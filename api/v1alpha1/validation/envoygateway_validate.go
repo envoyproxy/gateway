@@ -94,21 +94,20 @@ func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
 		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
 	}
 
-	warnings = append(warnings, warnRateLimitBackendSettings(eg.RateLimit)...)
+	warnings = append(warnings, warnRateLimitClusterSettings(eg.RateLimit)...)
 
 	return warnings
 }
 
 // warnRateLimitClusterSettings warns about RateLimit.ClusterSettings members that are accepted
 // by validateRateLimitClusterSettings but have no effect on the rate limit service cluster: it
-// has no associated route, so ir.TrafficFeatures.ClusterFeatures() drops Retry entirely, and
-// ir.Timeout.ClusterOnly() strips HTTP.RequestTimeout/HTTP.StreamIdleTimeout, before the CDS
-// cluster is built.
-func warnRateLimitBackendSettings(rateLimit *egv1a1.RateLimit) []string {
-	if rateLimit == nil || rateLimit.BackendSettings == nil {
+// has no associated route, so ir.Timeout.ClusterOnly() strips HTTP.RequestTimeout/
+// HTTP.StreamIdleTimeout before the CDS cluster is built.
+func warnRateLimitClusterSettings(rateLimit *egv1a1.RateLimit) []string {
+	if rateLimit == nil || rateLimit.ClusterSettings == nil {
 		return nil
 	}
-	cs := rateLimit.BackendSettings
+	cs := rateLimit.ClusterSettings
 
 	var warnings []string
 	if cs.Timeout != nil && cs.Timeout.HTTP != nil {
@@ -258,8 +257,8 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return nil
 	}
 
-	if err := validateRateLimitClusterSettings(rateLimit.BackendSettings); err != nil {
-		return fmt.Errorf("invalid rateLimit.backendSettings: %w", err)
+	if err := validateRateLimitClusterSettings(rateLimit.ClusterSettings); err != nil {
+		return fmt.Errorf("invalid rateLimit.clusterSettings: %w", err)
 	}
 
 	if rateLimit.Backend.Type != egv1a1.RedisBackendType {

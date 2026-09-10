@@ -30,7 +30,7 @@ data:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
-      backendSettings:
+      clusterSettings:
         timeout:
           http:
             maxConnectionDuration: 10s

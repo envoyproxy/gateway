@@ -1497,7 +1497,7 @@ func TestWarnEnvoyGateway(t *testing.T) {
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
-						BackendSettings: &egv1a1.ClusterSettings{
+						ClusterSettings: &egv1a1.ClusterSettings{
 							CircuitBreaker: &egv1a1.CircuitBreaker{
 								MaxRequestsPerConnection: new(int64(10)),
 							},
@@ -1508,28 +1508,13 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "rateLimit clusterSettings retry has no effect",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					RateLimit: &egv1a1.RateLimit{
-						BackendSettings: &egv1a1.ClusterSettings{
-							Retry: &egv1a1.Retry{},
-						},
-					},
-				},
-			},
-			expected: []string{"rateLimit.clusterSettings.retry has no effect: the rate limit service cluster has no associated route"},
-		},
-		{
 			name: "rateLimit clusterSettings requestTimeout and streamIdleTimeout have no effect",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
-						BackendSettings: &egv1a1.ClusterSettings{
+						ClusterSettings: &egv1a1.ClusterSettings{
 							Timeout: &egv1a1.Timeout{
 								HTTP: &egv1a1.HTTPTimeout{
 									RequestTimeout:    new(gwapiv1.Duration("30s")),
@@ -1720,7 +1705,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 				Type:  egv1a1.RedisBackendType,
 				Redis: &egv1a1.RateLimitRedisSettings{URL: new("redis.redis.svc:6379")},
 			},
-			BackendSettings: cs,
+			ClusterSettings: cs,
 		}
 	}
 	cases := []struct {
@@ -1795,12 +1780,6 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 				},
 			},
 			expectErr: "timeout.tcp.connectTimeout: invalid duration",
-		},
-		{
-			name: "retry is ignored, not rejected",
-			cs: &egv1a1.ClusterSettings{
-				Retry: &egv1a1.Retry{},
-			},
 		},
 		{
 			name: "requestTimeout is ignored, not rejected",

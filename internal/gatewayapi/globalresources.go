@@ -56,9 +56,9 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 				dest := t.processRateLimitServiceCluster(resources)
 
 				var backendSetting *egv1a1.BackendSettings
-				if t.RateLimitBackendSettings != nil {
+				if t.RateLimitClusterSettings != nil {
 					backendSetting = &egv1a1.BackendSettings{
-						ClusterSettings: *t.RateLimitBackendSettings,
+						ClusterSettings: *t.RateLimitClusterSettings,
 					}
 				}
 				tf, err := translateTrafficFeatures(backendSetting)
