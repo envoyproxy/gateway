@@ -165,6 +165,12 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 				Delete: update.Delete,
 			}, meta, errChans)
 		}
+
+		// The backlog is drained once the batch has been handled, and nothing else
+		// records this gauge. Leaving the batch size in place would keep reporting
+		// it for as long as the publisher stays idle, so the depth panel would show
+		// a backlog that never clears and any alert on it would stay firing.
+		watchableDepth.With(meta.LabelValues()...).Record(0)
 	}
 }
 

@@ -102,10 +102,11 @@ func collectWatchableDepth(t *testing.T, reader *sdkmetric.ManualReader) float64
 }
 
 // handleSnapshot runs HandleSubscription over a single snapshot carrying the
-// given updates, and returns the depth recorded for it. The channel is
-// unbuffered, matching what watchable.Map.Subscribe returns, so reading the
-// depth off the channel rather than the snapshot yields 0 here too.
-func handleSnapshot(t *testing.T, reader *sdkmetric.ManualReader, updates []watchable.Update[string, int]) float64 {
+// given updates. It returns the depth observed while the batch was being
+// handled and the depth left behind once HandleSubscription returned. The
+// channel is unbuffered, matching what watchable.Map.Subscribe returns, so
+// reading the depth off the channel rather than the snapshot yields 0 here too.
+func handleSnapshot(t *testing.T, reader *sdkmetric.ManualReader, updates []watchable.Update[string, int]) (during, after float64) {
 	t.Helper()
 
 	ch := make(chan watchable.Snapshot[string, int])
@@ -116,14 +117,23 @@ func handleSnapshot(t *testing.T, reader *sdkmetric.ManualReader, updates []watc
 		ch <- watchable.Snapshot[string, int]{State: map[string]int{}, Updates: updates}
 	}()
 
+	observed := false
 	HandleSubscription(
 		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		Metadata{Runner: "demo", Message: "demo"},
 		ch,
-		func(_ Update[string, int], _ chan error) {},
+		func(_ Update[string, int], _ chan error) {
+			// The handler runs between the two Record calls, which is the only
+			// point where the batch size is still the current value.
+			if !observed {
+				during = collectWatchableDepth(t, reader)
+				observed = true
+			}
+		},
 	)
+	require.True(t, observed, "the handler should run at least once")
 
-	return collectWatchableDepth(t, reader)
+	return during, collectWatchableDepth(t, reader)
 }
 
 // TestHandleSubscriptionRecordsCoalescedUpdateCount pins watchable_depth to the
@@ -145,7 +155,7 @@ func TestHandleSubscriptionRecordsCoalescedUpdateCount(t *testing.T) {
 	previousDepth := watchableDepth
 	watchableDepth = metrics.NewGauge(
 		"watchable_depth",
-		"Number of updates coalesced into the snapshot being handled.",
+		"Number of updates coalesced into the snapshot being handled, or 0 when idle.",
 	)
 	t.Cleanup(func() {
 		watchableDepth = previousDepth
@@ -157,8 +167,12 @@ func TestHandleSubscriptionRecordsCoalescedUpdateCount(t *testing.T) {
 		{Key: "bar", Value: 2},
 		{Key: "baz", Value: 3},
 	}
-	require.Equal(t, float64(3), handleSnapshot(t, reader, backlog), "a backlog of three updates")
+	during, after := handleSnapshot(t, reader, backlog)
+	require.Equal(t, float64(3), during, "a backlog of three updates")
+	require.Zero(t, after, "the depth should fall back to zero once the backlog is drained")
 
 	single := []watchable.Update[string, int]{{Key: "foo", Value: 1}}
-	require.Equal(t, float64(1), handleSnapshot(t, reader, single), "a single update")
+	during, after = handleSnapshot(t, reader, single)
+	require.Equal(t, float64(1), during, "a single update")
+	require.Zero(t, after, "the depth should fall back to zero once the backlog is drained")
 }
