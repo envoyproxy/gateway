@@ -304,8 +304,7 @@ spec:
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
                       The Secret must be in the same namespace as the EnvoyProxy or Backend resource
-                      that references it. If namespace is omitted, the referencing resource's namespace
-                      is used. If specified, namespace must match the referencing resource's namespace.
+                      that references it.
                       Cross-namespace references are not supported, even with a ReferenceGrant.
                       The ReferenceGrant requirement in the namespace field's description is inherited
                       from the Gateway API SecretObjectReference type and does not apply to this field.
@@ -10174,8 +10173,7 @@ spec:
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
                       The Secret must be in the same namespace as the EnvoyProxy or Backend resource
-                      that references it. If namespace is omitted, the referencing resource's namespace
-                      is used. If specified, namespace must match the referencing resource's namespace.
+                      that references it.
                       Cross-namespace references are not supported, even with a ReferenceGrant.
                       The ReferenceGrant requirement in the namespace field's description is inherited
                       from the Gateway API SecretObjectReference type and does not apply to this field.
