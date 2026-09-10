@@ -824,26 +824,20 @@ func getOverLimitCount(cli kubernetes.CLIClient, pod *corev1.Pod) (int, error) {
 // /rlconfig endpoint used to dump the currently loaded rate limit config.
 const rateLimitDebugPort = 6070
 
-// DumpRateLimitConfig fetches the config currently loaded by the envoy-ratelimit service via
-// its /rlconfig debug endpoint - the same one used by `egctl config envoy-ratelimit`.
-func DumpRateLimitConfig(t *testing.T, suite *suite.ConformanceTestSuite) (string, error) {
+// dumpRateLimitConfigForPod fetches the config currently loaded by one envoy-ratelimit pod via
+// its /rlconfig debug endpoint - the same one used by `egctl config envoy-ratelimit`. Callers
+// need one replica's config, not "the" config: WaitForRateLimitDomainsToBeLoaded calls this once
+// per pod and requires every one of them to have loaded a domain before treating it as ready,
+// since checking just one arbitrary replica is exactly the race that helper exists to close.
+func dumpRateLimitConfigForPod(t *testing.T, suite *suite.ConformanceTestSuite, podName string) (string, error) {
 	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
 	if err != nil {
 		return "", err
 	}
 
-	pods, err := cli.PodsForSelector("envoy-gateway-system", "app.kubernetes.io/name=envoy-ratelimit")
-	if err != nil {
-		return "", err
-	}
-
-	if len(pods.Items) == 0 {
-		return "", fmt.Errorf("no envoy-ratelimit pod found")
-	}
-
 	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
 		Namespace: "envoy-gateway-system",
-		Name:      pods.Items[0].Name,
+		Name:      podName,
 	}, 0, rateLimitDebugPort)
 	if err != nil {
 		return "", err
@@ -858,6 +852,11 @@ func DumpRateLimitConfig(t *testing.T, suite *suite.ConformanceTestSuite) (strin
 		return "", err
 	}
 
+	// Use a bounded client instead of http.DefaultClient (no timeout). This request runs
+	// inside WaitForRateLimitDomainsToBeLoaded's require.Eventually poll loop, so a single
+	// stuck attempt - e.g. the port-forward wedges, or the pod stops responding - must fail
+	// fast and let Eventually retry, rather than hanging the whole call (and therefore the
+	// test) until the suite-level timeout eventually kills it with a much less useful error.
 	httpClient := &http.Client{
 		Timeout: 3 * time.Second,
 	}
@@ -901,23 +900,43 @@ func WaitForRateLimitDomainToBeLoaded(t *testing.T, suite *suite.ConformanceTest
 func WaitForRateLimitDomainsToBeLoaded(t *testing.T, suite *suite.ConformanceTestSuite, domains ...string) {
 	t.Helper()
 
+	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
+	require.NoErrorf(t, err, "failed to build client for envoy-ratelimit pod discovery")
+
 	require.Eventually(t, func() bool {
-		cfg, err := DumpRateLimitConfig(t, suite)
-		if err != nil {
-			tlog.Logf(t, "failed to fetch envoy-ratelimit config, retrying: %v", err)
+		pods, err := cli.PodsForSelector("envoy-gateway-system", "app.kubernetes.io/name=envoy-ratelimit")
+		if err != nil || len(pods.Items) == 0 {
+			tlog.Logf(t, "failed to list envoy-ratelimit pods, retrying: %v", err)
 			return false
 		}
-		tlog.Logf(t, "dump rate limit config: %s", cfg)
-		// Dump() emits one line per configured descriptor limit, keyed as "<domain>.<descriptor
-		// path>: ...", so this substring is present only once the ratelimit service has actually
-		// loaded a limit for this domain.
-		for _, domain := range domains {
-			if !strings.Contains(cfg, domain) {
+
+		// Every replica gets the xDS push independently (see internal/globalratelimit/runner), so
+		// a domain isn't actually ready until *every* replica has loaded it, not just whichever pod
+		// happens to be checked (previously always pods.Items[0]). Otherwise Envoy can send the
+		// next rate-limit RPC to a replica that hasn't caught up yet, which fails open (an
+		// unmatched domain is treated as unlimited) - reintroducing the same "expected 429, got
+		// 200" race this helper exists to close. This matters most for profiles like
+		// gateway-namespace-mode that run more than one ratelimit replica - see
+		// rateLimitDeployment.replicas in test/config/envoy-gateaway-config/gateway-namespace-mode.yaml.
+		for i := range pods.Items {
+			pod := &pods.Items[i]
+			cfg, err := dumpRateLimitConfigForPod(t, suite, pod.Name)
+			if err != nil {
+				tlog.Logf(t, "failed to fetch envoy-ratelimit config from pod %s, retrying: %v", pod.Name, err)
 				return false
+			}
+			tlog.Logf(t, "dump rate limit config from pod %s: %s", pod.Name, cfg)
+			// Dump() emits one line per configured descriptor limit, keyed as "<domain>.<descriptor
+			// path>: ...", so this substring is present only once the ratelimit service has actually
+			// loaded a limit for this domain.
+			for _, domain := range domains {
+				if !strings.Contains(cfg, domain) {
+					return false
+				}
 			}
 		}
 		return true
-	}, suite.TimeoutConfig.MaxTimeToConsistency, time.Second, "envoy-ratelimit service never loaded config for domains %v", domains)
+	}, suite.TimeoutConfig.MaxTimeToConsistency, time.Second, "envoy-ratelimit service never loaded config for domains %v on every replica", domains)
 }
 
 // RateLimitListenerDomain returns the rate limit domain name EG assigns to a non-shared
