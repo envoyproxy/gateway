@@ -303,7 +303,10 @@ spec:
                       ClientCertificateRef defines the reference to a Kubernetes Secret that contains
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
-                      This secret should be located within the same namespace as the Envoy proxy resource that references it.
+                      The Secret must be in the same namespace as the resource that references it.
+                      If namespace is omitted, the referring resource's namespace is used.
+                      Cross-namespace references are not supported, even with a ReferenceGrant.
+                      The generic ReferenceGrant guidance in SecretObjectReference does not apply to this field.
                     properties:
                       group:
                         default: ""
