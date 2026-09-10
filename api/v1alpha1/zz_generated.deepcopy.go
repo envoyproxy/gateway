@@ -3460,6 +3460,11 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.EnableRoutePriority != nil {
+		in, out := &in.EnableRoutePriority, &out.EnableRoutePriority
+		*out = new(bool)
+		**out = **in
+	}
 	if in.LuaValidation != nil {
 		in, out := &in.LuaValidation, &out.LuaValidation
 		*out = new(LuaValidation)
