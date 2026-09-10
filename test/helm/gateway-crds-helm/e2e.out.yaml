@@ -303,7 +303,11 @@ spec:
                       ClientCertificateRef defines the reference to a Kubernetes Secret that contains
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
-                      This secret should be located within the same namespace as the Envoy proxy resource that references it.
+                      The Secret must be in the same namespace as the EnvoyProxy or Backend resource
+                      that references it.
+                      Cross-namespace references are not supported, even with a ReferenceGrant.
+                      The ReferenceGrant requirement in the namespace field's description is inherited
+                      from the Gateway API SecretObjectReference type and does not apply to this field.
                     properties:
                       group:
                         default: ""
@@ -5475,6 +5479,17 @@ spec:
                 type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
+                properties:
+                  advertisedPort:
+                    description: |-
+                      AdvertisedPort specifies the port advertised to clients in the HTTP/3
+                      `alt-svc` response header. It does not change the listener or Service port.
+                      If unset, the Gateway listener port is advertised.
+                    format: int32
+                    type: integer
+                    x-kubernetes-validations:
+                    - message: advertisedPort must be between 1 and 65535
+                      rule: self >= 1 && self <= 65535
                 type: object
               path:
                 description: Path enables managing how the incoming path set by clients
@@ -10157,7 +10172,11 @@ spec:
                       ClientCertificateRef defines the reference to a Kubernetes Secret that contains
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
-                      This secret should be located within the same namespace as the Envoy proxy resource that references it.
+                      The Secret must be in the same namespace as the EnvoyProxy or Backend resource
+                      that references it.
+                      Cross-namespace references are not supported, even with a ReferenceGrant.
+                      The ReferenceGrant requirement in the namespace field's description is inherited
+                      from the Gateway API SecretObjectReference type and does not apply to this field.
                     properties:
                       group:
                         default: ""
@@ -35862,6 +35881,24 @@ spec:
                     required:
                     - name
                     type: object
+                  codeVerifierTTL:
+                    description: |-
+                      CodeVerifierTTL defines how long the PKCE code verifier generated during the OAuth2
+                      authorization flow remains valid.
+
+                      This duration determines the lifetime of the code verifier cookie, which is exchanged
+                      for the access token when the provider redirects back to the callback endpoint.
+
+                      Both this cookie and the CSRF cookie are only consumed on the callback endpoint, so an
+                      authorization flow that is started but never completed leaves them behind until they
+                      expire. Lowering this value along with csrfTokenTTL bounds how many such cookies a
+                      browser can accumulate. It must stay long enough for a user to complete the login,
+                      including any multi-factor prompt: once it elapses the browser drops the cookie and
+                      the callback fails.
+
+                      If omitted, Envoy Gateway defaults the code verifier expiration to 10 minutes.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   cookieConfig:
                     description: |-
                       CookieConfigs allows setting the SameSite attribute for OIDC cookies.
