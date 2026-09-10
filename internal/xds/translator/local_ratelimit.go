@@ -27,6 +27,14 @@ import (
 
 const (
 	localRateLimitFilterStatPrefix = "http_local_rate_limiter"
+	// localRateLimitMaxDynamicDescriptors bounds the LRU cache of per-value
+	// token buckets that Envoy keeps for each wildcard descriptor (an entry
+	// without a value, as produced by Distinct matches). Envoy defaults to 20,
+	// which is far too small for per-client limits on a public listener.
+	// Keep the intended capacity of 10k entries per wildcard descriptor in
+	// each route configuration; entries are allocated on demand. This can be
+	// made configurable in the API if needed.
+	localRateLimitMaxDynamicDescriptors = 10000
 )
 
 func init() {
@@ -60,9 +68,7 @@ func (*localRateLimit) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 	localRl := &localrlv3.LocalRateLimit{
 		StatPrefix: localRateLimitFilterStatPrefix,
 		MaxDynamicDescriptors: &wrapperspb.UInt32Value{
-			Value: 10000,
-			// Default to 10k, assuming a listener has 10k unique active users to be rate limited.
-			// We can make this configurable in the API if needed.
+			Value: localRateLimitMaxDynamicDescriptors,
 		},
 	}
 
@@ -152,6 +158,12 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 
 	localRl := &localrlv3.LocalRateLimit{
 		StatPrefix: localRateLimitFilterStatPrefix,
+		// Envoy resolves the per-route config as a whole and does not inherit
+		// this value from the HCM filter, so it must be set here, where the
+		// descriptors live, or Envoy falls back to its default of 20.
+		MaxDynamicDescriptors: &wrapperspb.UInt32Value{
+			Value: localRateLimitMaxDynamicDescriptors,
+		},
 		TokenBucket: &typev3.TokenBucket{
 			MaxTokens: local.Default.Requests,
 			TokensPerFill: &wrapperspb.UInt32Value{
