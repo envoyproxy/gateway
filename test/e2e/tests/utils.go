@@ -824,6 +824,14 @@ func getOverLimitCount(cli kubernetes.CLIClient, pod *corev1.Pod) (int, error) {
 // /rlconfig endpoint used to dump the currently loaded rate limit config.
 const rateLimitDebugPort = 6070
 
+// rateLimitDebugAttemptTimeout bounds each attempt inside WaitForRateLimitDomainsToBeLoaded's
+// require.Eventually poll loop - both starting the port-forward and issuing the HTTP request -
+// so a single stuck attempt (the port-forward's Kubernetes upgrade/dial wedges, or the pod
+// stops responding) fails fast and lets Eventually retry, rather than hanging the whole call
+// (and therefore the test) until the suite-level timeout eventually kills it with a much less
+// useful error.
+const rateLimitDebugAttemptTimeout = 3 * time.Second
+
 // dumpRateLimitConfigForPod fetches the config currently loaded by one envoy-ratelimit pod via
 // its /rlconfig debug endpoint - the same one used by `egctl config envoy-ratelimit`. Callers
 // need one replica's config, not "the" config: WaitForRateLimitDomainsToBeLoaded calls this once
@@ -842,7 +850,13 @@ func dumpRateLimitConfigForPod(t *testing.T, suite *suite.ConformanceTestSuite, 
 	if err != nil {
 		return "", err
 	}
-	if err := fwd.Start(); err != nil {
+
+	// Bound port-forward startup by the same per-attempt timeout as the HTTP request below -
+	// see rateLimitDebugAttemptTimeout. Without this, a wedged Kubernetes upgrade/dial inside
+	// fwd.Start() could block this call indefinitely regardless of the HTTP client's timeout.
+	startCtx, cancel := context.WithTimeout(t.Context(), rateLimitDebugAttemptTimeout)
+	defer cancel()
+	if err := fwd.StartWithContext(startCtx); err != nil {
 		return "", err
 	}
 	defer fwd.Stop()
@@ -852,13 +866,10 @@ func dumpRateLimitConfigForPod(t *testing.T, suite *suite.ConformanceTestSuite, 
 		return "", err
 	}
 
-	// Use a bounded client instead of http.DefaultClient (no timeout). This request runs
-	// inside WaitForRateLimitDomainsToBeLoaded's require.Eventually poll loop, so a single
-	// stuck attempt - e.g. the port-forward wedges, or the pod stops responding - must fail
-	// fast and let Eventually retry, rather than hanging the whole call (and therefore the
-	// test) until the suite-level timeout eventually kills it with a much less useful error.
+	// Use a bounded client instead of http.DefaultClient (no timeout); see
+	// rateLimitDebugAttemptTimeout for why this must be bounded.
 	httpClient := &http.Client{
-		Timeout: 3 * time.Second,
+		Timeout: rateLimitDebugAttemptTimeout,
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
