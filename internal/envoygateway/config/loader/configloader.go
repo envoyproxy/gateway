@@ -10,7 +10,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/filewatcher"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -80,7 +80,7 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 				eg.SetEnvoyGatewayDefaults()
 				eg.Logging.SetEnvoyGatewayLoggingDefaults()
 
-				if err := validation.ValidateEnvoyGateway(eg); err != nil {
+				if err := config.ValidateEnvoyGateway(eg); err != nil {
 					r.logger.Error(err, "failed to validate EnvoyGateway config")
 					continue
 				}
@@ -117,8 +117,26 @@ func (r *Loader) runHook(ctx context.Context) error {
 	if r.hook == nil {
 		return nil
 	}
-	r.logger.Info("running hook")
+
 	cfgCopy := r.snapshotConfig()
+	if cfgCopy != nil && cfgCopy.EnvoyGateway != nil {
+		// Log only a non-sensitive identifier at Info level. The full
+		// EnvoyGatewaySpec is not safe to reflect-serialize here: it may carry
+		// an inline envoyProxy.bootstrap.value or a raw Kubernetes workload
+		// patch, either of which can embed credentials that would otherwise be
+		// written to the controller log on every startup and reload.
+		var providerType egv1a1.ProviderType
+		if p := cfgCopy.EnvoyGateway.Provider; p != nil {
+			providerType = p.Type
+		}
+		r.logger.Info("running hook", "provider", providerType)
+		// The full spec is only useful for troubleshooting, so keep it behind
+		// verbose/debug logging rather than the default Info level.
+		r.logger.V(1).Info("running hook", "envoyGateway", cfgCopy.EnvoyGateway.EnvoyGatewaySpec)
+	} else {
+		r.logger.Info("running hook")
+	}
+
 	c, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
 	r.hookMutex.Lock()
