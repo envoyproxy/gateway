@@ -504,7 +504,14 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 		}
 	}
 	if redirection.Path != nil {
-		if redirection.Path.FullReplace != nil {
+		if regex := redirection.Path.RegexMatchReplace; regex != nil {
+			routeAction.PathRewriteSpecifier = &routev3.RedirectAction_RegexRewrite{
+				RegexRewrite: &matcherv3.RegexMatchAndSubstitute{
+					Pattern:      &matcherv3.RegexMatcher{Regex: regex.Pattern},
+					Substitution: regex.Substitution,
+				},
+			}
+		} else if redirection.Path.FullReplace != nil {
 			routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PathRedirect{
 				PathRedirect: *redirection.Path.FullReplace,
 			}

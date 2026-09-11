@@ -53802,6 +53802,82 @@ spec:
                   type: object
                 maxItems: 8
                 type: array
+              redirect:
+                description: |-
+                  Redirect extends a Gateway API RequestRedirect filter with a regex path
+                  transformation. Both filters must be configured on the same HTTPRoute rule,
+                  and the RequestRedirect filter must not specify path. Filter order does not
+                  affect the resulting redirect. Only one redirect extension is allowed per rule.
+                  Redirect cannot be combined with URL rewriting or direct responses, and is
+                  not supported on GRPCRoutes or backendRefs.
+                properties:
+                  path:
+                    description: |-
+                      Path transforms the path in the redirect Location header using RE2 matching
+                      and substitution. The query string is preserved. Capture groups use backslash
+                      references such as \1, not $1. All matching portions are replaced.
+                      If the pattern does not match, the path is unchanged but the redirect still
+                      occurs. Constrain the HTTPRoute matches to avoid redirecting to the same URL.
+                      The native RequestRedirect supplies the scheme, hostname, port and status code.
+                      Substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'.
+                    properties:
+                      replaceRegexMatch:
+                        description: |-
+                          ReplaceRegexMatch defines a path regex rewrite. The path portions matched by the regex pattern are replaced by the defined substitution.
+                          https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-regex-rewrite
+                          Some examples:
+                          (1) replaceRegexMatch:
+                                pattern: ^/service/([^/]+)(/.*)$
+                                substitution: \2/instance/\1
+                              Would transform /service/foo/v1/api into /v1/api/instance/foo.
+                          (2) replaceRegexMatch:
+                                pattern: one
+                                substitution: two
+                              Would transform /xxx/one/yyy/one/zzz into /xxx/two/yyy/two/zzz.
+                          (3) replaceRegexMatch:
+                                pattern: ^(.*?)one(.*)$
+                                substitution: \1two\2
+                              Would transform /xxx/one/yyy/one/zzz into /xxx/two/yyy/one/zzz.
+                          (3) replaceRegexMatch:
+                                pattern: (?i)/xxx/
+                                substitution: /yyy/
+                              Would transform path /aaa/XxX/bbb into /aaa/yyy/bbb (case-insensitive).
+                        properties:
+                          pattern:
+                            description: |-
+                              Pattern matches a regular expression against the value of the HTTP Path.The regex string must
+                              adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+                            minLength: 1
+                            type: string
+                          substitution:
+                            description: |-
+                              Substitution is an expression that replaces the matched portion.The expression may include numbered
+                              capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.
+                            type: string
+                        required:
+                        - pattern
+                        - substitution
+                        type: object
+                      type:
+                        description: HTTPPathModifierType defines the type of path
+                          redirect or rewrite.
+                        enum:
+                        - ReplaceRegexMatch
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: redirect substitution must not be empty
+                      rule: '!has(self.replaceRegexMatch) || size(self.replaceRegexMatch.substitution)
+                        > 0'
+                    - message: If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch
+                        field needs to be set.
+                      rule: 'self.type == ''ReplaceRegexMatch'' ? has(self.replaceRegexMatch)
+                        : !has(self.replaceRegexMatch)'
+                required:
+                - path
+                type: object
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
@@ -53932,6 +54008,9 @@ spec:
                         : !has(self.replaceRegexMatch)'
                 type: object
             type: object
+            x-kubernetes-validations:
+            - message: redirect cannot be combined with urlRewrite or directResponse
+              rule: '!has(self.redirect) || (!has(self.urlRewrite) && !has(self.directResponse))'
         required:
         - spec
         type: object

@@ -2473,7 +2473,7 @@ type Redirect struct {
 	// Hostname configures the replacement of the request's hostname.
 	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 	// Path contains config for rewriting the path of the request.
-	Path *HTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
+	Path *ExtendedHTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
 	// Port configures the replacement of the request's port.
 	Port *uint32 `json:"port,omitempty" yaml:"port,omitempty"`
 	// Status code configures the redirection response's status code.
