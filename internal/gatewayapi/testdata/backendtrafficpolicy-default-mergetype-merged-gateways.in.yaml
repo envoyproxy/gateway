@@ -1,0 +1,102 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    mergeGateways: true
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-2
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 8080
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+        - namespace: envoy-gateway
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+backendTrafficPolicies:
+  # Distinct parent policy per Gateway: gateway-1 sets maxConnections 1111, gateway-2 sets 2222.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-gateway-1
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+      defaultChildMergeType: StrategicMerge
+      circuitBreaker:
+        maxConnections: 1111
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-gateway-2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+      defaultChildMergeType: StrategicMerge
+      circuitBreaker:
+        maxConnections: 2222
+  # Route-level policy with no mergeType: should merge into each Gateway's own parent, so the route
+  # on gateway-1 gets maxConnections 1111 and the route on gateway-2 gets 2222.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-for-route
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-1
+      connection:
+        bufferLimit: 100Mi

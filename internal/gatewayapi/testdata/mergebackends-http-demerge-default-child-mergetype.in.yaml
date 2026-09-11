@@ -1,0 +1,97 @@
+# Covers the interaction between MergeBackends cluster deduplication and defaultChildMergeType.
+#
+# http-route-1 and http-route-2 reference the same backend, so they are deduplication candidates.
+# The Gateway policy sets a cluster-scoped baseline (connectTimeout) plus defaultChildMergeType.
+# http-route-1 has its own policy that sets no mergeType and no cluster-scoped field, so:
+#   - without defaultChildMergeType it would replace the Gateway policy and resolve to empty
+#     cluster settings, diverging from http-route-2, which inherits the Gateway's.
+#   - with defaultChildMergeType it merges into the Gateway policy instead, so both routes end up
+#     with the same cluster-scoped settings.
+# Recorded behavior: http-route-1 is still demerged onto its own cluster, because the deduplication
+# index treats "mergeType unset" as "replaces its parent" without accounting for
+# defaultChildMergeType. Both routes end up with the same effective connectTimeout, so the split is
+# a missed deduplication rather than a wrong config. This fixture pins that down so a future change
+# to either side of the interaction shows up as a diff here.
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends: {}
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http-1
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+backendTrafficPolicies:
+  # Gateway-level baseline: the only place defaultChildMergeType may be declared.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: btp-gateway
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+      defaultChildMergeType: StrategicMerge
+      timeout:
+        tcp:
+          connectTimeout: 15s
+  # Route-level policy with no mergeType and no cluster-scoped field: it inherits the Gateway's
+  # defaultChildMergeType, so it merges into the Gateway policy rather than replacing it.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: btp-route-1
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: http-route-1
+      faultInjection:
+        abort:
+          httpStatus: 501
+          percentage: 10
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  # Same backend, no policy of its own: inherits the Gateway policy's cluster settings.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
