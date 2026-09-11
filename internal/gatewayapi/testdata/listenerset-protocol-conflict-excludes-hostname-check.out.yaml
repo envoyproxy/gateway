@@ -223,6 +223,8 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 443
+      hostnames:
+      - other.com
       metadata:
         kind: Gateway
         name: gateway-with-tls-and-http-conflict
@@ -232,6 +234,8 @@ xdsIR:
       port: 10443
     - address: 0.0.0.0
       externalPort: 443
+      hostnames:
+      - shared.com
       metadata:
         kind: Gateway
         name: gateway-with-tls-and-http-conflict
