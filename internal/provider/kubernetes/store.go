@@ -17,15 +17,15 @@ import (
 type nodeDetails struct {
 	name      string
 	addresses status.NodeAddresses
+	zoneID    string
 }
 
 // kubernetesProviderStore holds cached information for the kubernetes provider.
 type kubernetesProviderStore struct {
-	// nodes holds information required for updating Gateway status with the Node
-	// addresses, in case the Gateway is exposed on every Node of the cluster, using
-	// Service of type NodePort.
-	nodes map[string]nodeDetails
-	mu    sync.Mutex
+	// nodes holds addresses for NodePort status and zone IDs for locality.
+	nodes    map[string]nodeDetails
+	mu       sync.Mutex
+	platform clusterPlatform
 }
 
 func newProviderStore() *kubernetesProviderStore {
@@ -35,7 +35,7 @@ func newProviderStore() *kubernetesProviderStore {
 }
 
 func (p *kubernetesProviderStore) addNode(n *corev1.Node) {
-	details := nodeDetails{name: n.Name}
+	details := nodeDetails{name: n.Name, zoneID: p.platform.zoneID(n)}
 
 	var internalIPs, externalIPs status.NodeAddresses
 	for _, addr := range n.Status.Addresses {
@@ -72,6 +72,12 @@ func (p *kubernetesProviderStore) removeNode(n *corev1.Node) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	delete(p.nodes, n.Name)
+}
+
+func (p *kubernetesProviderStore) nodeZoneID(name string) string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.nodes[name].zoneID
 }
 
 func (p *kubernetesProviderStore) listNodeAddresses() status.NodeAddresses {
