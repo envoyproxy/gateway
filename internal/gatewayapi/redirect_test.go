@@ -133,15 +133,49 @@ func TestValidateRedirectSubstitution(t *testing.T) {
 func TestRedirectExtensionGRPCRoute(t *testing.T) {
 	translator := &Translator{}
 	route := &GRPCRouteContext{GRPCRoute: &gwapiv1.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
-	_, errs := translator.ProcessGRPCFilters(nil, route, []gwapiv1.GRPCRouteFilter{{
-		Type:         gwapiv1.GRPCRouteFilterExtensionRef,
-		ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "redirect"},
-	}}, &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{{
-		ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
-		Spec:       egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{}},
-	}}}, nil)
-	require.Len(t, errs, 1)
-	require.Contains(t, errs[0].Error(), "only supported on HTTPRoute rules")
+	resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
+			Spec:       egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{}},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "deny", Namespace: "default"},
+			Spec:       egv1a1.HTTPRouteFilterSpec{DirectResponse: &egv1a1.HTTPDirectResponseFilter{StatusCode: new(403)}},
+		},
+	}}
+	for _, tc := range []struct {
+		name    string
+		refs    []gwapiv1.ObjectName
+		invalid bool
+	}{
+		{name: "redirect alone", refs: []gwapiv1.ObjectName{"redirect"}, invalid: true},
+		{name: "direct response first", refs: []gwapiv1.ObjectName{"deny", "redirect"}, invalid: true},
+		{name: "redirect first", refs: []gwapiv1.ObjectName{"redirect", "deny"}, invalid: true},
+		{name: "direct response alone", refs: []gwapiv1.ObjectName{"deny"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var filters []gwapiv1.GRPCRouteFilter
+			for _, name := range tc.refs {
+				filters = append(filters, gwapiv1.GRPCRouteFilter{
+					Type:         gwapiv1.GRPCRouteFilterExtensionRef,
+					ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: name},
+				})
+			}
+			got, errs := translator.ProcessGRPCFilters(nil, route, filters, resources, nil)
+			require.Nil(t, got.RedirectResponse)
+			if tc.invalid {
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0].Error(), "only supported on HTTPRoute rules")
+				require.Equal(t, gwapiv1.RouteConditionAccepted, errs[0].Type())
+				require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, errs[0].Reason())
+				require.Nil(t, got.DirectResponse)
+				return
+			}
+			require.Empty(t, errs)
+			require.NotNil(t, got.DirectResponse)
+			require.Equal(t, new(uint32(403)), got.DirectResponse.StatusCode)
+		})
+	}
 }
 
 func TestRedirectExtensionBackendRef(t *testing.T) {

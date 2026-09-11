@@ -192,6 +192,24 @@ func (t *Translator) ProcessGRPCFilters(
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
 
+	// Reject redirect extensions before processing filters: a direct response
+	// stops the loop below and must not hide an unsupported GRPCRoute attachment.
+	for _, filter := range filters {
+		ref := filter.ExtensionRef
+		if filter.Type != gwapiv1.GRPCRouteFilterExtensionRef || ref == nil ||
+			string(ref.Group) != egv1a1.GroupName || string(ref.Kind) != egv1a1.KindHTTPRouteFilter {
+			continue
+		}
+		for _, hrf := range resources.HTTPRouteFilters {
+			if hrf.Namespace == route.GetNamespace() && hrf.Name == string(ref.Name) && hrf.Spec.Redirect != nil {
+				return httpFiltersContext, []status.Error{status.NewRouteStatusError(
+					errors.New("HTTPRouteFilter redirect is only supported on HTTPRoute rules"),
+					gwapiv1.RouteReasonUnsupportedValue,
+				).WithType(gwapiv1.RouteConditionAccepted)}
+			}
+		}
+	}
+
 	var errs status.TypedErrorCollector
 	for i := range filters {
 		filter := filters[i]
@@ -933,12 +951,6 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 		for _, hrf := range resources.HTTPRouteFilters {
 			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) {
 				found = true
-				if hrf.Spec.Redirect != nil && filterContext.Route.GetRouteType() != resource.KindHTTPRoute {
-					return status.NewRouteStatusError(
-						errors.New("HTTPRouteFilter redirect is only supported on HTTPRoute rules"),
-						gwapiv1.RouteReasonUnsupportedValue,
-					).WithType(gwapiv1.RouteConditionAccepted)
-				}
 				if len(hrf.Spec.Matches) > 0 && len(filterContext.Matches) > 0 {
 					return status.NewRouteStatusError(
 						errors.New("only one HTTPRouteFilter with matches is supported per HTTPRouteRule"),
