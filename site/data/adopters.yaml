@@ -134,3 +134,7 @@ adopters:
     logo: "/logos/openai.svg"
     url: "https://openai.com/"
     description: ""
+  - name: "United Security Providers"
+    logo: "/logos/united-security-providers.svg"
+    url: "https://www.united-security-providers.com/"
+    description: "United Security Providers offers USP Core WAAP Gateway and USP Aero WAAP, both based on Envoy Gateway and extending its application and API traffic management capabilities with web application and API security for Kubernetes and traditional on-premises deployments."
