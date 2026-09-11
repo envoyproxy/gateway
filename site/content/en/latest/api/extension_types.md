@@ -2415,6 +2415,7 @@ _Appears in:_
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict<br />Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release. |
 | `lua` | _[LuaValidationConfig](#luavalidationconfig)_ |  false  |  | Lua configures how Lua scripts from EnvoyExtensionPolicy resources are<br />validated in the gateway controller. It selects the validation mode and, for the Strict<br />mode, defines the filesystem paths and environment variables the scripts are permitted to<br />access during validation. |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `wasmModules` | _[WasmModuleEntry](#wasmmoduleentry) array_ |  false  |  | WasmModules defines the set of Wasm modules that are allowed to be used by<br />EnvoyExtensionPolicy resources. Each entry registers a module by a logical<br />name and a source (currently Local path).<br />When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up<br />in this list.<br />The EnvoyProxy owner is responsible for ensuring Local modules are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path. |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
 
@@ -4332,6 +4333,20 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `rules` | _[RateLimitRule](#ratelimitrule) array_ |  false  |  | Rules are a list of RateLimit selectors and limits. If a request matches<br />multiple rules, the strictest limit is applied. For example, if a request<br />matches two rules, one with 10rps and one with 20rps, the final limit will<br />be based on the rule with 10rps. |
+
+
+#### LocalWasmModuleSource
+
+
+
+LocalWasmModuleSource defines a Wasm module loaded from the local filesystem.
+
+_Appears in:_
+- [WasmModuleSource](#wasmmodulesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path is the absolute filesystem path to the Wasm module on the Envoy proxy. |
 
 
 #### LogLevel
@@ -6881,9 +6896,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension. |
+| `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension.<br />When Code is omitted, Name is required and must match a module registered<br />in EnvoyProxy.spec.wasmModules. |
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
-| `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  |  | Code is the Wasm code for the extension. |
+| `code` | _[WasmCodeSource](#wasmcodesource)_ |  false  |  | Code is the Wasm code for the extension.<br />When omitted, Name must match a module in EnvoyProxy.spec.wasmModules. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the Wasm extension will also be bypassed if the configuration is invalid. |
 | `env` | _[WasmEnv](#wasmenv)_ |  false  |  | Env configures the environment for the Wasm extension |
@@ -6948,6 +6963,52 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `hostKeys` | _string array_ |  false  |  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
+
+
+#### WasmModuleEntry
+
+
+
+WasmModuleEntry defines a Wasm module that is registered and allowed for use
+by EnvoyExtensionPolicy resources.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name when wasm[].code is omitted. |
+| `source` | _[WasmModuleSource](#wasmmodulesource)_ |  true  |  | Source defines where the Wasm module code is loaded from. |
+
+
+#### WasmModuleSource
+
+
+
+WasmModuleSource defines where a registered Wasm module is loaded from.
+Mirrors DynamicModuleSource so additional source types can be added later.
+
+_Appears in:_
+- [WasmModuleEntry](#wasmmoduleentry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[WasmModuleSourceType](#wasmmodulesourcetype)_ |  false  | Local | Type is the type of the source of the Wasm module.<br />Defaults to Local. |
+| `local` | _[LocalWasmModuleSource](#localwasmmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
+
+
+#### WasmModuleSourceType
+
+_Underlying type:_ _string_
+
+WasmModuleSourceType specifies the types of sources for registered Wasm modules.
+
+_Appears in:_
+- [WasmModuleSource](#wasmmodulesource)
+
+| Value | Description |
+| ----- | ----------- |
+| `Local` | LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.<br /> | 
 
 
 #### WeightedZoneConfig
