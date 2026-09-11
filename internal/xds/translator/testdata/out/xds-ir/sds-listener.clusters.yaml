@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: test1-dest
   ignoreHealthOnHostRemoval: true
@@ -30,6 +31,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: test2-dest
   ignoreHealthOnHostRemoval: true
@@ -53,6 +55,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: test3-dest
   ignoreHealthOnHostRemoval: true

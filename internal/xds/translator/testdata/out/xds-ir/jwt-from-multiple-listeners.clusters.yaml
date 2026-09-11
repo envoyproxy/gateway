@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: httproute/ns1/domain1/rule/0
   ignoreHealthOnHostRemoval: true
@@ -85,6 +86,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: httproute/ns2/domain2/rule/0
   ignoreHealthOnHostRemoval: true

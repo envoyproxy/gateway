@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: backend-utilization-weighted-zones-endpoint-override-dest/backend/0
   ignoreHealthOnHostRemoval: true

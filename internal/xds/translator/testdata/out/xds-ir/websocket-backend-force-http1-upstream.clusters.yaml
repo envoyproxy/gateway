@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: websocket-wss-route-dest
   ignoreHealthOnHostRemoval: true
@@ -61,6 +62,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: ordinary-tls-http-route-dest
   ignoreHealthOnHostRemoval: true

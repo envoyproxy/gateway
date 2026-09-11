@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: tcp-route-simple-dest
   ignoreHealthOnHostRemoval: true
@@ -30,6 +31,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: tcp-route-simple-1-dest
   ignoreHealthOnHostRemoval: true
@@ -53,6 +55,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: tcp-route-simple-2-dest
   ignoreHealthOnHostRemoval: true
@@ -76,6 +79,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: tcp-route-simple-3-dest
   ignoreHealthOnHostRemoval: true
@@ -99,6 +103,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: tcp-route-simple-4-dest
   ignoreHealthOnHostRemoval: true

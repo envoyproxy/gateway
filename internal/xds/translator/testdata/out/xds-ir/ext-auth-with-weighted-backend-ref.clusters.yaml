@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-1/rule/0
   ignoreHealthOnHostRemoval: true
@@ -30,6 +31,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-2/rule/0
   ignoreHealthOnHostRemoval: true
@@ -53,6 +55,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   ignoreHealthOnHostRemoval: true
@@ -83,6 +86,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
   ignoreHealthOnHostRemoval: true
