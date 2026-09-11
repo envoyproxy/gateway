@@ -9,7 +9,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: EmptyCluster
         statPrefix: tcp-10080
-    name: EmptyCluster
+    name: EmptyCluster/tcp-listener-with-no-routes
   maxConnectionsToAcceptPerSocketEvent: 1
   name: tcp-listener-with-no-routes
   perConnectionBufferLimitBytes: 32768
