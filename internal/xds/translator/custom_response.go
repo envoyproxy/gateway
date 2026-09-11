@@ -123,8 +123,16 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 			predicates = append(predicates, statusCodePredicate)
 		}
 
+		if len(r.Match.RequestHeaders) > 0 {
+			headerPredicate, err := c.buildHeaderPredicate(r.Match.RequestHeaders, c.buildRequestHeaderInput)
+			if err != nil {
+				return nil, err
+			}
+			predicates = append(predicates, headerPredicate)
+		}
+
 		if len(r.Match.ResponseHeaders) > 0 {
-			headerPredicate, err := c.buildResponseHeaderPredicate(r.Match.ResponseHeaders)
+			headerPredicate, err := c.buildHeaderPredicate(r.Match.ResponseHeaders, c.buildResponseHeaderInput)
 			if err != nil {
 				return nil, err
 			}
@@ -205,10 +213,10 @@ func (c *customResponse) buildStatusCodePredicate(codes []ir.StatusCodeMatch) (*
 	}, nil
 }
 
-func (c *customResponse) buildResponseHeaderPredicate(headers []ir.StringMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+func (c *customResponse) buildHeaderPredicate(headers []ir.StringMatch, buildInput func(string) (*cncfv3.TypedExtensionConfig, error)) (*matcherv3.Matcher_MatcherList_Predicate, error) {
 	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(headers))
 	for _, header := range headers {
-		input, err := c.buildResponseHeaderInput(header.Name)
+		input, err := buildInput(header.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -346,6 +354,22 @@ func (c *customResponse) buildStatusCodeInput() (*cncfv3.TypedExtensionConfig, e
 
 	return &cncfv3.TypedExtensionConfig{
 		Name:        "http-response-status-code-match-input",
+		TypedConfig: pb,
+	}, nil
+}
+
+func (c *customResponse) buildRequestHeaderInput(headerName string) (*cncfv3.TypedExtensionConfig, error) {
+	var (
+		pb  *anypb.Any
+		err error
+	)
+
+	if pb, err = proto.ToAnyWithValidation(&envoymatcherv3.HttpRequestHeaderMatchInput{HeaderName: headerName}); err != nil {
+		return nil, err
+	}
+
+	return &cncfv3.TypedExtensionConfig{
+		Name:        "http-request-header-match-input",
 		TypedConfig: pb,
 	}, nil
 }

@@ -1411,7 +1411,7 @@ _Appears in:_
 
 
 CustomResponseMatch defines the configuration for matching a user response to return a custom one.
-When both statusCodes and responseHeaders are specified, both must match.
+When more than one of statusCodes, requestHeaders and responseHeaders is specified, all of them must match.
 
 _Appears in:_
 - [ResponseOverride](#responseoverride)
@@ -1419,6 +1419,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  false  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `requestHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Request headers to match on. The match evaluates to true if all matches are successful.<br />Note that the request headers are not available for all Envoy-generated responses,<br />in which case a request header match never evaluates to true. |
 | `responseHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Response headers to match on. The match evaluates to true if all matches are successful. |
 
 
@@ -5984,7 +5985,7 @@ _Appears in:_
 
 
 
-ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+ResponseOverrideHeaderMatch defines the configuration for matching a request or response header.
 
 _Appears in:_
 - [CustomResponseMatch](#customresponsematch)
