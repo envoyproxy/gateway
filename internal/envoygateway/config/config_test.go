@@ -44,10 +44,8 @@ func TestValidate(t *testing.T) {
 			name: "empty namespace",
 			cfg: &Server{
 				EnvoyGateway: &egv1a1.EnvoyGateway{
-					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-						Gateway:  egv1a1.DefaultGateway(),
-						Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					},
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 				},
 				ControllerNamespace: "",
 			},

@@ -51,7 +51,7 @@ func (cr *CustomResource) CheckRBAC(_ context.Context, _ tbcollect.Collector, _ 
 	return nil
 }
 
-func (cr *CustomResource) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, error) {
+func (cr *CustomResource) Collect(_ chan<- any) (tbcollect.CollectorResult, error) {
 	ctx := context.Background()
 	output := tbcollect.NewResult()
 	client, err := kubernetes.NewForConfig(cr.ClientConfig)

@@ -26,7 +26,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -62,14 +61,12 @@ func TestNewManager(t *testing.T) {
 	t.Run("single extension returns plain Manager", func(t *testing.T) {
 		cfg := &config.Server{
 			EnvoyGateway: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Name: "ext1",
-						Resources: []egv1a1.GroupVersionKind{
-							{Group: "foo.io", Version: "v1", Kind: "Foo"},
-						},
-						Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Name: "ext1",
+					Resources: []egv1a1.GroupVersionKind{
+						{Group: "foo.io", Version: "v1", Kind: "Foo"},
 					},
+					Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
 				},
 			},
 			ControllerNamespace: "test-ns",
@@ -88,34 +85,32 @@ func TestNewManager(t *testing.T) {
 	t.Run("multiple extensions returns CompositeManager", func(t *testing.T) {
 		cfg := &config.Server{
 			EnvoyGateway: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					ExtensionManagers: []egv1a1.ExtensionManager{
-						{
-							Name: "ext1",
-							Resources: []egv1a1.GroupVersionKind{
-								{Group: "foo.io", Version: "v1", Kind: "Foo"},
-							},
-							PolicyResources: []egv1a1.GroupVersionKind{
-								{Group: "foo.io", Version: "v1", Kind: "FooPolicy"},
-							},
-							BackendResources: []egv1a1.GroupVersionKind{
-								{Group: "foo.io", Version: "v1", Kind: "FooBackend"},
-							},
-							Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+				ExtensionManagers: []egv1a1.ExtensionManager{
+					{
+						Name: "ext1",
+						Resources: []egv1a1.GroupVersionKind{
+							{Group: "foo.io", Version: "v1", Kind: "Foo"},
 						},
-						{
-							Name: "ext2",
-							Resources: []egv1a1.GroupVersionKind{
-								{Group: "bar.io", Version: "v1", Kind: "Bar"},
-							},
-							PolicyResources: []egv1a1.GroupVersionKind{
-								{Group: "bar.io", Version: "v1", Kind: "BarPolicy"},
-							},
-							BackendResources: []egv1a1.GroupVersionKind{
-								{Group: "bar.io", Version: "v1", Kind: "BarBackend"},
-							},
-							Service: &egv1a1.ExtensionService{Host: "bar.svc", Port: 8080},
+						PolicyResources: []egv1a1.GroupVersionKind{
+							{Group: "foo.io", Version: "v1", Kind: "FooPolicy"},
 						},
+						BackendResources: []egv1a1.GroupVersionKind{
+							{Group: "foo.io", Version: "v1", Kind: "FooBackend"},
+						},
+						Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+					},
+					{
+						Name: "ext2",
+						Resources: []egv1a1.GroupVersionKind{
+							{Group: "bar.io", Version: "v1", Kind: "Bar"},
+						},
+						PolicyResources: []egv1a1.GroupVersionKind{
+							{Group: "bar.io", Version: "v1", Kind: "BarPolicy"},
+						},
+						BackendResources: []egv1a1.GroupVersionKind{
+							{Group: "bar.io", Version: "v1", Kind: "BarBackend"},
+						},
+						Service: &egv1a1.ExtensionService{Host: "bar.svc", Port: 8080},
 					},
 				},
 			},
@@ -217,11 +212,9 @@ func Test_TLS(t *testing.T) {
 
 	extManager := &egv1a1.ExtensionManager{
 		Service: &egv1a1.ExtensionService{
-			BackendEndpoint: egv1a1.BackendEndpoint{
-				IP: &egv1a1.IPEndpoint{
-					Address: "localhost",
-					Port:    int32(port),
-				},
+			IP: &egv1a1.IPEndpoint{
+				Address: "localhost",
+				Port:    int32(port),
 			},
 			TLS: &egv1a1.ExtensionTLS{
 				CertificateRef: gwapiv1.SecretObjectReference{
@@ -233,11 +226,9 @@ func Test_TLS(t *testing.T) {
 	}
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cert",
-			Namespace: "default",
-		},
-		Type: corev1.SecretTypeTLS,
+		Name:      "cert",
+		Namespace: "default",
+		Type:      corev1.SecretTypeTLS,
 		Data: map[string][]byte{
 			corev1.TLSCertKey: caCert,
 		},
@@ -312,11 +303,9 @@ func Test_mTLS(t *testing.T) {
 	// Configure Extension Manager with both CA cert and client cert for mTLS
 	extManager := &egv1a1.ExtensionManager{
 		Service: &egv1a1.ExtensionService{
-			BackendEndpoint: egv1a1.BackendEndpoint{
-				IP: &egv1a1.IPEndpoint{
-					Address: "localhost",
-					Port:    int32(port),
-				},
+			IP: &egv1a1.IPEndpoint{
+				Address: "localhost",
+				Port:    int32(port),
 			},
 			TLS: &egv1a1.ExtensionTLS{
 				CertificateRef: gwapiv1.SecretObjectReference{
@@ -333,22 +322,18 @@ func Test_mTLS(t *testing.T) {
 
 	// Create secrets for both CA and client certificates
 	caSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ca-cert",
-			Namespace: "default",
-		},
-		Type: corev1.SecretTypeOpaque,
+		Name:      "ca-cert",
+		Namespace: "default",
+		Type:      corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
 			corev1.TLSCertKey: caCert,
 		},
 	}
 
 	clientSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-cert",
-			Namespace: "default",
-		},
-		Type: corev1.SecretTypeTLS,
+		Name:      "client-cert",
+		Namespace: "default",
+		Type:      corev1.SecretTypeTLS,
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       clientCert,
 			corev1.TLSPrivateKeyKey: clientKey,
@@ -457,11 +442,9 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 					},
 				},
 				Service: &egv1a1.ExtensionService{
-					BackendEndpoint: egv1a1.BackendEndpoint{
-						FQDN: &egv1a1.FQDNEndpoint{
-							Hostname: "foo.bar",
-							Port:     44344,
-						},
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "foo.bar",
+						Port:     44344,
 					},
 					Retry: tt.args.retryPolicy,
 				},
@@ -642,11 +625,9 @@ func Test_Integration_ClusterUpdateExtensionServer(t *testing.T) {
 					},
 				},
 				Service: &egv1a1.ExtensionService{
-					BackendEndpoint: egv1a1.BackendEndpoint{
-						FQDN: &egv1a1.FQDNEndpoint{
-							Hostname: "example.foo",
-							Port:     44344,
-						},
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "example.foo",
+						Port:     44344,
 					},
 				},
 			}
@@ -719,11 +700,9 @@ func TestPostTranslateModifyHookWithListenersAndRoutes(t *testing.T) {
 			},
 		},
 		Service: &egv1a1.ExtensionService{
-			BackendEndpoint: egv1a1.BackendEndpoint{
-				FQDN: &egv1a1.FQDNEndpoint{
-					Hostname: "foo.bar",
-					Port:     44344,
-				},
+			FQDN: &egv1a1.FQDNEndpoint{
+				Hostname: "foo.bar",
+				Port:     44344,
 			},
 		},
 	}

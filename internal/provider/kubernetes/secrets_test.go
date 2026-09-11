@@ -11,38 +11,29 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var (
 	envoyGatewaySecret = corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envoy-gateway",
-			Namespace: "envoy-gateway-system",
-		},
+		Name:      "envoy-gateway",
+		Namespace: "envoy-gateway-system",
 	}
 
 	envoySecret = corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envoy",
-			Namespace: "envoy-gateway-system",
-		},
+		Name:      "envoy",
+		Namespace: "envoy-gateway-system",
 	}
 
 	envoyRateLimitSecret = corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envoy-rate-limit",
-			Namespace: "envoy-gateway-system",
-		},
+		Name:      "envoy-rate-limit",
+		Namespace: "envoy-gateway-system",
 	}
 
 	oidcHMACSecret = corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envoy-oidc-hmac",
-			Namespace: "envoy-gateway-system",
-		},
+		Name:      "envoy-oidc-hmac",
+		Namespace: "envoy-gateway-system",
 	}
 
 	existingSecretsWithoutHMAC = []client.Object{

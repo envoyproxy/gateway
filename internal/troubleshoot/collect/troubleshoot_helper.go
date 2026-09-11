@@ -42,7 +42,7 @@ import (
 )
 
 // Use for error maps and arrays. These are guaranteed to not result in an error when marshaling.
-func marshalErrors(errors interface{}) io.Reader {
+func marshalErrors(errors any) io.Reader {
 	if errors == nil {
 		return nil
 	}
@@ -172,7 +172,7 @@ func crsV1(ctx context.Context, client dynamic.Interface, crdClient apiextv1clie
 		}
 
 		if !isNamespacedResource {
-			objects := []map[string]interface{}{}
+			objects := []map[string]any{}
 			for _, item := range customResourceList.Items {
 				objects = append(objects, item.Object)
 			}
@@ -183,7 +183,7 @@ func crsV1(ctx context.Context, client dynamic.Interface, crdClient apiextv1clie
 			}
 		} else {
 			// Group fetched resources by the namespace
-			perNamespace := map[string][]map[string]interface{}{}
+			perNamespace := map[string][]map[string]any{}
 			errors := []string{}
 
 			for _, item := range customResourceList.Items {
@@ -194,7 +194,7 @@ func crsV1(ctx context.Context, client dynamic.Interface, crdClient apiextv1clie
 					continue
 				}
 				if perNamespace[ns] == nil {
-					perNamespace[ns] = []map[string]interface{}{}
+					perNamespace[ns] = []map[string]any{}
 				}
 				perNamespace[ns] = append(perNamespace[ns], item.Object)
 			}
@@ -293,7 +293,7 @@ func crsV1beta(ctx context.Context, client dynamic.Interface, crdClient apiextv1
 		}
 
 		if !isNamespacedResource {
-			objects := []map[string]interface{}{}
+			objects := []map[string]any{}
 			for _, item := range customResourceList.Items {
 				objects = append(objects, item.Object)
 			}
@@ -306,7 +306,7 @@ func crsV1beta(ctx context.Context, client dynamic.Interface, crdClient apiextv1
 
 		} else {
 			// Group fetched resources by the namespace
-			perNamespace := map[string][]map[string]interface{}{}
+			perNamespace := map[string][]map[string]any{}
 			errors := []string{}
 
 			for _, item := range customResourceList.Items {
@@ -316,7 +316,7 @@ func crsV1beta(ctx context.Context, client dynamic.Interface, crdClient apiextv1
 					continue
 				}
 				if perNamespace[ns] == nil {
-					perNamespace[ns] = []map[string]interface{}{}
+					perNamespace[ns] = []map[string]any{}
 				}
 				perNamespace[ns] = append(perNamespace[ns], item.Object)
 			}

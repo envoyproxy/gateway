@@ -164,13 +164,11 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 		}
 
 		to.HTTP = &ir.HTTPTimeout{
-			ClusterHTTPTimeout: ir.ClusterHTTPTimeout{
-				ConnectionIdleTimeout: cit,
-				MaxConnectionDuration: mcd,
-				MaxStreamDuration:     msd,
-			},
-			RequestTimeout:    rt,
-			StreamIdleTimeout: sit,
+			ConnectionIdleTimeout: cit,
+			MaxConnectionDuration: mcd,
+			MaxStreamDuration:     msd,
+			RequestTimeout:        rt,
+			StreamIdleTimeout:     sit,
 		}
 	}
 	return to, errs

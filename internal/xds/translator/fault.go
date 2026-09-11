@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	xdsfault "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/common/fault/v3"
@@ -82,12 +83,7 @@ func buildHCMFaultFilter() (*hcmv3.HttpFilter, error) {
 
 // listenerContainsFault returns true if Fault exists for the provided listener.
 func listenerContainsFault(irListener *ir.HTTPListener) bool {
-	for _, route := range irListener.Routes {
-		if routeContainsFault(route) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(irListener.Routes, routeContainsFault)
 }
 
 // routeContainsFault returns true if Fault exists for the provided route.

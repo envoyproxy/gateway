@@ -315,7 +315,7 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	return nil
 }
 
-func deepCopyPtr(src, dest interface{}) error {
+func deepCopyPtr(src, dest any) error {
 	if src == nil || dest == nil {
 		return errors.New("cannot deep copy nil pointer")
 	}

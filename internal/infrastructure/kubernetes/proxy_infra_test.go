@@ -95,16 +95,14 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 
 	cfg.EnvoyGateway = &egv1a1.EnvoyGateway{
 		TypeMeta: metav1.TypeMeta{},
-		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-			RateLimit: &egv1a1.RateLimit{
-				Backend: egv1a1.RateLimitDatabaseBackend{
-					Type: egv1a1.RedisBackendType,
-					Redis: &egv1a1.RateLimitRedisSettings{
-						URL: new(""),
-						TLS: &egv1a1.RedisTLSSettings{
-							CertificateRef: &gwapiv1.SecretObjectReference{
-								Name: "ratelimit-cert",
-							},
+		RateLimit: &egv1a1.RateLimit{
+			Backend: egv1a1.RateLimitDatabaseBackend{
+				Type: egv1a1.RedisBackendType,
+				Redis: &egv1a1.RateLimitRedisSettings{
+					URL: new(""),
+					TLS: &egv1a1.RedisTLSSettings{
+						CertificateRef: &gwapiv1.SecretObjectReference{
+							Name: "ratelimit-cert",
 						},
 					},
 				},
@@ -207,34 +205,26 @@ func TestCreateProxyInfra(t *testing.T) {
 
 				// Verify all resources were created via the fake kube client.
 				sa := &corev1.ServiceAccount{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.ControllerNamespace,
-						Name:      expectedName(tc.in.Proxy, false),
-					},
+					Namespace: kube.ControllerNamespace,
+					Name:      expectedName(tc.in.Proxy, false),
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
 
 				cm := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.ControllerNamespace,
-						Name:      expectedName(tc.in.Proxy, false),
-					},
+					Namespace: kube.ControllerNamespace,
+					Name:      expectedName(tc.in.Proxy, false),
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cm), cm))
 
 				deploy := &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.ControllerNamespace,
-						Name:      expectedName(tc.in.Proxy, false),
-					},
+					Namespace: kube.ControllerNamespace,
+					Name:      expectedName(tc.in.Proxy, false),
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
 
 				svc := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.ControllerNamespace,
-						Name:      expectedName(tc.in.Proxy, false),
-					},
+					Namespace: kube.ControllerNamespace,
+					Name:      expectedName(tc.in.Proxy, false),
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(svc), svc))
 			}
@@ -287,20 +277,16 @@ func TestDeleteProxyInfra(t *testing.T) {
 // When enable GatewayNamespace mode, ProxyInfra Get OwnerReference from Gateway.
 func setupOwnerReferenceResources(ctx context.Context, client *InfraClient) error {
 	gwc := &gwapiv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: testGatewayClass,
-			UID:  testResourceUID,
-		},
+		Name: testGatewayClass,
+		UID:  testResourceUID,
 	}
 	if err := client.Create(ctx, gwc); err != nil {
 		return err
 	}
 	gw := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "ns1",
-			Name:      "gateway-1",
-			UID:       testResourceUID,
-		},
+		Namespace: "ns1",
+		Name:      "gateway-1",
+		UID:       testResourceUID,
 	}
 	return client.Create(ctx, gw)
 }

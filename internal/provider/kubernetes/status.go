@@ -632,7 +632,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							}
 							valCopy := val.DeepCopy()
 							setLastTransitionTimeInConditionsForPolicyStatus(valCopy, metav1.Now())
-							objMap := make(map[string]interface{}, len(t.Object))
+							objMap := make(map[string]any, len(t.Object))
 							for k, v := range t.Object {
 								if k != "status" {
 									objMap[k] = v

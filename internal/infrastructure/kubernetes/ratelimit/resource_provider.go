@@ -97,16 +97,12 @@ func (r *ResourceRender) ConfigMap(_ string) (*corev1.ConfigMap, error) {
 	}
 
 	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			Name:            "statsd-exporter-config",
-			Labels:          rateLimitLabels(),
-			OwnerReferences: r.ownerReferences(),
-		},
+		Kind:            "ConfigMap",
+		APIVersion:      "v1",
+		Namespace:       r.Namespace(),
+		Name:            "statsd-exporter-config",
+		Labels:          rateLimitLabels(),
+		OwnerReferences: r.ownerReferences(),
 		Data: map[string]string{
 			"conf.yaml": statsConf,
 		},
@@ -138,23 +134,19 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	labels := rateLimitLabels()
 	kubernetesServiceSpec := &egv1a1.KubernetesServiceSpec{
-		Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+		Type: new(egv1a1.ServiceTypeClusterIP),
 	}
 	serviceSpec := resource.ExpectedServiceSpec(kubernetesServiceSpec)
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
 
 	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       ResourceKindService,
-			APIVersion: apiVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace(),
-			Name:      InfraName,
-			Labels:    labels,
-		},
-		Spec: serviceSpec,
+		Kind:       ResourceKindService,
+		APIVersion: apiVersion,
+		Namespace:  r.Namespace(),
+		Name:       InfraName,
+		Labels:     labels,
+		Spec:       serviceSpec,
 	}
 
 	if r.ownerReferenceUID != nil {
@@ -178,16 +170,12 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	const apiVersion = "v1"
 
 	sa := &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       ResourceKindServiceAccount,
-			APIVersion: apiVersion,
-		},
+		Kind:                         ResourceKindServiceAccount,
+		APIVersion:                   apiVersion,
 		AutomountServiceAccountToken: new(false),
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace(),
-			Name:      InfraName,
-			Labels:    rateLimitLabels(),
-		},
+		Namespace:                    r.Namespace(),
+		Name:                         InfraName,
+		Labels:                       rateLimitLabels(),
 	}
 
 	if r.ownerReferenceUID != nil {
@@ -245,14 +233,10 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	deployment := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       ResourceKindDeployment,
-			APIVersion: appsAPIVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace(),
-			Labels:    rateLimitLabels(),
-		},
+		Kind:       ResourceKindDeployment,
+		APIVersion: appsAPIVersion,
+		Namespace:  r.Namespace(),
+		Labels:     rateLimitLabels(),
 		Spec: appsv1.DeploymentSpec{
 			Replicas: replicas,
 			Strategy: *r.rateLimitDeployment.Strategy,
@@ -334,16 +318,12 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "autoscaling/v2",
-			Kind:       "HorizontalPodAutoscaler",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			Name:            r.Name(),
-			Labels:          rateLimitLabels(),
-			OwnerReferences: r.ownerReferences(),
-		},
+		APIVersion:      "autoscaling/v2",
+		Kind:            "HorizontalPodAutoscaler",
+		Namespace:       r.Namespace(),
+		Name:            r.Name(),
+		Labels:          rateLimitLabels(),
+		OwnerReferences: r.ownerReferences(),
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",

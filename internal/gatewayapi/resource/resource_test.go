@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -29,18 +28,14 @@ func TestEqualXds(t *testing.T) {
 			a: &ControllerResources{
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "foo",
-						},
+						Name: "foo",
 					},
 				},
 			},
 			b: &ControllerResources{
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "bar",
-						},
+						Name: "bar",
 					},
 				},
 			},
@@ -51,32 +46,24 @@ func TestEqualXds(t *testing.T) {
 			a: &ControllerResources{
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "foo",
-						},
+						Name: "foo",
 					},
 				},
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "bar",
-						},
+						Name: "bar",
 					},
 				},
 			},
 			b: &ControllerResources{
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "foo",
-						},
+						Name: "foo",
 					},
 				},
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "bar",
-						},
+						Name: "bar",
 					},
 				},
 			},
@@ -87,32 +74,24 @@ func TestEqualXds(t *testing.T) {
 			a: &ControllerResources{
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "foo",
-						},
+						Name: "foo",
 					},
 				},
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "bar",
-						},
+						Name: "bar",
 					},
 				},
 			},
 			b: &ControllerResources{
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "bar",
-						},
+						Name: "bar",
 					},
 				},
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "foo",
-						},
+						Name: "foo",
 					},
 				},
 			},
@@ -138,9 +117,7 @@ func TestEqualControllerResourcesContext(t *testing.T) {
 		Resources: &ControllerResources{
 			{
 				GatewayClass: &gwapiv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "foo",
-					},
+					Name: "foo",
 				},
 			},
 		},
@@ -150,9 +127,7 @@ func TestEqualControllerResourcesContext(t *testing.T) {
 		Resources: &ControllerResources{
 			{
 				GatewayClass: &gwapiv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "foo",
-					},
+					Name: "foo",
 				},
 			},
 		},
@@ -166,12 +141,10 @@ func TestEqualControllerResourcesContext(t *testing.T) {
 func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {
 	// Test data setup
 	dualStackService := &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "dual-stack-service",
-			Namespace: "default",
-			Labels: map[string]string{
-				discoveryv1.LabelServiceName: "my-dual-stack-service",
-			},
+		Name:      "dual-stack-service",
+		Namespace: "default",
+		Labels: map[string]string{
+			discoveryv1.LabelServiceName: "my-dual-stack-service",
 		},
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints: []discoveryv1.Endpoint{
@@ -185,12 +158,10 @@ func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {
 	}
 
 	dualStackServiceIPv6 := &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "dual-stack-service-ipv6",
-			Namespace: "default",
-			Labels: map[string]string{
-				discoveryv1.LabelServiceName: "my-dual-stack-service",
-			},
+		Name:      "dual-stack-service-ipv6",
+		Namespace: "default",
+		Labels: map[string]string{
+			discoveryv1.LabelServiceName: "my-dual-stack-service",
 		},
 		AddressType: discoveryv1.AddressTypeIPv6,
 		Endpoints: []discoveryv1.Endpoint{
@@ -261,9 +232,7 @@ func TestControllerResourcesContextDeepCopy(t *testing.T) {
 				Resources: &ControllerResources{
 					{
 						GatewayClass: &gwapiv1.GatewayClass{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "test-gateway-class",
-							},
+							Name: "test-gateway-class",
 						},
 					},
 				},
@@ -320,9 +289,7 @@ func TestControllerResourcesDeepCopy(t *testing.T) {
 			resources: &ControllerResources{
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "test-gateway-class",
-						},
+						Name: "test-gateway-class",
 					},
 				},
 			},
@@ -332,16 +299,12 @@ func TestControllerResourcesDeepCopy(t *testing.T) {
 			resources: &ControllerResources{
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "gateway-class-1",
-						},
+						Name: "gateway-class-1",
 					},
 				},
 				{
 					GatewayClass: &gwapiv1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "gateway-class-2",
-						},
+						Name: "gateway-class-2",
 					},
 				},
 			},

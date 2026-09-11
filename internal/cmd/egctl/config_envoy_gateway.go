@@ -32,7 +32,7 @@ const (
 	envoyGatewayConfigDumpEndpoint   = "/api/config_dump"
 )
 
-type aggregatedEnvoyGatewayConfigDump map[string]map[string]interface{}
+type aggregatedEnvoyGatewayConfigDump map[string]map[string]any
 
 type envoyGatewayConfigType string
 
@@ -214,7 +214,7 @@ func retrieveEnvoyGatewayConfigDump(args []string, configType envoyGatewayConfig
 
 	for _, pod := range pods {
 		if _, ok := podConfigDumps[pod.Namespace]; !ok {
-			podConfigDumps[pod.Namespace] = make(map[string]interface{})
+			podConfigDumps[pod.Namespace] = make(map[string]any)
 		}
 	}
 
@@ -328,7 +328,7 @@ func fetchRunningEnvoyGatewayPods(c kube.CLIClient, nn types.NamespacedName, lab
 	return podsNamespacedNames, nil
 }
 
-func extractEnvoyGatewayConfigDump(fw kube.PortForwarder, configType envoyGatewayConfigType) (interface{}, error) {
+func extractEnvoyGatewayConfigDump(fw kube.PortForwarder, configType envoyGatewayConfigType) (any, error) {
 	out, err := envoyGatewayConfigDumpRequest(fw.Address(), configType)
 	if err != nil {
 		return nil, err
@@ -341,9 +341,9 @@ func extractEnvoyGatewayConfigDump(fw kube.PortForwarder, configType envoyGatewa
 		return nil, err
 	}
 
-	items := make([]interface{}, 0, len(response.Resources))
+	items := make([]any, 0, len(response.Resources))
 	for _, raw := range response.Resources {
-		var item interface{}
+		var item any
 		if err := json.Unmarshal(raw, &item); err != nil {
 			return nil, err
 		}

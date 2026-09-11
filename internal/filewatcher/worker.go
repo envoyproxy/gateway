@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"sync"
 
@@ -161,9 +162,7 @@ func (wk *worker) getTrackers() map[string]*fileTracker {
 	wk.mu.RLock()
 
 	result := make(map[string]*fileTracker, len(wk.watchedFiles))
-	for k, v := range wk.watchedFiles {
-		result[k] = v
-	}
+	maps.Copy(result, wk.watchedFiles)
 
 	wk.mu.RUnlock()
 	return result

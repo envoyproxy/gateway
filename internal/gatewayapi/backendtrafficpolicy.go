@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1420,13 +1421,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					!ptr.Deref(r.Traffic.LoadBalancer.BackendUtilization.KeepResponseHeaders, false) {
 					headersToRemove := []string{"endpoint-load-metrics", "endpoint-load-metrics-bin"}
 					for _, h := range headersToRemove {
-						found := false
-						for _, existing := range r.RemoveResponseHeaders {
-							if existing == h {
-								found = true
-								break
-							}
-						}
+						found := slices.Contains(r.RemoveResponseHeaders, h)
 						if !found {
 							r.RemoveResponseHeaders = append(r.RemoveResponseHeaders, h)
 						}
@@ -1573,27 +1568,25 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
-		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
-			LoadBalancer:      lb,
-			ProxyProtocol:     pp,
-			HealthCheck:       hc,
-			AdmissionControl:  ac,
-			CircuitBreaker:    cb,
-			Timeout:           to,
-			TCPKeepalive:      ka,
-			BackendConnection: bc,
-			HTTP2:             h2,
-			DNS:               ds,
-		},
-		RateLimit:        rl,
-		BandwidthLimit:   bl,
-		FaultInjection:   fi,
-		Retry:            rt,
-		ResponseOverride: ro,
-		Compression:      cp,
-		HTTPUpgrade:      httpUpgrade,
-		Telemetry:        buildBackendTelemetry(policy.Spec.Telemetry),
-		RequestBuffer:    rb,
+		LoadBalancer:      lb,
+		ProxyProtocol:     pp,
+		HealthCheck:       hc,
+		AdmissionControl:  ac,
+		CircuitBreaker:    cb,
+		Timeout:           to,
+		TCPKeepalive:      ka,
+		BackendConnection: bc,
+		HTTP2:             h2,
+		DNS:               ds,
+		RateLimit:         rl,
+		BandwidthLimit:    bl,
+		FaultInjection:    fi,
+		Retry:             rt,
+		ResponseOverride:  ro,
+		Compression:       cp,
+		HTTPUpgrade:       httpUpgrade,
+		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
+		RequestBuffer:     rb,
 	}, errs
 }
 

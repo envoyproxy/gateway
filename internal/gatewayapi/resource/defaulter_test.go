@@ -21,40 +21,40 @@ func TestApplyDefault(t *testing.T) {
 	testCases := []struct {
 		name   string
 		error  bool
-		input  map[string]interface{}
-		expect map[string]interface{}
+		input  map[string]any
+		expect map[string]any
 	}{
 		{
 			name: "empty object with nested field",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"apiVersion": "example.com/v1",
 				"kind":       "TestCR",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name":      "test-cr",
 					"namespace": "default",
 				},
-				"spec": map[string]interface{}{
-					"objectField": map[string]interface{}{},
+				"spec": map[string]any{
+					"objectField": map[string]any{},
 				},
 			},
-			expect: map[string]interface{}{
+			expect: map[string]any{
 				"apiVersion": "example.com/v1",
 				"kind":       "TestCR",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name":      "test-cr",
 					"namespace": "default",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"stringField":  "defaultString",
 					"integerField": 42.,
 					"floatField":   3.14,
 					"booleanField": true,
 					"enumField":    "option1",
-					"objectField": map[string]interface{}{
+					"objectField": map[string]any{
 						"nestedString":  "nestedDefault",
 						"nestedInteger": 10.,
 					},
-					"mapField": map[string]interface{}{
+					"mapField": map[string]any{
 						"key1": "value1",
 						"key2": "value2",
 					},
@@ -64,29 +64,29 @@ func TestApplyDefault(t *testing.T) {
 		},
 		{
 			name: "empty object without nested field",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"apiVersion": "example.com/v1",
 				"kind":       "TestCR",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name":      "test-cr",
 					"namespace": "default",
 				},
-				"spec": map[string]interface{}{},
+				"spec": map[string]any{},
 			},
-			expect: map[string]interface{}{
+			expect: map[string]any{
 				"apiVersion": "example.com/v1",
 				"kind":       "TestCR",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name":      "test-cr",
 					"namespace": "default",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"stringField":  "defaultString",
 					"integerField": 42.,
 					"floatField":   3.14,
 					"booleanField": true,
 					"enumField":    "option1",
-					"mapField": map[string]interface{}{
+					"mapField": map[string]any{
 						"key1": "value1",
 						"key2": "value2",
 					},
@@ -96,39 +96,39 @@ func TestApplyDefault(t *testing.T) {
 		},
 		{
 			name: "object with few field unset",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"apiVersion": "example.com/v1",
 				"kind":       "TestCR",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name":      "test-cr",
 					"namespace": "default",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"stringField":  "exampleString",
 					"booleanField": false,
-					"objectField": map[string]interface{}{
+					"objectField": map[string]any{
 						"nestedString": "nestedExample",
 					},
 				},
 			},
-			expect: map[string]interface{}{
+			expect: map[string]any{
 				"apiVersion": "example.com/v1",
 				"kind":       "TestCR",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name":      "test-cr",
 					"namespace": "default",
 				},
-				"spec": map[string]interface{}{
+				"spec": map[string]any{
 					"stringField":  "exampleString",
 					"integerField": 42.,
 					"floatField":   3.14,
 					"booleanField": false,
 					"enumField":    "option1",
-					"objectField": map[string]interface{}{
+					"objectField": map[string]any{
 						"nestedString":  "nestedExample",
 						"nestedInteger": 10.,
 					},
-					"mapField": map[string]interface{}{
+					"mapField": map[string]any{
 						"key1": "value1",
 						"key2": "value2",
 					},

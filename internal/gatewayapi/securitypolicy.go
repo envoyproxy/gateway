@@ -2755,8 +2755,8 @@ func (t *Translator) buildBasicAuth(
 // validateHtpasswdFormat validates that the htpasswd data is in the correct format.
 // Currently, only the SHA format is supported by Envoy.
 func validateHtpasswdFormat(data []byte) error {
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(data), "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

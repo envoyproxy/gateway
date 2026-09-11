@@ -832,13 +832,10 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 		}
 
 		found := false
-		for _, routeKind := range routeKinds {
-			if kind.Kind == routeKind {
-				supportedKinds = append(supportedKinds, kind)
-				supportedRouteKinds = append(supportedRouteKinds, kind.Kind)
-				found = true
-				break
-			}
+		if slices.Contains(routeKinds, kind.Kind) {
+			supportedKinds = append(supportedKinds, kind)
+			supportedRouteKinds = append(supportedRouteKinds, kind.Kind)
+			found = true
 		}
 
 		if !found {

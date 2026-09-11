@@ -105,8 +105,8 @@ func (r *Runner) start(address string, handler http.Handler) error {
 }
 
 func (r *Runner) newOptions() (registerOptions, error) {
-	newOpts := registerOptions{}
-	newOpts.address = net.JoinHostPort(egv1a1.GatewayMetricsHost, fmt.Sprint(egv1a1.GatewayMetricsPort))
+	newOpts := registerOptions{
+		address: net.JoinHostPort(egv1a1.GatewayMetricsHost, fmt.Sprint(egv1a1.GatewayMetricsPort))}
 
 	if r.cfg.EnvoyGateway.DisablePrometheus() {
 		newOpts.pullOptions.disable = true

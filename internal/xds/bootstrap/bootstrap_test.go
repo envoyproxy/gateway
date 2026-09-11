@@ -121,15 +121,11 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
 								Host: new("otel-collector.monitoring.svc"),
 								Port: 4317,
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Namespace: new(gwapiv1.Namespace("monitoring")),
-												Port:      new(gwapiv1.PortNumber(4317)),
-											},
-										},
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										Name:      "otel-collector",
+										Namespace: new(gwapiv1.Namespace("monitoring")),
+										Port:      new(gwapiv1.PortNumber(4317)),
 									},
 								},
 							},
@@ -355,14 +351,12 @@ func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Namespace: new(gwapiv1.Namespace("monitoring")),
-												// Port is nil
-											},
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name:      "otel-collector",
+											Namespace: new(gwapiv1.Namespace("monitoring")),
+											// Port is nil
 										},
 									},
 								},

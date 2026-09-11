@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -384,14 +383,12 @@ func TestFetchRunningRateLimitPods(t *testing.T) {
 			caseName: "normally obtain the rate limit pod of Running phase",
 			rlPods: []corev1.Pod{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "envoy-ratelimit-666457bc4c-c2td5",
-						Namespace: "envoy-gateway-system",
-						Labels: map[string]string{
-							"app.kubernetes.io/name":       "envoy-ratelimit",
-							"app.kubernetes.io/component":  "ratelimit",
-							"app.kubernetes.io/managed-by": "envoy-gateway",
-						},
+					Name:      "envoy-ratelimit-666457bc4c-c2td5",
+					Namespace: "envoy-gateway-system",
+					Labels: map[string]string{
+						"app.kubernetes.io/name":       "envoy-ratelimit",
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
 					},
 					Status: corev1.PodStatus{
 						Phase: corev1.PodRunning,
@@ -416,10 +413,8 @@ func TestFetchRunningRateLimitPods(t *testing.T) {
 			caseName: "unable to obtain rate limit pod",
 			rlPods: []corev1.Pod{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "envoy-ratelimit-666457bc4c-c2td5",
-						Namespace: "envoy-gateway-system",
-					},
+					Name:      "envoy-ratelimit-666457bc4c-c2td5",
+					Namespace: "envoy-gateway-system",
 					Status: corev1.PodStatus{
 						Phase: corev1.PodPending,
 					},
@@ -453,10 +448,8 @@ func TestCheckEnableGlobalRateLimit(t *testing.T) {
 			caseName: "global rate limit feature is enabled",
 			expect:   true,
 			egConfigMap: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "envoy-gateway-config",
-					Namespace: "envoy-gateway-system",
-				},
+				Name:      "envoy-gateway-config",
+				Namespace: "envoy-gateway-system",
 				Data: map[string]string{
 					"envoy-gateway.yaml": `
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -478,10 +471,8 @@ rateLimit:
 			caseName: "global rate limit feature is not enabled",
 			expect:   false,
 			egConfigMap: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "envoy-gateway-config",
-					Namespace: "envoy-gateway-system",
-				},
+				Name:      "envoy-gateway-config",
+				Namespace: "envoy-gateway-system",
 				Data: map[string]string{
 					"envoy-gateway.yaml": `
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -612,7 +603,7 @@ func TestExtractEnvoyGatewayConfigDump(t *testing.T) {
 
 	resources, err := extractEnvoyGatewayConfigDump(fw, GatewayEnvoyGatewayConfigType)
 	require.NoError(t, err)
-	items, ok := resources.([]interface{})
+	items, ok := resources.([]any)
 	require.True(t, ok)
 	require.Len(t, items, 1)
 
@@ -641,10 +632,8 @@ func TestFetchRunningEnvoyGatewayPods(t *testing.T) {
 		fakeCli := &fakeCLIClient{
 			pods: []corev1.Pod{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "envoy-gateway-abc",
-						Namespace: "envoy-gateway-system",
-					},
+					Name:      "envoy-gateway-abc",
+					Namespace: "envoy-gateway-system",
 					Status: corev1.PodStatus{
 						Phase: corev1.PodRunning,
 					},
@@ -674,10 +663,8 @@ func TestFetchRunningEnvoyGatewayPods(t *testing.T) {
 		fakeCli := &fakeCLIClient{
 			pods: []corev1.Pod{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "envoy-gateway-abc",
-						Namespace: "envoy-gateway-system",
-					},
+					Name:      "envoy-gateway-abc",
+					Namespace: "envoy-gateway-system",
 					Status: corev1.PodStatus{
 						Phase: corev1.PodPending,
 					},

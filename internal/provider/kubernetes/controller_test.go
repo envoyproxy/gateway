@@ -53,9 +53,7 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 		{
 			name: "gatewayclass with no finalizers",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gc",
-				},
+				Name: "test-gc",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: egv1a1.GatewayControllerName,
 				},
@@ -65,10 +63,8 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 		{
 			name: "gatewayclass with a different finalizer",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gc",
-					Finalizers: []string{"fooFinalizer"},
-				},
+				Name:       "test-gc",
+				Finalizers: []string{"fooFinalizer"},
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: egv1a1.GatewayControllerName,
 				},
@@ -78,10 +74,8 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 		{
 			name: "gatewayclass with existing gatewayclass finalizer",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gc",
-					Finalizers: []string{gatewayClassFinalizer},
-				},
+				Name:       "test-gc",
+				Finalizers: []string{gatewayClassFinalizer},
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: egv1a1.GatewayControllerName,
 				},
@@ -186,14 +180,14 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 
 	// Create test custom backend resources
 	s3Backend := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "storage.example.io/v1alpha1",
 			"kind":       "S3Backend",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "s3-backend",
 				"namespace": "default",
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"bucket": "my-s3-bucket",
 				"region": "us-west-2",
 			},
@@ -201,14 +195,14 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 	}
 
 	lambdaBackend := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "compute.example.io/v1alpha1",
 			"kind":       "LambdaBackend",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "lambda-backend",
 				"namespace": "default",
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"functionName": "my-function",
 				"region":       "us-west-2",
 			},
@@ -238,8 +232,8 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			},
 			existingExtFilters: map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{
 				{
-					NamespacedName: types.NamespacedName{Namespace: "default", Name: "s3-backend"},
-					GroupKind:      schema.GroupKind{Group: "storage.example.io", Kind: "S3Backend"},
+					Namespace: "default", Name: "s3-backend",
+					Group: "storage.example.io", Kind: "S3Backend",
 				}: *s3Backend,
 			},
 			expectedExtFiltersCount: 1,
@@ -267,12 +261,12 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			},
 			existingExtFilters: map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{
 				{
-					NamespacedName: types.NamespacedName{Namespace: "default", Name: "s3-backend"},
-					GroupKind:      schema.GroupKind{Group: "storage.example.io", Kind: "S3Backend"},
+					Namespace: "default", Name: "s3-backend",
+					Group: "storage.example.io", Kind: "S3Backend",
 				}: *s3Backend,
 				{
-					NamespacedName: types.NamespacedName{Namespace: "default", Name: "lambda-backend"},
-					GroupKind:      schema.GroupKind{Group: "compute.example.io", Kind: "LambdaBackend"},
+					Namespace: "default", Name: "lambda-backend",
+					Group: "compute.example.io", Kind: "LambdaBackend",
 				}: *lambdaBackend,
 			},
 			expectedExtFiltersCount: 2,
@@ -342,10 +336,8 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 func TestProcessBackendRefsUsesEndpointSliceIndex(t *testing.T) {
 	const ns = "default"
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend",
-			Namespace: ns,
-		},
+		Name:      "backend",
+		Namespace: ns,
 	}
 	matchingEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-backend"}, service.Name, false)
 	otherEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
@@ -379,10 +371,8 @@ func TestProcessBackendRefsUsesEndpointSliceIndex(t *testing.T) {
 func TestProcessBackendRefsEndpointSliceIndexDisabled(t *testing.T) {
 	const ns = "default"
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend",
-			Namespace: ns,
-		},
+		Name:      "backend",
+		Namespace: ns,
 	}
 	matchingEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-backend"}, service.Name, false)
 	otherEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
@@ -398,10 +388,8 @@ func TestProcessBackendRefsEndpointSliceIndexDisabled(t *testing.T) {
 		log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 		client: fakeClient,
 		envoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				RuntimeFlags: &egv1a1.RuntimeFlags{
-					Disabled: []egv1a1.RuntimeFlag{egv1a1.EndpointSliceIndex},
-				},
+			RuntimeFlags: &egv1a1.RuntimeFlags{
+				Disabled: []egv1a1.RuntimeFlag{egv1a1.EndpointSliceIndex},
 			},
 		},
 	}
@@ -424,10 +412,8 @@ func TestProcessBackendRefsEndpointSliceIndexDisabled(t *testing.T) {
 func TestProcessRateLimitService(t *testing.T) {
 	const ns = "envoy-gateway-system"
 	rateLimitService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rateLimitServiceName,
-			Namespace: ns,
-		},
+		Name:      rateLimitServiceName,
+		Namespace: ns,
 	}
 	matchingEndpointSlice := test.GetEndpointSlice(
 		types.NamespacedName{Namespace: ns, Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false)
@@ -454,7 +440,7 @@ func TestProcessRateLimitService(t *testing.T) {
 			// returned to the caller, which logs it and continues rather than
 			// failing the reconcile - this Service may not exist yet at startup.
 			name:           "global rate limit enabled but service not found",
-			envoyGateway:   &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			envoyGateway:   &egv1a1.EnvoyGateway{RateLimit: &egv1a1.RateLimit{}},
 			objects:        nil,
 			expectNotFound: true,
 			expectSvc:      false,
@@ -462,7 +448,7 @@ func TestProcessRateLimitService(t *testing.T) {
 		},
 		{
 			name:         "global rate limit enabled and service discovered",
-			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			envoyGateway: &egv1a1.EnvoyGateway{RateLimit: &egv1a1.RateLimit{}},
 			objects:      []client.Object{rateLimitService, matchingEndpointSlice, otherEndpointSlice},
 			expectSvc:    true,
 			expectEPS:    true,
@@ -573,9 +559,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 		{
 			name: "gatewayclass with no finalizers",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gc",
-				},
+				Name: "test-gc",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: egv1a1.GatewayControllerName,
 				},
@@ -585,10 +569,8 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 		{
 			name: "gatewayclass with a different finalizer",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gc",
-					Finalizers: []string{"fooFinalizer"},
-				},
+				Name:       "test-gc",
+				Finalizers: []string{"fooFinalizer"},
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: egv1a1.GatewayControllerName,
 				},
@@ -598,10 +580,8 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 		{
 			name: "gatewayclass with existing gatewayclass finalizer",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gc",
-					Finalizers: []string{gatewayClassFinalizer},
-				},
+				Name:       "test-gc",
+				Finalizers: []string{gatewayClassFinalizer},
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: egv1a1.GatewayControllerName,
 				},
@@ -641,9 +621,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 		{
 			name: "valid envoyproxy reference",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -655,19 +633,15 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				},
 			},
 			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test",
-				},
+				Namespace: config.DefaultNamespace,
+				Name:      "test",
 			},
 			expected: true,
 		},
 		{
 			name: "envoyproxy kind does not exist",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -683,9 +657,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 		{
 			name: "referenced envoyproxy does not exist",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -697,19 +669,15 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				},
 			},
 			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test",
-				},
+				Namespace: config.DefaultNamespace,
+				Name:      "test",
 			},
 			expected: false,
 		},
 		{
 			name: "invalid gatewayclass parameters ref",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -721,19 +689,15 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				},
 			},
 			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test",
-				},
+				Namespace: config.DefaultNamespace,
+				Name:      "test",
 			},
 			expected: false,
 		},
 		{
 			name: "incompatible configuration: merged gateways with gateway namespace mode",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-merged-gw",
-				},
+				Name: "test-merged-gw",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -745,10 +709,8 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				},
 			},
 			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test-merge-gw",
-				},
+				Namespace: config.DefaultNamespace,
+				Name:      "test-merge-gw",
 				Spec: egv1a1.EnvoyProxySpec{
 					MergeGateways: new(true),
 				},
@@ -760,9 +722,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 		{
 			name: "valid merged gateways enabled configuration",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-merge-gw",
-				},
+				Name: "test-merge-gw",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -774,10 +734,8 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				},
 			},
 			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test-merge-gw",
-				},
+				Namespace: config.DefaultNamespace,
+				Name:      "test-merge-gw",
 				Spec: egv1a1.EnvoyProxySpec{
 					MergeGateways: new(true),
 				},
@@ -788,9 +746,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 		{
 			name: "valid gateway namespace mode enabled configuration",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -802,10 +758,8 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 				},
 			},
 			ep: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test",
-				},
+				Namespace: config.DefaultNamespace,
+				Name:      "test",
 			},
 			gatewayNamespaceMode: true,
 			expected:             true,
@@ -869,10 +823,8 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid wasm configmap ca cert ref",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -893,20 +845,16 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			configMap: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "ca-cert",
-				},
+				Namespace: "ns-1",
+				Name:      "ca-cert",
 			},
 			shouldBeAdded: true,
 		},
 		{
 			name: "valid wasm secret ca cert ref",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -927,33 +875,25 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "ca-cert",
-				},
+				Namespace: "ns-1",
+				Name:      "ca-cert",
 			},
 			shouldBeAdded: true,
 		},
 		{
 			name: "valid envoy extension policy with proper ref grant to backend",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Namespace: gatewayapi.NamespacePtr("ns-2"),
-											Name:      "test-backend",
-											Kind:      gatewayapi.KindPtr(resource.KindBackend),
-											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-										},
-									},
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Namespace: gatewayapi.NamespacePtr("ns-2"),
+									Name:      "test-backend",
+									Kind:      gatewayapi.KindPtr(resource.KindBackend),
+									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 								},
 							},
 						},
@@ -961,16 +901,12 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -993,23 +929,17 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid envoy extension policy with wrong from kind in ref grant to backend",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					ExtProc: []egv1a1.ExtProc{
 						{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Namespace: gatewayapi.NamespacePtr("ns-2"),
-											Name:      "test-backend",
-											Kind:      gatewayapi.KindPtr(resource.KindBackend),
-											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-										},
-									},
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Namespace: gatewayapi.NamespacePtr("ns-2"),
+									Name:      "test-backend",
+									Kind:      gatewayapi.KindPtr(resource.KindBackend),
+									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 								},
 							},
 						},
@@ -1017,16 +947,12 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1049,10 +975,8 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid wasm http with ClusterTrustBundle ca cert ref",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -1073,19 +997,15 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ca-ctb",
-				},
+				Name: "ca-ctb",
 			},
 			shouldBeAdded: true,
 		},
 		{
 			name: "valid wasm image with ClusterTrustBundle ca cert ref",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -1106,19 +1026,15 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ca-ctb-image",
-				},
+				Name: "ca-ctb-image",
 			},
 			shouldBeAdded: true,
 		},
 		{
 			name: "valid wasm image with Secret ca cert ref (default kind)",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -1139,20 +1055,16 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "ca-secret-default",
-				},
+				Namespace: "ns-1",
+				Name:      "ca-secret-default",
 			},
 			shouldBeAdded: true,
 		},
 		{
 			name: "wasm with multiple sources (HTTP with ConfigMap, Image with ClusterTrustBundle)",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -1187,15 +1099,11 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			configMap: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "ca-cm-multi",
-				},
+				Namespace: "ns-1",
+				Name:      "ca-cm-multi",
 			},
 			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ca-ctb-multi",
-				},
+				Name: "ca-ctb-multi",
 			},
 			shouldBeAdded: true,
 		},
@@ -1270,25 +1178,19 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid security policy with remote jwks proper ref grant to backend",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								RemoteJWKS: &egv1a1.RemoteJWKS{
-									BackendCluster: egv1a1.BackendCluster{
-										BackendRefs: []egv1a1.BackendRef{
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Namespace: gatewayapi.NamespacePtr("ns-2"),
-													Name:      "test-backend",
-													Kind:      gatewayapi.KindPtr(resource.KindBackend),
-													Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-												},
-											},
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											Namespace: gatewayapi.NamespacePtr("ns-2"),
+											Name:      "test-backend",
+											Kind:      gatewayapi.KindPtr(resource.KindBackend),
+											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 										},
 									},
 								},
@@ -1298,16 +1200,12 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1330,25 +1228,19 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid security policy with remote jwks wrong namespace ref grant to backend",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								RemoteJWKS: &egv1a1.RemoteJWKS{
-									BackendCluster: egv1a1.BackendCluster{
-										BackendRefs: []egv1a1.BackendRef{
-											{
-												BackendObjectReference: gwapiv1.BackendObjectReference{
-													Namespace: gatewayapi.NamespacePtr("ns-2"),
-													Name:      "test-backend",
-													Kind:      gatewayapi.KindPtr(resource.KindBackend),
-													Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-												},
-											},
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											Namespace: gatewayapi.NamespacePtr("ns-2"),
+											Name:      "test-backend",
+											Kind:      gatewayapi.KindPtr(resource.KindBackend),
+											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 										},
 									},
 								},
@@ -1358,16 +1250,12 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1390,23 +1278,17 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid security policy with extAuth grpc proper ref grant to backend",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Namespace: gatewayapi.NamespacePtr("ns-2"),
-											Name:      "test-backend",
-											Kind:      gatewayapi.KindPtr(resource.KindBackend),
-											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-										},
-									},
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Namespace: gatewayapi.NamespacePtr("ns-2"),
+									Name:      "test-backend",
+									Kind:      gatewayapi.KindPtr(resource.KindBackend),
+									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 								},
 							},
 						},
@@ -1414,16 +1296,12 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1446,36 +1324,28 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid security policy with extAuth grpc proper ref grant to backend (deprecated field)",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRef: &gwapiv1.BackendObjectReference{
-									Namespace: gatewayapi.NamespacePtr("ns-2"),
-									Name:      "test-backend",
-									Kind:      gatewayapi.KindPtr(resource.KindBackend),
-									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-								},
+							BackendRef: &gwapiv1.BackendObjectReference{
+								Namespace: gatewayapi.NamespacePtr("ns-2"),
+								Name:      "test-backend",
+								Kind:      gatewayapi.KindPtr(resource.KindBackend),
+								Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 							},
 						},
 					},
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1498,23 +1368,17 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid security policy with extAuth grpc wrong namespace ref grant to backend",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Namespace: gatewayapi.NamespacePtr("ns-2"),
-											Name:      "test-backend",
-											Kind:      gatewayapi.KindPtr(resource.KindBackend),
-											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-										},
-									},
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Namespace: gatewayapi.NamespacePtr("ns-2"),
+									Name:      "test-backend",
+									Kind:      gatewayapi.KindPtr(resource.KindBackend),
+									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 								},
 							},
 						},
@@ -1522,16 +1386,12 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1554,23 +1414,17 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid security policy with extAuth http proper ref grant to backend",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Namespace: gatewayapi.NamespacePtr("ns-2"),
-											Name:      "test-backend",
-											Kind:      gatewayapi.KindPtr(resource.KindBackend),
-											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-										},
-									},
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Namespace: gatewayapi.NamespacePtr("ns-2"),
+									Name:      "test-backend",
+									Kind:      gatewayapi.KindPtr(resource.KindBackend),
+									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 								},
 							},
 						},
@@ -1578,16 +1432,12 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1610,36 +1460,28 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid security policy with extAuth http proper ref grant to backend (deprecated field)",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRef: &gwapiv1.BackendObjectReference{
-									Namespace: gatewayapi.NamespacePtr("ns-2"),
-									Name:      "test-backend",
-									Kind:      gatewayapi.KindPtr(resource.KindBackend),
-									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-								},
+							BackendRef: &gwapiv1.BackendObjectReference{
+								Namespace: gatewayapi.NamespacePtr("ns-2"),
+								Name:      "test-backend",
+								Kind:      gatewayapi.KindPtr(resource.KindBackend),
+								Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 							},
 						},
 					},
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1662,23 +1504,17 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 		{
 			name: "valid security policy with extAuth http wrong namespace ref grant to backend",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
+				Namespace: "ns-1",
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Namespace: gatewayapi.NamespacePtr("ns-2"),
-											Name:      "test-backend",
-											Kind:      gatewayapi.KindPtr(resource.KindBackend),
-											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-										},
-									},
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Namespace: gatewayapi.NamespacePtr("ns-2"),
+									Name:      "test-backend",
+									Kind:      gatewayapi.KindPtr(resource.KindBackend),
+									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 								},
 							},
 						},
@@ -1686,16 +1522,12 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 				},
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
+				Namespace: "ns-2",
+				Name:      "test-backend",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
+				Namespace: "ns-2",
+				Name:      "test-grant",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1754,10 +1586,8 @@ func TestProcessSecurityPolicyObjectKeyRefs(t *testing.T) {
 		{
 			name: "ContextExtension value with ConfigMap",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "test-policy",
-				},
+				Namespace: ns,
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						ContextExtensions: []*egv1a1.ContextExtension{
@@ -1765,11 +1595,9 @@ func TestProcessSecurityPolicyObjectKeyRefs(t *testing.T) {
 								Name: "foo",
 								Type: egv1a1.ContextExtensionValueTypeValueRef,
 								ValueRef: &egv1a1.LocalObjectKeyReference{
-									LocalObjectReference: gwapiv1.LocalObjectReference{
-										Kind: resource.KindConfigMap,
-										Name: "fake-cm",
-									},
-									Key: "foo",
+									Kind: resource.KindConfigMap,
+									Name: "fake-cm",
+									Key:  "foo",
 								},
 							},
 						},
@@ -1781,10 +1609,8 @@ func TestProcessSecurityPolicyObjectKeyRefs(t *testing.T) {
 		{
 			name: "ContextExtension value with Secret",
 			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "test-policy",
-				},
+				Namespace: ns,
+				Name:      "test-policy",
 				Spec: egv1a1.SecurityPolicySpec{
 					ExtAuth: &egv1a1.ExtAuth{
 						ContextExtensions: []*egv1a1.ContextExtension{
@@ -1792,11 +1618,9 @@ func TestProcessSecurityPolicyObjectKeyRefs(t *testing.T) {
 								Name: "foo",
 								Type: egv1a1.ContextExtensionValueTypeValueRef,
 								ValueRef: &egv1a1.LocalObjectKeyReference{
-									LocalObjectReference: gwapiv1.LocalObjectReference{
-										Kind: resource.KindSecret,
-										Name: "fake-secret",
-									},
-									Key: "foo",
+									Kind: resource.KindSecret,
+									Name: "fake-secret",
+									Key:  "foo",
 								},
 							},
 						},
@@ -1855,32 +1679,24 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 		{
 			name: "when merged gateways and no hardcoded svc name is used",
 			gatewayClass: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: gcName,
-				},
+				Name: gcName,
 			},
 			envoyProxy:      nil,
 			expectedSvcName: proxy.ExpectedResourceHashedName(gcName),
 			serviceCluster: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      proxy.ExpectedResourceHashedName(gcName),
-						Namespace: nsName,
-					},
+					Name:      proxy.ExpectedResourceHashedName(gcName),
+					Namespace: nsName,
 				},
 			},
 		},
 		{
 			name: "when merged gateways and a hardcoded svc name is used",
 			gatewayClass: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: gcName,
-				},
+				Name: gcName,
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: gcName,
-				},
+				Name: gcName,
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
@@ -1895,19 +1711,15 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 			expectedSvcName: "merged-gc-svc",
 			serviceCluster: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "merged-gc-svc",
-						Namespace: nsName,
-					},
+					Name:      "merged-gc-svc",
+					Namespace: nsName,
 				},
 			},
 		},
 		{
 			name: "non-existent proxy service",
 			gatewayClass: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: gcName,
-				},
+				Name: gcName,
 			},
 			envoyProxy:      nil,
 			expectedSvcName: proxy.ExpectedResourceHashedName(gcName),
@@ -1961,10 +1773,8 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 		{
 			name: "no gateway namespaced mode with no hardcoded service name",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-gateway",
-					Namespace: "app-namespace",
-				},
+				Name:      "my-gateway",
+				Namespace: "app-namespace",
 			},
 			envoyProxy:            nil,
 			gatewayNamespacedMode: false,
@@ -1974,15 +1784,11 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 		{
 			name: "no gateway namespaced mode with hardcoded service name",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-gateway",
-					Namespace: "app-namespace",
-				},
+				Name:      "my-gateway",
+				Namespace: "app-namespace",
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-gateway",
-				},
+				Name: "my-gateway",
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
@@ -2001,10 +1807,8 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 		{
 			name: "gateway namespaced mode with no hardcoded service name",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-gateway",
-					Namespace: "app-namespace",
-				},
+				Name:      "my-gateway",
+				Namespace: "app-namespace",
 			},
 			envoyProxy:            nil,
 			gatewayNamespacedMode: true,
@@ -2012,25 +1816,19 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			expectedSvcNamespace:  "app-namespace",
 			serviceCluster: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-gateway",
-						Namespace: "app-namespace",
-					},
+					Name:      "my-gateway",
+					Namespace: "app-namespace",
 				},
 			},
 		},
 		{
 			name: "gateway namespaced mode with hardcoded service name",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-gateway",
-					Namespace: "app-namespace",
-				},
+				Name:      "my-gateway",
+				Namespace: "app-namespace",
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-gateway",
-				},
+				Name: "my-gateway",
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
@@ -2047,26 +1845,20 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			expectedSvcNamespace:  "app-namespace",
 			serviceCluster: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-gateway-svc",
-						Namespace: "app-namespace",
-					},
+					Name:      "my-gateway-svc",
+					Namespace: "app-namespace",
 				},
 			},
 		},
 		{
 			name: "no gateway namespaced mode with no hardcoded service name attached gatewayclass",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-gateway",
-					Namespace: "app-namespace",
-				},
+				Name:      "my-gateway",
+				Namespace: "app-namespace",
 			},
 			envoyProxy: nil,
 			gatewayClassEnvoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-gateway",
-				},
+				Name: "my-gateway",
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
@@ -2135,10 +1927,8 @@ func newGatewayAPIReconciler(logger logging.Logger) *gatewayAPIReconciler {
 		classController:  "some-gateway-class",
 		backendCRDExists: true,
 		envoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-					EnableBackend: true,
-				},
+			ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+				EnableBackend: true,
 			},
 		},
 	}
@@ -2166,10 +1956,8 @@ func TestProcessBackendRefs(t *testing.T) {
 	ctb := test.GetClusterTrustBundle("fake-ctb")
 	secret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "fake-secret"})
 	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
-			Name:      "fake-cm",
-		},
+		Namespace: ns,
+		Name:      "fake-cm",
 		Data: map[string]string{
 			"ca.crt": "fake-ca-cert",
 		},
@@ -2185,10 +1973,8 @@ func TestProcessBackendRefs(t *testing.T) {
 		{
 			name: "DynamicResolver with ClusterTrustBundle",
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "test-backend",
-				},
+				Namespace: ns,
+				Name:      "test-backend",
 				Spec: egv1a1.BackendSpec{
 					Type: new(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
@@ -2206,10 +1992,8 @@ func TestProcessBackendRefs(t *testing.T) {
 		{
 			name: "DynamicResolver with ConfigMap",
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "test-backend",
-				},
+				Namespace: ns,
+				Name:      "test-backend",
 				Spec: egv1a1.BackendSpec{
 					Type: new(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
@@ -2227,10 +2011,8 @@ func TestProcessBackendRefs(t *testing.T) {
 		{
 			name: "DynamicResolver with Secret",
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "test-backend",
-				},
+				Namespace: ns,
+				Name:      "test-backend",
 				Spec: egv1a1.BackendSpec{
 					Type: new(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
@@ -2308,10 +2090,8 @@ func TestProcessListenerSets(t *testing.T) {
 		{
 			name: "matching gateway with TLS secret and XLS in same namespace",
 			xls: &gwapiv1.ListenerSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-xls",
-					Namespace: "default",
-				},
+				Name:      "test-xls",
+				Namespace: "default",
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("test-gateway"),
@@ -2333,10 +2113,8 @@ func TestProcessListenerSets(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "listener-cert",
-					Namespace: "default",
-				},
+				Name:      "listener-cert",
+				Namespace: "default",
 			},
 			gatewayNamespace: "default",
 			expectXLSCount:   1,
@@ -2346,10 +2124,8 @@ func TestProcessListenerSets(t *testing.T) {
 		{
 			name: "matching gateway with TLS secret and XLS in different namespace",
 			xls: &gwapiv1.ListenerSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-xls",
-					Namespace: "xls",
-				},
+				Name:      "test-xls",
+				Namespace: "xls",
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("test-gateway"),
@@ -2372,10 +2148,8 @@ func TestProcessListenerSets(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "listener-cert",
-					Namespace: "xls",
-				},
+				Name:      "listener-cert",
+				Namespace: "xls",
 			},
 			gatewayNamespace: "gateway",
 			expectXLSCount:   1,
@@ -2385,10 +2159,8 @@ func TestProcessListenerSets(t *testing.T) {
 		{
 			name: "matching gateway with TLS secret and XLS all in different namespaces with valid ReferenceGrant",
 			xls: &gwapiv1.ListenerSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-xls",
-					Namespace: "xls",
-				},
+				Name:      "test-xls",
+				Namespace: "xls",
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("test-gateway"),
@@ -2411,16 +2183,12 @@ func TestProcessListenerSets(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "listener-cert",
-					Namespace: "secret",
-				},
+				Name:      "listener-cert",
+				Namespace: "secret",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-to-secret",
-					Namespace: "secret",
-				},
+				Name:      "gateway-to-secret",
+				Namespace: "secret",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -2445,10 +2213,8 @@ func TestProcessListenerSets(t *testing.T) {
 		{
 			name: "matching gateway with TLS secret and XLS all in different namespaces",
 			xls: &gwapiv1.ListenerSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-xls",
-					Namespace: "xls",
-				},
+				Name:      "test-xls",
+				Namespace: "xls",
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("test-gateway"),
@@ -2471,10 +2237,8 @@ func TestProcessListenerSets(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "listener-cert",
-					Namespace: "secret",
-				},
+				Name:      "listener-cert",
+				Namespace: "secret",
 			},
 			gatewayNamespace: "gateway",
 			expectXLSCount:   1,
@@ -2484,10 +2248,8 @@ func TestProcessListenerSets(t *testing.T) {
 		{
 			name: "non-matching gateway",
 			xls: &gwapiv1.ListenerSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-xls",
-					Namespace: "default",
-				},
+				Name:      "test-xls",
+				Namespace: "default",
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("other-gateway"),
@@ -2581,10 +2343,8 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 
 	refGrant := func(name, namespace, fromKind, fromNamespace, toGroup, toKind string) *gwapiv1b1.ReferenceGrant {
 		return &gwapiv1b1.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
+			Name:      name,
+			Namespace: namespace,
 			Spec: gwapiv1b1.ReferenceGrantSpec{
 				From: []gwapiv1b1.ReferenceGrantFrom{
 					{
@@ -2632,7 +2392,7 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			name: "BackendTrafficPolicy includes gateway, ListenerSet, and route target grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
-					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "btp"},
+					Namespace: policyNS, Name: "btp",
 				})
 			},
 			referenceGrants: []client.Object{
@@ -2646,7 +2406,7 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			name: "ClientTrafficPolicy includes gateway and ListenerSet target grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &egv1a1.ClientTrafficPolicy{
-					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "ctp"},
+					Namespace: policyNS, Name: "ctp",
 				})
 			},
 			referenceGrants: []client.Object{
@@ -2660,7 +2420,7 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			name: "EnvoyExtensionPolicy includes gateway, ListenerSet, and route target grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, &egv1a1.EnvoyExtensionPolicy{
-					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "eep"},
+					Namespace: policyNS, Name: "eep",
 				})
 			},
 			referenceGrants: []client.Object{
@@ -2674,7 +2434,7 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			name: "SecurityPolicy includes gateway, ListenerSet, and supported route target grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "sp"},
+					Namespace: policyNS, Name: "sp",
 				})
 			},
 			referenceGrants: []client.Object{
@@ -2691,7 +2451,7 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			name: "ignores non matching grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
-					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "btp"},
+					Namespace: policyNS, Name: "btp",
 				})
 			},
 			referenceGrants: []client.Object{
@@ -2711,7 +2471,7 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			name: "deduplicates grants already collected",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
-					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "btp"},
+					Namespace: policyNS, Name: "btp",
 				})
 			},
 			referenceGrants: []client.Object{
@@ -2805,10 +2565,8 @@ func TestProcessListenerSetsDoesNotTrackRouteslessSelectorMatchedNamespace(t *te
 
 	fromSelector := gwapiv1.NamespacesFromSelector
 	xls := &gwapiv1.ListenerSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-xls",
-			Namespace: "default",
-		},
+		Name:      "test-xls",
+		Namespace: "default",
 		Spec: gwapiv1.ListenerSetSpec{
 			ParentRef: gwapiv1.ParentGatewayReference{
 				Name:      gwapiv1.ObjectName("test-gateway"),
@@ -2832,10 +2590,8 @@ func TestProcessListenerSetsDoesNotTrackRouteslessSelectorMatchedNamespace(t *te
 	// This namespace has no route, secret, or any other resource in it. Its labels match the
 	// ListenerSet listener's allowedRoutes selector, but that alone must not cause it to be tracked.
 	matchingEmptyNS := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "matching-empty",
-			Labels: map[string]string{"env": "prod"},
-		},
+		Name:   "matching-empty",
+		Labels: map[string]string{"env": "prod"},
 	}
 
 	fakeClient := fakeclient.NewClientBuilder().
@@ -2862,10 +2618,8 @@ func TestProcessCTPCrlRefs(t *testing.T) {
 	ns := "default"
 	crlSecret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "crl-secret"})
 	crlConfigMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
-			Name:      "crl-configmap",
-		},
+		Namespace: ns,
+		Name:      "crl-configmap",
 		Data: map[string]string{
 			"ca.crl": "fake-crl-data",
 		},
@@ -3037,10 +2791,8 @@ func TestProcessCTPCACertificateRefs(t *testing.T) {
 	ns := "default"
 	caSecret := test.GetSecret(types.NamespacedName{Namespace: ns, Name: "ca-secret"})
 	caConfigMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
-			Name:      "ca-configmap",
-		},
+		Namespace: ns,
+		Name:      "ca-configmap",
 		Data: map[string]string{
 			"ca.crt": "fake-ca-cert",
 		},

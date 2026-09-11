@@ -133,7 +133,7 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 }
 
 type tempoResponse struct {
-	Traces []map[string]interface{} `json:"traces,omitempty"`
+	Traces []map[string]any `json:"traces,omitempty"`
 }
 
 // copy from https://github.com/grafana/tempo/blob/c0127c78c368319433c7c67ca8967adbfed2259e/cmd/tempo-query/tempo/plugin.go#L361

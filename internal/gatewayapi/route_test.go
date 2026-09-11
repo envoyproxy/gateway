@@ -122,7 +122,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			name: "All IP endpoints",
 			endpointSlices: []*discoveryv1.EndpointSlice{
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice1"},
+					Name:        "slice1",
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"192.0.2.1"}},
@@ -133,7 +133,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice2"},
+					Name:        "slice2",
 					AddressType: discoveryv1.AddressTypeIPv6,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"2001:db8::1"}},
@@ -156,7 +156,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			name: "Mixed IP and FQDN endpoints",
 			endpointSlices: []*discoveryv1.EndpointSlice{
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice1"},
+					Name:        "slice1",
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"192.0.2.1"}},
@@ -166,7 +166,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice2"},
+					Name:        "slice2",
 					AddressType: discoveryv1.AddressTypeFQDN,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"example.com"}},
@@ -188,7 +188,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			name: "Dual-stack IP endpoints",
 			endpointSlices: []*discoveryv1.EndpointSlice{
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice1-ipv4"},
+					Name:        "slice1-ipv4",
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"192.0.2.1"}},
@@ -199,7 +199,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice2-ipv6"},
+					Name:        "slice2-ipv6",
 					AddressType: discoveryv1.AddressTypeIPv6,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"2001:db8::1"}},
@@ -224,7 +224,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			name: "Dual-stack with FQDN",
 			endpointSlices: []*discoveryv1.EndpointSlice{
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice1-ipv4"},
+					Name:        "slice1-ipv4",
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"192.0.2.1"}},
@@ -234,7 +234,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice2-ipv6"},
+					Name:        "slice2-ipv6",
 					AddressType: discoveryv1.AddressTypeIPv6,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"2001:db8::1"}},
@@ -244,7 +244,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice3-fqdn"},
+					Name:        "slice3-fqdn",
 					AddressType: discoveryv1.AddressTypeFQDN,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"example.com"}},
@@ -267,7 +267,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 			name: "Keep non-serving or terminating as draining",
 			endpointSlices: []*discoveryv1.EndpointSlice{
 				{
-					ObjectMeta:  metav1.ObjectMeta{Name: "slice1"},
+					Name:        "slice1",
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Endpoints: []discoveryv1.Endpoint{
 						{Addresses: []string{"192.0.2.1"}, Conditions: discoveryv1.EndpointConditions{
@@ -355,8 +355,8 @@ func TestBuildRouteMatchCombinations(t *testing.T) {
 				{Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")}},
 			},
 			expected: []routeMatchCombination{
-				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}}},
-				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")}}},
+				{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}},
+				{Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")}},
 			},
 		},
 		{
@@ -378,32 +378,28 @@ func TestBuildRouteMatchCombinations(t *testing.T) {
 			},
 			expected: []routeMatchCombination{
 				{
-					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}},
-					cookies:        []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
+					Path:    &gwapiv1.HTTPPathMatch{Value: new("/foo")},
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
 				},
 				{
-					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: new("/foo")}},
-					cookies:        []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}},
+					Path:    &gwapiv1.HTTPPathMatch{Value: new("/foo")},
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}},
 				},
 				{
-					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{
-						Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")},
-						Headers: []gwapiv1.HTTPHeaderMatch{
-							{Name: "a", Value: "1"},
-							{Name: "b", Value: "2"},
-							{Name: "c", Value: "3"},
-						},
+					Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")},
+					Headers: []gwapiv1.HTTPHeaderMatch{
+						{Name: "a", Value: "1"},
+						{Name: "b", Value: "2"},
+						{Name: "c", Value: "3"},
 					},
 					cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
 				},
 				{
-					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{
-						Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")},
-						Headers: []gwapiv1.HTTPHeaderMatch{
-							{Name: "a", Value: "1"},
-							{Name: "b", Value: "2"},
-							{Name: "c", Value: "3"},
-						},
+					Path: &gwapiv1.HTTPPathMatch{Value: new("/bar")},
+					Headers: []gwapiv1.HTTPHeaderMatch{
+						{Name: "a", Value: "1"},
+						{Name: "b", Value: "2"},
+						{Name: "c", Value: "3"},
 					},
 					cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}},
 				},
@@ -551,8 +547,8 @@ func TestBackendClusterKeyConstruction(t *testing.T) {
 	})
 
 	t.Run("never collides across gateways", func(t *testing.T) {
-		gwCtx1 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
-		gwCtx2 := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-2"}}}
+		gwCtx1 := &GatewayContext{Gateway: &gwapiv1.Gateway{Namespace: "envoy-gateway", Name: "gateway-1"}}
+		gwCtx2 := &GatewayContext{Gateway: &gwapiv1.Gateway{Namespace: "envoy-gateway", Name: "gateway-2"}}
 
 		baseKey := newBackendClusterKey(serviceBackendRef, "default")
 		key1 := tr.backendClusterKeyForGateway(&baseKey, gwCtx1, ir.HTTP)
@@ -573,7 +569,7 @@ func TestBackendClusterKeyConstruction(t *testing.T) {
 
 func TestShouldMergeBackend(t *testing.T) {
 	gwNN := types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"}
-	gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: gwNN.Namespace, Name: gwNN.Name}}}
+	gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{Namespace: gwNN.Namespace, Name: gwNN.Name}}
 	serviceRT := egv1a1.ServiceRoutingType
 	endpointRT := egv1a1.EndpointRoutingType
 	dynamicResolverType := egv1a1.BackendTypeDynamicResolver
@@ -585,8 +581,8 @@ func TestShouldMergeBackend(t *testing.T) {
 		Name:  "be-dynamic",
 	}
 	dynamicResolverBackend := &egv1a1.Backend{
-		ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default"},
-		Spec:       egv1a1.BackendSpec{Type: &dynamicResolverType},
+		Name: "be-dynamic", Namespace: "default",
+		Spec: egv1a1.BackendSpec{Type: &dynamicResolverType},
 	}
 
 	tests := []struct {
@@ -681,7 +677,7 @@ func TestShouldMergeBackend(t *testing.T) {
 			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
 			backendRef:    serviceBackendRef,
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+				Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"},
 			},
 			want: true,
 		},
@@ -691,7 +687,7 @@ func TestShouldMergeBackend(t *testing.T) {
 			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
 			backendRef:    serviceBackendRef,
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "other"}},
+				Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "other"},
 			},
 			want: false,
 		},
@@ -710,7 +706,7 @@ func TestShouldMergeBackend(t *testing.T) {
 			}},
 			backendRef: serviceBackendRef,
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+				Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"},
 			},
 			want: false,
 		},
@@ -720,7 +716,7 @@ func TestShouldMergeBackend(t *testing.T) {
 			mergeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"tier": "dedup"}},
 			backendRef:    dynamicResolverBackendRef,
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+				Name: "be-dynamic", Namespace: "default", Labels: map[string]string{"tier": "dedup"},
 				// deliberately NOT a dynamic-resolver type here, so isMergeableBackendKind doesn't
 				// exclude it first and this case actually exercises the selector path; reuse
 				// dynamicResolverBackendRef only for its Kind=Backend, with a plain Spec.
@@ -738,7 +734,7 @@ func TestShouldMergeBackend(t *testing.T) {
 				Name:  "service-import-1",
 			},
 			serviceImport: &mcsapiv1a1.ServiceImport{
-				ObjectMeta: metav1.ObjectMeta{Name: "service-import-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+				Name: "service-import-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"},
 			},
 			want: true,
 		},
@@ -753,7 +749,7 @@ func TestShouldMergeBackend(t *testing.T) {
 			},
 			backendRef: serviceBackendRef,
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"}},
+				Name: "service-1", Namespace: "default", Labels: map[string]string{"tier": "dedup"},
 			},
 			want: false, // matches the DEFAULT-level selector's labels, not the Gateway-level override's — must be excluded, proving the override, not the default, was actually applied
 		},
@@ -821,7 +817,7 @@ func TestIsMergeableBackendKind(t *testing.T) {
 				Name:  "be-1",
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{Name: "be-1", Namespace: "default"},
+				Name: "be-1", Namespace: "default",
 			},
 			want: true,
 		},
@@ -833,8 +829,8 @@ func TestIsMergeableBackendKind(t *testing.T) {
 				Name:  "be-dynamic",
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{Name: "be-dynamic", Namespace: "default"},
-				Spec:       egv1a1.BackendSpec{Type: &dynamicResolverType},
+				Name: "be-dynamic", Namespace: "default",
+				Spec: egv1a1.BackendSpec{Type: &dynamicResolverType},
 			},
 			want: false,
 		},
@@ -883,8 +879,8 @@ func TestIsFallbackBackend(t *testing.T) {
 				Name:  "be-fallback",
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{Name: "be-fallback", Namespace: "default"},
-				Spec:       egv1a1.BackendSpec{Fallback: &fallbackTrue},
+				Name: "be-fallback", Namespace: "default",
+				Spec: egv1a1.BackendSpec{Fallback: &fallbackTrue},
 			},
 			want: true,
 		},
@@ -896,7 +892,7 @@ func TestIsFallbackBackend(t *testing.T) {
 				Name:  "be-plain",
 			},
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{Name: "be-plain", Namespace: "default"},
+				Name: "be-plain", Namespace: "default",
 			},
 			want: false,
 		},
@@ -917,8 +913,8 @@ func TestIsFallbackBackend(t *testing.T) {
 func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 	fallbackTrue := true
 	fallbackBackend := &egv1a1.Backend{
-		ObjectMeta: metav1.ObjectMeta{Name: "be-fallback", Namespace: "default"},
-		Spec:       egv1a1.BackendSpec{Fallback: &fallbackTrue},
+		Name: "be-fallback", Namespace: "default",
+		Spec: egv1a1.BackendSpec{Fallback: &fallbackTrue},
 	}
 	fallbackRef := gwapiv1.BackendObjectReference{
 		Group: GroupPtr(egv1a1.GroupName),
@@ -928,8 +924,8 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 	serviceRef1 := gwapiv1.BackendObjectReference{Name: "service-1"}
 	serviceRef2 := gwapiv1.BackendObjectReference{Name: "service-2"}
 
-	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route-1"}}}
-	gatewayCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
+	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{Namespace: "default", Name: "route-1"}}
+	gatewayCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{Namespace: "envoy-gateway", Name: "gateway-1"}}
 
 	// consistentHashIdx forces IsConsistentHash to return true for gatewayCtx's gateway.
 	consistentHashIdx := func() *BTPLoadBalancerIndex {

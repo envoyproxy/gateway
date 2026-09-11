@@ -30,7 +30,7 @@ func TestTruncateRouteParents(t *testing.T) {
 
 	t.Run("no-op when at cap", func(t *testing.T) {
 		routeStatus := &gwapiv1.RouteStatus{Parents: make([]gwapiv1.RouteParentStatus, 0, 32)}
-		for i := 0; i < 32; i++ {
+		for i := range 32 {
 			routeStatus.Parents = append(routeStatus.Parents, makeRouteParent("default", fmt.Sprintf("gw-%02d", i), "http", []metav1.Condition{acceptedCondition(9), resolvedRefsCondition(9)}))
 		}
 
@@ -44,7 +44,7 @@ func TestTruncateRouteParents(t *testing.T) {
 
 	t.Run("truncates to 32, prioritizes failures, and annotates last retained parent", func(t *testing.T) {
 		routeStatus := &gwapiv1.RouteStatus{Parents: make([]gwapiv1.RouteParentStatus, 0, 35)}
-		for i := 0; i < 31; i++ {
+		for i := range 31 {
 			routeStatus.Parents = append(routeStatus.Parents, makeRouteParent("default", fmt.Sprintf("ok-%02d", i), "http", []metav1.Condition{acceptedCondition(11), resolvedRefsCondition(11)}))
 		}
 		routeStatus.Parents = append(routeStatus.Parents,
@@ -70,7 +70,7 @@ func TestTruncateRouteParents(t *testing.T) {
 		require.Equal(t, int64(11), lastAggregated[0].ObservedGeneration)
 		require.Equal(t, "Parents have been truncated because the number of route parents exceeds 32.", lastAggregated[0].Message)
 
-		for i := 0; i < 31; i++ {
+		for i := range 31 {
 			require.Empty(t, aggregatedConditions(routeStatus.Parents[i].Conditions))
 		}
 	})
@@ -84,7 +84,7 @@ func TestTruncateRouteParents(t *testing.T) {
 				makeRouteParent("a", "gw-a", "a", []metav1.Condition{acceptedCondition(13)}),
 			},
 		}
-		for i := 0; i < 29; i++ {
+		for i := range 29 {
 			routeStatus.Parents = append(routeStatus.Parents, makeRouteParent("z", fmt.Sprintf("gw-z-%02d", i), "http", []metav1.Condition{acceptedCondition(13)}))
 		}
 
@@ -102,7 +102,7 @@ func TestTruncateRouteParents(t *testing.T) {
 
 	t.Run("sorts ties by port before truncating", func(t *testing.T) {
 		routeStatus := &gwapiv1.RouteStatus{Parents: make([]gwapiv1.RouteParentStatus, 0, 34)}
-		for i := 0; i < 31; i++ {
+		for i := range 31 {
 			routeStatus.Parents = append(routeStatus.Parents, makeRouteParent("z", fmt.Sprintf("gw-z-%02d", i), "http", []metav1.Condition{acceptedCondition(17)}))
 		}
 		routeStatus.Parents = append(routeStatus.Parents,

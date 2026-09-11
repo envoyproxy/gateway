@@ -17,7 +17,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -56,10 +55,8 @@ func (is *InfraSynthesizer) CreateOrUpdate(ctx context.Context, ir *Infra) error
 		return fmt.Errorf("build service: %w", err)
 	}
 	existingSvc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      desiredSvc.Name,
-			Namespace: desiredSvc.Namespace,
-		},
+		Name:      desiredSvc.Name,
+		Namespace: desiredSvc.Namespace,
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, is.KubernetesClient, existingSvc, func() error {
 		mergeServiceSpec(existingSvc, desiredSvc)
@@ -73,10 +70,8 @@ func (is *InfraSynthesizer) CreateOrUpdate(ctx context.Context, ir *Infra) error
 		return fmt.Errorf("build deployment: %w", err)
 	}
 	existingDeploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      desiredDeploy.Name,
-			Namespace: desiredDeploy.Namespace,
-		},
+		Name:      desiredDeploy.Name,
+		Namespace: desiredDeploy.Namespace,
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, is.KubernetesClient, existingDeploy, func() error {
 		mergeDeploymentSpec(existingDeploy, desiredDeploy)
@@ -98,20 +93,16 @@ func (is *InfraSynthesizer) Delete(ctx context.Context, ir *Infra) error {
 	name := resourceName(ir)
 
 	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: is.Namespace,
-		},
+		Name:      name,
+		Namespace: is.Namespace,
 	}
 	if err := is.KubernetesClient.Delete(ctx, deploy); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("delete deployment %s/%s: %w", is.Namespace, name, err)
 	}
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: is.Namespace,
-		},
+		Name:      name,
+		Namespace: is.Namespace,
 	}
 	if err := is.KubernetesClient.Delete(ctx, svc); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("delete service %s/%s: %w", is.Namespace, name, err)

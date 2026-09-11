@@ -317,7 +317,7 @@ func extendStatusHeader(header []string, verbose, needNamespace bool) []string {
 
 // extendStatusBodyWithNamespaceAndName extends current body with namespace and name at head.
 func extendStatusBodyWithNamespaceAndName(body [][]string, namespace, name string, needNamespace bool) [][]string {
-	for i := 0; i < len(body); i++ {
+	for i := range body {
 		if needNamespace {
 			body[i] = append([]string{namespace, name}, body[i]...)
 		} else {
@@ -386,7 +386,7 @@ func fetchStatusBody(resourcesList client.ObjectList, resourceKind string, quiet
 					parentRef.FieldByName("Kind").Elem().String(),
 					parentRef.FieldByName("Name").String(),
 				)
-				for k := 0; k < len(conditions); k++ {
+				for k := range conditions {
 					conditions[k] = append([]string{parentName}, conditions[k]...)
 					parentName = ""
 				}
@@ -407,7 +407,7 @@ func fetchStatusBody(resourcesList client.ObjectList, resourceKind string, quiet
 					ancestorRef.FieldByName("Kind").Elem().String(),
 					ancestorRef.FieldByName("Name").String(),
 				)
-				for k := 0; k < len(conditions); k++ {
+				for k := range conditions {
 					conditions[k] = append([]string{ancestorName}, conditions[k]...)
 					ancestorName = ""
 				}

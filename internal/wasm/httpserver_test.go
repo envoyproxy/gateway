@@ -53,8 +53,7 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 	}
 
 	t.Run("get wasm module from EG HTTP server", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		var (
 			server     *HTTPServer
@@ -108,8 +107,7 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 	})
 
 	t.Run("get non-existing wasm module from EG HTTP server", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		var server *HTTPServer
 
@@ -155,8 +153,7 @@ func Test_httpServerWithHTTP(t *testing.T) {
 	defer r.Close()
 
 	t.Run("get wasm module from EG HTTP server", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		var (
 			server     *HTTPServer
@@ -205,8 +202,7 @@ func Test_httpServerWithHTTP(t *testing.T) {
 	})
 
 	t.Run("get non-existing wasm module from EG HTTP server", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		var server *HTTPServer
 
@@ -249,8 +245,7 @@ func Test_httpServerFailedAttempt(t *testing.T) {
 	}
 
 	t.Run("failed attempts exceed the max", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		var (
 			server                *HTTPServer
@@ -282,7 +277,7 @@ func Test_httpServerFailedAttempt(t *testing.T) {
 
 		// The 7th Get() should return a normal error because the failed attempts have been reset.
 		err = nil
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			time.Sleep(300 * time.Millisecond)
 			_, _, err = server.Get(
 				fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
@@ -347,7 +342,7 @@ func startLocalHTTPServer(ctx context.Context, cacheDir string, maxFailedAttempt
 		response *http.Response
 		err      error
 	)
-	for i := 0; i < retries; i++ {
+	for range retries {
 		if response, err = http.Get(fmt.Sprintf("http://127.0.0.1:%d", serverPort)); err == nil {
 			_ = response.Body.Close()
 			break

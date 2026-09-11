@@ -38,7 +38,7 @@ func TestOnStreamResponseConcurrentAccess(t *testing.T) {
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(2)
 		streamID := int64(i + 100)
 
@@ -108,7 +108,7 @@ func TestOnStreamDeltaResponseConcurrentAccess(t *testing.T) {
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		wg.Add(2)
 		streamID := int64(i + 100)
 
