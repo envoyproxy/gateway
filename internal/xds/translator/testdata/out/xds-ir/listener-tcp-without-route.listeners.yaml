@@ -16,7 +16,7 @@
         cluster: EmptyCluster
         idleTimeout: 1200s
         statPrefix: tcp-10443
-    name: EmptyCluster
+    name: EmptyCluster/envoy-gateway/gateway-1/tls-1
   listenerFilters:
   - name: envoy.filters.listener.proxy_protocol
     typedConfig:

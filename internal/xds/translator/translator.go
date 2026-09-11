@@ -1029,12 +1029,10 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			}
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
+				tcpListener,
 				route,
 				singleClusterDestinationName(route.Destination),
 				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1043,26 +1041,27 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
+			// The EmptyCluster itself is shared by every listener that needs a placeholder.
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
 
+			// Name the placeholder after its listener so the chains stay distinguishable in
+			// config dumps when several listeners share one xDS listener.
 			emptyRoute := &ir.TCPRoute{
-				Name: emptyClusterName,
+				Name: emptyClusterName + "/" + tcpListener.Name,
 				Destination: &ir.RouteDestination{
 					Name: emptyClusterName,
 				},
 			}
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
+				tcpListener,
 				emptyRoute,
 				emptyClusterName,
 				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
