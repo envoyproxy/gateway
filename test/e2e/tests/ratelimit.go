@@ -74,7 +74,7 @@ func init() {
 var RateLimitCluster = suite.ConformanceTest{
 	ShortName:   "RateLimitCluster",
 	Description: "make sure the ratelimit worked as expected",
-	Manifests:   []string{"testdata/ratelimit-cidr-invert-match-always-enforce.yaml"},
+	Manifests:   []string{"testdata/ratelimit-cluster.yaml"},
 	Test: func(t *testing.T, cts *suite.ConformanceTestSuite) {
 		gwNN := types.NamespacedName{
 			Name:      "same-namespace",
