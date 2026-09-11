@@ -11601,7 +11601,7 @@ spec:
                             type: string
                             x-kubernetes-validations:
                             - message: loadBalancerIP must be a valid IPv4 address
-                              rule: self.matches(r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+                              rule: isIP(self) && ip(self).family() == 4
                           loadBalancerSourceRanges:
                             description: |-
                               LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
@@ -11610,7 +11610,9 @@ spec:
                               This field may only be set for services with type LoadBalancer and will be cleared if the type
                               is changed to any other type.
                             items:
+                              format: cidr
                               type: string
+                            maxItems: 64
                             type: array
                           name:
                             description: |-
