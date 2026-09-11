@@ -85,7 +85,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			Name:       policy.Name,
 			Namespace:  policy.Namespace,
 			Generation: policy.Generation,
-			Status:     &policy.Status}
+			Status:     &policy.Status,
+		}
 
 		// Append the IR
 		gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
@@ -129,7 +130,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		for _, patch := range policy.Spec.JSONPatches {
 			irPatch := ir.JSONPatchConfig{
 				Type: string(patch.Type),
-				Name: patch.Name}
+				Name: patch.Name,
+			}
 			irPatch.Operation.Op = ir.JSONPatchOp(patch.Operation.Op)
 			irPatch.Operation.Path = patch.Operation.Path
 			irPatch.Operation.JSONPath = patch.Operation.JSONPath

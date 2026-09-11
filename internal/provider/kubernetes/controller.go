@@ -3111,7 +3111,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 func (r *gatewayAPIReconciler) enqueueClass(_ context.Context, _ client.Object) []reconcile.Request {
 	return []reconcile.Request{{
-		Name: string(r.classController)}}
+		Name: string(r.classController),
+	}}
 }
 
 // processGatewayParamsRef processes the infrastructure.parametersRef of the provided Gateway.

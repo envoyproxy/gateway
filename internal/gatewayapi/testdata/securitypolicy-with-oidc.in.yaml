@@ -126,6 +126,7 @@ securityPolicies:
       refreshToken: true
       defaultRefreshTokenTTL: 24h
       csrfTokenTTL: 35m
+      codeVerifierTTL: 2m
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:

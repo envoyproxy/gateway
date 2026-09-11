@@ -20,7 +20,8 @@ import (
 
 func enqueueClass(_ context.Context, _ client.Object) []reconcile.Request {
 	return []reconcile.Request{{
-		Name: "controller-name"}}
+		Name: "controller-name",
+	}}
 }
 
 func TestSources(t *testing.T) {

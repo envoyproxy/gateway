@@ -5997,6 +5997,24 @@ spec:
                     required:
                     - name
                     type: object
+                  codeVerifierTTL:
+                    description: |-
+                      CodeVerifierTTL defines how long the PKCE code verifier generated during the OAuth2
+                      authorization flow remains valid.
+
+                      This duration determines the lifetime of the code verifier cookie, which is exchanged
+                      for the access token when the provider redirects back to the callback endpoint.
+
+                      Both this cookie and the CSRF cookie are only consumed on the callback endpoint, so an
+                      authorization flow that is started but never completed leaves them behind until they
+                      expire. Lowering this value along with csrfTokenTTL bounds how many such cookies a
+                      browser can accumulate. It must stay long enough for a user to complete the login,
+                      including any multi-factor prompt: once it elapses the browser drops the cookie and
+                      the callback fails.
+
+                      If omitted, Envoy Gateway defaults the code verifier expiration to 10 minutes.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
                   cookieConfig:
                     description: |-
                       CookieConfigs allows setting the SameSite attribute for OIDC cookies.

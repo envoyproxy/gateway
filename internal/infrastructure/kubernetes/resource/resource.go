@@ -24,7 +24,8 @@ func GetSelector(labels map[string]string) *metav1.LabelSelector {
 func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSpec {
 	serviceSpec := corev1.ServiceSpec{
 		Type:            corev1.ServiceType(*service.Type),
-		SessionAffinity: corev1.ServiceAffinityNone}
+		SessionAffinity: corev1.ServiceAffinityNone,
+	}
 	if service.ExternalTrafficPolicy == nil {
 		service.ExternalTrafficPolicy = egv1a1.DefaultKubernetesServiceExternalTrafficPolicy()
 	}
