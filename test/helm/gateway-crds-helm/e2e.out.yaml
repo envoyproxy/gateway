@@ -2103,9 +2103,6 @@ spec:
                   Currently, this field can only be set when targeting xRoute resources.
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
-                x-kubernetes-validations:
-                - message: Replace is not a valid MergeType for BackendTrafficPolicySpec
-                  rule: self != 'Replace'
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.
@@ -11564,6 +11561,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -17292,6 +17294,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -21533,6 +21540,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -21583,6 +21595,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -21674,6 +21691,11 @@ spec:
                                   Type is the type of merge operation to perform
 
                                   By default, StrategicMerge is used as the patch type.
+                                  Replace is not supported for Kubernetes resource patches, as it would
+                                  replace the entire generated resource with the patch value.
+                                enum:
+                                - StrategicMerge
+                                - JSONMerge
                                 type: string
                               value:
                                 description: Object contains the raw configuration
@@ -35773,9 +35795,6 @@ spec:
                   Currently, this field can only be set when targeting xRoute resources.
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
-                x-kubernetes-validations:
-                - message: Replace is not a valid MergeType for SecurityPolicy
-                  rule: self != 'Replace'
               oidc:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.

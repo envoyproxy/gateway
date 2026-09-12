@@ -575,6 +575,10 @@ type KubernetesPatchSpec struct {
 	// Type is the type of merge operation to perform
 	//
 	// By default, StrategicMerge is used as the patch type.
+	// Replace is not supported for Kubernetes resource patches, as it would
+	// replace the entire generated resource with the patch value.
+	//
+	// +kubebuilder:validation:Enum=StrategicMerge;JSONMerge
 	// +optional
 	Type *MergeType `json:"type,omitempty"`
 
