@@ -686,15 +686,27 @@ func hasHCMInDefaultFilterChain(xdsListener *listenerv3.Listener) bool {
 }
 
 func (t *Translator) addXdsTCPFilterChain(
-	xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string,
-	accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection,
-	tlsConfig *ir.TLSConfig,
+	xdsListener *listenerv3.Listener, tcpListener *ir.TCPListener, irRoute *ir.TCPRoute,
+	clusterName string, accesslog *ir.AccessLog,
 ) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
 
-	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
+	var snis []string
+	if irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil {
+		snis = irRoute.TLS.TLSInspectorConfig.SNIs
+	}
+	if len(snis) == 0 {
+		// Fall back to the Gateway listener hostname. Every filter chain on a listener must have
+		// a distinct match, and multiple listeners can share one xDS listener (an HTTPS listener
+		// and a TLS listener on the same port, for example). Without this, a chain whose route
+		// carries no SNI of its own matches on nothing, and Envoy NACKs the entire listener as
+		// soon as a second such chain appears.
+		snis = tcpListener.Hostnames
+	}
+
+	isTLSPassthrough := len(snis) > 0 || (irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil)
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := ptr.Deref(irRoute.StatName, "")
 	if statPrefix == "" {
@@ -716,21 +728,16 @@ func (t *Translator) addXdsTCPFilterChain(
 		clusterName,
 		statPrefix,
 		accesslog,
-		timeout,
-		connection,
+		tcpListener.Timeout,
+		tcpListener.Connection,
 	)
 	if err != nil {
 		return err
 	}
 
-	var snis []string
-	if irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil {
-		snis = irRoute.TLS.TLSInspectorConfig.SNIs
-	}
-
 	var fingerprints []ir.TLSFingerprintType
-	if tlsConfig != nil {
-		fingerprints = tlsConfig.Fingerprints
+	if tcpListener.TLS != nil {
+		fingerprints = tcpListener.TLS.Fingerprints
 	}
 
 	if err := addServerNamesMatch(xdsListener, filterChain, snis, fingerprints); err != nil {

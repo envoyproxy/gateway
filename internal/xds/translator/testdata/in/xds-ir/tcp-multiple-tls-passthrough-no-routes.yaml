@@ -1,16 +1,27 @@
+# Multiple TLS Passthrough listeners sharing a port, none with an attached route.
+# Each one still needs a placeholder filter chain, and the chains must not share a
+# matcher or Envoy rejects the whole listener (envoyproxy/gateway#7866). Listeners
+# sharing a port always carry distinct hostnames -- identical ones are rejected with
+# HostnameConflict before translation -- so the SNI match is what keeps them unique.
 tcp:
 - name: tls-passthrough-1
   address: 0.0.0.0
   port: 10443
+  hostnames:
+  - one.example.com
   tls: {}
   routes: []
 - name: tls-passthrough-2
   address: 0.0.0.0
   port: 10443
+  hostnames:
+  - two.example.com
   tls: {}
   routes: []
 - name: tls-passthrough-3
   address: 0.0.0.0
   port: 10443
+  hostnames:
+  - three.example.com
   tls: {}
   routes: []
