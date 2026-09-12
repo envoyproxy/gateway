@@ -15,6 +15,7 @@ import (
 	commondnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/common/dns/v3"
 	dnsclusterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
+	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
 	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -341,6 +342,66 @@ func TestBuildXdsRouteClusterWithoutClusterLevelHashPolicy(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Nil(t, result.cluster.TypedExtensionProtocolOptions)
+}
+
+func TestBuildXdsClusterConsistentHashLocalityWeighting(t *testing.T) {
+	sourceIP := true
+	singleSetting := []*ir.DestinationSetting{{
+		Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+	}}
+	weight1, weight2 := uint32(5), uint32(95)
+	multiSetting := []*ir.DestinationSetting{
+		{Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}}, Weight: &weight1},
+		{Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.2", Port: 8080}}, Weight: &weight2},
+	}
+
+	tests := []struct {
+		name     string
+		settings []*ir.DestinationSetting
+		lb       *ir.LoadBalancer
+		want     bool
+	}{
+		{
+			name:     "single destination setting",
+			settings: singleSetting,
+			lb:       &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: &sourceIP}},
+			want:     false,
+		},
+		{
+			name:     "multiple destination settings (weighted backendRefs collapsed into one cluster)",
+			settings: multiSetting,
+			lb:       &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: &sourceIP}},
+			want:     true,
+		},
+		{
+			name:     "single destination setting with explicit WeightedZones",
+			settings: singleSetting,
+			lb: &ir.LoadBalancer{
+				ConsistentHash: &ir.ConsistentHash{SourceIP: &sourceIP},
+				WeightedZones:  []ir.WeightedZoneConfig{{Zone: "us-east-1a", Weight: 30}, {Zone: "us-east-1b", Weight: 70}},
+			},
+			want: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			args := &xdsClusterArgs{
+				name:         "test-cluster-consistent-hash-locality",
+				endpointType: EndpointTypeStatic,
+				settings:     tc.settings,
+				loadBalancer: tc.lb,
+			}
+
+			result, err := buildXdsCluster(args)
+			require.NoError(t, err)
+			require.Len(t, result.cluster.LoadBalancingPolicy.Policies, 1)
+
+			maglev := &maglevv3.Maglev{}
+			require.NoError(t, result.cluster.LoadBalancingPolicy.Policies[0].TypedExtensionConfig.TypedConfig.UnmarshalTo(maglev))
+			require.Equal(t, tc.want, maglev.LocalityWeightedLbConfig != nil)
+		})
+	}
 }
 
 func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
