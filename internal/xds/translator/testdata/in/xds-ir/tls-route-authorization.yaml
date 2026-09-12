@@ -1,0 +1,59 @@
+tcp:
+- name: "tls-listener-authorization"
+  address: "0.0.0.0"
+  port: 8443
+  routes:
+  - name: "tls-route-blocked"
+    tls:
+      inspector:
+        snis:
+        - "blocked.example.com"
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-office
+        principal:
+          clientCIDRs:
+          - cidr: 192.168.254.0/24
+            distinct: false
+            isIPv6: false
+            maskLen: 24
+    destination:
+      name: "tls-backend-blocked"
+      settings:
+      - endpoints:
+        - host: "10.0.1.1"
+          port: 443
+        name: "tls-backend-blocked/backend/0"
+  - name: "tls-route-allowed"
+    tls:
+      inspector:
+        snis:
+        - "allowed.example.com"
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-all-ipv4
+        principal:
+          clientCIDRs:
+          - cidr: 0.0.0.0/0
+            distinct: false
+            isIPv6: false
+            maskLen: 0
+      - action: Allow
+        name: allow-all-ipv6
+        principal:
+          clientCIDRs:
+          - cidr: ::/0
+            distinct: false
+            isIPv6: true
+            maskLen: 0
+    destination:
+      name: "tls-backend-allowed"
+      settings:
+      - endpoints:
+        - host: "10.0.1.2"
+          port: 443
+        name: "tls-backend-allowed/backend/0"

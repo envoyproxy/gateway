@@ -1,0 +1,120 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8443
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - blocked.example.com
+    filters:
+    - name: envoy.filters.network.rbac
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+        matcher:
+          matcherList:
+            matchers:
+            - onMatch:
+                action:
+                  name: allow-office
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
+              predicate:
+                singlePredicate:
+                  customMatch:
+                    name: ip_matcher
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                      cidrRanges:
+                      - addressPrefix: 192.168.254.0
+                        prefixLen: 24
+                      statPrefix: client_ip
+                  input:
+                    name: client_ip
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+          onNoMatch:
+            action:
+              name: default
+              typedConfig:
+                '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                action: DENY
+                name: DENY
+        statPrefix: tls-passthrough-8443
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tls-backend-blocked
+        statPrefix: tls-passthrough-8443
+    name: tls-route-blocked
+  - filterChainMatch:
+      serverNames:
+      - allowed.example.com
+    filters:
+    - name: envoy.filters.network.rbac
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+        matcher:
+          matcherList:
+            matchers:
+            - onMatch:
+                action:
+                  name: allow-all-ipv4
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
+              predicate:
+                singlePredicate:
+                  customMatch:
+                    name: ip_matcher
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                      cidrRanges:
+                      - addressPrefix: 0.0.0.0
+                        prefixLen: 0
+                      statPrefix: client_ip
+                  input:
+                    name: client_ip
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+            - onMatch:
+                action:
+                  name: allow-all-ipv6
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                    name: ALLOW
+              predicate:
+                singlePredicate:
+                  customMatch:
+                    name: ip_matcher
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                      cidrRanges:
+                      - addressPrefix: '::'
+                        prefixLen: 0
+                      statPrefix: client_ip
+                  input:
+                    name: client_ip
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+          onNoMatch:
+            action:
+              name: default
+              typedConfig:
+                '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                action: DENY
+                name: DENY
+        statPrefix: tls-passthrough-8443
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tls-backend-allowed
+        statPrefix: tls-passthrough-8443
+    name: tls-route-allowed
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: tls-listener-authorization
+  perConnectionBufferLimitBytes: 32768

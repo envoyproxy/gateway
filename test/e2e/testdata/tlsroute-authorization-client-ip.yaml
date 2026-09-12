@@ -1,0 +1,85 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: tls-authorization-backend
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "envoy-gateway"
+  listeners:
+    - name: tls-passthrough
+      protocol: TLS
+      port: 8443
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        kinds:
+          - kind: TLSRoute
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: tls-backend-authorization-blocked
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tls-authorization-backend
+      sectionName: tls-passthrough
+  hostnames:
+    - "blocked.example.com"
+  rules:
+    - backendRefs:
+        - name: tls-backend
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: tls-backend-authorization-allowed
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tls-authorization-backend
+      sectionName: tls-passthrough
+  hostnames:
+    - "allowed.example.com"
+  rules:
+    - backendRefs:
+        - name: tls-backend
+          port: 443
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: tls-backend-authorization-blocked-security-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: TLSRoute
+      name: tls-backend-authorization-blocked
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+            - 192.168.254.0/24  # This CIDR won't match test client
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: tls-backend-authorization-allowed-security-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: TLSRoute
+      name: tls-backend-authorization-allowed
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+            - 0.0.0.0/0  # Allow all IPv4
+            - ::/0       # Allow all IPv6
