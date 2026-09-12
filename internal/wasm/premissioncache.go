@@ -21,6 +21,7 @@ package wasm
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -47,6 +48,9 @@ type permissionCacheOptions struct {
 	// The permission cache will be removed if it is not accessed for the specified expiry time.
 	// This is used to purge the cache.
 	cacheExpiry time.Duration
+
+	// permissionCheckTimeout is the maximum time for one background permission recheck.
+	permissionCheckTimeout time.Duration
 }
 
 // sanitize validates and sets the default values for the permission cache options.
@@ -59,6 +63,9 @@ func (o *permissionCacheOptions) sanitize() {
 	}
 	if o.cacheExpiry == 0 {
 		o.cacheExpiry = 24 * time.Hour
+	}
+	if o.permissionCheckTimeout == 0 {
+		o.permissionCheckTimeout = DefaultPermissionCheckTimeout
 	}
 }
 
@@ -92,7 +99,17 @@ type permissionCacheEntry struct {
 }
 
 func (e *permissionCacheEntry) key() string {
-	return permissionCacheKey(e.image, e.fetcherOption.PullSecret)
+	return permissionCacheKey(e.image, e.fetcherOption.PullSecret, e.fetcherOption.CACert)
+}
+
+func (e *permissionCacheEntry) copy() *permissionCacheEntry {
+	return &permissionCacheEntry{
+		image:         e.image,
+		fetcherOption: e.fetcherOption,
+		lastCheck:     e.lastCheck,
+		checkError:    e.checkError,
+		lastAccess:    e.lastAccess,
+	}
 }
 
 // isPermissionExpired returns true if the permission check is older
@@ -110,12 +127,13 @@ func (e *permissionCacheEntry) isCacheExpired(expiry time.Duration) bool {
 }
 
 // permissionCacheKey generates a key for a permission cache entry.
-// The key is the hex encoded of concatenation of the image URL and the pull secret.
-func permissionCacheKey(image *url.URL, pullSecret []byte) string {
-	b := make([]byte, len(image.String())+len(pullSecret))
-	copy(b, image.String())
-	copy(b[len(image.String()):], pullSecret)
-	return hex.EncodeToString(b)
+// The key is the hex encoded SHA-256 of the image URL, the pull secret, and the
+// CA certificate. The pull secret and CA certificate are hex encoded before
+// hashing so that they can't contain the separator, making the split between the
+// components unambiguous.
+func permissionCacheKey(image *url.URL, pullSecret, caCert []byte) string {
+	sum := sha256.Sum256(fmt.Appendf(nil, "%s|%x|%x", image.String(), pullSecret, caCert))
+	return hex.EncodeToString(sum[:])
 }
 
 // newPermissionCache creates a new permission cache with a given TTL.
@@ -128,17 +146,15 @@ func newPermissionCache(options permissionCacheOptions, logger logging.Logger) *
 	}
 }
 
-// checkAndUpdatePermission checks the permission of the image against the pull secret and updates the cache entry.
-func (p *permissionCache) checkAndUpdatePermission(ctx context.Context, e *permissionCacheEntry) error {
-	fetcher, err := NewImageFetcher(ctx, *e.fetcherOption, p.logger)
+// checkPermission checks the permission of the image against the pull secret.
+func (p *permissionCache) checkPermission(ctx context.Context, image *url.URL, fetcherOption ImageFetcherOption) (time.Time, error) {
+	fetcher, err := NewImageFetcher(ctx, fetcherOption, p.logger)
 	if err != nil {
 		// Return a more descriptive error as messages downstream do not indicate the source very well.
-		return fmt.Errorf("failed to create image fetcher: %w", err)
+		return time.Now(), fmt.Errorf("failed to create image fetcher: %w", err)
 	}
-	_, _, err = fetcher.PrepareFetch(e.image.Host + e.image.Path)
-	e.checkError = err
-	e.lastCheck = time.Now()
-	return err
+	_, _, err = fetcher.PrepareFetch(image.Host + image.Path)
+	return time.Now(), err
 }
 
 // start starts a background goroutine to periodically check the permission for the cached permission entries.
@@ -149,51 +165,112 @@ func (p *permissionCache) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
-				func() {
-					p.Lock()
-					defer p.Unlock()
-					for _, e := range p.cache {
-						if e.isCacheExpired(p.cacheExpiry) {
-							p.logger.Info("removing permission cache entry", "image", e.image.String())
-							delete(p.cache, e.key())
-							continue
+				entries := p.pruneExpiredAndGetEntriesToRecheck()
+				for _, e := range entries {
+					const retryAttempts = 3
+					const retryDelay = 1 * time.Second
+					lastCheck := e.lastCheck
+					checkCtx, cancel := context.WithTimeout(ctx, p.permissionCheckTimeout)
+					p.logger.Info("rechecking permission for image", "image", e.image.String())
+					err := retry.New(
+						retry.Attempts(retryAttempts),
+						retry.DelayType(retry.BackOffDelay),
+						retry.Delay(retryDelay),
+						retry.Context(checkCtx),
+					).Do(func() error {
+						lastCheck, err := p.checkPermission(checkCtx, e.image, *e.fetcherOption)
+						e.checkError = err
+						e.lastCheck = lastCheck
+						if err != nil && isRetriableError(err) {
+							p.logger.Error(
+								err,
+								"failed to check permission for image, will retry again",
+								"image",
+								e.image.String())
+							return err
 						}
-						if e.isPermissionExpired(p.permissionExpiry) {
-							const retryAttempts = 3
-							const retryDelay = 1 * time.Second
-							p.logger.Info("rechecking permission for image", "image", e.image.String())
-							err := retry.New(
-								retry.Attempts(retryAttempts),
-								retry.DelayType(retry.BackOffDelay),
-								retry.Delay(retryDelay),
-								retry.Context(ctx),
-							).Do(func() error {
-								err := p.checkAndUpdatePermission(ctx, e)
-								if err != nil && isRetriableError(err) {
-									p.logger.Error(
-										err,
-										"failed to check permission for image, will retry again",
-										"image",
-										e.image.String())
-									return err
-								}
-								return nil
-							})
-							if err != nil {
-								p.logger.Error(
-									err,
-									fmt.Sprintf("failed to recheck permission for image after %d attempts", retryAttempts),
-									"image",
-									e.image.String())
-							}
-						}
+						return nil
+					})
+					cancel()
+					if err != nil {
+						p.logger.Error(
+							err,
+							fmt.Sprintf("failed to recheck permission for image after %d attempts", retryAttempts),
+							"image",
+							e.image.String())
 					}
-				}()
+					p.updateRecheckedPermission(e, lastCheck)
+				}
 			case <-ctx.Done():
 				return
 			}
 		}
 	}()
+}
+
+func (p *permissionCache) pruneExpiredAndGetEntriesToRecheck() []*permissionCacheEntry {
+	p.Lock()
+	defer p.Unlock()
+
+	var entries []*permissionCacheEntry
+	for key, e := range p.cache {
+		if e.isCacheExpired(p.cacheExpiry) {
+			p.logger.Info("removing permission cache entry", "image", e.image.String())
+			delete(p.cache, key)
+			continue
+		}
+		if e.isPermissionExpired(p.permissionExpiry) {
+			entries = append(entries, e.copy())
+		}
+	}
+	return entries
+}
+
+func (p *permissionCache) updateRecheckedPermission(e *permissionCacheEntry, lastCheck time.Time) {
+	p.Lock()
+	defer p.Unlock()
+
+	cached, ok := p.cache[e.key()]
+	if !ok {
+		return
+	}
+	// If the last check time is different, it means the permission has been updated by other goroutine,
+	// so we should not update the cache with the rechecked result to avoid overwriting the newer permission with the older one.
+	if !cached.lastCheck.Equal(lastCheck) {
+		return
+	}
+	cached.checkError = e.checkError
+	cached.lastCheck = e.lastCheck
+}
+
+func (p *permissionCache) upsertPermission(e *permissionCacheEntry) {
+	p.Lock()
+	defer p.Unlock()
+
+	key := e.key()
+	if cached, ok := p.cache[key]; ok {
+		if e.lastCheck.After(cached.lastCheck) {
+			cached.checkError = e.checkError
+			cached.lastCheck = e.lastCheck
+		}
+		if e.lastAccess.After(cached.lastAccess) {
+			cached.lastAccess = e.lastAccess
+		}
+		return
+	}
+	p.cache[key] = e
+}
+
+func (p *permissionCache) lookupPermission(key string) (error, bool) {
+	p.Lock()
+	defer p.Unlock()
+
+	e, ok := p.cache[key]
+	if ok {
+		e.lastAccess = time.Now()
+		return e.checkError, true
+	}
+	return nil, false
 }
 
 // isRetriableError checks if the error is retriable.
@@ -224,30 +301,32 @@ func (p *permissionCache) Put(e *permissionCacheEntry) {
 //
 // If any error occurs, the permission is considered not allowed.
 // The error can be a permission error or other errors like network error, non-exist image, etc.
-func (p *permissionCache) IsAllowed(ctx context.Context, image *url.URL, pullSecret []byte, insecure bool) (bool, error) {
-	p.Lock()
-	defer p.Unlock()
-	key := permissionCacheKey(image, pullSecret)
-	if e, ok := p.cache[key]; ok {
-		e.lastAccess = time.Now()
-		return e.checkError == nil, e.checkError
+func (p *permissionCache) IsAllowed(ctx context.Context, image *url.URL, pullSecret []byte, insecure bool, caCert []byte) (bool, error) {
+	key := permissionCacheKey(image, pullSecret, caCert)
+	if err, ok := p.lookupPermission(key); ok {
+		return err == nil, err
 	}
 
-	e := &permissionCacheEntry{
-		image: image,
-		fetcherOption: &ImageFetcherOption{
-			Insecure:   insecure,
-			PullSecret: pullSecret,
-		},
+	fetcherOption := ImageFetcherOption{
+		Insecure:   insecure,
+		PullSecret: pullSecret,
+		CACert:     caCert,
 	}
 	// Do not retry if the permission check fails because we don't want to block the translator for too long.
 	// The permission check will be retried in the background goroutine by the permission cache.
-	if err := p.checkAndUpdatePermission(ctx, e); err != nil {
-		p.logger.Error(err, "failed to check permission for image", "image", e.image.String())
+	lastCheck, err := p.checkPermission(ctx, image, fetcherOption)
+	if err != nil {
+		p.logger.Error(err, "failed to check permission for image", "image", image.String())
 	}
-	e.lastAccess = time.Now()
-	p.cache[key] = e
-	return e.checkError == nil, e.checkError
+
+	p.upsertPermission(&permissionCacheEntry{
+		image:         image,
+		fetcherOption: &fetcherOption,
+		lastCheck:     lastCheck,
+		checkError:    err,
+		lastAccess:    time.Now(),
+	})
+	return err == nil, err
 }
 
 // getForTest is a test helper to get a permission cache entry from the cache.

@@ -25,7 +25,7 @@ type RouteContextExample struct {
 type RouteContextExampleSpec struct {
 	TargetRefs []gwapiv1.LocalPolicyTargetReferenceWithSectionName `json:"targetRefs"`
 
-	ResponseHeaderName string `json:"responseHeaderName"`
+	ResponseHeaderName  string `json:"responseHeaderName"`
 	ResponseHeaderValue string `json:"responseHeaderValue"`
 }
 

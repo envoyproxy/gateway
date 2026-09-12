@@ -36,14 +36,14 @@
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
-    "autoprefixer": "^10.5.4",
+    "autoprefixer": "^10.5.5",
     "cross-env": "^10.0.0",
     "hugo-extended": "0.160.1",
-    "postcss-cli": "^11.0.0",
+    "postcss-cli": "^12.0.0",
     "rtlcss": "^4.3.0"
   },
   "optionalDependencies": {
-    "npm-check-updates": "^23.0.2"
+    "npm-check-updates": "^23.1.0"
   },
   "overrides": {
     "adm-zip": "^0.6.0"

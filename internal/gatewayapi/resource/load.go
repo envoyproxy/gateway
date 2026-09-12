@@ -133,7 +133,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 
 		gv := gvk.GroupVersion().String()
 		objType := reflect.TypeOf(kobj)
-		if objType.Kind() != reflect.Ptr {
+		if objType.Kind() != reflect.Pointer {
 			return fmt.Errorf("expected pointer type, but got %s", objType.Kind().String())
 		}
 		kobjVal := reflect.ValueOf(kobj).Elem()

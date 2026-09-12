@@ -864,6 +864,22 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 			}
 		}
 
+		// ProxyAccessLogFormat.Type is optional: when it is unset the API only requires that
+		// one of text or json is set. The File and ALS sinks can render just one of the two,
+		// so resolve the effective type once here instead of defaulting to JSON at each sink
+		// and silently dropping a text format that was accepted by the API server.
+		// An unset type with both text and json set stays JSON, which is what those sinks
+		// have always picked for that input; only the text-only case changes.
+		// OpenTelemetry is deliberately excluded below: it can carry text and attributes at
+		// the same time and handles the unset type itself.
+		formatType := egv1a1.ProxyAccessLogFormatTypeJSON
+		switch {
+		case format.Type != nil:
+			formatType = *format.Type
+		case format.Text != nil && format.JSON == nil:
+			formatType = egv1a1.ProxyAccessLogFormatTypeText
+		}
+
 		var (
 			validExprs []string
 			errs       []error
@@ -880,13 +896,23 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 		}
 
 		if len(accessLog.Sinks) == 0 {
-			al := &ir.JSONAccessLog{
-				JSON:       ir.MapToSlice(format.JSON),
-				CELMatches: validExprs,
-				LogType:    accessLogType,
-				Path:       "/dev/stdout",
+			if formatType == egv1a1.ProxyAccessLogFormatTypeText {
+				al := &ir.TextAccessLog{
+					Format:     format.Text,
+					CELMatches: validExprs,
+					LogType:    accessLogType,
+					Path:       "/dev/stdout",
+				}
+				irAccessLog.Text = append(irAccessLog.Text, al)
+			} else {
+				al := &ir.JSONAccessLog{
+					JSON:       ir.MapToSlice(format.JSON),
+					CELMatches: validExprs,
+					LogType:    accessLogType,
+					Path:       "/dev/stdout",
+				}
+				irAccessLog.JSON = append(irAccessLog.JSON, al)
 			}
-			irAccessLog.JSON = append(irAccessLog.JSON, al)
 		}
 
 		for j, sink := range accessLog.Sinks {
@@ -896,7 +922,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					continue
 				}
 
-				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
+				if formatType == egv1a1.ProxyAccessLogFormatTypeText {
 					al := &ir.TextAccessLog{
 						Format:     format.Text,
 						Path:       sink.File.Path,
@@ -960,10 +986,9 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					}
 					al.HTTP = http
 				}
-				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
+				if formatType == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
 				} else {
-					// Default to JSON format if type is nil or JSON
 					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 

@@ -94,6 +94,7 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+	extBackendCRDExists    map[schema.GroupVersionKind]bool
 
 	clusterTrustBundleExits bool
 
@@ -175,6 +176,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		mergeGateways:        sets.New[string](),
 		extServerPolicies:    extServerPoliciesGVKs,
 		extBackendGVKs:       extBackendGVKs,
+		extBackendCRDExists:  make(map[schema.GroupVersionKind]bool),
 		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
 	}
 
@@ -185,6 +187,16 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
 	}
 
+	debounce := cfg.EnvoyGateway.Debounce
+	var debounceAfter, debounceMax time.Duration
+	if debounce.Enabled() {
+		var err error
+		if debounceAfter, debounceMax, err = debounce.ResolveDurations(); err != nil {
+			return err
+		}
+		r.log.Info("debouncing reconcile requests", "after", debounceAfter, "max", debounceMax)
+	}
+
 	// controller-runtime doesn't allow run controller with same name for more than once
 	// see https://github.com/kubernetes-sigs/controller-runtime/blob/2b941650bce159006c88bd3ca0d132c7bc40e947/pkg/controller/name.go#L29
 	name := fmt.Sprintf("gatewayapi-%d", time.Now().Unix())
@@ -192,10 +204,14 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		Reconciler:         r,
 		SkipNameValidation: skipNameValidation(),
 		NewQueue: func(controllerName string, rateLimiter workqueue.TypedRateLimiter[reconcile.Request]) workqueue.TypedRateLimitingInterface[reconcile.Request] {
-			return workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{
+			q := workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{
 				Name:            controllerName,
 				MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
 			})
+			if !debounce.Enabled() {
+				return q
+			}
+			return newDebouncingQueue(q, debounceAfter, debounceMax)
 		},
 	})
 	if err != nil {
@@ -617,13 +633,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	//    which impacts translation output
 	gwcResources.Sort()
 
-	// Store the Gateway Resources for the GatewayClass with trace context.
+	// Store the Gateway Resources for the GatewayClass with trace context. Consumers
+	// propagate only its SpanContext, so their spans may outlive this reconciliation.
 	// The Store is triggered even when there are no Gateways associated to the
 	// GatewayClass. This would happen in case the last Gateway is removed and the
 	// Store will be required to trigger a cleanup of envoy infra resources.
 	resourcesWithContext := &resource.ControllerResourcesContext{
 		Resources: &gwcResources,
 		Context:   ctx,
+		StoredAt:  time.Now(),
 	}
 	r.resources.GatewayAPIResources.Store(string(r.classController), resourcesWithContext)
 	message.PublishMetric(message.Metadata{
@@ -1851,6 +1869,16 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		r.processServiceClusterForGatewayClass(ctx, resourceTree.EnvoyProxyForGatewayClass, managedGC, resourceMap)
 	}
 
+	if len(gatewayList.Items) == 0 {
+		return nil
+	}
+
+	// The extension ref filters and backend resources are cluster-wide,
+	// so they are collected once per GatewayClass instead of once per Gateway.
+	if err := r.populateExtensionResources(ctx, resourceMap); err != nil {
+		return err
+	}
+
 	for i := range gatewayList.Items {
 		gtw := &gatewayList.Items[i]
 
@@ -2421,6 +2449,33 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &corev1.Namespace{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ns *corev1.Namespace) []reconcile.Request {
+				// Gateway listener restricts route attachment with allowedRoutes.namespaces.from: Selector
+				// changing a namespace's labels after an HTTPRoute in it has been evaluated should trigger re-evaluation.
+				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
+				// so we enqueue all GatewayClasses for reconciliation.
+				// Any namespace holding a candidate Route is already tracked in allAssociatedNamespaces by
+				// the route processors (processHTTPRoutes et al.) regardless of whether it currently
+				// satisfies any listener's selector, and is re-fetched fresh on every reconcile (see the
+				// allAssociatedNamespaces loop that builds gwcResource.Namespaces). So a label change on a
+				// namespace that actually contains a candidate route always shows up as a genuine diff in
+				// Resources.Namespaces and triggers a retranslation; a label change on any other namespace
+				// touches nothing tracked and correctly no-ops via the normal reflect.DeepEqual dedup.
+				if !r.hasSelectorAllowedRoutesListener(ctx) {
+					return nil
+				}
+				return r.enqueueClass(ctx, ns)
+			}),
+			predicate.NewTypedPredicateFuncs(func(_ *corev1.Namespace) bool {
+				// TODO: respect the namespaceLabel filter here, but we need to be careful
+				// about the case where the label is removed from a namespace, which should trigger a reconciliation.
+				return true
+			}))); err != nil {
+		return fmt.Errorf("failed to watch Namespace: %w", err)
+	}
+
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	httprPredicates := commonPredicates[*gwapiv1.HTTPRoute]()
 	if r.namespaceLabel != nil {
@@ -2959,9 +3014,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	r.log.Info("Watching gatewayAPI related objects")
 
 	// Watch any additional GVKs from the registered extension.
-	uPredicates := []predicate.TypedPredicate[*unstructured.Unstructured]{
-		predicate.TypedGenerationChangedPredicate[*unstructured.Unstructured]{},
-	}
+	uPredicates := commonPredicates[*unstructured.Unstructured]()
 	if r.namespaceLabel != nil {
 		uPredicates = append(uPredicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
 			return r.hasMatchingNamespaceLabels(obj)
@@ -2992,13 +3045,33 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.log.Info("Watching additional policy resource", "resource", gvk.String())
 	}
 	for _, gvk := range r.extBackendGVKs {
+		// Check if the backend resource CRD exists before registering the watch.
+		// If the CRD is missing (or RBAC is insufficient), skip the watch for this
+		// GVK instead of failing WaitForCacheSync and crashing the controller.
+		// This follows the same pattern used for ServiceImport, Backend, and other
+		// optional CRDs.
+		crdExists, err := checkCRD(gvk.Kind, gvk.GroupVersion().String())
+		if err != nil {
+			return err
+		}
+		if !crdExists {
+			r.log.Info("backend resource CRD not found, skipping watch", "resource", gvk.String())
+			continue
+		}
+		r.extBackendCRDExists[gvk] = true
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
+		extBackendPredicates := commonPredicates[*unstructured.Unstructured]()
+		if r.namespaceLabel != nil {
+			extBackendPredicates = append(extBackendPredicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
+				return r.hasMatchingNamespaceLabels(obj)
+			}))
+		}
 		if err := c.Watch(source.Kind(mgr.GetCache(), u,
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *unstructured.Unstructured) []reconcile.Request {
 				return r.enqueueClass(ctx, si)
 			}),
-			uPredicates...)); err != nil {
+			extBackendPredicates...)); err != nil {
 			return err
 		}
 		r.log.Info("Watching additional backend resource", "resource", gvk.String())

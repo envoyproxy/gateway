@@ -8,7 +8,9 @@ package gatewayapi
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -244,6 +246,135 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 				Concurrency: new(int32(8)),
 			},
 		},
+		{
+			name: "StrategicMerge with backendRefs",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeType:   new(egv1a1.StrategicMerge),
+				Concurrency: new(int32(4)),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Tracing: &egv1a1.ProxyTracing{
+						Provider: egv1a1.TracingProvider{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Group: new(gwapiv1.Group("gateway.envoyproxy.io")),
+									Name:  gwapiv1.ObjectName("otel-collector1"),
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType:   new(egv1a1.StrategicMerge),
+					Concurrency: new(int32(8)),
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								ServiceName: new("fake-service-name"),
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										Kind: new(gwapiv1.Kind("Backend")),
+										Name: gwapiv1.ObjectName("otel-collector"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: new(int32(8)),
+				MergeType:   new(egv1a1.StrategicMerge),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Tracing: &egv1a1.ProxyTracing{
+						Provider: egv1a1.TracingProvider{
+							ServiceName: new("fake-service-name"),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Kind: new(gwapiv1.Kind("Backend")),
+									Name: gwapiv1.ObjectName("otel-collector"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "JSONMerge with backendRefs",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: new(int32(4)),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Tracing: &egv1a1.ProxyTracing{
+						Provider: egv1a1.TracingProvider{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Group: new(gwapiv1.Group("gateway.envoyproxy.io")),
+									Name:  gwapiv1.ObjectName("otel-collector1"),
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType:   new(egv1a1.JSONMerge),
+					Concurrency: new(int32(8)),
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								ServiceName: new("fake-service-name"),
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										Kind: new(gwapiv1.Kind("Backend")),
+										Name: gwapiv1.ObjectName("otel-collector"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: new(int32(8)),
+				MergeType:   new(egv1a1.JSONMerge),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Tracing: &egv1a1.ProxyTracing{
+						Provider: egv1a1.TracingProvider{
+							ServiceName: new("fake-service-name"),
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									Kind: new(gwapiv1.Kind("Backend")),
+									Name: gwapiv1.ObjectName("otel-collector"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -262,13 +393,8 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 				return
 			}
 
-			require.NotNil(t, result)
-			require.Equal(t, tc.expectedSpec.MergeType, result.Spec.MergeType)
-			require.Equal(t, tc.expectedSpec.Concurrency, result.Spec.Concurrency)
-
-			if len(tc.expectedSpec.Logging.Level) > 0 {
-				require.Equal(t, tc.expectedSpec.Logging.Level, result.Spec.Logging.Level)
-			}
+			diff := cmp.Diff(result.Spec, *tc.expectedSpec)
+			require.Empty(t, diff)
 		})
 	}
 }
