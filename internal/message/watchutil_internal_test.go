@@ -6,14 +6,20 @@
 package message
 
 import (
+	"context"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/noop"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/metrics"
 )
 
 func TestCoalesceUpdates(t *testing.T) {
@@ -69,4 +75,104 @@ func TestCoalesceUpdates(t *testing.T) {
 			require.Equal(t, tc.expected, actual)
 		})
 	}
+}
+
+func collectWatchableDepth(t *testing.T, reader *sdkmetric.ManualReader) float64 {
+	t.Helper()
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(context.Background(), &rm))
+
+	for _, scopeMetric := range rm.ScopeMetrics {
+		for _, metric := range scopeMetric.Metrics {
+			if metric.Name != "watchable_depth" {
+				continue
+			}
+
+			gauge, ok := metric.Data.(metricdata.Gauge[float64])
+			require.True(t, ok, "watchable_depth should export a float64 gauge")
+			require.Len(t, gauge.DataPoints, 1)
+
+			return gauge.DataPoints[0].Value
+		}
+	}
+
+	t.Fatal("watchable_depth was never recorded")
+	return 0
+}
+
+// handleSnapshot runs HandleSubscription over a single snapshot carrying the
+// given updates. It returns the depth observed while the batch was being
+// handled and the depth left behind once HandleSubscription returned. The
+// channel is unbuffered, matching what watchable.Map.Subscribe returns, so
+// reading the depth off the channel rather than the snapshot yields 0 here too.
+func handleSnapshot(t *testing.T, reader *sdkmetric.ManualReader, updates []watchable.Update[string, int]) (during, after float64) {
+	t.Helper()
+
+	ch := make(chan watchable.Snapshot[string, int])
+	go func() {
+		defer close(ch)
+		// Consumed as the initial state, before the update loop.
+		ch <- watchable.Snapshot[string, int]{State: map[string]int{}}
+		ch <- watchable.Snapshot[string, int]{State: map[string]int{}, Updates: updates}
+	}()
+
+	observed := false
+	HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		Metadata{Runner: "demo", Message: "demo"},
+		ch,
+		func(_ Update[string, int], _ chan error) {
+			// The handler runs between the two Record calls, which is the only
+			// point where the batch size is still the current value.
+			if !observed {
+				during = collectWatchableDepth(t, reader)
+				observed = true
+			}
+		},
+	)
+	require.True(t, observed, "the handler should run at least once")
+
+	return during, collectWatchableDepth(t, reader)
+}
+
+// TestHandleSubscriptionRecordsCoalescedUpdateCount pins watchable_depth to the
+// number of updates in the snapshot being handled. Recording len(subscription)
+// instead reports 0 forever, because watchable's Subscribe returns an
+// unbuffered channel.
+//
+// watchable_depth is an async observable gauge, so both scenarios share one
+// meter provider and run in sequence; installing a new provider per case would
+// drop the callback registration.
+func TestHandleSubscriptionRecordsCoalescedUpdateCount(t *testing.T) {
+	// The first SetMeterProvider in a process does not reach an async instrument
+	// created immediately after it, so resolve the global delegate first.
+	otel.SetMeterProvider(noop.NewMeterProvider())
+
+	reader := sdkmetric.NewManualReader()
+	otel.SetMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)))
+
+	previousDepth := watchableDepth
+	watchableDepth = metrics.NewGauge(
+		"watchable_depth",
+		"Number of updates coalesced into the snapshot being handled, or 0 when idle.",
+	)
+	t.Cleanup(func() {
+		watchableDepth = previousDepth
+		otel.SetMeterProvider(noop.NewMeterProvider())
+	})
+
+	backlog := []watchable.Update[string, int]{
+		{Key: "foo", Value: 1},
+		{Key: "bar", Value: 2},
+		{Key: "baz", Value: 3},
+	}
+	during, after := handleSnapshot(t, reader, backlog)
+	require.Equal(t, float64(3), during, "a backlog of three updates")
+	require.Zero(t, after, "the depth should fall back to zero once the backlog is drained")
+
+	single := []watchable.Update[string, int]{{Key: "foo", Value: 1}}
+	during, after = handleSnapshot(t, reader, single)
+	require.Equal(t, float64(1), during, "a single update")
+	require.Zero(t, after, "the depth should fall back to zero once the backlog is drained")
 }
