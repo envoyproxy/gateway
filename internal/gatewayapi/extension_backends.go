@@ -34,6 +34,9 @@ func (t *Translator) buildExtensionBackend(policy *egv1a1.EnvoyExtensionPolicy, 
 	if backend.Name == t.getIRKey(gateway.Gateway) {
 		return nil, fmt.Errorf("cluster name %q is reserved for Envoy Gateway's service cluster", backend.Name)
 	}
+	if backend.Name == "tracing" {
+		return nil, fmt.Errorf("cluster name %q is reserved for Envoy Gateway's tracing cluster", backend.Name)
+	}
 	destination, err := t.translateExtServiceBackendRefs(policy,
 		[]egv1a1.BackendRef{{BackendObjectReference: backend.BackendRef}}, ir.HTTP,
 		resources, gateway, fmt.Sprintf("dynamic-module/%d", moduleIndex), backendIndex)

@@ -163,6 +163,18 @@ func TestExtensionBackendDeploymentScope(t *testing.T) {
 	condition := extensionPolicyCondition(t, result, "policy-for-http-route")
 	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), condition.Reason)
 	require.Contains(t, condition.Message, "reserved")
+
+	for _, policy := range resources.EnvoyExtensionPolicies {
+		if policy.Name == "policy-for-http-route" {
+			policy.Spec.DynamicModule[0].Backends[0].Name = "tracing"
+		}
+	}
+	result, routes = translateExtensionBackends(t, resources)
+	condition = extensionPolicyCondition(t, result, "policy-for-http-route")
+	require.Equal(t, metav1.ConditionFalse, condition.Status)
+	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), condition.Reason)
+	require.Contains(t, condition.Message, `cluster name "tracing" is reserved`)
+	require.EqualValues(t, 500, *routes["httproute-1"].DirectResponse.StatusCode)
 }
 
 func TestExtensionBackendInheritanceAndAuthorization(t *testing.T) {
