@@ -1,0 +1,1 @@
+Added `deployment.minReadySeconds` and `deployment.progressDeadlineSeconds` values to the gateway-helm chart, letting the envoy-gateway controller's own rollout add a bake period between replica replacements instead of replacing all replicas within seconds of each other.
