@@ -147,12 +147,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   bootstrap.EnvoyReadinessPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   bootstrap.EnvoyReadinessPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -160,12 +158,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				FailureThreshold: 30,
 			},
 			ReadinessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   bootstrap.EnvoyReadinessPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   bootstrap.EnvoyReadinessPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    5,
@@ -173,12 +169,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				FailureThreshold: 1,
 			},
 			LivenessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   bootstrap.EnvoyReadinessPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   bootstrap.EnvoyReadinessPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -206,12 +200,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   envoy.ShutdownManagerHealthCheckPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   envoy.ShutdownManagerHealthCheckPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -219,12 +211,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				FailureThreshold: 30,
 			},
 			ReadinessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   envoy.ShutdownManagerHealthCheckPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   envoy.ShutdownManagerHealthCheckPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -232,12 +222,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				FailureThreshold: 3,
 			},
 			LivenessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   envoy.ShutdownManagerHealthCheckPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   envoy.ShutdownManagerHealthCheckPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -340,49 +328,41 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 	var volumes []corev1.Volume
 	certsVolume := corev1.Volume{
 		Name: "certs",
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName:  "envoy",
-				DefaultMode: new(int32(420)),
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName:  "envoy",
+			DefaultMode: new(int32(420)),
 		},
 	}
 
 	if r.GatewayNamespaceMode {
 		certsVolume = corev1.Volume{
 			Name: "certs",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: r.Name(),
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				Name: r.Name(),
+				Items: []corev1.KeyToPath{
+					{
+						Key:  XdsTLSCaFileName,
+						Path: XdsTLSCaFileName,
 					},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  XdsTLSCaFileName,
-							Path: XdsTLSCaFileName,
-						},
-					},
-					DefaultMode: new(int32(420)),
-					Optional:    new(false),
 				},
+				DefaultMode: new(int32(420)),
+				Optional:    new(false),
 			},
 		}
 		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, r.ControllerNamespace(), r.DNSDomain)
 		saTokenProjectedVolume := corev1.Volume{
 			Name: "sa-token",
-			VolumeSource: corev1.VolumeSource{
-				Projected: &corev1.ProjectedVolumeSource{
-					Sources: []corev1.VolumeProjection{
-						{
-							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-								Path:              "sa-token",
-								Audience:          saAudience,
-								ExpirationSeconds: new(int64(3600)),
-							},
+			Projected: &corev1.ProjectedVolumeSource{
+				Sources: []corev1.VolumeProjection{
+					{
+						ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+							Path:              "sa-token",
+							Audience:          saAudience,
+							ExpirationSeconds: new(int64(3600)),
 						},
 					},
-					DefaultMode: new(int32(420)),
 				},
+				DefaultMode: new(int32(420)),
 			},
 		}
 		volumes = append(volumes, saTokenProjectedVolume)
@@ -392,15 +372,11 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 
 	sdsVolume := corev1.Volume{
 		Name: "sds",
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: r.Name(),
-				},
-				Items:       sdsConfigMapItems(r.GatewayNamespaceMode),
-				DefaultMode: new(int32(420)),
-				Optional:    new(false),
-			},
+		ConfigMap: &corev1.ConfigMapVolumeSource{
+			Name:        r.Name(),
+			Items:       sdsConfigMapItems(r.GatewayNamespaceMode),
+			DefaultMode: new(int32(420)),
+			Optional:    new(false),
 		},
 	}
 

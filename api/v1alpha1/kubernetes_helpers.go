@@ -87,20 +87,23 @@ func DefaultKubernetesService() *KubernetesServiceSpec {
 
 // DefaultKubernetesServiceType returns a new KubernetesServiceType with default settings.
 func DefaultKubernetesServiceType() *ServiceType {
-	return GetKubernetesServiceType(ServiceTypeLoadBalancer)
+	return new(ServiceTypeLoadBalancer)
 }
 
 // GetKubernetesServiceType returns the KubernetesServiceType pointer.
+//
+//go:fix inline
 func GetKubernetesServiceType(serviceType ServiceType) *ServiceType {
-	return &serviceType
+	return new(serviceType)
 }
 
 func DefaultKubernetesServiceExternalTrafficPolicy() *ServiceExternalTrafficPolicy {
-	return GetKubernetesServiceExternalTrafficPolicy(ServiceExternalTrafficPolicyLocal)
+	return new(ServiceExternalTrafficPolicyLocal)
 }
 
+//go:fix inline
 func GetKubernetesServiceExternalTrafficPolicy(serviceExternalTrafficPolicy ServiceExternalTrafficPolicy) *ServiceExternalTrafficPolicy {
-	return &serviceExternalTrafficPolicy
+	return new(serviceExternalTrafficPolicy)
 }
 
 // defaultKubernetesDeploymentSpec fill a default KubernetesDeploymentSpec if unspecified.

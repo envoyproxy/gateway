@@ -841,14 +841,10 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			if r.isCustomBackendResource(backendRef.Group, backendRefKind) {
 				resourceMappings.allAssociatedNamespaces.Insert(string(*backendRef.Namespace))
 				key := utils.NamespacedNameWithGroupKind{
-					NamespacedName: types.NamespacedName{
-						Namespace: string(*backendRef.Namespace),
-						Name:      string(backendRef.Name),
-					},
-					GroupKind: schema.GroupKind{
-						Group: string(*backendRef.Group),
-						Kind:  backendRefKind,
-					},
+					Namespace: string(*backendRef.Namespace),
+					Name:      string(backendRef.Name),
+					Group:     string(*backendRef.Group),
+					Kind:      backendRefKind,
 				}
 				if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
 					resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
@@ -1196,8 +1192,8 @@ func backendRefKey(ref *gwapiv1.BackendObjectReference) utils.NamespacedNameWith
 	group := gatewayapi.GroupDerefOr(ref.Group, "")
 	kind := gatewayapi.KindDerefOr(ref.Kind, resource.KindService)
 	return utils.NamespacedNameWithGroupKind{
-		NamespacedName: types.NamespacedName{Namespace: namespace, Name: string(ref.Name)},
-		GroupKind:      schema.GroupKind{Group: group, Kind: kind},
+		Namespace: namespace, Name: string(ref.Name),
+		Group: group, Kind: kind,
 	}
 }
 
@@ -3118,9 +3114,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 }
 
 func (r *gatewayAPIReconciler) enqueueClass(_ context.Context, _ client.Object) []reconcile.Request {
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{
-		Name: string(r.classController),
-	}}}
+	return []reconcile.Request{{
+		Name: string(r.classController)}}
 }
 
 // processGatewayParamsRef processes the infrastructure.parametersRef of the provided Gateway.

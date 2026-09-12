@@ -201,7 +201,7 @@ func expectedAndFirstFallbackFilter[T any](data map[string]T, expectedKeys map[s
 }
 
 // transformConfigMapData filters ConfigMap data to only keep needed keys to reduce memory usage.
-func transformConfigMapData(obj interface{}) (interface{}, error) {
+func transformConfigMapData(obj any) (any, error) {
 	cm, ok := obj.(*corev1.ConfigMap)
 	if !ok || len(cm.Data) <= 1 {
 		return obj, nil
@@ -213,7 +213,7 @@ func transformConfigMapData(obj interface{}) (interface{}, error) {
 
 // composeTransforms chains multiple transform functions together.
 func composeTransforms(transforms ...toolscache.TransformFunc) toolscache.TransformFunc {
-	return func(obj interface{}) (interface{}, error) {
+	return func(obj any) (any, error) {
 		var err error
 		for _, transform := range transforms {
 			if transform == nil {

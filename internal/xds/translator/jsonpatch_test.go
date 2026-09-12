@@ -53,11 +53,9 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 
 		policies := []*ir.EnvoyPatchPolicy{
 			{
-				EnvoyPatchPolicyStatus: ir.EnvoyPatchPolicyStatus{
-					Name:      "policy",
-					Namespace: "default",
-					Status:    &gwapiv1.PolicyStatus{},
-				},
+				Name:      "policy",
+				Namespace: "default",
+				Status:    &gwapiv1.PolicyStatus{},
 				JSONPatches: []*ir.JSONPatchConfig{
 					// Applied.
 					{

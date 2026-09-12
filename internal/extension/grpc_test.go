@@ -37,11 +37,9 @@ func Test_GenerateGRPCOptions(t *testing.T) {
 				ext: &egv1a1.ExtensionManager{
 					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", math.MaxInt))),
 					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: "foo.bar",
+							Port:     44344,
 						},
 					},
 				},
@@ -53,11 +51,9 @@ func Test_GenerateGRPCOptions(t *testing.T) {
 				ext: &egv1a1.ExtensionManager{
 					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", 0))),
 					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: "foo.bar",
+							Port:     44344,
 						},
 					},
 				},
@@ -69,11 +65,9 @@ func Test_GenerateGRPCOptions(t *testing.T) {
 				ext: &egv1a1.ExtensionManager{
 					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", 10))),
 					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: "foo.bar",
+							Port:     44344,
 						},
 						Retry: &egv1a1.ExtensionServiceRetry{
 							MaxAttempts:    new(20),
@@ -133,11 +127,9 @@ func Test_buildServiceConfig(t *testing.T) {
 			name: "default",
 			args: args{
 				extSvc: &egv1a1.ExtensionService{
-					BackendEndpoint: egv1a1.BackendEndpoint{
-						FQDN: &egv1a1.FQDNEndpoint{
-							Hostname: "foo.bar",
-							Port:     44344,
-						},
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "foo.bar",
+						Port:     44344,
 					},
 				},
 			},
@@ -158,11 +150,9 @@ func Test_buildServiceConfig(t *testing.T) {
 			name: "valid",
 			args: args{
 				extSvc: &egv1a1.ExtensionService{
-					BackendEndpoint: egv1a1.BackendEndpoint{
-						FQDN: &egv1a1.FQDNEndpoint{
-							Hostname: "foo.bar",
-							Port:     44344,
-						},
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "foo.bar",
+						Port:     44344,
 					},
 					Retry: &egv1a1.ExtensionServiceRetry{
 						MaxAttempts:    new(20),
@@ -209,11 +199,9 @@ func Test_buildServiceConfig(t *testing.T) {
 			name: "defaults",
 			args: args{
 				extSvc: &egv1a1.ExtensionService{
-					BackendEndpoint: egv1a1.BackendEndpoint{
-						FQDN: &egv1a1.FQDNEndpoint{
-							Hostname: "foo.bar",
-							Port:     44344,
-						},
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "foo.bar",
+						Port:     44344,
 					},
 				},
 			},
@@ -234,11 +222,9 @@ func Test_buildServiceConfig(t *testing.T) {
 			name: "invalid-code",
 			args: args{
 				extSvc: &egv1a1.ExtensionService{
-					BackendEndpoint: egv1a1.BackendEndpoint{
-						FQDN: &egv1a1.FQDNEndpoint{
-							Hostname: "foo.bar",
-							Port:     44344,
-						},
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "foo.bar",
+						Port:     44344,
 					},
 					Retry: &egv1a1.ExtensionServiceRetry{
 						RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
@@ -275,11 +261,9 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		{
 			Name: "has an FQDN",
 			Service: &egv1a1.ExtensionService{
-				BackendEndpoint: egv1a1.BackendEndpoint{
-					FQDN: &egv1a1.FQDNEndpoint{
-						Hostname: "extserver.svc.cluster.local",
-						Port:     5050,
-					},
+				FQDN: &egv1a1.FQDNEndpoint{
+					Hostname: "extserver.svc.cluster.local",
+					Port:     5050,
 				},
 			},
 			Expected: "extserver.svc.cluster.local:5050",
@@ -287,11 +271,9 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		{
 			Name: "has an IP",
 			Service: &egv1a1.ExtensionService{
-				BackendEndpoint: egv1a1.BackendEndpoint{
-					IP: &egv1a1.IPEndpoint{
-						Address: "10.10.10.10",
-						Port:    5050,
-					},
+				IP: &egv1a1.IPEndpoint{
+					Address: "10.10.10.10",
+					Port:    5050,
 				},
 			},
 			Expected: "10.10.10.10:5050",
@@ -299,10 +281,8 @@ func TestGetExtensionServerAddress(t *testing.T) {
 		{
 			Name: "has a Unix path",
 			Service: &egv1a1.ExtensionService{
-				BackendEndpoint: egv1a1.BackendEndpoint{
-					Unix: &egv1a1.UnixSocket{
-						Path: "/some/path",
-					},
+				Unix: &egv1a1.UnixSocket{
+					Path: "/some/path",
 				},
 			},
 			Expected: "unix:///some/path",

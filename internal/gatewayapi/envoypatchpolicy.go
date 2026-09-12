@@ -81,11 +81,11 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Create the IR with the context need to publish the status later
-		policyIR := ir.EnvoyPatchPolicy{}
-		policyIR.Name = policy.Name
-		policyIR.Namespace = policy.Namespace
-		policyIR.Generation = policy.Generation
-		policyIR.Status = &policy.Status
+		policyIR := ir.EnvoyPatchPolicy{
+			Name:       policy.Name,
+			Namespace:  policy.Namespace,
+			Generation: policy.Generation,
+			Status:     &policy.Status}
 
 		// Append the IR
 		gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
@@ -127,9 +127,9 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 		// Save the patch
 		for _, patch := range policy.Spec.JSONPatches {
-			irPatch := ir.JSONPatchConfig{}
-			irPatch.Type = string(patch.Type)
-			irPatch.Name = patch.Name
+			irPatch := ir.JSONPatchConfig{
+				Type: string(patch.Type),
+				Name: patch.Name}
 			irPatch.Operation.Op = ir.JSONPatchOp(patch.Operation.Op)
 			irPatch.Operation.Path = patch.Operation.Path
 			irPatch.Operation.JSONPath = patch.Operation.JSONPath

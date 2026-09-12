@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -20,9 +19,8 @@ import (
 )
 
 func enqueueClass(_ context.Context, _ client.Object) []reconcile.Request {
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{
-		Name: "controller-name",
-	}}}
+	return []reconcile.Request{{
+		Name: "controller-name"}}
 }
 
 func TestSources(t *testing.T) {

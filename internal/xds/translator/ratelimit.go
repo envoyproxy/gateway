@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -70,12 +71,7 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 		return false
 	}
 	// Return true if rate limit config exists.
-	for _, route := range irListener.Routes {
-		if isValidGlobalRateLimit(route) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(irListener.Routes, isValidGlobalRateLimit)
 }
 
 // buildRateLimitFilter constructs a list of HTTP filters for rate limiting based on the provided HTTP listener configuration.
@@ -810,7 +806,7 @@ func getDomainRuleIndex(rules []*ir.RateLimitRule, globalRuleIdx int, ruleIsShar
 
 	// Count how many rules of the same "shared" status came before this one
 	count := 0
-	for i := 0; i < globalRuleIdx; i++ {
+	for i := range globalRuleIdx {
 		// If we're looking for shared rules, count shared ones; otherwise count non-shared ones
 		if (ruleIsShared && isRuleShared(rules[i])) || (!ruleIsShared && !isRuleShared(rules[i])) {
 			count++

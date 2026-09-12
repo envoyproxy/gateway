@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -42,14 +41,10 @@ func fullyPopulatedInfra() *ir.Infra {
 				},
 			},
 			Config: &egv1a1.EnvoyProxy{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "EnvoyProxy",
-					APIVersion: "gateway.envoyproxy.io/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "custom-proxy",
-					Namespace: "envoy-gateway-system",
-				},
+				Kind:       "EnvoyProxy",
+				APIVersion: "gateway.envoyproxy.io/v1alpha1",
+				Name:       "custom-proxy",
+				Namespace:  "envoy-gateway-system",
 				Spec: egv1a1.EnvoyProxySpec{
 					Logging: egv1a1.ProxyLogging{
 						Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{

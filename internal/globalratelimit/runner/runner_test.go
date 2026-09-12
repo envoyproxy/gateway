@@ -38,9 +38,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 		return &ir.Xds{
 			HTTP: []*ir.HTTPListener{
 				{
-					CoreListenerDetails: ir.CoreListenerDetails{
-						Name: fmt.Sprintf("default/%s/listener-0", gwName),
-					},
+					Name: fmt.Sprintf("default/%s/listener-0", gwName),
 					Routes: []*ir.HTTPRoute{
 						{
 							Name: "route-0",
@@ -209,8 +207,7 @@ func Test_subscribeAndTranslate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := t.Context()
 			xdsIR := new(message.XdsIR)
 			defer xdsIR.Close()
 			cfg, err := config.New(os.Stdout, os.Stderr)
@@ -293,9 +290,7 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	}
 
 	r := &Runner{
-		Config: Config{
-			Server: *cfg,
-		},
+		Server: *cfg,
 	}
 
 	// Test loadTLSConfig with host mode

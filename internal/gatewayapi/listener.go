@@ -342,15 +342,13 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				tlsConfig := irTLSConfigs(&listener.tls)
 				irListener := &ir.HTTPListener{
-					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:         irListenerName(listener),
-						Address:      address,
-						Port:         uint32(containerPort),
-						ExternalPort: uint32(listener.Port),
-						Metadata:     buildListenerMetadata(listener, gateway),
-						IPFamily:     ipFamily,
-					},
-					TLS: tlsConfig,
+					Name:         irListenerName(listener),
+					Address:      address,
+					Port:         uint32(containerPort),
+					ExternalPort: uint32(listener.Port),
+					Metadata:     buildListenerMetadata(listener, gateway),
+					IPFamily:     ipFamily,
+					TLS:          tlsConfig,
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -373,14 +371,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				tlsConfig := irTLSConfigsForTCPListener(&listener.tls)
 				irListener := &ir.TCPListener{
-					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:         irListenerName(listener),
-						Address:      address,
-						Port:         uint32(containerPort),
-						ExternalPort: uint32(listener.Port),
-						Metadata:     buildListenerMetadata(listener, gateway),
-						IPFamily:     ipFamily,
-					},
+					Name:         irListenerName(listener),
+					Address:      address,
+					Port:         uint32(containerPort),
+					ExternalPort: uint32(listener.Port),
+					Metadata:     buildListenerMetadata(listener, gateway),
+					IPFamily:     ipFamily,
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
@@ -391,14 +387,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
-					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:         irListenerName(listener),
-						Address:      address,
-						Port:         uint32(containerPort),
-						ExternalPort: uint32(listener.Port),
-						Metadata:     buildListenerMetadata(listener, gateway),
-						IPFamily:     ipFamily,
-					},
+					Name:         irListenerName(listener),
+					Address:      address,
+					Port:         uint32(containerPort),
+					ExternalPort: uint32(listener.Port),
+					Metadata:     buildListenerMetadata(listener, gateway),
+					IPFamily:     ipFamily,
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
 			}

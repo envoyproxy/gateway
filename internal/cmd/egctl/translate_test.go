@@ -383,6 +383,6 @@ func requireTestDataOutFile(t *testing.T, name ...string) []byte {
 	return []byte(test.DenormalizeCertPath(string(content)))
 }
 
-func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }

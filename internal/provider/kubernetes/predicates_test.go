@@ -180,11 +180,9 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 			client: fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(&corev1.Namespace{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Namespace",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{Name: ns, Labels: tc.labels},
+					Kind:       "Namespace",
+					APIVersion: "v1",
+					Name:       ns, Labels: tc.labels,
 				}).
 				Build(),
 		}
@@ -213,7 +211,7 @@ func TestHasMatchingNamespaceLabelsControllerNamespaceBypass(t *testing.T) {
 		client: fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace},
+				Name: controllerNamespace,
 			}).
 			Build(),
 	}
@@ -225,10 +223,8 @@ func TestHasMatchingNamespaceLabelsControllerNamespaceBypass(t *testing.T) {
 	require.False(t, r.hasMatchingNamespaceLabels(gateway))
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: controllerNamespace,
-			Name:      "envoy-default-gateway",
-		},
+		Namespace: controllerNamespace,
+		Name:      "envoy-default-gateway",
 	}
 	require.True(t, r.hasMatchingNamespaceLabels(svc))
 }
@@ -370,24 +366,20 @@ func TestEnvoyServiceForGatewayIncludesControllerNamespace(t *testing.T) {
 		Name:      "gateway",
 	}, gatewayClassName, 80)
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: controllerNamespace,
-			Name:      "envoy-default-gateway",
-			Labels:    gatewayapi.OwnerLabels(gtw, false),
-		},
+		Namespace: controllerNamespace,
+		Name:      "envoy-default-gateway",
+		Labels:    gatewayapi.OwnerLabels(gtw, false),
 	}
 
 	baseClient := fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		WithObjects(
 			&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   gatewayNamespace,
-					Labels: namespaceSelector.MatchLabels,
-				},
+				Name:   gatewayNamespace,
+				Labels: namespaceSelector.MatchLabels,
 			},
 			&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace},
+				Name: controllerNamespace,
 			},
 			svc,
 		).
@@ -427,10 +419,8 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			name: "references Backend TLS config map",
 			configs: []client.Object{
 				&egv1a1.Backend{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "static-backend",
-						Namespace: "default",
-					},
+					Name:      "static-backend",
+					Namespace: "default",
 					Spec: egv1a1.BackendSpec{
 						TLS: &egv1a1.BackendTLSSettings{
 							CACertificateRefs: []gwapiv1.LocalObjectReference{
@@ -452,18 +442,14 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&egv1a1.EnvoyExtensionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "lua-cm",
-						Namespace: "test",
-					},
+					Name:      "lua-cm",
+					Namespace: "test",
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Kind: "Gateway",
-										Name: "scheduled-status-test",
-									},
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
 								},
 							},
 						},
@@ -489,18 +475,14 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&egv1a1.EnvoyExtensionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "lua-cm",
-						Namespace: "test",
-					},
+					Name:      "lua-cm",
+					Namespace: "test",
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Kind: "Gateway",
-										Name: "scheduled-status-test",
-									},
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
 								},
 							},
 						},
@@ -524,10 +506,8 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			name: "references SecurityPolicy Ext Auth context extensions config map",
 			configs: []client.Object{
 				&egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ext-auth",
-						Namespace: "test",
-					},
+					Name:      "ext-auth",
+					Namespace: "test",
 					Spec: egv1a1.SecurityPolicySpec{
 						ExtAuth: &egv1a1.ExtAuth{
 							ContextExtensions: []*egv1a1.ContextExtension{
@@ -535,11 +515,9 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 									Name: "foo",
 									Type: egv1a1.ContextExtensionValueTypeValueRef,
 									ValueRef: &egv1a1.LocalObjectKeyReference{
-										LocalObjectReference: gwapiv1.LocalObjectReference{
-											Kind: resource.KindConfigMap,
-											Name: "context-extensions-cm",
-										},
-										Key: "foo",
+										Kind: resource.KindConfigMap,
+										Name: "context-extensions-cm",
+										Key:  "foo",
 									},
 								},
 							},
@@ -554,10 +532,8 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			name: "references BackendTLSPolicy CA config map",
 			configs: []client.Object{
 				&gwapiv1.BackendTLSPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "btls",
-						Namespace: "default",
-					},
+					Name:      "btls",
+					Namespace: "default",
 					Spec: gwapiv1.BackendTLSPolicySpec{
 						Validation: gwapiv1.BackendTLSPolicyValidation{
 							CACertificateRefs: []gwapiv1.LocalObjectReference{
@@ -578,10 +554,8 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			btlsCRDAbsent: true,
 			configs: []client.Object{
 				&gwapiv1.BackendTLSPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "btls",
-						Namespace: "default",
-					},
+					Name:      "btls",
+					Namespace: "default",
 					Spec: gwapiv1.BackendTLSPolicySpec{
 						Validation: gwapiv1.BackendTLSPolicyValidation{
 							CACertificateRefs: []gwapiv1.LocalObjectReference{
@@ -609,10 +583,8 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		spCRDExists:      true,
 		eepCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-					EnableBackend: true,
-				},
+			ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+				EnableBackend: true,
 			},
 		},
 	}
@@ -638,10 +610,8 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 // predicate function with a redirect response override.
 func TestValidateBackendTrafficPolicyForReconcileWithRedirectResponseOverride(t *testing.T) {
 	btpWithRedirect := &egv1a1.BackendTrafficPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "response-override",
-			Namespace: "envoy-gateway-system",
-		},
+		Name:      "response-override",
+		Namespace: "envoy-gateway-system",
 		Spec: egv1a1.BackendTrafficPolicySpec{
 			ResponseOverride: []*egv1a1.ResponseOverride{
 				{
@@ -674,10 +644,8 @@ func TestValidateBackendTrafficPolicyForReconcileWithRedirectResponseOverride(t 
 // predicate function.
 func TestValidateSecretForReconcile(t *testing.T) {
 	mtlsEnabledEnvoyProxyConfig := &egv1a1.EnvoyProxy{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "mtls-settings",
-		},
+		Namespace: "default",
+		Name:      "mtls-settings",
 		Spec: egv1a1.EnvoyProxySpec{
 			BackendTLS: &egv1a1.BackendTLSConfig{
 				ClientCertificateRef: &gwapiv1.SecretObjectReference{
@@ -698,10 +666,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			name: "backend references TLS secret",
 			configs: []client.Object{
 				&egv1a1.Backend{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "secure-backend",
-					},
+					Namespace: "default",
+					Name:      "secure-backend",
 					Spec: egv1a1.BackendSpec{
 						TLS: &egv1a1.BackendTLSSettings{
 							CACertificateRefs: []gwapiv1.LocalObjectReference{
@@ -762,16 +728,12 @@ func TestValidateSecretForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "oidc",
-					},
+					Name: "oidc",
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-									Kind: "Gateway",
-									Name: "scheduled-status-test",
-								},
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
 							},
 						},
 						OIDC: &egv1a1.OIDC{
@@ -797,16 +759,12 @@ func TestValidateSecretForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "apikey-auth",
-					},
+					Name: "apikey-auth",
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-									Kind: "Gateway",
-									Name: "scheduled-status-test",
-								},
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
 							},
 						},
 						APIKeyAuth: &egv1a1.APIKeyAuth{
@@ -828,16 +786,12 @@ func TestValidateSecretForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "basic-auth",
-					},
+					Name: "basic-auth",
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-									Kind: "Gateway",
-									Name: "scheduled-status-test",
-								},
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
 							},
 						},
 						BasicAuth: &egv1a1.BasicAuth{
@@ -855,9 +809,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			name: "references SecurityPolicy Ext Auth context extensions",
 			configs: []client.Object{
 				&egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "ext-auth",
-					},
+					Name: "ext-auth",
 					Spec: egv1a1.SecurityPolicySpec{
 						ExtAuth: &egv1a1.ExtAuth{
 							ContextExtensions: []*egv1a1.ContextExtension{
@@ -865,11 +817,9 @@ func TestValidateSecretForReconcile(t *testing.T) {
 									Name: "foo",
 									Type: egv1a1.ContextExtensionValueTypeValueRef,
 									ValueRef: &egv1a1.LocalObjectKeyReference{
-										LocalObjectReference: gwapiv1.LocalObjectReference{
-											Kind: resource.KindSecret,
-											Name: "secret",
-										},
-										Key: "foo",
+										Kind: resource.KindSecret,
+										Name: "secret",
+										Key:  "foo",
 									},
 								},
 							},
@@ -894,17 +844,13 @@ func TestValidateSecretForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080),
 				&egv1a1.EnvoyExtensionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "wasm-oci",
-					},
+					Name: "wasm-oci",
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Kind: "Gateway",
-										Name: "scheduled-status-test",
-									},
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
 								},
 							},
 						},
@@ -934,10 +880,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				&egv1a1.Backend{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend",
-						Namespace: "default",
-					},
+					Name:      "backend",
+					Namespace: "default",
 					Spec: egv1a1.BackendSpec{
 						Endpoints: []egv1a1.BackendEndpoint{{
 							IP: &egv1a1.IPEndpoint{Address: "1.1.1.1", Port: 80},
@@ -960,10 +904,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				&egv1a1.Backend{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend",
-						Namespace: "default",
-					},
+					Name:      "backend",
+					Namespace: "default",
 					Spec: egv1a1.BackendSpec{
 						Endpoints: []egv1a1.BackendEndpoint{{
 							IP: &egv1a1.IPEndpoint{Address: "1.1.1.1", Port: 80},
@@ -985,10 +927,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				&egv1a1.HTTPRouteFilter{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "credential-injection",
-					},
+					Namespace: "default",
+					Name:      "credential-injection",
 					Spec: egv1a1.HTTPRouteFilterSpec{
 						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
 							Credential: egv1a1.InjectedCredential{
@@ -1008,10 +948,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				&egv1a1.HTTPRouteFilter{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "credential-injection",
-					},
+					Namespace: "default",
+					Name:      "credential-injection",
 					Spec: egv1a1.HTTPRouteFilterSpec{
 						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
 							Credential: egv1a1.InjectedCredential{
@@ -1207,10 +1145,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 		hrfCRDExists:         true,
 		listenerSetCRDExists: true,
 		envoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-					EnableBackend: true,
-				},
+			ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+				EnableBackend: true,
 			},
 		},
 	}
@@ -1295,9 +1231,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
 				sampleGateway,
 				&gwapiv1.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "httproute-test",
-					},
+					Name: "httproute-test",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -1308,12 +1242,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 							{
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name: gwapiv1.ObjectName("service"),
-												Port: new(gwapiv1.PortNumber(80)),
-											},
-										},
+										Name: gwapiv1.ObjectName("service"),
+										Port: new(gwapiv1.PortNumber(80)),
 									},
 								},
 								Filters: []gwapiv1.HTTPRouteFilter{
@@ -1338,7 +1268,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name:         "rate limit service endpointslice with global rate limit enabled",
 			namespace:    "envoy-gateway-system",
-			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			envoyGateway: &egv1a1.EnvoyGateway{RateLimit: &egv1a1.RateLimit{}},
 			endpointSlice: test.GetEndpointSlice(
 				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
 			expect: true,
@@ -1353,7 +1283,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		{
 			name:         "endpointslice for an unrelated service named envoy-ratelimit in another namespace",
 			namespace:    "envoy-gateway-system",
-			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			envoyGateway: &egv1a1.EnvoyGateway{RateLimit: &egv1a1.RateLimit{}},
 			endpointSlice: test.GetEndpointSlice(
 				types.NamespacedName{Namespace: "other-namespace", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
 			expect: false,
@@ -1393,10 +1323,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
 	telemetryEnabledGatewaysConfig := &egv1a1.EnvoyProxy{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "telemetry",
-		},
+		Namespace: "default",
+		Name:      "telemetry",
 		Spec: egv1a1.EnvoyProxySpec{
 			Telemetry: &egv1a1.ProxyTelemetry{
 				AccessLog: &egv1a1.ProxyAccessLog{
@@ -1406,15 +1334,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 								{
 									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
-										BackendCluster: egv1a1.BackendCluster{
-											BackendRefs: []egv1a1.BackendRef{
-												{
-													BackendObjectReference: gwapiv1.BackendObjectReference{
-														Name:      "otel-collector",
-														Namespace: new(gwapiv1.Namespace("default")),
-														Port:      new(gwapiv1.PortNumber(4317)),
-													},
-												},
+										BackendRefs: []egv1a1.BackendRef{
+											{
+												Name:      "otel-collector",
+												Namespace: new(gwapiv1.Namespace("default")),
+												Port:      new(gwapiv1.PortNumber(4317)),
 											},
 										},
 									},
@@ -1428,15 +1352,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Namespace: new(gwapiv1.Namespace("default")),
-												Port:      new(gwapiv1.PortNumber(4317)),
-											},
-										},
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										Name:      "otel-collector",
+										Namespace: new(gwapiv1.Namespace("default")),
+										Port:      new(gwapiv1.PortNumber(4317)),
 									},
 								},
 							},
@@ -1449,11 +1369,9 @@ func TestValidateServiceForReconcile(t *testing.T) {
 						BackendCluster: egv1a1.BackendCluster{
 							BackendRefs: []egv1a1.BackendRef{
 								{
-									BackendObjectReference: gwapiv1.BackendObjectReference{
-										Name:      "otel-collector",
-										Namespace: new(gwapiv1.Namespace("default")),
-										Port:      new(gwapiv1.PortNumber(4317)),
-									},
+									Name:      "otel-collector",
+									Namespace: new(gwapiv1.Namespace("default")),
+									Port:      new(gwapiv1.PortNumber(4317)),
 								},
 							},
 						},
@@ -1648,27 +1566,19 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			name: "service referenced by SecurityPolicy ExtAuth HTTP service",
 			configs: []client.Object{
 				&egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "ext-auth-http",
-					},
+					Name: "ext-auth-http",
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-									Kind: "Gateway",
-									Name: "scheduled-status-test",
-								},
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
 							},
 						},
 						ExtAuth: &egv1a1.ExtAuth{
 							HTTP: &egv1a1.HTTPExtAuthService{
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name: "ext-auth-http-service",
-											},
-										},
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										Name: "ext-auth-http-service",
 									},
 								},
 							},
@@ -1683,27 +1593,19 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			name: "service referenced by SecurityPolicy ExtAuth GRPC service",
 			configs: []client.Object{
 				&egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "ext-auth-http",
-					},
+					Name: "ext-auth-http",
 					Spec: egv1a1.SecurityPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-									Kind: "Gateway",
-									Name: "scheduled-status-test",
-								},
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
 							},
 						},
 						ExtAuth: &egv1a1.ExtAuth{
 							GRPC: &egv1a1.GRPCExtAuthService{
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name: "ext-auth-grpc-service",
-											},
-										},
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										Name: "ext-auth-grpc-service",
 									},
 								},
 							},
@@ -1718,27 +1620,19 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service",
 			configs: []client.Object{
 				&egv1a1.EnvoyExtensionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "ext-proc",
-					},
+					Name: "ext-proc",
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-									Kind: "Gateway",
-									Name: "scheduled-status-test",
-								},
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
 							},
 						},
 						ExtProc: []egv1a1.ExtProc{
 							{
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name: "ext-proc-service",
-											},
-										},
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										Name: "ext-proc-service",
 									},
 								},
 							},
@@ -1753,27 +1647,19 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service unrelated",
 			configs: []client.Object{
 				&egv1a1.EnvoyExtensionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "ext-proc",
-					},
+					Name: "ext-proc",
 					Spec: egv1a1.EnvoyExtensionPolicySpec{
 						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-									Kind: "Gateway",
-									Name: "scheduled-status-test",
-								},
+								Kind: "Gateway",
+								Name: "scheduled-status-test",
 							},
 						},
 						ExtProc: []egv1a1.ExtProc{
 							{
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name: "ext-proc-service",
-											},
-										},
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										Name: "ext-proc-service",
 									},
 								},
 							},
@@ -1822,7 +1708,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name:         "rate limit service in controller namespace with global rate limit enabled",
 			namespace:    "envoy-gateway-system",
-			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			envoyGateway: &egv1a1.EnvoyGateway{RateLimit: &egv1a1.RateLimit{}},
 			service:      test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
 			expect:       true,
 		},
@@ -1835,7 +1721,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		{
 			name:         "unrelated service named envoy-ratelimit in a different namespace",
 			namespace:    "envoy-gateway-system",
-			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			envoyGateway: &egv1a1.EnvoyGateway{RateLimit: &egv1a1.RateLimit{}},
 			service:      test.GetService(types.NamespacedName{Namespace: "other-namespace", Name: rateLimitServiceName}, nil, nil),
 			expect:       false,
 		},
@@ -2013,11 +1899,9 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 				}, 8080),
 				""),
 			ns: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "foo",
-					Labels: map[string]string{
-						"label-1": "",
-					},
+				Name: "foo",
+				Labels: map[string]string{
+					"label-1": "",
 				},
 			},
 			reconcileLabels: "label-1",
@@ -2037,11 +1921,9 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 				}, 8080),
 				""),
 			ns: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "bar",
-					Labels: map[string]string{
-						"label-2": "",
-					},
+				Name: "bar",
+				Labels: map[string]string{
+					"label-2": "",
 				},
 			},
 			reconcileLabels: "label-1",
@@ -2050,19 +1932,15 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 		{
 			name: "cluster-scoped resources are not filtered",
 			object: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "foo-1",
-					Labels: map[string]string{
-						"label-1": "",
-					},
+				Name: "foo-1",
+				Labels: map[string]string{
+					"label-1": "",
 				},
 			},
 			ns: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "bar-1",
-					Labels: map[string]string{
-						"label-1": "",
-					},
+				Name: "bar-1",
+				Labels: map[string]string{
+					"label-1": "",
 				},
 			},
 			reconcileLabels: "label-1",
@@ -2298,10 +2176,8 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 	gtw := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	ctb := test.GetClusterTrustBundle("fake-ctb")
 	backend := &egv1a1.Backend{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-dynamic-resolver-clustertrustbundle",
-			Namespace: "default",
-		},
+		Name:      "backend-dynamic-resolver-clustertrustbundle",
+		Namespace: "default",
 		Spec: egv1a1.BackendSpec{
 			Type: new(egv1a1.BackendTypeDynamicResolver),
 			TLS: &egv1a1.BackendTLSSettings{
@@ -2315,10 +2191,8 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		},
 	}
 	btp := &gwapiv1.BackendTLSPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-tls-policy-dynamic-resolver-clustertrustbundle",
-			Namespace: "default",
-		},
+		Name:      "backend-tls-policy-dynamic-resolver-clustertrustbundle",
+		Namespace: "default",
 		Spec: gwapiv1.BackendTLSPolicySpec{
 			Validation: gwapiv1.BackendTLSPolicyValidation{
 				CACertificateRefs: []gwapiv1.LocalObjectReference{
@@ -2414,10 +2288,8 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		btlsCRDExists:    true,
 		ctpCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-					EnableBackend: true,
-				},
+			ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+				EnableBackend: true,
 			},
 		},
 	}

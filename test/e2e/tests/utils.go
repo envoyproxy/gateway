@@ -463,17 +463,13 @@ func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan
 
 	flog.SetLogLevel(flog.Error)
 	opts := fhttp.HTTPRunnerOptions{
-		RunnerOptions: periodic.RunnerOptions{
-			QPS: float64(qps),
-			// allow some overhead time for setting up workers and tearing down after restart
-			Duration:   timeoutConfig.CreateTimeout + timeoutConfig.CreateTimeout/2,
-			NumThreads: 50,
-			Stop:       aborter,
-			Out:        io.Discard,
-		},
-		HTTPOptions: fhttp.HTTPOptions{
-			URL: reqURL,
-		},
+		QPS: float64(qps),
+		// allow some overhead time for setting up workers and tearing down after restart
+		Duration:   timeoutConfig.CreateTimeout + timeoutConfig.CreateTimeout/2,
+		NumThreads: 50,
+		Stop:       aborter,
+		Out:        io.Discard,
+		URL:        reqURL,
 	}
 
 	if reqTimeout > 0 {
@@ -1054,7 +1050,7 @@ func QueryLogLinesFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	lines := make([]string, 0)
 	for _, res := range lokiResponse.Data.Result {
 		for _, value := range res.Values {
-			pair, ok := value.([]interface{})
+			pair, ok := value.([]any)
 			if !ok || len(pair) < 2 {
 				continue
 			}
@@ -1075,8 +1071,8 @@ type LokiQueryResponse struct {
 	Data   struct {
 		ResultType string `json:"resultType"`
 		Result     []struct {
-			Metric interface{}
-			Values []interface{} `json:"values"`
+			Metric any
+			Values []any `json:"values"`
 		}
 	}
 }
@@ -1133,10 +1129,8 @@ func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, erro
 
 func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string, port int32) error {
 	backend := &egv1a1.Backend{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nn.Namespace,
-			Name:      nn.Name,
-		},
+		Namespace: nn.Namespace,
+		Name:      nn.Name,
 		Spec: egv1a1.BackendSpec{
 			Endpoints: []egv1a1.BackendEndpoint{
 				{

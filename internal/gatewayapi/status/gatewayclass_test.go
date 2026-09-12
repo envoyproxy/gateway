@@ -53,9 +53,7 @@ func TestComputeGatewayClassAcceptedCondition(t *testing.T) {
 
 	for _, tc := range testCases {
 		gc := &gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Generation: 7,
-			},
+			Generation: 7,
 		}
 
 		got := computeGatewayClassAcceptedCondition(gc, tc.accepted, tc.expect.Reason, tc.expect.Message)
