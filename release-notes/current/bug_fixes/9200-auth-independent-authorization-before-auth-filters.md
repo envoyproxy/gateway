@@ -1,0 +1,1 @@
+Fixed authentication-independent authorization rules (such as `clientIPGeoLocations` or `clientCIDRs` deny rules) not being enforced before OAuth2/OIDC and other authentication filters. A geo/IP deny rule now returns 403 before OAuth2 can redirect an otherwise-denied client to the identity provider.
