@@ -248,7 +248,9 @@ type AuthorizationHeaderMatch struct {
 type JWTPrincipal struct {
 	// Provider is the name of the JWT provider that used to verify the JWT token.
 	// In order to use JWT claims for authorization, you must configure the JWT
-	// authentication with the same provider in the same `SecurityPolicy`.
+	// authentication with the same provider in the same `SecurityPolicy`, or,
+	// when `mergeType` is set, in the parent `SecurityPolicy` this policy is
+	// merged into.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
