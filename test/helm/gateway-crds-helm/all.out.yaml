@@ -54594,6 +54594,24 @@ spec:
                     items:
                       type: string
                     type: array
+                  allowOriginRegexes:
+                    description: |-
+                      AllowOriginRegexes defines regular expressions that are matched against the Origin header.
+                      It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.
+                      An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes.
+                    items:
+                      description: |-
+                        CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+                        including the scheme and the port if present.
+                        The regex string must adhere to the syntax documented in
+                        https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+                        which is not supported.
+                        A regular expression that matches the literal string "*" is rejected.
+                        The value "*" in AllowOrigins allows any origin.
+                      maxLength: 1024
+                      minLength: 1
+                      type: string
+                    type: array
                   allowOrigins:
                     description: |-
                       AllowOrigins defines the origins that are allowed to make requests.

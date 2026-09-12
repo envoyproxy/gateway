@@ -1249,7 +1249,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			err = perr.WithMessage(err, "CORS")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	var csrf *ir.CSRF
@@ -1541,7 +1544,10 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			err = perr.WithMessage(err, "CORS")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	var csrf *ir.CSRF
@@ -1732,7 +1738,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	return errs
 }
 
-func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
+func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
@@ -1746,6 +1752,26 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 				Exact: (*string)(&origin),
 			})
 		}
+	}
+
+	for _, originRegex := range cors.AllowOriginRegexes {
+		regexStr := string(originRegex)
+		// Validate the pattern before it is anchored below, since anchoring an unbalanced pattern
+		// such as ")(" would make it valid.
+		if err := regex.Validate(regexStr); err != nil {
+			return nil, err
+		}
+		// Envoy's CORS filter tries each origin matcher against the literal "*" before the request
+		// origin, so a regex that fully matches "*" allows all origins.
+		// https://github.com/envoyproxy/envoy/blob/b579d07d3ad7ee11d32b105e91a5a39ad24718d7/source/extensions/filters/http/cors/cors_filter.cc#L208-L215
+		anchored, err := regexp.Compile("^(?:" + regexStr + ")$")
+		if err != nil {
+			return nil, err
+		}
+		if anchored.MatchString("*") {
+			return nil, fmt.Errorf(`origin regular expression %q must not match "*", use allowOrigins with value "*" to allow all origins`, regexStr)
+		}
+		allowOrigins = append(allowOrigins, &ir.StringMatch{SafeRegex: &regexStr})
 	}
 
 	irCORS := &ir.CORS{
@@ -1762,7 +1788,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
-	return irCORS
+	return irCORS, nil
 }
 
 func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
