@@ -341,6 +341,7 @@ func TestBuildCompression(t *testing.T) {
 		compression []*egv1a1.Compression
 		compressor  []*egv1a1.Compression
 		expected    []*ir.Compression
+		expectErr   bool
 	}{
 		{
 			name:        "nil compression",
@@ -449,11 +450,44 @@ func TestBuildCompression(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "minContentLength at the uint32 boundary is kept",
+			compressor: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.GzipCompressorType,
+					Gzip:             &egv1a1.GzipCompressor{},
+					MinContentLength: new(resource.MustParse("4294967295")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.GzipCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: new(uint32(math.MaxUint32)),
+				},
+			},
+		},
+		{
+			name: "minContentLength above uint32 is rejected instead of truncated",
+			compressor: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.GzipCompressorType,
+					Gzip:             &egv1a1.GzipCompressor{},
+					MinContentLength: new(resource.MustParse("4Gi")),
+				},
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := buildCompression(tc.compression, tc.compressor)
+			got, err := buildCompression(tc.compression, tc.compressor)
+			if tc.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 			require.Equal(t, tc.expected, got)
 		})
 	}
