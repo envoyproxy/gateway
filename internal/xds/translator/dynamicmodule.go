@@ -179,6 +179,9 @@ func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []
 				if err := createExtServiceXDSCluster(backend, nil, tCtx); err != nil {
 					errs = errors.Join(errs, err)
 				}
+				if err := processClientCertificates(tCtx, backend.Settings); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 			if dm.Remote == nil {
 				continue

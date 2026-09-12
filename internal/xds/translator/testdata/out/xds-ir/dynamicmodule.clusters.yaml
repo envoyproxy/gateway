@@ -137,6 +137,11 @@
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
+          tlsCertificateSdsSecretConfigs:
+          - name: resolver-client
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
         sni: resolver.example.com
   type: EDS
   typedExtensionProtocolOptions:
