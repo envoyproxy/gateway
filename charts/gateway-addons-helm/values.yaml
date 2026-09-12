@@ -1,6 +1,21 @@
 dashboard:
+  # How Grafana dashboards are rolled out:
+  # - "configmap" (default): dashboards are bundled into a ConfigMap that the bundled
+  #   Grafana subchart mounts via grafana.dashboardsConfigMaps.
+  # - "grafana-operator": one GrafanaDashboard custom resource (grafana.integreatly.org/v1beta1)
+  #   is rendered per dashboard. This requires the Grafana Operator and a Grafana instance
+  #   matching dashboard.instanceSelector. The bundled Grafana subchart is not used in this mode,
+  #   so set grafana.enabled=false (or clear grafana.dashboardsConfigMaps and grafana.dashboardProviders).
+  mode: configmap
   labels: {}
   annotations: {}
+  # GrafanaDashboard mode options
+  # The Grafana folder the dashboards are provisioned into.
+  folder: envoy-gateway
+  # Selects the Grafana instance the dashboards are imported into.
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
 
 # Values for Grafana dependency
 grafana:
