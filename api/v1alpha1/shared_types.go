@@ -31,6 +31,9 @@ const (
 	DefaultShutdownManagerCPUResourceRequests = "10m"
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
+	// DefaultShutdownManagerMemoryResourceLimits for shutdown manager memory resource limit.
+	// A CPU limit is intentionally not set to avoid CPU throttling.
+	DefaultShutdownManagerMemoryResourceLimits = "64Mi"
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
 	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.

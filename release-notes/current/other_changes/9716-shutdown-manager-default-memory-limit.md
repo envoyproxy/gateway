@@ -1,0 +1,1 @@
+Added a default memory limit (64Mi) to the `shutdown-manager` container of the Envoy proxy Pod so that it has both resource requests and limits set by default, addressing complaints from security scanners that require all containers to declare limits. A CPU limit was intentionally not added to avoid CPU throttling.
