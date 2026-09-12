@@ -109,6 +109,7 @@ func fullyPopulatedInfra() *ir.Infra {
 					ResourceAttributes:       map[string]string{"service.name": "eg"},
 					ReportCountersAsDeltas:   true,
 					ReportHistogramsAsDeltas: true,
+					Prefix:                   "envoy",
 					Headers: []gwapiv1.HTTPHeader{
 						{Name: "x-header", Value: "header-value"},
 					},
