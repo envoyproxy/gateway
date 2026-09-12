@@ -1770,20 +1770,63 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		)
 	}
 
-	// Gateway-level Traffic is the only level safe to apply uniformly to a merged cluster: a
-	// route/rule-level BackendTrafficPolicy that would conflict is already excluded from merging
-	// via hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here.
+	// Gateway-level Traffic is the only level safe to apply to a merged cluster: a route/rule-level
+	// BackendTrafficPolicy that would conflict is already excluded from merging via
+	// hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here. What each cluster
+	// takes from it still depends on the protocol it serves.
 	if applyToBackendClusters && errs == nil {
 		for _, bc := range x.BackendClusters {
-			bc.Traffic = tf.ClusterTrafficFeatures.DeepCopy()
-			// Drop the route-scoped timeout members: they are never read from a cluster, and a
-			// merged cluster must not advertise settings it cannot honor.
-			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
-			bc.UseClientProtocol = policy.Spec.UseClientProtocol
+			applyGatewayPolicyToMergedCluster(bc, tf, policy.Spec.UseClientProtocol)
 		}
 	}
 
 	return errs
+}
+
+// applyGatewayPolicyToMergedCluster stores on bc the subset of a whole-Gateway
+// BackendTrafficPolicy's cluster-scoped settings that a merged cluster serving bc's protocol can
+// actually honor.
+//
+// Without MergeBackends a TCP/UDP backend's cluster is built from ir.TCPRoute / ir.UDPRoute, which
+// carry a deliberately narrower feature set than an HTTP route's - ir.UDPRoute, for instance, only
+// has LoadBalancer and DNS, so a health check can never reach the cluster udp_proxy routes to.
+// Deduplicating clusters must not change that, so the subsets below mirror exactly what the TCP
+// and UDP loops in translateBackendTrafficPolicyForListeners set on their routes; keep them in
+// sync with those loops.
+func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeatures, useClientProtocol *bool) {
+	if bc == nil || tf == nil {
+		return
+	}
+
+	// UseClientProtocol only ever reaches a cluster through ir.HTTPRoute, so a tcp_proxy or
+	// udp_proxy cluster must not pick it up either. Only the HTTP branch below restores it.
+	bc.UseClientProtocol = nil
+
+	switch bc.Protocol() {
+	case ir.UDP:
+		bc.Traffic = &ir.ClusterTrafficFeatures{
+			LoadBalancer: tf.LoadBalancer.DeepCopy(),
+			DNS:          tf.DNS.DeepCopy(),
+		}
+	case ir.TCP:
+		bc.Traffic = &ir.ClusterTrafficFeatures{
+			LoadBalancer:   tf.LoadBalancer.DeepCopy(),
+			ProxyProtocol:  tf.ProxyProtocol.DeepCopy(),
+			HealthCheck:    tf.HealthCheck.DeepCopy(),
+			CircuitBreaker: tf.CircuitBreaker.DeepCopy(),
+			TCPKeepalive:   tf.TCPKeepalive.DeepCopy(),
+			// Drop the route-scoped timeout members, exactly as TCPRouteTranslator does when it
+			// builds the same cluster from an ir.TCPRoute.
+			Timeout: tf.Timeout.ClusterOnly().AsTimeout(),
+			DNS:     tf.DNS.DeepCopy(),
+		}
+	default:
+		bc.Traffic = tf.ClusterTrafficFeatures.DeepCopy()
+		// Drop the route-scoped timeout members: they are never read from a cluster, and a
+		// merged cluster must not advertise settings it cannot honor.
+		bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
+		bc.UseClientProtocol = useClientProtocol
+	}
 }
 
 func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {
