@@ -32,6 +32,17 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 	}
 
 	sectionName := gwapiv1a2.SectionName("foo")
+	dynamicModuleTarget := func() egv1a1.PolicyTargetReferences {
+		return egv1a1.PolicyTargetReferences{
+			TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Group: "gateway.networking.k8s.io",
+					Kind:  "Gateway",
+					Name:  "eg",
+				},
+			},
+		}
+	}
 
 	cases := []struct {
 		desc         string
@@ -1211,6 +1222,42 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "DynamicModule with duplicate backend name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule: []egv1a1.DynamicModule{{
+						Name: "module",
+						Backends: []egv1a1.ExtensionBackend{
+							{Name: "backend", BackendRef: gwapiv1.BackendObjectReference{Name: "service-a", Port: new(gwapiv1.PortNumber(8080))}},
+							{Name: "backend", BackendRef: gwapiv1.BackendObjectReference{Name: "service-b", Port: new(gwapiv1.PortNumber(8080))}},
+						},
+					}},
+					PolicyTargetReferences: dynamicModuleTarget(),
+				}
+			},
+			wantErrors: []string{"spec.dynamicModule[0].backends[1]: Duplicate value:"},
+		},
+		{
+			desc: "DynamicModule with too many backends",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				backends := make([]egv1a1.ExtensionBackend, 17)
+				for i := range backends {
+					backends[i] = egv1a1.ExtensionBackend{
+						Name: fmt.Sprintf("backend-%d", i),
+						BackendRef: gwapiv1.BackendObjectReference{
+							Name: gwapiv1.ObjectName(fmt.Sprintf("service-%d", i)),
+							Port: new(gwapiv1.PortNumber(8080)),
+						},
+					}
+				}
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule:          []egv1a1.DynamicModule{{Name: "module", Backends: backends}},
+					PolicyTargetReferences: dynamicModuleTarget(),
+				}
+			},
+			wantErrors: []string{"spec.dynamicModule[0].backends: Too many:"},
 		},
 		{
 			desc: "target selectors without targetRefs or targetRef",

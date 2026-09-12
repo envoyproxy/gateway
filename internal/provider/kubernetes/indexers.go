@@ -1363,6 +1363,17 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 		}
 	}
 
+	for _, dynamicModule := range envoyExtensionPolicy.Spec.DynamicModule {
+		for _, backend := range dynamicModule.Backends {
+			backendRef := backend.BackendRef
+			ret = append(ret,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, envoyExtensionPolicy.Namespace),
+					Name:      string(backendRef.Name),
+				}.String())
+		}
+	}
+
 	return ret
 }
 
