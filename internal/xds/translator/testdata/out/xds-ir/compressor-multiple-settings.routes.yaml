@@ -14,7 +14,7 @@
     name: envoy-gateway/gateway-1/http/gateway_envoyproxy_io
     routes:
     - match:
-        prefix: /
+        pathSeparatedPrefix: /one
       metadata:
         filterMetadata:
           envoy-gateway:
@@ -30,15 +30,28 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.compressor.brotli/e26d3c81:
+        envoy.filters.http.compressor.gzip/63b70d49:
           '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
           overrides:
             responseDirectionConfig: {}
-        envoy.filters.http.compressor.gzip/7a4115a:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
-          overrides:
-            responseDirectionConfig: {}
-        envoy.filters.http.compressor.zstd/8fc9f56:
+    - match:
+        pathSeparatedPrefix: /two
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-2
+              namespace: default
+      name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+      requestHeadersToRemove:
+      - accept-encoding
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.compressor.gzip/323f3e9b:
           '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
           overrides:
             responseDirectionConfig: {}

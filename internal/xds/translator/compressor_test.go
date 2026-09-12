@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"strings"
 	"testing"
 
 	brotliv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/brotli/compressor/v3"
@@ -83,7 +84,7 @@ func TestBuildCompressorFilter(t *testing.T) {
 				Type:             egv1a1.GzipCompressorType,
 				MinContentLength: new(uint32(1024)),
 			},
-			expectedName:    "envoy.filters.http.compressor.gzip",
+			expectedName:    "envoy.filters.http.compressor.gzip/2ee8b42b",
 			expectedExtName: "envoy.compression.gzip.compressor",
 			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
 				require.NotNil(t, c.ResponseDirectionConfig)
@@ -99,12 +100,101 @@ func TestBuildCompressorFilter(t *testing.T) {
 				ChooseFirst:      true,
 				MinContentLength: new(uint32(2048)),
 			},
-			expectedName:    "envoy.filters.http.compressor.brotli",
+			expectedName:    "envoy.filters.http.compressor.brotli/2965facd",
 			expectedExtName: "envoy.compression.brotli.compressor",
 			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
 				assert.True(t, c.ChooseFirst)
 				require.NotNil(t, c.ResponseDirectionConfig)
 				assert.Equal(t, uint32(2048), c.ResponseDirectionConfig.CommonConfig.MinContentLength.Value)
+			},
+		},
+		{
+			name: "gzip compressor with custom settings",
+			compression: &ir.Compression{
+				Type: egv1a1.GzipCompressorType,
+				Gzip: &egv1a1.GzipCompressor{
+					CompressionLevel:    new(uint32(9)),
+					CompressionStrategy: new(egv1a1.GzipCompressionStrategyRLE),
+					MemoryLevel:         new(uint32(8)),
+					WindowBits:          new(uint32(15)),
+					ChunkSize:           new(uint32(8192)),
+				},
+			},
+			expectedName:    "envoy.filters.http.compressor.gzip/fcbb148f",
+			expectedExtName: "envoy.compression.gzip.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				gzip := &gzipv3.Gzip{}
+				require.NoError(t, c.CompressorLibrary.TypedConfig.UnmarshalTo(gzip))
+				assert.Equal(t, gzipv3.Gzip_COMPRESSION_LEVEL_9, gzip.CompressionLevel)
+				assert.Equal(t, gzipv3.Gzip_RLE, gzip.CompressionStrategy)
+				assert.Equal(t, uint32(8), gzip.MemoryLevel.Value)
+				assert.Equal(t, uint32(15), gzip.WindowBits.Value)
+				assert.Equal(t, uint32(8192), gzip.ChunkSize.Value)
+			},
+		},
+		{
+			name: "brotli compressor with custom settings",
+			compression: &ir.Compression{
+				Type: egv1a1.BrotliCompressorType,
+				Brotli: &egv1a1.BrotliCompressor{
+					Quality:                       new(uint32(11)),
+					EncoderMode:                   new(egv1a1.BrotliEncoderModeText),
+					WindowBits:                    new(uint32(24)),
+					InputBlockBits:                new(uint32(16)),
+					ChunkSize:                     new(uint32(4096)),
+					DisableLiteralContextModeling: new(true),
+				},
+			},
+			expectedName:    "envoy.filters.http.compressor.brotli/e3c96b84",
+			expectedExtName: "envoy.compression.brotli.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				brotli := &brotliv3.Brotli{}
+				require.NoError(t, c.CompressorLibrary.TypedConfig.UnmarshalTo(brotli))
+				assert.Equal(t, uint32(11), brotli.Quality.Value)
+				assert.Equal(t, brotliv3.Brotli_TEXT, brotli.EncoderMode)
+				assert.Equal(t, uint32(24), brotli.WindowBits.Value)
+				assert.Equal(t, uint32(16), brotli.InputBlockBits.Value)
+				assert.Equal(t, uint32(4096), brotli.ChunkSize.Value)
+				assert.True(t, brotli.DisableLiteralContextModeling)
+			},
+		},
+		{
+			name: "zstd compressor with custom settings",
+			compression: &ir.Compression{
+				Type: egv1a1.ZstdCompressorType,
+				Zstd: &egv1a1.ZstdCompressor{
+					CompressionLevel: new(uint32(22)),
+					EnableChecksum:   new(true),
+					Strategy:         new(egv1a1.ZstdCompressionStrategyBTUltra2),
+					ChunkSize:        new(uint32(65536)),
+				},
+			},
+			expectedName:    "envoy.filters.http.compressor.zstd/b29b3f6f",
+			expectedExtName: "envoy.compression.zstd.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				zstd := &zstdv3.Zstd{}
+				require.NoError(t, c.CompressorLibrary.TypedConfig.UnmarshalTo(zstd))
+				assert.Equal(t, uint32(22), zstd.CompressionLevel.Value)
+				assert.True(t, zstd.EnableChecksum)
+				assert.Equal(t, zstdv3.Zstd_BTULTRA2, zstd.Strategy)
+				assert.Equal(t, uint32(65536), zstd.ChunkSize.Value)
+			},
+		},
+		{
+			name: "compressor settings for a different type are ignored",
+			compression: &ir.Compression{
+				Type: egv1a1.GzipCompressorType,
+				Brotli: &egv1a1.BrotliCompressor{
+					Quality: new(uint32(11)),
+				},
+			},
+			expectedName:    "envoy.filters.http.compressor.gzip/f55d6fbc",
+			expectedExtName: "envoy.compression.gzip.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				gzip := &gzipv3.Gzip{}
+				require.NoError(t, c.CompressorLibrary.TypedConfig.UnmarshalTo(gzip))
+				assert.Nil(t, gzip.MemoryLevel)
+				assert.Nil(t, gzip.WindowBits)
 			},
 		},
 	}
@@ -130,18 +220,95 @@ func TestBuildCompressorFilter(t *testing.T) {
 }
 
 func TestCompressorFilterName(t *testing.T) {
+	gzipCompression := &ir.Compression{
+		Type: egv1a1.GzipCompressorType,
+		Gzip: &egv1a1.GzipCompressor{
+			CompressionLevel:    new(uint32(9)),
+			CompressionStrategy: new(egv1a1.GzipCompressionStrategyRLE),
+		},
+	}
+	identicalGzipCompression := &ir.Compression{
+		Type: egv1a1.GzipCompressorType,
+		Gzip: &egv1a1.GzipCompressor{
+			CompressionLevel:    new(uint32(9)),
+			CompressionStrategy: new(egv1a1.GzipCompressionStrategyRLE),
+		},
+	}
+	differentGzipCompression := &ir.Compression{
+		Type: egv1a1.GzipCompressorType,
+		Gzip: &egv1a1.GzipCompressor{
+			CompressionLevel:    new(uint32(1)),
+			CompressionStrategy: new(egv1a1.GzipCompressionStrategyRLE),
+		},
+	}
+
 	tests := []struct {
-		compressorType egv1a1.CompressorType
-		want           string
+		name        string
+		compression *ir.Compression
+		want        string
 	}{
-		{egv1a1.GzipCompressorType, "envoy.filters.http.compressor.gzip"},
-		{egv1a1.BrotliCompressorType, "envoy.filters.http.compressor.brotli"},
-		{egv1a1.ZstdCompressorType, "envoy.filters.http.compressor.zstd"},
+		{
+			name: "bare gzip",
+			compression: &ir.Compression{
+				Type: egv1a1.GzipCompressorType,
+			},
+			want: "envoy.filters.http.compressor.gzip",
+		},
+		{
+			name: "bare brotli",
+			compression: &ir.Compression{
+				Type: egv1a1.BrotliCompressorType,
+			},
+			want: "envoy.filters.http.compressor.brotli",
+		},
+		{
+			name: "bare zstd",
+			compression: &ir.Compression{
+				Type: egv1a1.ZstdCompressorType,
+			},
+			want: "envoy.filters.http.compressor.zstd",
+		},
+		{
+			name: "choose first only",
+			compression: &ir.Compression{
+				Type:        egv1a1.GzipCompressorType,
+				ChooseFirst: true,
+			},
+			want: "envoy.filters.http.compressor.gzip",
+		},
+		{
+			name:        "custom gzip",
+			compression: gzipCompression,
+			want:        "envoy.filters.http.compressor.gzip/7a9fd8cc",
+		},
+		{
+			name: "min content length",
+			compression: &ir.Compression{
+				Type:             egv1a1.GzipCompressorType,
+				MinContentLength: new(uint32(1024)),
+			},
+			want: "envoy.filters.http.compressor.gzip/2ee8b42b",
+		},
 	}
 
 	for _, tt := range tests {
-		t.Run(string(tt.compressorType), func(t *testing.T) {
-			assert.Equal(t, tt.want, compressorFilterName(tt.compressorType))
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := compressorFilterName(tt.compression)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
+
+	customName, err := compressorFilterName(gzipCompression)
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(customName, "envoy.filters.http.compressor.gzip/"))
+	assert.Len(t, strings.TrimPrefix(customName, "envoy.filters.http.compressor.gzip/"), 8)
+
+	identicalName, err := compressorFilterName(identicalGzipCompression)
+	require.NoError(t, err)
+	assert.Equal(t, customName, identicalName)
+
+	differentName, err := compressorFilterName(differentGzipCompression)
+	require.NoError(t, err)
+	assert.NotEqual(t, customName, differentName)
 }
