@@ -611,8 +611,74 @@ transfer-encoding: chunked
 
 ```
 
-**Note:** Local rate limiting does not support `distinct` matching. If you want to rate limit based on distinct values,
-you should use [Global Rate Limiting][].
+**Note:** Local rate limiting supports `Distinct` matching since v1.4.0. See [Rate Limit Distinct Clients](#rate-limit-distinct-clients).
+
+## Rate Limit Distinct Clients
+
+For a single selector of type `Distinct`, local rate limiting keeps a separate token bucket per distinct matched value, subject to the cache capacity described below. A `sourceCIDR` selector distinguishes the detected client IP addresses within the CIDR, and a header selector distinguishes header values.
+
+Envoy keys a `sourceCIDR` selector on the client address it detects. When clients reach Envoy through trusted proxies that pass their addresses in `X-Forwarded-For`, first configure `clientIPDetection` in a `ClientTrafficPolicy` targeting the Gateway for that proxy chain; see [Configure Client IP Detection](../client-traffic-policy/#configure-client-ip-detection). Otherwise the directly connected peer's address is used, and every client behind the same proxy shares one bucket.
+
+This example limits each client IP to 10 requests/Minute. The `0.0.0.0/0` CIDR only covers IPv4 clients; add a second rule with `::/0` to limit IPv6 clients too.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 10
+          unit: Minute
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 10
+          unit: Minute
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Each Envoy proxy keeps these buckets in its own memory, in a bounded least recently used cache per rule with a `Distinct` selector on each route. A client whose requests reach different proxies gets a separate budget on each, and every bucket starts full again when the proxy restarts. When a new value does not fit in the cache, the least recently used entry is evicted; if that value appears again, its bucket starts full, so cache churn can let a value exceed its configured rate. Use [Global Rate Limiting][] when the limit must be shared across proxies.
 
 ## Rate Limit Based on Path
 
