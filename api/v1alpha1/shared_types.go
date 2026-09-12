@@ -914,6 +914,8 @@ type CustomResponse struct {
 	// If unset, does not override the status of response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=200
+	// +kubebuilder:validation:Maximum=599
 	StatusCode *int `json:"statusCode,omitempty"`
 
 	// Header defines headers to add, set or remove from the response.
