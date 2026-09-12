@@ -49,6 +49,12 @@ type oidcRouteTestCase struct {
 	// forwardedIDTokenHeader, when set, is the request header that EG is configured
 	// to forward the OIDC ID token on. The test verifies the upstream receives it.
 	forwardedIDTokenHeader string
+	// expectedPostLogoutRedirectURI, when set, is the percent-encoded value expected
+	// in the post_logout_redirect_uri parameter of the logout redirect.
+	expectedPostLogoutRedirectURI string
+	// expectNoPostLogoutRedirectURI asserts the post_logout_redirect_uri parameter is
+	// absent from the logout redirect, i.e. postLogoutRedirect.disabled is set.
+	expectNoPostLogoutRedirectURI bool
 }
 
 func init() {
@@ -76,13 +82,16 @@ var OIDCTest = suite.ConformanceTest{
 				securityPolicyName: "oidc-test-foo",
 				testURL:            "http://www.example.com/foo",
 				logoutURL:          "http://www.example.com/foo/logout",
+				// Envoy percent-encodes everything but ALPHA, DIGIT and "*-._".
+				expectedPostLogoutRedirectURI: "http%3A%2F%2Fwww.example.com%2Ffoo%2Floggedout",
 			},
 			{
-				routeName:              "http-with-oidc-bar",
-				securityPolicyName:     "oidc-test-bar",
-				testURL:                "http://www.example.com/bar",
-				logoutURL:              "http://www.example.com/bar/logout",
-				forwardedIDTokenHeader: "X-Id-Token",
+				routeName:                     "http-with-oidc-bar",
+				securityPolicyName:            "oidc-test-bar",
+				testURL:                       "http://www.example.com/bar",
+				logoutURL:                     "http://www.example.com/bar/logout",
+				forwardedIDTokenHeader:        "X-Id-Token",
+				expectNoPostLogoutRedirectURI: true,
 			},
 		}
 
@@ -170,6 +179,9 @@ var OIDCTest = suite.ConformanceTest{
 				securityPolicyName: "oidc-test",
 				testURL:            "http://www.example.com/myapp",
 				logoutURL:          "http://www.example.com/myapp/logout",
+				// This policy sets no postLogoutRedirect, so Envoy falls back to the root of
+				// the request's host.
+				expectedPostLogoutRedirectURI: "http%3A%2F%2Fwww.example.com%2F",
 			}, "testdata/oidc-securitypolicy-backendcluster.yaml")
 		})
 	},
@@ -299,7 +311,22 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc *oidcRouteTest
 	require.Equal(t, http.StatusFound, res.StatusCode)
 
 	// After logout, OAuth2 filter will redirect to the IdP end session endpoint.
-	require.Contains(t, res.Header.Get("Location"), "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout", "Expected redirect to the root of the host")
+	location := res.Header.Get("Location")
+	require.Contains(t, location, "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout", "Expected redirect to the root of the host")
+
+	// The post_logout_redirect_uri parameter on that redirect is controlled by
+	// oidc.postLogoutRedirect in the SecurityPolicy. Every test case must declare which behavior
+	// it expects, so that a new case can't silently assert nothing here.
+	switch {
+	case tc.expectNoPostLogoutRedirectURI:
+		require.NotContains(t, location, "post_logout_redirect_uri",
+			"Expected the post_logout_redirect_uri parameter to be omitted")
+	case tc.expectedPostLogoutRedirectURI != "":
+		require.Contains(t, location, "post_logout_redirect_uri="+tc.expectedPostLogoutRedirectURI,
+			"Expected the configured post_logout_redirect_uri on the logout redirect")
+	default:
+		t.Fatal("test case must set expectedPostLogoutRedirectURI or expectNoPostLogoutRedirectURI")
+	}
 
 	// Verify that the oauth2 cookies have been deleted
 	var cookieDeleted bool
