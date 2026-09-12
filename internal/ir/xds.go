@@ -4109,6 +4109,10 @@ type Wasm struct {
 	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
 	RootID *string `json:"rootID,omitempty"`
 
+	// VMID is the user-provided ID of the Wasm VM that runs this extension.
+	// If left blank, Name is used, so the extension gets a VM of its own.
+	VMID *string `json:"vmID,omitempty"`
+
 	// WasmName is used to identify the Wasm extension if multiple extensions are
 	// handled by the same vm_id and root_id.
 	// It's also used for logging/debugging.

@@ -1,0 +1,1 @@
+Added an optional `vmID` field to `EnvoyExtensionPolicy`'s `wasm` entries, which is passed through to Envoy's `VmConfig.vm_id`. Wasm extensions that set the same `vmID` and are backed by the same Wasm code share a single Wasm VM instead of getting one each.
