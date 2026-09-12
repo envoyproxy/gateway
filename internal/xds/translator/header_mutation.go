@@ -66,16 +66,14 @@ func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, e
 		return nil, nil
 	}
 
-	addHeaders := headers.LateAddResponseHeaders
-	removeHeaders := headers.LateRemoveResponseHeaders
-	removeOnMatch := headers.LateRemoveResponseHeadersOnMatch
-	if len(addHeaders) == 0 && len(removeHeaders) == 0 && len(removeOnMatch) == 0 {
+	responseMutations := buildHeaderMutationRules(headers.LateResponseHeaderMutations)
+	if len(responseMutations) == 0 {
 		return nil, nil
 	}
 
 	mutationProto := &mutationv3.HeaderMutation{
 		Mutations: &mutationv3.Mutations{
-			ResponseMutations: buildHeaderMutationRules(addHeaders, removeHeaders, removeOnMatch),
+			ResponseMutations: responseMutations,
 		},
 	}
 
@@ -92,72 +90,60 @@ func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, e
 	}, nil
 }
 
-func buildHeaderMutationRules(addHeaders []ir.AddHeader, removeHeaders []string, removeOnMatch []*ir.StringMatch) []*mutation_rulesv3.HeaderMutation {
-	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, len(addHeaders)+len(removeHeaders)+len(removeOnMatch))
+// buildHeaderMutationRules converts an ordered list of ir.HeaderMutation into
+// Envoy HeaderMutation rules, preserving the exact order of the list. It maps
+// 1:1 to Envoy's mutation_rules HeaderMutation oneof.
+func buildHeaderMutationRules(mutations []ir.HeaderMutation) []*mutation_rulesv3.HeaderMutation {
+	if len(mutations) == 0 {
+		return nil
+	}
 
-	for _, header := range addHeaders {
-		var appendAction corev3.HeaderValueOption_HeaderAppendAction
+	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, len(mutations))
+	for _, m := range mutations {
 		switch {
-		case header.AddIfAbsent:
-			appendAction = corev3.HeaderValueOption_ADD_IF_ABSENT
-		case header.Append:
-			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		default:
-			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
-		}
-		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if len(header.Value) == 0 {
+		case m.Write != nil:
+			var appendAction corev3.HeaderValueOption_HeaderAppendAction
+			switch m.Write.Action {
+			case ir.HeaderWriteOverwrite:
+				appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+			case ir.HeaderWriteAddIfAbsent:
+				appendAction = corev3.HeaderValueOption_ADD_IF_ABSENT
+			case ir.HeaderWriteOverwriteIfExists:
+				appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS
+			default:
+				appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+			}
 			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
 				Action: &mutation_rulesv3.HeaderMutation_Append{
 					Append: &corev3.HeaderValueOption{
 						Header: &corev3.HeaderValue{
-							Key: header.Name,
+							Key:   m.Write.Name,
+							Value: m.Write.Value,
 						},
 						AppendAction:   appendAction,
-						KeepEmptyValue: true,
+						KeepEmptyValue: m.Write.KeepEmptyValue,
 					},
 				},
 			})
-		} else {
-			for _, val := range header.Value {
-				mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
-					Action: &mutation_rulesv3.HeaderMutation_Append{
-						Append: &corev3.HeaderValueOption{
-							Header: &corev3.HeaderValue{
-								Key:   header.Name,
-								Value: val,
-							},
-							AppendAction:   appendAction,
-							KeepEmptyValue: val == "",
-						},
-					},
-				})
-			}
-		}
-	}
-
-	for _, header := range removeHeaders {
-		mr := &mutation_rulesv3.HeaderMutation{
-			Action: &mutation_rulesv3.HeaderMutation_Remove{
-				Remove: header,
-			},
-		}
-		mutationRules = append(mutationRules, mr)
-	}
-
-	for _, matcher := range removeOnMatch {
-		sm := buildXdsStringMatcher(matcher)
-		if sm == nil {
-			continue
-		}
-		mr := &mutation_rulesv3.HeaderMutation{
-			Action: &mutation_rulesv3.HeaderMutation_RemoveOnMatch_{
-				RemoveOnMatch: &mutation_rulesv3.HeaderMutation_RemoveOnMatch{
-					KeyMatcher: sm,
+		case m.Remove != nil:
+			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
+				Action: &mutation_rulesv3.HeaderMutation_Remove{
+					Remove: *m.Remove,
 				},
-			},
+			})
+		case m.RemoveOnMatch != nil:
+			sm := buildXdsStringMatcher(m.RemoveOnMatch)
+			if sm == nil {
+				continue
+			}
+			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
+				Action: &mutation_rulesv3.HeaderMutation_RemoveOnMatch_{
+					RemoveOnMatch: &mutation_rulesv3.HeaderMutation_RemoveOnMatch{
+						KeyMatcher: sm,
+					},
+				},
+			})
 		}
-		mutationRules = append(mutationRules, mr)
 	}
 
 	return mutationRules

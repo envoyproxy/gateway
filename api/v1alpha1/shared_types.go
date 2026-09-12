@@ -1073,12 +1073,32 @@ type CustomRedirect struct {
 // Remove this definition and reuse the upstream one once it supports items more than 64
 
 // HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
-// request or response. Only one action for a given header name is
-// permitted. Filters specifying multiple actions of the same or different
-// type for any one header name are invalid. Configuration to set or add
-// multiple values for a header must use RFC 7230 header value formatting,
-// separating each value with a comma.
+// request or response.
+//
+// The Set, Add, AddIfAbsent, Remove and RemoveOnMatch fields permit only one
+// action for a given header name. Specifying multiple actions of the same or
+// different type for any one header name via those fields is invalid, and
+// configuration to set or add multiple values for a header must use RFC 7230
+// header value formatting, separating each value with a comma.
+//
+// The Mutations field has no such restriction. It is an ordered list, so the
+// same header name may appear in any number of operations and each one is
+// applied in turn.
 type HTTPHeaderFilter struct {
+	// Mutations is an ordered list of header operations that are applied in
+	// exactly the order specified. Use this field when the sequence of
+	// operations matters, for example setting a header and then appending to
+	// it, or removing a header and then re-adding it.
+	//
+	// Mutations are always applied FIRST, in list order. The Set, Add,
+	// AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after
+	// the mutations, preserving their existing ordering (Add, then Set, then
+	// AddIfAbsent, then Remove, then RemoveOnMatch).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=64
+	Mutations []HTTPHeaderMutation `json:"mutations,omitempty"`
+
 	// Set overwrites the request with the given header (name, value)
 	// before the action.
 	//
@@ -1182,6 +1202,85 @@ type HTTPHeaderFilter struct {
 	// +kubebuilder:validation:MaxItems=64
 	RemoveOnMatch []StringMatch `json:"removeOnMatch,omitempty"`
 }
+
+// HTTPHeaderMutation defines a single header mutation operation.
+//
+// +kubebuilder:validation:MaxProperties=1
+// +kubebuilder:validation:MinProperties=1
+type HTTPHeaderMutation struct {
+	// Write adds or modifies a header using the specified action.
+	//
+	// +optional
+	Write *HTTPHeaderWrite `json:"write,omitempty"`
+
+	// Remove removes the named header if it exists. Header names are
+	// case-insensitive.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	Remove *string `json:"remove,omitempty"`
+
+	// RemoveOnMatch removes every header whose name matches the specified string
+	// matcher. Matching is performed on the header name (case-insensitive).
+	//
+	// +optional
+	RemoveOnMatch *StringMatch `json:"removeOnMatch,omitempty"`
+}
+
+// HTTPHeaderWrite defines a header to write and how it should be applied when a
+// header with the same name already exists. It mirrors Envoy's
+// core.v3.HeaderValueOption.
+type HTTPHeaderWrite struct {
+	// Header is the header name and value to write. The value may contain
+	// Envoy substitution format operators such as "%REQ(x-foo)%", which are
+	// evaluated per request.
+	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
+	Header gwapiv1.HTTPHeader `json:"header"`
+
+	// Action controls how the header value is written when a header with the
+	// same name already exists. Defaults to Append.
+	//
+	// +optional
+	// +kubebuilder:default=Append
+	Action HeaderWriteAction `json:"action,omitempty"`
+
+	// KeepEmptyValue controls whether the header is still written when its
+	// value is empty. This matters for values produced by substitution
+	// formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+	// request time. Envoy drops such headers by default; set this to true to
+	// keep them with an empty value.
+	//
+	// When unset, it defaults to true only if the configured value itself is
+	// the empty string, so a literal empty header is always written.
+	//
+	// +optional
+	KeepEmptyValue *bool `json:"keepEmptyValue,omitempty"`
+}
+
+// HeaderWriteAction controls how a header value is written when a header with
+// the same name already exists. The values mirror Envoy's
+// HeaderValueOption.HeaderAppendAction.
+//
+// +kubebuilder:validation:Enum=Append;Overwrite;AddIfAbsent;OverwriteIfExists
+type HeaderWriteAction string
+
+const (
+	// HeaderWriteAppend appends the value if the header exists, or adds the
+	// header otherwise. (Envoy: APPEND_IF_EXISTS_OR_ADD)
+	HeaderWriteAppend HeaderWriteAction = "Append"
+
+	// HeaderWriteOverwrite overwrites the value if the header exists, or adds
+	// the header otherwise. (Envoy: OVERWRITE_IF_EXISTS_OR_ADD)
+	HeaderWriteOverwrite HeaderWriteAction = "Overwrite"
+
+	// HeaderWriteAddIfAbsent adds the header only if it is not already present.
+	// (Envoy: ADD_IF_ABSENT)
+	HeaderWriteAddIfAbsent HeaderWriteAction = "AddIfAbsent"
+
+	// HeaderWriteOverwriteIfExists overwrites the value only if the header is
+	// already present, and does nothing otherwise. (Envoy: OVERWRITE_IF_EXISTS)
+	HeaderWriteOverwriteIfExists HeaderWriteAction = "OverwriteIfExists"
+)
 
 // LocalObjectKeyReference selects a key from a local object.
 type LocalObjectKeyReference struct {

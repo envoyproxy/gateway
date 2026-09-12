@@ -25,42 +25,42 @@ http:
   hostnames:
   - "*"
   headers:
-    lateAddResponseHeaders:
-    - name: "some-header"
-      value:
-      - "some-value1,some-value2"
-      append: true
-    - name: "some-header-2"
-      value:
-      - "some-value"
-      append: true
-    - name: "some-header3"
-      value:
-      - "some-value"
-      append: false
-    - name: "some-header4"
-      value:
-      - "some-value"
-      append: false
-    - name: "empty-header"
-      value:
-      append: false
-    lateRemoveResponseHeaders:
-    - "some-header5"
-    - "some-header6"
-    lateRemoveResponseHeadersOnMatch:
-    - distinct: false
-      exact: my-removed-response-header-value
-      name: ""
-    - distinct: false
-      name: ""
-      prefix: removed-response-prefix-
-    - distinct: false
-      name: ""
-      suffix: -removed-response-suffix
-    - distinct: false
-      name: ""
-      safeRegex: removed-response-regex-.*
+    lateResponseHeaderMutations:
+    - write:
+        name: "some-header"
+        value: "some-value1,some-value2"
+        action: Append
+    - write:
+        name: "some-header-2"
+        value: "some-value"
+        action: Append
+    - write:
+        name: "some-header3"
+        value: "some-value"
+        action: Overwrite
+    - write:
+        name: "some-header4"
+        value: "some-value"
+        action: Overwrite
+    - write:
+        name: "empty-header"
+        value: ""
+        action: Overwrite
+        keepEmptyValue: true
+    - remove: "some-header5"
+    - remove: "some-header6"
+    - removeOnMatch:
+        name: ""
+        exact: my-removed-response-header-value
+    - removeOnMatch:
+        name: ""
+        prefix: removed-response-prefix-
+    - removeOnMatch:
+        name: ""
+        suffix: -removed-response-suffix
+    - removeOnMatch:
+        name: ""
+        safeRegex: removed-response-regex-.*
   routes:
   - name: "second-route"
     hostname: "*"
