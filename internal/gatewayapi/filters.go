@@ -95,6 +95,13 @@ func (t *Translator) ProcessHTTPFilters(
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
 	var errs status.TypedErrorCollector
+	// Resolve redirect extensions before processing filters so composition and
+	// conflict detection do not depend on filter order (including direct responses
+	// which otherwise stop filter processing early).
+	redirectPath, err := processRedirectExtension(filters, route, resources)
+	if err != nil {
+		return httpFiltersContext, []status.Error{err}
+	}
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -139,6 +146,12 @@ func (t *Translator) ProcessHTTPFilters(
 		}
 	}
 
+	if redirectPath != nil && httpFiltersContext.RedirectResponse != nil {
+		httpFiltersContext.RedirectResponse.Path = &ir.ExtendedHTTPPathModifier{
+			RegexMatchReplace: redirectPath,
+		}
+	}
+
 	// Check for conflicts between RequestMirror and DirectResponse or RequestRedirect filters
 	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
 		// Clear the DirectResponse to prevent it from being configured in the IR
@@ -177,6 +190,24 @@ func (t *Translator) ProcessGRPCFilters(
 		Route:     route,
 
 		HTTPFilterIR: &HTTPFilterIR{},
+	}
+
+	// Reject redirect extensions before processing filters: a direct response
+	// stops the loop below and must not hide an unsupported GRPCRoute attachment.
+	for _, filter := range filters {
+		ref := filter.ExtensionRef
+		if filter.Type != gwapiv1.GRPCRouteFilterExtensionRef || ref == nil ||
+			string(ref.Group) != egv1a1.GroupName || string(ref.Kind) != egv1a1.KindHTTPRouteFilter {
+			continue
+		}
+		for _, hrf := range resources.HTTPRouteFilters {
+			if hrf.Namespace == route.GetNamespace() && hrf.Name == string(ref.Name) && hrf.Spec.Redirect != nil {
+				return httpFiltersContext, []status.Error{status.NewRouteStatusError(
+					errors.New("HTTPRouteFilter redirect is only supported on HTTPRoute rules"),
+					gwapiv1.RouteReasonUnsupportedValue,
+				).WithType(gwapiv1.RouteConditionAccepted)}
+			}
+		}
 	}
 
 	var errs status.TypedErrorCollector
@@ -424,14 +455,14 @@ func (t *Translator) processRedirectFilter(
 		switch redirect.Path.Type {
 		case gwapiv1.FullPathHTTPPathModifier:
 			if redirect.Path.ReplaceFullPath != nil {
-				redir.Path = &ir.HTTPPathModifier{
-					FullReplace: redirect.Path.ReplaceFullPath,
+				redir.Path = &ir.ExtendedHTTPPathModifier{
+					HTTPPathModifier: ir.HTTPPathModifier{FullReplace: redirect.Path.ReplaceFullPath},
 				}
 			}
 		case gwapiv1.PrefixMatchHTTPPathModifier:
 			if redirect.Path.ReplacePrefixMatch != nil {
-				redir.Path = &ir.HTTPPathModifier{
-					PrefixMatchReplace: redirect.Path.ReplacePrefixMatch,
+				redir.Path = &ir.ExtendedHTTPPathModifier{
+					HTTPPathModifier: ir.HTTPPathModifier{PrefixMatchReplace: redirect.Path.ReplacePrefixMatch},
 				}
 			}
 		default:
@@ -813,6 +844,97 @@ func (t *Translator) processResponseHeaderModifierFilter(
 		).WithType(gwapiv1.RouteConditionAccepted)
 	}
 
+	return nil
+}
+
+// processRedirectExtension composes a rule's native redirect and its extension.
+// Other extension handling, including unresolved references, remains in the
+// normal filter processing path.
+func processRedirectExtension(filters []gwapiv1.HTTPRouteFilter, route RouteContext, resources *resource.Resources) (*ir.RegexMatchReplace, status.Error) {
+	var extension *egv1a1.HTTPRouteFilter
+	var redirect *gwapiv1.HTTPRequestRedirectFilter
+	var redirectCount int
+	var conflictingAction bool
+	var duplicateExtension bool
+	for _, filter := range filters {
+		switch filter.Type {
+		case gwapiv1.HTTPRouteFilterRequestRedirect:
+			redirectCount++
+			redirect = filter.RequestRedirect
+		case gwapiv1.HTTPRouteFilterURLRewrite:
+			conflictingAction = true
+		case gwapiv1.HTTPRouteFilterExtensionRef:
+			ref := filter.ExtensionRef
+			if ref == nil || string(ref.Group) != egv1a1.GroupName || string(ref.Kind) != egv1a1.KindHTTPRouteFilter {
+				continue
+			}
+			for _, hrf := range resources.HTTPRouteFilters {
+				if hrf.Namespace != route.GetNamespace() || hrf.Name != string(ref.Name) {
+					continue
+				}
+				conflictingAction = conflictingAction || hrf.Spec.URLRewrite != nil || hrf.Spec.DirectResponse != nil
+				if hrf.Spec.Redirect != nil {
+					duplicateExtension = duplicateExtension || extension != nil
+					extension = hrf
+				}
+				break
+			}
+		}
+	}
+	if extension == nil {
+		return nil, nil
+	}
+	invalid := func(message string, reason gwapiv1.RouteConditionReason) (*ir.RegexMatchReplace, status.Error) {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("HTTPRouteFilter %s/%s: %s", extension.Namespace, extension.Name, message), reason,
+		).WithType(gwapiv1.RouteConditionAccepted)
+	}
+	switch {
+	case duplicateExtension:
+		return invalid("only one redirect extension is supported per HTTPRoute rule", gwapiv1.RouteReasonIncompatibleFilters)
+	case redirectCount != 1 || redirect == nil:
+		return invalid("redirect requires exactly one RequestRedirect filter on the same HTTPRoute rule", gwapiv1.RouteReasonIncompatibleFilters)
+	case redirect.Path != nil:
+		return invalid("redirect path cannot be combined with RequestRedirect.path", gwapiv1.RouteReasonIncompatibleFilters)
+	case conflictingAction:
+		return invalid("redirect cannot be combined with URLRewrite or DirectResponse", gwapiv1.RouteReasonIncompatibleFilters)
+	}
+	path := extension.Spec.Redirect.Path
+	if path.Type != egv1a1.RegexHTTPPathModifier || path.ReplaceRegexMatch == nil || path.ReplaceRegexMatch.Pattern == "" {
+		return invalid("redirect path requires ReplaceRegexMatch with a non-empty pattern", gwapiv1.RouteReasonUnsupportedValue)
+	}
+	replacement := path.ReplaceRegexMatch
+	pattern, err := regexp.Compile(replacement.Pattern)
+	if err != nil {
+		return invalid("redirect pattern must be a valid RE2 regular expression", gwapiv1.RouteReasonUnsupportedValue)
+	}
+	if err := validateRedirectSubstitution(replacement.Substitution, pattern.NumSubexp()); err != nil {
+		return invalid(err.Error(), gwapiv1.RouteReasonUnsupportedValue)
+	}
+	return &ir.RegexMatchReplace{Pattern: replacement.Pattern, Substitution: replacement.Substitution}, nil
+}
+
+// RE2 replacement strings support \\ and single-digit capture references \0..\9.
+// Validate these separately from the pattern: Go's replacement syntax differs.
+func validateRedirectSubstitution(substitution string, captures int) error {
+	if substitution == "" || strings.ContainsAny(substitution, "\r\n\x00?#") {
+		return errors.New("redirect substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'")
+	}
+	for i := 0; i < len(substitution); i++ {
+		if substitution[i] != '\\' {
+			continue
+		}
+		i++
+		if i == len(substitution) {
+			return errors.New("redirect substitution must not end with an unescaped backslash")
+		}
+		if substitution[i] == '\\' {
+			continue
+		}
+		if substitution[i] < '0' || substitution[i] > '9' || int(substitution[i]-'0') > captures {
+			return errors.New("redirect substitution must use valid RE2 capture references (\\0 through \\9) or an escaped backslash")
+		}
+	}
 	return nil
 }
 
