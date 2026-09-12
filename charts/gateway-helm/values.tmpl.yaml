@@ -30,7 +30,7 @@ global:
       # This updates the generated `envoyProxy` config and does not change the `envoy-gateway`
       # control plane Deployment image. If not specified, the default image built into
       # `envoy-gateway` is used.
-      image: ""
+      image: "docker.io/envoyproxy/envoy:distroless-dev"
       # -- Image pull policy for the managed Envoy Proxy data plane.
       # Default behavior: IfNotPresent.
       pullPolicy: ""

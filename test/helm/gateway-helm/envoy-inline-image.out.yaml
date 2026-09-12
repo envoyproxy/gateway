@@ -37,7 +37,7 @@ data:
         kubernetes:
           envoyDeployment:
             container:
-              image: docker.io/envoyproxy/envoy:distroless-dev
+              image: private-hub/envoyproxy/envoy:custom
         type: Kubernetes
     extensionApis: {}
     gateway:
@@ -60,7 +60,7 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
-          image: docker.io/envoyproxy/gateway-dev:latest
+          image: docker.io/envoyproxy/gateway-dev:d4d99594f
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -451,34 +451,6 @@ spec:
         app.kubernetes.io/instance: gateway-helm
     spec:
       automountServiceAccountToken: true
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: topology.kubernetes.io/zone
-                operator: In
-                values:
-                - antarctica-east1
-                - antarctica-west1
-      topologySpreadConstraints:
-      - labelSelector:
-          matchLabels:
-            app: envoyproxy
-            control-plane: envoy-control-plane
-        maxSkew: 1
-        topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: DoNotSchedule
-      - labelSelector:
-          matchLabels:
-            app: envoyproxy
-        maxSkew: 1
-        topologyKey: topology.kubernetes.io/zone
-        whenUnsatisfiable: ScheduleAnyway
-      tolerations:
-      - key: custom.taint
-        operator: Equal
-        value: custom.value
       securityContext:
         fsGroup: 65532
         runAsGroup: 65532
@@ -498,23 +470,14 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
-        startupProbe:
-          failureThreshold: 30
-          httpGet:
-            path: /healthz
-            port: 8081
-          periodSeconds: 1
-          successThreshold: 1
-          timeoutSeconds: 1
+        image: docker.io/envoyproxy/gateway-dev:d4d99594f
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /healthz
             port: 8081
+          initialDelaySeconds: 15
           periodSeconds: 20
-          successThreshold: 1
-          timeoutSeconds: 1
         name: envoy-gateway
         ports:
         - containerPort: 18000
@@ -531,9 +494,8 @@ spec:
           httpGet:
             path: /readyz
             port: 8081
+          initialDelaySeconds: 5
           periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
         resources:
           limits:
             memory: 1024Mi
@@ -585,7 +547,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0
     gateway.networking.k8s.io/channel: standard
   name: "safe-upgrades.gateway.networking.k8s.io"
 spec:
@@ -618,7 +580,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   annotations:
-    gateway.networking.k8s.io/bundle-version: v1.6.1
+    gateway.networking.k8s.io/bundle-version: v1.6.0
     gateway.networking.k8s.io/channel: standard
   name: safe-upgrades.gateway.networking.k8s.io
 spec:
@@ -799,8 +761,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        image: docker.io/envoyproxy/gateway-dev:d4d99594f
+        imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false
