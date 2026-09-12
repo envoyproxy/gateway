@@ -763,6 +763,31 @@ type policyTargetRouteKey struct {
 	Name      string
 }
 
+// backendPolicyKey identifies a backend-targeted BackendTrafficPolicy's target, for conflict
+// detection.
+type backendPolicyKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+func backendPolicyKeyFromTarget(target policyTargetReferenceWithSectionName) backendPolicyKey {
+	return backendPolicyKey{
+		Kind:      string(target.Kind),
+		Namespace: string(target.Namespace),
+		Name:      string(target.Name),
+	}
+}
+
+// backendPolicyKeyFromMetadata builds the same key from a BackendCluster's Metadata, so it can be
+// matched against the map backendPolicyKeyFromTarget populates. Returns the zero key for nil.
+func backendPolicyKeyFromMetadata(md *ir.ResourceMetadata) backendPolicyKey {
+	if md == nil {
+		return backendPolicyKey{}
+	}
+	return backendPolicyKey{Kind: md.Kind, Namespace: md.Namespace, Name: md.Name}
+}
+
 type policyRouteTargetContext struct {
 	RouteContext
 	attached             bool
@@ -1135,6 +1160,17 @@ func isListener(target policyTargetReferenceWithSectionName) bool {
 	return target.Kind == resource.KindGateway && target.SectionName != nil
 }
 
+// isBackendTargetKind reports whether target's kind is Service, ServiceImport, or Backend -
+// i.e. the target is a backend, not a Gateway/ListenerSet/xRoute.
+func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {
+	switch target.Kind {
+	case gwapiv1.Kind(resource.KindService), gwapiv1.Kind(resource.KindServiceImport), gwapiv1.Kind(resource.KindBackend):
+		return true
+	default:
+		return false
+	}
+}
+
 func isListenerSet(target policyTargetReferenceWithSectionName) bool {
 	// If the target is a ListenerSet and the section name is nil, then it targets the whole ListenerSet.
 	return target.Kind == resource.KindListenerSet && target.SectionName == nil
@@ -1460,6 +1496,14 @@ func ownerOf[T any](
 // Sets *target to value if and only if *target is nil
 func setIfNil[T any](target **T, value *T) {
 	if *target == nil {
+		*target = value
+	}
+}
+
+// overrideIfSet sets *target to value if value is non-nil, leaving *target unchanged otherwise.
+// The inverse of setIfNil.
+func overrideIfSet[T any](target **T, value *T) {
+	if value != nil {
 		*target = value
 	}
 }

@@ -1472,17 +1472,24 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 	extra *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
-	return &xdsClusterArgs{
+	clusterArgs := &xdsClusterArgs{
 		name:         name,
 		settings:     settings,
-		loadBalancer: route.LoadBalancer,
 		endpointType: buildEndpointType(settings),
 		metrics:      extra.metrics,
-		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
 		metadata:     metadata,
 		isRoute:      true,
 	}
+
+	if traffic := determineSettingTraffic(settings); traffic != nil {
+		applyTraffic(clusterArgs, traffic)
+	} else {
+		clusterArgs.loadBalancer = route.LoadBalancer
+		clusterArgs.dns = route.DNS
+	}
+
+	return clusterArgs
 }
 
 type TCPRouteTranslator struct {
@@ -1494,24 +1501,31 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 	extra *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
-	return &xdsClusterArgs{
-		name:              name,
-		settings:          settings,
-		loadBalancer:      route.LoadBalancer,
-		proxyProtocol:     route.ProxyProtocol,
-		circuitBreaker:    route.CircuitBreaker,
-		tcpkeepalive:      route.TCPKeepalive,
-		healthCheck:       route.HealthCheck,
-		timeout:           route.Timeout.ClusterOnly(),
-		endpointType:      buildEndpointType(settings),
-		metrics:           extra.metrics,
-		backendConnection: route.BackendConnection,
-		dns:               route.DNS,
-		ipFamily:          extra.ipFamily,
-		metadata:          metadata,
-		healthCheckLog:    extra.healthCheckLog,
-		isRoute:           true,
+	clusterArgs := &xdsClusterArgs{
+		name:           name,
+		settings:       settings,
+		endpointType:   buildEndpointType(settings),
+		metrics:        extra.metrics,
+		ipFamily:       extra.ipFamily,
+		metadata:       metadata,
+		healthCheckLog: extra.healthCheckLog,
+		isRoute:        true,
 	}
+
+	if traffic := determineSettingTraffic(settings); traffic != nil {
+		applyTraffic(clusterArgs, traffic)
+	} else {
+		clusterArgs.loadBalancer = route.LoadBalancer
+		clusterArgs.proxyProtocol = route.ProxyProtocol
+		clusterArgs.circuitBreaker = route.CircuitBreaker
+		clusterArgs.tcpkeepalive = route.TCPKeepalive
+		clusterArgs.healthCheck = route.HealthCheck
+		clusterArgs.timeout = route.Timeout.ClusterOnly()
+		clusterArgs.backendConnection = route.BackendConnection
+		clusterArgs.dns = route.DNS
+	}
+
+	return clusterArgs
 }
 
 type HTTPRouteTranslator struct {
@@ -1543,8 +1557,11 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// Populate traffic features.
-	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
+	if traffic := determineSettingTraffic(settings); traffic != nil {
+		applyTraffic(clusterArgs, traffic)
+	} else {
+		applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
+	}
 
 	return clusterArgs
 }

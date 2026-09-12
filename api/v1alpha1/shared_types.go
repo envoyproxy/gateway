@@ -70,6 +70,12 @@ const (
 	// PolicyReasonDeprecatedField is used with the "Warning" condition when the policy
 	// uses deprecated fields that should be migrated to newer alternatives.
 	PolicyReasonDeprecatedField gwapiv1.PolicyConditionReason = "DeprecatedField"
+
+	// PolicyReasonUnsupportedBackendTrafficPolicy is used with the "Warning" condition when a
+	// backend-targeted BackendTrafficPolicy cannot apply to a specific backendRef because it
+	// shares a single Envoy cluster with sibling backendRefs in a route kind that has no
+	// per-backend cluster splitting (TCPRoute, UDPRoute, TLSRoute).
+	PolicyReasonUnsupportedBackendTrafficPolicy gwapiv1.PolicyConditionReason = "UnsupportedBackendTrafficPolicy"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.

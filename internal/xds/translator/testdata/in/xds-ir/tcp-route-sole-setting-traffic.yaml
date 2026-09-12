@@ -1,0 +1,26 @@
+tcp:
+- name: "tcp-listener-simple"
+  address: "::"
+  port: 10080
+  routes:
+  - name: "tcp-route-simple"
+    circuitBreaker:
+      maxConnections: 999
+    tcpKeepalive:
+      idleTime: 1200
+      interval: 60
+      probes: 3
+    destination:
+      name: "tcp-route-simple-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tcp-route-simple-dest/backend/0"
+        traffic:
+          circuitBreaker:
+            maxConnections: 100
+          tcpKeepalive:
+            idleTime: 60
+            interval: 10
+            probes: 5

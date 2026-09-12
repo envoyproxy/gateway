@@ -217,6 +217,18 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.ClusterTrafficFeatures) {
 	args.admissionControl = traffic.AdmissionControl
 }
 
+// determineSettingTraffic returns the Traffic override carried by settings' only entry, if
+// there is exactly one setting and it carries one; nil otherwise.
+func determineSettingTraffic(settings []*ir.DestinationSetting) *ir.ClusterTrafficFeatures {
+	// A shared cluster (more than one setting) never gets a Traffic override applied to it -
+	// a Traffic-bearing setting is always split into its own cluster first. Return nil here
+	// so the caller falls back to the route's own Traffic.
+	if len(settings) != 1 {
+		return nil
+	}
+	return settings[0].Traffic
+}
+
 // determineIPFamily determines the IP family based on multiple destination settings
 func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
 	// If there's only one setting, return its IPFamily directly
