@@ -1237,6 +1237,8 @@ type TrafficFeatures struct {
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+	// RequestBodyBufferLimit is the maximum number of bytes Envoy may buffer for an individual request body.
+	RequestBodyBufferLimit *uint64 `json:"requestBodyBufferLimit,omitempty" yaml:"requestBodyBufferLimit,omitempty"`
 }
 
 // ClusterFeatures returns the cluster-scoped subset of these traffic features, or nil if there are
