@@ -94,6 +94,42 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid UDPRoute targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("UDPRoute"),
+								Name:  gwapiv1.ObjectName("udp-backend"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid UDPRoute targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("UDPRoute"),
+									Name:  gwapiv1.ObjectName("udp-backend"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid mergeType with xRoute targetRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -120,6 +156,24 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							{
 								Kind:        gwapiv1.Kind("HTTPRoute"),
 								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid mergeType with UDPRoute targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("UDPRoute"),
+								Name:  gwapiv1.ObjectName("udp-backend"),
 							},
 						},
 					},
@@ -210,7 +264,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 		{
@@ -251,7 +305,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 		{
@@ -274,7 +328,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 
