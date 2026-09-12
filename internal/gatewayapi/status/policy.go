@@ -22,6 +22,10 @@ const (
 	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
 	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
 
+	// PolicyReasonUnsupportedHTTP3ProxyProtocol is used with the "Warning" condition when
+	// HTTP/3 is disabled because the proxy protocol listener filter is not supported on QUIC listeners.
+	PolicyReasonUnsupportedHTTP3ProxyProtocol gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ProxyProtocol"
+
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
