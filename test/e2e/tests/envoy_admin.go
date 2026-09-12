@@ -22,6 +22,10 @@ import (
 // collect.RequestWithPortForwarder, used the same way in test/benchmark/suite/report.go for
 // pprof).
 func fetchEnvoyClustersOutput(t *testing.T, suite *suite.ConformanceTestSuite, selector ...string) (string, error) {
+	return fetchEnvoyOutput(t, suite, "/clusters", selector...)
+}
+
+func fetchEnvoyOutput(t *testing.T, suite *suite.ConformanceTestSuite, path string, selector ...string) (string, error) {
 	t.Helper()
 
 	cli, err := kube.NewForRestConfig(suite.RestConfig)
@@ -40,7 +44,7 @@ func fetchEnvoyClustersOutput(t *testing.T, suite *suite.ConformanceTestSuite, s
 	body, err := collect.RequestWithPortForwarder(cli, types.NamespacedName{
 		Namespace: pods.Items[0].Namespace,
 		Name:      pods.Items[0].Name,
-	}, 19000, "/clusters")
+	}, 19000, path)
 	if err != nil {
 		return "", err
 	}

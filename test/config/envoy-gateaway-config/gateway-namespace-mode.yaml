@@ -30,6 +30,10 @@ data:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
+      clusterSettings:
+        timeout:
+          http:
+            maxConnectionDuration: 10s
       # Bumped from the 20ms default (unset field) - that default is tuned for a colocated,
       # low-latency ratelimit service, but this gRPC call also has to cover the ratelimit
       # service's own Redis round trip, which can exceed 20ms under CI load. failClosed
