@@ -94,6 +94,10 @@ type TCPClientTimeout struct {
 	// If exceeded, the connection is dropped.
 	// Default: 15 seconds.
 	//
+	// This setting belongs to the listener socket, which is shared by every Gateway
+	// listener on the same address and port, so it applies to all of them. If more
+	// than one of those listeners configures it, the first one wins.
+	//
 	// +optional
 	ConnectionInspectionTimeout *gwapiv1.Duration `json:"connectionInspectionTimeout,omitempty"`
 }
