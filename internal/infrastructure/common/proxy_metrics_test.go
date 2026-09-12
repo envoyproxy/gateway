@@ -167,6 +167,31 @@ func TestResolvedMetricSinksConversion(t *testing.T) {
 			},
 		},
 		{
+			name: "sink with prefix",
+			irSinks: []ir.ResolvedMetricSink{
+				{
+					Destination: ir.RouteDestination{
+						Name: "metrics_otel_0",
+						Settings: []*ir.DestinationSetting{
+							{
+								Endpoints: []*ir.DestinationEndpoint{
+									{Host: "otel-collector.example.com", Port: 4317},
+								},
+							},
+						},
+					},
+					Prefix: "envoy",
+				},
+			},
+			expected: []bootstrap.MetricSink{
+				{
+					Address: "otel-collector.example.com",
+					Port:    4317,
+					Prefix:  "envoy",
+				},
+			},
+		},
+		{
 			name: "sink with resources",
 			irSinks: []ir.ResolvedMetricSink{
 				{
