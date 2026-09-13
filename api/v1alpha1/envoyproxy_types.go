@@ -254,6 +254,31 @@ type MergeBackendsConfig struct {
 	//
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+
+	// StatName defines the value of the merged cluster alt_stat_name, determining how the stats of
+	// a merged backend cluster are named. It applies only to clusters that were actually merged;
+	// a backendRef that fell back to a dedicated per-route cluster keeps using
+	// `EnvoyProxy.spec.telemetry.metrics.clusterStatName`.
+	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
+	// Only backend-scoped operators are supported, because a merged cluster is shared by every
+	// route that references the same backend and therefore has no single route identity:
+	// `%BACKEND_KIND%`: kind of the backend resource, lowercased (`service`, `serviceimport`, `backend`)
+	// `%BACKEND_NAMESPACE%`: namespace of the backend resource
+	// `%BACKEND_NAME%`: name of the backend resource
+	// `%BACKEND_PORT%`: port of the backend resource
+	// `%BACKEND_PROTOCOL%`: application protocol of the backend port, lowercased (`http`, `http2`,
+	// `grpc`, `tcp`, ...), or `-` when the backend port declares none
+	// Unlike clusterStatName, this applies to every route kind that can merge backends, including
+	// TCPRoute, UDPRoute and TLSRoute.
+	// A pattern that omits `%BACKEND_PORT%` or `%BACKEND_PROTOCOL%` can resolve to the same value
+	// for two distinct merged clusters, in which case Envoy aggregates their stats together.
+	// When unset, no alt_stat_name is set and merged cluster stats keep using the generated
+	// cluster name.
+	// Example: `%BACKEND_KIND%/%BACKEND_NAMESPACE%/%BACKEND_NAME%/%BACKEND_PORT%` => `service/my-ns/my-backend/3000`
+	//
+	// +optional
+	// +notImplementedHide
+	StatName *string `json:"statName,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
@@ -498,6 +523,22 @@ const (
 
 	// StatFormatterBackendRefs defines the Route Name formatter for stats
 	StatFormatterBackendRefs string = "%BACKEND_REFS%"
+
+	// StatFormatterBackendKind defines the merged backend cluster Kind formatter for stats
+	StatFormatterBackendKind string = "%BACKEND_KIND%"
+
+	// StatFormatterBackendNamespace defines the merged backend cluster Namespace formatter for stats
+	StatFormatterBackendNamespace string = "%BACKEND_NAMESPACE%"
+
+	// StatFormatterBackendName defines the merged backend cluster Name formatter for stats
+	StatFormatterBackendName string = "%BACKEND_NAME%"
+
+	// StatFormatterBackendPort defines the merged backend cluster Port formatter for stats
+	StatFormatterBackendPort string = "%BACKEND_PORT%"
+
+	// StatFormatterBackendProtocol defines the merged backend cluster application protocol
+	// formatter for stats
+	StatFormatterBackendProtocol string = "%BACKEND_PROTOCOL%"
 )
 
 type ProxyTelemetry struct {

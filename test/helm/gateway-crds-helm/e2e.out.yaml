@@ -10966,6 +10966,29 @@ spec:
                         type: object
                     type: object
                     x-kubernetes-map-type: atomic
+                  statName:
+                    description: |-
+                      StatName defines the value of the merged cluster alt_stat_name, determining how the stats of
+                      a merged backend cluster are named. It applies only to clusters that were actually merged;
+                      a backendRef that fell back to a dedicated per-route cluster keeps using
+                      `EnvoyProxy.spec.telemetry.metrics.clusterStatName`.
+                      For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
+                      Only backend-scoped operators are supported, because a merged cluster is shared by every
+                      route that references the same backend and therefore has no single route identity:
+                      `%BACKEND_KIND%`: kind of the backend resource, lowercased (`service`, `serviceimport`, `backend`)
+                      `%BACKEND_NAMESPACE%`: namespace of the backend resource
+                      `%BACKEND_NAME%`: name of the backend resource
+                      `%BACKEND_PORT%`: port of the backend resource
+                      `%BACKEND_PROTOCOL%`: application protocol of the backend port, lowercased (`http`, `http2`,
+                      `grpc`, `tcp`, ...), or `-` when the backend port declares none
+                      Unlike clusterStatName, this applies to every route kind that can merge backends, including
+                      TCPRoute, UDPRoute and TLSRoute.
+                      A pattern that omits `%BACKEND_PORT%` or `%BACKEND_PROTOCOL%` can resolve to the same value
+                      for two distinct merged clusters, in which case Envoy aggregates their stats together.
+                      When unset, no alt_stat_name is set and merged cluster stats keep using the generated
+                      cluster name.
+                      Example: `%BACKEND_KIND%/%BACKEND_NAMESPACE%/%BACKEND_NAME%/%BACKEND_PORT%` => `service/my-ns/my-backend/3000`
+                    type: string
                 type: object
               mergeGateways:
                 description: |-
@@ -25393,6 +25416,9 @@ spec:
                           `%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section
                           `%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|...` format
                           Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
+                          This does not apply to clusters shared by multiple routes through
+                          `EnvoyProxy.spec.mergeBackends`, since the operators above are all per-route: use
+                          `EnvoyProxy.spec.mergeBackends.statName` to name those.
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
                         type: string

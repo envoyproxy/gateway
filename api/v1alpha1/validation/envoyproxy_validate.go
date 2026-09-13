@@ -63,6 +63,13 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 		}
 	}
 
+	// validate merge backends
+	if spec != nil && spec.MergeBackends != nil && spec.MergeBackends.StatName != nil {
+		if err := ValidateMergedClusterStatName(*spec.MergeBackends.StatName); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	return utilerrors.NewAggregate(errs)
 }
 
@@ -313,6 +320,18 @@ var (
 		egv1a1.StatFormatterRouteRuleNumber: true,
 		egv1a1.StatFormatterBackendRefs:     true,
 	}
+
+	// mergedClusterStatSupportedOperators holds the operators allowed in
+	// MergeBackendsConfig.StatName. A merged cluster is shared by every route referencing the same
+	// backend, so no route-scoped operator can resolve to a single correct value - only
+	// backend-scoped ones are supported.
+	mergedClusterStatSupportedOperators = map[string]bool{
+		egv1a1.StatFormatterBackendKind:      true,
+		egv1a1.StatFormatterBackendNamespace: true,
+		egv1a1.StatFormatterBackendName:      true,
+		egv1a1.StatFormatterBackendPort:      true,
+		egv1a1.StatFormatterBackendProtocol:  true,
+	}
 )
 
 func ValidateRouteStatName(routeStatName string) error {
@@ -326,6 +345,14 @@ func ValidateRouteStatName(routeStatName string) error {
 func ValidateClusterStatName(clusterStatName string) error {
 	if err := validateStatName(clusterStatName, clusterStatSupportedOperators); err != nil {
 		return fmt.Errorf("unable to configure Cluster Stat Name: %w", err)
+	}
+
+	return nil
+}
+
+func ValidateMergedClusterStatName(mergedClusterStatName string) error {
+	if err := validateStatName(mergedClusterStatName, mergedClusterStatSupportedOperators); err != nil {
+		return fmt.Errorf("unable to configure Merged Cluster Stat Name: %w", err)
 	}
 
 	return nil
