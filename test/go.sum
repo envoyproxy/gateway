@@ -617,6 +617,10 @@ github.com/yuin/gopher-lua v1.1.2 h1:yF/FjE3hD65tBbt0VXLE13HWS9h34fdzJmrWRXwobGA
 github.com/yuin/gopher-lua v1.1.2/go.mod h1:7aRmXIWl37SqRf0koeyylBEzJ+aPt8A+mmkQ4f1ntR8=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
+github.com/zirain-dev/gateway-api v0.0.0-20260914075327-7c51128a5d91 h1:GwqyxKFSvGvNM7HdUUpdj8KFBj6mO/OPOH0gSc1Cy4A=
+github.com/zirain-dev/gateway-api v0.0.0-20260914075327-7c51128a5d91/go.mod h1:FVfx3t389ybeXOqvDghLbdvJdSCfI/PReqCUI3lu3mY=
+github.com/zirain-dev/gateway-api/conformance v0.0.0-20260914075327-7c51128a5d91 h1:I7ygET76K1HjPbhcOnwQMNX/SooWqMVRlehLDO/msfw=
+github.com/zirain-dev/gateway-api/conformance v0.0.0-20260914075327-7c51128a5d91/go.mod h1:JD6CHFrpzVyvgivIzhu0My27sOk3I3IphxJe4CIjGb4=
 go.etcd.io/bbolt v1.5.0 h1:S7GAl7Fxv12yohbwFfIbQCGDWbQbtDGPET4P/bD4lxU=
 go.etcd.io/bbolt v1.5.0/go.mod h1:mkltfYE5aUHQxUct9N9V+Kp7aSjFqjgrhcXIS70Lrdk=
 go.etcd.io/etcd/api/v3 v3.7.1 h1:KJG0/DcWGfe3Y1otDf/fsBf0TSSgpxZ5RO/L8SFt73E=
@@ -832,10 +836,6 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.36.0 h1:/YpDJ4vReG7Zm
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.36.0/go.mod h1:tJo1aepTXyR+8Xs3sUsGBDk4Ub2AM5dPAPKJx0mpm5c=
 sigs.k8s.io/controller-runtime v0.25.0 h1:44KgRUPew331KSJpNu8zJow3iTR5W0p/SfrHdw3lV40=
 sigs.k8s.io/controller-runtime v0.25.0/go.mod h1:4QqLdT6z/L6Olj8JJCtvztid4/fnIiYsfaTFScegctc=
-sigs.k8s.io/gateway-api v1.6.2 h1:vh5YzKlbdBivEaLX61+APKLGRq4tZ7Fj4XfGkv08xB4=
-sigs.k8s.io/gateway-api v1.6.2/go.mod h1:FVfx3t389ybeXOqvDghLbdvJdSCfI/PReqCUI3lu3mY=
-sigs.k8s.io/gateway-api/conformance v1.6.2 h1:41gszNdu1oSZj/3k7AMxgFA5mTic/aNTsKaKTMaPYSk=
-sigs.k8s.io/gateway-api/conformance v1.6.2/go.mod h1:JD6CHFrpzVyvgivIzhu0My27sOk3I3IphxJe4CIjGb4=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730/go.mod h1:mdzfpAEoE6DHQEN0uh9ZbOCuHbLK5wOm7dK4ctXE9Tg=
 sigs.k8s.io/kubectl-validate v0.0.5-0.20250915070809-d2f2d68fba09 h1:JQbPOwLjSztom+aSDQIi6UZq8V0Gbv7BjAlYQSgycCI=
