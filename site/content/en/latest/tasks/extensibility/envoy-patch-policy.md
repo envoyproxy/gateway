@@ -121,6 +121,8 @@ Because [EnvoyPatchPolicy][] relies on specific xDS resource names, it’s impor
 | **HCM StatPrefix**   | Old            | `<ApplicationProtocol>/<ContainerPort>`                                     | `http-10080`, `https-10443`     |
 |                      | V2 (HTTP)      | `http-<Port>`                                                               | `http-80`                        |
 |                      | V2 (HTTPS)     | `https-<Port>`                                                              | `https-443`                      |
+| **Cluster name**     | Old            | `httproute/<HTTPRouteNamespace>/<HTTPRouteName>/rule/<RuleIndex>`           | `default/backend/rule/0`        |
+|                      | V2             | `httproute/<HTTPRouteNamespace>/<HTTPRouteName>/rule/<RuleIndex>`           | `default/backend/rule/0`        |
 
 
 This change is gated by the XDSNameSchemeV2 runtime flag. The flag is disabled by default in v1.5 and will be enabled by default starting in v1.10.
@@ -449,6 +451,104 @@ $ curl -v --header "Host: www.example.com" http://localhost:8888/
 ...
 < x-envoy-attempt-count: 1
 ...
+```
+
+### Patch Cluster Configuration
+
+* Use [EnvoyPatchPolicy][] to modify an upstream cluster generated for an HTTPRoute rule.
+  This example replaces the default load balancing policy with client-side weighted round robin.
+
+* Cluster names follow the format `httproute/<HTTPRouteNamespace>/<HTTPRouteName>/rule/<RuleIndex>`.
+  For an HTTPRoute named `server-route` in namespace `envoy-poc` with a single rule, the cluster name is
+  `httproute/envoy-poc/server-route/rule/0`.
+
+* Use [egctl x translate][] to confirm the exact cluster name in your environment before applying a patch.
+
+* Envoy Gateway already sets `load_balancing_policy` on generated clusters, so use `replace` instead of `add`
+  when modifying that field.
+
+* Apply the configuration
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: server-route-client-wrr
+  namespace: envoy-poc
+spec:
+  type: JSONPatch
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: envoy-poc
+  jsonPatches:
+  - type: type.googleapis.com/envoy.config.cluster.v3.Cluster
+    # Cluster name for HTTPRoute rule 0 in namespace envoy-poc
+    name: httproute/envoy-poc/server-route/rule/0
+    operation:
+      op: replace
+      path: /load_balancing_policy
+      value:
+        policies:
+        - typed_extension_config:
+            name: envoy.load_balancing_policies.client_side_weighted_round_robin
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: server-route-client-wrr
+  namespace: envoy-poc
+spec:
+  type: JSONPatch
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: envoy-poc
+  jsonPatches:
+  - type: type.googleapis.com/envoy.config.cluster.v3.Cluster
+    # Cluster name for HTTPRoute rule 0 in namespace envoy-poc
+    name: httproute/envoy-poc/server-route/rule/0
+    operation:
+      op: replace
+      path: /load_balancing_policy
+      value:
+        policies:
+        - typed_extension_config:
+            name: envoy.load_balancing_policies.client_side_weighted_round_robin
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+* Verify the patch was applied by checking the EnvoyPatchPolicy status
+
+```shell
+kubectl get envoypatchpolicy server-route-client-wrr -n envoy-poc -o yaml
+```
+
+The `Programmed=True` condition confirms the patch was applied. You can also inspect the generated
+cluster configuration with [egctl x translate][]:
+
+```shell
+egctl x translate --from gateway-api -o yaml | yq '.clusters.dynamicActiveClusters[] | select(.cluster.name == "httproute/envoy-poc/server-route/rule/0")'
 ```
 
 ## Debugging
