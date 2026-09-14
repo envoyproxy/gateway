@@ -1,0 +1,114 @@
+http:
+- address: 0.0.0.0
+  clientIPDetection:
+    customHeader:
+      failClosed: false
+      name: x-real-client-ip
+  geoIPProvider:
+    maxMind:
+      countryDbPath: /db/GeoLite2-Country.mmdb
+  hostnames:
+  - '*'
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      metadata:
+        kind: HTTPRoute
+        name: httproute-protected
+        namespace: default
+      name: httproute/default/httproute-protected/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-protected/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    hostname: www.example.com
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: httproute-protected
+      namespace: default
+    name: httproute/default/httproute-protected/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /protected
+    security:
+      authorization:
+        defaultAction: Deny
+        rules:
+        # Leading authentication-independent rules: enforced by the pre-auth RBAC
+        # filter (before OAuth2) as well as the main RBAC filter.
+        - action: Deny
+          name: deny-sanctioned-country
+          principal:
+            clientIPGeoLocations:
+            - country: IR
+        - action: Deny
+          name: deny-internal-cidr
+          principal:
+            clientCIDRs:
+            - cidr: 10.0.0.0/8
+        # Authentication-dependent rule: only enforced by the main RBAC filter,
+        # after the JWT/OIDC authentication filters have run.
+        - action: Allow
+          name: allow-admins
+          principal:
+            jwt:
+              claims:
+              - name: groups
+                valueType: StringArray
+                values:
+                - admin
+              provider: exjwt
+      jwt:
+        providers:
+        - claimToHeaders:
+          - claim: groups
+            header: x-user-groups
+          extractFrom:
+            cookies:
+            - IdToken
+          issuer: https://oauth.example.com/realms/example
+          name: exjwt
+          remoteJWKS:
+            uri: https://oauth.example.com/realms/example/protocol/openid-connect/certs
+            cacheDuration: 300s
+      oidc:
+        name: securitypolicy/default/policy-for-protected-route
+        clientID: client.oauth.example.com
+        clientSecret: Y2xpZW50MTpzZWNyZXQK
+        hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+        provider:
+          authorizationEndpoint: https://oauth.example.com/oauth2/v2/auth
+          tokenEndpoint: https://oauth.example.com/token
+        scopes:
+        - openid
+        - email
+        - profile
+        redirectURL: "https://www.example.com/protected/oauth2/callback"
+        redirectPath: "/protected/oauth2/callback"
+        logoutPath: "/protected/logout"
+        cookieSuffix: 5F93C2E4
+        forwardAccessToken: true
+        defaultTokenTTL: 1h
+        refreshToken: true
+        defaultRefreshTokenTTL: 48h
+        csrfTokenTTL: 35m
