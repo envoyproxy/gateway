@@ -27,7 +27,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests,
 		LocalRateLimitTest,
 		LocalRateLimitQueryParametersTest,
-		LocalRateLimitRetryAfterHeaderTest,
+		LocalRateLimitDisableRetryAfterHeaderTest,
 	)
 }
 
@@ -674,10 +674,10 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 	})
 }
 
-var LocalRateLimitRetryAfterHeaderTest = suite.ConformanceTest{
-	ShortName:   "LocalRateLimitRetryAfterHeader",
-	Description: "Emit Retry-After header on local rate-limited 429 responses",
-	Manifests:   []string{"testdata/local-ratelimit-retry-after-header.yaml"},
+var LocalRateLimitDisableRetryAfterHeaderTest = suite.ConformanceTest{
+	ShortName:   "LocalRateLimitDisableRetryAfterHeader",
+	Description: "Omit Retry-After header on local rate-limited 429 responses when disabled",
+	Manifests:   []string{"testdata/local-ratelimit-disable-retry-after-header.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -689,7 +689,7 @@ var LocalRateLimitRetryAfterHeaderTest = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "local-ratelimit-retry-after-header-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "local-ratelimit-disable-retry-after-header-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 		okResponse := http.ExpectedResponse{
 			Request: http.Request{
@@ -708,12 +708,8 @@ var LocalRateLimitRetryAfterHeaderTest = suite.ConformanceTest{
 				Path: "/retry-after-local",
 			},
 			Response: http.Response{
-				StatusCodes: []int{429},
-				// The value counts down from the 3600s (1 Hour) window, so allow a small
-				// tolerance rather than asserting an exact, time-dependent value.
-				ValidHeaderValues: map[string][]string{
-					RetryAfterHeaderName: {"3600", "3599", "3598"},
-				},
+				StatusCodes:   []int{429},
+				AbsentHeaders: []string{RetryAfterHeaderName},
 			},
 			Namespace: ns,
 		}

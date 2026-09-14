@@ -4724,6 +4724,12 @@ spec:
                       DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
                       when rate limiting is enabled.
                     type: boolean
+                  disableRetryAfterHeader:
+                    description: |-
+                      DisableRetryAfterHeader configures Envoy Proxy to omit the "Retry-After" response header
+                      on rate-limited 429 responses.
+                      The default is to emit this header.
+                    type: boolean
                   earlyRequestHeaders:
                     description: |-
                       EarlyRequestHeaders defines settings for early request header modification, before envoy performs
@@ -4963,11 +4969,6 @@ spec:
                     description: |-
                       EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
                       and responses.
-                    type: boolean
-                  enableRetryAfterHeader:
-                    description: |-
-                      EnableRetryAfterHeader configures Envoy Proxy to emit the "Retry-After" response header
-                      on rate-limited 429 responses.
                     type: boolean
                   host:
                     description: Host enables managing how the Host/Authority header

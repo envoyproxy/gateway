@@ -149,9 +149,10 @@ func createRateLimitFilter(t *Translator, irListener *ir.HTTPListener, domain, f
 		rateLimitFilterProto.EnableXRatelimitHeaders = ratelimitfilterv3.RateLimit_DRAFT_VERSION_03
 	}
 
-	// Emit the Retry-After header on rate-limited 429 responses.
-	if irListener.Headers != nil && irListener.Headers.EnableRetryAfterHeader {
-		rateLimitFilterProto.EnableRetryAfterHeader = true
+	// Emit the Retry-After header on rate-limited 429 responses, unless disabled.
+	rateLimitFilterProto.EnableRetryAfterHeader = true
+	if irListener.Headers != nil && irListener.Headers.DisableRetryAfterHeader {
+		rateLimitFilterProto.EnableRetryAfterHeader = false
 	}
 
 	// Set the failure mode to deny if the global rate limit is configured to fail closed

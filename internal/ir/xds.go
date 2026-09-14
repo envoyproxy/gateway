@@ -948,10 +948,10 @@ type HeaderSettings struct {
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimit
 	DisableRateLimitHeaders bool `json:"disableRateLimitHeaders,omitempty" yaml:"disableRateLimitHeaders,omitempty"`
 
-	// EnableRetryAfterHeader controls if a "Retry-After" header is added to rate-limited 429 responses.
-	// The default is to omit this header.
+	// DisableRetryAfterHeader controls if a "Retry-After" header is added to rate-limited 429 responses.
+	// The default is to emit this header.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimit
-	EnableRetryAfterHeader bool `json:"enableRetryAfterHeader,omitempty" yaml:"enableRetryAfterHeader,omitempty"`
+	DisableRetryAfterHeader bool `json:"disableRetryAfterHeader,omitempty" yaml:"disableRetryAfterHeader,omitempty"`
 
 	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails

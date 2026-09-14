@@ -1,1 +1,1 @@
-Added `ClientTrafficPolicy.spec.headers.enableRetryAfterHeader` to emit a `Retry-After` header on rate-limited 429 responses, for both the global and local rate limit filters. Defaults to `false`.
+Added `ClientTrafficPolicy.spec.headers.disableRetryAfterHeader` to control whether a `Retry-After` header is emitted on rate-limited 429 responses, for both the global and local rate limit filters. The header is emitted by default; set this field to `true` to opt out.

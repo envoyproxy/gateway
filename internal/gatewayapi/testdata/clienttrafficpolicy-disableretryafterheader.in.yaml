@@ -6,7 +6,7 @@ clientTrafficPolicies:
     name: target-gateway-1
   spec:
     headers:
-      enableRetryAfterHeader: true
+      disableRetryAfterHeader: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

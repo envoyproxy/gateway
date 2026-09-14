@@ -5065,8 +5065,8 @@ func (in *HeaderSettings) DeepCopyInto(out *HeaderSettings) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.EnableRetryAfterHeader != nil {
-		in, out := &in.EnableRetryAfterHeader, &out.EnableRetryAfterHeader
+	if in.DisableRetryAfterHeader != nil {
+		in, out := &in.DisableRetryAfterHeader, &out.DisableRetryAfterHeader
 		*out = new(bool)
 		**out = **in
 	}

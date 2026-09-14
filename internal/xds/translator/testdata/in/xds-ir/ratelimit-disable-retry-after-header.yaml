@@ -13,7 +13,7 @@ http:
       mergeSlashes: true
       escapedSlashesAction: UnescapeAndRedirect
     headers:
-      enableRetryAfterHeader: true
+      disableRetryAfterHeader: true
     routes:
       - name: "first-route"
         hostname: "*"
