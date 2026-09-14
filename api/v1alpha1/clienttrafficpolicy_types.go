@@ -142,7 +142,6 @@ type HeaderSettings struct {
 
 	// DisableRetryAfterHeader configures Envoy Proxy to omit the "Retry-After" response header
 	// on rate-limited 429 responses.
-	// The default is to emit this header.
 	// +optional
 	DisableRetryAfterHeader *bool `json:"disableRetryAfterHeader,omitempty"`
 
