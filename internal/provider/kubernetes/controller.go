@@ -53,6 +53,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	workqueuemetrics "github.com/envoyproxy/gateway/internal/metrics/workqueue"
 	"github.com/envoyproxy/gateway/internal/utils"
+	endpointsutil "github.com/envoyproxy/gateway/internal/utils/endpoints"
 )
 
 var skipNameValidation = func() *bool {
@@ -301,6 +302,78 @@ func (r *gatewayAPIReconciler) endpointSliceIndexEnabled() bool {
 	return flags.IsEnabled(egv1a1.EndpointSliceIndex)
 }
 
+// endpointFastPathEnabled returns true when endpoint updates should be published
+// on the EndpointUpdates channel for the xDS runner's endpoint fast path.
+func (r *gatewayAPIReconciler) endpointFastPathEnabled() bool {
+	var flags *egv1a1.RuntimeFlags
+	if r != nil && r.envoyGateway != nil {
+		flags = r.envoyGateway.RuntimeFlags
+	}
+	return flags.IsEnabled(egv1a1.EndpointFastPath)
+}
+
+// publishEndpointUpdate publishes the full current set of EndpointSlices for the
+// backend that eps belongs to, so the xDS runner can propagate the change
+// without waiting for a full translation.
+func (r *gatewayAPIReconciler) publishEndpointUpdate(ctx context.Context, eps *discoveryv1.EndpointSlice) {
+	if !r.endpointFastPathEnabled() {
+		return
+	}
+	// Informer events can still arrive while the manager is shutting down;
+	// there is no point publishing an update nothing will consume.
+	if ctx.Err() != nil {
+		return
+	}
+
+	kind, name, ok := endpointsutil.BackendForSlice(eps)
+	if !ok {
+		return
+	}
+	namespace := eps.Namespace
+	endpointSliceIndex, endpointSliceLabelKey := serviceEndpointSliceIndex, discoveryv1.LabelServiceName
+	if kind == resource.KindServiceImport {
+		endpointSliceIndex, endpointSliceLabelKey = serviceImportEndpointSliceIndex, mcsapiv1a1.LabelServiceName
+	}
+
+	opts := []client.ListOption{client.InNamespace(namespace)}
+	if r.endpointSliceIndexEnabled() {
+		opts = append(opts, client.MatchingFields{endpointSliceIndex: name})
+	} else {
+		opts = append(opts, client.MatchingLabels{endpointSliceLabelKey: name})
+	}
+
+	endpointSliceList := new(discoveryv1.EndpointSliceList)
+	if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
+		r.log.Error(err, "failed to list EndpointSlices for endpoint update",
+			"kind", kind, "namespace", namespace, "name", name)
+		return
+	}
+
+	update := &message.EndpointUpdate{
+		Kind:      kind,
+		Namespace: namespace,
+		Name:      name,
+	}
+	for i := range endpointSliceList.Items {
+		update.EndpointSlices = append(update.EndpointSlices, &endpointSliceList.Items[i])
+	}
+	// Sort with the same comparator the resource tree uses, so the fast path
+	// derives endpoints in the same order as a full translation.
+	resource.SortEndpointSlices(update.EndpointSlices)
+	if len(update.EndpointSlices) == 0 {
+		// The backend's last EndpointSlice is gone; drop the retained entry so
+		// the channel doesn't accumulate state for deleted backends. Consumers
+		// treat the deletion as a skip and leave it to the full path.
+		r.resources.EndpointUpdates.Delete(update.Key())
+		return
+	}
+	r.resources.EndpointUpdates.Store(update.Key(), update)
+	message.PublishMetric(message.Metadata{
+		Runner:  string(egv1a1.LogComponentProviderRunner),
+		Message: message.EndpointSlicesMessageName,
+	}, 1)
+}
+
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	if eg.Provider == nil {
 		return false
@@ -342,6 +415,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		err        error
 	)
 	logger.Info("reconciling gateways")
+
+	// Collect the backends referenced by any route this reconcile, to prune
+	// retained endpoint updates for backends that are no longer referenced.
+	var referencedBackends sets.Set[string]
+	if r.endpointFastPathEnabled() {
+		referencedBackends = sets.New[string]()
+	}
 
 	// Get the GatewayClasses managed by the Envoy Gateway Controller.
 	managedGCs, err = r.managedGatewayClasses(ctx)
@@ -623,6 +703,36 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				}
 				gcLogger.Error(err, "failed adding finalizer to gatewayClass")
 			}
+		}
+
+		if referencedBackends != nil {
+			// Collect from the backendRefs themselves, not from the resources
+			// they resolved to: a reference to a Service that does not exist is
+			// still a reference, and must not look prunable.
+			for _, ref := range gwcResourceMapping.allAssociatedBackendRefs {
+				kind := gatewayapi.KindDerefOr(ref.Kind, resource.KindService)
+				if kind != resource.KindService && kind != resource.KindServiceImport {
+					continue
+				}
+				referencedBackends.Insert(message.BackendKey(kind, string(*ref.Namespace), string(ref.Name)))
+			}
+		}
+	}
+
+	// Drop retained endpoint updates for backends no longer referenced by any
+	// route, so the EndpointUpdates channel does not accumulate stale state.
+	// The filter collects the stale keys and admits nothing, so no retained
+	// EndpointSlice set is deep copied just to enumerate the keys.
+	if referencedBackends != nil {
+		var staleBackends []string
+		r.resources.EndpointUpdates.LoadAllMatching(func(key string, _ *message.EndpointUpdate) bool {
+			if !referencedBackends.Has(key) {
+				staleBackends = append(staleBackends, key)
+			}
+			return false
+		})
+		for _, key := range staleBackends {
+			r.resources.EndpointUpdates.Delete(key)
 		}
 	}
 
@@ -2659,6 +2769,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{},
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *discoveryv1.EndpointSlice) []reconcile.Request {
+				r.publishEndpointUpdate(ctx, si)
 				return r.enqueueClass(ctx, si)
 			}),
 			esPredicates...)); err != nil {

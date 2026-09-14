@@ -170,7 +170,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EndpointFastPath
 type RuntimeFlag string
 
 const (
@@ -191,6 +191,14 @@ const (
 	// upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use
 	// it, which may cause a brief disruption to new connections on first enable.
 	PerResourceSystemCASecret RuntimeFlag = "PerResourceSystemCASecret" //nolint:gosec // not a credential
+
+	// EndpointFastPath enables propagating EndpointSlice updates to Envoy as EDS-only
+	// pushes without waiting for a full translation: endpoint changes are patched into
+	// the current xDS snapshot using cached per-cluster context from the last successful
+	// full translation. Endpoint changes that affect configuration (e.g. a backend's
+	// endpoint count crossing zero) still take the full path, and full translations
+	// remain authoritative. Disabled by default.
+	EndpointFastPath RuntimeFlag = "EndpointFastPath"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
