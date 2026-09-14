@@ -3,7 +3,7 @@ title: Gateway
 no_list: true
 ---
 
-{{ partial "announcement-banner.html" . }}
+{{< announcement-banner >}}
 
 <div class="home-header">
   <div class="container">
