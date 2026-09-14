@@ -11572,6 +11572,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                           pod:
                             description: Pod defines the desired specification of
                               pod.
@@ -17300,6 +17304,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                           pod:
                             description: Pod defines the desired specification of
                               pod.
@@ -21541,6 +21549,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                         required:
                         - maxReplicas
                         type: object
@@ -21591,6 +21603,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                         type: object
                         x-kubernetes-validations:
                         - message: only one of minAvailable or maxUnavailable can
@@ -21682,6 +21698,10 @@ spec:
                             required:
                             - value
                             type: object
+                            x-kubernetes-validations:
+                            - message: patch type must be StrategicMerge or JSONMerge
+                              rule: '!has(self.type) || self.type in [''StrategicMerge'',
+                                ''JSONMerge'']'
                           type:
                             default: LoadBalancer
                             description: |-
@@ -21747,6 +21767,9 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: host must be set when the provider type is 'Host'
+                  rule: self.type != 'Host' || has(self.host)
               routingType:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
