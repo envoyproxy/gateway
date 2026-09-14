@@ -35,7 +35,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.172.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.159.0"
@@ -308,7 +308,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.172.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.159.0"
@@ -10394,7 +10394,7 @@ kind: ClusterRole
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.172.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.159.0"
@@ -10508,7 +10508,7 @@ kind: ClusterRoleBinding
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.172.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.159.0"
@@ -10655,7 +10655,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.172.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.159.0"
@@ -10894,7 +10894,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.172.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.159.0"
@@ -10914,7 +10914,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 14f2e3c10852feb2a6d93332c8e6beb8b8d5a8050684b80a691637cfe14fba2a
+        checksum/config: 24c3780d63272d28d6c6ffb5174236c2a19e8ffa80bbaa074894b6cf31dd3cf9
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -10933,7 +10933,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.159.0"
+          image: "otel/opentelemetry-collector-contrib:0.160.0"
           imagePullPolicy: IfNotPresent
           ports:
             
