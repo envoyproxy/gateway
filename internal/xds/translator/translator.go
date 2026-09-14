@@ -1057,7 +1057,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			// Name the placeholder after its listener so the chains stay distinguishable in
 			// config dumps when several listeners share one xDS listener.
 			emptyRoute := &ir.TCPRoute{
-				Name: emptyClusterName + "/" + tcpListener.Name,
+				Name: tcpListener.Name + "/no-routes",
 				Destination: &ir.RouteDestination{
 					Name: emptyClusterName,
 				},
