@@ -54,7 +54,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: EmptyCluster
         statPrefix: tls-passthrough-10443
-    name: EmptyCluster/tls-terminate-no-routes
+    name: tls-terminate-no-routes/no-routes
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
