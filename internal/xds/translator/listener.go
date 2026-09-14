@@ -698,11 +698,11 @@ func (t *Translator) addXdsTCPFilterChain(
 		snis = irRoute.TLS.TLSInspectorConfig.SNIs
 	}
 	if len(snis) == 0 {
-		// Fall back to the Gateway listener hostname. Every filter chain on a listener must have
-		// a distinct match, and multiple listeners can share one xDS listener (an HTTPS listener
-		// and a TLS listener on the same port, for example). Without this, a chain whose route
-		// carries no SNI of its own matches on nothing, and Envoy NACKs the entire listener as
-		// soon as a second such chain appears.
+		// Fall back to the Gateway listener hostname. Multiple listeners can share one xDS
+		// listener (an HTTPS and a TLS listener on the same port, for example), and Envoy NACKs
+		// a listener whose filter chains do not all have a distinct match. The hostnames are
+		// already unique here: the Gateway API layer marks a listener Conflicted when another
+		// listener on the same port resolves to the same SNI, so it never reaches the IR.
 		snis = tcpListener.Hostnames
 	}
 

@@ -1,8 +1,10 @@
 # Multiple TLS Passthrough listeners sharing a port, none with an attached route.
 # Each one still needs a placeholder filter chain, and the chains must not share a
 # matcher or Envoy rejects the whole listener (envoyproxy/gateway#7866). Listeners
-# sharing a port always carry distinct hostnames -- identical ones are rejected with
-# HostnameConflict before translation -- so the SNI match is what keeps them unique.
+# sharing a port always carry distinct hostnames -- the Gateway API layer marks a
+# listener Conflicted with HostnameConflict when two listeners on the same port resolve
+# to the same SNI, so it never reaches the IR -- and the SNI match is what keeps the
+# chains built from them unique.
 tcp:
 - name: tls-passthrough-1
   address: 0.0.0.0
