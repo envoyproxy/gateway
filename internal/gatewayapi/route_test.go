@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,6 +23,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 func TestAppProtocolToIRAppProtocol(t *testing.T) {
@@ -1019,4 +1021,115 @@ func TestGetOrCreateBackendCluster(t *testing.T) {
 		require.Equal(t, first.Name, second.Setting.Name)
 		require.Len(t, gwIR.BackendClusters, 1)
 	})
+}
+
+func TestRoutePriority(t *testing.T) {
+	tr := &Translator{Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo)}
+
+	tests := []struct {
+		name    string
+		route   RouteContext
+		want    *uint32
+		wantNil bool
+	}{
+		{name: "absent", route: httpRouteWithPriority(nil), wantNil: true},
+		{name: "valid HTTPRoute", route: httpRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: " 10 "}), want: new(uint32(10))},
+		{name: "valid GRPCRoute", route: grpcRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: "20"}), want: new(uint32(20))},
+		{name: "zero", route: httpRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: "0"}), want: new(uint32(0))},
+		{name: "max uint32", route: httpRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: "4294967295"}), want: new(uint32(4294967295))},
+		{name: "overflow uint32", route: httpRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: "4294967296"}), wantNil: true},
+		{name: "negative", route: httpRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: "-1"}), wantNil: true},
+		{name: "non-integer", route: httpRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: "nope"}), wantNil: true},
+		{name: "empty", route: httpRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: ""}), wantNil: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tr.routePriority(tc.route)
+			if tc.wantNil {
+				require.Nil(t, got)
+				return
+			}
+			require.NotNil(t, got)
+			require.Equal(t, *tc.want, *got)
+		})
+	}
+}
+
+func TestRouteOrderForParent(t *testing.T) {
+	tr := &Translator{Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo)}
+	ann := map[string]string{egv1a1.RoutePriorityAnnotation: "7"}
+	enabled := routeParentWithEnvoyProxy(&egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{EnableRoutePriority: new(true)},
+	})
+	disabled := routeParentWithEnvoyProxy(&egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{EnableRoutePriority: new(false)},
+	})
+	unset := routeParentWithEnvoyProxy(&egv1a1.EnvoyProxy{})
+
+	tests := []struct {
+		name    string
+		parent  *RouteParentContext
+		route   RouteContext
+		wantNil bool
+		want    uint32
+	}{
+		{name: "no envoyproxy", parent: routeParentWithEnvoyProxy(nil), route: httpRouteWithPriority(ann), wantNil: true},
+		{name: "field unset", parent: unset, route: httpRouteWithPriority(ann), wantNil: true},
+		{name: "disabled", parent: disabled, route: httpRouteWithPriority(ann), wantNil: true},
+		{name: "disabled GRPCRoute", parent: disabled, route: grpcRouteWithPriority(ann), wantNil: true},
+		{name: "enabled HTTPRoute", parent: enabled, route: httpRouteWithPriority(ann), want: 7},
+		{name: "enabled GRPCRoute", parent: enabled, route: grpcRouteWithPriority(ann), want: 7},
+		{
+			name:    "enabled invalid annotation",
+			parent:  enabled,
+			route:   grpcRouteWithPriority(map[string]string{egv1a1.RoutePriorityAnnotation: "nope"}),
+			wantNil: true,
+		},
+		{name: "nil parent", parent: nil, route: httpRouteWithPriority(ann), wantNil: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tr.routeOrderForParent(tc.route, tc.parent)
+			if tc.wantNil {
+				require.Nil(t, got)
+				return
+			}
+			require.NotNil(t, got)
+			require.Equal(t, tc.want, *got)
+		})
+	}
+}
+
+func httpRouteWithPriority(ann map[string]string) *HTTPRouteContext {
+	return &HTTPRouteContext{
+		HTTPRoute: &gwapiv1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "r",
+				Namespace:   "ns",
+				Annotations: ann,
+			},
+		},
+	}
+}
+
+func grpcRouteWithPriority(ann map[string]string) *GRPCRouteContext {
+	return &GRPCRouteContext{
+		GRPCRoute: &gwapiv1.GRPCRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "r",
+				Namespace:   "ns",
+				Annotations: ann,
+			},
+		},
+	}
+}
+
+func routeParentWithEnvoyProxy(ep *egv1a1.EnvoyProxy) *RouteParentContext {
+	return &RouteParentContext{
+		listeners: []*ListenerContext{{
+			gateway: &GatewayContext{envoyProxy: ep},
+		}},
+	}
 }
