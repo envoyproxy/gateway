@@ -62,6 +62,52 @@ func TestContexts(t *testing.T) {
 	require.Empty(t, gateway.Status.Listeners[0].Conditions)
 }
 
+func TestIsParentRefEqual(t *testing.T) {
+	testCases := []struct {
+		name string
+		ref1 gwapiv1.ParentReference
+		ref2 gwapiv1.ParentReference
+		want bool
+	}{
+		{
+			name: "identical refs",
+			ref1: gwapiv1.ParentReference{Name: "gateway-1"},
+			ref2: gwapiv1.ParentReference{Name: "gateway-1"},
+			want: true,
+		},
+		{
+			name: "same name, no section name, different port",
+			ref1: gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(80)},
+			ref2: gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(443)},
+			want: false,
+		},
+		{
+			name: "same name, no section name, same port",
+			ref1: gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(80)},
+			ref2: gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(80)},
+			want: true,
+		},
+		{
+			name: "same name, different section name",
+			ref1: gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("http")},
+			ref2: gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("https")},
+			want: false,
+		},
+		{
+			name: "different name",
+			ref1: gwapiv1.ParentReference{Name: "gateway-1"},
+			ref2: gwapiv1.ParentReference{Name: "gateway-2"},
+			want: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, IsParentRefEqual(tc.ref1, tc.ref2, "default"))
+		})
+	}
+}
+
 func TestContextsStaleListener(t *testing.T) {
 	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
