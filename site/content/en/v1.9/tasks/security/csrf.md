@@ -117,7 +117,7 @@ Requests that are not selected for shadowing are enforced, so `shadowFraction` a
 rolling enforcement out gradually: `numerator: 25` shadows a quarter of the requests and enforces the
 remaining three quarters. Lower it towards 0 as the metrics confirm that no legitimate origin is rejected.
 
-[csrf]: https://owasp.org/www-community/attacks/csrf
+[csrf]: https://portswigger.net/web-security/csrf
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
