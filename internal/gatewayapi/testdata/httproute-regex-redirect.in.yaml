@@ -101,6 +101,84 @@ httpRoutes:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
           name: missing
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: invalid-redirect-unresolved-ref
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: /invalid-redirect
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: deny
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: regex-redirect
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: missing
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: invalid-redirect-unresolved-ref
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - method:
+          service: example.InvalidRedirect
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: deny
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: regex-redirect
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: missing
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: invalid-redirect-resolved-ref
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - method:
+          service: example.ResolvedRedirect
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: regex-redirect
 httpFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: HTTPRouteFilter
@@ -114,3 +192,11 @@ httpFilters:
         replaceRegexMatch:
           pattern: '^/blogs/([0-9]+)$'
           substitution: '/post-\1'
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    namespace: default
+    name: deny
+  spec:
+    directResponse:
+      statusCode: 403

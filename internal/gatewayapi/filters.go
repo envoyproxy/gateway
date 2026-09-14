@@ -100,7 +100,13 @@ func (t *Translator) ProcessHTTPFilters(
 	// which otherwise stop filter processing early).
 	redirectPath, err := processRedirectExtension(filters, route, resources)
 	if err != nil {
-		return httpFiltersContext, []status.Error{err}
+		errs.Add(err)
+		for _, filter := range filters {
+			if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
+				errs.Add(t.validateExtensionRefHTTPFilter(filter.ExtensionRef, route, resources))
+			}
+		}
+		return httpFiltersContext, errs.GetAllErrors()
 	}
 	for i := range filters {
 		filter := filters[i]
@@ -202,10 +208,17 @@ func (t *Translator) ProcessGRPCFilters(
 		}
 		for _, hrf := range resources.HTTPRouteFilters {
 			if hrf.Namespace == route.GetNamespace() && hrf.Name == string(ref.Name) && hrf.Spec.Redirect != nil {
-				return httpFiltersContext, []status.Error{status.NewRouteStatusError(
+				var errs status.TypedErrorCollector
+				errs.Add(status.NewRouteStatusError(
 					errors.New("HTTPRouteFilter redirect is only supported on HTTPRoute rules"),
 					gwapiv1.RouteReasonUnsupportedValue,
-				).WithType(gwapiv1.RouteConditionAccepted)}
+				).WithType(gwapiv1.RouteConditionAccepted))
+				for _, filter := range filters {
+					if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
+						errs.Add(t.validateExtensionRefHTTPFilter(filter.ExtensionRef, route, resources))
+					}
+				}
+				return httpFiltersContext, errs.GetAllErrors()
 			}
 		}
 	}
@@ -934,6 +947,18 @@ func validateRedirectSubstitution(substitution string, captures int) error {
 		if substitution[i] < '0' || substitution[i] > '9' || int(substitution[i]-'0') > captures {
 			return errors.New("redirect substitution must use valid RE2 capture references (\\0 through \\9) or an escaped backslash")
 		}
+	}
+	return nil
+}
+
+func (t *Translator) validateExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, route RouteContext, resources *resource.Resources) status.Error {
+	filterContext := &HTTPFiltersContext{
+		Route:        route,
+		HTTPFilterIR: &HTTPFilterIR{},
+	}
+	err := t.processExtensionRefHTTPFilter(extFilter, filterContext, resources)
+	if err != nil && err.Type() == gwapiv1.RouteConditionResolvedRefs {
+		return err
 	}
 	return nil
 }

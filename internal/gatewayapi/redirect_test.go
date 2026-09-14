@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,6 +16,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func TestRedirectExtension(t *testing.T) {
@@ -101,6 +103,75 @@ func TestRedirectExtension(t *testing.T) {
 	}
 }
 
+func TestRedirectExtensionReferenceErrors(t *testing.T) {
+	translator := &Translator{}
+	resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
+			Spec:       egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{}},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "deny", Namespace: "default"},
+			Spec:       egv1a1.HTTPRouteFilterSpec{DirectResponse: &egv1a1.HTTPDirectResponseFilter{StatusCode: new(403)}},
+		},
+	}}
+	for _, routeKind := range []gwapiv1.Kind{resource.KindHTTPRoute, resource.KindGRPCRoute} {
+		t.Run(string(routeKind), func(t *testing.T) {
+			for _, tc := range []struct {
+				name    string
+				refs    []gwapiv1.ObjectName
+				missing []string
+			}{
+				{name: "all references resolve", refs: []gwapiv1.ObjectName{"redirect", "deny"}},
+				{name: "redirect first", refs: []gwapiv1.ObjectName{"redirect", "missing"}, missing: []string{"missing"}},
+				{name: "missing reference first", refs: []gwapiv1.ObjectName{"missing", "redirect"}, missing: []string{"missing"}},
+				{name: "direct response first", refs: []gwapiv1.ObjectName{"deny", "redirect", "missing"}, missing: []string{"missing"}},
+				{name: "multiple missing references", refs: []gwapiv1.ObjectName{"missing", "deny", "redirect", "other"}, missing: []string{"missing", "other"}},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					var got *HTTPFiltersContext
+					var errs []status.Error
+					if routeKind == resource.KindHTTPRoute {
+						filters := make([]gwapiv1.HTTPRouteFilter, 0, len(tc.refs))
+						for _, name := range tc.refs {
+							filters = append(filters, gwapiv1.HTTPRouteFilter{
+								Type:         gwapiv1.HTTPRouteFilterExtensionRef,
+								ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: name},
+							})
+						}
+						route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+						got, errs = translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
+					} else {
+						filters := make([]gwapiv1.GRPCRouteFilter, 0, len(tc.refs))
+						for _, name := range tc.refs {
+							filters = append(filters, gwapiv1.GRPCRouteFilter{
+								Type:         gwapiv1.GRPCRouteFilterExtensionRef,
+								ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: name},
+							})
+						}
+						route := &GRPCRouteContext{GRPCRoute: &gwapiv1.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+						got, errs = translator.ProcessGRPCFilters(nil, route, filters, resources, nil)
+					}
+					require.Equal(t, &HTTPFilterIR{}, got.HTTPFilterIR)
+					conditionErrors := make(map[gwapiv1.RouteConditionType][]string)
+					for _, err := range errs {
+						conditionErrors[err.Type()] = append(conditionErrors[err.Type()], err.Error())
+					}
+					require.NotEmpty(t, conditionErrors[gwapiv1.RouteConditionAccepted])
+					if len(tc.missing) == 0 {
+						require.Empty(t, conditionErrors[gwapiv1.RouteConditionResolvedRefs])
+					} else {
+						require.NotEmpty(t, conditionErrors[gwapiv1.RouteConditionResolvedRefs])
+						for _, name := range tc.missing {
+							require.Contains(t, strings.Join(conditionErrors[gwapiv1.RouteConditionResolvedRefs], "; "), "default/"+name)
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestValidateRedirectSubstitution(t *testing.T) {
 	for _, tc := range []struct {
 		value string
@@ -154,7 +225,7 @@ func TestRedirectExtensionGRPCRoute(t *testing.T) {
 		{name: "direct response alone", refs: []gwapiv1.ObjectName{"deny"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var filters []gwapiv1.GRPCRouteFilter
+			filters := make([]gwapiv1.GRPCRouteFilter, 0, len(tc.refs))
 			for _, name := range tc.refs {
 				filters = append(filters, gwapiv1.GRPCRouteFilter{
 					Type:         gwapiv1.GRPCRouteFilterExtensionRef,
