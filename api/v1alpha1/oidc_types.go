@@ -160,6 +160,24 @@ type OIDC struct {
 	// +optional
 	CSRFTokenTTL *gwapiv1.Duration `json:"csrfTokenTTL,omitempty"`
 
+	// CodeVerifierTTL defines how long the PKCE code verifier generated during the OAuth2
+	// authorization flow remains valid.
+	//
+	// This duration determines the lifetime of the code verifier cookie, which is exchanged
+	// for the access token when the provider redirects back to the callback endpoint.
+	//
+	// Both this cookie and the CSRF cookie are only consumed on the callback endpoint, so an
+	// authorization flow that is started but never completed leaves them behind until they
+	// expire. Lowering this value along with csrfTokenTTL bounds how many such cookies a
+	// browser can accumulate. It must stay long enough for a user to complete the login,
+	// including any multi-factor prompt: once it elapses the browser drops the cookie and
+	// the callback fails.
+	//
+	// If omitted, Envoy Gateway defaults the code verifier expiration to 10 minutes.
+	//
+	// +optional
+	CodeVerifierTTL *gwapiv1.Duration `json:"codeVerifierTTL,omitempty"`
+
 	// Disable token encryption. When set to true, both the access token and the ID token will be stored in plain text.
 	// This option should only be used in secure environments where token encryption is not required.
 	// Default is false (tokens are encrypted).
