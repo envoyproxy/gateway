@@ -880,6 +880,13 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 			formatType = egv1a1.ProxyAccessLogFormatTypeText
 		}
 
+		omitEmptyValues := false
+		if format.OmitEmptyValues != nil {
+			omitEmptyValues = *format.OmitEmptyValues
+		}
+
+		irAccessLog.OmitEmptyValues = omitEmptyValues
+
 		var (
 			validExprs []string
 			errs       []error

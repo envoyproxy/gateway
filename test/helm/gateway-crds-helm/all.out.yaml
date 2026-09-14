@@ -45869,6 +45869,12 @@ spec:
                                     can be used as values for fields within the Struct.
                                     It's required when the format type is "JSON".
                                   type: object
+                                omitEmptyValues:
+                                  description: |-
+                                    OmitEmpty defines whether empty log fields should be omitted from the final log.
+                                    This sets Envoy [omit_empty_values](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/substitution_format_string.proto#envoy-v3-api-field-config-core-v3-substitutionformatstring-omit-empty-values).
+                                    Defaults to false.
+                                  type: boolean
                                 text:
                                   description: |-
                                     Text defines the text accesslog format, following Envoy accesslog formatting,
