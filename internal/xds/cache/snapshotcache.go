@@ -23,7 +23,9 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	envoytypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -51,7 +53,8 @@ var (
 type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
-	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
+	GenerateNewSnapshot(string, types.XdsResources, context.Context) (bool, error)
+	UpdateEndpointResources(string, []envoytypes.Resource, context.Context) (bool, error)
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
 }
@@ -74,11 +77,26 @@ type snapshotCache struct {
 	lastSnapshot        snapshotMap
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
+	// eagerVersionMap makes GenerateNewSnapshot construct the delta version map
+	// while the snapshot is still private, so UpdateEndpointResources can read
+	// it without racing go-control-plane's lazy construction. Enabled only with
+	// the endpoint fast path, since it costs a marshal+hash of every resource
+	// per snapshot.
+	eagerVersionMap bool
+	// noVersionMap marks IR keys whose committed snapshot has no usable delta
+	// version map, so UpdateEndpointResources stands down instead of reading a
+	// field go-control-plane may be filling in lazily under its own mutex.
+	noVersionMap map[string]bool
 }
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
-func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) error {
+//
+// The returned bool reports whether the snapshot was committed. It is false only
+// when building it failed, leaving the previous snapshot untouched; it is true
+// even when publishing to a node then failed, so callers can keep state in sync
+// with the committed snapshot while still surfacing the error.
+func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -98,30 +116,152 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	)
 	if err != nil {
 		xdsSnapshotCreateTotal.WithFailure(metrics.ReasonError).Increment()
-		return err
+		return false, err
+	}
+	// Build the delta version map while the snapshot is still private:
+	// go-control-plane would otherwise build it lazily under its own mutex,
+	// racing UpdateEndpointResources reading it under s.mu. A failure must not
+	// block the publish — without the fast path this map only affects delta
+	// streams — so the snapshot goes out with a nil map, rebuilt lazily.
+	versionMapFailed := false
+	if s.eagerVersionMap {
+		if err := snapshot.ConstructVersionMap(); err != nil {
+			// ConstructVersionMap allocates the map before it can fail, and
+			// later lazy construction short-circuits on a non-nil map, so a
+			// partially built map would never be repaired. Clear it and let
+			// go-control-plane rebuild it on demand.
+			snapshot.VersionMap = nil
+			versionMapFailed = true
+			s.log.Errorf("failed to construct the delta version map for %s: %v", irKey, err)
+		}
 	}
 	xdsSnapshotCreateTotal.WithSuccess().Increment()
 
+	// Commit point.
 	// Delete snapshot from cache if resources are nil
 	if resources == nil {
 		delete(s.lastSnapshot, irKey)
+		delete(s.noVersionMap, irKey)
 	} else {
 		// Update snapshot in cache
 		s.lastSnapshot[irKey] = snapshot
+		if versionMapFailed {
+			s.noVersionMap[irKey] = true
+		} else {
+			delete(s.noVersionMap, irKey)
+		}
 	}
 
+	// The snapshot is committed above, so a per-node publish failure is
+	// reported with committed=true: the error still propagates to the caller
+	// (and its error channel), while a node whose publish failed is served the
+	// committed snapshot when it reconnects.
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
 
 		if err = s.SetSnapshot(context.TODO(), node, snapshot); err != nil {
 			xdsSnapshotUpdateTotal.WithFailure(metrics.ReasonError, nodeIDLabel.Value(node)).Increment()
-			return err
-		} else {
-			xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
+			return true, err
+		}
+		xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
+	}
+
+	return true, nil
+}
+
+// UpdateEndpointResources patches only the EDS resources of irKey's snapshot: the
+// given ClusterLoadAssignments replace the same-named ones, the EDS version is
+// bumped, and every other type keeps its version, so non-EDS resources are not
+// resent. The previous snapshot is never mutated — its pointer is shared with
+// live streams. Returns false when no snapshot exists for irKey yet.
+func (s *snapshotCache) UpdateEndpointResources(irKey string, assignments []envoytypes.Resource, ctx context.Context) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	oldSnapshot, ok := s.lastSnapshot[irKey]
+	if !ok || oldSnapshot == nil {
+		return false, nil
+	}
+	// The snapshot went out without a usable delta version map, so
+	// go-control-plane may be building one on it concurrently. Leave it to the
+	// next full build rather than read or rebuild that map here.
+	if s.noVersionMap[irKey] {
+		return false, nil
+	}
+
+	_, span := tracer.Start(ctx, "SnapshotCache.UpdateEndpointResources")
+	defer span.End()
+
+	// Merge the updated CLAs over the existing EDS resources.
+	edsIndex := cachev3.GetResponseType(resourcev3.EndpointType)
+	oldEDS := oldSnapshot.Resources[edsIndex]
+	merged := make([]envoytypes.Resource, 0, len(oldEDS.Items)+len(assignments))
+	replaced := make(map[string]struct{}, len(assignments))
+	for _, cla := range assignments {
+		merged = append(merged, cla)
+		replaced[cachev3.GetResourceName(cla)] = struct{}{}
+	}
+	for name, res := range oldEDS.Items {
+		if _, ok := replaced[name]; !ok {
+			merged = append(merged, res.Resource)
 		}
 	}
 
-	return nil
+	// Clone the snapshot: the Resources array is copied by value, and only the
+	// EDS entry is replaced under a fresh version. The per-type Resources maps
+	// of the other types are shared with the old snapshot but never mutated.
+	newSnapshot := &cachev3.Snapshot{Resources: oldSnapshot.Resources}
+	newSnapshot.Resources[edsIndex] = cachev3.NewResources(s.newSnapshotVersion(), merged)
+
+	// Carry the delta version map forward for unchanged resource types and for
+	// unchanged EDS entries, and re-hash only the incoming CLAs, so a patch
+	// costs O(changed) rather than O(all resources). The old map was built
+	// eagerly while the snapshot was private, so reading it here is safe.
+	if oldSnapshot.VersionMap != nil {
+		versionMap := make(map[string]map[string]string, len(oldSnapshot.VersionMap))
+		for typeURL, inner := range oldSnapshot.VersionMap {
+			if typeURL != resourcev3.EndpointType {
+				versionMap[typeURL] = inner
+			}
+		}
+		oldEDSVersions := oldSnapshot.VersionMap[resourcev3.EndpointType]
+		edsVersions := make(map[string]string, len(merged))
+		for _, res := range merged {
+			name := cachev3.GetResourceName(res)
+			if _, ok := replaced[name]; !ok {
+				if v, ok := oldEDSVersions[name]; ok {
+					edsVersions[name] = v
+					continue
+				}
+			}
+			marshaled, err := cachev3.MarshalResource(res)
+			if err != nil {
+				return false, err
+			}
+			edsVersions[name] = cachev3.HashResource(marshaled)
+		}
+		versionMap[resourcev3.EndpointType] = edsVersions
+		newSnapshot.VersionMap = versionMap
+	}
+
+	// Commit point: update the stored snapshot so reconnecting nodes see the
+	// patched state too. Everything fallible above happens before this, so
+	// committed=false always means nothing changed; a per-node publish failure
+	// below is reported with committed=true, and that node is served the
+	// committed snapshot when it reconnects.
+	s.lastSnapshot[irKey] = newSnapshot
+
+	for _, node := range s.getNodeIDs(irKey) {
+		s.log.Debugf("Updating endpoint resources in snapshot with Node %s", node)
+
+		if err := s.SetSnapshot(context.TODO(), node, newSnapshot); err != nil {
+			xdsSnapshotUpdateTotal.WithFailure(metrics.ReasonError, nodeIDLabel.Value(node)).Increment()
+			return true, err
+		}
+		xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
+	}
+
+	return true, nil
 }
 
 // newSnapshotVersion increments the current snapshotVersion
@@ -140,7 +280,10 @@ func (s *snapshotCache) newSnapshotVersion() string {
 // NewSnapshotCache gives you a fresh SnapshotCache.
 // It needs a logger that supports the go-control-plane
 // required interface (Debugf, Infof, Warnf, and Errorf).
-func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallbacks {
+// eagerVersionMap must be set when the endpoint fast path is enabled, so
+// UpdateEndpointResources can read the previous snapshot's delta version map
+// without racing go-control-plane's lazy construction.
+func NewSnapshotCache(ads, eagerVersionMap bool, logger logging.Logger) SnapshotCacheWithCallbacks {
 	// Set up the nasty wrapper hack.
 	wrappedLogger := logger.Sugar()
 	return &snapshotCache{
@@ -151,6 +294,8 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 		nodeFrequency:       make(nodeFrequencyMap),
 		streamDuration:      make(streamDurationMap),
 		deltaStreamDuration: make(streamDurationMap),
+		eagerVersionMap:     eagerVersionMap,
+		noVersionMap:        make(map[string]bool),
 	}
 }
 

@@ -21,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	endpointsutil "github.com/envoyproxy/gateway/internal/utils/endpoints"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -1015,15 +1016,9 @@ func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, b
 func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
 	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
 
-	var kind, svcName string
 	for _, slice := range slices {
-		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
-			kind = resource.KindService
-			svcName = name
-		} else if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
-			kind = resource.KindServiceImport
-			svcName = name
-		} else {
+		kind, svcName, ok := endpointsutil.BackendForSlice(slice)
+		if !ok {
 			continue
 		}
 
