@@ -29,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	endpointsutil "github.com/envoyproxy/gateway/internal/utils/endpoints"
 	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
@@ -3016,9 +3017,10 @@ func (t *Translator) processServiceImportDestinationSetting(
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
-		endpoints []*ir.DestinationEndpoint
-		addrType  *ir.DestinationAddressType
-		protocol  = defaultProtocol
+		endpoints      []*ir.DestinationEndpoint
+		addrType       *ir.DestinationAddressType
+		endpointSource *ir.EndpointSource
+		protocol       = defaultProtocol
 	)
 
 	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
@@ -3051,6 +3053,15 @@ func (t *Translator) processServiceImportDestinationSetting(
 				status.RouteReasonEndpointsNotFound,
 			)
 		}
+		if t.EndpointFastPathEnabled {
+			endpointSource = &ir.EndpointSource{
+				Kind:      resource.KindServiceImport,
+				Namespace: backendNamespace,
+				Name:      string(backendRef.Name),
+				PortName:  servicePort.Name,
+				Protocol:  getServicePortProtocol(servicePort.Protocol),
+			}
+		}
 	} else {
 		// Use ServiceImport IPs for routing
 		for _, ip := range backendIps {
@@ -3066,6 +3077,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		Endpoints:          endpoints,
 		AddressType:        addrType,
 		Metadata:           buildResourceMetadata(serviceImport, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		EndpointSource:     endpointSource,
 	}, nil
 }
 
@@ -3078,8 +3090,9 @@ func (t *Translator) processServiceDestinationSetting(
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
-		endpoints []*ir.DestinationEndpoint
-		addrType  *ir.DestinationAddressType
+		endpoints      []*ir.DestinationEndpoint
+		addrType       *ir.DestinationAddressType
+		endpointSource *ir.EndpointSource
 	)
 	protocol := defaultProtocol
 
@@ -3123,6 +3136,15 @@ func (t *Translator) processServiceDestinationSetting(
 				status.RouteReasonEndpointsNotFound,
 			)
 		}
+		if t.EndpointFastPathEnabled {
+			endpointSource = &ir.EndpointSource{
+				Kind:      KindDerefOr(backendRef.Kind, resource.KindService),
+				Namespace: backendNamespace,
+				Name:      string(backendRef.Name),
+				PortName:  servicePort.Name,
+				Protocol:  getServicePortProtocol(servicePort.Protocol),
+			}
+		}
 	} else {
 		// Use Service ClusterIP routing
 		ep := ir.NewDestEndpoint(nil, service.Spec.ClusterIP, uint32(*backendRef.Port), false, nil)
@@ -3137,6 +3159,7 @@ func (t *Translator) processServiceDestinationSetting(
 		AddressType:        addrType,
 		PreferLocal:        processPreferLocalZone(service),
 		Metadata:           buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		EndpointSource:     endpointSource,
 	}, nil
 }
 
@@ -3330,66 +3353,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 }
 
 func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
-	var (
-		dstEndpoints []*ir.DestinationEndpoint
-		dstAddrType  *ir.DestinationAddressType
-	)
-
-	addrTypeMap := make(map[ir.DestinationAddressType]int)
-	for _, endpointSlice := range endpointSlices {
-		if endpointSlice.AddressType == discoveryv1.AddressTypeFQDN {
-			addrTypeMap[ir.FQDN]++
-		} else {
-			addrTypeMap[ir.IP]++
-		}
-		endpoints := getIREndpointsFromEndpointSlice(endpointSlice, portName, portProtocol)
-		dstEndpoints = append(dstEndpoints, endpoints...)
-	}
-
-	for addrTypeState, addrTypeCounts := range addrTypeMap {
-		if addrTypeCounts == len(endpointSlices) {
-			dstAddrType = new(addrTypeState)
-			break
-		}
-	}
-
-	if len(addrTypeMap) > 0 && dstAddrType == nil {
-		dstAddrType = new(ir.MIXED)
-	}
-
-	return dstEndpoints, dstAddrType
-}
-
-func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
-	var endpoints []*ir.DestinationEndpoint
-	for _, endpoint := range endpointSlice.Endpoints {
-		for _, endpointPort := range endpointSlice.Ports {
-			// Check if the endpoint port matches the service port
-			if *endpointPort.Name != portName || *endpointPort.Protocol != portProtocol {
-				continue
-			}
-			conditions := endpoint.Conditions
-
-			// Unknown Serving/Terminating (nil) should fall-back to Ready, see https://pkg.go.dev/k8s.io/api/discovery/v1#EndpointConditions
-			// So drain the endpoint if:
-			// 1. Both `Terminating` and `Serving` are != null, and either `Terminating=true` or `Serving=false`
-			// 2. Or `Ready=false`
-			var draining bool
-			if conditions.Serving != nil && conditions.Terminating != nil {
-				draining = *conditions.Terminating || !*conditions.Serving
-			} else {
-				draining = conditions.Ready != nil && !*conditions.Ready
-			}
-
-			for _, address := range endpoint.Addresses {
-				ep := ir.NewDestEndpoint(nil, address, uint32(*endpointPort.Port), draining, endpoint.Zone)
-				endpoints = append(endpoints, ep)
-			}
-
-		}
-	}
-
-	return endpoints
+	return endpointsutil.EndpointsFromSlices(endpointSlices, portName, portProtocol)
 }
 
 // isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources

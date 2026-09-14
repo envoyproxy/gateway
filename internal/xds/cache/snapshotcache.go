@@ -15,6 +15,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -23,7 +24,9 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	envoytypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -51,10 +54,15 @@ var (
 type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
-	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
+	GenerateNewSnapshot(string, types.XdsResources, context.Context) (bool, error)
+	UpdateEndpointResources(string, []envoytypes.Resource) error
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
 }
+
+// ErrNoSnapshot is returned by UpdateEndpointResources when the IR key has no
+// snapshot to patch, so callers can tell "nothing to do" from a real failure.
+var ErrNoSnapshot = errors.New("no snapshot for the IR key")
 
 type snapshotMap map[string]*cachev3.Snapshot
 
@@ -78,7 +86,12 @@ type snapshotCache struct {
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
-func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) error {
+//
+// The returned bool reports whether the snapshot was committed. It is false only
+// when building it failed, leaving the previous snapshot untouched; it is true
+// even when publishing to a node then failed, so callers can keep state in sync
+// with the committed snapshot while still surfacing the error.
+func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -98,10 +111,11 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	)
 	if err != nil {
 		xdsSnapshotCreateTotal.WithFailure(metrics.ReasonError).Increment()
-		return err
+		return false, err
 	}
 	xdsSnapshotCreateTotal.WithSuccess().Increment()
 
+	// Commit point.
 	// Delete snapshot from cache if resources are nil
 	if resources == nil {
 		delete(s.lastSnapshot, irKey)
@@ -110,15 +124,68 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 		s.lastSnapshot[irKey] = snapshot
 	}
 
+	// The snapshot is committed above, so a per-node publish failure is
+	// reported with committed=true: the error still propagates to the caller
+	// (and its error channel), while a node whose publish failed is served the
+	// committed snapshot when it reconnects.
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
 
 		if err = s.SetSnapshot(context.TODO(), node, snapshot); err != nil {
 			xdsSnapshotUpdateTotal.WithFailure(metrics.ReasonError, nodeIDLabel.Value(node)).Increment()
-			return err
-		} else {
-			xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
+			return true, err
 		}
+		xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
+	}
+
+	return true, nil
+}
+
+// UpdateEndpointResources patches only the EDS resources of irKey's snapshot: the
+// given ClusterLoadAssignments replace the same-named ones, the EDS version is
+// bumped, and every other type keeps its version, so non-EDS resources are not
+// resent. Returns ErrNoSnapshot when irKey has no snapshot to patch.
+func (s *snapshotCache) UpdateEndpointResources(irKey string, assignments []envoytypes.Resource) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	oldSnapshot, ok := s.lastSnapshot[irKey]
+	if !ok || oldSnapshot == nil {
+		return ErrNoSnapshot
+	}
+
+	// Merge the updated CLAs over the existing EDS resources.
+	edsIndex := cachev3.GetResponseType(resourcev3.EndpointType)
+	oldEDS := oldSnapshot.Resources[edsIndex]
+	merged := make([]envoytypes.Resource, 0, len(oldEDS.Items)+len(assignments))
+	replaced := make(map[string]struct{}, len(assignments))
+	for _, cla := range assignments {
+		merged = append(merged, cla)
+		replaced[cachev3.GetResourceName(cla)] = struct{}{}
+	}
+	for name, res := range oldEDS.Items {
+		if _, ok := replaced[name]; !ok {
+			merged = append(merged, res.Resource)
+		}
+	}
+
+	// Clone the snapshot with the merged EDS resources: the Resources array is
+	// copied by value, so only the EDS entry gets a new value. VersionMap is left
+	// nil; go-control-plane rebuilds it lazily, deriving each resource's version by
+	// hashing its marshaled bytes, so only the CLAs that changed are resent.
+	newSnapshot := &cachev3.Snapshot{Resources: oldSnapshot.Resources}
+	newSnapshot.Resources[edsIndex] = cachev3.NewResources(s.newSnapshotVersion(), merged)
+
+	s.lastSnapshot[irKey] = newSnapshot
+
+	for _, node := range s.getNodeIDs(irKey) {
+		s.log.Debugf("Updating endpoint resources in snapshot with Node %s", node)
+
+		if err := s.SetSnapshot(context.TODO(), node, newSnapshot); err != nil {
+			xdsSnapshotUpdateTotal.WithFailure(metrics.ReasonError, nodeIDLabel.Value(node)).Increment()
+			return err
+		}
+		xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
 	}
 
 	return nil

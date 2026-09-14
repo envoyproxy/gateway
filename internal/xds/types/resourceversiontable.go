@@ -32,6 +32,11 @@ type ResourceVersionTable struct {
 	XdsResources
 	EnvoyPatchPolicyStatuses
 	GlobalResourceStatus
+
+	// EndpointContexts maps an EDS cluster name to the context needed to rebuild
+	// its ClusterLoadAssignment on the endpoint fast path. Only populated when
+	// the EndpointFastPath runtime flag is enabled.
+	EndpointContexts map[string]*EndpointContext
 }
 
 // GetXdsResources retrieves the translated xds resources saved in the translator context.
