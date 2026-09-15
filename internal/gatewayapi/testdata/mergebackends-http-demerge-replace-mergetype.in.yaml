@@ -1,0 +1,102 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends: {}
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-1
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-2
+          backendRefs:
+            - name: service-1
+              port: 8080
+backendTrafficPolicies:
+  # The gateway policy sets cluster-scoped settings that apply to the merged
+  # BackendCluster shared by both routes.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: btp-gateway
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+      circuitBreaker:
+        maxConnections: 2048
+      healthCheck:
+        passive:
+          baseEjectionTime: 160s
+          interval: 2s
+          maxEjectionPercent: 100
+          consecutive5XxErrors: 5
+      dns:
+        dnsRefreshRate: 30s
+        respectDnsTtl: true
+  # The route policy uses mergeType Replace and sets no cluster-scoped field of
+  # its own. Replace discards the gateway policy entirely, so http-route-2 must
+  # not stay on the shared BackendCluster: doing so would reinstate the gateway
+  # policy's circuitBreaker/healthCheck/dns that this policy discards.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: btp-route-2-replace
+    spec:
+      mergeType: Replace
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: http-route-2
+      rateLimit:
+        type: Local
+        local:
+          rules:
+            - limit:
+                requests: 10
+                unit: Second

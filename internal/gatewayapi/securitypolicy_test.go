@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1272,7 +1273,7 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), sets.New[string](), policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1351,7 +1352,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), sets.New[string](), policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
