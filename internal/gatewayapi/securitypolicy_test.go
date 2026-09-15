@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -822,6 +823,30 @@ func TestBuildAuthorizationCEL(t *testing.T) {
 		require.ErrorContains(t, err, "invalid CEL expression: )++++")
 		require.Nil(t, authorization)
 	})
+
+	t.Run("cel-only rule with nil principal does not panic", func(t *testing.T) {
+		// Regression test: AuthorizationRule allows either principal or cel
+		// (XValidation: "has(self.principal) || has(self.cel)"), so a CEL-only
+		// rule has Principal == nil. Dereferencing rule.Principal.ClientCert
+		// unconditionally previously panicked on this exact case.
+		celExpression := egv1a1.CELExpression("request.path.startsWith('/admin')")
+		policy := sp("default", "authz-cel-only")
+		policy.Spec.Authorization = &egv1a1.Authorization{
+			Rules: []egv1a1.AuthorizationRule{
+				{
+					Action: egv1a1.AuthorizationActionAllow,
+					CEL:    &celExpression,
+				},
+			},
+		}
+
+		require.NotPanics(t, func() {
+			authorization, err := tr.buildAuthorization(policy, &securityPolicyOwners{})
+			require.NoError(t, err)
+			require.Len(t, authorization.Rules, 1)
+			require.Nil(t, authorization.Rules[0].Principal.ClientCert)
+		})
+	})
 }
 
 func Test_validateHtpasswdFormat(t *testing.T) {
@@ -946,6 +971,191 @@ func Test_parseExtAuthTimeout(t *testing.T) {
 func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {
 	if err := validateCIDRs([]egv1a1.CIDR{"10.0.0.0/33"}); err == nil {
 		t.Fatal("expected invalid ClientCIDR error")
+	}
+}
+
+func TestValidateClientCertPrincipal(t *testing.T) {
+	cases := []struct {
+		desc       string
+		clientCert *egv1a1.ClientCertPrincipal
+		wantErr    bool
+	}{
+		{
+			desc:       "nil clientCert",
+			clientCert: nil,
+			wantErr:    false,
+		},
+		{
+			desc: "valid exact subject",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				Subject: &egv1a1.StringMatch{Value: "CN=client"},
+			},
+			wantErr: false,
+		},
+		{
+			desc: "valid subject regex",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				Subject: &egv1a1.StringMatch{
+					Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+					Value: "CN=.*client.*",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			desc: "invalid subject regex fails to compile",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				Subject: &egv1a1.StringMatch{
+					Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+					Value: "[",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			desc: "invalid uris regex fails to compile",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				SubjectAltNames: &egv1a1.SubjectAltNames{
+					URIs: []egv1a1.StringMatch{
+						{
+							Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+							Value: "spiffe://(",
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			// Regression test: CEL admission only checks has(self.subjectAltNames),
+			// which is true even for an empty {} object. Without this Go-level check,
+			// an empty subjectAltNames would silently contribute no certificate
+			// predicate during translation, and a principal that also ANDs a
+			// CIDR/header/JWT condition could authorize without matching any
+			// certificate identity.
+			desc: "empty subjectAltNames object is rejected",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				SubjectAltNames: &egv1a1.SubjectAltNames{},
+			},
+			wantErr: true,
+		},
+		{
+			// Regression test: has(self.subjectAltNames.uris) is true in CEL even for
+			// an explicitly empty array (uris: []), so this must be caught here rather
+			// than relying on admission-time has() checks alone.
+			desc: "empty uris array is rejected",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				SubjectAltNames: &egv1a1.SubjectAltNames{
+					URIs: []egv1a1.StringMatch{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			desc: "empty dnsNames array is rejected",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				SubjectAltNames: &egv1a1.SubjectAltNames{
+					DNSNames: []egv1a1.StringMatch{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			desc: "empty uris and dnsNames arrays together are rejected",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				SubjectAltNames: &egv1a1.SubjectAltNames{
+					URIs:     []egv1a1.StringMatch{},
+					DNSNames: []egv1a1.StringMatch{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			desc: "invalid dnsNames regex fails to compile",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				SubjectAltNames: &egv1a1.SubjectAltNames{
+					DNSNames: []egv1a1.StringMatch{
+						{
+							Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+							Value: "*.invalid",
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			desc: "valid dnsNames regex",
+			clientCert: &egv1a1.ClientCertPrincipal{
+				SubjectAltNames: &egv1a1.SubjectAltNames{
+					DNSNames: []egv1a1.StringMatch{
+						{
+							Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+							Value: ".*\\.example\\.com",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			err := validateClientCertPrincipal(tc.clientCert)
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateAuthorizationClientCert(t *testing.T) {
+	cases := []struct {
+		desc      string
+		tlsConfig *ir.TLSConfig
+		wantErr   string
+	}{
+		{
+			desc:      "nil TLS config: no ClientTrafficPolicy at all",
+			tlsConfig: nil,
+			wantErr:   "requires a ClientTrafficPolicy configuring spec.tls.clientValidation",
+		},
+		{
+			desc:      "ClientValidationEnabled false: no clientValidation configured",
+			tlsConfig: &ir.TLSConfig{ClientValidationEnabled: false},
+			wantErr:   "requires a ClientTrafficPolicy configuring spec.tls.clientValidation",
+		},
+		{
+			desc: "AcceptUntrusted true: Request/RequireAny modes do not verify the chain",
+			tlsConfig: &ir.TLSConfig{
+				ClientValidationEnabled: true,
+				AcceptUntrusted:         true,
+			},
+			wantErr: "Request and RequireAny do not verify the certificate chain",
+		},
+		{
+			desc: "verified chain: VerifyIfGiven/RequireAndVerify modes are accepted",
+			tlsConfig: &ir.TLSConfig{
+				ClientValidationEnabled: true,
+				AcceptUntrusted:         false,
+			},
+			wantErr: "",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			err := validateAuthorizationClientCert(tc.tlsConfig)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tc.wantErr)
+		})
 	}
 }
 

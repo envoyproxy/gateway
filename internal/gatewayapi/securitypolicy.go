@@ -974,9 +974,12 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
 //
 // TCP supports Authorization with ClientCIDRs ONLY.
-// - Principals.JWT      => invalid (HTTP-only)
-// - Principals.Headers  => invalid (HTTP-only)
-// - Empty/no Authorization is allowed and results in no-op on TCP.
+//   - Principals.JWT       => invalid (HTTP-only)
+//   - Principals.Headers   => invalid (HTTP-only)
+//   - Principals.ClientCert => invalid (HTTP-only; mTLS validation results
+//     are not surfaced to TCP-route-scoped policies in EG today)
+//   - Empty/no Authorization is allowed and results in no-op on TCP.
+//
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
@@ -998,6 +1001,9 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		}
 		if len(rule.Principal.Headers) > 0 {
 			return fmt.Errorf("rule %d: headers not supported for TCP", i)
+		}
+		if rule.Principal.ClientCert != nil {
+			return fmt.Errorf("rule %d: clientCert not supported for TCP", i)
 		}
 		if len(rule.Principal.ClientIPGeoLocations) > 0 {
 			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP", i)
@@ -1424,8 +1430,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					var (
 						geoIPProvider              *ir.GeoIPProvider
 						geoIPErr                   error
+						clientCertErr              error
 						listenerHasNonExtAuthError = hasNonExtAuthError
 						geoIPValidated             bool
+						clientCertValidated        bool
 					)
 
 					for _, r := range irListener.Routes {
@@ -1459,7 +1467,18 @@ func (t *Translator) translateSecurityPolicyForRoute(
 								geoIPValidated = true
 							}
 
-							if geoIPErr != nil || hasBaseErrs {
+							// Validate that clientCert principals are only used on a listener whose
+							// ClientTrafficPolicy actually verifies the certificate chain.
+							if r.Security.Authorization.UsesClientCert() && !clientCertValidated {
+								if clientCertErr = validateAuthorizationClientCert(irListener.TLS); clientCertErr != nil {
+									clientCertErr = perr.WithMessage(clientCertErr, "Authorization")
+									errs = errors.Join(errs, clientCertErr)
+									listenerHasNonExtAuthError = true
+								}
+								clientCertValidated = true
+							}
+
+							if geoIPErr != nil || clientCertErr != nil || hasBaseErrs {
 								// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 								// and allow the request to go through.
 								// Otherwise, return a 500 direct response to avoid unauthorized access.
@@ -1653,6 +1672,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		var (
 			geoIPProvider              *ir.GeoIPProvider
 			geoIPErr                   error
+			clientCertErr              error
 			listenerHasNonExtAuthError = hasNonExtAuthError
 		)
 
@@ -1668,8 +1688,17 @@ func (t *Translator) translateSecurityPolicyForListeners(
 			}
 		}
 
+		if authorization.UsesClientCert() {
+			// We have to validate this here because it requires the listener-level TLS configuration from CTP.
+			if clientCertErr = validateAuthorizationClientCert(h.TLS); clientCertErr != nil {
+				clientCertErr = perr.WithMessage(clientCertErr, "Authorization")
+				errs = errors.Join(errs, clientCertErr)
+				listenerHasNonExtAuthError = true
+			}
+		}
+
 		var errorResponse *ir.CustomResponse
-		if geoIPErr != nil || hasBaseErrs {
+		if geoIPErr != nil || clientCertErr != nil || hasBaseErrs {
 			// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 			// and allow the request to go through.
 			// Otherwise, return a 500 direct response to avoid unauthorized access.
@@ -3066,6 +3095,11 @@ func (t *Translator) buildAuthorization(
 			irPrincipal.JWT = rule.Principal.JWT
 			irPrincipal.Headers = rule.Principal.Headers
 			irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
+
+			if err := validateClientCertPrincipal(rule.Principal.ClientCert); err != nil {
+				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+			}
+			irPrincipal.ClientCert = rule.Principal.ClientCert
 		}
 
 		if err := validateAuthorizationOperation(rule.Operation); err != nil {
@@ -3112,6 +3146,59 @@ func validateAuthorizationOperation(operation *egv1a1.Operation) error {
 	default:
 		return fmt.Errorf("invalid path type")
 	}
+}
+
+// validateClientCertPrincipal validates any RegularExpression StringMatch values
+// configured on a ClientCertPrincipal. CEL admission only checks that the matcher
+// type is a recognized enum value and the value is nonempty; it cannot compile the
+// regex. An invalid regex left unvalidated here would otherwise reach xDS as a
+// malformed RegexMatcher, causing Envoy to reject the whole route configuration
+// instead of failing SecurityPolicy admission with a clear error.
+func validateClientCertPrincipal(clientCert *egv1a1.ClientCertPrincipal) error {
+	if clientCert == nil {
+		return nil
+	}
+
+	if err := validateStringMatchRegex(clientCert.Subject); err != nil {
+		return fmt.Errorf("invalid clientCert.subject: %w", err)
+	}
+
+	if san := clientCert.SubjectAltNames; san != nil {
+		// CEL admission only checks has(self.subjectAltNames.uris)/.dnsNames, which is
+		// true even for an explicitly empty array (uris: []); enforcing "at least one
+		// non-empty entry" here in Go instead avoids the CEL cost-budget limit that a
+		// size()-based admission rule hits on this already-XValidation-heavy type.
+		// Without this check, an empty subjectAltNames{} (or uris: []/dnsNames: [])
+		// would silently contribute no certificate predicate, and a principal that
+		// also ANDs a CIDR/header/JWT condition could authorize without matching any
+		// certificate identity.
+		if len(san.URIs) == 0 && len(san.DNSNames) == 0 {
+			return errors.New("clientCert.subjectAltNames must specify at least one non-empty entry in uris or dnsNames")
+		}
+
+		for i := range san.URIs {
+			if err := validateStringMatchRegex(&san.URIs[i]); err != nil {
+				return fmt.Errorf("invalid clientCert.subjectAltNames.uris[%d]: %w", i, err)
+			}
+		}
+		for i := range san.DNSNames {
+			if err := validateStringMatchRegex(&san.DNSNames[i]); err != nil {
+				return fmt.Errorf("invalid clientCert.subjectAltNames.dnsNames[%d]: %w", i, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateStringMatchRegex validates the regex compiles when the matcher's type is
+// RegularExpression. Other match types require no additional validation beyond what
+// CEL admission already performs.
+func validateStringMatchRegex(sm *egv1a1.StringMatch) error {
+	if sm == nil || sm.Type == nil || *sm.Type != egv1a1.StringMatchRegularExpression {
+		return nil
+	}
+	return regex.Validate(sm.Value)
 }
 
 func validateAuthorizationGeoIP(
@@ -3206,6 +3293,25 @@ func localGeoIPDBPath(source *egv1a1.GeoIPDBSource) *string {
 		return nil
 	}
 	return &source.Local.Path
+}
+
+// validateAuthorizationClientCert ensures a clientCert principal is only used on a
+// listener whose ClientTrafficPolicy verifies the presented certificate's chain.
+//
+// A ClientTrafficPolicy in Request or RequireAny mode still requests/accepts a
+// client certificate, but sets AcceptUntrusted so Envoy does not verify the
+// certificate chain (ACCEPT_UNTRUSTED). Without this check, an attacker could
+// present a self-signed certificate carrying an allowed Subject or SAN and
+// satisfy a clientCert rule, even though the API documents this principal as
+// matching a validated peer certificate.
+func validateAuthorizationClientCert(tlsConfig *ir.TLSConfig) error {
+	if tlsConfig == nil || !tlsConfig.ClientValidationEnabled {
+		return errors.New("authorization clientCert requires a ClientTrafficPolicy configuring spec.tls.clientValidation on the gateway listener")
+	}
+	if tlsConfig.AcceptUntrusted {
+		return errors.New("authorization clientCert requires ClientTrafficPolicy.spec.tls.clientValidation.mode of VerifyIfGiven or RequireAndVerify; Request and RequireAny do not verify the certificate chain")
+	}
+	return nil
 }
 
 func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) string {
