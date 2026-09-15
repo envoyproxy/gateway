@@ -31,6 +31,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:
@@ -72,6 +73,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:
@@ -127,6 +129,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:
@@ -188,6 +191,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:

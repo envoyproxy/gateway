@@ -8,8 +8,10 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -52,6 +54,50 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 				"x-user-id": "alice",
 				"x-org-id":  "",
 			}, ns, gwAddr, path)
+		})
+
+		t.Run("exhausted user stays limited after more than 20 distinct users", func(t *testing.T) {
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header", Namespace: ns}, suite.ControllerName, ancestorRef)
+			path := "/ratelimit-distinct-header"
+			headers := map[string]string{"x-user-id": "cache-retention-original"}
+
+			// Exhaust the original user's three-token bucket before creating enough
+			// other buckets to evict it from Envoy's default 20-entry cache.
+			testRatelimit(t, suite, headers, ns, gwAddr, path)
+			for i := range 20 {
+				expectedResp := http.ExpectedResponse{
+					Request: http.Request{
+						Path:    path,
+						Headers: map[string]string{"x-user-id": fmt.Sprintf("cache-retention-%d", i)},
+					},
+					Response:  http.Response{StatusCodes: []int{200}},
+					Namespace: ns,
+				}
+				req := http.MakeRequest(t, &expectedResp, gwAddr, "HTTP", "http")
+				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
+				require.NoError(t, err)
+				require.NoError(t, http.CompareRoundTrip(t, &req, cReq, cRes, expectedResp))
+			}
+
+			// Check the very next response without polling: retries could exhaust a
+			// newly recreated bucket and hide the eviction. The manifest uses an
+			// hourly limit so the original bucket cannot refill during this test.
+			expectedResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path:    path,
+					Headers: headers,
+				},
+				Response:  http.Response{StatusCodes: []int{429}},
+				Namespace: ns,
+			}
+			req := http.MakeRequest(t, &expectedResp, gwAddr, "HTTP", "http")
+			cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
+			require.NoError(t, err)
+			require.NoError(t, http.CompareRoundTrip(t, &req, cReq, cRes, expectedResp))
+			// CompareRoundTrip checks response headers only on 200 and 204, so
+			// attribute the rejection to the original user's exhausted bucket.
+			require.Equal(t, []string{"3"}, cRes.Headers["X-Ratelimit-Limit"])
+			require.Equal(t, []string{"0"}, cRes.Headers["X-Ratelimit-Remaining"])
 		})
 
 		t.Run("requests with x-user-id header and matching x-org-id header should be limited per user", func(t *testing.T) {
