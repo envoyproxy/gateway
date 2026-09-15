@@ -927,7 +927,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `header` | _string_ |  true  |  | Header defines the name of the HTTP request header that the JWT Claim will be saved into. |
-| `claim` | _string_ |  true  |  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path. |
+| `claim` | _string_ |  false  |  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path.<br />Because the name is always split on ".", a claim whose own name contains a dot -- a<br />URI-namespaced claim such as "https://example.com/claims/tenant_name" commonly emitted by<br />OIDC providers -- cannot be addressed this way. Use ClaimPath for those claims instead.<br />Exactly one of Claim or ClaimPath must be specified. |
+| `claimPath` | _string array_ |  false  |  | ClaimPath is the path to the claim to copy, given as an explicit list of segments. Each<br />segment is matched in full against a key of the enclosing JSON object, so claim names<br />containing dots are addressable. For example, a top-level claim named<br />"https://example.com/claims/tenant_name" is selected with:<br />	claimPath:<br />	- "https://example.com/claims/tenant_name"<br />and a nested claim `\{"nested": \{"claim": \{"key": "value"\}\}\}` is selected with:<br />	claimPath:<br />	- nested<br />	- claim<br />	- key<br />Exactly one of Claim or ClaimPath must be specified. |
 
 
 #### ClientConnection
