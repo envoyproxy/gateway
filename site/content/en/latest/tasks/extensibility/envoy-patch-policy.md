@@ -540,7 +540,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-#### Bind upstream connections to a specific source address
+#### Bind backend connections to a specific source address
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
