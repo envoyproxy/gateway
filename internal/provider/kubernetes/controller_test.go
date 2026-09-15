@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -40,6 +41,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -3420,4 +3422,89 @@ func TestCRDExistsWithClient(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, exists)
 	})
+}
+
+// TestReconcileIsolatesTransientErrorPerGatewayClass verifies that a transient error while
+// processing one managed GatewayClass does not prevent the other managed GatewayClasses in the
+// same Reconcile call from having their status and resources refreshed. Before this was fixed,
+// Reconcile aborted the entire batch on the first transient error, leaving every other managed
+// GatewayClass's status/resources untouched until a later, unrelated success reset the shared
+// workqueue's backoff.
+func TestReconcileIsolatesTransientErrorPerGatewayClass(t *testing.T) {
+	const (
+		ns            = "default"
+		flakyEPName   = "flaky-envoy-proxy"
+		healthyGCName = "healthy-gc"
+		flakyGCName   = "flaky-gc"
+	)
+
+	flakyEP := test.GetEnvoyProxy(types.NamespacedName{Namespace: ns, Name: flakyEPName}, false)
+
+	healthyGC := test.GetGatewayClass(healthyGCName, egv1a1.GatewayControllerName, nil)
+	flakyGC := test.GetGatewayClass(flakyGCName, egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
+		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+		Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+		Namespace: gwapiv1.Namespace(ns),
+		Name:      gwapiv1.ObjectName(flakyEPName),
+	})
+
+	// Simulate a transient (ServiceUnavailable) error only when fetching the EnvoyProxy
+	// referenced by flakyGC's parametersRef - every other Get/List succeeds normally.
+	flakyGet := interceptor.Funcs{
+		Get: func(ctx context.Context, cli client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if _, ok := obj.(*egv1a1.EnvoyProxy); ok && key.Name == flakyEPName {
+				return kerrors.NewServiceUnavailable("simulated transient error")
+			}
+			return cli.Get(ctx, key, obj, opts...)
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(healthyGC, flakyGC, flakyEP).
+		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
+		WithInterceptorFuncs(flakyGet).
+		Build()
+
+	pResources := new(message.ProviderResources)
+	r := &gatewayAPIReconciler{
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client:          fakeClient,
+		classController: egv1a1.GatewayControllerName,
+		namespace:       ns,
+		envoyGateway:    &egv1a1.EnvoyGateway{},
+		mergeGateways:   sets.New[string](),
+		resources:       pResources,
+	}
+
+	_, err := r.Reconcile(t.Context(), reconcile.Request{})
+	require.Error(t, err, "Reconcile should surface the transient error so the workqueue retries it")
+
+	// The healthy GatewayClass must still have been processed and marked Accepted this pass,
+	// despite the flaky GatewayClass's transient failure earlier/later in the same batch.
+	healthyStatus, ok := pResources.GatewayClassStatuses.Load(types.NamespacedName{Name: healthyGCName})
+	require.True(t, ok, "healthy GatewayClass status should have been stored despite the other class's transient error")
+	var acceptedCond *metav1.Condition
+	for i := range healthyStatus.Conditions {
+		if healthyStatus.Conditions[i].Type == string(gwapiv1.GatewayClassConditionStatusAccepted) {
+			acceptedCond = &healthyStatus.Conditions[i]
+		}
+	}
+	require.NotNil(t, acceptedCond, "healthy GatewayClass should have an Accepted condition")
+	require.Equal(t, metav1.ConditionTrue, acceptedCond.Status)
+
+	// ... and its resources should have been stored in the shared GatewayAPIResources map.
+	stored, ok := pResources.GatewayAPIResources.Load(string(egv1a1.GatewayControllerName))
+	require.True(t, ok)
+	found := false
+	for _, gwcResource := range *stored.Resources {
+		if gwcResource.GatewayClass != nil && gwcResource.GatewayClass.Name == healthyGCName {
+			found = true
+		}
+	}
+	require.True(t, found, "healthy GatewayClass's resources should be present in the stored batch")
+
+	// The flaky GatewayClass must NOT have been marked Accepted this pass - it's retried later.
+	_, ok = pResources.GatewayClassStatuses.Load(types.NamespacedName{Name: flakyGCName})
+	require.False(t, ok, "flaky GatewayClass status should not be stored this pass; it failed transiently")
 }
