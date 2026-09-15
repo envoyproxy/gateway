@@ -3040,7 +3040,17 @@ func (t *Translator) buildAuthorization(
 		irAuth        = &ir.Authorization{}
 		// The default action is Deny if not specified
 		defaultAction = egv1a1.AuthorizationActionDeny
+		// The JWT providers this policy resolves a rule's JWT principal against. For a
+		// merging policy this is the merged set, so a rule may reference a provider that
+		// only the parent policy defines.
+		jwtProviders = sets.New[string]()
 	)
+
+	if policy.Spec.JWT != nil {
+		for _, provider := range policy.Spec.JWT.Providers {
+			jwtProviders.Insert(provider.Name)
+		}
+	}
 
 	ownerPolicy := policyOwnerOr(owners.authorizationRules, policy)
 
@@ -3061,6 +3071,13 @@ func (t *Translator) buildAuthorization(
 				}
 
 				irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
+			}
+
+			// The JWT provider name is the key the JWT authn filter writes its payload
+			// under, so a rule naming a provider that is not configured can never match.
+			// Reject it here instead of silently never matching the rule.
+			if rule.Principal.JWT != nil && !jwtProviders.Has(rule.Principal.JWT.Provider) {
+				return nil, fmt.Errorf("unable to translate authorization rule: jwt provider %q is not defined in jwt.providers", rule.Principal.JWT.Provider)
 			}
 
 			irPrincipal.JWT = rule.Principal.JWT
