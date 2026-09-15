@@ -63,6 +63,7 @@ var tracer = otel.Tracer("envoy-gateway/provider/runner")
 
 type gatewayAPIReconciler struct {
 	client               client.Client
+	apiReader            client.Reader
 	log                  logging.Logger
 	statusUpdater        Updater
 	classController      gwapiv1.GatewayController
@@ -164,6 +165,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 
 	r := &gatewayAPIReconciler{
 		client:               mgr.GetClient(),
+		apiReader:            mgr.GetAPIReader(),
 		log:                  cfg.Logger,
 		classController:      gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		namespace:            cfg.ControllerNamespace,
@@ -1079,10 +1081,21 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 					switch ctxExt.ValueRef.Kind {
 					case resource.KindConfigMap:
 						configMap := new(corev1.ConfigMap)
-						err := r.client.Get(ctx,
-							types.NamespacedName{Namespace: policy.Namespace, Name: string(ctxExt.ValueRef.Name)},
-							configMap,
-						)
+						cmName := types.NamespacedName{Namespace: policy.Namespace, Name: string(ctxExt.ValueRef.Name)}
+						err := r.client.Get(ctx, cmName, configMap)
+						// transformConfigMapData trims a cached ConfigMap to
+						// cachedConfigMapKeys plus its first key, and the key wanted here
+						// is named by the policy. Only pay for an uncached read when the
+						// cached copy is missing it; a ConfigMap with one entry is never
+						// trimmed, so the common case stays on the informer.
+						if err == nil {
+							if _, ok := configMap.Data[ctxExt.ValueRef.Key]; !ok {
+								fresh := new(corev1.ConfigMap)
+								if err = r.apiReader.Get(ctx, cmName, fresh); err == nil {
+									configMap = fresh
+								}
+							}
+						}
 						if err != nil {
 							// If the error is transient, we return it to retry later
 							if isTransientError(err) {

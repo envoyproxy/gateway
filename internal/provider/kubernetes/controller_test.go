@@ -1820,6 +1820,8 @@ func TestProcessSecurityPolicyObjectKeyRefs(t *testing.T) {
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(objs...).
 				Build()
+			// No cache to bypass here, so both readers are the same client.
+			r.apiReader = r.client
 
 			resourceTree := resource.NewResources()
 			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, tc.securityPolicy)
@@ -3419,5 +3421,69 @@ func TestCRDExistsWithClient(t *testing.T) {
 		exists, err := r.crdExistsWithClient(ctx, disco, resource.KindSecurityPolicy, egv1a1.GroupVersion.String(), backoff)
 		require.NoError(t, err)
 		require.True(t, exists)
+	})
+}
+
+// A context extension names its own ConfigMap key, so transformConfigMapData cannot know
+// to keep it: any key that is neither allow-listed nor lexicographically first is gone from
+// the cached copy, and the policy was rejected for a key that is plainly in the API server.
+func TestProcessSecurityPolicyContextExtensionReadsPastTheCache(t *testing.T) {
+	const wantKey, wantValue = "my-key", "context-extension-value"
+
+	full := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctxext"},
+		// "aaa-other" sorts before the wanted key, so it wins the transform's fallback slot.
+		Data: map[string]string{"aaa-other": "filler", wantKey: wantValue},
+	}
+	cached := full.DeepCopy()
+	cached.Data = map[string]string{"aaa-other": "filler"}
+
+	policy := &egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "policy"},
+		Spec: egv1a1.SecurityPolicySpec{
+			ExtAuth: &egv1a1.ExtAuth{
+				ContextExtensions: []*egv1a1.ContextExtension{{
+					Name: "ctx",
+					Type: egv1a1.ContextExtensionValueTypeValueRef,
+					ValueRef: &egv1a1.LocalObjectKeyReference{
+						LocalObjectReference: gwapiv1.LocalObjectReference{
+							Kind: resource.KindConfigMap,
+							Name: "ctxext",
+						},
+						Key: wantKey,
+					},
+				}},
+			},
+		},
+	}
+
+	r := newGatewayAPIReconciler(logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
+	r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).
+		WithObjects(policy, cached).Build()
+	r.apiReader = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).
+		WithObjects(policy, full).Build()
+
+	resourceTree := resource.NewResources()
+	resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, policy)
+	require.NoError(t, r.processSecurityPolicyObjectRefs(t.Context(), resourceTree, newResourceMapping()))
+
+	require.Len(t, resourceTree.ConfigMaps, 1)
+	require.Equal(t, wantValue, resourceTree.ConfigMaps[0].Data[wantKey],
+		"the key the policy names must survive into the resource tree")
+
+	// A ConfigMap of one entry is never trimmed, so the cached copy already has the key
+	// and the API server must not be touched. apiReader holds nothing, so any read fails.
+	t.Run("cached hit does not reach the API server", func(t *testing.T) {
+		full.Data = map[string]string{wantKey: wantValue}
+		r := newGatewayAPIReconciler(logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
+		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).
+			WithObjects(policy, full).Build()
+		r.apiReader = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+
+		tree := resource.NewResources()
+		tree.SecurityPolicies = append(tree.SecurityPolicies, policy)
+		require.NoError(t, r.processSecurityPolicyObjectRefs(t.Context(), tree, newResourceMapping()))
+		require.Len(t, tree.ConfigMaps, 1)
+		require.Equal(t, wantValue, tree.ConfigMaps[0].Data[wantKey])
 	})
 }
