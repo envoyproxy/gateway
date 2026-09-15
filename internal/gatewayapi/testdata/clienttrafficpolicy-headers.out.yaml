@@ -206,69 +206,67 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       headers:
-        earlyAddRequestHeaders:
-        - addIfAbsent: false
-          append: true
-          name: my-added-header
-          value:
-          - my-added-header-value
-        - addIfAbsent: false
-          append: true
-          name: my-multi-added-header
-          value:
-          - value1,value2
-        - addIfAbsent: false
-          append: false
-          name: my-set-header
-          value:
-          - my-set-header-value
-        earlyRemoveRequestHeaders:
-        - my-removed-header
-        earlyRemoveRequestHeadersOnMatch:
-        - distinct: false
-          exact: my-removed-header-value
-          name: ""
-        - distinct: false
-          name: ""
-          prefix: removed-prefix-
-        - distinct: false
-          name: ""
-          suffix: -removed-suffix
-        - distinct: false
-          name: ""
-          safeRegex: removed-regex-.*
+        earlyRequestHeaderMutations:
+        - write:
+            action: Append
+            name: my-added-header
+            value: my-added-header-value
+        - write:
+            action: Append
+            name: my-multi-added-header
+            value: value1,value2
+        - write:
+            action: Overwrite
+            name: my-set-header
+            value: my-set-header-value
+        - remove: my-removed-header
+        - removeOnMatch:
+            distinct: false
+            exact: my-removed-header-value
+            name: ""
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            prefix: removed-prefix-
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            suffix: -removed-suffix
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            safeRegex: removed-regex-.*
         enableEnvoyHeaders: true
-        lateAddResponseHeaders:
-        - addIfAbsent: false
-          append: true
-          name: my-added-response-header
-          value:
-          - my-added-response-header-value
-        - addIfAbsent: false
-          append: false
-          name: my-set-response-header
-          value:
-          - my-set-response-header-value
-        - addIfAbsent: false
-          append: false
-          name: my-multi-set-response-header
-          value:
-          - value1,value2
-        lateRemoveResponseHeaders:
-        - my-removed-response-header
-        lateRemoveResponseHeadersOnMatch:
-        - distinct: false
-          exact: my-removed-response-header-value
-          name: ""
-        - distinct: false
-          name: ""
-          prefix: removed-response-prefix-
-        - distinct: false
-          name: ""
-          suffix: -removed-response-suffix
-        - distinct: false
-          name: ""
-          safeRegex: removed-response-regex-.*
+        lateResponseHeaderMutations:
+        - write:
+            action: Append
+            name: my-added-response-header
+            value: my-added-response-header-value
+        - write:
+            action: Overwrite
+            name: my-set-response-header
+            value: my-set-response-header-value
+        - write:
+            action: Overwrite
+            name: my-multi-set-response-header
+            value: value1,value2
+        - remove: my-removed-response-header
+        - removeOnMatch:
+            distinct: false
+            exact: my-removed-response-header-value
+            name: ""
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            prefix: removed-response-prefix-
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            suffix: -removed-response-suffix
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            safeRegex: removed-response-regex-.*
         requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
@@ -286,69 +284,67 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 8080
       headers:
-        earlyAddRequestHeaders:
-        - addIfAbsent: false
-          append: true
-          name: my-added-header
-          value:
-          - my-added-header-value
-        - addIfAbsent: false
-          append: true
-          name: my-multi-added-header
-          value:
-          - value1,value2
-        - addIfAbsent: false
-          append: false
-          name: my-set-header
-          value:
-          - my-set-header-value
-        earlyRemoveRequestHeaders:
-        - my-removed-header
-        earlyRemoveRequestHeadersOnMatch:
-        - distinct: false
-          exact: my-removed-header-value
-          name: ""
-        - distinct: false
-          name: ""
-          prefix: removed-prefix-
-        - distinct: false
-          name: ""
-          suffix: -removed-suffix
-        - distinct: false
-          name: ""
-          safeRegex: removed-regex-.*
+        earlyRequestHeaderMutations:
+        - write:
+            action: Append
+            name: my-added-header
+            value: my-added-header-value
+        - write:
+            action: Append
+            name: my-multi-added-header
+            value: value1,value2
+        - write:
+            action: Overwrite
+            name: my-set-header
+            value: my-set-header-value
+        - remove: my-removed-header
+        - removeOnMatch:
+            distinct: false
+            exact: my-removed-header-value
+            name: ""
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            prefix: removed-prefix-
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            suffix: -removed-suffix
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            safeRegex: removed-regex-.*
         enableEnvoyHeaders: true
-        lateAddResponseHeaders:
-        - addIfAbsent: false
-          append: true
-          name: my-added-response-header
-          value:
-          - my-added-response-header-value
-        - addIfAbsent: false
-          append: false
-          name: my-set-response-header
-          value:
-          - my-set-response-header-value
-        - addIfAbsent: false
-          append: false
-          name: my-multi-set-response-header
-          value:
-          - value1,value2
-        lateRemoveResponseHeaders:
-        - my-removed-response-header
-        lateRemoveResponseHeadersOnMatch:
-        - distinct: false
-          exact: my-removed-response-header-value
-          name: ""
-        - distinct: false
-          name: ""
-          prefix: removed-response-prefix-
-        - distinct: false
-          name: ""
-          suffix: -removed-response-suffix
-        - distinct: false
-          name: ""
-          safeRegex: removed-response-regex-.*
+        lateResponseHeaderMutations:
+        - write:
+            action: Append
+            name: my-added-response-header
+            value: my-added-response-header-value
+        - write:
+            action: Overwrite
+            name: my-set-response-header
+            value: my-set-response-header-value
+        - write:
+            action: Overwrite
+            name: my-multi-set-response-header
+            value: value1,value2
+        - remove: my-removed-response-header
+        - removeOnMatch:
+            distinct: false
+            exact: my-removed-response-header-value
+            name: ""
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            prefix: removed-response-prefix-
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            suffix: -removed-response-suffix
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            safeRegex: removed-response-regex-.*
         requestID: PreserveOrGenerate
         withUnderscoresAction: Allow
       hostnames:
