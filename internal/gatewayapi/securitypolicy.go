@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"bytes"
+	"container/list"
 	"context"
 	"crypto/sha1" //nolint:gosec // SHA1 is required to validate htpasswd {SHA} format
 	"crypto/tls"
@@ -23,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -89,6 +91,8 @@ func (t *Translator) ProcessSecurityPolicies(
 ) []*egv1a1.SecurityPolicy {
 	// Cache is only reused during one translation across multiple routes and gateways.
 	// The failed fetches will be retried in the next translation when the provider resources are reconciled again.
+	// The last successful discovery result per issuer is retained across translations in
+	// oidcDiscoveryFallback and used when a later discovery attempt fails.
 	t.oidcDiscoveryCache = newOIDCDiscoveryCache()
 
 	// SecurityPolicies are already sorted by the provider layer
@@ -2410,10 +2414,19 @@ func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.
 
 	config, err := discoverEndpointsFromIssuer(issuerURL, providerTLS)
 	if err != nil {
+		// Fall back to the last successfully discovered configuration for this issuer, if any,
+		// so that a transient discovery failure does not break every route protected by it.
+		if fallback, ok := oidcDiscoveryFallback.Get(issuerURL); ok {
+			t.Logger.Error(err, "OIDC discovery failed, using the last successfully discovered configuration",
+				"issuer", issuerURL)
+			t.oidcDiscoveryCache.Set(issuerURL, fallback, nil)
+			return fallback, nil
+		}
 		t.oidcDiscoveryCache.Set(issuerURL, nil, err)
 		return nil, err
 	}
 
+	oidcDiscoveryFallback.Set(issuerURL, config)
 	t.oidcDiscoveryCache.Set(issuerURL, config, nil)
 	return config, nil
 }
@@ -2623,6 +2636,83 @@ func (c *oidcDiscoveryCache) Set(issuer string, cfg *OpenIDConfig, err error) {
 		config: cfg,
 		err:    err,
 	}
+}
+
+// maxOIDCDiscoveryFallbackEntries caps the number of issuers whose last successful discovery
+// result is retained across translations. The number of OIDC providers used by a cluster is
+// typically small, so a small bound with LRU eviction is sufficient.
+const maxOIDCDiscoveryFallbackEntries = 128
+
+// oidcDiscoveryFallback retains the last successfully discovered OpenID configuration per issuer
+// for the lifetime of the process. It is shared by all translations and consulted when discovery
+// fails, so that a transient IdP outage does not result in a 500 response on every route
+// protected by that issuer.
+var oidcDiscoveryFallback = newOIDCDiscoveryFallbackCache(maxOIDCDiscoveryFallbackEntries)
+
+// oidcDiscoveryFallbackCache is a size-capped LRU cache of OpenID configurations keyed by issuer.
+// It is safe for concurrent use.
+type oidcDiscoveryFallbackCache struct {
+	mu         sync.Mutex
+	maxEntries int
+	entries    map[string]*list.Element
+	// order holds *oidcDiscoveryFallbackEntry values, most recently used first.
+	order *list.List
+}
+
+type oidcDiscoveryFallbackEntry struct {
+	issuer string
+	config *OpenIDConfig
+}
+
+func newOIDCDiscoveryFallbackCache(maxEntries int) *oidcDiscoveryFallbackCache {
+	return &oidcDiscoveryFallbackCache{
+		maxEntries: maxEntries,
+		entries:    make(map[string]*list.Element),
+		order:      list.New(),
+	}
+}
+
+// Get returns the last successfully discovered configuration for the issuer, if any,
+// and marks it as the most recently used entry.
+func (c *oidcDiscoveryFallbackCache) Get(issuer string) (*OpenIDConfig, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	elem, ok := c.entries[issuer]
+	if !ok {
+		return nil, false
+	}
+	c.order.MoveToFront(elem)
+
+	return elem.Value.(*oidcDiscoveryFallbackEntry).config, true
+}
+
+// Set stores the configuration for the issuer as the most recently used entry,
+// evicting the least recently used entries beyond the configured cap.
+func (c *oidcDiscoveryFallbackCache) Set(issuer string, cfg *OpenIDConfig) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if elem, ok := c.entries[issuer]; ok {
+		elem.Value.(*oidcDiscoveryFallbackEntry).config = cfg
+		c.order.MoveToFront(elem)
+		return
+	}
+
+	c.entries[issuer] = c.order.PushFront(&oidcDiscoveryFallbackEntry{issuer: issuer, config: cfg})
+	for c.order.Len() > c.maxEntries {
+		oldest := c.order.Back()
+		c.order.Remove(oldest)
+		delete(c.entries, oldest.Value.(*oidcDiscoveryFallbackEntry).issuer)
+	}
+}
+
+// Len returns the number of issuers currently retained.
+func (c *oidcDiscoveryFallbackCache) Len() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.order.Len()
 }
 
 func retryable(code int) bool {
