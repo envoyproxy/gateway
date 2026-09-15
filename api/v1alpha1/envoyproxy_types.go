@@ -260,12 +260,15 @@ type MergeBackendsConfig struct {
 	// a backendRef that fell back to a dedicated per-route cluster keeps using
 	// `EnvoyProxy.spec.telemetry.metrics.clusterStatName`.
 	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
+	//
 	// Only backend-scoped operators are supported, because a merged cluster is shared by every
 	// route that references the same backend and therefore has no single route identity:
 	// `%BACKEND_KIND%`: kind of the backend resource, lowercased (`service`, `serviceimport`, `backend`)
 	// `%BACKEND_NAMESPACE%`: namespace of the backend resource
 	// `%BACKEND_NAME%`: name of the backend resource
-	// `%BACKEND_PORT%`: port of the backend resource
+	// `%BACKEND_PORT%`: port set on the backendRef (`backendRef.port`). For a Service or ServiceImport this is
+	// the service port. The port may be omitted only when referencing a `Backend` resource, whose endpoints
+	// carry their own ports; in that case it expands to `-`.
 	// `%BACKEND_PROTOCOL%`: upstream protocol of the merged cluster, lowercased (`http`, `http2`, `grpc`,
 	// `tcp`, `udp`). It is derived from the route kind (HTTPRoute: `http`, GRPCRoute: `grpc`,
 	// TCPRoute and TLSRoute: `tcp`, UDPRoute: `udp`) and, for HTTPRoute, refined by the backend's
@@ -273,6 +276,7 @@ type MergeBackendsConfig struct {
 	// different route kinds is merged into separate clusters that differ only by this value.
 	// Unlike clusterStatName, this applies to every route kind that can merge backends, including
 	// TCPRoute, UDPRoute and TLSRoute.
+	//
 	// A pattern that omits `%BACKEND_PORT%` or `%BACKEND_PROTOCOL%` can resolve to the same value
 	// for two distinct merged clusters, in which case Envoy aggregates their stats together.
 	// When unset, no alt_stat_name is set and merged cluster stats keep using the generated
