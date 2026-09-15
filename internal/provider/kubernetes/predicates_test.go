@@ -29,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // TestGatewayClassHasMatchingController tests the hasMatchingController
@@ -2367,7 +2368,6 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		},
 	}
 
-	// Create the reconciler.
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
@@ -2396,6 +2396,268 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateClusterTrustBundleForReconcile(tc.ctb)
+			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+func TestServiceHasRouteWithEndpointRouting(t *testing.T) {
+	sampleGateway := test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080)
+	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
+	ep := test.GetEnvoyProxy(types.NamespacedName{Name: "test-ep"}, false)
+	epWithServiceRouting := ep.DeepCopy()
+	routing := egv1a1.ServiceRoutingType
+	epWithServiceRouting.Spec.RoutingType = &routing
+
+	epRef := &test.GroupKindNamespacedName{
+		Group:     gwapiv1.Group(ep.GroupVersionKind().Group),
+		Kind:      gwapiv1.Kind(ep.GroupVersionKind().Kind),
+		Namespace: gwapiv1.Namespace(ep.Namespace),
+		Name:      gwapiv1.ObjectName(ep.Name),
+	}
+
+	service := test.GetService(types.NamespacedName{Name: "service"}, nil, nil)
+
+	testCases := []struct {
+		name    string
+		configs []client.Object
+		service client.Object
+		expect  bool
+	}{
+		{
+			name: "service routing _ no routes exist",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				epWithServiceRouting,
+			},
+			service: service,
+			expect:  false,
+		},
+		{
+			name: "service routing _ httproute",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				epWithServiceRouting,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			service: service,
+			expect:  false,
+		},
+		{
+			name: "endpoint routing _ no routes exist",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				ep,
+			},
+			service: service,
+			expect:  false,
+		},
+		{
+			name: "endpoint routing _ httproute",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				ep,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			service: service,
+			expect:  true,
+		},
+	}
+
+	// Create the reconciler.
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	r := gatewayAPIReconciler{
+		classController: egv1a1.GatewayControllerName,
+		log:             logger,
+	}
+
+	for _, tc := range testCases {
+		r.client = fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(tc.configs...).
+			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+			Build()
+		t.Run(tc.name, func(t *testing.T) {
+			nsName := utils.NamespacedName(tc.service)
+			res := r.hasRouteWithEndpointRouting(&nsName)
+			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+func TestValidateServiceUpdateForReconcile(t *testing.T) {
+	sampleGateway := test.GetGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", 8080)
+	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
+	ep := test.GetEnvoyProxy(types.NamespacedName{Name: "test-ep"}, false)
+	epWithServiceRouting := ep.DeepCopy()
+	routing := egv1a1.ServiceRoutingType
+	epWithServiceRouting.Spec.RoutingType = &routing
+
+	epRef := &test.GroupKindNamespacedName{
+		Group:     gwapiv1.Group(ep.GroupVersionKind().Group),
+		Kind:      gwapiv1.Kind(ep.GroupVersionKind().Kind),
+		Namespace: gwapiv1.Namespace(ep.Namespace),
+		Name:      gwapiv1.ObjectName(ep.Name),
+	}
+
+	oldClusterIP := test.GetService(types.NamespacedName{Name: "service"}, nil, nil)
+	oldClusterIP.Spec.ClusterIP = "1.2.3.4"
+	oldClusterIP.Spec.Type = corev1.ServiceTypeClusterIP
+	oldClusterIP.Spec.Selector = map[string]string{"app": "test"}
+	newClusterIPSelectorChange := oldClusterIP.DeepCopy()
+	newClusterIPSelectorChange.Spec.Selector = map[string]string{"app": "test2"}
+	newClusterIPChange := oldClusterIP.DeepCopy()
+	newClusterIPChange.Spec.ClusterIP = "4.3.2.1"
+	oldNodePort := oldClusterIP.DeepCopy()
+	oldNodePort.Spec.Type = corev1.ServiceTypeNodePort
+
+	testCases := []struct {
+		name       string
+		configs    []client.Object
+		serviceOld *corev1.Service
+		serviceNew *corev1.Service
+		expect     bool
+	}{
+		{
+			name: "service routing _ clusterIP svc _ no routes _ no change",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				epWithServiceRouting,
+			},
+			serviceOld: oldClusterIP,
+			serviceNew: oldClusterIP,
+			expect:     false,
+		},
+		{
+			name: "service routing _ clusterIP svc _ httproute _ no change",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				epWithServiceRouting,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			serviceOld: oldClusterIP,
+			serviceNew: oldClusterIP,
+			expect:     false,
+		},
+		{
+			name: "service routing _ nodeport svc _ no routes _ no change",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				epWithServiceRouting,
+			},
+			serviceOld: oldNodePort,
+			serviceNew: oldNodePort,
+			expect:     true,
+		},
+		{
+			name: "service routing _ nodeport svc _ httproute _ no change",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				epWithServiceRouting,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			serviceOld: oldNodePort,
+			serviceNew: oldNodePort,
+			expect:     true,
+		},
+		{
+			name: "service routing _ clusterIP svc _ httproute _ change selector",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				epWithServiceRouting,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			serviceOld: oldClusterIP,
+			serviceNew: newClusterIPSelectorChange,
+			expect:     false,
+		},
+		{
+			name: "service routing _ clusterIP svc _ httproute _ change clusterIP",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				epWithServiceRouting,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			serviceOld: oldClusterIP,
+			serviceNew: newClusterIPChange,
+			expect:     true,
+		},
+		{
+			name: "endpoint routing _ clusterIP svc _ no routes _ no change",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				ep,
+			},
+			serviceOld: oldClusterIP,
+			serviceNew: oldClusterIP,
+			expect:     false,
+		},
+		{
+			name: "endpoint routing _ clusterIP svc _ httproute _ no change",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				ep,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			serviceOld: oldClusterIP,
+			serviceNew: oldClusterIP,
+			expect:     true,
+		},
+		{
+			name: "endpoint routing _ clusterIP svc _ httproute _ change selector",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				ep,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			serviceOld: oldClusterIP,
+			serviceNew: newClusterIPSelectorChange,
+			expect:     true,
+		},
+		{
+			name: "endpoint routing _ clusterIP svc _ httproute _ change clusterIP",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef),
+				sampleGateway,
+				ep,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, ""),
+			},
+			serviceOld: oldClusterIP,
+			serviceNew: newClusterIPChange,
+			expect:     true,
+		},
+	}
+
+	// Create the reconciler.
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	r := gatewayAPIReconciler{
+		classController: egv1a1.GatewayControllerName,
+		log:             logger,
+	}
+
+	for _, tc := range testCases {
+		r.client = fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(tc.configs...).
+			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+			Build()
+		t.Run(tc.name, func(t *testing.T) {
+			res := r.validateServiceUpdateForReconcile(tc.serviceOld, tc.serviceNew)
 			require.Equal(t, tc.expect, res)
 		})
 	}

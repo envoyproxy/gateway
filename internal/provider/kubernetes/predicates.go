@@ -542,6 +542,31 @@ func (r *gatewayAPIReconciler) isRateLimitService(nsName *types.NamespacedName) 
 	return *nsName == rateLimitService
 }
 
+// validateServiceUpdateForReconcile checks whether a Service update should trigger a reconcile.
+// Returns false when the backend does not have endpoint routing and the service of type clusterIP
+// does not have a new IP address.
+func (r *gatewayAPIReconciler) validateServiceUpdateForReconcile(oldSvc *corev1.Service, newSvc *corev1.Service) bool {
+	ctx := context.Background()
+	labels := newSvc.GetLabels()
+	// Check if the Service belongs to a Gateway
+	gtw := r.findOwningGateway(ctx, labels)
+	if gtw != nil {
+		return true
+	}
+	// Merged gateways will have only this label
+	gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok && r.mergeGateways.Has(gcName) {
+		return true
+	}
+
+	if (newSvc.Spec.Type == corev1.ServiceTypeClusterIP) && (oldSvc.Spec.Type == corev1.ServiceTypeClusterIP) && (newSvc.Spec.ClusterIP == oldSvc.Spec.ClusterIP) {
+		nsName := utils.NamespacedName(newSvc)
+		return r.hasRouteWithEndpointRouting(&nsName)
+	}
+
+	return true
+}
+
 // validateServiceForReconcile tries finding the owning Gateway of the Service
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
