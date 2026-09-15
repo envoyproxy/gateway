@@ -1,0 +1,1 @@
+Fixed Policy reporting only `Accepted=True` when they attach to a Gateway or ListenerSet whose listeners have no route the policy can be applied to, so the policy silently never reached the generated configuration. Those policies now also carry a `Warning` condition with reason `NoAttachedRoutes`.
