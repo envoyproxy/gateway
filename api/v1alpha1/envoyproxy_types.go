@@ -281,6 +281,7 @@ type MergeBackendsConfig struct {
 	//
 	// +optional
 	// +notImplementedHide
+	// +kubebuilder:validation:Pattern=`^([^%]|%(BACKEND_KIND|BACKEND_NAMESPACE|BACKEND_NAME|BACKEND_PORT|BACKEND_PROTOCOL)%)*$`
 	StatName *string `json:"statName,omitempty"`
 }
 

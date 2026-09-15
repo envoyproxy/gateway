@@ -2639,6 +2639,51 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "mergeBackends statName with every backend operator is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{
+					StatName: new("%BACKEND_KIND%/%BACKEND_NAMESPACE%/%BACKEND_NAME%/%BACKEND_PORT%/%BACKEND_PROTOCOL%"),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeBackends statName without any operator is valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{
+					StatName: new("my-backend-stats"),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "mergeBackends statName with a route operator is invalid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{
+					StatName: new("%BACKEND_NAME%/%ROUTE_NAME%"),
+				}
+			},
+			wantErrors: []string{"spec.mergeBackends.statName in body should match"},
+		},
+		{
+			desc: "mergeBackends statName with BACKEND_REFS is invalid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{
+					StatName: new("%BACKEND_REFS%"),
+				}
+			},
+			wantErrors: []string{"spec.mergeBackends.statName in body should match"},
+		},
+		{
+			desc: "mergeBackends statName with an unterminated operator is invalid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{
+					StatName: new("%BACKEND_NAME"),
+				}
+			},
+			wantErrors: []string{"spec.mergeBackends.statName in body should match"},
+		},
 	}
 
 	for _, tc := range cases {

@@ -10991,6 +10991,7 @@ spec:
                       When unset, no alt_stat_name is set and merged cluster stats keep using the generated
                       cluster name.
                       Example: `%BACKEND_KIND%/%BACKEND_NAMESPACE%/%BACKEND_NAME%/%BACKEND_PORT%` => `service/my-ns/my-backend/3000`
+                    pattern: ^([^%]|%(BACKEND_KIND|BACKEND_NAMESPACE|BACKEND_NAME|BACKEND_PORT|BACKEND_PROTOCOL)%)*$
                     type: string
                 type: object
               mergeGateways:
