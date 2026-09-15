@@ -2397,9 +2397,11 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, 
 				Scheme: ro.Redirect.Scheme,
 			}
 			if ro.Redirect.Path != nil {
-				redirect.Path = &ir.HTTPPathModifier{
-					FullReplace:        ro.Redirect.Path.ReplaceFullPath,
-					PrefixMatchReplace: ro.Redirect.Path.ReplacePrefixMatch,
+				redirect.Path = &ir.ExtendedHTTPPathModifier{
+					HTTPPathModifier: ir.HTTPPathModifier{
+						FullReplace:        ro.Redirect.Path.ReplaceFullPath,
+						PrefixMatchReplace: ro.Redirect.Path.ReplacePrefixMatch,
+					},
 				}
 			}
 			if ro.Redirect.Hostname != nil {

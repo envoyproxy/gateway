@@ -4308,7 +4308,7 @@ func (in *Redirect) DeepCopyInto(out *Redirect) {
 	}
 	if in.Path != nil {
 		in, out := &in.Path, &out.Path
-		*out = new(HTTPPathModifier)
+		*out = new(ExtendedHTTPPathModifier)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Port != nil {
