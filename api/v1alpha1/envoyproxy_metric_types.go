@@ -63,9 +63,6 @@ type ProxyMetrics struct {
 	// `%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section
 	// `%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|...` format
 	// Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
-	// This does not apply to clusters shared by multiple routes through
-	// `EnvoyProxy.spec.mergeBackends`, since the operators above are all per-route: use
-	// `EnvoyProxy.spec.mergeBackends.statName` to name those.
 	// Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
 	// Example: `httproute/my-ns/my-route/rule/0`
 	//
