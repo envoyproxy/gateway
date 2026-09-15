@@ -702,7 +702,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		return
 	}
 
-	if policy.Spec.MergeType == nil {
+	// A policy that sets mergeType: Replace explicitly opts out of merging, even when a parent
+	// policy configures defaultChildMergeType.
+	explicitReplace := policy.Spec.MergeType != nil && *policy.Spec.MergeType == egv1a1.Replace
+	if explicitReplace || (policy.Spec.MergeType == nil && !anyParentPolicyMergeDefault(parentRefCtxs, gatewayPolicyMap)) {
 		// Set conditions for translation error if it got any
 		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -726,6 +729,9 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 					ancestorRef  gwapiv1.ParentReference
 					parentPolicy *egv1a1.BackendTrafficPolicy
 					parentScope  policyScope
+					// ancestorPolicies holds the parent policies in nearest-first order, used to
+					// resolve defaultChildMergeType independently of the merge target.
+					ancestorPolicies []*egv1a1.BackendTrafficPolicy
 				)
 
 				if listener.isFromListenerSet() {
@@ -746,6 +752,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 					} else if p, ok := gatewayPolicyMap[gwKey]; ok {
 						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
+					ancestorPolicies = []*egv1a1.BackendTrafficPolicy{
+						listenerSetPolicyMap[lsListenerKey],
+						listenerSetPolicyMap[lsKey],
+						gatewayPolicyMap[gwKey],
+					}
 				} else {
 					ancestorRef = getAncestorRefForPolicy(gwNN, &listener.Name)
 
@@ -756,10 +767,23 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 					} else if p, ok := gatewayPolicyMap[gwMapKey]; ok {
 						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
+					ancestorPolicies = []*egv1a1.BackendTrafficPolicy{
+						gatewayPolicyMap[listenerMapKey],
+						gatewayPolicyMap[gwMapKey],
+					}
 				}
 
-				if parentPolicy == nil {
-					// not found, fall back to the current policy
+				// The default-merge intent comes from the nearest ancestor that declares
+				// defaultChildMergeType, independent of which parent the child merges into. CEL
+				// restricts the field to policies targeting an entire Gateway, so resolving it
+				// separately keeps a listener- or ListenerSet-level policy from suppressing the
+				// Gateway-level default.
+				defaultMergeType := resolveDefaultChildMergeType(ancestorPolicies...)
+
+				// Resolve the effective mergeType: the policy's own value, or the resolved default.
+				mergeType := effectiveMergeType(policy, defaultMergeType)
+				if mergeType == nil || parentPolicy == nil {
+					// No merge for this listener: apply the policy standalone.
 					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
@@ -773,9 +797,16 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 					continue
 				}
 
+				// Carry the effective mergeType so a defaulted policy (no explicit mergeType)
+				// merges like an explicit one. policy is a deep copy; nothing is persisted.
+				mergePolicy := policy
+				if policy.Spec.MergeType == nil {
+					mergePolicy = policy.DeepCopy()
+					mergePolicy.Spec.MergeType = mergeType
+				}
 				// merge with parent policy
 				if err := t.translateBackendTrafficPolicyForRouteWithMerge(
-					policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
+					mergePolicy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
 				); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -1326,6 +1357,10 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	policy *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	x *ir.Xds,
+	// policyTargetListenerName is the full IR listener name ("<gw-ns>/<gw-name>/<listener>",
+	// or "<gw-ns>/<gw-name>/<ls-ns>/<ls-name>/<listener>" for a ListenerSet listener). Because it
+	// carries the Gateway, matching on it also scopes the policy to the target Gateway's listeners
+	// in MergeGateways mode, where multiple Gateways share a single IR. Empty means "no scoping".
 	policyTargetListenerName string,
 ) {
 	routeStatName := ""
@@ -1451,6 +1486,62 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 			"error", errs,
 		)
 	}
+}
+
+// effectiveMergeType returns the mergeType to use when merging a route-level policy into its
+// parent policy: the policy's own value if set (Replace meaning "do not merge"), otherwise the
+// resolved defaultChildMergeType from the nearest ancestor that declares one.
+func effectiveMergeType(policy *egv1a1.BackendTrafficPolicy, defaultMergeType *egv1a1.MergeType) *egv1a1.MergeType {
+	if policy.Spec.MergeType != nil {
+		if *policy.Spec.MergeType == egv1a1.Replace {
+			return nil
+		}
+		return policy.Spec.MergeType
+	}
+	return defaultMergeType
+}
+
+// resolveDefaultChildMergeType returns the defaultChildMergeType declared by the nearest ancestor
+// policy, checking from the closest parent to the furthest (listener before gateway). CEL restricts
+// defaultChildMergeType to policies targeting an entire Gateway, so the merge target for a child
+// under a listener may be the listener-level policy while the default intent is declared on the
+// gateway-level policy. Resolving the default independently of the merge target keeps a
+// listener-level policy from suppressing the gateway-level default.
+func resolveDefaultChildMergeType(ancestors ...*egv1a1.BackendTrafficPolicy) *egv1a1.MergeType {
+	for _, p := range ancestors {
+		if p == nil || p.Spec.DefaultChildMergeType == nil {
+			continue
+		}
+		mergeType := p.Spec.DefaultChildMergeType
+		// Defense in depth: the CRD enum restricts DefaultChildMergeType to StrategicMerge/JSONMerge.
+		// The nearest declarer wins, so if its value is not a real merge, return nil rather than
+		// falling through, ensuring a stray value can never produce a "merged" status while actually
+		// replacing the parent.
+		if *mergeType != egv1a1.StrategicMerge && *mergeType != egv1a1.JSONMerge {
+			return nil
+		}
+		return mergeType
+	}
+	return nil
+}
+
+// anyParentPolicyMergeDefault reports whether any parent policy (gateway- or listener-level) of
+// the route's parent gateways sets defaultChildMergeType.
+func anyParentPolicyMergeDefault(parentRefCtxs []*RouteParentContext, gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy) bool {
+	for _, p := range parentRefCtxs {
+		for _, l := range p.listeners {
+			gwNN := utils.NamespacedName(l.gateway.Gateway)
+			for _, key := range []NamespacedNameWithSection{
+				{NamespacedName: gwNN, SectionName: l.Name},
+				{NamespacedName: gwNN},
+			} {
+				if pp := gatewayPolicyMap[key]; pp != nil && pp.Spec.DefaultChildMergeType != nil {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // mergeBackendTrafficPolicy merges route policy into gateway policy, returning the merged
