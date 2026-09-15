@@ -1350,6 +1350,34 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}
+		// Record the endpoint context so the endpoint fast path can rebuild this
+		// cluster's CLA without a full translation. EndpointSource is only set on
+		// settings when the EndpointFastPath runtime flag is enabled.
+		// The context must own deep copies: the IR delivered to the xDS runner is
+		// retained by the watchable layer for equality checks, so the fast path
+		// must never mutate objects reachable from it.
+		for _, ds := range args.settings {
+			if ds.EndpointSource != nil {
+				settings := make([]*ir.DestinationSetting, len(args.settings))
+				for i, s := range args.settings {
+					settings[i] = s.DeepCopy()
+				}
+				ec := &types.EndpointContext{
+					ClusterName: args.name,
+					Settings:    settings,
+					HealthCheck: args.healthCheck.DeepCopy(),
+					PreferLocal: lb.PreferLocal.DeepCopy(),
+				}
+				if lb.WeightedZones != nil {
+					ec.WeightedZones = make([]ir.WeightedZoneConfig, len(lb.WeightedZones))
+					for i, wz := range lb.WeightedZones {
+						wz.DeepCopyInto(&ec.WeightedZones[i])
+					}
+				}
+				tCtx.AddEndpointContext(ec)
+				break
+			}
+		}
 	case EndpointTypeDNS:
 		xdsCluster.LoadAssignment = xdsEndpoints
 	case EndpointTypeDynamicResolver:

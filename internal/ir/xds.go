@@ -2333,6 +2333,28 @@ type DestinationSetting struct {
 	// * invalid 500
 	// * without endpoints 503
 	Invalid bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
+	// EndpointSource identifies the Kubernetes backend this setting's endpoints are
+	// derived from, so endpoint updates can be re-resolved without a full translation.
+	// Only set for EndpointSlice-backed (EDS) settings when the EndpointFastPath
+	// runtime flag is enabled.
+	EndpointSource *EndpointSource `json:"endpointSource,omitempty" yaml:"endpointSource,omitempty"`
+}
+
+// EndpointSource identifies the Kubernetes backend an EDS-managed DestinationSetting's
+// endpoints are derived from, along with the parameters needed to filter that backend's
+// EndpointSlices the same way the full translation does.
+// +kubebuilder:object:generate=true
+type EndpointSource struct {
+	// Kind is the backend kind: Service or ServiceImport.
+	Kind string `json:"kind" yaml:"kind"`
+	// Namespace of the backend.
+	Namespace string `json:"namespace" yaml:"namespace"`
+	// Name of the backend.
+	Name string `json:"name" yaml:"name"`
+	// PortName is the service port name used to filter EndpointSlice ports.
+	PortName string `json:"portName,omitempty" yaml:"portName,omitempty"`
+	// Protocol is the service port protocol used to filter EndpointSlice ports.
+	Protocol corev1.Protocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
