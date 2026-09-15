@@ -360,6 +360,42 @@ func TestHTTPRouteFilter(t *testing.T) {
 				": header.remove is not supported for DirectResponse",
 			},
 		},
+		{
+			desc: "Valid BackendPriority with highest priority",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					BackendPriority: &egv1a1.HTTPBackendPriorityFilter{
+						Value: 0,
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Valid BackendPriority with max value",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					BackendPriority: &egv1a1.HTTPBackendPriorityFilter{
+						Value: 128,
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Invalid BackendPriority exceeding max value",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					BackendPriority: &egv1a1.HTTPBackendPriorityFilter{
+						Value: 129,
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.backendPriority.value: Invalid value: 129:",
+				"should be less than or equal to 128",
+			},
+		},
 	}
 
 	for _, tc := range cases {
