@@ -4167,6 +4167,9 @@ type DynamicModule struct {
 	// Config is the JSON configuration for the filter.
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 
+	// Backends use the cluster names referenced by the opaque module configuration.
+	Backends []*RouteDestination `json:"backends,omitempty"`
+
 	// DoNotClose prevents the module from being unloaded.
 	DoNotClose bool `json:"doNotClose"`
 

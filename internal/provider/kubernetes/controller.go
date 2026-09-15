@@ -3427,7 +3427,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 
 // processEnvoyExtensionPolicyObjectRefs adds the referenced resources in EnvoyExtensionPolicies
 // to the resourceTree
-// - BackendRefs for ExtProcs
+// - BackendRefs for ExtProcs and dynamic modules
 // - SecretRefs for Wasms
 // - ValueRefs for Luas
 func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
@@ -3455,6 +3455,23 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 					r.log.Error(err,
 						"failed to process ExtProc BackendRef for EnvoyExtensionPolicy",
 						"policy", policy, "backendRef", br.BackendObjectReference)
+				}
+			}
+		}
+
+		for _, dynamicModule := range policy.Spec.DynamicModule {
+			for _, backend := range dynamicModule.Backends {
+				if err := r.processBackendRef(
+					ctx,
+					resourceMap,
+					resourceTree,
+					resource.KindEnvoyExtensionPolicy,
+					policy.Namespace,
+					policy.Name,
+					backend.BackendRef); err != nil {
+					r.log.Error(err,
+						"failed to process DynamicModule BackendRef for EnvoyExtensionPolicy",
+						"policy", policy, "backendRef", backend.BackendRef)
 				}
 			}
 		}

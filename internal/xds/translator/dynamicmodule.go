@@ -162,7 +162,7 @@ func routeContainsDynamicModule(irRoute *ir.HTTPRoute) bool {
 	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.DynamicModules) > 0
 }
 
-// patchResources creates clusters for remote dynamic module sources.
+// Module downloads and callouts both require clusters outside the route destination.
 func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
@@ -175,6 +175,14 @@ func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []
 		}
 
 		for _, dm := range route.EnvoyExtensions.DynamicModules {
+			for _, backend := range dm.Backends {
+				if err := createExtServiceXDSCluster(backend, nil, tCtx); err != nil {
+					errs = errors.Join(errs, err)
+				}
+				if err := processClientCertificates(tCtx, backend.Settings); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
 			if dm.Remote == nil {
 				continue
 			}

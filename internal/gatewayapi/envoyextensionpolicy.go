@@ -80,6 +80,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.EnvoyExtensionPolicy {
+	t.extensionBackendRoutes = make(map[*ir.HTTPRoute]extensionBackendRoute)
+	defer func() { t.extensionBackendRoutes = nil }()
 	var res []*egv1a1.EnvoyExtensionPolicy
 	// EnvoyExtensionPolicies are already sorted by the provider layer
 
@@ -284,6 +286,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 		}
 	}
 
+	t.resolveExtensionBackendConflicts(envoyExtensionPolicies)
 	for _, policy := range res {
 		// Truncate Ancestor list of longer than 16
 		if len(policy.Status.Ancestors) > 16 {
@@ -1108,7 +1111,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var dynamicModules []ir.DynamicModule
-		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, owners, gtwCtx.envoyProxy); dynamicModuleError != nil {
+		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, owners, resources, gtwCtx); dynamicModuleError != nil {
 			dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 			errs = errors.Join(errs, dynamicModuleError)
 		}
@@ -1151,6 +1154,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							failRoute = true
 						}
 						if failRoute {
+							if dynamicModuleError != nil {
+								// A parent policy must not replace a failed module configuration.
+								r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
+							}
 							r.DirectResponse = &ir.CustomResponse{
 								StatusCode: new(uint32(500)),
 							}
@@ -1162,6 +1169,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 								Luas:           luas,
 								DynamicModules: dynamicModules,
 							}
+							t.recordExtensionBackendRoute(r, policy, policyOwnerOr(owners.dynamicModule, policy), listener)
 						}
 					}
 				}
@@ -1242,7 +1250,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
-	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, noOwners, gateway.envoyProxy); dynamicModuleError != nil {
+	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, noOwners, resources, gateway); dynamicModuleError != nil {
 		dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 		errs = errors.Join(errs, dynamicModuleError)
 	}
@@ -1286,6 +1294,9 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				failRoute = true
 			}
 			if failRoute {
+				if dynamicModuleError != nil {
+					r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
+				}
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
@@ -1296,6 +1307,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 					Wasms:          wasms,
 					Luas:           luas,
 					DynamicModules: dynamicModules,
+				}
+				for _, listener := range targetListeners {
+					if irListenerName(listener) == http.Name {
+						t.recordExtensionBackendRoute(r, policy, policy, listener)
+						break
+					}
 				}
 			}
 		}
@@ -1803,7 +1820,8 @@ func irConfigNameForDynamicModule(policy *egv1a1.EnvoyExtensionPolicy, index int
 func (t *Translator) buildDynamicModules(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	owners *envoyExtensionPolicyOwners,
-	envoyProxy *egv1a1.EnvoyProxy,
+	resources *resource.Resources,
+	gateway *GatewayContext,
 ) ([]ir.DynamicModule, error) {
 	var errs error
 
@@ -1813,6 +1831,7 @@ func (t *Translator) buildDynamicModules(
 
 	// Build registry lookup map from EnvoyProxy
 	registry := make(map[string]*egv1a1.DynamicModuleEntry)
+	envoyProxy := gateway.envoyProxy
 	if envoyProxy != nil {
 		for i := range envoyProxy.Spec.DynamicModules {
 			entry := &envoyProxy.Spec.DynamicModules[i]
@@ -1876,6 +1895,14 @@ func (t *Translator) buildDynamicModules(
 			continue
 		}
 
+		for backendIdx, backend := range dm.Backends {
+			destination, err := t.buildExtensionBackend(ownerPolicy, backend, resources, gateway, idx, backendIdx)
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("dynamicModule[%d].backends[%d]: %w", idx, backendIdx, err))
+				continue
+			}
+			dmIR.Backends = append(dmIR.Backends, destination)
+		}
 		dmIRList = append(dmIRList, dmIR)
 	}
 
