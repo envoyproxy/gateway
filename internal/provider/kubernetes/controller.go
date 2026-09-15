@@ -386,6 +386,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// generation vs observedGeneration drift). This class is retried on the next Reconcile.
 			logger.Error(err, "transient error reconciling GatewayClass, will retry", "GatewayClass", managedGC.Name)
 			errs = append(errs, err)
+			// Carry forward this GatewayClass's last published resources instead of dropping it
+			// from gwcResources: the Store below replaces the entire snapshot, and the Gateway
+			// API runner's mark-and-sweep treats any GatewayClass missing from that snapshot as
+			// deleted, tearing down its InfraIR, XdsIR, and statuses. Republishing the previous
+			// resources keeps the data plane intact until the transient error clears.
+			if prevResource := r.resources.GetResourcesByGatewayClass(managedGC.Name); prevResource != nil {
+				gwcResources = append(gwcResources, prevResource)
+				gcStatusToDelete.Delete(utils.NamespacedName(managedGC))
+			}
 			continue
 		}
 		gwcResources = append(gwcResources, gwcResource)
