@@ -49,6 +49,7 @@ data:
       timeout: 1s
     envoyProxy:
       provider:
+        type: Kubernetes
         kubernetes:
           envoyDeployment:
             container:
