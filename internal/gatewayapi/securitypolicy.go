@@ -2214,6 +2214,14 @@ func (t *Translator) buildOIDC(
 		}
 	}
 
+	if oidc.CodeVerifierTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.CodeVerifierTTL)); err == nil {
+			irOIDC.CodeVerifierTTL = ir.MetaV1DurationPtr(d)
+		} else {
+			return nil, fmt.Errorf("invalid codeVerifierTTL: %w", err)
+		}
+	}
+
 	return irOIDC, nil
 }
 
@@ -2793,7 +2801,7 @@ func (t *Translator) buildExtAuth(
 		http              = policy.Spec.ExtAuth.HTTP
 		grpc              = policy.Spec.ExtAuth.GRPC
 		backendRefs       []egv1a1.BackendRef
-		backendSettings   *egv1a1.ClusterSettings
+		backendSettings   *egv1a1.BackendSettings
 		protocol          ir.AppProtocol
 		rd                *ir.RouteDestination
 		authority         string
