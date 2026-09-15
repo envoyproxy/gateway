@@ -22,6 +22,7 @@
             - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            codeVerifierTokenExpiresIn: 120s
             cookieConfigs:
               codeVerifierCookieConfig:
                 path: /foo/oauth2/callback
@@ -95,12 +96,12 @@
               cookieDomain: example.com
               cookieNames:
                 bearerToken: CustomAccessTokenOverride
-                codeVerifier: CodeVerifier-5f93c2e4
+                codeVerifier: CustomCodeVerifierOverride
                 idToken: CustomIdTokenOverride
-                oauthExpires: OauthExpires-5f93c2e4
-                oauthHmac: OauthHMAC-5f93c2e4
-                oauthNonce: OauthNonce-5f93c2e4
-                refreshToken: RefreshToken-5f93c2e4
+                oauthExpires: CustomOauthExpiresOverride
+                oauthHmac: CustomOauthHMACOverride
+                oauthNonce: CustomOauthNonceOverride
+                refreshToken: CustomRefreshTokenOverride
               hmacSecret:
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-second-route
                 sdsConfig:

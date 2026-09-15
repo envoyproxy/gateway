@@ -140,7 +140,7 @@ func proxyListenerToProto(l *ir.ProxyListener) *remoteinfra.ProxyListener {
 
 // resolvedMetricSinkToProto translates every field of ir.ResolvedMetricSink
 // (Authority, Headers, ResourceAttributes, ReportCountersAsDeltas,
-// ReportHistogramsAsDeltas). Only its Destination is narrowed to a subset; see
+// ReportHistogramsAsDeltas, Prefix). Only its Destination is narrowed to a subset; see
 // routeDestinationToProto.
 func resolvedMetricSinkToProto(s *ir.ResolvedMetricSink) *remoteinfra.ResolvedMetricSink {
 	out := &remoteinfra.ResolvedMetricSink{
@@ -149,6 +149,7 @@ func resolvedMetricSinkToProto(s *ir.ResolvedMetricSink) *remoteinfra.ResolvedMe
 		ResourceAttributes:       s.ResourceAttributes,
 		ReportCountersAsDeltas:   s.ReportCountersAsDeltas,
 		ReportHistogramsAsDeltas: s.ReportHistogramsAsDeltas,
+		Prefix:                   s.Prefix,
 	}
 
 	for _, h := range s.Headers {
@@ -376,6 +377,7 @@ func protoToResolvedMetricSink(s *remoteinfra.ResolvedMetricSink) ir.ResolvedMet
 		ResourceAttributes:       s.GetResourceAttributes(),
 		ReportCountersAsDeltas:   s.GetReportCountersAsDeltas(),
 		ReportHistogramsAsDeltas: s.GetReportHistogramsAsDeltas(),
+		Prefix:                   s.GetPrefix(),
 	}
 
 	if s.GetDestination() != nil {
