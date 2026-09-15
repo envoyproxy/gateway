@@ -124,8 +124,15 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 		return nil, err
 	}
 
+	// Envoy keys a VM on vm_id and code, so default to the per-filter name to avoid
+	// sharing VMs across filters unless the user asks for it.
+	vmID := wasm.Name
+	if wasm.VMID != nil {
+		vmID = *wasm.VMID
+	}
+
 	vmConfig := &wasmv3.VmConfig{
-		VmId:    wasm.Name, // Do not share VMs across different filters
+		VmId:    vmID,
 		Runtime: vmRuntimeV8,
 		Code: &corev3.AsyncDataSource{
 			Specifier: &corev3.AsyncDataSource_Remote{
