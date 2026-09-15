@@ -257,8 +257,8 @@ type MergeBackendsConfig struct {
 
 	// StatName defines the value of the merged cluster alt_stat_name, determining how the stats of
 	// a merged backend cluster are named. It applies only to clusters that were actually merged;
-	// a backendRef that fell back to a dedicated per-route cluster keeps using
-	// `EnvoyProxy.spec.telemetry.metrics.clusterStatName`.
+	// a backendRef that fell back to a dedicated per-route cluster is named like any other per-route
+	// cluster: by `EnvoyProxy.spec.telemetry.metrics.clusterStatName` for HTTPRoute and GRPCRoute.
 	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
 	//
 	// Only backend-scoped operators are supported, because a merged cluster is shared by every
@@ -272,8 +272,9 @@ type MergeBackendsConfig struct {
 	// `%BACKEND_PROTOCOL%`: upstream protocol of the merged cluster, lowercased (`http`, `http2`, `grpc`,
 	// `tcp`, `udp`). It is derived from the route kind (HTTPRoute: `http`, GRPCRoute: `grpc`,
 	// TCPRoute and TLSRoute: `tcp`, UDPRoute: `udp`) and, for HTTPRoute, refined by the backend's
-	// appProtocol (e.g. `kubernetes.io/h2c` resolves to `http2`). The same backend port referenced from
-	// different route kinds is merged into separate clusters that differ only by this value.
+	// appProtocol (e.g. `kubernetes.io/h2c` resolves to `http2`). Routes referencing the same backend port
+	// share a merged cluster only when they resolve to the same protocol; otherwise they get separate
+	// merged clusters that differ only by this value.
 	// Unlike clusterStatName, this applies to every route kind that can merge backends, including
 	// TCPRoute, UDPRoute and TLSRoute.
 	//
