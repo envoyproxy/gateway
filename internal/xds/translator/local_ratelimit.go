@@ -185,6 +185,11 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 	if httpListener.Headers != nil && httpListener.Headers.DisableRateLimitHeaders {
 		localRl.EnableXRatelimitHeaders = rlv3.XRateLimitHeadersRFCVersion_OFF
 	}
+	// Emit the Retry-After header on rate-limited 429 responses, unless disabled.
+	localRl.EnableRetryAfterHeader = true
+	if httpListener.Headers != nil && httpListener.Headers.DisableRetryAfterHeader {
+		localRl.EnableRetryAfterHeader = false
+	}
 
 	localRlAny, err := anypb.New(localRl)
 	if err != nil {
