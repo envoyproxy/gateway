@@ -37,14 +37,20 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 	return resourceItems, nil
 }
 
-// getExtensionBackendResources returns all custom backend resources managed by extensions
+// getExtensionBackendResources returns all custom backend resources managed by extensions.
+// GVKs whose CRD was determined absent at controller startup are skipped (the watch
+// and this list path), so the reconcile keeps processing routes that don't depend on
+// the missing custom backend. All other errors from List are returned so the reconcile
+// is retried and stale configuration is not published.
 func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context) ([]unstructured.Unstructured, error) {
 	var resourceItems []unstructured.Unstructured
 	for _, gvk := range r.extBackendGVKs {
+		if r.extBackendCRDExists != nil && !r.extBackendCRDExists[gvk] {
+			continue
+		}
 		uExtResourceList := &unstructured.UnstructuredList{}
 		uExtResourceList.SetGroupVersionKind(gvk)
 		if err := r.client.List(ctx, uExtResourceList, client.UnsafeDisableDeepCopy); err != nil {
-			r.log.Info("no associated backend resources found", "GVK", gvk.String())
 			return nil, fmt.Errorf("failed to list %s: %w", gvk.String(), err)
 		}
 

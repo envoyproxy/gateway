@@ -7,10 +7,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.11.1
+    helm.sh/chart: alloy-1.12.1
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.18.1"
+    app.kubernetes.io/version: "v1.19.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -35,10 +35,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.169.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.158.0"
+    app.kubernetes.io/version: "0.159.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -80,10 +80,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.11.1
+    helm.sh/chart: alloy-1.12.1
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.18.1"
+    app.kubernetes.io/version: "v1.19.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: config
@@ -229,6 +229,7 @@ data:
       mode: simple
     limits_config:
       max_cache_freshness_per_query: 10m
+      max_structured_metadata_size: 131072
       otlp_config:
         resource_attributes:
           attributes_config:
@@ -307,10 +308,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.169.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.158.0"
+    app.kubernetes.io/version: "0.159.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -319,11 +320,11 @@ data:
     exporters:
       debug:
         verbosity: detailed
-      otlp:
+      otlp_grpc:
         endpoint: tempo.monitoring.svc:4317
         tls:
           insecure: true
-      otlphttp/loki:
+      otlp_http/loki:
         endpoint: http://loki.monitoring.svc:3100/otlp
       prometheus:
         endpoint: :19001
@@ -415,7 +416,7 @@ data:
       pipelines:
         logs:
           exporters:
-          - otlphttp/loki
+          - otlp_http/loki
           processors:
           - k8s_attributes
           - transform/loki
@@ -434,7 +435,7 @@ data:
           - otlp
         traces:
           exporters:
-          - otlp
+          - otlp_grpc
           processors:
           - k8s_attributes
           - memory_limiter
@@ -1895,7 +1896,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"http-.*\"}[$__rate_interval]))",
+                "expr": "sum(irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"https?-.*\"}[$__rate_interval]))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{service}} - in",
@@ -1907,7 +1908,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"http-.*\"}[$__rate_interval]))",
+                "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"https?-.*\"}[$__rate_interval]))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{service}} - out",
@@ -3123,6 +3124,7 @@ data:
         "uid": "8WkEOMnANKE6PW5hhpVv",
         "version": 40
       }
+      
   envoy-gateway-global.json: |-
       {
         "annotations": {
@@ -10250,10 +10252,10 @@ kind: ClusterRole
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-1.11.1
+    helm.sh/chart: alloy-1.12.1
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.18.1"
+    app.kubernetes.io/version: "v1.19.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -10393,10 +10395,10 @@ kind: ClusterRole
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.169.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.158.0"
+    app.kubernetes.io/version: "0.159.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10466,10 +10468,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-1.11.1
+    helm.sh/chart: alloy-1.12.1
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.18.1"
+    app.kubernetes.io/version: "v1.19.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -10507,10 +10509,10 @@ kind: ClusterRoleBinding
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.169.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.158.0"
+    app.kubernetes.io/version: "0.159.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10551,10 +10553,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.11.1
+    helm.sh/chart: alloy-1.12.1
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.18.1"
+    app.kubernetes.io/version: "v1.19.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: networking
@@ -10654,10 +10656,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.169.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.158.0"
+    app.kubernetes.io/version: "0.159.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10801,10 +10803,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.11.1
+    helm.sh/chart: alloy-1.12.1
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.18.1"
+    app.kubernetes.io/version: "v1.19.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
 spec:
@@ -10823,7 +10825,7 @@ spec:
       serviceAccountName: alloy
       containers:
         - name: alloy
-          image: docker.io/grafana/alloy:v1.18.1
+          image: docker.io/grafana/alloy:v1.19.2
           imagePullPolicy: IfNotPresent
           args:
             - run
@@ -10893,10 +10895,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.169.0
+    helm.sh/chart: opentelemetry-collector-0.172.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.158.0"
+    app.kubernetes.io/version: "0.159.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10913,7 +10915,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: f0f55d39ea4c62fe9947ba2f26db6c0d2e936dbd880ac47784e1493f969b02da
+        checksum/config: 24c3780d63272d28d6c6ffb5174236c2a19e8ffa80bbaa074894b6cf31dd3cf9
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -10932,7 +10934,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.158.0"
+          image: "otel/opentelemetry-collector-contrib:0.160.0"
           imagePullPolicy: IfNotPresent
           ports:
             
@@ -11158,7 +11160,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 6b4509c66d127c358eaec628ad628a06a82b9eea1a0d0b619b774e1938e660da
+        checksum/config: 11cf4e31138a898d46620bf2c85ab2b39eba10d307d42f7faaa395ba84dfb732
         storage/size: "10Gi"
         kubectl.kubernetes.io/default-container: "loki"
       labels:

@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: eg-rate-limit
+  name: ratelimit-global-merge
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
@@ -17,7 +17,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: eg-rate-limit
+    - name: ratelimit-global-merge
   rules:
     - matches:
         - path:
@@ -34,7 +34,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: eg-rate-limit
+    - name: ratelimit-global-merge
   rules:
     - matches:
         - path:
@@ -88,7 +88,7 @@ spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: eg-rate-limit
+      name: ratelimit-global-merge
   rateLimit:
     type: Global
     global:

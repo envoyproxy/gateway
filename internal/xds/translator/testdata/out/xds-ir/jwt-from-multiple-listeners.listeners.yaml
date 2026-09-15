@@ -107,7 +107,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway-system/external-gateway/domain1-example-com-http
         serverHeaderTransformation: PASS_THROUGH

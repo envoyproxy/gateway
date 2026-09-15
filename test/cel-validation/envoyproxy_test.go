@@ -130,7 +130,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"1.1.1.1", "2001:db8::/32"},
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32", "2001:db8::/32"},
 							},
 						},
 					},
@@ -180,13 +180,51 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeClusterIP),
-								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+								LoadBalancerSourceRanges: []string{"10.0.0.0/8"},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{"loadBalancerSourceRanges can only be set for LoadBalancer type"},
+		},
+		{
+			desc: "loadBalancerSourceRanges-invalid-cidr",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"not-a-cidr"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"must be of type cidr"},
+		},
+		{
+			desc: "loadBalancerSourceRanges-too-many-items",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				sourceRanges := make([]string, 65)
+				for i := range sourceRanges {
+					sourceRanges[i] = "10.0.0.0/8"
+				}
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: sourceRanges,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Too many: 65: must have at most 64 items"},
 		},
 		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",
@@ -248,6 +286,23 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           new(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerIP: new("a.b.c.d"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerIP must be a valid IPv4 address"},
+		},
+		{
+			desc: "ServiceTypeLoadBalancer-with-IPv6-IP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: new("2001:db8::68"),
 							},
 						},
 					},
@@ -2484,6 +2539,130 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"If type is Remote, local field must not be set"},
+		},
+		{
+			desc: "lua-strict-valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths:   []string{"/tmp"},
+							AllowedEnvVars: []string{"LOG_LEVEL"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "lua-empty-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths: []string{""},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
+		},
+		{
+			desc: "lua-whitespace-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths: []string{"  "},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedPaths entries must not be blank or whitespace-only"},
+		},
+		{
+			desc: "lua-root-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths: []string{"/"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedPaths entries must not be the filesystem root"},
+		},
+		{
+			desc: "lua-multi-slash-root-path-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedPaths: []string{"//"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedPaths entries must not be the filesystem root"},
+		},
+		{
+			desc: "lua-whitespace-envvar-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{
+							AllowedEnvVars: []string{"  "},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allowedEnvVars entries must not be blank or whitespace-only"},
+		},
+		{
+			desc: "lua-with-explicit-strict-type-allowed",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						ValidationType:   new(egv1a1.LuaValidationStrict),
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "lua-with-unset-type-allowed",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "lua-strict-with-insecure-syntax-type-rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Lua: &egv1a1.LuaValidationConfig{
+						ValidationType:   new(egv1a1.LuaValidationInsecureSyntax),
+						StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}},
+					},
+				}
+			},
+			wantErrors: []string{"strictValidation can only be set when validationType is Strict"},
+		},
+		{
+			desc: "luaValidation-and-lua-mutually-exclusive",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					LuaValidation: new(egv1a1.LuaValidationStrict),
+					Lua:           &egv1a1.LuaValidationConfig{StrictValidation: &egv1a1.StrictValidation{AllowedPaths: []string{"/tmp"}}},
+				}
+			},
+			wantErrors: []string{"only one of luaValidation or lua may be set"},
 		},
 		{
 			desc: "mergeBackends present (empty) is valid",

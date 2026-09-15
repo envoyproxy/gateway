@@ -15,10 +15,12 @@ import (
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -64,6 +66,69 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.hasMatchingController(tc.gc)
 			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+func TestUnstructuredCommonPredicates(t *testing.T) {
+	base := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "example.com/v1",
+		"kind":       "ExtensionResource",
+		"metadata": map[string]any{
+			"name":      "resource",
+			"namespace": "default",
+		},
+	}}
+
+	testCases := []struct {
+		name   string
+		mutate func(*unstructured.Unstructured)
+		expect bool
+	}{
+		{
+			name: "generation changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetGeneration(1)
+			},
+			expect: true,
+		},
+		{
+			name: "labels changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetLabels(map[string]string{"environment": "test"})
+			},
+			expect: true,
+		},
+		{
+			name: "annotations changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetAnnotations(map[string]string{"example.com/config": "updated"})
+			},
+			expect: true,
+		},
+		{
+			name: "status changed only",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.Object["status"] = map[string]any{"state": "ready"}
+			},
+			expect: false,
+		},
+	}
+
+	predicates := commonPredicates[*unstructured.Unstructured]()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updated := base.DeepCopy()
+			tc.mutate(updated)
+
+			matched := false
+			for _, p := range predicates {
+				matched = matched || p.Update(event.TypedUpdateEvent[*unstructured.Unstructured]{
+					ObjectOld: base,
+					ObjectNew: updated,
+				})
+			}
+			require.Equal(t, tc.expect, matched)
 		})
 	}
 }
@@ -1181,6 +1246,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		name          string
 		configs       []client.Object
 		endpointSlice client.Object
+		namespace     string
+		envoyGateway  *egv1a1.EnvoyGateway
 		expect        bool
 	}{
 		{
@@ -1268,6 +1335,29 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "mirror-service", false),
 			expect:        true,
 		},
+		{
+			name:         "rate limit service endpointslice with global rate limit enabled",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: true,
+		},
+		{
+			name:      "rate limit service endpointslice but global rate limit disabled",
+			namespace: "envoy-gateway-system",
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: false,
+		},
+		{
+			name:         "endpointslice for an unrelated service named envoy-ratelimit in another namespace",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			endpointSlice: test.GetEndpointSlice(
+				types.NamespacedName{Namespace: "other-namespace", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+			expect: false,
+		},
 	}
 
 	// Create the reconciler.
@@ -1279,6 +1369,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		r.namespace = tc.namespace
+		r.envoyGateway = tc.envoyGateway
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
@@ -1381,6 +1473,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		tlsRouteCRDAbsent  bool
 		configs            []client.Object
 		service            client.Object
+		namespace          string
+		envoyGateway       *egv1a1.EnvoyGateway
 		expect             bool
 	}{
 		{
@@ -1725,6 +1819,26 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			}, nil),
 			expect: false,
 		},
+		{
+			name:         "rate limit service in controller namespace with global rate limit enabled",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			service:      test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
+			expect:       true,
+		},
+		{
+			name:      "rate limit service in controller namespace but global rate limit disabled",
+			namespace: "envoy-gateway-system",
+			service:   test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
+			expect:    false,
+		},
+		{
+			name:         "unrelated service named envoy-ratelimit in a different namespace",
+			namespace:    "envoy-gateway-system",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			service:      test.GetService(types.NamespacedName{Namespace: "other-namespace", Name: rateLimitServiceName}, nil, nil),
+			expect:       false,
+		},
 	}
 
 	// Create the reconciler.
@@ -1745,6 +1859,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		r.grpcRouteCRDExists = !tc.grpcRouteCRDAbsent
 		r.tlsRouteCRDExists = !tc.tlsRouteCRDAbsent
+		r.namespace = tc.namespace
+		r.envoyGateway = tc.envoyGateway
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).

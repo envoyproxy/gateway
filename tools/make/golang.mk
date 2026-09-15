@@ -143,6 +143,13 @@ go.lint.fmt:
 	@$(LOG_TARGET)
 	$(GO_TOOL) golangci-lint fmt --config=tools/linter/golangci-lint/.golangci.yml
 
+.PHONY: go.fix
+go.fix: go.fix.examples ## Run go fix across all modules
+	@$(LOG_TARGET)
+	go fix ./...
+	cd test && go fix ./...
+	cd tools && go fix ./...
+
 .PHONY: go.generate
 go.generate: ## Generate code from templates
 	@$(LOG_TARGET)
