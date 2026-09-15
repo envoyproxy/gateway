@@ -1,0 +1,13 @@
+global:
+  images:
+    envoyProxy:
+      image: "private-hub/envoyproxy/envoy:dev"
+
+config:
+  envoyGateway:
+    envoyProxy:
+      provider:
+        type: Kubernetes
+        kubernetes:
+          envoyDaemonSet:
+            name: test-daemonset
