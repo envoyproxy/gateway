@@ -399,8 +399,7 @@ func TestPermissionCacheDoesNotHoldLockDuringBackgroundCheck(t *testing.T) {
 	cache.cache[permissionCacheKey(cachedImage, nil, nil)].lastCheck = time.Now().Add(time.Hour)
 	cache.Unlock()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	cache.Start(ctx)
 
 	require.Eventually(t, func() bool {

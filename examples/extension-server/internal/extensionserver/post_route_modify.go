@@ -40,7 +40,7 @@ func (s *Server) PostRouteModify(ctx context.Context, req *pb.PostRouteModifyReq
 	var inferencePool *inferencev1.InferencePool
 	for _, ext := range req.PostRouteContext.ExtensionResources {
 		// Parse the JSON to check the kind and apiVersion
-		var resourceInfo map[string]interface{}
+		var resourceInfo map[string]any
 		if err := json.Unmarshal(ext.GetUnstructuredBytes(), &resourceInfo); err != nil {
 			return &pb.PostRouteModifyResponse{
 				Route: req.Route,

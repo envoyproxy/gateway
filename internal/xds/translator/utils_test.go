@@ -118,11 +118,9 @@ func TestDetermineIPFamily(t *testing.T) {
 func TestAddClusterFromURLWithTraffic(t *testing.T) {
 	tCtx := &types.ResourceVersionTable{}
 	traffic := &ir.TrafficFeatures{
-		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
-			Timeout: &ir.Timeout{
-				TCP: &ir.TCPTimeout{
-					ConnectTimeout: &metav1.Duration{Duration: 2 * time.Second},
-				},
+		Timeout: &ir.Timeout{
+			TCP: &ir.TCPTimeout{
+				ConnectTimeout: &metav1.Duration{Duration: 2 * time.Second},
 			},
 		},
 	}

@@ -333,9 +333,7 @@ func (t *Translator) processURLRewriteFilter(
 			}
 			if rewrite.Path.ReplaceFullPath != nil {
 				pathModifier = &ir.ExtendedHTTPPathModifier{
-					HTTPPathModifier: ir.HTTPPathModifier{
-						FullReplace: rewrite.Path.ReplaceFullPath,
-					},
+					FullReplace: rewrite.Path.ReplaceFullPath,
 				}
 			}
 		case gwapiv1.PrefixMatchHTTPPathModifier:
@@ -353,9 +351,7 @@ func (t *Translator) processURLRewriteFilter(
 			}
 			if rewrite.Path.ReplacePrefixMatch != nil {
 				pathModifier = &ir.ExtendedHTTPPathModifier{
-					HTTPPathModifier: ir.HTTPPathModifier{
-						PrefixMatchReplace: rewrite.Path.ReplacePrefixMatch,
-					},
+					PrefixMatchReplace: rewrite.Path.ReplacePrefixMatch,
 				}
 			}
 		default:
@@ -1041,12 +1037,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 			// To get only the group we cut off the version.
 			// This could be a one liner but just to be safe we check that the APIVersion is properly formatted
-			idx := strings.IndexByte(apiVers, '/')
-			if idx == -1 {
+			before, _, ok := strings.Cut(apiVers, "/")
+			if !ok {
 				errMsg := fmt.Sprintf("Unable to translate APIVersion for Extension Filter: kind: %s, %s/%s", res.GetKind(), filterNs, extFilter.Name)
 				return t.processUnresolvedHTTPFilter(errMsg, filterContext)
 			}
-			group := apiVers[:idx]
+			group := before
 			if group == string(extFilter.Group) {
 				res := res // Capture loop variable
 				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, &ir.UnstructuredRef{

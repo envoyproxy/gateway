@@ -26,7 +26,7 @@ func TestMergePolicy(t *testing.T) {
 
 	for _, caseFile := range caseFiles {
 		caseName := strings.TrimPrefix(strings.TrimSuffix(caseFile, ".in.yaml"), baseDir+"/")
-		policyType := strings.SplitN(caseName, "_", 2)[0]
+		policyType, _, _ := strings.Cut(caseName, "_")
 
 		t.Run(caseName, func(t *testing.T) {
 			switch policyType {

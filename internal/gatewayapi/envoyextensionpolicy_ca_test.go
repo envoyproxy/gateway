@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -61,10 +60,8 @@ func TestBuildWasmWithTLS(t *testing.T) {
 			resources: &resource.Resources{
 				Secrets: []*corev1.Secret{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: ns,
-							Name:      "ca-secret",
-						},
+						Namespace: ns,
+						Name:      "ca-secret",
 						Data: map[string][]byte{
 							"ca.crt": caData,
 						},
@@ -91,10 +88,8 @@ func TestBuildWasmWithTLS(t *testing.T) {
 			resources: &resource.Resources{
 				Secrets: []*corev1.Secret{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: ns,
-							Name:      "ca-secret",
-						},
+						Namespace: ns,
+						Name:      "ca-secret",
 						Data: map[string][]byte{
 							"ca.crt": caData,
 						},
@@ -162,10 +157,8 @@ func TestBuildWasmWithTLS(t *testing.T) {
 			}
 
 			policy := &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "test-policy",
-				},
+				Namespace: ns,
+				Name:      "test-policy",
 			}
 
 			_, err := translator.buildWasm("test-wasm", tt.wasm, policy, 0, tt.resources)

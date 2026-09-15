@@ -20,10 +20,8 @@ import (
 
 func TestContexts(t *testing.T) {
 	gateway := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "envoy-gateway",
-			Name:      "gateway-1",
-		},
+		Namespace: "envoy-gateway",
+		Name:      "gateway-1",
 		Spec: gwapiv1.GatewaySpec{
 			Listeners: []gwapiv1.Listener{
 				{
@@ -64,10 +62,8 @@ func TestContexts(t *testing.T) {
 
 func TestContextsStaleListener(t *testing.T) {
 	gateway := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "envoy-gateway",
-			Name:      "gateway-1",
-		},
+		Namespace: "envoy-gateway",
+		Name:      "gateway-1",
 		Spec: gwapiv1.GatewaySpec{
 			Listeners: []gwapiv1.Listener{
 				{
@@ -179,10 +175,8 @@ func TestAttachEnvoyProxy(t *testing.T) {
 		{
 			name: "gatewayclass envoy proxy overrides default spec",
 			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "envoy-gateway-system",
-					Name:      "gc-proxy",
-				},
+				Namespace: "envoy-gateway-system",
+				Name:      "gc-proxy",
 				Spec: egv1a1.EnvoyProxySpec{
 					Concurrency: new(int32(8)),
 				},
@@ -200,19 +194,15 @@ func TestAttachEnvoyProxy(t *testing.T) {
 				Name:  "gw-proxy",
 			},
 			envoyProxyForGateway: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "gw-proxy",
-				},
+				Namespace: "default",
+				Name:      "gw-proxy",
 				Spec: egv1a1.EnvoyProxySpec{
 					Concurrency: new(int32(16)),
 				},
 			},
 			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "envoy-gateway-system",
-					Name:      "gc-proxy",
-				},
+				Namespace: "envoy-gateway-system",
+				Name:      "gc-proxy",
 				Spec: egv1a1.EnvoyProxySpec{
 					Concurrency: new(int32(8)),
 				},
@@ -234,10 +224,8 @@ func TestAttachEnvoyProxy(t *testing.T) {
 		{
 			name: "gatewayclass overrides default merge gateways setting",
 			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "envoy-gateway-system",
-					Name:      "gc-proxy",
-				},
+				Namespace: "envoy-gateway-system",
+				Name:      "gc-proxy",
 				Spec: egv1a1.EnvoyProxySpec{
 					MergeGateways: new(false),
 				},
@@ -253,10 +241,8 @@ func TestAttachEnvoyProxy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create gateway
 			gateway := &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "test-gateway",
-				},
+				Namespace: "default",
+				Name:      "test-gateway",
 				Spec: gwapiv1.GatewaySpec{
 					GatewayClassName: "test-gc",
 				},

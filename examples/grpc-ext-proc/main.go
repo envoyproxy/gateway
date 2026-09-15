@@ -219,8 +219,8 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 				}
 			}
 
-			emittedDynamicMetadata, _ := structpb.NewStruct(map[string]interface{}{
-				"io.envoyproxy.gateway.e2e": map[string]interface{}{
+			emittedDynamicMetadata, _ := structpb.NewStruct(map[string]any{
+				"io.envoyproxy.gateway.e2e": map[string]any{
 					"ext-proc-emitted-metadata": "received",
 				},
 			})

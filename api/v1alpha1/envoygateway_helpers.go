@@ -8,6 +8,7 @@ package v1alpha1
 import (
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 	"time"
 
@@ -48,9 +49,7 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 
 	if e.Provider.Kubernetes == nil {
 		e.Provider.Kubernetes = &EnvoyGatewayKubernetesProvider{
-			EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-				LeaderElection: DefaultLeaderElection(),
-			},
+			LeaderElection: DefaultLeaderElection(),
 		}
 	}
 	if e.Provider.Kubernetes.LeaderElection == nil {
@@ -178,10 +177,8 @@ var defaultRuntimeFlags = map[RuntimeFlag]bool{
 // IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
 func (f *GatewayAPISettings) IsEnabled(api GatewayAPI) bool {
 	if f != nil {
-		for _, enable := range f.Enabled {
-			if enable == api {
-				return true
-			}
+		if slices.Contains(f.Enabled, api) {
+			return true
 		}
 	}
 
@@ -191,15 +188,11 @@ func (f *GatewayAPISettings) IsEnabled(api GatewayAPI) bool {
 // IsEnabled checks if a runtime flag is enabled in the EnvoyGateway configuration.
 func (f *RuntimeFlags) IsEnabled(flag RuntimeFlag) bool {
 	if f != nil {
-		for _, disable := range f.Disabled {
-			if disable == flag {
-				return false
-			}
+		if slices.Contains(f.Disabled, flag) {
+			return false
 		}
-		for _, enable := range f.Enabled {
-			if enable == flag {
-				return true
-			}
+		if slices.Contains(f.Enabled, flag) {
+			return true
 		}
 	}
 
@@ -344,10 +337,8 @@ func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 	return &EnvoyGatewayProvider{
 		Type: ProviderTypeKubernetes,
 		Kubernetes: &EnvoyGatewayKubernetesProvider{
-			EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-				LeaderElection: DefaultLeaderElection(),
-				Client:         DefaultKubernetesClient(),
-			},
+			LeaderElection: DefaultLeaderElection(),
+			Client:         DefaultKubernetesClient(),
 		},
 	}
 }
@@ -365,9 +356,7 @@ func (e *EnvoyGateway) GetEnvoyGatewayProvider() *EnvoyGatewayProvider {
 // DefaultEnvoyGatewayKubeProvider returns a new EnvoyGatewayKubernetesProvider with default settings.
 func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
 	return &EnvoyGatewayKubernetesProvider{
-		EnvoyGatewayKubernetesInfrastructureConfiguration: EnvoyGatewayKubernetesInfrastructureConfiguration{
-			RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
-		},
+		RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
 	}
 }
 

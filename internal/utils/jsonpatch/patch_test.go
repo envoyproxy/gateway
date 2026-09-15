@@ -249,7 +249,7 @@ func TestApplyJSONPatches(t *testing.T) {
 }
 
 func formatJSON(s []byte) (string, error) {
-	var obj map[string]interface{}
+	var obj map[string]any
 	err := json.Unmarshal(s, &obj)
 	if err != nil {
 		return "", err

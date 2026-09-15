@@ -16,7 +16,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -432,10 +431,8 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 	var (
 		name, ns = r.Name(), r.Namespace()
 		sa       = &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Namespace: ns,
+			Name:      name,
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
@@ -455,10 +452,8 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 	}()
 
 	return i.Client.DeleteAllOf(ctx, sa, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace:     ns,
-			LabelSelector: r.LabelSelector(),
-		},
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
 	})
 }
 
@@ -468,10 +463,8 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 		name, ns           = r.Name(), r.Namespace()
 		recordDeleteMetric = true
 		deployment         = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Namespace: ns,
+			Name:      name,
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
@@ -502,10 +495,8 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 	}()
 
 	return i.Client.DeleteAllOf(ctx, deployment, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace:     ns,
-			LabelSelector: r.LabelSelector(),
-		},
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
 	})
 }
 
@@ -515,10 +506,8 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 		name, ns           = r.Name(), r.Namespace()
 		recordDeleteMetric = true
 		daemonSet          = &appsv1.DaemonSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Namespace: ns,
+			Name:      name,
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
@@ -549,10 +538,8 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 	}()
 
 	return i.Client.DeleteAllOf(ctx, daemonSet, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace:     ns,
-			LabelSelector: r.LabelSelector(),
-		},
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
 	})
 }
 
@@ -561,10 +548,8 @@ func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err erro
 	var (
 		name, ns = r.Name(), r.Namespace()
 		cm       = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Namespace: ns,
+			Name:      name,
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
@@ -584,10 +569,8 @@ func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) (err erro
 	}()
 
 	return i.Client.DeleteAllOf(ctx, cm, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace:     ns,
-			LabelSelector: r.LabelSelector(),
-		},
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
 	})
 }
 
@@ -596,10 +579,8 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 	var (
 		name, ns = r.Name(), r.Namespace()
 		svc      = &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Namespace: ns,
+			Name:      name,
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
@@ -619,10 +600,8 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 	}()
 
 	return i.Client.DeleteAllOf(ctx, svc, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace:     ns,
-			LabelSelector: r.LabelSelector(),
-		},
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
 	})
 }
 
@@ -632,10 +611,8 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 		name, ns           = r.Name(), r.Namespace()
 		recordDeleteMetric = true
 		hpa                = &autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Namespace: ns,
+			Name:      name,
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
@@ -666,10 +643,8 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 	}()
 
 	return i.Client.DeleteAllOf(ctx, hpa, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace:     ns,
-			LabelSelector: r.LabelSelector(),
-		},
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
 	})
 }
 
@@ -679,10 +654,8 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 		name, ns           = r.Name(), r.Namespace()
 		recordDeleteMetric = true
 		pdb                = &policyv1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Namespace: ns,
+			Name:      name,
 		}
 		startTime = time.Now()
 		labels    = []metrics.LabelValue{
@@ -713,10 +686,8 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 	}()
 
 	return i.Client.DeleteAllOf(ctx, pdb, &client.DeleteAllOfOptions{
-		ListOptions: client.ListOptions{
-			Namespace:     ns,
-			LabelSelector: r.LabelSelector(),
-		},
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
 	})
 }
 

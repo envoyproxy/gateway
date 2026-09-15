@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"slices"
 	"time"
 
 	"github.com/telepresenceio/watchable"
@@ -175,8 +176,8 @@ func coalesceUpdates[K comparable, V any](logger logging.Logger, updates []watch
 	seen := make(map[K]struct{}, len(updates))
 	write := len(updates) - 1
 
-	for read := len(updates) - 1; read >= 0; read-- {
-		update := updates[read]
+	for _, update := range slices.Backward(updates) {
+
 		if _, ok := seen[update.Key]; ok {
 			continue
 		}

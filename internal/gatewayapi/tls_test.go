@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -120,11 +119,9 @@ func createTestSecrets(t *testing.T, certFiles, keyFiles []string) []*corev1.Sec
 		require.NoError(t, err)
 
 		secrets = append(secrets, &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretName,
-				Namespace: secretNamespace,
-			},
-			Type: corev1.SecretTypeTLS,
+			Name:      secretName,
+			Namespace: secretNamespace,
+			Type:      corev1.SecretTypeTLS,
 			Data: map[string][]byte{
 				corev1.TLSCertKey:       certData,
 				corev1.TLSPrivateKeyKey: keyData,
@@ -561,13 +558,13 @@ func TestBuildListenerTLSParametersDedupCACerts(t *testing.T) {
 	// both secrets contain the identical CA PEM
 	makeCASecret := func(name string) *corev1.Secret {
 		return &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
-			Data:       map[string][]byte{CACertKey: caCertPEM},
+			Namespace: ns, Name: name,
+			Data: map[string][]byte{CACertKey: caCertPEM},
 		}
 	}
 
 	policy := &egv1a1.ClientTrafficPolicy{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "test-policy"},
+		Namespace: ns, Name: "test-policy",
 		Spec: egv1a1.ClientTrafficPolicySpec{
 			TLS: &egv1a1.ClientTLSSettings{
 				ClientValidation: &egv1a1.ClientValidationContext{
@@ -734,9 +731,9 @@ func TestParseCertsExpiredLeafChainRejected(t *testing.T) {
 	require.NoError(t, err, "leaf and key are expected to match; the chain is only expired")
 
 	secrets := []*corev1.Secret{{
-		ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: secretNamespace},
-		Type:       corev1.SecretTypeTLS,
-		Data:       map[string][]byte{corev1.TLSCertKey: chain, corev1.TLSPrivateKeyKey: key},
+		Name: secretName, Namespace: secretNamespace,
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{corev1.TLSCertKey: chain, corev1.TLSPrivateKeyKey: key},
 	}}
 
 	validSecrets, certs, listenerErr := parseCertsFromTLSSecretsData(secrets)
@@ -749,16 +746,16 @@ func TestParseCertsExpiredLeafChainRejected(t *testing.T) {
 
 func TestValidateTerminateModeDeduplicatesSDSCertificateRefs(t *testing.T) {
 	sdsSecretOne := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "sds-one", Namespace: secretNamespace},
-		Type:       egv1a1.SDSSecretType,
+		Name: "sds-one", Namespace: secretNamespace,
+		Type: egv1a1.SDSSecretType,
 		Data: map[string][]byte{
 			"secretName": []byte("listener-one"),
 			"url":        []byte("unix:///var/run/sds/one.sock"),
 		},
 	}
 	sdsSecretTwo := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "sds-two", Namespace: secretNamespace},
-		Type:       egv1a1.SDSSecretType,
+		Name: "sds-two", Namespace: secretNamespace,
+		Type: egv1a1.SDSSecretType,
 		Data: map[string][]byte{
 			"secretName": []byte("listener-two"),
 			"url":        []byte("unix:///var/run/sds/two.sock"),
@@ -766,7 +763,7 @@ func TestValidateTerminateModeDeduplicatesSDSCertificateRefs(t *testing.T) {
 	}
 
 	gateway := &GatewayContext{Gateway: &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: secretNamespace},
+		Name: "gateway", Namespace: secretNamespace,
 		Spec: gwapiv1.GatewaySpec{Listeners: []gwapiv1.Listener{{
 			Name: "https",
 			TLS: &gwapiv1.ListenerTLSConfig{CertificateRefs: []gwapiv1.SecretObjectReference{

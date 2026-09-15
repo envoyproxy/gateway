@@ -12,7 +12,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -242,14 +241,10 @@ func (r *gatewayAPIReconciler) processGRPCRouteFilter(
 
 	// NOTE: filters must be in the same namespace as the GRPCRoute.
 	key := utils.NamespacedNameWithGroupKind{
-		NamespacedName: types.NamespacedName{
-			Namespace: grpcRoute.Namespace,
-			Name:      string(filter.ExtensionRef.Name),
-		},
-		GroupKind: schema.GroupKind{
-			Group: string(filter.ExtensionRef.Group),
-			Kind:  string(filter.ExtensionRef.Kind),
-		},
+		Namespace: grpcRoute.Namespace,
+		Name:      string(filter.ExtensionRef.Name),
+		Group:     string(filter.ExtensionRef.Group),
+		Kind:      string(filter.ExtensionRef.Kind),
 	}
 
 	if string(filter.ExtensionRef.Group) == egv1a1.GroupName &&
@@ -420,14 +415,10 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 		// NOTE: filters must be in the same namespace as the HTTPRoute
 		// Check if it's a Kind managed by an extension and add to resourceTree
 		key := utils.NamespacedNameWithGroupKind{
-			NamespacedName: types.NamespacedName{
-				Namespace: httpRoute.Namespace,
-				Name:      string(filter.ExtensionRef.Name),
-			},
-			GroupKind: schema.GroupKind{
-				Group: string(filter.ExtensionRef.Group),
-				Kind:  string(filter.ExtensionRef.Kind),
-			},
+			Namespace: httpRoute.Namespace,
+			Name:      string(filter.ExtensionRef.Name),
+			Group:     string(filter.ExtensionRef.Group),
+			Kind:      string(filter.ExtensionRef.Kind),
 		}
 
 		switch string(filter.ExtensionRef.Kind) {

@@ -8,9 +8,9 @@ package synthesizer
 import (
 	"errors"
 	"fmt"
+	"maps"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -23,15 +23,11 @@ func (is *InfraSynthesizer) GetService(ir *Infra) (*corev1.Service, error) {
 		return nil, fmt.Errorf("failed to build service ports: %w", err)
 	}
 	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: is.Namespace,
-			Name:      resourceName(ir),
-			Labels:    is.generateServiceLabels(ir),
-		},
+		Kind:       "Service",
+		APIVersion: "v1",
+		Namespace:  is.Namespace,
+		Name:       resourceName(ir),
+		Labels:     is.generateServiceLabels(ir),
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeLoadBalancer,
 			Ports:    svcPorts,
@@ -47,9 +43,7 @@ func (is *InfraSynthesizer) generateServiceLabels(ir *Infra) map[string]string {
 		"app.kubernetes.io/name":          "envoy",
 		"gateway.envoyproxy.io/delegated": "example-infra-server",
 	}
-	for k, v := range ir.Proxy.Metadata.Labels {
-		labels[k] = v
-	}
+	maps.Copy(labels, ir.Proxy.Metadata.Labels)
 	return labels
 }
 

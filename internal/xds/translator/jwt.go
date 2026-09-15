@@ -9,6 +9,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"maps"
+	"slices"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -116,9 +118,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 		if err != nil {
 			return err
 		}
-		for providerKey, jwtProvider := range providers {
-			jwtAuthn.Providers[providerKey] = jwtProvider
-		}
+		maps.Copy(jwtAuthn.Providers, providers)
 
 		requirement := buildJWTRequirement(reqs)
 		requirementName, err := jwtRequirementName(route.Security.JWT, requirement)
@@ -471,13 +471,7 @@ func listenerContainsJWTAuthn(irListener *ir.HTTPListener) bool {
 		return false
 	}
 
-	for _, route := range irListener.Routes {
-		if routeContainsJWTAuthn(route) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(irListener.Routes, routeContainsJWTAuthn)
 }
 
 // routeContainsJWTAuthn returns true if JWT authentication exists for the

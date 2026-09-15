@@ -19,10 +19,8 @@ func TestTracesRunner_New(t *testing.T) {
 	cfg := &config.Server{
 		Logger: logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 		EnvoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				Telemetry: &egv1a1.EnvoyGatewayTelemetry{
-					Traces: &egv1a1.EnvoyGatewayTraces{},
-				},
+			Telemetry: &egv1a1.EnvoyGatewayTelemetry{
+				Traces: &egv1a1.EnvoyGatewayTraces{},
 			},
 		},
 	}

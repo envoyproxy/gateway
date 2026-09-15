@@ -175,12 +175,10 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   ReadinessPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   ReadinessPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -188,12 +186,10 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 				FailureThreshold: 30,
 			},
 			ReadinessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   ReadinessPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   ReadinessPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    5,
@@ -201,12 +197,10 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 				FailureThreshold: 1,
 			},
 			LivenessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   ReadinessPath,
-						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   ReadinessPath,
+					Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -258,37 +252,29 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 		rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		volumes = append(volumes, corev1.Volume{
 			Name: "redis-certs",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName:  string(rateLimit.Backend.Redis.TLS.CertificateRef.Name),
-					DefaultMode: new(int32(420)),
-				},
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  string(rateLimit.Backend.Redis.TLS.CertificateRef.Name),
+				DefaultMode: new(int32(420)),
 			},
 		})
 	}
 
 	volumes = append(volumes, corev1.Volume{
 		Name: "certs",
-		VolumeSource: corev1.VolumeSource{
-			// #nosec G101 - This refers to a Kubernetes secret volume, not a credential
-			Secret: &corev1.SecretVolumeSource{
-				SecretName:  "envoy-rate-limit",
-				DefaultMode: new(int32(420)),
-			},
+		// #nosec G101 - This refers to a Kubernetes secret volume, not a credential
+		Secret: &corev1.SecretVolumeSource{
+			SecretName:  "envoy-rate-limit",
+			DefaultMode: new(int32(420)),
 		},
 	})
 
 	if enablePrometheus(rateLimit) {
 		volumes = append(volumes, corev1.Volume{
 			Name: "statsd-exporter-config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "statsd-exporter-config",
-					},
-					Optional:    new(true),
-					DefaultMode: new(int32(420)),
-				},
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				Name:        "statsd-exporter-config",
+				Optional:    new(true),
+				DefaultMode: new(int32(420)),
 			},
 		})
 	}

@@ -42,16 +42,12 @@ func GetPodDisruptionBudget(pdb *egv1a1.KubernetesPodDisruptionBudgetSpec,
 	}
 
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-			Labels:    selector.MatchLabels,
-		},
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "policy/v1",
-			Kind:       "PodDisruptionBudget",
-		},
-		Spec: pdbSpec,
+		Name:       nn.Name,
+		Namespace:  nn.Namespace,
+		Labels:     selector.MatchLabels,
+		APIVersion: "policy/v1",
+		Kind:       "PodDisruptionBudget",
+		Spec:       pdbSpec,
 	}
 
 	podDisruptionBudget.OwnerReferences = append(podDisruptionBudget.OwnerReferences, ownerReferences...)

@@ -44,40 +44,32 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "unspecified gateway",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-				},
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 			},
 			expect: false,
 		},
 		{
 			name: "unspecified provider",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-				},
+				Gateway: egv1a1.DefaultGateway(),
 			},
 			expect: false,
 		},
 		{
 			name: "empty gateway controllerName",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  &egv1a1.Gateway{ControllerName: ""},
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-				},
+				Gateway:  &egv1a1.Gateway{ControllerName: ""},
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 			},
 			expect: false,
 		},
 		{
 			name: "nil custom provider",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type:   egv1a1.ProviderTypeCustom,
-						Custom: nil,
-					},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type:   egv1a1.ProviderTypeCustom,
+					Custom: nil,
 				},
 			},
 			expect: false,
@@ -85,12 +77,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "empty custom provider",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type:   egv1a1.ProviderTypeCustom,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{},
-					},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type:   egv1a1.ProviderTypeCustom,
+					Custom: &egv1a1.EnvoyGatewayCustomProvider{},
 				},
 			},
 			expect: false,
@@ -98,21 +88,19 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "custom provider with file resource provider and host infra provider",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeCustom,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{
-									Paths: []string{"foo", "bar"},
-								},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeCustom,
+					Custom: &egv1a1.EnvoyGatewayCustomProvider{
+						Resource: egv1a1.EnvoyGatewayResourceProvider{
+							Type: egv1a1.ResourceProviderTypeFile,
+							File: &egv1a1.EnvoyGatewayFileResourceProvider{
+								Paths: []string{"foo", "bar"},
 							},
-							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: egv1a1.InfrastructureProviderTypeHost,
-								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-							},
+						},
+						Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+							Type: egv1a1.InfrastructureProviderTypeHost,
+							Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
 						},
 					},
 				},
@@ -122,16 +110,14 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "custom provider with file provider and k8s infra provider",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeCustom,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{
-									Paths: []string{"foo", "bar"},
-								},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeCustom,
+					Custom: &egv1a1.EnvoyGatewayCustomProvider{
+						Resource: egv1a1.EnvoyGatewayResourceProvider{
+							Type: egv1a1.ResourceProviderTypeFile,
+							File: &egv1a1.EnvoyGatewayFileResourceProvider{
+								Paths: []string{"foo", "bar"},
 							},
 						},
 					},
@@ -142,14 +128,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "custom provider with unsupported resource provider",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeCustom,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: "foobar",
-							},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeCustom,
+					Custom: &egv1a1.EnvoyGatewayCustomProvider{
+						Resource: egv1a1.EnvoyGatewayResourceProvider{
+							Type: "foobar",
 						},
 					},
 				},
@@ -159,14 +143,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "custom provider with file provider but no file struct",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeCustom,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-							},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeCustom,
+					Custom: &egv1a1.EnvoyGatewayCustomProvider{
+						Resource: egv1a1.EnvoyGatewayResourceProvider{
+							Type: egv1a1.ResourceProviderTypeFile,
 						},
 					},
 				},
@@ -176,20 +158,18 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "custom provider with file provider and host infra provider but no host struct",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeCustom,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{
-									Paths: []string{"a", "b"},
-								},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeCustom,
+					Custom: &egv1a1.EnvoyGatewayCustomProvider{
+						Resource: egv1a1.EnvoyGatewayResourceProvider{
+							Type: egv1a1.ResourceProviderTypeFile,
+							File: &egv1a1.EnvoyGatewayFileResourceProvider{
+								Paths: []string{"a", "b"},
 							},
-							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: egv1a1.InfrastructureProviderTypeHost,
-							},
+						},
+						Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+							Type: egv1a1.InfrastructureProviderTypeHost,
 						},
 					},
 				},
@@ -199,20 +179,18 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "custom provider with file provider and unsupported infra provider",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeCustom,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{
-									Paths: []string{"a", "b"},
-								},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeCustom,
+					Custom: &egv1a1.EnvoyGatewayCustomProvider{
+						Resource: egv1a1.EnvoyGatewayResourceProvider{
+							Type: egv1a1.ResourceProviderTypeFile,
+							File: &egv1a1.EnvoyGatewayFileResourceProvider{
+								Paths: []string{"a", "b"},
 							},
-							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: "foobar",
-							},
+						},
+						Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+							Type: "foobar",
 						},
 					},
 				},
@@ -222,19 +200,17 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "custom provider with file provider and host infra provider but no paths assign in resource",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeCustom,
-						Custom: &egv1a1.EnvoyGatewayCustomProvider{
-							Resource: egv1a1.EnvoyGatewayResourceProvider{
-								Type: egv1a1.ResourceProviderTypeFile,
-								File: &egv1a1.EnvoyGatewayFileResourceProvider{},
-							},
-							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type: egv1a1.InfrastructureProviderTypeHost,
-								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-							},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeCustom,
+					Custom: &egv1a1.EnvoyGatewayCustomProvider{
+						Resource: egv1a1.EnvoyGatewayResourceProvider{
+							Type: egv1a1.ResourceProviderTypeFile,
+							File: &egv1a1.EnvoyGatewayFileResourceProvider{},
+						},
+						Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+							Type: egv1a1.InfrastructureProviderTypeHost,
+							Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
 						},
 					},
 				},
@@ -244,25 +220,21 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "empty ratelimit",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:   egv1a1.DefaultGateway(),
-					Provider:  egv1a1.DefaultEnvoyGatewayProvider(),
-					RateLimit: &egv1a1.RateLimit{},
-				},
+				Gateway:   egv1a1.DefaultGateway(),
+				Provider:  egv1a1.DefaultEnvoyGatewayProvider(),
+				RateLimit: &egv1a1.RateLimit{},
 			},
 			expect: false,
 		},
 		{
 			name: "empty ratelimit redis setting",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					RateLimit: &egv1a1.RateLimit{
-						Backend: egv1a1.RateLimitDatabaseBackend{
-							Type:  egv1a1.RedisBackendType,
-							Redis: &egv1a1.RateLimitRedisSettings{},
-						},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				RateLimit: &egv1a1.RateLimit{
+					Backend: egv1a1.RateLimitDatabaseBackend{
+						Type:  egv1a1.RedisBackendType,
+						Redis: &egv1a1.RateLimitRedisSettings{},
 					},
 				},
 			},
@@ -271,15 +243,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "unknown ratelimit redis url format",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					RateLimit: &egv1a1.RateLimit{
-						Backend: egv1a1.RateLimitDatabaseBackend{
-							Type: egv1a1.RedisBackendType,
-							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: new(":foo"),
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				RateLimit: &egv1a1.RateLimit{
+					Backend: egv1a1.RateLimitDatabaseBackend{
+						Type: egv1a1.RedisBackendType,
+						Redis: &egv1a1.RateLimitRedisSettings{
+							URL: new(":foo"),
 						},
 					},
 				},
@@ -289,15 +259,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "happy ratelimit redis settings",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					RateLimit: &egv1a1.RateLimit{
-						Backend: egv1a1.RateLimitDatabaseBackend{
-							Type: egv1a1.RedisBackendType,
-							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: new("localhost:6376"),
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				RateLimit: &egv1a1.RateLimit{
+					Backend: egv1a1.RateLimitDatabaseBackend{
+						Type: egv1a1.RedisBackendType,
+						Redis: &egv1a1.RateLimitRedisSettings{
+							URL: new("localhost:6376"),
 						},
 					},
 				},
@@ -307,15 +275,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "happy ratelimit redis sentinel settings",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					RateLimit: &egv1a1.RateLimit{
-						Backend: egv1a1.RateLimitDatabaseBackend{
-							Type: egv1a1.RedisBackendType,
-							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: new("primary_.-,node-0:26379,node-1:26379"),
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				RateLimit: &egv1a1.RateLimit{
+					Backend: egv1a1.RateLimitDatabaseBackend{
+						Type: egv1a1.RedisBackendType,
+						Redis: &egv1a1.RateLimitRedisSettings{
+							URL: new("primary_.-,node-0:26379,node-1:26379"),
 						},
 					},
 				},
@@ -325,15 +291,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "happy ratelimit redis cluster settings",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					RateLimit: &egv1a1.RateLimit{
-						Backend: egv1a1.RateLimitDatabaseBackend{
-							Type: egv1a1.RedisBackendType,
-							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: new("node-0:6376,node-1:6376,node-2:6376"),
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				RateLimit: &egv1a1.RateLimit{
+					Backend: egv1a1.RateLimitDatabaseBackend{
+						Type: egv1a1.RedisBackendType,
+						Redis: &egv1a1.RateLimitRedisSettings{
+							URL: new("node-0:6376,node-1:6376,node-2:6376"),
 						},
 					},
 				},
@@ -343,32 +307,30 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "happy extension settings",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
+						},
+					},
+					Hooks: &egv1a1.ExtensionHooks{
+						XDSTranslator: &egv1a1.XDSTranslatorHooks{
+							Pre: []egv1a1.XDSTranslatorHook{},
+							Post: []egv1a1.XDSTranslatorHook{
+								egv1a1.XDSHTTPListener,
+								egv1a1.XDSTranslation,
+								egv1a1.XDSRoute,
+								egv1a1.XDSVirtualHost,
 							},
 						},
-						Hooks: &egv1a1.ExtensionHooks{
-							XDSTranslator: &egv1a1.XDSTranslatorHooks{
-								Pre: []egv1a1.XDSTranslatorHook{},
-								Post: []egv1a1.XDSTranslatorHook{
-									egv1a1.XDSHTTPListener,
-									egv1a1.XDSTranslation,
-									egv1a1.XDSRoute,
-									egv1a1.XDSVirtualHost,
-								},
-							},
-						},
-						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 80,
-						},
+					},
+					Service: &egv1a1.ExtensionService{
+						Host: "foo.extension",
+						Port: 80,
 					},
 				},
 			},
@@ -377,40 +339,38 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "happy extension settings tls",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
+						},
+					},
+					Hooks: &egv1a1.ExtensionHooks{
+						XDSTranslator: &egv1a1.XDSTranslatorHooks{
+							Pre: []egv1a1.XDSTranslatorHook{},
+							Post: []egv1a1.XDSTranslatorHook{
+								egv1a1.XDSHTTPListener,
+								egv1a1.XDSTranslation,
+								egv1a1.XDSRoute,
+								egv1a1.XDSVirtualHost,
 							},
 						},
-						Hooks: &egv1a1.ExtensionHooks{
-							XDSTranslator: &egv1a1.XDSTranslatorHooks{
-								Pre: []egv1a1.XDSTranslatorHook{},
-								Post: []egv1a1.XDSTranslatorHook{
-									egv1a1.XDSHTTPListener,
-									egv1a1.XDSTranslation,
-									egv1a1.XDSRoute,
-									egv1a1.XDSVirtualHost,
-								},
+					},
+					Service: &egv1a1.ExtensionService{
+						Host: "foo.extension",
+						Port: 443,
+						TLS: &egv1a1.ExtensionTLS{
+							CertificateRef: gwapiv1.SecretObjectReference{
+								Kind: &TLSSecretKind,
+								Name: gwapiv1.ObjectName("certificate"),
 							},
-						},
-						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 443,
-							TLS: &egv1a1.ExtensionTLS{
-								CertificateRef: gwapiv1.SecretObjectReference{
-									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("certificate"),
-								},
-								ClientCertificateRef: &gwapiv1.SecretObjectReference{
-									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("client-certificate"),
-								},
+							ClientCertificateRef: &gwapiv1.SecretObjectReference{
+								Kind: &TLSSecretKind,
+								Name: gwapiv1.ObjectName("client-certificate"),
 							},
 						},
 					},
@@ -421,33 +381,31 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "happy extension settings no resources",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Hooks: &egv1a1.ExtensionHooks{
-							XDSTranslator: &egv1a1.XDSTranslatorHooks{
-								Pre: []egv1a1.XDSTranslatorHook{},
-								Post: []egv1a1.XDSTranslatorHook{
-									egv1a1.XDSHTTPListener,
-									egv1a1.XDSTranslation,
-									egv1a1.XDSRoute,
-									egv1a1.XDSVirtualHost,
-								},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Hooks: &egv1a1.ExtensionHooks{
+						XDSTranslator: &egv1a1.XDSTranslatorHooks{
+							Pre: []egv1a1.XDSTranslatorHook{},
+							Post: []egv1a1.XDSTranslatorHook{
+								egv1a1.XDSHTTPListener,
+								egv1a1.XDSTranslation,
+								egv1a1.XDSRoute,
+								egv1a1.XDSVirtualHost,
 							},
 						},
-						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 443,
-							TLS: &egv1a1.ExtensionTLS{
-								CertificateRef: gwapiv1.SecretObjectReference{
-									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("certificate"),
-								},
-								ClientCertificateRef: &gwapiv1.SecretObjectReference{
-									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("client-certificate"),
-								},
+					},
+					Service: &egv1a1.ExtensionService{
+						Host: "foo.extension",
+						Port: 443,
+						TLS: &egv1a1.ExtensionTLS{
+							CertificateRef: gwapiv1.SecretObjectReference{
+								Kind: &TLSSecretKind,
+								Name: gwapiv1.ObjectName("certificate"),
+							},
+							ClientCertificateRef: &gwapiv1.SecretObjectReference{
+								Kind: &TLSSecretKind,
+								Name: gwapiv1.ObjectName("client-certificate"),
 							},
 						},
 					},
@@ -458,40 +416,38 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "unknown TLS certificateRef in extension settings",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
+						},
+					},
+					Hooks: &egv1a1.ExtensionHooks{
+						XDSTranslator: &egv1a1.XDSTranslatorHooks{
+							Pre: []egv1a1.XDSTranslatorHook{},
+							Post: []egv1a1.XDSTranslatorHook{
+								egv1a1.XDSHTTPListener,
+								egv1a1.XDSTranslation,
+								egv1a1.XDSRoute,
+								egv1a1.XDSVirtualHost,
 							},
 						},
-						Hooks: &egv1a1.ExtensionHooks{
-							XDSTranslator: &egv1a1.XDSTranslatorHooks{
-								Pre: []egv1a1.XDSTranslatorHook{},
-								Post: []egv1a1.XDSTranslatorHook{
-									egv1a1.XDSHTTPListener,
-									egv1a1.XDSTranslation,
-									egv1a1.XDSRoute,
-									egv1a1.XDSVirtualHost,
-								},
+					},
+					Service: &egv1a1.ExtensionService{
+						Host: "foo.extension",
+						Port: 8080,
+						TLS: &egv1a1.ExtensionTLS{
+							CertificateRef: gwapiv1.SecretObjectReference{
+								Kind: &TLSUnrecognizedKind,
+								Name: gwapiv1.ObjectName("certificate"),
 							},
-						},
-						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 8080,
-							TLS: &egv1a1.ExtensionTLS{
-								CertificateRef: gwapiv1.SecretObjectReference{
-									Kind: &TLSUnrecognizedKind,
-									Name: gwapiv1.ObjectName("certificate"),
-								},
-								ClientCertificateRef: &gwapiv1.SecretObjectReference{
-									Kind: &TLSSecretKind,
-									Name: gwapiv1.ObjectName("client-certificate"),
-								},
+							ClientCertificateRef: &gwapiv1.SecretObjectReference{
+								Kind: &TLSSecretKind,
+								Name: gwapiv1.ObjectName("client-certificate"),
 							},
 						},
 					},
@@ -502,26 +458,24 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "empty service in extension settings",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
 						},
-						Hooks: &egv1a1.ExtensionHooks{
-							XDSTranslator: &egv1a1.XDSTranslatorHooks{
-								Pre: []egv1a1.XDSTranslatorHook{},
-								Post: []egv1a1.XDSTranslatorHook{
-									egv1a1.XDSHTTPListener,
-									egv1a1.XDSTranslation,
-									egv1a1.XDSRoute,
-									egv1a1.XDSVirtualHost,
-								},
+					},
+					Hooks: &egv1a1.ExtensionHooks{
+						XDSTranslator: &egv1a1.XDSTranslatorHooks{
+							Pre: []egv1a1.XDSTranslatorHook{},
+							Post: []egv1a1.XDSTranslatorHook{
+								egv1a1.XDSHTTPListener,
+								egv1a1.XDSTranslation,
+								egv1a1.XDSRoute,
+								egv1a1.XDSVirtualHost,
 							},
 						},
 					},
@@ -532,21 +486,19 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "empty hooks in extension settings",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
 						},
-						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 8080,
-						},
+					},
+					Service: &egv1a1.ExtensionService{
+						Host: "foo.extension",
+						Port: 8080,
 					},
 				},
 			},
@@ -555,13 +507,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "valid gateway logging level info",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Logging: &egv1a1.EnvoyGatewayLogging{
-						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
-							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelInfo,
-						},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Logging: &egv1a1.EnvoyGatewayLogging{
+					Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelInfo,
 					},
 				},
 			},
@@ -570,13 +520,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "valid gateway logging level warn",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Logging: &egv1a1.EnvoyGatewayLogging{
-						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
-							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelWarn,
-						},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Logging: &egv1a1.EnvoyGatewayLogging{
+					Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelWarn,
 					},
 				},
 			},
@@ -585,13 +533,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "valid gateway logging level error",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Logging: &egv1a1.EnvoyGatewayLogging{
-						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
-							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelError,
-						},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Logging: &egv1a1.EnvoyGatewayLogging{
+					Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelError,
 					},
 				},
 			},
@@ -600,14 +546,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "valid gateway logging level debug",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Logging: &egv1a1.EnvoyGatewayLogging{
-						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
-							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelDebug,
-							egv1a1.LogComponentProviderRunner: egv1a1.LogLevelDebug,
-						},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Logging: &egv1a1.EnvoyGatewayLogging{
+					Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelDebug,
+						egv1a1.LogComponentProviderRunner: egv1a1.LogLevelDebug,
 					},
 				},
 			},
@@ -616,13 +560,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "invalid gateway logging level",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Logging: &egv1a1.EnvoyGatewayLogging{
-						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
-							egv1a1.LogComponentGatewayDefault: "inffo",
-						},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Logging: &egv1a1.EnvoyGatewayLogging{
+					Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentGatewayDefault: "inffo",
 					},
 				},
 			},
@@ -631,19 +573,17 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "valid gateway metrics sink",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
-						Metrics: &egv1a1.EnvoyGatewayMetrics{
-							Sinks: []egv1a1.EnvoyGatewayMetricSink{
-								{
-									Type: egv1a1.MetricSinkTypeOpenTelemetry,
-									OpenTelemetry: &egv1a1.EnvoyGatewayOpenTelemetrySink{
-										Host:     "x.x.x.x",
-										Port:     4317,
-										Protocol: "grpc",
-									},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Telemetry: &egv1a1.EnvoyGatewayTelemetry{
+					Metrics: &egv1a1.EnvoyGatewayMetrics{
+						Sinks: []egv1a1.EnvoyGatewayMetricSink{
+							{
+								Type: egv1a1.MetricSinkTypeOpenTelemetry,
+								OpenTelemetry: &egv1a1.EnvoyGatewayOpenTelemetrySink{
+									Host:     "x.x.x.x",
+									Port:     4317,
+									Protocol: "grpc",
 								},
 							},
 						},
@@ -655,15 +595,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "invalid gateway metrics sink",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
-						Metrics: &egv1a1.EnvoyGatewayMetrics{
-							Sinks: []egv1a1.EnvoyGatewayMetricSink{
-								{
-									Type: egv1a1.MetricSinkTypeOpenTelemetry,
-								},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Telemetry: &egv1a1.EnvoyGatewayTelemetry{
+					Metrics: &egv1a1.EnvoyGatewayMetrics{
+						Sinks: []egv1a1.EnvoyGatewayMetricSink{
+							{
+								Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							},
 						},
 					},
@@ -674,18 +612,16 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "valid gateway traces sink",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
-						Traces: &egv1a1.EnvoyGatewayTraces{
-							Sink: egv1a1.EnvoyGatewayTraceSink{
-								Type: egv1a1.TraceSinkTypeOpenTelemetry,
-								OpenTelemetry: &egv1a1.EnvoyGatewayOpenTelemetrySink{
-									Host:     "otel-collector.monitoring.svc.cluster.local",
-									Protocol: "grpc",
-									Port:     4317,
-								},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Telemetry: &egv1a1.EnvoyGatewayTelemetry{
+					Traces: &egv1a1.EnvoyGatewayTraces{
+						Sink: egv1a1.EnvoyGatewayTraceSink{
+							Type: egv1a1.TraceSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.EnvoyGatewayOpenTelemetrySink{
+								Host:     "otel-collector.monitoring.svc.cluster.local",
+								Protocol: "grpc",
+								Port:     4317,
 							},
 						},
 					},
@@ -696,14 +632,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "invalid gateway traces sink",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
-						Traces: &egv1a1.EnvoyGatewayTraces{
-							Sink: egv1a1.EnvoyGatewayTraceSink{
-								Type: egv1a1.TraceSinkTypeOpenTelemetry,
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				Telemetry: &egv1a1.EnvoyGatewayTelemetry{
+					Traces: &egv1a1.EnvoyGatewayTraces{
+						Sink: egv1a1.EnvoyGatewayTraceSink{
+							Type: egv1a1.TraceSinkTypeOpenTelemetry,
 						},
 					},
 				},
@@ -713,16 +647,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "invalid gateway watch mode",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
-								Watch: &egv1a1.KubernetesWatchMode{
-									Type: "foobar",
-								},
-							},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+						Watch: &egv1a1.KubernetesWatchMode{
+							Type: "foobar",
 						},
 					},
 				},
@@ -732,17 +662,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "happy namespaces must be set when watch mode is Namespaces",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
-								Watch: &egv1a1.KubernetesWatchMode{
-									Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
-									Namespaces: []string{"foo"},
-								},
-							},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+						Watch: &egv1a1.KubernetesWatchMode{
+							Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
+							Namespaces: []string{"foo"},
 						},
 					},
 				},
@@ -752,17 +678,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "fail namespaces is not be set when watch mode is Namespaces",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
-								Watch: &egv1a1.KubernetesWatchMode{
-									Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
-									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
-								},
-							},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+						Watch: &egv1a1.KubernetesWatchMode{
+							Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
+							NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
 						},
 					},
 				},
@@ -772,17 +694,13 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "happy namespaceSelector must be set when watch mode is NamespaceSelector",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
-								Watch: &egv1a1.KubernetesWatchMode{
-									Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
-								},
-							},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+						Watch: &egv1a1.KubernetesWatchMode{
+							Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+							NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
 						},
 					},
 				},
@@ -792,16 +710,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "fail namespaceSelector is not be set when watch mode is NamespaceSelector",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
-					Provider: &egv1a1.EnvoyGatewayProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
-								Watch: &egv1a1.KubernetesWatchMode{
-									Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-								},
-							},
+				Gateway: egv1a1.DefaultGateway(),
+				Provider: &egv1a1.EnvoyGatewayProvider{
+					Type: egv1a1.ProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+						Watch: &egv1a1.KubernetesWatchMode{
+							Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
 						},
 					},
 				},
@@ -811,20 +725,18 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "no extension server target set",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
 						},
-						Service: &egv1a1.ExtensionService{
-							Port: 8080,
-						},
+					},
+					Service: &egv1a1.ExtensionService{
+						Port: 8080,
 					},
 				},
 			},
@@ -833,27 +745,23 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "both host and path targets are set for extension server",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
 						},
-						Service: &egv1a1.ExtensionService{
-							BackendEndpoint: egv1a1.BackendEndpoint{
-								FQDN: &egv1a1.FQDNEndpoint{
-									Hostname: "foo.example.com",
-									Port:     8080,
-								},
-								Unix: &egv1a1.UnixSocket{
-									Path: "/some/path",
-								},
-							},
+					},
+					Service: &egv1a1.ExtensionService{
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: "foo.example.com",
+							Port:     8080,
+						},
+						Unix: &egv1a1.UnixSocket{
+							Path: "/some/path",
 						},
 					},
 				},
@@ -863,28 +771,24 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "multiple backend targets are set for extension server",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
 						},
-						Service: &egv1a1.ExtensionService{
-							BackendEndpoint: egv1a1.BackendEndpoint{
-								FQDN: &egv1a1.FQDNEndpoint{
-									Hostname: "foo.example.com",
-									Port:     8080,
-								},
-								IP: &egv1a1.IPEndpoint{
-									Address: "10.9.8.7",
-									Port:    8080,
-								},
-							},
+					},
+					Service: &egv1a1.ExtensionService{
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: "foo.example.com",
+							Port:     8080,
+						},
+						IP: &egv1a1.IPEndpoint{
+							Address: "10.9.8.7",
+							Port:    8080,
 						},
 					},
 				},
@@ -894,26 +798,22 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "both host and path targets are set for extension server",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
-							},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Resources: []egv1a1.GroupVersionKind{
+						{
+							Group:   "foo.example.io",
+							Version: "v1alpha1",
+							Kind:    "Foo",
 						},
-						Service: &egv1a1.ExtensionService{
-							Host: "foo.example.com",
-							Port: 8080,
-							BackendEndpoint: egv1a1.BackendEndpoint{
-								FQDN: &egv1a1.FQDNEndpoint{
-									Hostname: "foo.example.com",
-									Port:     8080,
-								},
-							},
+					},
+					Service: &egv1a1.ExtensionService{
+						Host: "foo.example.com",
+						Port: 8080,
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: "foo.example.com",
+							Port:     8080,
 						},
 					},
 				},
@@ -923,27 +823,25 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "both extensionManager and extensionManagers set",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManager: &egv1a1.ExtensionManager{
+					Hooks: &egv1a1.ExtensionHooks{
+						XDSTranslator: &egv1a1.XDSTranslatorHooks{
+							Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+						},
+					},
+					Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+				},
+				ExtensionManagers: []egv1a1.ExtensionManager{
+					{
+						Name: "ext1",
 						Hooks: &egv1a1.ExtensionHooks{
 							XDSTranslator: &egv1a1.XDSTranslatorHooks{
 								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 							},
 						},
-						Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
-					},
-					ExtensionManagers: []egv1a1.ExtensionManager{
-						{
-							Name: "ext1",
-							Hooks: &egv1a1.ExtensionHooks{
-								XDSTranslator: &egv1a1.XDSTranslatorHooks{
-									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
-								},
-							},
-							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
-						},
+						Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
 					},
 				},
 			},
@@ -952,39 +850,35 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "extensionManagers explicitly empty",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:           egv1a1.DefaultGateway(),
-					Provider:          egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManagers: []egv1a1.ExtensionManager{},
-				},
+				Gateway:           egv1a1.DefaultGateway(),
+				Provider:          egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManagers: []egv1a1.ExtensionManager{},
 			},
 			expect: false,
 		},
 		{
 			name: "extensionManagers with duplicate names",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManagers: []egv1a1.ExtensionManager{
-						{
-							Name: "ext1",
-							Hooks: &egv1a1.ExtensionHooks{
-								XDSTranslator: &egv1a1.XDSTranslatorHooks{
-									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
-								},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManagers: []egv1a1.ExtensionManager{
+					{
+						Name: "ext1",
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
 						},
-						{
-							Name: "ext1",
-							Hooks: &egv1a1.ExtensionHooks{
-								XDSTranslator: &egv1a1.XDSTranslatorHooks{
-									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
-								},
+						Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+					},
+					{
+						Name: "ext1",
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
 						},
+						Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
 					},
 				},
 			},
@@ -993,18 +887,16 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "extensionManagers with missing name",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManagers: []egv1a1.ExtensionManager{
-						{
-							Hooks: &egv1a1.ExtensionHooks{
-								XDSTranslator: &egv1a1.XDSTranslatorHooks{
-									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
-								},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManagers: []egv1a1.ExtensionManager{
+					{
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
 						},
+						Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
 					},
 				},
 			},
@@ -1013,24 +905,22 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "extensionManagers with invalid individual extension manager",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManagers: []egv1a1.ExtensionManager{
-						{
-							Name: "good-ext",
-							Hooks: &egv1a1.ExtensionHooks{
-								XDSTranslator: &egv1a1.XDSTranslatorHooks{
-									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
-								},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManagers: []egv1a1.ExtensionManager{
+					{
+						Name: "good-ext",
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 							},
-							Service: &egv1a1.ExtensionService{Host: "good.extension", Port: 80},
 						},
-						{
-							Name: "bad-ext",
-							// Missing hooks → should fail individual validation
-							Service: &egv1a1.ExtensionService{Host: "bad.extension", Port: 80},
-						},
+						Service: &egv1a1.ExtensionService{Host: "good.extension", Port: 80},
+					},
+					{
+						Name: "bad-ext",
+						// Missing hooks → should fail individual validation
+						Service: &egv1a1.ExtensionService{Host: "bad.extension", Port: 80},
 					},
 				},
 			},
@@ -1039,28 +929,26 @@ func TestValidateEnvoyGateway(t *testing.T) {
 		{
 			name: "valid extensionManagers plural config",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManagers: []egv1a1.ExtensionManager{
-						{
-							Name: "ai-gateway",
-							Hooks: &egv1a1.ExtensionHooks{
-								XDSTranslator: &egv1a1.XDSTranslatorHooks{
-									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute, egv1a1.XDSTranslation},
-								},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionManagers: []egv1a1.ExtensionManager{
+					{
+						Name: "ai-gateway",
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute, egv1a1.XDSTranslation},
 							},
-							Service: &egv1a1.ExtensionService{Host: "ai-gw.extension", Port: 80},
 						},
-						{
-							Name: "observability",
-							Hooks: &egv1a1.ExtensionHooks{
-								XDSTranslator: &egv1a1.XDSTranslatorHooks{
-									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSHTTPListener},
-								},
+						Service: &egv1a1.ExtensionService{Host: "ai-gw.extension", Port: 80},
+					},
+					{
+						Name: "observability",
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSHTTPListener},
 							},
-							Service: &egv1a1.ExtensionService{Host: "obs.extension", Port: 80},
 						},
+						Service: &egv1a1.ExtensionService{Host: "obs.extension", Port: 80},
 					},
 				},
 			},
@@ -1248,8 +1136,8 @@ func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 
 func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGateway := &egv1a1.EnvoyGateway{
-		TypeMeta:         metav1.TypeMeta{},
-		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{Provider: egv1a1.DefaultEnvoyGatewayProvider()},
+		TypeMeta: metav1.TypeMeta{},
+		Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 	}
 	assert.NotNil(t, envoyGateway.Provider)
 
@@ -1264,12 +1152,10 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-				Replicas:  nil,
-				Pod:       nil,
-				Container: nil,
-			},
+		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+			Replicas:  nil,
+			Pod:       nil,
+			Container: nil,
 		},
 	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
@@ -1278,14 +1164,12 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-				Pod: nil,
-				Container: &egv1a1.KubernetesContainerSpec{
-					Resources:       nil,
-					SecurityContext: nil,
-					Image:           nil,
-				},
+		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+			Pod: nil,
+			Container: &egv1a1.KubernetesContainerSpec{
+				Resources:       nil,
+				SecurityContext: nil,
+				Image:           nil,
 			},
 		},
 	}
@@ -1466,12 +1350,10 @@ func TestWarnEnvoyGateway(t *testing.T) {
 		{
 			name: "disableLua is set",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						DisableLua: new(true),
-					},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					DisableLua: new(true),
 				},
 			},
 			expected: []string{"disableLua is deprecated, use enableLua instead"},
@@ -1479,12 +1361,10 @@ func TestWarnEnvoyGateway(t *testing.T) {
 		{
 			name: "enableLua is set",
 			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						EnableLua: true,
-					},
+				Gateway:  egv1a1.DefaultGateway(),
+				Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+					EnableLua: true,
 				},
 			},
 			expected: nil,
@@ -1573,8 +1453,8 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
 				URLRef: &egv1a1.RedisURLSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
-						Key:                  "REDIS_ENDPOINT",
+						Name: "redis-conn",
+						Key:  "REDIS_ENDPOINT",
 					},
 				},
 			}),
@@ -1586,8 +1466,8 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 				URL: new("redis.redis.svc:6379"),
 				URLRef: &egv1a1.RedisURLSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
-						Key:                  "REDIS_ENDPOINT",
+						Name: "redis-conn",
+						Key:  "REDIS_ENDPOINT",
 					},
 				},
 			}),
@@ -1603,7 +1483,7 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
 				URLRef: &egv1a1.RedisURLSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Name: "redis-conn",
 					},
 				},
 			}),
@@ -1623,9 +1503,9 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
 				URLRef: &egv1a1.RedisURLSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
-						Key:                  "REDIS_ENDPOINT",
-						Optional:             new(true),
+						Name:     "redis-conn",
+						Key:      "REDIS_ENDPOINT",
+						Optional: new(true),
 					},
 				},
 			}),
@@ -1636,9 +1516,9 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
 				URLRef: &egv1a1.RedisURLSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
-						Key:                  "REDIS_ENDPOINT",
-						Optional:             new(false),
+						Name:     "redis-conn",
+						Key:      "REDIS_ENDPOINT",
+						Optional: new(false),
 					},
 				},
 			}),

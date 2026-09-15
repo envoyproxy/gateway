@@ -197,14 +197,10 @@ func TestTranslate(t *testing.T) {
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 
 				svc := &corev1.Service{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Service",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      svcName,
-					},
+					APIVersion: "v1",
+					Kind:       "Service",
+					Namespace:  "default",
+					Name:       svcName,
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "1.1.1.1",
 						Ports: []corev1.ServicePort{
@@ -241,16 +237,12 @@ func TestTranslate(t *testing.T) {
 				resources.Services = append(resources.Services, svc)
 
 				endptSlice := &discoveryv1.EndpointSlice{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "discovery.k8s.io/v1",
-						Kind:       "EndpointSlice",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      epSliceName,
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: svcName,
-						},
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+					Name:       epSliceName,
+					Namespace:  "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svcName,
 					},
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
@@ -298,14 +290,10 @@ func TestTranslate(t *testing.T) {
 			}
 			resources.Services = append(resources.Services,
 				&corev1.Service{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Service",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "mirror-service",
-					},
+					APIVersion: "v1",
+					Kind:       "Service",
+					Namespace:  "default",
+					Name:       "mirror-service",
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "2.2.2.2",
 						Ports: []corev1.ServicePort{
@@ -321,16 +309,12 @@ func TestTranslate(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "discovery.k8s.io/v1",
-						Kind:       "EndpointSlice",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "mirror-service-endpointslice",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "mirror-service",
-						},
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+					Name:       "mirror-service-endpointslice",
+					Namespace:  "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "mirror-service",
 					},
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
@@ -356,14 +340,10 @@ func TestTranslate(t *testing.T) {
 			// add otel-collector service
 			resources.Services = append(resources.Services,
 				&corev1.Service{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Service",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "monitoring",
-						Name:      "otel-collector",
-					},
+					APIVersion: "v1",
+					Kind:       "Service",
+					Namespace:  "monitoring",
+					Name:       "otel-collector",
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "3.3.3.3",
 						Ports: []corev1.ServicePort{
@@ -386,16 +366,12 @@ func TestTranslate(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "discovery.k8s.io/v1",
-						Kind:       "EndpointSlice",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "otel-collector-endpointslice",
-						Namespace: "monitoring",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "otel-collector",
-						},
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+					Name:       "otel-collector-endpointslice",
+					Namespace:  "monitoring",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "otel-collector",
 					},
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
@@ -424,16 +400,12 @@ func TestTranslate(t *testing.T) {
 			)
 
 			svc := corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Service",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					// Matches proxy.ExpectedResourceHashedName()
-					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
-					Namespace: translator.ControllerNamespace,
-					Labels:    make(map[string]string),
-				},
+				APIVersion: "v1",
+				Kind:       "Service",
+				// Matches proxy.ExpectedResourceHashedName()
+				Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+				Namespace: translator.ControllerNamespace,
+				Labels:    make(map[string]string),
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "6.7.8.9",
 					Ports: []corev1.ServicePort{
@@ -448,16 +420,12 @@ func TestTranslate(t *testing.T) {
 			}
 
 			endPtSlice := discoveryv1.EndpointSlice{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "discovery.k8s.io/v1",
-					Kind:       "EndpointSlice",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      svc.Name,
-					Namespace: svc.Namespace,
-					Labels: map[string]string{
-						discoveryv1.LabelServiceName: svc.Name,
-					},
+				APIVersion: "discovery.k8s.io/v1",
+				Kind:       "EndpointSlice",
+				Name:       svc.Name,
+				Namespace:  svc.Namespace,
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: svc.Name,
 				},
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Ports: []discoveryv1.EndpointPort{
@@ -510,21 +478,13 @@ func TestTranslate(t *testing.T) {
 			}
 
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "envoy-gateway",
-				},
+				APIVersion: "v1",
+				Kind:       "Namespace",
+				Name:       "envoy-gateway",
 			}, &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				APIVersion: "v1",
+				Kind:       "Namespace",
+				Name:       "default",
 			})
 
 			got, _ := translator.Translate(t.Context(), resources)
@@ -588,14 +548,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
 					&corev1.Service{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "v1",
-							Kind:       "Service",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      svcName,
-						},
+						APIVersion: "v1",
+						Kind:       "Service",
+						Namespace:  "default",
+						Name:       svcName,
 						Spec: corev1.ServiceSpec{
 							ClusterIP: "1.1.1.1",
 							Ports: []corev1.ServicePort{
@@ -629,16 +585,12 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				)
 				resources.EndpointSlices = append(resources.EndpointSlices,
 					&discoveryv1.EndpointSlice{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "discovery.k8s.io/v1",
-							Kind:       "EndpointSlice",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      epSliceName,
-							Namespace: "default",
-							Labels: map[string]string{
-								discoveryv1.LabelServiceName: svcName,
-							},
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+						Name:       epSliceName,
+						Namespace:  "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: svcName,
 						},
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
@@ -679,14 +631,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			resources.Services = append(resources.Services,
 				&corev1.Service{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "v1",
-						Kind:       "Service",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "mirror-service",
-					},
+					APIVersion: "v1",
+					Kind:       "Service",
+					Namespace:  "default",
+					Name:       "mirror-service",
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "2.2.2.2",
 						Ports: []corev1.ServicePort{
@@ -701,16 +649,12 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "discovery.k8s.io/v1",
-						Kind:       "EndpointSlice",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "mirror-service-endpointslice",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "mirror-service",
-						},
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+					Name:       "mirror-service-endpointslice",
+					Namespace:  "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "mirror-service",
 					},
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
@@ -734,16 +678,12 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			)
 
 			svc := corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Service",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					// Matches proxy.ExpectedResourceHashedName()
-					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
-					Namespace: translator.ControllerNamespace,
-					Labels:    make(map[string]string),
-				},
+				APIVersion: "v1",
+				Kind:       "Service",
+				// Matches proxy.ExpectedResourceHashedName()
+				Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+				Namespace: translator.ControllerNamespace,
+				Labels:    make(map[string]string),
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "6.7.8.9",
 					Ports: []corev1.ServicePort{
@@ -758,16 +698,12 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			endPtSlice := discoveryv1.EndpointSlice{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "discovery.k8s.io/v1",
-					Kind:       "EndpointSlice",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      svc.Name,
-					Namespace: svc.Namespace,
-					Labels: map[string]string{
-						discoveryv1.LabelServiceName: svc.Name,
-					},
+				APIVersion: "discovery.k8s.io/v1",
+				Kind:       "EndpointSlice",
+				Name:       svc.Name,
+				Namespace:  svc.Namespace,
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: svc.Name,
 				},
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Ports: []discoveryv1.EndpointPort{
@@ -818,21 +754,13 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "envoy-gateway",
-				},
+				APIVersion: "v1",
+				Kind:       "Namespace",
+				Name:       "envoy-gateway",
 			}, &corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				APIVersion: "v1",
+				Kind:       "Namespace",
+				Name:       "default",
 			})
 
 			got, _ := translator.Translate(t.Context(), resources)
@@ -892,7 +820,7 @@ func TestIsValidHostname(t *testing.T) {
 	// Setting up a hostname that is 256+ characters for a test case that does not also trip the max label size
 	veryLongHostname := "a"
 	label := 0
-	for i := 0; i < 256; i++ {
+	for range 256 {
 		if label > 10 {
 			veryLongHostname += "."
 			label = 0
@@ -1002,10 +930,8 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 				name:      "tls-secret-1",
 			},
 			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "referencegrant-1",
-					Namespace: "default",
-				},
+				Name:      "referencegrant-1",
+				Namespace: "default",
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
@@ -1238,8 +1164,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 
 	// Ensure we didn't drop an exported field.
 	ta, tr := reflect.TypeOf(*a), reflect.TypeOf(ret)
-	for i := 0; i < ta.NumField(); i++ {
-		aField := ta.Field(i)
+	for aField := range ta.Fields() {
 		if rField, ok := tr.FieldByName(aField.Name); !ok || aField.Type != rField.Type {
 			// We panic here because this is test code, and it would be hard to
 			// plumb the error out.

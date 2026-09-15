@@ -8,6 +8,7 @@ package translator
 import (
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -756,11 +757,9 @@ func buildHTTPStatusRange(irStatuses []ir.HTTPStatus) []*xdstype.Int64Range {
 		return nil
 	}
 	ranges := []*xdstype.Int64Range{}
-	sort.Slice(irStatuses, func(i, j int) bool {
-		return irStatuses[i] < irStatuses[j]
-	})
+	slices.Sort(irStatuses)
 	var start, end int64
-	for i := 0; i < len(irStatuses); i++ {
+	for i := range irStatuses {
 		switch {
 		case start == 0:
 			start = int64(irStatuses[i])

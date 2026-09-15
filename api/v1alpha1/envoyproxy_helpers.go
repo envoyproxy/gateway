@@ -117,7 +117,7 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	if r.Kubernetes.EnvoyService.Type == nil {
-		r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeLoadBalancer)
+		r.Kubernetes.EnvoyService.Type = new(ServiceTypeLoadBalancer)
 	}
 
 	if r.Kubernetes.EnvoyHpa != nil {

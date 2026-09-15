@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	troubleshootv1b2 "github.com/replicatedhq/troubleshoot/pkg/apis/troubleshoot/v1beta2"
 	tbcollect "github.com/replicatedhq/troubleshoot/pkg/collect"
@@ -83,7 +84,7 @@ func CollectResult(ctx context.Context, restConfig *rest.Config, opts ...Collect
 	}
 
 	var result tbcollect.CollectorResult
-	progressChan := make(chan interface{})
+	progressChan := make(chan any)
 	go func() {
 		select {
 		case <-ctx.Done():
@@ -176,9 +177,7 @@ func CollectResult(ctx context.Context, restConfig *rest.Config, opts ...Collect
 			}
 			continue
 		}
-		for k, v := range res {
-			allCollectedData[k] = v
-		}
+		maps.Copy(allCollectedData, res)
 	}
 	result = allCollectedData
 

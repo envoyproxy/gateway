@@ -72,7 +72,7 @@ func (cd ConfigDump) getTimeout() time.Duration {
 	return DefaultConfigDumpTimeout
 }
 
-func (cd ConfigDump) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, error) {
+func (cd ConfigDump) Collect(_ chan<- any) (tbcollect.CollectorResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), cd.getTimeout())
 	defer cancel()
 

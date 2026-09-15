@@ -163,18 +163,14 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	}
 
 	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceAccount",
-			APIVersion: "v1",
-		},
+		Kind:                         "ServiceAccount",
+		APIVersion:                   "v1",
 		AutomountServiceAccountToken: new(false),
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			Name:            r.serviceAccountName(),
-			Labels:          saLabels,
-			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			OwnerReferences: r.ownerReferences(),
-		},
+		Namespace:                    r.Namespace(),
+		Name:                         r.serviceAccountName(),
+		Labels:                       saLabels,
+		Annotations:                  r.infra.GetProxyMetadata().Annotations,
+		OwnerReferences:              r.ownerReferences(),
 	}, nil
 }
 
@@ -283,17 +279,13 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			Labels:          svcLabels,
-			Annotations:     annotations,
-			OwnerReferences: r.ownerReferences(),
-		},
-		Spec: serviceSpec,
+		APIVersion:      "v1",
+		Kind:            "Service",
+		Namespace:       r.Namespace(),
+		Labels:          svcLabels,
+		Annotations:     annotations,
+		OwnerReferences: r.ownerReferences(),
+		Spec:            serviceSpec,
 	}
 
 	// set name
@@ -334,18 +326,14 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	}
 
 	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			Name:            r.Name(),
-			Labels:          cmLabels,
-			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			OwnerReferences: r.ownerReferences(),
-		},
-		Data: data,
+		Kind:            "ConfigMap",
+		APIVersion:      "v1",
+		Namespace:       r.Namespace(),
+		Name:            r.Name(),
+		Labels:          cmLabels,
+		Annotations:     r.infra.GetProxyMetadata().Annotations,
+		OwnerReferences: r.ownerReferences(),
+		Data:            data,
 	}, nil
 }
 
@@ -403,16 +391,12 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	deployment := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deployment",
-			APIVersion: "apps/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			Labels:          dpLabels,
-			Annotations:     dpAnnotations,
-			OwnerReferences: r.ownerReferences(),
-		},
+		Kind:            "Deployment",
+		APIVersion:      "apps/v1",
+		Namespace:       r.Namespace(),
+		Labels:          dpLabels,
+		Annotations:     dpAnnotations,
+		OwnerReferences: r.ownerReferences(),
 		Spec: appsv1.DeploymentSpec{
 			Replicas: replicas,
 			Strategy: *deploymentConfig.Strategy,
@@ -494,16 +478,12 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	daemonSet := &appsv1.DaemonSet{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "DaemonSet",
-			APIVersion: "apps/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			Labels:          dsLabels,
-			Annotations:     dsAnnotations,
-			OwnerReferences: r.ownerReferences(),
-		},
+		Kind:            "DaemonSet",
+		APIVersion:      "apps/v1",
+		Namespace:       r.Namespace(),
+		Labels:          dsLabels,
+		Annotations:     dsAnnotations,
+		OwnerReferences: r.ownerReferences(),
 		Spec: appsv1.DaemonSetSpec{
 			// Daemonset's selector is immutable.
 			Selector:       r.stableSelector(),
@@ -575,16 +555,12 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "autoscaling/v2",
-			Kind:       "HorizontalPodAutoscaler",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       r.Namespace(),
-			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			Labels:          r.stableSelector().MatchLabels,
-			OwnerReferences: r.ownerReferences(),
-		},
+		APIVersion:      "autoscaling/v2",
+		Kind:            "HorizontalPodAutoscaler",
+		Namespace:       r.Namespace(),
+		Annotations:     r.infra.GetProxyMetadata().Annotations,
+		Labels:          r.stableSelector().MatchLabels,
+		OwnerReferences: r.ownerReferences(),
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",

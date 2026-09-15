@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	configv3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -90,13 +91,7 @@ func listenerContainsLocalRateLimit(irListener *ir.HTTPListener) bool {
 		return false
 	}
 
-	for _, route := range irListener.Routes {
-		if routeContainsLocalRateLimit(route) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(irListener.Routes, routeContainsLocalRateLimit)
 }
 
 func routeContainsLocalRateLimit(irRoute *ir.HTTPRoute) bool {

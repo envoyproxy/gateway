@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -191,12 +192,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 }
 
 func hasWildcard(array []string) bool {
-	for _, s := range array {
-		if s == "*" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(array, "*")
 }
 
 func (c *cors) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
