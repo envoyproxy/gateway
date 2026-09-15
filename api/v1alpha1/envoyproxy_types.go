@@ -266,8 +266,11 @@ type MergeBackendsConfig struct {
 	// `%BACKEND_NAMESPACE%`: namespace of the backend resource
 	// `%BACKEND_NAME%`: name of the backend resource
 	// `%BACKEND_PORT%`: port of the backend resource
-	// `%BACKEND_PROTOCOL%`: application protocol of the backend port, lowercased (`http`, `http2`,
-	// `grpc`, `tcp`, ...), or `-` when the backend port declares none
+	// `%BACKEND_PROTOCOL%`: upstream protocol of the merged cluster, lowercased (`http`, `http2`, `grpc`,
+	// `tcp`, `udp`). It is derived from the route kind (HTTPRoute: `http`, GRPCRoute: `grpc`,
+	// TCPRoute and TLSRoute: `tcp`, UDPRoute: `udp`) and, for HTTPRoute, refined by the backend's
+	// appProtocol (e.g. `kubernetes.io/h2c` resolves to `http2`). The same backend port referenced from
+	// different route kinds is merged into separate clusters that differ only by this value.
 	// Unlike clusterStatName, this applies to every route kind that can merge backends, including
 	// TCPRoute, UDPRoute and TLSRoute.
 	// A pattern that omits `%BACKEND_PORT%` or `%BACKEND_PROTOCOL%` can resolve to the same value
