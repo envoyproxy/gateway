@@ -13,6 +13,27 @@ the behavior for how the Envoy Proxy server behaves with downstream clients.
 
 This API was added as a new policy attachment resource that can be applied to Gateway resources and it is meant to hold settings for configuring behavior of the connection between the downstream client and Envoy Proxy listener. It is the counterpart to the [BackendTrafficPolicy][] API resource.
 
+## Settings shared by listeners on the same port
+
+Gateway listeners that share an address and port are translated into a single Envoy
+listener with one socket. Four ClientTrafficPolicy fields configure that socket
+rather than an individual Gateway listener:
+
+- `tcpKeepalive`
+- `connection.bufferLimit`
+- `connection.maxAcceptPerSocketEvent`
+- `timeout.tcp.connectionInspectionTimeout`
+
+Setting one of them on a single listener therefore applies it to every listener on
+that address and port, including listeners that no policy targets. When two
+listeners on the same address and port set the same field to different values, the
+first one wins. That order comes from translation and is not something to rely on,
+so keep these fields consistent across the listeners on a port — or set them once
+with a policy that targets the whole Gateway.
+
+Listeners that leave a field unset do not affect it, so one listener configuring a
+buffer limit no longer has a second listener reset it to the default.
+
 ## Quickstart
 
 ### Prerequisites
