@@ -118,6 +118,47 @@ var ResponseOverrideTest = suite.ConformanceTest{
 				bodyNotEqual: true,
 				statusCode:   200,
 			})
+
+			// Test request header match response override and add X-Request-Override-Matched header
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
+				path:           "/response-override-request-header-match",
+				requestHeaders: map[string]string{"X-Client-Type": "browser"},
+				contentType:    "text/plain",
+				body:           "matched on request header",
+				statusCode:     200,
+				headers:        map[string]string{"X-Request-Override-Matched": "true"},
+			})
+
+			// Test request header match response override NOT doing anything because the request header does not match
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
+				path:           "/response-override-request-header-match",
+				requestHeaders: map[string]string{"X-Client-Type": "cli"},
+				contentType:    "application/json",
+				body:           "matched on request header",
+				bodyNotEqual:   true,
+				statusCode:     200,
+			})
+
+			// Test that a rule matching on both request and response headers only fires when both match
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
+				path: "/response-override-combined-header-match",
+				requestHeaders: map[string]string{
+					"X-Client-Type":     "mobile",
+					"X-Echo-Set-Header": "X-Custom-Header: combined-value",
+				},
+				contentType: "text/plain",
+				body:        "matched on request and response headers",
+				statusCode:  200,
+			})
+
+			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, &expectedResponse{
+				path:           "/response-override-combined-header-match",
+				requestHeaders: map[string]string{"X-Client-Type": "mobile"},
+				contentType:    "application/json",
+				body:           "matched on request and response headers",
+				bodyNotEqual:   true,
+				statusCode:     200,
+			})
 		})
 	},
 }

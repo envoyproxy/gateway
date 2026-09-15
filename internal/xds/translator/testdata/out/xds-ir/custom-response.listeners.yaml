@@ -225,6 +225,79 @@
                                 safeRegex:
                                   googleRe2: {}
                                   regex: ^us-.*$
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/3
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: matched request header
+                        preserveResponseCodeDetails: true
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: text/plain
+                  predicate:
+                    singlePredicate:
+                      input:
+                        name: http-request-header-match-input
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                          headerName: X-Client-Type
+                      valueMatch:
+                        exact: browser
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/4
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: '{"error":"combined request and response match"}'
+                        preserveResponseCodeDetails: true
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: application/json
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-status-code-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                          valueMatch:
+                            exact: "502"
+                      - andMatcher:
+                          predicate:
+                          - singlePredicate:
+                              input:
+                                name: http-request-header-match-input
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: X-Client-Type
+                              valueMatch:
+                                prefix: mobile-
+                          - singlePredicate:
+                              input:
+                                name: http-request-header-match-input
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                                  headerName: X-Tenant
+                              valueMatch:
+                                safeRegex:
+                                  googleRe2: {}
+                                  regex: ^acme-.*$
+                      - singlePredicate:
+                          input:
+                            name: http-response-header-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseHeaderMatchInput
+                              headerName: X-Error-Type
+                          valueMatch:
+                            exact: upstream-timeout
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
