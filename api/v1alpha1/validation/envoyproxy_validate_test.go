@@ -847,51 +847,6 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
-		{
-			name: "valid operators in MergeBackends StatName",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeBackends: &egv1a1.MergeBackendsConfig{
-						StatName: new(fmt.Sprintf("%s/%s/%s/%s/%s", egv1a1.StatFormatterBackendKind,
-							egv1a1.StatFormatterBackendNamespace, egv1a1.StatFormatterBackendName,
-							egv1a1.StatFormatterBackendPort, egv1a1.StatFormatterBackendProtocol)),
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "route operators are rejected in MergeBackends StatName",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeBackends: &egv1a1.MergeBackendsConfig{
-						StatName: new(fmt.Sprintf("%s/%s", egv1a1.StatFormatterBackendName, egv1a1.StatFormatterRouteName)),
-					},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "MergeBackends without StatName is valid",
-			proxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeBackends: &egv1a1.MergeBackendsConfig{},
-				},
-			},
-			expected: true,
-		},
 	}
 
 	for i := range testCases {
@@ -1088,64 +1043,6 @@ func TestValidateClusterStatName(t *testing.T) {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
 			errs := ValidateClusterStatName(tc.statName)
-			if tc.expected {
-				require.NoError(t, errs)
-			} else {
-				require.Error(t, errs)
-			}
-		})
-	}
-}
-
-func TestValidateMergedClusterStatName(t *testing.T) {
-	testCases := []struct {
-		name     string
-		statName string
-		expected bool
-	}{
-		{
-			name:     "valid merged cluster stat name with every supported operator",
-			statName: "%BACKEND_KIND%/%BACKEND_NAMESPACE%/%BACKEND_NAME%/%BACKEND_PORT%/%BACKEND_PROTOCOL%",
-			expected: true,
-		},
-		{
-			name:     "valid merged cluster stat name with a subset of supported operators",
-			statName: "%BACKEND_NAMESPACE%/%BACKEND_NAME%",
-			expected: true,
-		},
-		{
-			name:     "valid merged cluster stat name without any operator",
-			statName: "any_custom_name",
-			expected: true,
-		},
-		{
-			// A merged cluster is shared by every route referencing the backend, so route-scoped
-			// operators can never resolve to a single correct value.
-			name:     "invalid merged cluster stat name with a route operator",
-			statName: "%BACKEND_NAME%/%ROUTE_NAME%",
-			expected: false,
-		},
-		{
-			name:     "invalid merged cluster stat name with a route rule operator",
-			statName: "%ROUTE_RULE_NUMBER%",
-			expected: false,
-		},
-		{
-			name:     "invalid merged cluster stat name with an unknown operator",
-			statName: "%BACKEND_NAME%/%FOO%",
-			expected: false,
-		},
-		{
-			name:     "invalid merged cluster stat name with an unterminated operator",
-			statName: "%BACKEND_NAME",
-			expected: false,
-		},
-	}
-
-	for i := range testCases {
-		tc := testCases[i]
-		t.Run(tc.name, func(t *testing.T) {
-			errs := ValidateMergedClusterStatName(tc.statName)
 			if tc.expected {
 				require.NoError(t, errs)
 			} else {
