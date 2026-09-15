@@ -403,19 +403,29 @@ func TestProcessBackendRefsEndpointSliceIndexDisabled(t *testing.T) {
 	matchingEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-backend"}, service.Name, false)
 	otherEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
 
-	// The backendRef needs an owning route, as EndpointSlices are only collected for
-	// backends reached by endpoint routing.
+	// The backendRef needs an owning route, and the route needs a Gateway, GatewayClass and
+	// EnvoyProxy behind it, because EndpointSlices are only collected for backends reached by
+	// endpoint routing.
 	backendRef := gwapiv1.BackendObjectReference{
 		Name:      gwapiv1.ObjectName(service.Name),
 		Namespace: gatewayapi.NamespacePtr(ns),
 	}
 	httpRoute := test.GetHTTPRoute(types.NamespacedName{Namespace: ns, Name: "httproute-backend"}, "gateway", backendRef, "")
+	envoyProxy := test.GetEnvoyProxy(types.NamespacedName{Name: "test-ep"}, false)
+	epRef := &test.GroupKindNamespacedName{
+		Group:     gwapiv1.Group(envoyProxy.GroupVersionKind().Group),
+		Kind:      gwapiv1.Kind(envoyProxy.GroupVersionKind().Kind),
+		Namespace: gwapiv1.Namespace(envoyProxy.Namespace),
+		Name:      gwapiv1.ObjectName(envoyProxy.Name),
+	}
+	gatewayClass := test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, epRef)
+	gateway := test.GetGateway(types.NamespacedName{Namespace: ns, Name: "gateway"}, "test-gc", 8080)
 
 	// Do not register EndpointSlice field indexes here. This verifies the disabled
 	// runtime flag path falls back to label selection instead of using MatchingFields.
 	fakeClient := fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
-		WithObjects(service, matchingEndpointSlice, otherEndpointSlice, httpRoute).
+		WithObjects(service, matchingEndpointSlice, otherEndpointSlice, httpRoute, envoyProxy, gatewayClass, gateway).
 		WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 		Build()
 
