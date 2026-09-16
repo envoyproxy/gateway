@@ -156,9 +156,8 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        redirect:
-          port: 80
-          statusCode: 301
+        directResponse:
+          statusCode: 500
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
