@@ -52,7 +52,7 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/"
+          value: "/route-2"
       backendRefs:
       - name: service-2
         namespace: envoy-gateway

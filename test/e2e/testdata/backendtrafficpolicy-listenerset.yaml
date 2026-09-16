@@ -1,0 +1,262 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: btp-listenerset-policy
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18186
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: btp-listenerset-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: btp-listenerset-policy
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: ls-http
+    port: 18187
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: btp-listenerset-gateway-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: btp-listenerset-policy
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /gateway-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: btp-listenerset-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: btp-listenerset-policy-ls
+    sectionName: ls-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /listenerset-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-listenerset-gateway
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: btp-listenerset-policy
+  faultInjection:
+    abort:
+      httpStatus: 418
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-listenerset-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: btp-listenerset-policy-ls
+  faultInjection:
+    abort:
+      httpStatus: 419
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: btp-route-policy-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18188
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: btp-route-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: btp-route-policy-gateway
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: route-http
+    port: 18189
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: btp-route-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: btp-route-policy-ls
+    sectionName: route-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /route-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-route-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: btp-route-policy-route
+  faultInjection:
+    abort:
+      httpStatus: 420
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: btp-merge-policy-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18190
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: btp-merge-policy-ls
+  namespace: gateway-conformance-infra
+spec:
+  parentRef:
+    name: btp-merge-policy-gateway
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: merge-http
+    port: 18191
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: btp-merge-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: btp-merge-policy-ls
+    sectionName: merge-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /merge-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-merge-listenerset
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: btp-merge-policy-ls
+  responseOverride:
+  - match:
+      statusCodes:
+      - type: Range
+        range:
+          start: 421
+          end: 422
+    response:
+      statusCode: 500
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: btp-merge-route
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: btp-merge-policy-route
+  mergeType: StrategicMerge
+  faultInjection:
+    abort:
+      httpStatus: 421

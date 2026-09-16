@@ -53,6 +53,8 @@ http:
           subjectAltNames:
           - uri: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
           - hostname: subdomain.secondexample.com
+          CACertificate:
+            name: system_ca_certificates
           useSystemTrustStore: true
         weight: 1
     hostname: '*'
@@ -153,6 +155,8 @@ http:
           - RSA-PSS-RSAE-SHA256
           - ECDSA-SECP256R1-SHA256
           sni: example.com
+          CACertificate:
+            name: system_ca_certificates
           useSystemTrustStore: true
         weight: 1
     hostname: '*'
@@ -203,6 +207,8 @@ http:
           - RSA-PSS-RSAE-SHA256
           - ECDSA-SECP256R1-SHA256
           sni: example.com
+          CACertificate:
+            name: system_ca_certificates
           useSystemTrustStore: true
         weight: 1
     hostname: '*'

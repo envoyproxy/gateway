@@ -1,0 +1,117 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - foo.example.com
+    - bar.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - name: rule-1
+      matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - name: rule-2
+      matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-2
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+      backendRefs:
+      - name: service-2
+        port: 8080
+extensionServerPolicies:
+# policy should be delivered to all rules in httproute-1
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-1
+    namespace: default
+  spec:
+    targetRef:
+      kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: httproute-1
+    data: "attached to a whole httproute (multi-rule, multi-hostname)"
+# policy must attach to a single rule in httproute-1
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-2
+    namespace: default
+  spec:
+    targetRef:
+      kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: httproute-1
+      sectionName: rule-1
+    data: "attached to httproute rule-1"
+# policy must not get attached to anything since no rule exists with the given name
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-3
+    namespace: default
+  spec:
+    targetRef:
+      kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: httproute-1
+      sectionName: no-such-rule
+    data: "targets a rule that does not exist"
+# policy must attach to all rules in httproute-1 and httproute-2
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-4
+    namespace: default
+  spec:
+    targetRefs:
+    - kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: httproute-1
+    - kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: httproute-2
+    data: "attached to two httproutes via targetRefs"

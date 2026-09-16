@@ -288,7 +288,7 @@ xdsIR:
               - HTTP/1.1
               - HTTP/2
               caCertificate:
-                name: policy-tls/default-ca
+                name: system_ca_certificates
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384
@@ -358,7 +358,7 @@ xdsIR:
               - HTTP/1.1
               - HTTP/2
               caCertificate:
-                name: policy-tls/default-ca
+                name: system_ca_certificates
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               - ECDHE-ECDSA-AES256-GCM-SHA384

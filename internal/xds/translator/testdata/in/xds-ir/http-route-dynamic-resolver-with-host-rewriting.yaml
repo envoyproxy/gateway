@@ -54,7 +54,7 @@ http:
               tls:
                 alpnProtocols: null
                 caCertificate:
-                  name: backend-with-system-ca/default-ca
+                  name: system_ca_certificates
                 useSystemTrustStore: true
               weight: 1
         hostname: gateway.envoyproxy.io

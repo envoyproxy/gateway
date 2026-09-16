@@ -9,6 +9,9 @@ import (
 	"context"
 
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -17,6 +20,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 )
+
+var tracer = otel.Tracer("envoy-gateway/infrastructure")
 
 type Config struct {
 	config.Server
@@ -75,8 +80,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
 	// to avoid multiple EG instances processing envoy proxy infra resources.
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
-		!ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
+	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
+		!ptr.Deref(r.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false) {
 		go func() {
 			select {
 			case <-ctx.Done():
@@ -95,29 +100,48 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	return err
 }
 
-func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
+func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *message.InfraIRWithContext]) {
 	// Subscribe to resources
 	message.HandleSubscription(
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
-		func(update message.Update[string, *ir.Infra], errChan chan error) {
+		func(update message.Update[string, *message.InfraIRWithContext], errChan chan error) {
 			// Check if context is done before logging to avoid writing to test output after test completes
 			select {
 			case <-ctx.Done():
 				return
 			default:
 			}
-			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
+
+			parentCtx := update.Value.ParentContext(ctx)
+			var startOpts []trace.SpanStartOption
+			if !update.Delete && !update.Initial {
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
+			}
+
+			traceCtx, span := tracer.Start(parentCtx, "InfrastructureRunner.updateProxyInfraFromSubscription", startOpts...)
+			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
+
+			traceLogger.Info("received an update", "key", update.Key, "delete", update.Delete)
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
-			val := update.Value
+			span.SetAttributes(
+				attribute.String("infra-ir.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+
+			var val *ir.Infra
+			if update.Value != nil {
+				val = update.Value.Infra
+			}
 
 			if update.Delete {
-				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
+				if err := r.mgr.DeleteProxyInfra(traceCtx, val); err != nil {
 					select {
 					case <-ctx.Done():
 						return
 					default:
-						r.Logger.Error(err, "failed to delete infra")
+						traceLogger.Error(err, "failed to delete infra")
 					}
 					errChan <- err
 				}
@@ -131,17 +155,17 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 					case <-ctx.Done():
 						return
 					default:
-						r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+						traceLogger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
 					}
 					return
 				}
 
-				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
+				if err := r.mgr.CreateOrUpdateProxyInfra(traceCtx, val); err != nil {
 					select {
 					case <-ctx.Done():
 						return
 					default:
-						r.Logger.Error(err, "failed to create new infra")
+						traceLogger.Error(err, "failed to create new infra")
 					}
 					errChan <- err
 				}
@@ -174,7 +198,7 @@ func (r *Runner) initializeRateLimitInfra(ctx context.Context) {
 }
 
 func (r *Runner) waitForProviderReady(ctx context.Context) bool {
-	if r.EnvoyGateway.Provider.Type != egv1a1.ProviderTypeKubernetes {
+	if !r.EnvoyGateway.Provider.IsRunningOnKubernetes() {
 		return true
 	}
 

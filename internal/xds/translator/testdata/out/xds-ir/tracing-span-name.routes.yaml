@@ -28,6 +28,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       tracing:
+        clientSampling: {}
         operation: custom-client-span-%REQ(X-CUSTOM-HEADER)%
         upstreamOperation: custom-server-span-%UPSTREAM_HOST%
 - ignorePortInHostMatching: true

@@ -1,0 +1,39 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "backend-utilization-oob-route"
+    hostname: "*"
+    destination:
+      name: "backend-utilization-oob-dest"
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 8080
+        name: "backend-utilization-oob-dest/backend/0"
+        weight: 1
+    traffic:
+      loadBalancer:
+        backendUtilization:
+          blackoutPeriod: 10s
+          outOfBand:
+            reportingPeriod: 5s
+            port: 9001
+            authority: orca.example.com
+  - name: "backend-utilization-oob-defaults-route"
+    hostname: "*"
+    destination:
+      name: "backend-utilization-oob-defaults-dest"
+      settings:
+      - endpoints:
+        - host: "5.6.7.9"
+          port: 8080
+        name: "backend-utilization-oob-defaults-dest/backend/0"
+        weight: 1
+    traffic:
+      loadBalancer:
+        backendUtilization:
+          outOfBand: {}

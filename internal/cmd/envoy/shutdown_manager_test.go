@@ -21,9 +21,9 @@ import (
 
 // setupFakeEnvoyStats set up an HTTP server return content
 func setupFakeEnvoyStats(t *testing.T, content string) *http.Server {
+	// Reuse the bound listener instead of closing and re-binding the port.
 	l, err := net.Listen("tcp", ":0") //nolint: gosec
 	require.NoError(t, err)
-	require.NoError(t, l.Close())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
@@ -39,7 +39,7 @@ func setupFakeEnvoyStats(t *testing.T, content string) *http.Server {
 	}
 	t.Logf("start to listen at %s ", addr)
 	go func() {
-		if err := s.ListenAndServe(); err != nil {
+		if err := s.Serve(l); err != nil {
 			fmt.Println("fail to listen: ", err)
 		}
 	}()

@@ -1,0 +1,73 @@
+http:
+  - address: 0.0.0.0
+    hostnames:
+      - '*'
+    name: envoy-gateway/gateway-btls/http
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - destination:
+          name: httproute/envoy-gateway/httproute-btls-1/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 10.244.0.11
+                  port: 8080
+              protocol: HTTP
+              tls:
+                CACertificate:
+                  name: system_ca_certificates
+                sni: backend-1.example.com
+                useSystemTrustStore: true
+              weight: 1
+              name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
+        hostname: '*'
+        name: httproute/envoy-gateway/httproute-btls-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /backend-1
+          name: ""
+      - destination:
+          name: httproute/envoy-gateway/httproute-btls-2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 10.244.0.12
+                  port: 8080
+              protocol: HTTP
+              tls:
+                CACertificate:
+                  name: system_ca_certificates
+                sni: backend-2.example.com
+                useSystemTrustStore: true
+              weight: 1
+              name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
+        hostname: '*'
+        name: httproute/envoy-gateway/httproute-btls-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /backend-2
+          name: ""
+      - destination:
+          name: httproute/envoy-gateway/httproute-btls-3/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 10.244.0.13
+                  port: 8080
+              protocol: HTTP
+              tls:
+                CACertificate:
+                  name: system_ca_certificates
+                sni: backend-3.example.com
+                useSystemTrustStore: true
+              weight: 1
+              name: httproute/envoy-gateway/httproute-btls-3/rule/0/backend/0
+        hostname: '*'
+        name: httproute/envoy-gateway/httproute-btls-3/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /backend-3
+          name: ""

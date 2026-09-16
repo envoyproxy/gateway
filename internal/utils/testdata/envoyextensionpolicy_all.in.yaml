@@ -1,0 +1,33 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: original
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: gateway-1
+  wasm:
+  - name: wasm-parent
+    rootID: parent-root
+    code:
+      type: HTTP
+      http:
+        url: https://wasm.parent.example.com/filter.wasm
+    failOpen: false
+  extProc:
+  - backendRefs:
+    - name: ext-proc-parent
+      kind: Service
+      port: 9001
+    messageTimeout: 5s
+    failOpen: false
+  lua:
+  - type: ValueRef
+    valueRef:
+      group: v1
+      kind: ConfigMap
+      name: parent-lua
+  dynamicModule:
+  - name: parent-dm
+    filterName: parent-filter

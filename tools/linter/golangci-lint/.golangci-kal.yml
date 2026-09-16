@@ -16,12 +16,45 @@ linters:
         original-url: sigs.k8s.io/kube-api-linter
         settings:
           linters:
+            # Every kube-api-linter rule is listed here explicitly, so this
+            # file doubles as the roadmap for enabling the remaining rules
+            # (tracked in https://github.com/envoyproxy/gateway/issues/9683).
+            # Rules that are commented out have violations today and are
+            # enabled progressively once their violations are fixed.
             enable:
-              - "conditions"
-              - "nodurations"
-              - "nonullable"
-              - "notimestamp"
-              - "statusoptional"
+              - "conditions"  # Ensure conditions have the correct json tags and markers.
+              - "nodurations"  # Prevent usage of Duration types, prefer integer fields with a unit suffix.
+              - "nonullable"  # Ensure types and fields do not have the nullable marker.
+              - "nophase"  # Phase fields are discouraged by the Kube API conventions, use conditions instead.
+              - "noreferences"  # Prefer Ref/Refs over Reference/References in field names.
+              - "notimestamp"  # Prevent usage of Timestamp in field names, prefer Time.
+              - "statusoptional"  # Ensure all first-level fields within status are optional.
+              - "statussubresource"  # Root objects with a status field must have the status subresource marker.
+              # - "arrayofstruct"  # Structs in arrays must have at least one required field.
+              # - "commentstart"  # Comments must start with the serialized field name.
+              # - "defaultorrequired"  # A field cannot carry both a default and the required marker.
+              # - "defaults"  # Fields with a default must be optional and have omitempty.
+              # - "duplicatemarkers"  # No exact duplicate markers on types and fields.
+              # - "integers"  # Only int32 and int64 are allowed (fixes break the current API).
+              # - "jsontags"  # Every field needs a camelCase json tag (fixes break the current API).
+              # - "maxlength"  # Strings and arrays need MaxLength/MaxItems validation.
+              # - "minlength"  # Strings, arrays and maps must declare whether empty is valid.
+              # - "nobools"  # Bools do not evolve over time, use enums instead.
+              # - "nofloats"  # Floats cannot be round-tripped reliably (fixes break the current API).
+              # - "nomaps"  # Prefer lists of named subobjects over maps (fixes break the current API).
+              # - "nonpointerstructs"  # Non-pointer structs must carry the matching optional/required marker.
+              # - "optionalfields"  # Optional fields should be pointers with omitempty where appropriate.
+              # - "optionalorrequired"  # Every field must be marked as optional or required.
+              # - "requiredfields"  # Required fields must follow the pointer and omitempty conventions.
+              # - "ssatags"  # Arrays need the correct listType markers for Server-Side Apply.
+              # - "uniquemarkers"  # Single-instance markers must not be defined more than once.
+              # The following rules check nothing until they are configured
+              # with project-specific rule sets:
+              # - "conflictingmarkers"  # Detect configured sets of mutually exclusive markers.
+              # - "dependenttags"  # Enforce configured marker dependencies.
+              # - "forbiddenmarkers"  # Forbid configured markers on types and fields.
+              # - "namingconventions"  # Enforce configured field naming conventions.
+              # - "preferredmarkers"  # Enforce a preferred marker among configured equivalents.
             disable:
               - "*"
           lintersConfig:

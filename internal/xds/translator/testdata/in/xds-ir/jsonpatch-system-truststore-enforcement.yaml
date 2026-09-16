@@ -1,0 +1,100 @@
+envoyPatchPolicies:
+# Policy 1: inject a duplicate secret named system_ca_certificates via add-op
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "envoy-gateway"
+        name: "gateway-btls"
+  name: "inject-duplicate-system-ca-policy"
+  namespace: "default"
+  generation: 1
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+    name: "system_ca_certificates_injected"
+    operation:
+      op: "add"
+      path: ""
+      value:
+        name: system_ca_certificates
+        validation_context:
+          trusted_ca:
+            filename: "/tmp/evil-ca.crt"
+# Policy 2: modify the existing secret (replace filename)
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "envoy-gateway"
+        name: "gateway-btls"
+  name: "replace-system-ca-policy"
+  namespace: "default"
+  generation: 1
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+    name: "system_ca_certificates"
+    operation:
+      op: "replace"
+      path: "/validation_context/trusted_ca/filename"
+      value: "/tmp/evil-ca.crt"
+# Policy 3: rename another secret to system_ca_certificates
+- status:
+    ancestors:
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "envoy-gateway"
+        name: "gateway-btls"
+  name: "rename-to-system-ca-policy"
+  namespace: "default"
+  generation: 1
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+    name: "other-secret"
+    operation:
+      op: "add"
+      path: ""
+      value:
+        name: other-secret
+        validation_context:
+          trusted_ca:
+            filename: "/etc/ssl/certs/ca-certificates.crt"
+  - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+    name: "other-secret"
+    operation:
+      op: "replace"
+      path: "/name"
+      value: "system_ca_certificates"
+http:
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  name: envoy-gateway/gateway-btls/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      name: httproute/envoy-gateway/httproute-btls/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 10.244.0.11
+          port: 8080
+        protocol: HTTP
+        tls:
+          CACertificate:
+            name: system_ca_certificates
+          sni: example.com
+          useSystemTrustStore: true
+        weight: 1
+        name: httproute/envoy-gateway/httproute-btls/rule/0/backend/0
+    hostname: '*'
+    name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
+    pathMatch:
+      distinct: false
+      exact: /exact
+      name: ""

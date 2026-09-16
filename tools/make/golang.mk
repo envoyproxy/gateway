@@ -98,6 +98,18 @@ go.test.benchmark: ## Run benchmark tests for translation performance
 	@$(LOG_TARGET)
 	cd test && go test -timeout=15m -run='^$$' -bench=. -benchmem -benchtime=1x -count=6 ./gobench
 
+.PHONY: go.test.standalone
+go.test.standalone: ## Run standalone-mode integration tests
+	@$(LOG_TARGET)
+	@# The xDS runner loads control-plane TLS from ~/.config/envoy-gateway/certs/envoy-gateway
+	@# in host mode, so certs must exist before the suite starts envoy-gateway.
+	@if [ -n "$$ENVOY_GATEWAY_BIN" ]; then \
+		"$$ENVOY_GATEWAY_BIN" certgen --local; \
+	else \
+		go run $(ROOT_PACKAGE)/cmd/envoy-gateway certgen --local; \
+	fi
+	cd test && go test -v -tags standalone -timeout=15m ./standalone
+
 .PHONY: go.test.clean
 go.test.clean: # Clean go test cache
 	@$(LOG_TARGET)
@@ -130,6 +142,13 @@ go.mod.lint: go.mod.tidy go.mod.tidy.examples ## Check if go.mod is clean
 go.lint.fmt:
 	@$(LOG_TARGET)
 	$(GO_TOOL) golangci-lint fmt --config=tools/linter/golangci-lint/.golangci.yml
+
+.PHONY: go.fix
+go.fix: go.fix.examples ## Run go fix across all modules
+	@$(LOG_TARGET)
+	go fix ./...
+	cd test && go fix ./...
+	cd tools && go fix ./...
 
 .PHONY: go.generate
 go.generate: ## Generate code from templates

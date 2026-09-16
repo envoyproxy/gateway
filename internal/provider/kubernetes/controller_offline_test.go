@@ -144,6 +144,8 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 	t.Run("ListenerSet index", func(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1.ListenerSetList{}, client.MatchingFields{gatewayListenerSetIndex: "any"})
 		require.NoError(t, err)
+		err = cli.List(context.Background(), &gwapiv1.ListenerSetList{}, client.MatchingFields{secretListenerSetIndex: "any"})
+		require.NoError(t, err)
 	})
 
 	t.Run("HTTPRoute indices", func(t *testing.T) {

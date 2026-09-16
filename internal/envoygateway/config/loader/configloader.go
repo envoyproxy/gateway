@@ -142,6 +142,14 @@ func (r *Loader) Errors() <-chan error {
 	return r.hookErr
 }
 
+// Logger returns the current logger, safe to call concurrently with a config
+// reload replacing it.
+func (r *Loader) Logger() logging.Logger {
+	r.cfgMu.RLock()
+	defer r.cfgMu.RUnlock()
+	return r.cfg.Logger
+}
+
 // Wait returns when success to acquire mutex, which means no hook is running.
 func (r *Loader) Wait() {
 	r.hookMutex.Lock()

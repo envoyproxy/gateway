@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -276,7 +278,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: ":foo",
+								URL: new(":foo"),
 							},
 						},
 					},
@@ -294,7 +296,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "localhost:6376",
+								URL: new("localhost:6376"),
 							},
 						},
 					},
@@ -312,7 +314,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "primary_.-,node-0:26379,node-1:26379",
+								URL: new("primary_.-,node-0:26379,node-1:26379"),
 							},
 						},
 					},
@@ -330,7 +332,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
 							Redis: &egv1a1.RateLimitRedisSettings{
-								URL: "node-0:6376,node-1:6376,node-2:6376",
+								URL: new("node-0:6376,node-1:6376,node-2:6376"),
 							},
 						},
 					},
@@ -716,8 +718,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: "foobar",
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: "foobar",
+								},
 							},
 						},
 					},
@@ -733,9 +737,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
-								Namespaces: []string{"foo"},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
+									Namespaces: []string{"foo"},
+								},
 							},
 						},
 					},
@@ -751,9 +757,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
-								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:              egv1a1.KubernetesWatchModeTypeNamespaces,
+									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+								},
 							},
 						},
 					},
@@ -769,9 +777,11 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
-								NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+									NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": ""}},
+								},
 							},
 						},
 					},
@@ -787,8 +797,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-							Watch: &egv1a1.KubernetesWatchMode{
-								Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+							EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
+								Watch: &egv1a1.KubernetesWatchMode{
+									Type: egv1a1.KubernetesWatchModeTypeNamespaceSelector,
+								},
 							},
 						},
 					},
@@ -1111,6 +1123,71 @@ func TestValidateEnvoyGatewayXDSServer(t *testing.T) {
 		x := &egv1a1.XDSServer{MaxConnectionAgeGrace: &age}
 		require.Error(t, validateEnvoyGatewayXDSServer(x))
 	})
+
+	t.Run("valid maxReceiveMessageSize", func(t *testing.T) {
+		size := resource.MustParse("100Mi")
+		x := &egv1a1.XDSServer{MaxReceiveMessageSize: &size}
+		require.NoError(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("invalid zero maxReceiveMessageSize", func(t *testing.T) {
+		size := resource.MustParse("0")
+		x := &egv1a1.XDSServer{MaxReceiveMessageSize: &size}
+		require.Error(t, validateEnvoyGatewayXDSServer(x))
+	})
+}
+
+func TestValidateEnvoyGatewayDebounce(t *testing.T) {
+	duration := func(s string) *gwapiv1.Duration {
+		d := gwapiv1.Duration(s)
+		return &d
+	}
+
+	t.Run("valid no overrides", func(t *testing.T) {
+		require.NoError(t, validateEnvoyGatewayDebounce(nil))
+		require.NoError(t, validateEnvoyGatewayDebounce(&egv1a1.Debounce{}))
+	})
+
+	t.Run("valid overrides", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("100ms"), Max: duration("10s")}
+		require.NoError(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("valid equal after and max", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("1s"), Max: duration("1s")}
+		require.NoError(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("invalid after duration", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("bad")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("invalid max duration", func(t *testing.T) {
+		d := &egv1a1.Debounce{Max: duration("bad")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("non positive after", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("0s")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("non positive max", func(t *testing.T) {
+		d := &egv1a1.Debounce{Max: duration("-1s")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("max shorter than after", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("5s"), Max: duration("1s")}
+		require.ErrorContains(t, validateEnvoyGatewayDebounce(d), "must be greater than or equal to")
+	})
+
+	t.Run("max shorter than defaulted after", func(t *testing.T) {
+		// After falls back to its 100ms default, so a 10ms max is invalid.
+		d := &egv1a1.Debounce{Max: duration("10ms")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
 }
 
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
@@ -1187,10 +1264,12 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Replicas:  nil,
-			Pod:       nil,
-			Container: nil,
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Replicas:  nil,
+				Pod:       nil,
+				Container: nil,
+			},
 		},
 	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
@@ -1199,12 +1278,14 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Pod: nil,
-			Container: &egv1a1.KubernetesContainerSpec{
-				Resources:       nil,
-				SecurityContext: nil,
-				Image:           nil,
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Pod: nil,
+				Container: &egv1a1.KubernetesContainerSpec{
+					Resources:       nil,
+					SecurityContext: nil,
+					Image:           nil,
+				},
 			},
 		},
 	}
@@ -1461,4 +1542,124 @@ func TestLuaDisabled(t *testing.T) {
 			assert.Equal(t, tc.expected, tc.ext.LuaDisabled())
 		})
 	}
+}
+
+func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
+	redisBackend := func(redis *egv1a1.RateLimitRedisSettings) *egv1a1.RateLimit {
+		return &egv1a1.RateLimit{
+			Backend: egv1a1.RateLimitDatabaseBackend{
+				Type:  egv1a1.RedisBackendType,
+				Redis: redis,
+			},
+		}
+	}
+	cases := []struct {
+		name      string
+		rateLimit *egv1a1.RateLimit
+		expectErr bool
+	}{
+		{
+			name:      "nil redis settings",
+			rateLimit: redisBackend(nil),
+			expectErr: true,
+		},
+		{
+			name:      "url only",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{URL: new("redis.redis.svc:6379")}),
+			expectErr: false,
+		},
+		{
+			name: "urlRef only",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+					},
+				},
+			}),
+			expectErr: false,
+		},
+		{
+			name: "both url and urlRef set",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URL: new("redis.redis.svc:6379"),
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name:      "neither url nor urlRef",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef missing key",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef missing name",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{Key: "REDIS_ENDPOINT"},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef optional true",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+						Optional:             new(true),
+					},
+				},
+			}),
+			expectErr: true,
+		},
+		{
+			name: "urlRef optional false",
+			rateLimit: redisBackend(&egv1a1.RateLimitRedisSettings{
+				URLRef: &egv1a1.RedisURLSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
+						Key:                  "REDIS_ENDPOINT",
+						Optional:             new(false),
+					},
+				},
+			}),
+			expectErr: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateEnvoyGatewayRateLimit(tc.rateLimit)
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateRedisURL(t *testing.T) {
+	require.NoError(t, ValidateRedisURL("redis.redis.svc:6379"))
+	require.NoError(t, ValidateRedisURL("a.redis.svc:6379,b.redis.svc:6379"))
+	require.ErrorContains(t, ValidateRedisURL(""), "ratelimit redis url is empty")
+	require.ErrorContains(t, ValidateRedisURL(":foo"), "unknown ratelimit redis url format")
 }

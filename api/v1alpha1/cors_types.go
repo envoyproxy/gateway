@@ -20,10 +20,12 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // - http://foo.example.com:8080
 // - http://*.example.com:8080
 // - https://*
+// - moz-extension://example.com
+// - foo://*.example.com:8080
 //
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=253
-// +kubebuilder:validation:Pattern=`^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$`
+// +kubebuilder:validation:Pattern=`^(\*|[A-Za-z][A-Za-z0-9+.-]*:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$`
 type Origin string
 
 // CORS defines the configuration for Cross-Origin Resource Sharing (CORS).

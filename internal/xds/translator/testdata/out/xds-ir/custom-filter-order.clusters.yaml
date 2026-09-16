@@ -1,10 +1,16 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: one_example_com_443
@@ -29,24 +35,30 @@
             localityWeightedLbConfig: {}
   name: one_example_com_443
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
   transportSocket:
     name: envoy.transport_sockets.tls
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
       commonTlsContext:
+        tlsParams:
+          tlsMaximumProtocolVersion: TLSv1_3
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
       sni: one.example.com
-  type: STRICT_DNS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: two_example_com_80
@@ -71,5 +83,3 @@
             localityWeightedLbConfig: {}
   name: two_example_com_80
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS

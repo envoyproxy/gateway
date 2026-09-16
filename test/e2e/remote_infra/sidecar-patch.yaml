@@ -1,0 +1,89 @@
+# Strategic merge patch that injects the remote-infra recording server as a
+# native Kubernetes sidecar (an initContainer with restartPolicy: Always)
+# into the envoy-gateway Deployment. The two containers communicate via
+# gRPC over a Unix domain socket on a shared emptyDir volume, mirroring
+# the production deployment pattern documented in the upstream
+# envoy-gateway-extension repository.
+#
+# Native sidecars guarantee:
+#   - The sidecar starts before any regular container.
+#   - Regular containers (envoy-gateway) do not start until the sidecar's
+#     startupProbe passes — i.e., not until the UDS socket exists.
+#
+# Requires Kubernetes 1.29+ (beta, on by default) or 1.33+ (GA). The kind
+# image used by the e2e suite tracks 1.35+, so this is unconditional.
+#
+# Both containers run as UID/GID 65532 (the EG default), so the socket
+# created by the sidecar at mode 0660 is accessible to envoy-gateway via
+# owner perms.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+spec:
+  template:
+    spec:
+      # The helm chart sets runAsNonRoot/runAsUser/runAsGroup on the pod
+      # securityContext; we redeclare them here alongside fsGroup because
+      # strategic merge replaces the securityContext object as a whole.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        # fsGroup ensures the shared emptyDir is group-owned by 65532 so the
+        # non-root sidecar can create the UDS socket file in it.
+        fsGroup: 65532
+      volumes:
+        - name: remote-infra-socket
+          emptyDir: {}
+      containers:
+        # Patch the existing envoy-gateway container to mount the shared
+        # socket directory. Strategic merge keys on container name.
+        - name: envoy-gateway
+          volumeMounts:
+            - name: remote-infra-socket
+              mountPath: /var/run/remote-infra
+      initContainers:
+        - name: remote-infra
+          image: envoyproxy/remote-infra:latest
+          imagePullPolicy: IfNotPresent
+          restartPolicy: Always
+          args:
+            - --socket-path=/var/run/remote-infra/server.sock
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          # Gates startup of the envoy-gateway container: it will not start
+          # until the UDS socket exists. Readiness and liveness use the same
+          # check so that a sidecar whose socket disappears (e.g., crashed
+          # process leaves a stale fd but no socket file) is restarted and
+          # marked NotReady, mirroring production.
+          startupProbe:
+            exec:
+              command: ["test", "-S", "/var/run/remote-infra/server.sock"]
+            periodSeconds: 1
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command: ["test", "-S", "/var/run/remote-infra/server.sock"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["test", "-S", "/var/run/remote-infra/server.sock"]
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: remote-infra-socket
+              mountPath: /var/run/remote-infra

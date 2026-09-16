@@ -1,0 +1,44 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.csrf:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.csrf.v3.CsrfPolicy
+          additionalOrigins:
+          - exact: www.example.com
+          - exact: www.example.com:8080
+          - safeRegex:
+              regex: .*\.trusted\.com
+          filterEnabled:
+            defaultValue:
+              numerator: 100
+    - match:
+        path: bar/baz
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.csrf:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.csrf.v3.CsrfPolicy
+          additionalOrigins:
+          - exact: staging.example.com
+          filterEnabled:
+            defaultValue:
+              denominator: TEN_THOUSAND
+              numerator: 9750
+          shadowEnabled:
+            defaultValue:
+              numerator: 100

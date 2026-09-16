@@ -56,7 +56,7 @@ metadata:
   name: envoy-ext-auth
   namespace: gateway-conformance-infra
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: envoy-ext-auth

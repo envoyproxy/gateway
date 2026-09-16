@@ -133,7 +133,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 
 		gv := gvk.GroupVersion().String()
 		objType := reflect.TypeOf(kobj)
-		if objType.Kind() != reflect.Ptr {
+		if objType.Kind() != reflect.Pointer {
 			return fmt.Errorf("expected pointer type, but got %s", objType.Kind().String())
 		}
 		kobjVal := reflect.ValueOf(kobj).Elem()
@@ -542,7 +542,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 			if provided, found := providedServiceMap[key]; !found {
 				resources.Services = append(resources.Services, service)
 			} else {
-				providedPorts := sets.NewString()
+				providedPorts := sets.New[string]()
 				for _, port := range provided.Spec.Ports {
 					portKey := fmt.Sprintf("%s-%d", port.Protocol, port.Port)
 					providedPorts.Insert(portKey)

@@ -27,7 +27,7 @@ func init() {
 
 var SecurityPolicyListenerSetTest = suite.ConformanceTest{
 	ShortName:   "SecurityPolicyListenerSet",
-	Description: "SecurityPolicy targeting ListenerSets, ListenerSet-attached routes, and ListenerSet merge parents",
+	Description: "SecurityPolicy targeting ListenerSets, cross-namespace targeting ListenerSets, ListenerSet-attached routes, and ListenerSet merge parents",
 	Manifests:   []string{"testdata/securitypolicy-listenerset.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
@@ -153,6 +153,33 @@ var SecurityPolicyListenerSetTest = suite.ConformanceTest{
 
 			mergeAddr := getListenerAddr(gwAddr, "18185")
 			expectCORSPreflight(t, suite, mergeAddr, "/merge-policy", "https://merge-listenerset.example.com", "PATCH", "x-merge-header")
+		})
+
+		t.Run("cross-namespace policy applies to listenerset with reference grant", func(t *testing.T) {
+			gwNN := types.NamespacedName{Name: "sp-cross-policy-gateway", Namespace: ns}
+			lsNN := types.NamespacedName{Name: "sp-cross-policy-ls", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "sp-cross-policy-route", Namespace: ns}
+			policyNN := types.NamespacedName{Name: "sp-cross-listenerset", Namespace: "sp-cross-ns"}
+
+			gwAddr, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN))
+			require.NoError(t, err)
+
+			routeParents := []gwapiv1.RouteParentStatus{
+				createListenerSetParent(suite.ControllerName, lsNN.Name, "cross-http"),
+			}
+			kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, routeParents, false, &gwapiv1.HTTPRoute{})
+
+			ancestorRef := listenerSetPolicyAncestor(ns, lsNN.Name, "")
+			SecurityPolicyMustBeAccepted(
+				t,
+				suite.Client,
+				policyNN,
+				suite.ControllerName,
+				ancestorRef,
+			)
+
+			crossAddr := getListenerAddr(gwAddr, "18187")
+			expectCORSPreflight(t, suite, crossAddr, "/cross-policy", "https://cross-listenerset.example.com", "DELETE", "x-cross-header")
 		})
 	},
 }

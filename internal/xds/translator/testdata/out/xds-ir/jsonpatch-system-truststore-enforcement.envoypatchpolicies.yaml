@@ -1,0 +1,57 @@
+- generation: 1
+  name: inject-duplicate-system-ca-policy
+  namespace: default
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-btls
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Secret name "system_ca_certificates" is reserved for the system trust
+          store and cannot be used by other resources.
+        observedGeneration: 1
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      controllerName: ""
+- generation: 1
+  name: replace-system-ca-policy
+  namespace: default
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-btls
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Secret name "system_ca_certificates" is reserved for the system trust
+          store and cannot be modified by patches.
+        observedGeneration: 1
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      controllerName: ""
+- generation: 1
+  name: rename-to-system-ca-policy
+  namespace: default
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-btls
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Secret name "system_ca_certificates" is reserved for the system trust
+          store and cannot be used by other resources.
+        observedGeneration: 1
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      controllerName: ""

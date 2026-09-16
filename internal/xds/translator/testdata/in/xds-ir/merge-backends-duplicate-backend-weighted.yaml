@@ -1,0 +1,81 @@
+# The same merge-eligible backend (service-1) is referenced twice in one rule with different
+# weights (1 and 9), alongside a distinct backend (service-2, weight 10). The weighted route
+# action must preserve each occurrence's own weight (1, 9, 10), not collapse the duplicate
+# backend's second occurrence onto the first occurrence's weight.
+backendClusters:
+- metadata:
+    kind: Service
+    name: service-1
+    namespace: default
+    sectionName: "8080"
+  name: service/default/service-1/8080/http
+  setting:
+    addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    metadata:
+      kind: Service
+      name: service-1
+      namespace: default
+      sectionName: "8080"
+    name: service/default/service-1/8080/http
+    protocol: HTTP
+- metadata:
+    kind: Service
+    name: service-2
+    namespace: default
+    sectionName: "8080"
+  name: service/default/service-2/8080/http
+  setting:
+    addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    metadata:
+      kind: Service
+      name: service-2
+      namespace: default
+      sectionName: "8080"
+    name: service/default/service-2/8080/http
+    protocol: HTTP
+http:
+- address: 0.0.0.0
+  externalPort: 80
+  hostnames:
+  - '*'
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      backendClusterRefs:
+      - name: service/default/service-1/8080/http
+        weight: 1
+      - name: service/default/service-1/8080/http
+        weight: 9
+      - name: service/default/service-2/8080/http
+        weight: 10
+      metadata:
+        kind: HTTPRoute
+        name: http-route-1
+        namespace: default
+      name: httproute/default/http-route-1/rule/0
+    hostname: '*'
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: http-route-1
+      namespace: default
+    name: httproute/default/http-route-1/rule/0/match/0/*
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /split

@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -337,6 +338,36 @@ func TestRunner(t *testing.T) {
 		// Wait for the IR to be empty after deletion
 		return !r.cache.SnapshotHasIrKey("test") && len(xdsIR.LoadAll()) == 0
 	}, time.Second*5, time.Millisecond*50)
+}
+
+func TestRunner_withMaxReceiveMessageSize(t *testing.T) {
+	caFile, certFile, keyFile, cleanup := setupTLSCerts(t)
+	defer cleanup()
+
+	xdsIR := new(message.XdsIR)
+	pResource := new(message.ProviderResources)
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	size := resource.MustParse("100Mi")
+	cfg.EnvoyGateway.XDSServer = &egv1a1.XDSServer{
+		MaxReceiveMessageSize: &size,
+	}
+
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResource,
+		XdsIR:             xdsIR,
+		TLSCertPath:       certFile,
+		TLSKeyPath:        keyFile,
+		TLSCaPath:         caFile,
+	})
+
+	ctx, cancel := context.WithCancel(newTestTraceContext())
+	defer cancel()
+
+	err = r.Start(ctx)
+	require.NoError(t, err)
 }
 
 func TestRunner_withExtensionManager_FailOpen(t *testing.T) {

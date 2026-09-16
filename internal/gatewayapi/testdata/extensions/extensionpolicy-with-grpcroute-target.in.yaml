@@ -1,0 +1,51 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    hostnames:
+    - grpc.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - method:
+          service: com.example.Service
+          type: Exact
+      backendRefs:
+      - name: service-1
+        port: 8080
+extensionServerPolicies:
+# A policy targeting a whole GRPCRoute. The GRPCRoute is lowered into the same
+# HTTP listener routes as an HTTPRoute, so the policy is delivered to the
+# PostRouteModify hook for every route generated from the GRPCRoute.
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-1
+    namespace: default
+  spec:
+    targetRef:
+      kind: GRPCRoute
+      group: gateway.networking.k8s.io
+      name: grpcroute-1
+    data: "attached to a grpcroute"

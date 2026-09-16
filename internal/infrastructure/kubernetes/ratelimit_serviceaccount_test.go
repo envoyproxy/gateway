@@ -30,7 +30,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
 			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 			},
 		},
 	}
@@ -149,7 +149,7 @@ func TestDeleteRateLimitServiceAccount(t *testing.T) {
 		Backend: egv1a1.RateLimitDatabaseBackend{
 			Type: egv1a1.RedisBackendType,
 			Redis: &egv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
+				URL: new("redis.redis.svc:6379"),
 			},
 		},
 	}

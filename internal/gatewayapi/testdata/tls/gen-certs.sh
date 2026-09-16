@@ -20,6 +20,10 @@ openssl rsa -in rsa-pkcs8-san.key -out rsa-pkcs1-san.key
 openssl req -x509 -nodes -days $CERT_VALIDITY_DAYS -newkey rsa:2048 -keyout rsa-pkcs8-wildcard.key -out rsa-cert-wildcard.pem -subj "/CN=Test Inc" -addext "subjectAltName = DNS:*, DNS:*.example.com"
 openssl rsa -in rsa-pkcs8-wildcard.key -out rsa-pkcs1-wildcard.key
 
+# RSA with a duplicate SAN entry
+
+openssl req -x509 -nodes -days $CERT_VALIDITY_DAYS -newkey rsa:2048 -keyout rsa-pkcs8-dup-san.key -out rsa-cert-dup-san.pem -subj "/CN=Test Inc" -addext "subjectAltName = DNS:foo.bar.com, DNS:foo.bar.com"
+
 # ECDSA-p256
 
 openssl ecparam -name prime256v1 -genkey -noout -out ecdsa-p256.key

@@ -1,6 +1,6 @@
-envoyExtensionPolicies:
+clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
+  kind: ClientTrafficPolicy
   metadata:
     name: target-gateway-with-accepted-truncated-ancestors
     namespace: envoy-gateway
@@ -261,7 +261,7 @@ envoyExtensionPolicies:
         type: Aggregated
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
+  kind: ClientTrafficPolicy
   metadata:
     name: target-gateway-with-attachment-conflict-truncated-ancestors
     namespace: envoy-gateway
@@ -330,8 +330,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-1, another EnvoyExtensionPolicy
-          has already attached to it
+        message: Unable to target Gateway gateway-1, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -343,7 +343,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-10, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-10, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -356,7 +356,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-11, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-11, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -369,7 +369,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-12, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-12, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -382,7 +382,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-13, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-13, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -395,7 +395,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-14, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-14, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -408,7 +408,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-15, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-15, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -421,7 +421,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-16, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-16, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -434,7 +434,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-17, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-17, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -447,7 +447,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-18, another EnvoyExtensionPolicy
+        message: Unable to target Gateway gateway-18, another ClientTrafficPolicy
           has already attached to it
         reason: Conflicted
         status: "False"
@@ -460,8 +460,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-2, another EnvoyExtensionPolicy
-          has already attached to it
+        message: Unable to target Gateway gateway-2, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -473,8 +473,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-3, another EnvoyExtensionPolicy
-          has already attached to it
+        message: Unable to target Gateway gateway-3, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -486,8 +486,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-4, another EnvoyExtensionPolicy
-          has already attached to it
+        message: Unable to target Gateway gateway-4, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -499,8 +499,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-5, another EnvoyExtensionPolicy
-          has already attached to it
+        message: Unable to target Gateway gateway-5, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -512,8 +512,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-6, another EnvoyExtensionPolicy
-          has already attached to it
+        message: Unable to target Gateway gateway-6, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted
@@ -525,8 +525,8 @@ envoyExtensionPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Unable to target Gateway gateway-7, another EnvoyExtensionPolicy
-          has already attached to it
+        message: Unable to target Gateway gateway-7, another ClientTrafficPolicy has
+          already attached to it
         reason: Conflicted
         status: "False"
         type: Accepted

@@ -18,7 +18,7 @@ http:
               protocol: HTTP
               tls:
                 CACertificate:
-                  name: policy-btls/policies-ca
+                  name: system_ca_certificates
                 sni: example.com
                 useSystemTrustStore: true
               weight: 1

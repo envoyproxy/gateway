@@ -26,6 +26,7 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -42,6 +43,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	"github.com/envoyproxy/gateway/internal/xds/server/kubejwt"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
+	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -172,10 +174,17 @@ func (r *Runner) Start(ctx context.Context) error {
 		PermitWithoutStream: true,
 	}
 
+	// Default to 32MiB
+	maxReceiveMessageSize := int64(32 * 1024 * 1024)
+	if r.EnvoyGateway.XDSServer != nil && r.EnvoyGateway.XDSServer.MaxReceiveMessageSize != nil {
+		maxReceiveMessageSize, _ = r.EnvoyGateway.XDSServer.MaxReceiveMessageSize.AsInt64()
+	}
 	baseKeepaliveOptions := []grpc.ServerOption{
 		grpc.KeepaliveEnforcementPolicy(enforcementPolicy),
 		grpc.KeepaliveParams(keepaliveParams),
+		grpc.MaxRecvMsgSize(int(maxReceiveMessageSize)),
 	}
+	r.Logger.Info("configured gRPC max receive message size", "maxReceiveMessageSize", maxReceiveMessageSize)
 
 	grpcOpts := append([]grpc.ServerOption{}, baseKeepaliveOptions...)
 	grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(tlsConfig)))
@@ -267,12 +276,13 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-			parentCtx := context.Background()
-			if update.Value != nil && update.Value.Context != nil {
-				parentCtx = update.Value.Context
+			parentCtx := update.Value.ParentContext(context.Background())
+			var startOpts []trace.SpanStartOption
+			if !update.Delete && !update.Initial {
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 			}
 
-			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
+			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate", startOpts...)
 			defer span.End()
 			traceLogger := r.Logger.WithTrace(traceCtx)
 			traceLogger.Info("received an update")
@@ -322,9 +332,15 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					}
 				}
 
-				_, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
-				result, err := t.Translate(val.XdsIR)
-				translateSpan.End()
+				// The span is ended by a deferred call inside the closure: the translator
+				// panics on some inputs and HandleSubscription recovers from it, and an
+				// unended span is never exported, so a plain End() here would drop the
+				// stage span and the input sizes recorded on it.
+				result, err := func() (*xtypes.ResourceVersionTable, error) {
+					translateCtx, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
+					defer translateSpan.End()
+					return t.Translate(translateCtx, val.XdsIR)
+				}()
 				if err != nil {
 					traceLogger.Error(err, "skipped publishing xds resources: failed to translate xds ir")
 					errChan <- err

@@ -268,3 +268,103 @@ spec:
   cors:
     allowHeaders:
     - "x-merge-header"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sp-cross-ns
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: sp-cross-policy-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  allowedListeners:
+    namespaces:
+      from: Same
+  listeners:
+  - name: core
+    port: 18186
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: sp-cross-policy-ls
+  namespace: gateway-conformance-infra
+  labels:
+    cross-ns-target: "true"
+spec:
+  parentRef:
+    name: sp-cross-policy-gateway
+    namespace: gateway-conformance-infra
+  listeners:
+  - name: cross-http
+    port: 18187
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sp-cross-policy-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespace: gateway-conformance-infra
+    name: sp-cross-policy-ls
+    sectionName: cross-http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /cross-policy
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+# ReferenceGrant in the ListenerSet namespace allows the cross-namespace
+# SecurityPolicy in the sp-cross-ns namespace to target the ListenerSet.
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-cross-namespace-sp
+  namespace: gateway-conformance-infra
+spec:
+  from:
+  - group: gateway.envoyproxy.io
+    kind: SecurityPolicy
+    namespace: sp-cross-ns
+  to:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: sp-cross-listenerset
+  namespace: sp-cross-ns
+spec:
+  targetSelectors:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    namespaces:
+      from: All
+    matchLabels:
+      cross-ns-target: "true"
+  cors:
+    allowOrigins:
+    - "https://cross-listenerset.example.com"
+    allowMethods:
+    - DELETE
+    allowHeaders:
+    - "x-cross-header"

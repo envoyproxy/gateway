@@ -36,6 +36,7 @@ const (
 	gatewayTCPRouteIndex             = "gatewayTCPRouteIndex"
 	gatewayUDPRouteIndex             = "gatewayUDPRouteIndex"
 	secretGatewayIndex               = "secretGatewayIndex"
+	secretListenerSetIndex           = "secretListenerSetIndex"
 	targetRefGrantRouteIndex         = "targetRefGrantRouteIndex"
 	backendHTTPRouteIndex            = "backendHTTPRouteIndex"
 	backendGRPCRouteIndex            = "backendGRPCRouteIndex"
@@ -137,6 +138,9 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 
 func addListenerSetIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc); err != nil {
+		return err
+	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.ListenerSet{}, secretListenerSetIndex, secretListenerSetIndexFunc); err != nil {
 		return err
 	}
 	return nil
@@ -737,6 +741,29 @@ func secretGatewayIndexFunc(rawObj client.Object) []string {
 				secretReferences = append(secretReferences,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(cert.Namespace, gateway.Namespace),
+						Name:      string(cert.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return secretReferences
+}
+
+// secretListenerSetIndexFunc indexes ListenerSet objects by the Secrets they
+// reference in listeners[].tls.certificateRefs, mirroring secretGatewayIndexFunc.
+func secretListenerSetIndexFunc(rawObj client.Object) []string {
+	listenerSet := rawObj.(*gwapiv1.ListenerSet)
+	var secretReferences []string
+	for _, listener := range listenerSet.Spec.Listeners {
+		if listener.TLS == nil || *listener.TLS.Mode != gwapiv1.TLSModeTerminate {
+			continue
+		}
+		for _, cert := range listener.TLS.CertificateRefs {
+			if *cert.Kind == resource.KindSecret {
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(cert.Namespace, listenerSet.Namespace),
 						Name:      string(cert.Name),
 					}.String(),
 				)

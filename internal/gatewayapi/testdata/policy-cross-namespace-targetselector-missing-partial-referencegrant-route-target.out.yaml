@@ -161,7 +161,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /denied
+          value: /denied-c
   status:
     parents:
     - conditions:
@@ -244,6 +244,36 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: denied-route
+            namespace: policy-target-c
+          name: httproute/policy-target-c/denied-route/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.4.4
+              port: 8080
+            metadata:
+              kind: Service
+              name: denied-service
+              namespace: policy-target-c
+              sectionName: "8080"
+            name: httproute/policy-target-c/denied-route/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: denied-route
+          namespace: policy-target-c
+        name: httproute/policy-target-c/denied-route/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /denied-c
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: allowed-route
             namespace: policy-target-a
           name: httproute/policy-target-a/allowed-route/rule/0
@@ -303,36 +333,6 @@ xdsIR:
           name: denied-route
           namespace: policy-target-b
         name: httproute/policy-target-b/denied-route/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /denied
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: denied-route
-            namespace: policy-target-c
-          name: httproute/policy-target-c/denied-route/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 8.8.4.4
-              port: 8080
-            metadata:
-              kind: Service
-              name: denied-service
-              namespace: policy-target-c
-              sectionName: "8080"
-            name: httproute/policy-target-c/denied-route/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: denied-route
-          namespace: policy-target-c
-        name: httproute/policy-target-c/denied-route/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""

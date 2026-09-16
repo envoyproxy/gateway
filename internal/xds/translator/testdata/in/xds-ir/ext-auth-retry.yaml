@@ -29,6 +29,9 @@ http:
           extAuth:
             name: securitypolicy/default/policy-for-http-route-1
             traffic:
+              loadBalancer:
+                consistentHash:
+                  sourceIP: true
               retry:
                 numRetries: 2
                 perRetry:
@@ -86,6 +89,9 @@ http:
           extAuth:
             name: securitypolicy/default/policy-for-http-route-1
             traffic:
+              loadBalancer:
+                consistentHash:
+                  sourceIP: true
               retry:
                 numRetries: 2
                 perRetry:

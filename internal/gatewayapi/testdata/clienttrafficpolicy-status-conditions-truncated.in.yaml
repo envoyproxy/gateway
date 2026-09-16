@@ -1,6 +1,6 @@
-envoyExtensionPolicies:
+clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
+  kind: ClientTrafficPolicy
   metadata:
     namespace: envoy-gateway
     name: target-gateway-with-accepted-truncated-ancestors
@@ -61,7 +61,7 @@ envoyExtensionPolicies:
       kind: Gateway
       name: gateway-18
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
+  kind: ClientTrafficPolicy
   metadata:
     namespace: envoy-gateway
     name: target-gateway-with-attachment-conflict-truncated-ancestors

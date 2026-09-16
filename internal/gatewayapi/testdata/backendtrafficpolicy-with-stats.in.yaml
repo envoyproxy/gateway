@@ -34,6 +34,8 @@ grpcRoutes:
     namespace: default
     name: grpcroute-1
   spec:
+    hostnames:
+    - grpc-1.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
@@ -48,6 +50,8 @@ grpcRoutes:
     namespace: default
     name: grpcroute-2
   spec:
+    hostnames:
+    - grpc-2.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1

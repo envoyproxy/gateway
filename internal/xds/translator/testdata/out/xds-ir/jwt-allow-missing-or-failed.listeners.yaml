@@ -1,0 +1,107 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              example-cookie_0cd81fec67dbf176:
+                audiences:
+                - foo.com
+                forward: true
+                fromCookies:
+                - session_access_token
+                issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: example-cookie
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 10s
+                    uri: https://localhost/jwt/public-key/jwks.json
+              example-header_18dee9d5ffa8102b:
+                audiences:
+                - foo.com
+                forward: true
+                fromHeaders:
+                - name: Authorization
+                  valuePrefix: 'Bearer '
+                issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: example-header
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 10s
+                    uri: https://localhost/jwt/public-key/jwks.json
+              example_ced70d98fe975d58:
+                audiences:
+                - foo.com
+                forward: true
+                issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: example
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 10s
+                    uri: https://localhost/jwt/public-key/jwks.json
+            requirementMap:
+              example-cookie-or-example-header-or-missing-or-failed_f403d1f429347916:
+                requiresAny:
+                  requirements:
+                  - providerName: example-cookie_0cd81fec67dbf176
+                  - providerName: example-header_18dee9d5ffa8102b
+                  - allowMissingOrFailed: {}
+              example-or-missing-or-failed_3adbd87437a23687:
+                requiresAny:
+                  requirements:
+                  - providerName: example_ced70d98fe975d58
+                  - allowMissingOrFailed: {}
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

@@ -32,6 +32,22 @@ spec:
           - name: otel-collector
             namespace: monitoring
             port: 4317
+        backendSettings:
+          # TCP health check: verifies the gRPC port accepts connections.
+          # Sufficient to produce HC events logged to stdout for Loki assertions.
+          healthCheck:
+            active:
+              timeout: 3s
+              interval: 5s
+              unhealthyThreshold: 3
+              healthyThreshold: 1
+              type: TCP
+              tcp: {}
+              healthCheckLog:
+                sinks:
+                  - type: File
+                    file:
+                      path: /dev/stdout
       customTags:
         "provider":
           type: Literal
