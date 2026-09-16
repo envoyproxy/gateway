@@ -1189,13 +1189,15 @@ metadata:
   name: custom-proxy-config
   namespace: default
 spec:
-  ipFamily: DualStack  # Supports: IPv4, IPv6, or DualStack
+  ipFamily: DualStack  # Supports: IPv4, IPv6, DualStack, or PreferDualStack
 ```
 
 {{% /tab %}}
 {{< /tabpane >}}
 
 After applying the config, the EnvoyProxy deployment will be configured to use the specified IP family. When set to `DualStack`, both IPv4 and IPv6 networking will be enabled.
+
+Use `PreferDualStack` instead of `DualStack` to apply the same EnvoyProxy to both dual-stack and single-stack clusters. The proxy Service then gets both IP families where the cluster provides them, and the single available family otherwise.
 
 **Note**: Your cluster must support the selected IP family configuration. For DualStack support, ensure your Kubernetes cluster is properly configured for dual-stack networking.
 

@@ -279,6 +279,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		case egv1a1.DualStack:
 			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol}
 			serviceSpec.IPFamilyPolicy = new(corev1.IPFamilyPolicyRequireDualStack)
+		case egv1a1.PreferDualStack:
+			// IPFamilies is left unset so the cluster assigns the families it has
+			serviceSpec.IPFamilyPolicy = new(corev1.IPFamilyPolicyPreferDualStack)
 		}
 	}
 

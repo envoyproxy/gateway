@@ -1398,6 +1398,11 @@ func TestService(t *testing.T) {
 			service:  nil,
 		},
 		{
+			caseName: "prefer-dualstack",
+			infra:    newTestInfraWithIPFamily(new(egv1a1.PreferDualStack)),
+			service:  nil,
+		},
+		{
 			caseName: "ipv4-singlestack",
 			infra:    newTestInfraWithIPFamily(new(egv1a1.IPv4)),
 			service:  nil,
