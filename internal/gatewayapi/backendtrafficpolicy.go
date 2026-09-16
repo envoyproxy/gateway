@@ -2053,6 +2053,16 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 
 		if match.SourceCIDR != nil {
+			// Only a single sourceCIDR selector is supported per rule: irRule.CIDRMatch
+			// holds one CIDRMatch, so a second selector would silently overwrite the
+			// first rather than being ANDed with it. Reject this explicitly instead of
+			// silently dropping the earlier sourceCIDR selector.
+			if irRule.CIDRMatch != nil {
+				return nil, fmt.Errorf(
+					"unable to translate rateLimit: only one sourceCIDR selector is supported per rule," +
+						" found multiple sourceCIDR conditions across clientSelectors")
+			}
+
 			distinct := false
 			if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
 				distinct = true
