@@ -2388,6 +2388,10 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, 
 			}
 		}
 
+		for _, h := range ro.Match.RequestHeaders {
+			match.RequestHeaders = append(match.RequestHeaders, *irStringMatch(string(h.Name), h.Value))
+		}
+
 		for _, h := range ro.Match.ResponseHeaders {
 			match.ResponseHeaders = append(match.ResponseHeaders, *irStringMatch(string(h.Name), h.Value))
 		}

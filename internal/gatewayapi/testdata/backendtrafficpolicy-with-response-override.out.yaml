@@ -97,6 +97,40 @@ backendTrafficPolicies:
           inline: '{"error":"combined match"}'
           type: null
         contentType: application/json
+    - match:
+        requestHeaders:
+        - name: X-Client-Type
+          value:
+            type: Exact
+            value: browser
+      response:
+        body:
+          inline: matched request header
+          type: null
+        contentType: text/plain
+    - match:
+        requestHeaders:
+        - name: X-Client-Type
+          value:
+            type: Prefix
+            value: mobile-
+        - name: X-Tenant
+          value:
+            type: RegularExpression
+            value: ^acme-.*$
+        responseHeaders:
+        - name: X-Error-Type
+          value:
+            type: Exact
+            value: upstream-timeout
+        statusCodes:
+        - type: null
+          value: 502
+      response:
+        body:
+          inline: '{"error":"combined request and response match"}'
+          type: null
+        contentType: application/json
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -811,6 +845,33 @@ xdsIR:
               name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/2
               response:
                 body: eyJlcnJvciI6ImNvbWJpbmVkIG1hdGNoIn0=
+                contentType: application/json
+            - match:
+                requestHeaders:
+                - distinct: false
+                  exact: browser
+                  name: X-Client-Type
+              name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/3
+              response:
+                body: bWF0Y2hlZCByZXF1ZXN0IGhlYWRlcg==
+                contentType: text/plain
+            - match:
+                requestHeaders:
+                - distinct: false
+                  name: X-Client-Type
+                  prefix: mobile-
+                - distinct: false
+                  name: X-Tenant
+                  safeRegex: ^acme-.*$
+                responseHeaders:
+                - distinct: false
+                  exact: upstream-timeout
+                  name: X-Error-Type
+                statusCodes:
+                - value: 502
+              name: backendtrafficpolicy/default/policy-for-route-2/responseoverride/rule/4
+              response:
+                body: eyJlcnJvciI6ImNvbWJpbmVkIHJlcXVlc3QgYW5kIHJlc3BvbnNlIG1hdGNoIn0=
                 contentType: application/json
     readyListener:
       address: 0.0.0.0

@@ -2072,6 +2072,13 @@ func (in *CustomResponseMatch) DeepCopyInto(out *CustomResponseMatch) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.RequestHeaders != nil {
+		in, out := &in.RequestHeaders, &out.RequestHeaders
+		*out = make([]ResponseOverrideHeaderMatch, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.ResponseHeaders != nil {
 		in, out := &in.ResponseHeaders, &out.ResponseHeaders
 		*out = make([]ResponseOverrideHeaderMatch, len(*in))
