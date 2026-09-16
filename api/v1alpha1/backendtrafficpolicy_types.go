@@ -45,6 +45,7 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'])))", message="mergeType can only be used with xRoute targets"
 // +kubebuilder:validation:XValidation:rule="!has(self.compression) || !has(self.compressor)", message="either compression or compressor can be set, not both"
+// +kubebuilder:validation:XValidation:rule="!has(self.compressor) || self.compressor.all(c, (c.type == 'Gzip' && !has(c.brotli) && !has(c.zstd) && (has(c.gzip) || has(self.mergeType))) || (c.type == 'Brotli' && !has(c.gzip) && !has(c.zstd) && (has(c.brotli) || has(self.mergeType))) || (c.type == 'Zstd' && !has(c.brotli) && !has(c.gzip) && (has(c.zstd) || has(self.mergeType))))", message="compressor type must match its configuration; merge policies may omit the configuration to disable that compressor"
 // +kubebuilder:validation:XValidation:rule="!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0", message="requestBuffer cannot be used together with httpUpgrade"
 // +kubebuilder:validation:XValidation:rule="!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute'])))", message="admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets"
 type BackendTrafficPolicySpec struct {
@@ -103,6 +104,8 @@ type BackendTrafficPolicySpec struct {
 	// The compressor config for the http streams.
 	// This provides more granular control over compression configuration.
 	// Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal.
+	// Each entry must configure the codec matching its type, for example, type: Gzip with gzip: {}.
+	// A merge policy may omit the matching codec configuration to disable an inherited compressor.
 	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge

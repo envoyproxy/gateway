@@ -1,0 +1,1 @@
+BackendTrafficPolicy now rejects `compressor` entries whose `type` does not match a configured codec instead of silently omitting compression. Merge policies may continue to omit the codec configuration to disable an inherited compressor.
