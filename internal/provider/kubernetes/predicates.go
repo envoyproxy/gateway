@@ -545,7 +545,7 @@ func (r *gatewayAPIReconciler) isRateLimitService(nsName *types.NamespacedName) 
 // validateServiceUpdateForReconcile checks whether a Service update should trigger a reconcile.
 // Returns false when the backend does not have endpoint routing and the service of type clusterIP
 // does not have a new IP address.
-func (r *gatewayAPIReconciler) validateServiceUpdateForReconcile(oldSvc *corev1.Service, newSvc *corev1.Service) bool {
+func (r *gatewayAPIReconciler) validateServiceUpdateForReconcile(oldSvc, newSvc *corev1.Service) bool {
 	ctx := context.Background()
 	labels := newSvc.GetLabels()
 	// Check if the Service belongs to a Gateway
@@ -831,7 +831,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 		r.log.Error(err, "failed to find associated HTTPRoutes")
 		return false
 	}
-	for _, route := range httpRouteList.Items {
+	for i := range httpRouteList.Items {
+		route := &httpRouteList.Items[i]
 		if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
 			return true
 		}
@@ -845,7 +846,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 			r.log.Error(err, "failed to find associated GRPCRoutes")
 			return false
 		}
-		for _, route := range grpcRouteList.Items {
+		for i := range grpcRouteList.Items {
+			route := &grpcRouteList.Items[i]
 			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
 				return true
 			}
@@ -860,7 +862,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 			r.log.Error(err, "failed to find associated TLSRoutes")
 			return false
 		}
-		for _, route := range tlsRouteList.Items {
+		for i := range tlsRouteList.Items {
+			route := &tlsRouteList.Items[i]
 			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
 				return true
 			}
@@ -875,7 +878,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 			r.log.Error(err, "failed to find associated TCPRoutes")
 			return false
 		}
-		for _, route := range tcpRouteList.Items {
+		for i := range tcpRouteList.Items {
+			route := &tcpRouteList.Items[i]
 			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
 				return true
 			}
@@ -890,7 +894,8 @@ func (r *gatewayAPIReconciler) hasRouteWithEndpointRouting(nsName *types.Namespa
 			r.log.Error(err, "failed to find associated UDPRoutes")
 			return false
 		}
-		for _, route := range udpRouteList.Items {
+		for i := range udpRouteList.Items {
+			route := &udpRouteList.Items[i]
 			if r.hasEndpointRouting(route.Namespace, route.Spec.CommonRouteSpec) {
 				return true
 			}
