@@ -563,8 +563,8 @@ github.com/tklauser/numcpus v0.12.0 h1:NR85qdvHA9pFse3x3weVZ0r0ST8R6l5RHbZrlRaqo
 github.com/tklauser/numcpus v0.12.0/go.mod h1:ABHeXzJnr/qqwguhClkZKT1/8VABcYrsyUiUGobwWJg=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75 h1:6fotK7otjonDflCTK0BCfls4SPy3NcCVb5dqqmbRknE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75/go.mod h1:KO6IkyS8Y3j8OdNO85qEYBsRPuteD+YciPomcXdrMnk=
-github.com/tsaarni/certyaml v0.13.0 h1:QZAW7S4nRQUn2k4E6jZyErn7kzE1Nk5v3LnoiS0F+Fo=
-github.com/tsaarni/certyaml v0.13.0/go.mod h1:UZgnD4kY4DWzeRjbtVeb77dGlV2DX4R2eV5TZIIJruU=
+github.com/tsaarni/certyaml v0.12.0 h1:ADrQFfSTsr4VjPaCOabbEb3kyJG9FE/CivDtKcJi5GE=
+github.com/tsaarni/certyaml v0.12.0/go.mod h1:QhRQoqRztFOqh3FNkhUaM9ZMwH0OYDBfwjCbiCUkJZc=
 github.com/tsaarni/x500dn v1.1.0 h1:+rgqGj7LQEkdIIRLsYJm5S6M2dDBscb6/xiEcGW678s=
 github.com/tsaarni/x500dn v1.1.0/go.mod h1:vzfi5pu5wr1eeFf9/0rIr5Bc1kxeyes4jFMCcp0wfCk=
 github.com/ulikunitz/lz v0.6.11 h1:KX3Wk0shhb9X7xo0gjmjGYgqOJ22ykxVmnvt6rBaG6E=
