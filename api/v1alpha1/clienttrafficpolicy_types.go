@@ -50,6 +50,10 @@ type ClientTrafficPolicySpec struct {
 	// If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives.
 	// Disabled by default.
 	//
+	// This setting belongs to the listener socket, which is shared by every Gateway
+	// listener on the same address and port, so it applies to all of them. If more
+	// than one of those listeners configures it, the first one wins.
+	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
 	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
