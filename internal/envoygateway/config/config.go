@@ -47,9 +47,19 @@ type Server struct {
 	Stdout io.Writer
 	// Stderr is the writer for error output.
 	Stderr io.Writer
+	// MetricsTLS configures TLS for the control-plane Prometheus metrics endpoint.
+	MetricsTLS MetricsTLSConfig
 	// KubernetesClient holds the controller-runtime client created by the Kubernetes provider.
 	// This is used by the infrastructure runner to create the envoy proxy and rate limit infra resources.
 	KubernetesClient *KubernetesClientHolder
+}
+
+// MetricsTLSConfig configures server-side TLS for the control-plane metrics endpoint.
+// The certificate and key are read from files mounted into the Envoy Gateway Pod.
+type MetricsTLSConfig struct {
+	Enabled  bool
+	CertFile string
+	KeyFile  string
 }
 
 type KubernetesClientHolder struct {

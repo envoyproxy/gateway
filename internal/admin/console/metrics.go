@@ -13,21 +13,12 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
-// createCombinedMetricsHandler creates a handler that uses the controller-runtime registry
+// createCombinedMetricsHandler creates a handler that combines the controller-runtime and
+// default Prometheus registries.
 func createCombinedMetricsHandler() http.Handler {
-	// Check if the controller-runtime registry has any metrics
-	// In test environments, it might be empty
-	if hasMetrics(metricsserver.Registry) {
-		// Use the controller-runtime registry which includes all Envoy Gateway metrics
-		return promhttp.HandlerFor(metricsserver.Registry, promhttp.HandlerOpts{})
+	gatherer := prometheus.Gatherers{
+		metricsserver.Registry,
+		prometheus.DefaultGatherer,
 	}
-
-	// Fallback to default gatherer for test environments
-	return promhttp.Handler()
-}
-
-// hasMetrics checks if a gatherer has any metrics
-func hasMetrics(gatherer prometheus.Gatherer) bool {
-	families, err := gatherer.Gather()
-	return err == nil && len(families) > 0
+	return promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{})
 }
