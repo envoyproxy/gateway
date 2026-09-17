@@ -8,6 +8,7 @@ package runner
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"sync"
 
 	envoytypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -67,27 +68,14 @@ type endpointFastPath struct {
 	// mu serializes full-snapshot publishes and fast-path patches, so a patch
 	// can never interleave with a snapshot rebuild or its context swap.
 	mu sync.Mutex
-	// contexts holds, per IR key, the endpoint contexts captured at the last
-	// successful full translation.
-	contexts map[string]*irKeyContexts
+
+	// edsContextsByIRKey maps each IR key to its backend index of ClusterLoadAssignment
+	// contexts from the last successful full translation.
+	edsContextsByIRKey map[string]map[string][]*xdstypes.ClusterLoadAssignmentContext
+
 	// lastEndpoints holds the most recent endpoint update per backend key, so
 	// it can be re-applied on top of a full snapshot that raced with it.
-	// Entries are dropped only when the provider deletes the backend. Pruning
-	// against the committed contexts here would race an in-flight build that
-	// is about to introduce a backend it has no context for yet.
 	lastEndpoints map[string]*message.EndpointUpdate
-}
-
-// irKeyContexts is the endpoint context index for one IR key.
-type irKeyContexts struct {
-	// enabled is false when an extension can modify generated xDS resources.
-	enabled bool
-	// patchedClusters contains EDS clusters modified by an applicable
-	// EnvoyPatchPolicy. Those clusters must use the full translation path.
-	patchedClusters map[string]struct{}
-	// byBackend maps a backend key (message.EndpointUpdate.Key()) to the
-	// endpoint contexts of the clusters fed by that backend.
-	byBackend map[string][]*xdstypes.EndpointContext
 }
 
 func newEndpointFastPath(c cache.SnapshotCacheWithCallbacks, extMgr extension.Manager, logger logging.Logger) *endpointFastPath {
@@ -95,7 +83,7 @@ func newEndpointFastPath(c cache.SnapshotCacheWithCallbacks, extMgr extension.Ma
 		logger:                     logger,
 		cache:                      c,
 		extensionModifiesEndpoints: extensionModifiesEndpoints(extMgr),
-		contexts:                   make(map[string]*irKeyContexts),
+		edsContextsByIRKey:         make(map[string]map[string][]*xdstypes.ClusterLoadAssignmentContext),
 		lastEndpoints:              make(map[string]*message.EndpointUpdate),
 	}
 }
@@ -121,18 +109,33 @@ func endpointSourceKey(es *ir.EndpointSource) string {
 	return message.BackendKey(es.Kind, es.Namespace, es.Name)
 }
 
-// prepareFullSnapshot prepares endpoint contexts for a completed translation and folds
-// newer endpoint state into its EDS resources. The caller must hold f.mu through
-// snapshot publication and clear the contexts if publication fails.
-func (f *endpointFastPath) prepareFullSnapshot(irKey string, xdsIR *ir.Xds, table *xdstypes.ResourceVersionTable) {
-	ctxs := f.buildContexts(xdsIR, table)
-	if ctxs.enabled {
-		for backendKey := range ctxs.byBackend {
+// updateEDSForFullSnapshot applies retained endpoint updates to a completed
+// translation's EDS resources and replaces the stored EDS contexts. The caller
+// must hold f.mu through snapshot publication and clear the contexts if publication fails.
+func (f *endpointFastPath) updateEDSForFullSnapshot(irKey string, xdsIR *ir.Xds, table *xdstypes.ResourceVersionTable) {
+	ctxs := table.EDSContexts
+	// Exclude clusters targeted by endpoint patches before replaying retained
+	// updates so neither replay nor later fast-path updates overwrite policy changes.
+	if clustersWithPatches := clustersWithEndpointPatches(xdsIR); len(clustersWithPatches) > 0 {
+		for backendKey, contexts := range ctxs {
+			contexts = slices.DeleteFunc(contexts, func(ec *xdstypes.ClusterLoadAssignmentContext) bool {
+				_, hasEndpointPatch := clustersWithPatches[ec.ClusterName]
+				return hasEndpointPatch
+			})
+			if len(contexts) == 0 {
+				delete(ctxs, backendKey)
+			} else {
+				ctxs[backendKey] = contexts
+			}
+		}
+	}
+	if !f.extensionModifiesEndpoints {
+		for backendKey := range ctxs {
 			update, ok := f.lastEndpoints[backendKey]
 			if !ok {
 				continue
 			}
-			// Mutations target the private contexts built above; skips (zero
+			// Mutations target the private contexts captured by the build; skips (zero
 			// transition, address-type change) leave the build's own endpoint
 			// state in place.
 			assignments, skipReason := f.patchContexts(ctxs, update)
@@ -146,7 +149,7 @@ func (f *endpointFastPath) prepareFullSnapshot(irKey string, xdsIR *ir.Xds, tabl
 		}
 	}
 
-	f.contexts[irKey] = ctxs
+	f.edsContextsByIRKey[irKey] = ctxs
 }
 
 // replaceEndpointResources swaps the given ClusterLoadAssignments into the
@@ -167,33 +170,16 @@ func replaceEndpointResources(table *xdstypes.ResourceVersionTable, assignments 
 	}
 }
 
-// OnDelete drops the endpoint contexts for a deleted IR key.
+// OnDelete drops the ClusterLoadAssignment contexts for a deleted IR key.
 func (f *endpointFastPath) OnDelete(irKey string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	delete(f.contexts, irKey)
+	delete(f.edsContextsByIRKey, irKey)
 }
 
-// buildContexts builds the endpoint context index from a full translation's
-// captured contexts, without committing it.
-func (f *endpointFastPath) buildContexts(xdsIR *ir.Xds, table *xdstypes.ResourceVersionTable) *irKeyContexts {
-	ctxs := &irKeyContexts{
-		enabled:         !f.extensionModifiesEndpoints,
-		patchedClusters: patchedEndpointClusters(xdsIR),
-		byBackend:       make(map[string][]*xdstypes.EndpointContext),
-	}
-	for _, ec := range table.EndpointContexts {
-		for _, ds := range ec.Settings {
-			if ds.EndpointSource != nil {
-				key := endpointSourceKey(ds.EndpointSource)
-				ctxs.byBackend[key] = append(ctxs.byBackend[key], ec)
-			}
-		}
-	}
-	return ctxs
-}
-
-func patchedEndpointClusters(xdsIR *ir.Xds) map[string]struct{} {
+// clustersWithEndpointPatches returns the cluster names targeted by
+// ClusterLoadAssignment patches in the IR's EnvoyPatchPolicies.
+func clustersWithEndpointPatches(xdsIR *ir.Xds) map[string]struct{} {
 	clusters := make(map[string]struct{})
 	for _, policy := range xdsIR.EnvoyPatchPolicies {
 		for _, patch := range policy.JSONPatches {
@@ -242,12 +228,12 @@ func (f *endpointFastPath) handleUpdate(update *message.EndpointUpdate) {
 	f.lastEndpoints[backendKey] = update
 
 	found := false
-	for irKey, ctxs := range f.contexts {
-		if _, ok := ctxs.byBackend[backendKey]; !ok {
+	for irKey, ctxs := range f.edsContextsByIRKey {
+		if _, ok := ctxs[backendKey]; !ok {
 			continue
 		}
 		found = true
-		if !ctxs.enabled {
+		if f.extensionModifiesEndpoints {
 			endpointFastPathSkippedTotal.With(skipReasonLabel.Value(skipReasonDisabledForKey)).Increment()
 			continue
 		}
@@ -283,7 +269,7 @@ func (f *endpointFastPath) handleUpdate(update *message.EndpointUpdate) {
 // the rebuilt CLAs of the clusters that changed. A non-empty skip reason means
 // the contexts were left untouched: the change is not CLA-only and belongs to
 // the full path. Must be called with f.mu held.
-func (f *endpointFastPath) patchContexts(ctxs *irKeyContexts, update *message.EndpointUpdate) ([]envoytypes.Resource, string) {
+func (f *endpointFastPath) patchContexts(ctxs map[string][]*xdstypes.ClusterLoadAssignmentContext, update *message.EndpointUpdate) ([]envoytypes.Resource, string) {
 	backendKey := update.Key()
 
 	type pendingChange struct {
@@ -293,15 +279,12 @@ func (f *endpointFastPath) patchContexts(ctxs *irKeyContexts, update *message.En
 	}
 	var (
 		pending         []pendingChange
-		changedClusters []*xdstypes.EndpointContext
-		seen            = make(map[*xdstypes.EndpointContext]struct{})
+		changedClusters []*xdstypes.ClusterLoadAssignmentContext
+		seen            = make(map[*xdstypes.ClusterLoadAssignmentContext]struct{})
 	)
 
-	for _, ec := range ctxs.byBackend[backendKey] {
+	for _, ec := range ctxs[backendKey] {
 		if _, ok := seen[ec]; ok {
-			continue
-		}
-		if _, patched := ctxs.patchedClusters[ec.ClusterName]; patched {
 			continue
 		}
 		seen[ec] = struct{}{}

@@ -7,12 +7,13 @@ package types
 
 import (
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
-// EndpointContext captures, for one EDS cluster, the inputs needed to rebuild its
+// ClusterLoadAssignmentContext captures, for one EDS cluster, the inputs needed to rebuild its
 // ClusterLoadAssignment outside a full translation. It is recorded during full
 // translation and consumed by the xDS runner's endpoint fast path.
-type EndpointContext struct {
+type ClusterLoadAssignmentContext struct {
 	// ClusterName is the xDS cluster (and CLA) name.
 	ClusterName string
 	// Settings are the cluster's destination settings from the translated IR.
@@ -27,10 +28,21 @@ type EndpointContext struct {
 	WeightedZones []ir.WeightedZoneConfig
 }
 
-// AddEndpointContext records the endpoint context for an EDS cluster.
-func (t *ResourceVersionTable) AddEndpointContext(ec *EndpointContext) {
-	if t.EndpointContexts == nil {
-		t.EndpointContexts = make(map[string]*EndpointContext)
+// AddClusterLoadAssignmentContext records the context for an EDS cluster.
+func (t *ResourceVersionTable) AddClusterLoadAssignmentContext(ec *ClusterLoadAssignmentContext) {
+	if t.EDSContexts == nil {
+		t.EDSContexts = make(map[string][]*ClusterLoadAssignmentContext)
 	}
-	t.EndpointContexts[ec.ClusterName] = ec
+	seen := make(map[string]struct{})
+	for _, setting := range ec.Settings {
+		if setting.EndpointSource == nil {
+			continue
+		}
+		key := message.BackendKey(setting.EndpointSource.Kind, setting.EndpointSource.Namespace, setting.EndpointSource.Name)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		t.EDSContexts[key] = append(t.EDSContexts[key], ec)
+	}
 }

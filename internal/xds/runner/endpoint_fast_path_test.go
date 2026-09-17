@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"os"
+	"slices"
 	"testing"
 
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -80,9 +81,9 @@ func testEndpointSlice(svcName string, addresses ...string) *discoveryv1.Endpoin
 	}
 }
 
-func testFastPathContext() *xdstypes.EndpointContext {
+func testFastPathContext() *xdstypes.ClusterLoadAssignmentContext {
 	const clusterName = "cluster-a"
-	return &xdstypes.EndpointContext{
+	return &xdstypes.ClusterLoadAssignmentContext{
 		ClusterName: clusterName,
 		Settings: []*ir.DestinationSetting{{
 			Name:        clusterName + "/backend/0",
@@ -104,8 +105,8 @@ func testFastPathContext() *xdstypes.EndpointContext {
 func testFastPath(fc *fakeCache) *endpointFastPath {
 	fp := newEndpointFastPath(fc, nil, logging.DefaultLogger(os.Stderr, egv1a1.LogLevelInfo))
 	table := &xdstypes.ResourceVersionTable{}
-	table.AddEndpointContext(testFastPathContext())
-	fp.contexts["gw/eg"] = fp.buildContexts(&ir.Xds{}, table)
+	table.AddClusterLoadAssignmentContext(testFastPathContext())
+	fp.updateEDSForFullSnapshot("gw/eg", &ir.Xds{}, table)
 	return fp
 }
 
@@ -158,7 +159,7 @@ func TestFastPathSkipsZeroEndpointTransition(t *testing.T) {
 
 	require.Empty(t, fc.patches)
 	// The cached context still holds the last-applied endpoints.
-	require.Len(t, fp.contexts["gw/eg"].byBackend[update.Key()][0].Settings[0].Endpoints, 1)
+	require.Len(t, fp.edsContextsByIRKey["gw/eg"][update.Key()][0].Settings[0].Endpoints, 1)
 }
 
 func TestFastPathSkipsAddressTypeChange(t *testing.T) {
@@ -183,27 +184,81 @@ func TestFastPathSkipsUnknownBackend(t *testing.T) {
 	require.Empty(t, fc.patches)
 }
 
-func TestFastPathDisabledForKeyWithEnvoyPatchPolicies(t *testing.T) {
-	fc := &fakeCache{}
-	fp := testFastPath(fc)
+func TestFastPathSkipsClustersWithEndpointPatches(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		patches []*ir.JSONPatchConfig
+		skipped []string
+	}{
+		{
+			name:    "matching endpoint patch",
+			patches: []*ir.JSONPatchConfig{{Type: resourcev3.EndpointType, Name: "cluster-a"}},
+			skipped: []string{"cluster-a"},
+		},
+		{
+			name:    "other resource type",
+			patches: []*ir.JSONPatchConfig{{Type: resourcev3.ClusterType, Name: "cluster-a"}},
+		},
+		{
+			name:    "other cluster",
+			patches: []*ir.JSONPatchConfig{{Type: resourcev3.EndpointType, Name: "cluster-other"}},
+		},
+		{
+			name: "all clusters patched",
+			patches: []*ir.JSONPatchConfig{
+				{Type: resourcev3.EndpointType, Name: "cluster-a"},
+				{Type: resourcev3.EndpointType, Name: "cluster-b"},
+			},
+			skipped: []string{"cluster-a", "cluster-b"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fc := &fakeCache{}
+			fp := testFastPath(fc)
+			r := &Runner{cache: fc, endpointFastPath: fp}
+			retained := testUpdate("2.2.2.2")
+			fp.lastEndpoints[retained.Key()] = retained
 
-	// A full build whose IR carries EnvoyPatchPolicies disables the fast path
-	// for the key: patches could target ClusterLoadAssignments.
-	table := &xdstypes.ResourceVersionTable{}
-	table.AddEndpointContext(testFastPathContext())
-	fp.contexts["gw/eg"] = fp.buildContexts(&ir.Xds{EnvoyPatchPolicies: []*ir.EnvoyPatchPolicy{{
-		JSONPatches: []*ir.JSONPatchConfig{{Type: resourcev3.EndpointType, Name: "cluster-a"}},
-	}}}, table)
+			// Both clusters share a backend; only the targeted clusters must
+			// retain their full translation's endpoints during replay.
+			table := publishFullBuildTable(testFastPathContext())
+			other := testFastPathContext()
+			other.ClusterName = "cluster-b"
+			table.AddClusterLoadAssignmentContext(other)
+			table.XdsResources[resourcev3.EndpointType] = append(table.XdsResources[resourcev3.EndpointType], translator.BuildClusterLoadAssignment(other))
+			xdsIR := &ir.Xds{EnvoyPatchPolicies: []*ir.EnvoyPatchPolicy{{JSONPatches: tc.patches}}}
+			require.NoError(t, r.generateSnapshot("gw/eg", xdsIR, table, context.Background()))
+			for _, res := range fc.snapshotResources[0][resourcev3.EndpointType] {
+				cla := res.(*endpointv3.ClusterLoadAssignment)
+				if slices.Contains(tc.skipped, cla.ClusterName) {
+					require.Equal(t, []string{"1.1.1.1"}, claAddresses(t, res))
+				} else {
+					require.Equal(t, []string{"2.2.2.2"}, claAddresses(t, res))
+				}
+			}
 
-	fp.handleUpdate(testUpdate("2.2.2.2"))
-	require.Empty(t, fc.patches)
+			// Later updates must apply the same exclusions.
+			fp.handleUpdate(testUpdate("3.3.3.3"))
+			if len(tc.skipped) == 2 {
+				require.Empty(t, fc.patches)
+				require.NotContains(t, fp.edsContextsByIRKey["gw/eg"], retained.Key())
+				return
+			}
+			require.Len(t, fc.patches, 1)
+			require.Len(t, fc.patches[0].assignments, 2-len(tc.skipped))
+			for _, res := range fc.patches[0].assignments {
+				require.NotContains(t, tc.skipped, res.(*endpointv3.ClusterLoadAssignment).ClusterName)
+				require.Equal(t, []string{"3.3.3.3"}, claAddresses(t, res))
+			}
+		})
+	}
 }
 
 // publishFullBuildTable builds a translation table whose EDS resources match
-// the endpoint context captured by the build (as a real translation would).
-func publishFullBuildTable(ec *xdstypes.EndpointContext) *xdstypes.ResourceVersionTable {
+// the ClusterLoadAssignment context captured by the build (as a real translation would).
+func publishFullBuildTable(ec *xdstypes.ClusterLoadAssignmentContext) *xdstypes.ResourceVersionTable {
 	table := &xdstypes.ResourceVersionTable{}
-	table.AddEndpointContext(ec)
+	table.AddClusterLoadAssignmentContext(ec)
 	table.XdsResources = xdstypes.XdsResources{
 		resourcev3.EndpointType: {translator.BuildClusterLoadAssignment(ec)},
 	}
@@ -247,7 +302,7 @@ func TestFastPathKeepsContextWhenPatchCommittedWithError(t *testing.T) {
 	fp.handleUpdate(testUpdate("2.2.2.2"))
 	require.Len(t, fc.patches, 1)
 
-	applied := fp.contexts["gw/eg"].byBackend[testUpdate().Key()][0].Settings[0].Endpoints
+	applied := fp.edsContextsByIRKey["gw/eg"][testUpdate().Key()][0].Settings[0].Endpoints
 	require.Len(t, applied, 1)
 	require.Equal(t, "2.2.2.2", applied[0].Host)
 }
@@ -317,7 +372,7 @@ func TestFastPathFullBuildFailureDisablesPatchesUntilRecovery(t *testing.T) {
 	fc.snapshotErr = context.DeadlineExceeded
 	table := publishFullBuildTable(testFastPathContext())
 	require.ErrorIs(t, r.generateSnapshot("gw/eg", &ir.Xds{}, table, context.Background()), fc.snapshotErr)
-	require.NotContains(t, fp.contexts, "gw/eg")
+	require.NotContains(t, fp.edsContextsByIRKey, "gw/eg")
 
 	fp.handleUpdate(testUpdate("2.2.2.2"))
 	require.Empty(t, fc.patches)
@@ -325,7 +380,7 @@ func TestFastPathFullBuildFailureDisablesPatchesUntilRecovery(t *testing.T) {
 	fc.snapshotErr = nil
 	table = publishFullBuildTable(testFastPathContext())
 	require.NoError(t, r.generateSnapshot("gw/eg", &ir.Xds{}, table, context.Background()))
-	require.Contains(t, fp.contexts, "gw/eg")
+	require.Contains(t, fp.edsContextsByIRKey, "gw/eg")
 	require.ElementsMatch(t, []string{"2.2.2.2"},
 		claAddresses(t, fc.snapshotResources[len(fc.snapshotResources)-1][resourcev3.EndpointType][0]))
 

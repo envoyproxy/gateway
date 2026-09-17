@@ -436,14 +436,14 @@ func (r *Runner) generateSnapshot(irKey string, xdsIR *ir.Xds, table *xtypes.Res
 	if r.endpointFastPath != nil {
 		r.endpointFastPath.mu.Lock()
 		defer r.endpointFastPath.mu.Unlock()
-		r.endpointFastPath.prepareFullSnapshot(irKey, xdsIR, table)
+		r.endpointFastPath.updateEDSForFullSnapshot(irKey, xdsIR, table)
 	}
 
 	err := r.cache.GenerateNewSnapshot(irKey, table.XdsResources, ctx)
 	if err != nil && r.endpointFastPath != nil {
 		// Creation and publication failures can leave different snapshots live.
 		// Fall back to the full pipeline until a successful build restores contexts.
-		delete(r.endpointFastPath.contexts, irKey)
+		delete(r.endpointFastPath.edsContextsByIRKey, irKey)
 	}
 	return err
 }

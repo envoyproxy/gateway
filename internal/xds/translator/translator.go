@@ -1353,8 +1353,8 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		// Remember how this CLA was built so the endpoint fast path can rebuild it
 		// on an EndpointSlice change. Nil unless the EndpointFastPath flag is on and
 		// the cluster is EndpointSlice-backed.
-		if ec := buildEndpointContext(args, &lb); ec != nil {
-			tCtx.AddEndpointContext(ec)
+		if ec := buildClusterLoadAssignmentContext(args, &lb); ec != nil {
+			tCtx.AddClusterLoadAssignmentContext(ec)
 		}
 	case EndpointTypeDNS:
 		xdsCluster.LoadAssignment = xdsEndpoints
