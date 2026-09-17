@@ -33,6 +33,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:
@@ -95,6 +96,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:
@@ -160,6 +162,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           statPrefix: http_local_rate_limiter
           tokenBucket:
             fillInterval: 60s
