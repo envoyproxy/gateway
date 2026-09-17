@@ -166,9 +166,8 @@ func TestUpdateEndpointResources(t *testing.T) {
 			cla("cluster-b", "2.2.2.2"),
 		},
 	}
-	committed, err := sc.GenerateNewSnapshot(irKey, resources, context.Background())
+	err := sc.GenerateNewSnapshot(irKey, resources, context.Background())
 	require.NoError(t, err)
-	require.True(t, committed)
 
 	oldSnapshot := sc.lastSnapshot[irKey]
 	oldEDSVersion := oldSnapshot.GetVersion(resourcev3.EndpointType)

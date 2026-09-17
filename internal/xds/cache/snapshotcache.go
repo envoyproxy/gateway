@@ -54,7 +54,7 @@ var (
 type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
-	GenerateNewSnapshot(string, types.XdsResources, context.Context) (bool, error)
+	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
 	UpdateEndpointResources(string, []envoytypes.Resource) error
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
@@ -86,12 +86,7 @@ type snapshotCache struct {
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
-//
-// The returned bool reports whether the snapshot was committed. It is false only
-// when building it failed, leaving the previous snapshot untouched; it is true
-// even when publishing to a node then failed, so callers can keep state in sync
-// with the committed snapshot while still surfacing the error.
-func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) (bool, error) {
+func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -111,11 +106,10 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	)
 	if err != nil {
 		xdsSnapshotCreateTotal.WithFailure(metrics.ReasonError).Increment()
-		return false, err
+		return err
 	}
 	xdsSnapshotCreateTotal.WithSuccess().Increment()
 
-	// Commit point.
 	// Delete snapshot from cache if resources are nil
 	if resources == nil {
 		delete(s.lastSnapshot, irKey)
@@ -124,21 +118,18 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 		s.lastSnapshot[irKey] = snapshot
 	}
 
-	// The snapshot is committed above, so a per-node publish failure is
-	// reported with committed=true: the error still propagates to the caller
-	// (and its error channel), while a node whose publish failed is served the
-	// committed snapshot when it reconnects.
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
 
 		if err = s.SetSnapshot(context.TODO(), node, snapshot); err != nil {
 			xdsSnapshotUpdateTotal.WithFailure(metrics.ReasonError, nodeIDLabel.Value(node)).Increment()
-			return true, err
+			return err
+		} else {
+			xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
 		}
-		xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
 	}
 
-	return true, nil
+	return nil
 }
 
 // UpdateEndpointResources patches only the EDS resources of irKey's snapshot: the

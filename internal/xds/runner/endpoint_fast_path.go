@@ -6,7 +6,6 @@
 package runner
 
 import (
-	"context"
 	"errors"
 	"reflect"
 	"sync"
@@ -121,14 +120,10 @@ func endpointSourceKey(es *ir.EndpointSource) string {
 	return message.BackendKey(es.Kind, es.Namespace, es.Name)
 }
 
-// OnFullBuild hands a completed translation to the snapshot cache. The endpoint
-// state this path already published is folded into the build's own EDS resources
-// first, so a build that raced an endpoint change does not regress it. The
-// captured contexts replace the previous ones only if the snapshot committed.
-func (f *endpointFastPath) OnFullBuild(irKey string, xdsIR *ir.Xds, table *xdstypes.ResourceVersionTable, ctx context.Context) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
+// prepareFullSnapshot prepares endpoint contexts for a completed translation and folds
+// newer endpoint state into its EDS resources. The caller must hold f.mu through
+// snapshot publication and clear the contexts if publication fails.
+func (f *endpointFastPath) prepareFullSnapshot(irKey string, xdsIR *ir.Xds, table *xdstypes.ResourceVersionTable) {
 	ctxs := f.buildContexts(xdsIR, table)
 	if ctxs.enabled {
 		for backendKey := range ctxs.byBackend {
@@ -150,14 +145,7 @@ func (f *endpointFastPath) OnFullBuild(irKey string, xdsIR *ir.Xds, table *xdsty
 		}
 	}
 
-	committed, err := f.cache.GenerateNewSnapshot(irKey, table.XdsResources, ctx)
-	if committed {
-		// The snapshot is live, so the contexts must describe it even when
-		// publishing to some node failed — otherwise later patches would be
-		// built from the previous translation's settings.
-		f.contexts[irKey] = ctxs
-	}
-	return err
+	f.contexts[irKey] = ctxs
 }
 
 // replaceEndpointResources swaps the given ClusterLoadAssignments into the

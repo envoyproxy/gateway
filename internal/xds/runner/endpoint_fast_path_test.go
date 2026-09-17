@@ -36,6 +36,7 @@ type patchCall struct {
 // only the overridden methods may be called.
 type fakeCache struct {
 	cache.SnapshotCacheWithCallbacks
+	snapshotErr       error
 	snapshots         []string
 	snapshotResources []xdstypes.XdsResources
 	patches           []patchCall
@@ -46,10 +47,10 @@ type fakeCache struct {
 	patchCommitted bool
 }
 
-func (f *fakeCache) GenerateNewSnapshot(irKey string, resources xdstypes.XdsResources, _ context.Context) (bool, error) {
+func (f *fakeCache) GenerateNewSnapshot(irKey string, resources xdstypes.XdsResources, _ context.Context) error {
 	f.snapshots = append(f.snapshots, irKey)
 	f.snapshotResources = append(f.snapshotResources, resources)
-	return true, nil
+	return f.snapshotErr
 }
 
 func (f *fakeCache) UpdateEndpointResources(irKey string, assignments []envoytypes.Resource) error {
@@ -210,6 +211,7 @@ func publishFullBuildTable(ec *xdstypes.EndpointContext) *xdstypes.ResourceVersi
 func TestFastPathReappliesLatestEndpointsOnFullBuild(t *testing.T) {
 	fc := &fakeCache{}
 	fp := testFastPath(fc)
+	r := &Runner{cache: fc, endpointFastPath: fp}
 
 	// The fast path has seen endpoint state newer than what the (racing) full
 	// build translated.
@@ -220,7 +222,7 @@ func TestFastPathReappliesLatestEndpointsOnFullBuild(t *testing.T) {
 	// the state the fast path already published into the build's own EDS
 	// resources, so the snapshot goes out fresh in a single push.
 	table := publishFullBuildTable(testFastPathContext())
-	require.NoError(t, fp.OnFullBuild("gw/eg", &ir.Xds{}, table, context.Background()))
+	require.NoError(t, r.generateSnapshot("gw/eg", &ir.Xds{}, table, context.Background()))
 
 	require.Equal(t, []string{"gw/eg"}, fc.snapshots)
 	eds := fc.snapshotResources[0][resourcev3.EndpointType]
@@ -251,6 +253,7 @@ func TestFastPathKeepsContextWhenPatchCommittedWithError(t *testing.T) {
 func TestFastPathLeavesUncommittedPatchToTheFullPath(t *testing.T) {
 	fc := &fakeCache{}
 	fp := testFastPath(fc)
+	r := &Runner{cache: fc, endpointFastPath: fp}
 
 	// Nothing was committed. The contexts still track the new endpoints, so the
 	// fast path does not retry; the full build triggered by the same event is
@@ -260,7 +263,7 @@ func TestFastPathLeavesUncommittedPatchToTheFullPath(t *testing.T) {
 	require.Empty(t, fc.patches)
 
 	table := publishFullBuildTable(testFastPathContext())
-	require.NoError(t, fp.OnFullBuild("gw/eg", &ir.Xds{}, table, context.Background()))
+	require.NoError(t, r.generateSnapshot("gw/eg", &ir.Xds{}, table, context.Background()))
 	require.ElementsMatch(t, []string{"2.2.2.2"},
 		claAddresses(t, fc.snapshotResources[0][resourcev3.EndpointType][0]))
 }
@@ -268,6 +271,7 @@ func TestFastPathLeavesUncommittedPatchToTheFullPath(t *testing.T) {
 func TestFastPathRetainsEndpointsForBackendsNotYetInAnyContext(t *testing.T) {
 	fc := &fakeCache{}
 	fp := testFastPath(fc)
+	r := &Runner{cache: fc, endpointFastPath: fp}
 
 	// An endpoint update arrives for a backend no committed context references
 	// yet, because the build that will introduce it is still in flight.
@@ -279,7 +283,7 @@ func TestFastPathRetainsEndpointsForBackendsNotYetInAnyContext(t *testing.T) {
 	// An unrelated IR key's build commits. It must not drop the retained
 	// update: the in-flight build still needs it.
 	other := publishFullBuildTable(testFastPathContext())
-	require.NoError(t, fp.OnFullBuild("gw/other", &ir.Xds{}, other, context.Background()))
+	require.NoError(t, r.generateSnapshot("gw/other", &ir.Xds{}, other, context.Background()))
 	require.Contains(t, fp.lastEndpoints, pending.Key())
 
 	// When the in-flight build lands carrying older endpoints, the retained
@@ -287,7 +291,7 @@ func TestFastPathRetainsEndpointsForBackendsNotYetInAnyContext(t *testing.T) {
 	ec := testFastPathContext()
 	ec.Settings[0].EndpointSource.Name = "pending-svc"
 	table := publishFullBuildTable(ec)
-	require.NoError(t, fp.OnFullBuild("gw/pending", &ir.Xds{}, table, context.Background()))
+	require.NoError(t, r.generateSnapshot("gw/pending", &ir.Xds{}, table, context.Background()))
 
 	eds := fc.snapshotResources[len(fc.snapshotResources)-1][resourcev3.EndpointType]
 	require.Len(t, eds, 1)
@@ -301,4 +305,29 @@ func TestFastPathOnDelete(t *testing.T) {
 	fp.OnDelete("gw/eg")
 	fp.handleUpdate(testUpdate("2.2.2.2"))
 	require.Empty(t, fc.patches)
+}
+
+func TestFastPathFullBuildFailureDisablesPatchesUntilRecovery(t *testing.T) {
+	fc := &fakeCache{}
+	fp := testFastPath(fc)
+	r := &Runner{cache: fc, endpointFastPath: fp}
+
+	fc.snapshotErr = context.DeadlineExceeded
+	table := publishFullBuildTable(testFastPathContext())
+	require.ErrorIs(t, r.generateSnapshot("gw/eg", &ir.Xds{}, table, context.Background()), fc.snapshotErr)
+	require.NotContains(t, fp.contexts, "gw/eg")
+
+	fp.handleUpdate(testUpdate("2.2.2.2"))
+	require.Empty(t, fc.patches)
+
+	fc.snapshotErr = nil
+	table = publishFullBuildTable(testFastPathContext())
+	require.NoError(t, r.generateSnapshot("gw/eg", &ir.Xds{}, table, context.Background()))
+	require.Contains(t, fp.contexts, "gw/eg")
+	require.ElementsMatch(t, []string{"2.2.2.2"},
+		claAddresses(t, fc.snapshotResources[len(fc.snapshotResources)-1][resourcev3.EndpointType][0]))
+
+	fp.handleUpdate(testUpdate("3.3.3.3"))
+	require.Len(t, fc.patches, 1)
+	require.ElementsMatch(t, []string{"3.3.3.3"}, claAddresses(t, fc.patches[0].assignments[0]))
 }

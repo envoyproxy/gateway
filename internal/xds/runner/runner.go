@@ -38,6 +38,7 @@ import (
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
@@ -318,7 +319,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				if r.endpointFastPath != nil {
 					r.endpointFastPath.OnDelete(key)
 				}
-				if _, err := r.cache.GenerateNewSnapshot(key, nil, traceCtx); err != nil {
+				if err := r.cache.GenerateNewSnapshot(key, nil, traceCtx); err != nil {
 					traceLogger.Error(err, "failed to delete the snapshot")
 					errChan <- err
 				}
@@ -379,21 +380,12 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				// Note: invalid EnvoyPatchPolicies are considered user-level errors and will not prevent the snapshot from being updated.
 				if err == nil {
 					if result.XdsResources != nil {
-						switch {
-						case r.cache == nil:
+						switch r.cache {
+						case nil:
 							r.Logger.Error(err, "failed to init snapshot cache")
 							errChan <- err
-						case r.endpointFastPath != nil:
-							// Publish through the fast path so the snapshot, the
-							// endpoint contexts, and the re-applied endpoint state
-							// are swapped atomically with respect to endpoint patches.
-							if err := r.endpointFastPath.OnFullBuild(key, val.XdsIR, result, traceCtx); err != nil {
-								r.Logger.Error(err, "failed to generate a snapshot")
-								errChan <- err
-							}
 						default:
-							// Update snapshot cache
-							if _, err := r.cache.GenerateNewSnapshot(key, result.XdsResources, traceCtx); err != nil {
+							if err := r.generateSnapshot(key, val.XdsIR, result, traceCtx); err != nil {
 								r.Logger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}
@@ -436,6 +428,24 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 		},
 	)
 	r.Logger.Info("subscriber shutting down")
+}
+
+// generateSnapshot serializes full-snapshot publication with endpoint patches,
+// keeping the snapshot and the fast-path contexts aligned.
+func (r *Runner) generateSnapshot(irKey string, xdsIR *ir.Xds, table *xtypes.ResourceVersionTable, ctx context.Context) error {
+	if r.endpointFastPath != nil {
+		r.endpointFastPath.mu.Lock()
+		defer r.endpointFastPath.mu.Unlock()
+		r.endpointFastPath.prepareFullSnapshot(irKey, xdsIR, table)
+	}
+
+	err := r.cache.GenerateNewSnapshot(irKey, table.XdsResources, ctx)
+	if err != nil && r.endpointFastPath != nil {
+		// Creation and publication failures can leave different snapshots live.
+		// Fall back to the full pipeline until a successful build restores contexts.
+		delete(r.endpointFastPath.contexts, irKey)
+	}
+	return err
 }
 
 func (r *Runner) loadTLSConfig() (*tls.Config, error) {
