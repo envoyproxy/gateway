@@ -100,4 +100,24 @@ listenerSets:
       port: 8081
       allowedRoutes:
         namespaces:
-          from: Same
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-on-ext-http
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+      sectionName: ext-http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
