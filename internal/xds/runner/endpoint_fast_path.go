@@ -80,10 +80,11 @@ type endpointFastPath struct {
 
 // irKeyContexts is the endpoint context index for one IR key.
 type irKeyContexts struct {
-	// enabled is false when this IR key must not take the fast path — its IR
-	// contains EnvoyPatchPolicies, whose patches (and statuses) are only
-	// handled by the full translation.
+	// enabled is false when an extension can modify generated xDS resources.
 	enabled bool
+	// patchedClusters contains EDS clusters modified by an applicable
+	// EnvoyPatchPolicy. Those clusters must use the full translation path.
+	patchedClusters map[string]struct{}
 	// byBackend maps a backend key (message.EndpointUpdate.Key()) to the
 	// endpoint contexts of the clusters fed by that backend.
 	byBackend map[string][]*xdstypes.EndpointContext
@@ -177,8 +178,9 @@ func (f *endpointFastPath) OnDelete(irKey string) {
 // captured contexts, without committing it.
 func (f *endpointFastPath) buildContexts(xdsIR *ir.Xds, table *xdstypes.ResourceVersionTable) *irKeyContexts {
 	ctxs := &irKeyContexts{
-		enabled:   len(xdsIR.EnvoyPatchPolicies) == 0 && !f.extensionModifiesEndpoints,
-		byBackend: make(map[string][]*xdstypes.EndpointContext),
+		enabled:         !f.extensionModifiesEndpoints,
+		patchedClusters: patchedEndpointClusters(xdsIR),
+		byBackend:       make(map[string][]*xdstypes.EndpointContext),
 	}
 	for _, ec := range table.EndpointContexts {
 		for _, ds := range ec.Settings {
@@ -189,6 +191,18 @@ func (f *endpointFastPath) buildContexts(xdsIR *ir.Xds, table *xdstypes.Resource
 		}
 	}
 	return ctxs
+}
+
+func patchedEndpointClusters(xdsIR *ir.Xds) map[string]struct{} {
+	clusters := make(map[string]struct{})
+	for _, policy := range xdsIR.EnvoyPatchPolicies {
+		for _, patch := range policy.JSONPatches {
+			if patch.Type == resourcev3.EndpointType && patch.Name != "" {
+				clusters[patch.Name] = struct{}{}
+			}
+		}
+	}
+	return clusters
 }
 
 // subscribe consumes endpoint updates until the subscription context is
@@ -285,6 +299,9 @@ func (f *endpointFastPath) patchContexts(ctxs *irKeyContexts, update *message.En
 
 	for _, ec := range ctxs.byBackend[backendKey] {
 		if _, ok := seen[ec]; ok {
+			continue
+		}
+		if _, patched := ctxs.patchedClusters[ec.ClusterName]; patched {
 			continue
 		}
 		seen[ec] = struct{}{}

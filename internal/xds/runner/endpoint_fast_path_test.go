@@ -191,7 +191,9 @@ func TestFastPathDisabledForKeyWithEnvoyPatchPolicies(t *testing.T) {
 	// for the key: patches could target ClusterLoadAssignments.
 	table := &xdstypes.ResourceVersionTable{}
 	table.AddEndpointContext(testFastPathContext())
-	fp.contexts["gw/eg"] = fp.buildContexts(&ir.Xds{EnvoyPatchPolicies: []*ir.EnvoyPatchPolicy{{}}}, table)
+	fp.contexts["gw/eg"] = fp.buildContexts(&ir.Xds{EnvoyPatchPolicies: []*ir.EnvoyPatchPolicy{{
+		JSONPatches: []*ir.JSONPatchConfig{{Type: resourcev3.EndpointType, Name: "cluster-a"}},
+	}}}, table)
 
 	fp.handleUpdate(testUpdate("2.2.2.2"))
 	require.Empty(t, fc.patches)
