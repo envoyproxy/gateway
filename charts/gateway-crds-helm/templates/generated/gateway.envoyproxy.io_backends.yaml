@@ -54,8 +54,9 @@ spec:
             description: Spec defines the desired state of Backend.
             properties:
               appProtocols:
-                description: AppProtocols defines the application protocols to be
-                  supported when connecting to the backend.
+                description: |-
+                  AppProtocols defines the application protocols to be supported when connecting to the backend.
+                  For a KubernetesService backend, this takes precedence over the appProtocol of the Service port.
                 items:
                   description: AppProtocolType defines various backend applications
                     protocols supported by Envoy Gateway
@@ -161,6 +162,37 @@ spec:
                   The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
                   the health of the active backends falls below 72%.
                 type: boolean
+              kubernetesService:
+                description: |-
+                  KubernetesService defines the Kubernetes Service to be used when connecting to the backend.
+                  It must be set when Type is KubernetesService, and must not be set otherwise.
+
+                  The endpoints of the Service are discovered from its EndpointSlices, exactly as they
+                  are for a Service backendRef, so the resulting cluster keeps pod-level load balancing,
+                  health checking, session persistence, endpoint draining and zone awareness.
+                properties:
+                  name:
+                    description: |-
+                      Name is the name of the Kubernetes Service.
+
+                      Cross-namespace references are not supported yet; the Service is always resolved
+                      in the namespace of the Backend.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  port:
+                    description: |-
+                      Port is the port of the Kubernetes Service. It is matched against the Service
+                      port, not the target port of the backing pods, the same way a Service backendRef
+                      port is.
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                required:
+                - name
+                - port
+                type: object
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
@@ -472,6 +504,7 @@ spec:
                 enum:
                 - Endpoints
                 - DynamicResolver
+                - KubernetesService
                 type: string
             type: object
             x-kubernetes-validations:
@@ -480,6 +513,15 @@ spec:
             - message: DynamicResolver type cannot use autoSNIFromEndpointHostname
               rule: self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
                 && self.tls.autoSNIFromEndpointHostname)
+            - message: KubernetesService type cannot have endpoints specified
+              rule: self.type != 'KubernetesService' || !has(self.endpoints)
+            - message: KubernetesService type cannot use autoSNIFromEndpointHostname
+              rule: self.type != 'KubernetesService' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
+                && self.tls.autoSNIFromEndpointHostname)
+            - message: kubernetesService must be specified if and only if type is
+                KubernetesService
+              rule: 'self.type == ''KubernetesService'' ? has(self.kubernetesService)
+                : !has(self.kubernetesService)'
             - message: when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints
                 must define a hostname
               rule: '!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)

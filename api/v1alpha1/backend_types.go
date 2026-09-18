@@ -130,14 +130,35 @@ type UnixSocket struct {
 	Path string `json:"path"`
 }
 
+// KubernetesServiceReference references a Kubernetes Service in the same namespace
+// as the Backend.
+type KubernetesServiceReference struct {
+	// Name is the name of the Kubernetes Service.
+	//
+	// Cross-namespace references are not supported yet; the Service is always resolved
+	// in the namespace of the Backend.
+	Name gwapiv1.ObjectName `json:"name"`
+
+	// Port is the port of the Kubernetes Service. It is matched against the Service
+	// port, not the target port of the backing pods, the same way a Service backendRef
+	// port is.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int32 `json:"port"`
+}
+
 // BackendSpec describes the desired state of BackendSpec.
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints)",message="DynamicResolver type cannot have endpoints specified"
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname) && self.tls.autoSNIFromEndpointHostname)",message="DynamicResolver type cannot use autoSNIFromEndpointHostname"
+// +kubebuilder:validation:XValidation:rule="self.type != 'KubernetesService' || !has(self.endpoints)",message="KubernetesService type cannot have endpoints specified"
+// +kubebuilder:validation:XValidation:rule="self.type != 'KubernetesService' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname) && self.tls.autoSNIFromEndpointHostname)",message="KubernetesService type cannot use autoSNIFromEndpointHostname"
+// +kubebuilder:validation:XValidation:rule="self.type == 'KubernetesService' ? has(self.kubernetesService) : !has(self.kubernetesService)",message="kubernetesService must be specified if and only if type is KubernetesService"
 // +kubebuilder:validation:XValidation:rule="!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname) && self.tls.autoSNIFromEndpointHostname) || self.endpoints.all(e, (!has(e.ip) && !has(e.unix)) || has(e.hostname))",message="when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints must define a hostname"
 type BackendSpec struct {
 	// Type defines the type of the backend. Defaults to "Endpoints"
 	//
-	// +kubebuilder:validation:Enum=Endpoints;DynamicResolver
+	// +kubebuilder:validation:Enum=Endpoints;DynamicResolver;KubernetesService
 	// +kubebuilder:default=Endpoints
 	// +optional
 	Type *BackendType `json:"type,omitempty"`
@@ -149,7 +170,18 @@ type BackendSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.all(f, has(f.fqdn)) || !self.exists(f, has(f.fqdn))",message="fqdn addresses cannot be mixed with other address types"
 	Endpoints []BackendEndpoint `json:"endpoints,omitempty"`
 
+	// KubernetesService defines the Kubernetes Service to be used when connecting to the backend.
+	// It must be set when Type is KubernetesService, and must not be set otherwise.
+	//
+	// The endpoints of the Service are discovered from its EndpointSlices, exactly as they
+	// are for a Service backendRef, so the resulting cluster keeps pod-level load balancing,
+	// health checking, session persistence, endpoint draining and zone awareness.
+	//
+	// +optional
+	KubernetesService *KubernetesServiceReference `json:"kubernetesService,omitempty"`
+
 	// AppProtocols defines the application protocols to be supported when connecting to the backend.
+	// For a KubernetesService backend, this takes precedence over the appProtocol of the Service port.
 	//
 	// +optional
 	AppProtocols []AppProtocolType `json:"appProtocols,omitempty"`
@@ -257,6 +289,13 @@ const (
 	// upstream address. If the hostname is set in the host header, the Envoy will resolve the
 	// ip address and port from the hostname using the DNS resolver.
 	BackendTypeDynamicResolver BackendType = "DynamicResolver"
+	// BackendTypeKubernetesService defines the type of the backend as a Kubernetes Service.
+	//
+	// When a backend is of type KubernetesService, Envoy Gateway watches the EndpointSlices
+	// of the referenced Service and programs them as EDS endpoints, the same as it does for a
+	// Service backendRef. This lets the Backend-only settings, such as TLS and appProtocols,
+	// be layered on top of Service endpoint semantics instead of a DNS cluster.
+	BackendTypeKubernetesService BackendType = "KubernetesService"
 )
 
 // BackendConditionType is a type of condition for a backend. This type should be
