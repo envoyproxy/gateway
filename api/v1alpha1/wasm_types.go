@@ -38,6 +38,20 @@ type Wasm struct {
 	// Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
 	RootID *string `json:"rootID,omitempty"`
 
+	// VMID is the ID of the Wasm VM that runs this extension. Extensions with the
+	// same VMID and the same Wasm code share a single VM, which saves the memory a
+	// separate VM per extension would use.
+	// If not specified, EG generates a VM ID that is unique to this extension, so
+	// extensions never share a VM.
+	//
+	// Note: extensions sharing a VM also share its global state, and the VM is started
+	// with the configuration of the first extension that initializes it.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	VMID *string `json:"vmID,omitempty"`
+
 	// Code is the Wasm code for the extension.
 	Code WasmCodeSource `json:"code"`
 
