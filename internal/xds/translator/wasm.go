@@ -124,8 +124,12 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 		return nil, err
 	}
 
+	vmID := wasm.VMID
+	if vmID == "" {
+		vmID = wasm.Name
+	}
 	vmConfig := &wasmv3.VmConfig{
-		VmId:    wasm.Name, // Do not share VMs across different filters
+		VmId:    vmID,
 		Runtime: vmRuntimeV8,
 		Code: &corev3.AsyncDataSource{
 			Specifier: &corev3.AsyncDataSource_Remote{
