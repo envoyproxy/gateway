@@ -48,7 +48,7 @@ func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXd
 			}
 		}
 
-		if containsWasm(irXds.HTTP) {
+		if containsRemoteWasms(irXds.HTTP) {
 			if err := t.createWasmHTTPServiceCluster(tCtx, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -230,10 +230,10 @@ func buildEnvoyClientTLSSocket(envoyClientCertificate *ir.TLSCertificate) (*core
 	}, nil
 }
 
-// containsWasm reports whether any route uses a remote Wasm code source
+// containsRemoteWasms reports whether any route uses a remote Wasm code source
 // (HTTP/Image, served by the control-plane wasm HTTP service). Name-only
 // Wasm loads a path from EnvoyProxy.spec.wasmModules and does not need wasm_cluster.
-func containsWasm(httpListeners []*ir.HTTPListener) bool {
+func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
 	for _, httpListener := range httpListeners {
 		for _, route := range httpListener.Routes {
 			if route.EnvoyExtensions == nil {
