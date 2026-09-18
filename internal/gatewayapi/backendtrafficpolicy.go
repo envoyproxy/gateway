@@ -15,6 +15,7 @@ import (
 
 	perr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -1562,7 +1563,10 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
+	if cp, err = buildCompression(policy.Spec.Compression, policy.Spec.Compressor); err != nil {
+		err = perr.WithMessage(err, "Compression")
+		errs = errors.Join(errs, err)
+	}
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 	if rb != nil && len(httpUpgrade) > 0 {
 		err = errors.New("requestBuffer cannot be used together with httpUpgrade")
@@ -2537,7 +2541,7 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		strconv.Itoa(index))
 }
 
-func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compression {
+func buildCompression(compression, compressor []*egv1a1.Compression) ([]*ir.Compression, error) {
 	// Handle the Compressor field first (higher priority)
 	if len(compressor) > 0 {
 		result := make([]*ir.Compression, 0, len(compressor))
@@ -2550,21 +2554,20 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 					Type:        c.Type,
 					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 				}
-				if c.MinContentLength != nil {
-					minContentLength, ok := c.MinContentLength.AsInt64()
-					if ok {
-						irCompression.MinContentLength = new(uint32(minContentLength))
-					}
+				minContentLength, err := minContentLengthToUint32(c.MinContentLength)
+				if err != nil {
+					return nil, err
 				}
+				irCompression.MinContentLength = minContentLength
 				result = append(result, &irCompression)
 			}
 		}
-		return result
+		return result, nil
 	}
 
 	// Fallback to the deprecated Compression field
 	if compression == nil {
-		return nil
+		return nil, nil
 	}
 	result := make([]*ir.Compression, 0, len(compression))
 	for i, c := range compression {
@@ -2572,16 +2575,34 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 			Type:        c.Type,
 			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 		}
-		if c.MinContentLength != nil {
-			minContentLength, ok := c.MinContentLength.AsInt64()
-			if ok {
-				irCompression.MinContentLength = new(uint32(minContentLength))
-			}
+		minContentLength, err := minContentLengthToUint32(c.MinContentLength)
+		if err != nil {
+			return nil, err
 		}
+		irCompression.MinContentLength = minContentLength
 		result = append(result, &irCompression)
 	}
 
-	return result
+	return result, nil
+}
+
+// minContentLengthToUint32 converts the CRD quantity to the uint32 Envoy expects. The
+// CRD pattern allows suffixes up to Ei, so a value above MaxUint32 is accepted by the
+// API server; casting it straight to uint32 wraps (e.g. 4Gi becomes 0), turning a
+// large threshold into "compress everything". Reject out-of-range values instead.
+func minContentLengthToUint32(q *apiresource.Quantity) (*uint32, error) {
+	if q == nil {
+		return nil, nil
+	}
+	v, ok := q.AsInt64()
+	if !ok {
+		return nil, fmt.Errorf("invalid minContentLength value %s", q.String())
+	}
+	ui32, ok := int64ToUint32(v)
+	if !ok {
+		return nil, fmt.Errorf("invalid minContentLength value %d", v)
+	}
+	return &ui32, nil
 }
 
 func buildHTTPProtocolUpgradeConfig(cfgs []*egv1a1.ProtocolUpgradeConfig) []ir.HTTPUpgradeConfig {
