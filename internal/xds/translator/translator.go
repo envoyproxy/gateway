@@ -1350,6 +1350,12 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}
+		// Remember how this CLA was built so the endpoint fast path can rebuild it
+		// on an EndpointSlice change. Nil unless the EndpointFastPath flag is on and
+		// the cluster is EndpointSlice-backed.
+		if ec := buildClusterLoadAssignmentContext(args, &lb); ec != nil {
+			tCtx.AddClusterLoadAssignmentContext(ec)
+		}
 	case EndpointTypeDNS:
 		xdsCluster.LoadAssignment = xdsEndpoints
 	case EndpointTypeDynamicResolver:

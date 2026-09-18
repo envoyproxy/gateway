@@ -11,8 +11,11 @@ import (
 	"sync"
 	"testing"
 
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	envoytypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/require"
@@ -20,6 +23,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 func newTestSnapshotCache(t *testing.T) *snapshotCache {
@@ -123,4 +127,84 @@ func TestOnStreamDeltaResponseConcurrentAccess(t *testing.T) {
 		}(streamID)
 	}
 	wg.Wait()
+}
+
+// TestUpdateEndpointResources verifies that the endpoint fast path patch bumps
+// only the EDS resource version, replaces only the given CLAs, keeps everything
+// else version-stable, and never mutates the previous snapshot.
+func TestUpdateEndpointResources(t *testing.T) {
+	const irKey = "test-cluster"
+
+	sc := newTestSnapshotCache(t)
+
+	cla := func(name, address string) *endpointv3.ClusterLoadAssignment {
+		return &endpointv3.ClusterLoadAssignment{
+			ClusterName: name,
+			Endpoints: []*endpointv3.LocalityLbEndpoints{{
+				LbEndpoints: []*endpointv3.LbEndpoint{{
+					HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+						Endpoint: &endpointv3.Endpoint{
+							Address: &corev3.Address{
+								Address: &corev3.Address_SocketAddress{
+									SocketAddress: &corev3.SocketAddress{
+										Address:       address,
+										PortSpecifier: &corev3.SocketAddress_PortValue{PortValue: 8080},
+									},
+								},
+							},
+						},
+					},
+				}},
+			}},
+		}
+	}
+
+	resources := types.XdsResources{
+		resourcev3.ClusterType: {&clusterv3.Cluster{Name: "cluster-a"}, &clusterv3.Cluster{Name: "cluster-b"}},
+		resourcev3.EndpointType: {
+			cla("cluster-a", "1.1.1.1"),
+			cla("cluster-b", "2.2.2.2"),
+		},
+	}
+	err := sc.GenerateNewSnapshot(irKey, resources, context.Background())
+	require.NoError(t, err)
+
+	oldSnapshot := sc.lastSnapshot[irKey]
+	oldEDSVersion := oldSnapshot.GetVersion(resourcev3.EndpointType)
+	oldCDSVersion := oldSnapshot.GetVersion(resourcev3.ClusterType)
+
+	// Patching an unknown IR key is a no-op.
+	err = sc.UpdateEndpointResources("unknown", []envoytypes.Resource{cla("cluster-a", "3.3.3.3")})
+	require.ErrorIs(t, err, ErrNoSnapshot)
+
+	require.NoError(t, sc.UpdateEndpointResources(irKey, []envoytypes.Resource{cla("cluster-a", "3.3.3.3")}))
+
+	newSnapshot := sc.lastSnapshot[irKey]
+	require.NotSame(t, oldSnapshot, newSnapshot)
+
+	// Only the EDS version is bumped.
+	require.NotEqual(t, oldEDSVersion, newSnapshot.GetVersion(resourcev3.EndpointType))
+	require.Equal(t, oldCDSVersion, newSnapshot.GetVersion(resourcev3.ClusterType))
+
+	// The patched CLA is replaced, the other one is kept.
+	eds := newSnapshot.GetResources(resourcev3.EndpointType)
+	require.Len(t, eds, 2)
+	gotA := eds["cluster-a"].(*endpointv3.ClusterLoadAssignment)
+	require.Equal(t, "3.3.3.3", gotA.GetEndpoints()[0].GetLbEndpoints()[0].GetEndpoint().GetAddress().GetSocketAddress().GetAddress())
+	gotB := eds["cluster-b"].(*endpointv3.ClusterLoadAssignment)
+	require.Equal(t, "2.2.2.2", gotB.GetEndpoints()[0].GetLbEndpoints()[0].GetEndpoint().GetAddress().GetSocketAddress().GetAddress())
+
+	// The previous snapshot is untouched.
+	oldA := oldSnapshot.GetResources(resourcev3.EndpointType)["cluster-a"].(*endpointv3.ClusterLoadAssignment)
+	require.Equal(t, "1.1.1.1", oldA.GetEndpoints()[0].GetLbEndpoints()[0].GetEndpoint().GetAddress().GetSocketAddress().GetAddress())
+
+	// The patched snapshot carries no delta version map, so go-control-plane
+	// rebuilds it on demand and it reflects the patched endpoints.
+	require.Nil(t, newSnapshot.VersionMap)
+	require.NoError(t, newSnapshot.ConstructVersionMap())
+	require.NoError(t, oldSnapshot.ConstructVersionMap())
+	oldEDSVM := oldSnapshot.GetVersionMap(resourcev3.EndpointType)
+	newEDSVM := newSnapshot.GetVersionMap(resourcev3.EndpointType)
+	require.NotEqual(t, oldEDSVM["cluster-a"], newEDSVM["cluster-a"])
+	require.Equal(t, oldEDSVM["cluster-b"], newEDSVM["cluster-b"])
 }
