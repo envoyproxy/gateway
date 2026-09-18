@@ -3052,7 +3052,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3080,7 +3082,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								SectionName: &lsListenerName,
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3107,7 +3111,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3134,7 +3140,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},

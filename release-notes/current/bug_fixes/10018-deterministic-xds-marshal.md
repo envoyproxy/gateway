@@ -1,0 +1,1 @@
+Fixed the xDS translator emitting equivalent-but-byte-different resources on every reconcile: filter typed_config was marshaled non-deterministically, so proto map fields (such as an access log's `json_format`) re-ordered their keys each translation and caused repeated no-op xDS pushes. Typed configs are now marshaled deterministically.
