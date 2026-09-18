@@ -10,7 +10,7 @@ import "github.com/envoyproxy/gateway/internal/metrics"
 var (
 	watchableDepth = metrics.NewGauge(
 		"watchable_depth",
-		"Current depth of watchable queue.",
+		"Number of updates coalesced into the snapshot being handled, or 0 when idle.",
 	)
 
 	panicCounter = metrics.NewCounter(
