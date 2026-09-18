@@ -187,7 +187,7 @@ type EnvoyProxySpec struct {
 	// - It defaults to IPv4 only.
 	// - IPv6 and dual-stack environments are not supported in this default configuration.
 	// Note: To enable IPv6 or dual-stack functionality, explicit configuration is required.
-	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack
+	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack;PreferDualStack
 	// +optional
 	IPFamily *IPFamily `json:"ipFamily,omitempty"`
 
@@ -830,6 +830,9 @@ const (
 	// When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses
 	// for incoming client traffic, enabling support for both IP protocol versions.
 	DualStack IPFamily = "DualStack"
+	// PreferDualStack defines the dual-stack family, degrading to the single family
+	// the cluster provides instead of failing when the cluster is not dual-stack.
+	PreferDualStack IPFamily = "PreferDualStack"
 )
 
 func init() {

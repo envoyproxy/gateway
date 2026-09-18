@@ -1519,7 +1519,8 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 		return new(egv1a1.IPv4)
 	case egv1a1.IPv6:
 		return new(egv1a1.IPv6)
-	case egv1a1.DualStack:
+	case egv1a1.DualStack, egv1a1.PreferDualStack:
+		// Both build the same proxy listeners. Only the proxy Service differs.
 		return new(egv1a1.DualStack)
 	default:
 		return nil

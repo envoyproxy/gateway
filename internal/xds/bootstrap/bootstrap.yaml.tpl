@@ -120,7 +120,7 @@ static_resources:
         address: '{{ .StatsServer.Address }}'
         port_value: {{ .StatsServer.Port }}
         protocol: TCP
-        {{- if eq .IPFamily "DualStack" "IPv6" }}
+        {{- if eq .IPFamily "DualStack" "PreferDualStack" "IPv6" }}
         ipv4_compat: true
         {{- end }}
     bypass_overload_manager: true
