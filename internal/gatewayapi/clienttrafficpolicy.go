@@ -1023,6 +1023,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	httpIR.Headers = &ir.HeaderSettings{
 		EnableEnvoyHeaders:      ptr.Deref(headerSettings.EnableEnvoyHeaders, false),
 		DisableRateLimitHeaders: ptr.Deref(headerSettings.DisableRateLimitHeaders, false),
+		DisableRetryAfterHeader: ptr.Deref(headerSettings.DisableRetryAfterHeader, false),
 		WithUnderscoresAction:   ir.WithUnderscoresAction(ptr.Deref(headerSettings.WithUnderscoresAction, egv1a1.WithUnderscoresActionRejectRequest)),
 	}
 	if headerSettings.RequestID != nil {

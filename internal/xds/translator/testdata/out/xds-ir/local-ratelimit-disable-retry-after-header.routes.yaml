@@ -7,33 +7,9 @@
     routes:
     - match:
         path: foo/bar
-      name: first-route
+      name: first-route-ratelimit-single-rule
       route:
         cluster: first-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.ratelimit:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
-          domain: first-listener
-          rateLimits:
-          - actions:
-            - genericKey:
-                descriptorKey: first-route
-                descriptorValue: first-route
-            - headerValueMatch:
-                descriptorKey: rule-0-match-0
-                descriptorValue: rule-0-match-0
-                expectMatch: true
-                headers:
-                - name: x-user-id
-                  stringMatch:
-                    exact: one
-    - match:
-        path: example
-      name: second-route
-      route:
-        cluster: second-route-dest
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -48,7 +24,6 @@
               fillInterval: 3600s
               maxTokens: 10
               tokensPerFill: 10
-          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -56,7 +31,6 @@
           filterEnforced:
             defaultValue:
               numerator: 100
-          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:
@@ -72,14 +46,3 @@
             fillInterval: 60s
             maxTokens: 10
             tokensPerFill: 10
-        envoy.filters.http.ratelimit:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
-          domain: first-listener
-          rateLimits:
-          - actions:
-            - genericKey:
-                descriptorKey: second-route
-                descriptorValue: second-route
-            - requestHeaders:
-                descriptorKey: rule-0-match-0
-                headerName: x-user-id
