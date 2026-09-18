@@ -162,33 +162,43 @@ func routeContainsDynamicModule(irRoute *ir.HTTPRoute) bool {
 	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.DynamicModules) > 0
 }
 
-// Module downloads and callouts both require clusters outside the route destination.
-func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+// Dynamic module resources are added after route clusters in patchDynamicModuleResources.
+func (*dynamicModule) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error {
+	return nil
+}
+
+func patchDynamicModuleResources(tCtx *types.ResourceVersionTable, listeners []*ir.HTTPListener) error {
+	if len(listeners) == 0 {
+		return nil
+	}
 	if tCtx == nil || tCtx.XdsResources == nil {
 		return errors.New("xds resource table is nil")
 	}
 
 	var errs error
-	for _, route := range routes {
-		if !routeContainsDynamicModule(route) {
+	for _, listener := range listeners {
+		if listener == nil {
 			continue
 		}
-
-		for _, dm := range route.EnvoyExtensions.DynamicModules {
-			for _, backend := range dm.Backends {
-				if err := createExtServiceXDSCluster(backend, nil, tCtx); err != nil {
-					errs = errors.Join(errs, err)
-				}
-				if err := processClientCertificates(tCtx, backend.Settings); err != nil {
-					errs = errors.Join(errs, err)
-				}
-			}
-			if dm.Remote == nil {
+		for _, route := range listener.Routes {
+			if !routeContainsDynamicModule(route) {
 				continue
 			}
-
-			if err := addClusterFromURL(dm.Remote.URL, nil, tCtx); err != nil {
-				errs = errors.Join(errs, err)
+			for _, dm := range route.EnvoyExtensions.DynamicModules {
+				for _, backend := range dm.Backends {
+					if err := createExtServiceXDSCluster(backend, nil, tCtx); err != nil {
+						errs = errors.Join(errs, err)
+					}
+					if err := processClientCertificates(tCtx, backend.Settings); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+				if dm.Remote == nil {
+					continue
+				}
+				if err := addClusterFromURL(dm.Remote.URL, nil, tCtx); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 		}
 	}

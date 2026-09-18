@@ -125,3 +125,55 @@ func TestDynamicModuleSource(t *testing.T) {
 		})
 	}
 }
+
+func TestRouteBackendPrecedesDynamicModuleBackend(t *testing.T) {
+	destination := func(name, host string) *ir.RouteDestination {
+		addressType := ir.IP
+		weight := uint32(1)
+		return &ir.RouteDestination{
+			Name: name,
+			Settings: []*ir.DestinationSetting{{
+				Name:        name + "/backend/0",
+				AddressType: &addressType,
+				Protocol:    ir.HTTP,
+				Weight:      &weight,
+				Endpoints:   []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, 8080, false, nil)},
+			}},
+		}
+	}
+
+	// The first listener would claim "shared" first if module backends were added per listener.
+	xdsIR := &ir.Xds{HTTP: []*ir.HTTPListener{
+		{
+			CoreListenerDetails: ir.CoreListenerDetails{Name: "gateway/module", Address: "0.0.0.0", Port: 10080},
+			Hostnames:           []string{"module.example.com"},
+			Routes: []*ir.HTTPRoute{{
+				Name:        "module-route",
+				Hostname:    "module.example.com",
+				Destination: destination("module-route", "10.0.0.1"),
+				EnvoyExtensions: &ir.EnvoyExtensionFeatures{DynamicModules: []ir.DynamicModule{{
+					Name:       "policy/module/0",
+					Path:       "/module.so",
+					FilterName: "test",
+					Backends:   []*ir.RouteDestination{destination("shared", "10.0.0.2")},
+				}}},
+			}},
+		},
+		{
+			CoreListenerDetails: ir.CoreListenerDetails{Name: "gateway/route", Address: "0.0.0.0", Port: 10081},
+			Hostnames:           []string{"route.example.com"},
+			Routes: []*ir.HTTPRoute{{
+				Name:        "application-route",
+				Hostname:    "route.example.com",
+				Destination: destination("shared", "10.0.0.3"),
+			}},
+		},
+	}}
+
+	tCtx, err := (&Translator{}).Translate(t.Context(), xdsIR)
+	require.NoError(t, err)
+
+	endpoint := findXdsEndpoint(tCtx, "shared")
+	require.NotNil(t, endpoint)
+	require.Equal(t, "10.0.0.3", endpoint.Endpoints[0].LbEndpoints[0].GetEndpoint().Address.GetSocketAddress().Address)
+}
