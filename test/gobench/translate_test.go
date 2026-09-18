@@ -214,7 +214,7 @@ spec:
 // Helpers for benchmark policy generation.
 func genSecurityPolicies(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
@@ -243,7 +243,7 @@ spec:
 
 func genBackendTrafficPolicies(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -267,7 +267,7 @@ spec:
 
 func genEnvoyExtensionPolicies(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy
@@ -293,7 +293,7 @@ spec:
 // Helpers for benchmark Secret/ConfigMap generation.
 func genJWKSConfigMaps(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: v1
 kind: ConfigMap
@@ -310,7 +310,7 @@ data:
 // Helpers for benchmark route generation.
 func genHTTPRoutes(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -333,7 +333,7 @@ spec:
 
 func genGRPCRoutes(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
@@ -361,7 +361,7 @@ spec:
 
 func genUDPRoutes(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: gateway.networking.k8s.io/v1
 kind: UDPRoute
@@ -383,7 +383,7 @@ spec:
 
 func genService(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: v1
 kind: Service
@@ -404,7 +404,7 @@ spec:
 
 func genEndpointSlice(n int) string {
 	var sb strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		fmt.Fprintf(&sb, `---
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice

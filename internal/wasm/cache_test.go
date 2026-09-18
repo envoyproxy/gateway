@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -718,9 +719,7 @@ func TestWasmCache(t *testing.T) {
 				}
 			}
 
-			for k, m := range c.initialCachedChecksums {
-				cache.checksums[k] = m
-			}
+			maps.Copy(cache.checksums, c.initialCachedChecksums)
 
 			// put the tmp dir into the module path.
 			for k, m := range c.wantCachedModules {

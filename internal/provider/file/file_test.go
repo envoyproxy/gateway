@@ -297,7 +297,7 @@ func waitFileProviderReady(t *testing.T) {
 	}, 3*resourcesUpdateTimeout, resourcesUpdateTick)
 }
 
-func mustUnmarshal(t *testing.T, path string, out interface{}) {
+func mustUnmarshal(t *testing.T, path string, out any) {
 	t.Helper()
 
 	content, err := os.ReadFile(path)

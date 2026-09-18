@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"time"
 
@@ -286,9 +287,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		}
 
 		watchedAndControllerNamespaces := make(map[string]cache.Config, len(watchedNamespaces)+1)
-		for ns, cfg := range watchedNamespaces {
-			watchedAndControllerNamespaces[ns] = cfg
-		}
+		maps.Copy(watchedAndControllerNamespaces, watchedNamespaces)
 		watchedAndControllerNamespaces[svrCfg.ControllerNamespace] = cache.Config{}
 
 		// DefaultNamespaces applies to every namespaced informer without a

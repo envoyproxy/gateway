@@ -186,11 +186,9 @@ func (c *localFileCache) Get(downloadURL string, opts *GetOptions) (localFile, c
 
 	// Construct Wasm cache key with downloading URL and provided checksum of the module.
 	key := cacheKey{
-		downloadURL: downloadURL,
-		moduleKey: moduleKey{
-			name:     moduleNameFromURL(downloadURL),
-			checksum: originalChecksum,
-		},
+		downloadURL:     downloadURL,
+		name:            moduleNameFromURL(downloadURL),
+		checksum:        originalChecksum,
 		resourceName:    opts.ResourceName,
 		resourceVersion: opts.ResourceVersion,
 	}

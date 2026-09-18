@@ -65,11 +65,9 @@ func TestExtractTargetRefs(t *testing.T) {
 			},
 			output: egv1a1.PolicyTargetReferences{
 				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind",
-						Name:  "name",
-					},
+					Group: "some.group",
+					Kind:  "SomeKind",
+					Name:  "name",
 				},
 			},
 		},
@@ -115,18 +113,14 @@ func TestExtractTargetRefs(t *testing.T) {
 			output: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Group: "some.group",
-							Kind:  "SomeKind2",
-							Name:  "othername",
-						},
+						Group: "some.group",
+						Kind:  "SomeKind2",
+						Name:  "othername",
 					},
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Group: "some.group",
-							Kind:  "SomeKind",
-							Name:  "name",
-						},
+						Group: "some.group",
+						Kind:  "SomeKind",
+						Name:  "name",
 					},
 				},
 			},
@@ -265,8 +259,8 @@ func TestMergeAncestorsForExtensionServerPolicies(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		aggPolicy := unstructured.Unstructured{Object: make(map[string]interface{})}
-		newPolicy := unstructured.Unstructured{Object: make(map[string]interface{})}
+		aggPolicy := unstructured.Unstructured{Object: make(map[string]any)}
+		newPolicy := unstructured.Unstructured{Object: make(map[string]any)}
 		desiredMergedStatus := gwapiv1.PolicyStatus{}
 
 		// aggStatus == nil, means simulate not setting status at all within the policy.

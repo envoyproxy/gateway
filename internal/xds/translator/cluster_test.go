@@ -265,7 +265,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 	}
 }
 
-func requireCmpNoDiff(t *testing.T, expected, actual interface{}) {
+func requireCmpNoDiff(t *testing.T, expected, actual any) {
 	require.Empty(t, cmp.Diff(expected, actual, protocmp.Transform()))
 }
 

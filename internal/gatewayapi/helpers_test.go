@@ -356,11 +356,9 @@ func TestResolvePolicyTargets(t *testing.T) {
 			policy: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "TLSRoute",
-							Name:  "third",
-						},
+						Group: "gateway.networking.k8s.io",
+						Kind:  "TLSRoute",
+						Name:  "third",
 					},
 				},
 				TargetSelectors: []egv1a1.TargetSelector{
@@ -674,10 +672,8 @@ func TestResolvePolicyTargets(t *testing.T) {
 			},
 			grants: []*gwapiv1b1.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-default-btp",
-						Namespace: "other",
-					},
+					Name:      "allow-default-btp",
+					Namespace: "other",
 					Spec: gwapiv1b1.ReferenceGrantSpec{
 						From: []gwapiv1b1.ReferenceGrantFrom{
 							{
@@ -760,24 +756,18 @@ func TestResolvePolicyTargets(t *testing.T) {
 			},
 			namespaces: []*corev1.Namespace{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "selected",
-						Labels: map[string]string{"team": "blue"},
-					},
+					Name:   "selected",
+					Labels: map[string]string{"team": "blue"},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "unselected",
-						Labels: map[string]string{"team": "green"},
-					},
+					Name:   "unselected",
+					Labels: map[string]string{"team": "green"},
 				},
 			},
 			grants: []*gwapiv1b1.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-default-btp",
-						Namespace: "selected",
-					},
+					Name:      "allow-default-btp",
+					Namespace: "selected",
 					Spec: gwapiv1b1.ReferenceGrantSpec{
 						From: []gwapiv1b1.ReferenceGrantFrom{
 							{
@@ -929,11 +919,9 @@ func TestResolvePolicyTargetsFromReferences(t *testing.T) {
 			name: "target ref",
 			targetRefs: egv1a1.PolicyTargetReferences{
 				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "gateway.networking.k8s.io",
-						Kind:  "Gateway",
-						Name:  "eg",
-					},
+					Group:       "gateway.networking.k8s.io",
+					Kind:        "Gateway",
+					Name:        "eg",
 					SectionName: SectionNamePtr("http"),
 				},
 			},
@@ -953,18 +941,14 @@ func TestResolvePolicyTargetsFromReferences(t *testing.T) {
 			targetRefs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "first",
-						},
+						Group: "gateway.networking.k8s.io",
+						Kind:  "Gateway",
+						Name:  "first",
 					},
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Group: "gateway.networking.k8s.io",
-							Kind:  "Gateway",
-							Name:  "second",
-						},
+						Group: "gateway.networking.k8s.io",
+						Kind:  "Gateway",
+						Name:  "second",
 					},
 				},
 			},
@@ -1813,8 +1797,7 @@ func TestResolveMergeBackendsConfig(t *testing.T) {
 // fields via Go's own field promotion, skipping any name in skip.
 func structFieldNames(t reflect.Type, skip map[string]bool) []string {
 	var names []string
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
+	for f := range t.Fields() {
 		if skip[f.Name] {
 			continue
 		}

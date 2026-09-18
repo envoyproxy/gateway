@@ -24,14 +24,10 @@ type NamespacedNameWithGroupKind struct {
 // GetNamespacedNameWithGroupKind creates and returns object's NamespacedNameWithGroupKind.
 func GetNamespacedNameWithGroupKind(obj client.Object) NamespacedNameWithGroupKind {
 	return NamespacedNameWithGroupKind{
-		NamespacedName: types.NamespacedName{
-			Namespace: obj.GetNamespace(),
-			Name:      obj.GetName(),
-		},
-		GroupKind: schema.GroupKind{
-			Group: obj.GetObjectKind().GroupVersionKind().GroupKind().Group,
-			Kind:  obj.GetObjectKind().GroupVersionKind().GroupKind().Kind,
-		},
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+		Group:     obj.GetObjectKind().GroupVersionKind().GroupKind().Group,
+		Kind:      obj.GetObjectKind().GroupVersionKind().GroupKind().Kind,
 	}
 }
 

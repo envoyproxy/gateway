@@ -264,7 +264,7 @@ func ValidateRedisURL(redisURL string) error {
 	if redisURL == "" {
 		return fmt.Errorf("ratelimit redis url is empty")
 	}
-	for _, host := range strings.Split(redisURL, ",") {
+	for host := range strings.SplitSeq(redisURL, ",") {
 		if _, err := url.Parse(host); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}

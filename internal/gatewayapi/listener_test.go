@@ -61,15 +61,13 @@ func TestProxySamplingRates(t *testing.T) {
 		{
 			name: "client and overall fraction",
 			tracing: &egv1a1.ProxyTracing{
-				Tracing: egv1a1.Tracing{
-					ClientSamplingFraction: &gwapiv1.Fraction{
-						Numerator:   1,
-						Denominator: new(int32(4)),
-					},
-					OverallSamplingFraction: &gwapiv1.Fraction{
-						Numerator:   3,
-						Denominator: new(int32(4)),
-					},
+				ClientSamplingFraction: &gwapiv1.Fraction{
+					Numerator:   1,
+					Denominator: new(int32(4)),
+				},
+				OverallSamplingFraction: &gwapiv1.Fraction{
+					Numerator:   3,
+					Denominator: new(int32(4)),
 				},
 			},
 			expectedRandom:  100.0,
@@ -79,10 +77,8 @@ func TestProxySamplingRates(t *testing.T) {
 		{
 			name: "fraction numerator only",
 			tracing: &egv1a1.ProxyTracing{
-				Tracing: egv1a1.Tracing{
-					SamplingFraction: &gwapiv1.Fraction{
-						Numerator: 100,
-					},
+				SamplingFraction: &gwapiv1.Fraction{
+					Numerator: 100,
 				},
 			},
 			expectedRandom:  100,
@@ -92,11 +88,9 @@ func TestProxySamplingRates(t *testing.T) {
 		{
 			name: "fraction",
 			tracing: &egv1a1.ProxyTracing{
-				Tracing: egv1a1.Tracing{
-					SamplingFraction: &gwapiv1.Fraction{
-						Numerator:   1,
-						Denominator: new(int32(10)),
-					},
+				SamplingFraction: &gwapiv1.Fraction{
+					Numerator:   1,
+					Denominator: new(int32(10)),
 				},
 			},
 			expectedRandom:  10,
@@ -106,11 +100,9 @@ func TestProxySamplingRates(t *testing.T) {
 		{
 			name: "less than zero",
 			tracing: &egv1a1.ProxyTracing{
-				Tracing: egv1a1.Tracing{
-					SamplingFraction: &gwapiv1.Fraction{
-						Numerator:   1,
-						Denominator: new(int32(-1)),
-					},
+				SamplingFraction: &gwapiv1.Fraction{
+					Numerator:   1,
+					Denominator: new(int32(-1)),
 				},
 			},
 			expectedRandom:  0,
@@ -120,11 +112,9 @@ func TestProxySamplingRates(t *testing.T) {
 		{
 			name: "greater than 100",
 			tracing: &egv1a1.ProxyTracing{
-				Tracing: egv1a1.Tracing{
-					SamplingFraction: &gwapiv1.Fraction{
-						Numerator:   101,
-						Denominator: new(int32(1)),
-					},
+				SamplingFraction: &gwapiv1.Fraction{
+					Numerator:   101,
+					Denominator: new(int32(1)),
 				},
 			},
 			expectedRandom:  100,
@@ -134,11 +124,9 @@ func TestProxySamplingRates(t *testing.T) {
 		{
 			name: "less than 1",
 			tracing: &egv1a1.ProxyTracing{
-				Tracing: egv1a1.Tracing{
-					SamplingFraction: &gwapiv1.Fraction{
-						Numerator:   1,
-						Denominator: new(int32(1000)),
-					},
+				SamplingFraction: &gwapiv1.Fraction{
+					Numerator:   1,
+					Denominator: new(int32(1000)),
 				},
 			},
 			expectedRandom:  0.1,
@@ -921,32 +909,24 @@ func TestProcessTracingServiceName(t *testing.T) {
 		{
 			name: "no tracing configuration",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-proxy",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-proxy",
+				Namespace: "test-namespace",
 			},
 			expectedServiceName: "",
 		},
 		{
 			name: "tracing with default service name",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-proxy",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-proxy",
+				Namespace: "test-namespace",
 				Spec: egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
@@ -955,11 +935,9 @@ func TestProcessTracingServiceName(t *testing.T) {
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Port:      new(gwapiv1.PortNumber(4317)),
-												Namespace: new(gwapiv1.Namespace("monitoring")),
-											},
+											Name:      "otel-collector",
+											Port:      new(gwapiv1.PortNumber(4317)),
+											Namespace: new(gwapiv1.Namespace("monitoring")),
 										},
 									},
 								},
@@ -973,16 +951,12 @@ func TestProcessTracingServiceName(t *testing.T) {
 		{
 			name: "tracing with custom service name",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-proxy",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-proxy",
+				Namespace: "test-namespace",
 				Spec: egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
@@ -991,11 +965,9 @@ func TestProcessTracingServiceName(t *testing.T) {
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Port:      new(gwapiv1.PortNumber(4317)),
-												Namespace: new(gwapiv1.Namespace("monitoring")),
-											},
+											Name:      "otel-collector",
+											Port:      new(gwapiv1.PortNumber(4317)),
+											Namespace: new(gwapiv1.Namespace("monitoring")),
 										},
 									},
 								},
@@ -1010,19 +982,15 @@ func TestProcessTracingServiceName(t *testing.T) {
 		{
 			name: "tracing with merge gateways and custom service name",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
 				Spec: gwapiv1.GatewaySpec{
 					GatewayClassName: "test-gateway-class",
 				},
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-proxy",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-proxy",
+				Namespace: "test-namespace",
 				Spec: egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
@@ -1031,11 +999,9 @@ func TestProcessTracingServiceName(t *testing.T) {
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Port:      new(gwapiv1.PortNumber(4317)),
-												Namespace: new(gwapiv1.Namespace("monitoring")),
-											},
+											Name:      "otel-collector",
+											Port:      new(gwapiv1.PortNumber(4317)),
+											Namespace: new(gwapiv1.Namespace("monitoring")),
 										},
 									},
 								},
@@ -1051,19 +1017,15 @@ func TestProcessTracingServiceName(t *testing.T) {
 		{
 			name: "tracing with merge gateways without custom service name",
 			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
 				Spec: gwapiv1.GatewaySpec{
 					GatewayClassName: "test-gateway-class",
 				},
 			},
 			envoyProxy: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-proxy",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-proxy",
+				Namespace: "test-namespace",
 				Spec: egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
@@ -1072,11 +1034,9 @@ func TestProcessTracingServiceName(t *testing.T) {
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Port:      new(gwapiv1.PortNumber(4317)),
-												Namespace: new(gwapiv1.Namespace("monitoring")),
-											},
+											Name:      "otel-collector",
+											Port:      new(gwapiv1.PortNumber(4317)),
+											Namespace: new(gwapiv1.Namespace("monitoring")),
 										},
 									},
 								},
@@ -1099,10 +1059,8 @@ func TestProcessTracingServiceName(t *testing.T) {
 			// Mock service to resolve BackendRefs
 			resources.Services = append(resources.Services,
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "monitoring",
-						Name:      "otel-collector",
-					},
+					Namespace: "monitoring",
+					Name:      "otel-collector",
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "3.3.3.3",
 						Ports: []corev1.ServicePort{
@@ -1121,12 +1079,10 @@ func TestProcessTracingServiceName(t *testing.T) {
 			// Mock endpointSlice to resolve Service
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "monitoring",
-						Name:      "otel-collector",
-						Labels: map[string]string{
-							"kubernetes.io/service-name": "otel-collector",
-						},
+					Namespace: "monitoring",
+					Name:      "otel-collector",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "otel-collector",
 					},
 					Endpoints: []discoveryv1.Endpoint{
 						{
@@ -1481,10 +1437,8 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 		{
 			name: "single FQDN endpoint infers SNI for telemetry",
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "otel-collector",
-				},
+				Namespace: ns,
+				Name:      "otel-collector",
 				Spec: egv1a1.BackendSpec{
 					Endpoints: []egv1a1.BackendEndpoint{
 						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 4317}},
@@ -1499,10 +1453,8 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 		{
 			name: "multiple FQDN endpoints does not infer SNI",
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "otel-collector",
-				},
+				Namespace: ns,
+				Name:      "otel-collector",
 				Spec: egv1a1.BackendSpec{
 					Endpoints: []egv1a1.BackendEndpoint{
 						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel-1.example.com", Port: 4317}},
@@ -1518,10 +1470,8 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 		{
 			name: "explicit SNI takes precedence",
 			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns,
-					Name:      "otel-collector",
-				},
+				Namespace: ns,
+				Name:      "otel-collector",
 				Spec: egv1a1.BackendSpec{
 					Endpoints: []egv1a1.BackendEndpoint{
 						{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 4317}},
@@ -1552,15 +1502,13 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 			}
 			backendCluster := egv1a1.BackendCluster{
 				BackendRefs: []egv1a1.BackendRef{{
-					BackendObjectReference: gwapiv1.BackendObjectReference{
-						Group:     new(gwapiv1.Group("gateway.envoyproxy.io")),
-						Kind:      new(gwapiv1.Kind("Backend")),
-						Name:      gwapiv1.ObjectName(tc.backend.Name),
-						Namespace: new(gwapiv1.Namespace(tc.backend.Namespace)),
-					},
+					Group:     new(gwapiv1.Group("gateway.envoyproxy.io")),
+					Kind:      new(gwapiv1.Kind("Backend")),
+					Name:      gwapiv1.ObjectName(tc.backend.Name),
+					Namespace: new(gwapiv1.Namespace(tc.backend.Namespace)),
 				}},
 			}
-			ep := &egv1a1.EnvoyProxy{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway-system", Name: "test-proxy"}}
+			ep := &egv1a1.EnvoyProxy{Namespace: "envoy-gateway-system", Name: "test-proxy"}
 			ds, _, err := translator.processBackendRefsForTelemetry("test", backendCluster, ns, resources, ep, &GatewayContext{})
 			require.NoError(t, err)
 			require.Len(t, ds, 1)
@@ -1581,20 +1529,18 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	ns := "test-ns"
 	backendName := "otel-collector"
 	serviceName := "otel-svc"
-	envoyProxy := &egv1a1.EnvoyProxy{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway-system", Name: "test-proxy"}}
+	envoyProxy := &egv1a1.EnvoyProxy{Namespace: "envoy-gateway-system", Name: "test-proxy"}
 
 	backendBackendCluster := egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
-		BackendObjectReference: gwapiv1.BackendObjectReference{
-			Group: new(gwapiv1.Group("gateway.envoyproxy.io")), Kind: new(gwapiv1.Kind("Backend")),
-			Name: gwapiv1.ObjectName(backendName), Namespace: new(gwapiv1.Namespace(ns)),
-		},
+		Group: new(gwapiv1.Group("gateway.envoyproxy.io")), Kind: new(gwapiv1.Kind("Backend")),
+		Name: gwapiv1.ObjectName(backendName), Namespace: new(gwapiv1.Namespace(ns)),
 	}}}
 	otelBackend := &egv1a1.Backend{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: backendName},
-		Spec:       egv1a1.BackendSpec{Endpoints: []egv1a1.BackendEndpoint{{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 443}}}},
+		Namespace: ns, Name: backendName,
+		Spec: egv1a1.BackendSpec{Endpoints: []egv1a1.BackendEndpoint{{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 443}}}},
 	}
 	otelBackendWithTLS := &egv1a1.Backend{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: backendName},
+		Namespace: ns, Name: backendName,
 		Spec: egv1a1.BackendSpec{
 			Endpoints: []egv1a1.BackendEndpoint{{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 443}}},
 			TLS: &egv1a1.BackendTLSSettings{
@@ -1604,12 +1550,10 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		},
 	}
 	otelBackendPolicy := &gwapiv1.BackendTLSPolicy{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "otel-tls"},
+		Namespace: ns, Name: "otel-tls",
 		Spec: gwapiv1.BackendTLSPolicySpec{
 			TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
-				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-					Group: "gateway.envoyproxy.io", Kind: "Backend", Name: gwapiv1.ObjectName(backendName),
-				},
+				Group: "gateway.envoyproxy.io", Kind: "Backend", Name: gwapiv1.ObjectName(backendName),
 			}},
 			Validation: gwapiv1.BackendTLSPolicyValidation{
 				WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
@@ -1622,33 +1566,31 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	backendPolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
-		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
+		MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13),
 	}
 
 	serviceBackendCluster := egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
-		BackendObjectReference: gwapiv1.BackendObjectReference{
-			Name: gwapiv1.ObjectName(serviceName), Namespace: new(gwapiv1.Namespace(ns)),
-			Port: new(gwapiv1.PortNumber(4317)),
-		},
+		Name: gwapiv1.ObjectName(serviceName), Namespace: new(gwapiv1.Namespace(ns)),
+		Port: new(gwapiv1.PortNumber(4317)),
 	}}}
 	otelService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: serviceName},
+		Namespace: ns, Name: serviceName,
 		Spec: corev1.ServiceSpec{ClusterIP: "7.7.7.7", Ports: []corev1.ServicePort{{
 			Name: "grpc", Port: 4317, TargetPort: intstr.IntOrString{IntVal: 4317}, Protocol: corev1.ProtocolTCP,
 		}}},
 	}
 	otelEndpointSlice := &discoveryv1.EndpointSlice{
-		ObjectMeta:  metav1.ObjectMeta{Namespace: ns, Name: serviceName, Labels: map[string]string{"kubernetes.io/service-name": serviceName}},
+		Namespace: ns, Name: serviceName, Labels: map[string]string{"kubernetes.io/service-name": serviceName},
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints:   []discoveryv1.Endpoint{{Addresses: []string{"7.7.7.7"}, Conditions: discoveryv1.EndpointConditions{Ready: new(true)}}},
 		Ports:       []discoveryv1.EndpointPort{{Name: new("grpc"), Port: new(int32(4317)), Protocol: new(corev1.ProtocolTCP)}},
 	}
 	otelServicePolicy := &gwapiv1.BackendTLSPolicy{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "otel-svc-tls"},
+		Namespace: ns, Name: "otel-svc-tls",
 		Spec: gwapiv1.BackendTLSPolicySpec{
 			TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
-				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Kind: "Service", Name: gwapiv1.ObjectName(serviceName)},
-				SectionName:                new(gwapiv1.SectionName("grpc")),
+				Kind: "Service", Name: gwapiv1.ObjectName(serviceName),
+				SectionName: new(gwapiv1.SectionName("grpc")),
 			}},
 			Validation: gwapiv1.BackendTLSPolicyValidation{
 				WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
@@ -1661,7 +1603,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 	servicePolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: new("otel-svc.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: ir.SystemTrustStoreSecretName}, SubjectAltNames: []ir.SubjectAltName{},
-		TLSConfig: ir.TLSConfig{MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13)},
+		MinVersion: new(ir.TLSv12), MaxVersion: new(ir.TLSv13),
 	}
 
 	tests := []struct {
@@ -1695,10 +1637,8 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		{
 			name: "Backend ref without namespace, no TLS, no BackendTLSPolicy",
 			backendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
-				BackendObjectReference: gwapiv1.BackendObjectReference{
-					Group: new(gwapiv1.Group("gateway.envoyproxy.io")), Kind: new(gwapiv1.Kind("Backend")),
-					Name: gwapiv1.ObjectName(backendName),
-				},
+				Group: new(gwapiv1.Group("gateway.envoyproxy.io")), Kind: new(gwapiv1.Kind("Backend")),
+				Name: gwapiv1.ObjectName(backendName),
 			}}},
 			context:   &TranslatorContext{BackendMap: map[types.NamespacedName]*egv1a1.Backend{{Namespace: ns, Name: backendName}: otelBackend}},
 			resources: &resource.Resources{Backends: []*egv1a1.Backend{otelBackend}},

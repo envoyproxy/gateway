@@ -107,7 +107,7 @@ func (d *Defaulter) ApplyDefault(obj *unstructured.Unstructured) (*unstructured.
 	rs := v.Validate(obj.Object)
 	post.ApplyDefaults(rs)
 	// convert output object into unstructured one.
-	output, ok := rs.Data().(map[string]interface{})
+	output, ok := rs.Data().(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert output object")
 	}

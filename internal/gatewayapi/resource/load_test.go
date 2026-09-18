@@ -83,6 +83,6 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 	}
 }
 
-func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }

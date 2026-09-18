@@ -89,11 +89,9 @@ func TestProcessExtensionPostTranslationHookConfig(t *testing.T) {
 					},
 				},
 				Service: &egv1a1.ExtensionService{
-					BackendEndpoint: egv1a1.BackendEndpoint{
-						FQDN: &egv1a1.FQDNEndpoint{
-							Hostname: "test.example.com",
-							Port:     8080,
-						},
+					FQDN: &egv1a1.FQDNEndpoint{
+						Hostname: "test.example.com",
+						Port:     8080,
 					},
 				},
 			}

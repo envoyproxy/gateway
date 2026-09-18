@@ -26,66 +26,50 @@ import (
 func TestNamespaceSelectorClient(t *testing.T) {
 	// Create test namespaces
 	nsMatching := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "matching-ns",
-			Labels: map[string]string{
-				"env": "production",
-			},
+		Name: "matching-ns",
+		Labels: map[string]string{
+			"env": "production",
 		},
 	}
 	nsNonMatching := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "non-matching-ns",
-			Labels: map[string]string{
-				"env": "staging",
-			},
+		Name: "non-matching-ns",
+		Labels: map[string]string{
+			"env": "staging",
 		},
 	}
 
 	// Create test ClientTrafficPolicies in different namespaces
 	ctpInMatchingNs := &egv1a1.ClientTrafficPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ctp-matching",
-			Namespace: "matching-ns",
-		},
+		Name:      "ctp-matching",
+		Namespace: "matching-ns",
 	}
 	ctpInNonMatchingNs := &egv1a1.ClientTrafficPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ctp-non-matching",
-			Namespace: "non-matching-ns",
-		},
+		Name:      "ctp-non-matching",
+		Namespace: "non-matching-ns",
 	}
 
 	// Create test Gateways in different namespaces
 	gwInMatchingNs := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gw-matching",
-			Namespace: "matching-ns",
-		},
+		Name:      "gw-matching",
+		Namespace: "matching-ns",
 		Spec: gwapiv1.GatewaySpec{
 			GatewayClassName: "test-gc",
 		},
 	}
 	gwInNonMatchingNs := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gw-non-matching",
-			Namespace: "non-matching-ns",
-		},
+		Name:      "gw-non-matching",
+		Namespace: "non-matching-ns",
 		Spec: gwapiv1.GatewaySpec{
 			GatewayClassName: "test-gc",
 		},
 	}
 	svcInMatchingNs := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-matching",
-			Namespace: "matching-ns",
-		},
+		Name:      "svc-matching",
+		Namespace: "matching-ns",
 	}
 	svcInNonMatchingNs := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-non-matching",
-			Namespace: "non-matching-ns",
-		},
+		Name:      "svc-non-matching",
+		Namespace: "non-matching-ns",
 	}
 
 	// Get scheme with all required types
@@ -204,9 +188,7 @@ func TestNamespaceSelectorClient(t *testing.T) {
 func TestNamespaceSelectorClientClusterScopedResources(t *testing.T) {
 	// Create test GatewayClass (cluster-scoped)
 	gc := &gwapiv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gc",
-		},
+		Name: "test-gc",
 		Spec: gwapiv1.GatewayClassSpec{
 			ControllerName: "test-controller",
 		},
@@ -240,10 +222,8 @@ func TestNamespaceSelectorClientClusterScopedResources(t *testing.T) {
 func TestNamespaceSelectorClientNamespaceGetError(t *testing.T) {
 	// Create a Gateway in a namespace
 	gwInNs := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gw-test",
-			Namespace: "test-ns",
-		},
+		Name:      "gw-test",
+		Namespace: "test-ns",
 		Spec: gwapiv1.GatewaySpec{
 			GatewayClassName: "test-gc",
 		},

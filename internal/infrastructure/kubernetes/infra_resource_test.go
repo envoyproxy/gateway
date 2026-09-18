@@ -21,7 +21,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -283,7 +282,7 @@ func TestNoopDeleteMetricsStaySuppressedAcrossDeploymentReconciles(t *testing.T)
 	infra := standardDeploymentInfra()
 
 	// Simulate 3 consecutive reconcile loops.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		require.NoError(t, kube.CreateOrUpdateProxyInfra(ctx, infra))
 	}
 
@@ -309,7 +308,7 @@ func TestNoopDeleteMetricsStaySuppressedAcrossDaemonSetReconciles(t *testing.T) 
 	infra := daemonSetModeInfra()
 
 	// Simulate 3 consecutive reconcile loops.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		require.NoError(t, kube.CreateOrUpdateProxyInfra(ctx, infra))
 	}
 
@@ -346,10 +345,8 @@ func newGatewayNamespaceInfra(t *testing.T, cli client.Client) *Infra {
 	kube.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 		Type: egv1a1.ProviderTypeKubernetes,
 		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-			EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-				Deploy: &egv1a1.KubernetesDeployMode{
-					Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-				},
+			Deploy: &egv1a1.KubernetesDeployMode{
+				Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 			},
 		},
 	}
@@ -442,8 +439,8 @@ func TestCheckOwnership_NotFound(t *testing.T) {
 	kube := newGatewayNamespaceInfra(t, cli)
 
 	sa := &corev1.ServiceAccount{
-		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "does-not-exist", Labels: owningLabels("default", "my-gateway")},
+		Kind: "ServiceAccount", APIVersion: "v1",
+		Namespace: "default", Name: "does-not-exist", Labels: owningLabels("default", "my-gateway"),
 	}
 	require.NoError(t, kube.checkOwnership(context.Background(), sa))
 }
@@ -453,8 +450,8 @@ func TestCheckOwnership_NotFound(t *testing.T) {
 func TestCheckOwnership_SameGateway(t *testing.T) {
 	ctx := context.Background()
 	sa := &corev1.ServiceAccount{
-		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "my-gateway", Labels: owningLabels("default", "my-gateway")},
+		Kind: "ServiceAccount", APIVersion: "v1",
+		Namespace: "default", Name: "my-gateway", Labels: owningLabels("default", "my-gateway"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(sa).Build()
 	kube := newGatewayNamespaceInfra(t, cli)
@@ -467,12 +464,12 @@ func TestCheckOwnership_SameGateway(t *testing.T) {
 func TestCheckOwnership_UnownedResource(t *testing.T) {
 	ctx := context.Background()
 	existing := &corev1.ServiceAccount{
-		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway"},
+		Kind: "ServiceAccount", APIVersion: "v1",
+		Namespace: "kube-system", Name: "envoy-gateway",
 	}
 	desired := &corev1.ServiceAccount{
-		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway", Labels: owningLabels("kube-system", "envoy-gateway")},
+		Kind: "ServiceAccount", APIVersion: "v1",
+		Namespace: "kube-system", Name: "envoy-gateway", Labels: owningLabels("kube-system", "envoy-gateway"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 	kube := newGatewayNamespaceInfra(t, cli)
@@ -487,12 +484,12 @@ func TestCheckOwnership_UnownedResource(t *testing.T) {
 func TestCheckOwnership_DifferentGateway(t *testing.T) {
 	ctx := context.Background()
 	existing := &corev1.ServiceAccount{
-		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "shared-name", Labels: owningLabels("default", "gateway-a")},
+		Kind: "ServiceAccount", APIVersion: "v1",
+		Namespace: "default", Name: "shared-name", Labels: owningLabels("default", "gateway-a"),
 	}
 	desired := &corev1.ServiceAccount{
-		TypeMeta:   metav1.TypeMeta{Kind: "ServiceAccount", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "shared-name", Labels: owningLabels("default", "gateway-b")},
+		Kind: "ServiceAccount", APIVersion: "v1",
+		Namespace: "default", Name: "shared-name", Labels: owningLabels("default", "gateway-b"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 	kube := newGatewayNamespaceInfra(t, cli)
@@ -506,12 +503,12 @@ func TestCheckOwnership_DifferentGateway(t *testing.T) {
 func TestCheckOwnership_UnownedConfigMap(t *testing.T) {
 	ctx := context.Background()
 	existing := &corev1.ConfigMap{
-		TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway", Labels: map[string]string{"app": "something-else"}},
+		Kind: "ConfigMap", APIVersion: "v1",
+		Namespace: "kube-system", Name: "envoy-gateway", Labels: map[string]string{"app": "something-else"},
 	}
 	desired := &corev1.ConfigMap{
-		TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "envoy-gateway", Labels: owningLabels("kube-system", "envoy-gateway")},
+		Kind: "ConfigMap", APIVersion: "v1",
+		Namespace: "kube-system", Name: "envoy-gateway", Labels: owningLabels("kube-system", "envoy-gateway"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 	kube := newGatewayNamespaceInfra(t, cli)
@@ -525,12 +522,12 @@ func TestCheckOwnership_UnownedConfigMap(t *testing.T) {
 func TestCheckOwnership_UnownedDeployment(t *testing.T) {
 	ctx := context.Background()
 	existing := &appsv1.Deployment{
-		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+		Kind: "Deployment", APIVersion: "apps/v1",
+		Namespace: "gateway-ns", Name: "my-gateway",
 	}
 	desired := &appsv1.Deployment{
-		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+		Kind: "Deployment", APIVersion: "apps/v1",
+		Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 	kube := newGatewayNamespaceInfra(t, cli)
@@ -544,12 +541,12 @@ func TestCheckOwnership_UnownedDeployment(t *testing.T) {
 func TestCheckOwnership_UnownedDaemonSet(t *testing.T) {
 	ctx := context.Background()
 	existing := &appsv1.DaemonSet{
-		TypeMeta:   metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+		Kind: "DaemonSet", APIVersion: "apps/v1",
+		Namespace: "gateway-ns", Name: "my-gateway",
 	}
 	desired := &appsv1.DaemonSet{
-		TypeMeta:   metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+		Kind: "DaemonSet", APIVersion: "apps/v1",
+		Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 	kube := newGatewayNamespaceInfra(t, cli)
@@ -563,12 +560,12 @@ func TestCheckOwnership_UnownedDaemonSet(t *testing.T) {
 func TestCheckOwnership_UnownedService(t *testing.T) {
 	ctx := context.Background()
 	existing := &corev1.Service{
-		TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+		Kind: "Service", APIVersion: "v1",
+		Namespace: "gateway-ns", Name: "my-gateway",
 	}
 	desired := &corev1.Service{
-		TypeMeta:   metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+		Kind: "Service", APIVersion: "v1",
+		Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 	kube := newGatewayNamespaceInfra(t, cli)
@@ -582,12 +579,12 @@ func TestCheckOwnership_UnownedService(t *testing.T) {
 func TestCheckOwnership_UnownedPDB(t *testing.T) {
 	ctx := context.Background()
 	existing := &policyv1.PodDisruptionBudget{
-		TypeMeta:   metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+		Kind: "PodDisruptionBudget", APIVersion: "policy/v1",
+		Namespace: "gateway-ns", Name: "my-gateway",
 	}
 	desired := &policyv1.PodDisruptionBudget{
-		TypeMeta:   metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+		Kind: "PodDisruptionBudget", APIVersion: "policy/v1",
+		Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 	kube := newGatewayNamespaceInfra(t, cli)
@@ -601,12 +598,12 @@ func TestCheckOwnership_UnownedPDB(t *testing.T) {
 func TestCheckOwnership_UnownedHPA(t *testing.T) {
 	ctx := context.Background()
 	existing := &autoscalingv2.HorizontalPodAutoscaler{
-		TypeMeta:   metav1.TypeMeta{Kind: "HorizontalPodAutoscaler", APIVersion: "autoscaling/v2"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway"},
+		Kind: "HorizontalPodAutoscaler", APIVersion: "autoscaling/v2",
+		Namespace: "gateway-ns", Name: "my-gateway",
 	}
 	desired := &autoscalingv2.HorizontalPodAutoscaler{
-		TypeMeta:   metav1.TypeMeta{Kind: "HorizontalPodAutoscaler", APIVersion: "autoscaling/v2"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway")},
+		Kind: "HorizontalPodAutoscaler", APIVersion: "autoscaling/v2",
+		Namespace: "gateway-ns", Name: "my-gateway", Labels: owningLabels("gateway-ns", "my-gateway"),
 	}
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 	kube := newGatewayNamespaceInfra(t, cli)

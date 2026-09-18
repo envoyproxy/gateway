@@ -24,18 +24,18 @@ func TestPostRouteModify_WithInferencePool(t *testing.T) {
 	server := New(logger)
 
 	// Marshal the InferencePool to JSON as unstructured
-	unstructuredObj := map[string]interface{}{
+	unstructuredObj := map[string]any{
 		"kind":       "InferencePool",
 		"apiVersion": "sigs.k8s.io/gateway-api-inference-extension/v1",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      "test-inference-pool",
 			"namespace": "default",
 		},
-		"spec": map[string]interface{}{
-			"targetPorts": []map[string]interface{}{
+		"spec": map[string]any{
+			"targetPorts": []map[string]any{
 				{"number": 8000},
 			},
-			"selector": map[string]interface{}{
+			"selector": map[string]any{
 				"app": "vllm-llama3-8b-instruct",
 			},
 		},
@@ -187,15 +187,15 @@ func TestPostRouteModify_WithExtensionPolicy(t *testing.T) {
 	server := New(logger)
 
 	// Marshal a RouteContextExample policy to JSON as unstructured
-	policyObj := map[string]interface{}{
+	policyObj := map[string]any{
 		"kind":       "RouteContextExample",
 		"apiVersion": "example.extensions.io/v1alpha1",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      "test-route-policy",
 			"namespace": "default",
 		},
-		"spec": map[string]interface{}{
-			"targetRefs": []map[string]interface{}{
+		"spec": map[string]any{
+			"targetRefs": []map[string]any{
 				{
 					"group": "gateway.networking.k8s.io",
 					"kind":  "HTTPRoute",
@@ -278,18 +278,18 @@ func TestPostClusterModify_WithInferencePool(t *testing.T) {
 	server := New(logger)
 
 	// Marshal the InferencePool to JSON as unstructured
-	unstructuredObj := map[string]interface{}{
+	unstructuredObj := map[string]any{
 		"kind":       "InferencePool",
 		"apiVersion": "sigs.k8s.io/gateway-api-inference-extension/v1",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      "test-inference-pool",
 			"namespace": "default",
 		},
-		"spec": map[string]interface{}{
-			"targetPorts": []map[string]interface{}{
+		"spec": map[string]any{
+			"targetPorts": []map[string]any{
 				{"number": 8000},
 			},
-			"selector": map[string]interface{}{
+			"selector": map[string]any{
 				"app": "vllm-llama3-8b-instruct",
 			},
 		},

@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -60,9 +59,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 	// The gatewayclass configured for the reconciler and referenced by test cases.
 	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
 	gc := &gwapiv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-		},
+		Name: "test",
 		Spec: gwapiv1.GatewayClassSpec{
 			ControllerName: gcCtrlName,
 		},
@@ -70,10 +67,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 
 	// The gateway referenced by test cases.
 	gw := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "test",
-		},
+		Namespace: "test",
+		Name:      "test",
 		Spec: gwapiv1.GatewaySpec{
 			GatewayClassName: gwapiv1.ObjectName(gc.Name),
 			Listeners: []gwapiv1.Listener{
@@ -103,10 +98,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			name: "valid httproute",
 			routes: []*gwapiv1.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test",
-					},
+					Namespace: httpRouteNS,
+					Name:      "test",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -127,13 +120,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -147,10 +136,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			name: "httproute with extension filter multiple types same name",
 			routes: []*gwapiv1.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test",
-					},
+					Namespace: httpRouteNS,
+					Name:      "test",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -189,13 +176,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -205,20 +188,20 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			},
 			extensionFilters: []*unstructured.Unstructured{
 				{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "gateway.example.io/v1alpha1",
 						"kind":       "Bar",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test",
 							"namespace": httpRouteNS,
 						},
 					},
 				},
 				{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "gateway.example.io/v1alpha1",
 						"kind":       "Foo",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test",
 							"namespace": httpRouteNS,
 						},
@@ -243,10 +226,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			name: "httproute with one filter_from_extension",
 			routes: []*gwapiv1.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test",
-					},
+					Namespace: httpRouteNS,
+					Name:      "test",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -277,13 +258,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -293,10 +270,10 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			},
 			extensionFilters: []*unstructured.Unstructured{
 				{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "gateway.example.io/v1alpha1",
 						"kind":       "Foo",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test",
 							"namespace": httpRouteNS,
 						},
@@ -316,10 +293,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			name: "httproute with invalid timeout setting for HTTPRouteRule",
 			routes: []*gwapiv1.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test",
-					},
+					Namespace: httpRouteNS,
+					Name:      "test",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -340,13 +315,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 								Timeouts: &gwapiv1.HTTPRouteTimeouts{
@@ -364,10 +335,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			name: "multiple httproute with same extension filter",
 			routes: []*gwapiv1.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test",
-					},
+					Namespace: httpRouteNS,
+					Name:      "test",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -398,13 +367,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -412,10 +377,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test-2",
-					},
+					Namespace: httpRouteNS,
+					Name:      "test-2",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -446,13 +409,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -462,10 +421,10 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			},
 			extensionFilters: []*unstructured.Unstructured{
 				{
-					Object: map[string]interface{}{
+					Object: map[string]any{
 						"apiVersion": "gateway.example.io/v1alpha1",
 						"kind":       "Bar",
-						"metadata": map[string]interface{}{
+						"metadata": map[string]any{
 							"name":      "test",
 							"namespace": httpRouteNS,
 						},
@@ -490,10 +449,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			name: "multiple httproute with same extension filter: Envoy Gateway HTTPRouteFilter",
 			routes: []*gwapiv1.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test",
-					},
+					Namespace: httpRouteNS,
+					Name:      "test",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -524,13 +481,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -538,10 +491,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test-2",
-					},
+					Namespace: httpRouteNS,
+					Name:      "test-2",
 					Spec: gwapiv1.HTTPRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -572,13 +523,9 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.HTTPBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -588,14 +535,10 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			},
 			httpRouteFilters: []*egv1a1.HTTPRouteFilter{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindHTTPRouteFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: httpRouteNS,
-						Name:      "test",
-					},
+					Kind:       egv1a1.KindHTTPRouteFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+					Namespace:  httpRouteNS,
+					Name:       "test",
 					Spec: egv1a1.HTTPRouteFilterSpec{
 						URLRewrite: &egv1a1.HTTPURLRewriteFilter{
 							Hostname: &egv1a1.HTTPHostnameModifier{
@@ -669,14 +612,10 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				if tc.extensionFilters != nil {
 					for _, filter := range tc.extensionFilters {
 						key := utils.NamespacedNameWithGroupKind{
-							NamespacedName: types.NamespacedName{
-								Namespace: tc.routes[0].Namespace,
-								Name:      filter.GetName(),
-							},
-							GroupKind: schema.GroupKind{
-								Group: filter.GroupVersionKind().Group,
-								Kind:  filter.GroupVersionKind().Kind,
-							},
+							Namespace: tc.routes[0].Namespace,
+							Name:      filter.GetName(),
+							Group:     filter.GroupVersionKind().Group,
+							Kind:      filter.GroupVersionKind().Kind,
 						}
 						require.Equal(t, *filter, resourceMap.extensionRefFilters[key])
 					}
@@ -692,9 +631,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 	// The gatewayclass configured for the reconciler and referenced by test cases.
 	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
 	gc := &gwapiv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-		},
+		Name: "test",
 		Spec: gwapiv1.GatewayClassSpec{
 			ControllerName: gcCtrlName,
 		},
@@ -702,10 +639,8 @@ func TestProcessGRPCRoutes(t *testing.T) {
 
 	// The gateway referenced by test cases.
 	gw := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "test",
-		},
+		Namespace: "test",
+		Name:      "test",
 		Spec: gwapiv1.GatewaySpec{
 			GatewayClassName: gwapiv1.ObjectName(gc.Name),
 			Listeners: []gwapiv1.Listener{
@@ -731,10 +666,8 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			name: "valid grpcroute",
 			routes: []*gwapiv1.GRPCRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
+					Namespace: "test",
+					Name:      "test",
 					Spec: gwapiv1.GRPCRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -754,13 +687,9 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.GRPCBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -774,10 +703,8 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			name: "grpcroute referencing listenerset",
 			routes: []*gwapiv1.GRPCRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "xlistener-only",
-					},
+					Namespace: "test",
+					Name:      "xlistener-only",
 					Spec: gwapiv1.GRPCRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -794,11 +721,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 							{
 								BackendRefs: []gwapiv1.GRPCBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name: gwapiv1.ObjectName("test"),
-											},
-										},
+										Name: gwapiv1.ObjectName("test"),
 									},
 								},
 							},
@@ -813,10 +736,8 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			name: "grpcroute referencing gateway and listenerSet",
 			routes: []*gwapiv1.GRPCRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "multiple-parents",
-					},
+					Namespace: "test",
+					Name:      "multiple-parents",
 					Spec: gwapiv1.GRPCRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -836,11 +757,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 							{
 								BackendRefs: []gwapiv1.GRPCBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name: gwapiv1.ObjectName("test"),
-											},
-										},
+										Name: gwapiv1.ObjectName("test"),
 									},
 								},
 							},
@@ -855,10 +772,8 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			name: "grpcroute referencing Envoy Gateway HTTPRouteFilter",
 			routes: []*gwapiv1.GRPCRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "with-httproutefilter",
-					},
+					Namespace: "test",
+					Name:      "with-httproutefilter",
 					Spec: gwapiv1.GRPCRouteSpec{
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
@@ -881,13 +796,9 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								},
 								BackendRefs: []gwapiv1.GRPCBackendRef{
 									{
-										BackendRef: gwapiv1.BackendRef{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Group: gatewayapi.GroupPtr(corev1.GroupName),
-												Kind:  gatewayapi.KindPtr(resource.KindService),
-												Name:  "test",
-											},
-										},
+										Group: gatewayapi.GroupPtr(corev1.GroupName),
+										Kind:  gatewayapi.KindPtr(resource.KindService),
+										Name:  "test",
 									},
 								},
 							},
@@ -897,14 +808,10 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			},
 			httpRouteFilters: []*egv1a1.HTTPRouteFilter{
 				{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.KindHTTPRouteFilter,
-						APIVersion: egv1a1.GroupVersion.String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
+					Kind:       egv1a1.KindHTTPRouteFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+					Namespace:  "test",
+					Name:       "test",
 					Spec: egv1a1.HTTPRouteFilterSpec{
 						URLRewrite: &egv1a1.HTTPURLRewriteFilter{
 							Hostname: &egv1a1.HTTPHostnameModifier{
@@ -984,10 +891,8 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		{
 			name: "valid parentRef",
 			route: &gwapiv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
+				Namespace: "test",
+				Name:      "test",
 				Spec: gwapiv1.HTTPRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
@@ -1002,10 +907,8 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			gateways: []*gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
+					Namespace: "test",
+					Name:      "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
@@ -1013,9 +916,7 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			classes: []*gwapiv1.GatewayClass{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gc1",
-					},
+					Name: "gc1",
 					Spec: gwapiv1.GatewayClassSpec{
 						ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 					},
@@ -1023,11 +924,9 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "test",
-						Name:            "test",
-						ResourceVersion: "999",
-					},
+					Namespace:       "test",
+					Name:            "test",
+					ResourceVersion: "999",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
@@ -1038,10 +937,8 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		{
 			name: "invalid parentRef group",
 			route: &gwapiv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
+				Namespace: "test",
+				Name:      "test",
 				Spec: gwapiv1.HTTPRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
@@ -1059,10 +956,8 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		{
 			name: "invalid parentRef kind",
 			route: &gwapiv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
+				Namespace: "test",
+				Name:      "test",
 				Spec: gwapiv1.HTTPRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
@@ -1080,10 +975,8 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		{
 			name: "non-existent parentRef name",
 			route: &gwapiv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
+				Namespace: "test",
+				Name:      "test",
 				Spec: gwapiv1.HTTPRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
@@ -1101,10 +994,8 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		{
 			name: "valid parentRefs",
 			route: &gwapiv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
+				Namespace: "test",
+				Name:      "test",
 				Spec: gwapiv1.HTTPRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
@@ -1124,19 +1015,15 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			gateways: []*gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
+					Namespace: "test",
+					Name:      "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test2",
-					},
+					Namespace: "test",
+					Name:      "test2",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
@@ -1144,9 +1031,7 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			classes: []*gwapiv1.GatewayClass{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gc1",
-					},
+					Name: "gc1",
 					Spec: gwapiv1.GatewayClassSpec{
 						ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 					},
@@ -1154,21 +1039,17 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "test",
-						Name:            "test",
-						ResourceVersion: "999",
-					},
+					Namespace:       "test",
+					Name:            "test",
+					ResourceVersion: "999",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "test",
-						Name:            "test2",
-						ResourceVersion: "999",
-					},
+					Namespace:       "test",
+					Name:            "test2",
+					ResourceVersion: "999",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
@@ -1179,10 +1060,8 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		{
 			name: "one of two parentRefs are managed",
 			route: &gwapiv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
+				Namespace: "test",
+				Name:      "test",
 				Spec: gwapiv1.HTTPRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
@@ -1202,19 +1081,15 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			gateways: []*gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
+					Namespace: "test",
+					Name:      "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test2",
-					},
+					Namespace: "test",
+					Name:      "test2",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc2",
 					},
@@ -1222,17 +1097,13 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			classes: []*gwapiv1.GatewayClass{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gc1",
-					},
+					Name: "gc1",
 					Spec: gwapiv1.GatewayClassSpec{
 						ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gc2",
-					},
+					Name: "gc2",
 					Spec: gwapiv1.GatewayClassSpec{
 						ControllerName: gwapiv1.GatewayController("unmanaged.controller"),
 					},
@@ -1240,11 +1111,9 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 			},
 			expect: []gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "test",
-						Name:            "test",
-						ResourceVersion: "999",
-					},
+					Namespace:       "test",
+					Name:            "test",
+					ResourceVersion: "999",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: "gc1",
 					},
@@ -1255,10 +1124,8 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 		{
 			name: "one of two valid parentRefs kind",
 			route: &gwapiv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
+				Namespace: "test",
+				Name:      "test",
 				Spec: gwapiv1.HTTPRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
@@ -1349,10 +1216,8 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 
 	// Create test HTTPRoute with custom backend references
 	httpRoute := &gwapiv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 		Spec: gwapiv1.HTTPRouteSpec{
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{
@@ -1365,22 +1230,14 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 				{
 					BackendRefs: []gwapiv1.HTTPBackendRef{
 						{
-							BackendRef: gwapiv1.BackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Group: new(gwapiv1.Group("storage.example.io")),
-									Kind:  new(gwapiv1.Kind("S3Backend")),
-									Name:  "s3-backend",
-								},
-							},
+							Group: new(gwapiv1.Group("storage.example.io")),
+							Kind:  new(gwapiv1.Kind("S3Backend")),
+							Name:  "s3-backend",
 						},
 						{
-							BackendRef: gwapiv1.BackendRef{
-								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Group: new(gwapiv1.Group("compute.example.io")),
-									Kind:  new(gwapiv1.Kind("LambdaBackend")),
-									Name:  "lambda-backend",
-								},
-							},
+							Group: new(gwapiv1.Group("compute.example.io")),
+							Kind:  new(gwapiv1.Kind("LambdaBackend")),
+							Name:  "lambda-backend",
 						},
 					},
 				},
@@ -1390,10 +1247,8 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 
 	// Create test Gateway
 	gateway := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "default",
-		},
+		Name:      "test-gateway",
+		Namespace: "default",
 		Spec: gwapiv1.GatewaySpec{
 			GatewayClassName: "test",
 			Listeners: []gwapiv1.Listener{
@@ -1408,9 +1263,7 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 
 	// Create test GatewayClass
 	gatewayClass := &gwapiv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-		},
+		Name: "test",
 		Spec: gwapiv1.GatewayClassSpec{
 			ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 		},

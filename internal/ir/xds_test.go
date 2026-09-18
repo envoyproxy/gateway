@@ -22,20 +22,16 @@ import (
 var (
 	// HTTPListener
 	happyHTTPListener = HTTPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "happy",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
 	happyHTTPSListener = HTTPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "happy",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
@@ -47,11 +43,9 @@ var (
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	redactedHappyHTTPSListener = HTTPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "happy",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
 		Hostnames: []string{"example.com"},
 		TLS: &TLSConfig{
 			Certificates: []TLSCertificate{{
@@ -63,29 +57,23 @@ var (
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidAddrHTTPListener = HTTPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "invalid-addr",
-			Address: "1.0.0",
-			Port:    80,
-		},
+		Name:      "invalid-addr",
+		Address:   "1.0.0",
+		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidBackendHTTPListener = HTTPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "invalid-backend-match",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
+		Name:      "invalid-backend-match",
+		Address:   "0.0.0.0",
+		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&invalidBackendHTTPRoute},
 	}
 	weightedInvalidBackendsHTTPListener = HTTPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "weighted-invalid-backends-match",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
+		Name:      "weighted-invalid-backends-match",
+		Address:   "0.0.0.0",
+		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
 	}
@@ -98,63 +86,49 @@ var (
 		},
 	}
 	danglingBackendClusterRefHTTPListener = HTTPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "dangling-ref",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
+		Name:      "dangling-ref",
+		Address:   "0.0.0.0",
+		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&danglingBackendClusterRefHTTPRoute},
 	}
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "happy",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
-		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 
 	happyTCPListenerTLSTerminate = TCPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "happy",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
-		Routes: []*TCPRoute{&happyTCPRouteTLSTermination},
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSTermination},
 	}
 
 	emptySNITCPListenerTLSPassthrough = TCPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "empty-sni",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
-		Routes: []*TCPRoute{&emptySNITCPRoute},
+		Name:    "empty-sni",
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&emptySNITCPRoute},
 	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Address: "0.0.0.0",
-			Port:    80,
-		},
-		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "invalid-addr",
-			Address: "1.0.0",
-			Port:    80,
-		},
-		Routes: []*TCPRoute{&happyTCPRouteTLSPassthrough},
+		Name:    "invalid-addr",
+		Address: "1.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Address: "0.0.0.0",
-			Port:    80,
-		},
-		Routes: []*TCPRoute{&invalidSNITCPRoute},
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&invalidSNITCPRoute},
 	}
 
 	// TCPRoute
@@ -185,35 +159,27 @@ var (
 
 	// UDPListener
 	happyUDPListener = UDPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "happy",
-			Address: "0.0.0.0",
-			Port:    80,
-		},
-		Route: &happyUDPRoute,
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		Route:   &happyUDPRoute,
 	}
 	invalidNameUDPListener = UDPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Address: "0.0.0.0",
-			Port:    80,
-		},
-		Route: &happyUDPRoute,
+		Address: "0.0.0.0",
+		Port:    80,
+		Route:   &happyUDPRoute,
 	}
 	invalidAddrUDPListener = UDPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "invalid-addr",
-			Address: "1.0.0",
-			Port:    80,
-		},
-		Route: &happyUDPRoute,
+		Name:    "invalid-addr",
+		Address: "1.0.0",
+		Port:    80,
+		Route:   &happyUDPRoute,
 	}
 	invalidPortUDPListenerT = UDPListener{
-		CoreListenerDetails: CoreListenerDetails{
-			Name:    "invalid-port",
-			Address: "0.0.0.0",
-			Port:    0,
-		},
-		Route: &happyUDPRoute,
+		Name:    "invalid-port",
+		Address: "0.0.0.0",
+		Port:    0,
+		Route:   &happyUDPRoute,
 	}
 
 	// UDPRoute
@@ -328,9 +294,7 @@ var (
 				Name: new("rewrite.example.com"),
 			},
 			Path: &ExtendedHTTPPathModifier{
-				HTTPPathModifier: HTTPPathModifier{
-					FullReplace: new("/rewrite"),
-				},
+				FullReplace: new("/rewrite"),
 			},
 		},
 	}
@@ -346,10 +310,8 @@ var (
 				Name: new("rewrite.example.com"),
 			},
 			Path: &ExtendedHTTPPathModifier{
-				HTTPPathModifier: HTTPPathModifier{
-					FullReplace:        new("/rewrite"),
-					PrefixMatchReplace: new("/rewrite"),
-				},
+				FullReplace:        new("/rewrite"),
+				PrefixMatchReplace: new("/rewrite"),
 			},
 		},
 	}
