@@ -31,6 +31,19 @@ type Wasm struct {
 	// +optional
 	Name *string `json:"name,omitempty"`
 
+	// ShareVM allows this extension to share a Wasm VM with other extensions that
+	// enable sharing in the same EnvoyExtensionPolicy namespace. Envoy determines
+	// VM compatibility using the Wasm code and VM configuration, including environment
+	// variables. Each Envoy worker has its own VM.
+	//
+	// Sharing a VM shares module-level state and VM failures. Plugin names and root
+	// IDs are not changed; matching plugin identities may also share a root context.
+	// If false or unset, each policy's Wasm entry uses its own VM ID.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	ShareVM *bool `json:"shareVM,omitempty"`
+
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
 	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).

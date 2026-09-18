@@ -4104,6 +4104,10 @@ type Wasm struct {
 	// The xds translator only generates one Wasm filter for each unique name.
 	Name string `json:"name"`
 
+	// VMID overrides the VM ID to allow compatible extensions to share a VM.
+	// If unset, Name is used to keep different Wasm entries in separate VMs.
+	VMID string `json:"vmID,omitempty"`
+
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
 	// If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
