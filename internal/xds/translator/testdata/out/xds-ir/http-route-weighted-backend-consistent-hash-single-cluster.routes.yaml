@@ -1,0 +1,17 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        hashPolicy:
+        - header:
+            headerName: x-user-id
+        upgradeConfigs:
+        - upgradeType: websocket
