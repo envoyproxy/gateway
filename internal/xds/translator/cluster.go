@@ -544,6 +544,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
 					Ads: &corev3.AggregatedConfigSource{},
 				},
+				InitialFetchTimeout: durationpb.New(0),
 			},
 		}
 	default:

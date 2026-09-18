@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: route-with-weighted-zones-roundrobin-dest/backend/0
   ignoreHealthOnHostRemoval: true
@@ -30,6 +31,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: route-with-weighted-zones-maglev-dest/backend/0
   ignoreHealthOnHostRemoval: true
@@ -52,6 +54,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: route-with-weighted-zones-backend-utilization-dest/backend/0
   ignoreHealthOnHostRemoval: true
