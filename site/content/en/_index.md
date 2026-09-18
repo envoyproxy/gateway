@@ -3,6 +3,8 @@ title: Gateway
 no_list: true
 ---
 
+{{< announcement-banner >}}
+
 <div class="home-header">
   <div class="container">
     <img src="/icons/logo-white.svg" alt="Gateway Logo" class="mb-5" style="height: 120px;">
