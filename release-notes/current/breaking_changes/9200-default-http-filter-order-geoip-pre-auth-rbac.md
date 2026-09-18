@@ -1,0 +1,1 @@
+The GeoIP filter and a new internal pre-auth RBAC filter run before authentication to enforce leading geo/IP deny rules. When the internal filter is present, this order overrides conflicting `filterOrder` positions. If an `EnvoyPatchPolicy` or Extension Server targets these filters by position, update those patches.
