@@ -1,0 +1,80 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-http-wasm-source-shared-1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /wasm-http-shared-1
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-http-wasm-source-shared-2
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /wasm-http-shared-2
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: http-wasm-source-test-shared-1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-http-wasm-source-shared-1
+  wasm:
+  - name: wasm-filter-shared-1
+    rootID: my_root_id
+    shareVM: true
+    config:
+      message: shared-1
+    code:
+      type: HTTP
+      http:
+        url: http://static-file-server.gateway-conformance-infra/wasm/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: http-wasm-source-test-shared-2
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-http-wasm-source-shared-2
+  wasm:
+  - name: wasm-filter-shared-2
+    rootID: my_root_id
+    shareVM: true
+    config:
+      message: shared-2
+    code:
+      type: HTTP
+      http:
+        url: http://static-file-server.gateway-conformance-infra/wasm/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
