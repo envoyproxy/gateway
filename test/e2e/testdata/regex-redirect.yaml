@@ -1,0 +1,53 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: regex-redirect
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /blogs
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: example.com
+            statusCode: 301
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /articles
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: example.com
+            port: 8443
+            statusCode: 302
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: regex-redirect
+  namespace: gateway-conformance-infra
+spec:
+  redirect:
+    path:
+      type: ReplaceRegexMatch
+      replaceRegexMatch:
+        pattern: '^/(blogs|articles)/([0-9]+)$'
+        substitution: '/post-\2'

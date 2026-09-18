@@ -3,13 +3,84 @@ title: "HTTP Redirects"
 ---
 
 The [HTTPRoute][] resource can issue redirects to clients or rewrite paths sent upstream using filters. Note that
-HTTPRoute rules cannot use both filter types at once. Currently, Envoy Gateway only supports __core__
-[HTTPRoute filters][] which consist of `RequestRedirect` and `RequestHeaderModifier` at the time of this writing. To
-learn more about HTTP routing, refer to the [Gateway API documentation][].
+HTTPRoute rules cannot use both redirect and URL rewrite filters at once. Envoy Gateway also supports regex
+redirect paths through its `HTTPRouteFilter` extension. To learn more about HTTP routing, refer to the
+[Gateway API documentation][].
 
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
+
+## Regex Redirect Paths
+
+Use `HTTPRouteFilter.spec.redirect` together with a native `RequestRedirect` filter to construct a redirect
+path using regex capture groups. The native filter supplies the scheme, hostname, port and status code;
+the extension supplies the path transformation. Envoy produces one redirect response without forwarding
+the request to a backend. The two filters can appear in either order.
+
+This example redirects `/blogs/123` to `https://example.com/post-123` with status 301:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: regex-redirect
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - matches:
+        - path:
+            type: RegularExpression
+            value: '^/blogs/([0-9]+)$'
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: example.com
+            statusCode: 301
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: regex-redirect
+spec:
+  redirect:
+    path:
+      type: ReplaceRegexMatch
+      replaceRegexMatch:
+        pattern: '^/blogs/([0-9]+)$'
+        substitution: '/post-\1'
+```
+
+Apply both resources in the same namespace, then check the response without following the redirect:
+
+```shell
+curl -i "http://${GATEWAY_HOST}/blogs/123?source=email"
+```
+
+```console
+HTTP/1.1 301 Moved Permanently
+location: https://example.com/post-123?source=email
+```
+
+The regex transforms only the path; the original query string is preserved. Use RE2 replacement syntax
+(`\1`, not `$1`) and single-quoted YAML strings to preserve backslashes. Unanchored patterns replace all
+matching portions. Substitutions must be non-empty and cannot contain NUL, CR, LF, `?` or `#`.
+
+The transformation regex does not decide whether the route matches. If it does not match the path, the
+native redirect still applies with the unchanged path. Use appropriate HTTPRoute matches to avoid a
+redirect back to the same URL.
+
+Only one redirect extension is supported per HTTPRoute rule, and it requires exactly one native
+`RequestRedirect` filter. The native filter must not specify `path`, since it would conflict with the
+extension's path transformation. Conflicts are reported in route status. Redirect extensions cannot
+be combined with URL rewrite or direct response filters, or attached to GRPCRoutes or backendRefs.
 
 ## Redirects
 
@@ -601,7 +672,6 @@ curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}/get"
 You should receive a `302` with a redirect location of `http://path.redirect.example/status/200`.
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
-[HTTPRoute filters]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httproutefilter
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httprequestredirectfilter
 [sectionName]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#commonroutespec

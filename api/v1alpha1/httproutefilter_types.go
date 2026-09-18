@@ -37,9 +37,18 @@ type HTTPRouteFilter struct {
 
 // HTTPRouteFilterSpec defines the desired state of HTTPRouteFilter.
 // +union
+// +kubebuilder:validation:XValidation:rule="!has(self.redirect) || (!has(self.urlRewrite) && !has(self.directResponse))",message="redirect cannot be combined with urlRewrite or directResponse"
 type HTTPRouteFilterSpec struct {
 	// +optional
 	URLRewrite *HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
+	// Redirect extends a Gateway API RequestRedirect filter with a regex path
+	// transformation. Both filters must be configured on the same HTTPRoute rule,
+	// and the RequestRedirect filter must not specify path. Filter order does not
+	// affect the resulting redirect. Only one redirect extension is allowed per rule.
+	// Redirect cannot be combined with URL rewriting or direct responses, and is
+	// not supported on GRPCRoutes or backendRefs.
+	// +optional
+	Redirect *HTTPRedirectFilter `json:"redirect,omitempty"`
 	// DirectResponse returns a fixed response for matching requests.
 	//
 	// When this filter is referenced from a GRPCRoute, only a non-2xx status code
@@ -61,6 +70,20 @@ type HTTPRouteFilterSpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=8
 	Matches []HTTPRouteMatchFilter `json:"matches,omitempty"`
+}
+
+// HTTPRedirectFilter defines extended options for a RequestRedirect filter.
+type HTTPRedirectFilter struct {
+	// Path transforms the path in the redirect Location header using RE2 matching
+	// and substitution. The query string is preserved. Capture groups use backslash
+	// references such as \1, not $1. All matching portions are replaced.
+	// If the pattern does not match, the path is unchanged but the redirect still
+	// occurs. Constrain the HTTPRoute matches to avoid redirecting to the same URL.
+	// The native RequestRedirect supplies the scheme, hostname, port and status code.
+	// Substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="!has(self.replaceRegexMatch) || size(self.replaceRegexMatch.substitution) > 0",message="redirect substitution must not be empty"
+	Path HTTPPathModifier `json:"path"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host

@@ -6,6 +6,17 @@
     name: first-listener/*
     routes:
     - match:
+        safeRegex:
+          regex: ^/blogs/([0-9]+)$
+      name: regex-redirect-route
+      redirect:
+        hostRedirect: example.com
+        regexRewrite:
+          pattern:
+            regex: ^/blogs/([0-9]+)$
+          substitution: /post-\1
+        schemeRedirect: https
+    - match:
         prefix: /
       name: redirect-route-1
       redirect:
