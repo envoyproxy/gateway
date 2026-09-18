@@ -39,10 +39,16 @@
             - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.example.com/oauth2/v2/auth
+            cookieConfigs:
+              codeVerifierCookieConfig:
+                path: /protected/oauth2/callback
+              oauthNonceCookieConfig:
+                path: /protected/oauth2/callback
             credentials:
               clientId: client.oauth.example.com
               cookieNames:
                 bearerToken: AccessToken-5F93C2E4
+                codeVerifier: CodeVerifier-5F93C2E4
                 idToken: IdToken-5F93C2E4
                 oauthExpires: OauthExpires-5F93C2E4
                 oauthHmac: OauthHMAC-5F93C2E4
@@ -52,13 +58,11 @@
                 name: oauth2/hmac_secret/securitypolicy/default/policy-for-protected-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
               tokenSecret:
                 name: oauth2/client_secret/securitypolicy/default/policy-for-protected-route
                 sdsConfig:
                   ads: {}
-                  initialFetchTimeout: 0s
                   resourceApiVersion: V3
             csrfTokenExpiresIn: 2100s
             defaultExpiresIn: 3600s

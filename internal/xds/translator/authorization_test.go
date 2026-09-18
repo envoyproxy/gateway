@@ -9,7 +9,12 @@ import (
 	"reflect"
 	"testing"
 
+	rbacconfigv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	rbacv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/rbac/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -74,6 +79,18 @@ func celRule() *ir.AuthorizationRule {
 	}
 }
 
+func operationRule() *ir.AuthorizationRule {
+	pathType := gwapiv1.PathMatchPathPrefix
+	return &ir.AuthorizationRule{
+		Name:   "operation",
+		Action: egv1a1.AuthorizationActionDeny,
+		Operation: &egv1a1.Operation{
+			Methods: []gwapiv1.HTTPMethod{gwapiv1.HTTPMethodGet},
+			Path:    &egv1a1.PathMatch{Type: &pathType, Value: "/admin"},
+		},
+	}
+}
+
 func ruleNames(rules []*ir.AuthorizationRule) []string {
 	names := make([]string, 0, len(rules))
 	for _, r := range rules {
@@ -83,6 +100,9 @@ func ruleNames(rules []*ir.AuthorizationRule) []string {
 }
 
 func Test_authIndependentPrefix(t *testing.T) {
+	operationAllow := operationRule()
+	operationAllow.Action = egv1a1.AuthorizationActionAllow
+
 	tests := []struct {
 		name          string
 		authorization *ir.Authorization
@@ -120,6 +140,20 @@ func Test_authIndependentPrefix(t *testing.T) {
 				Rules: []*ir.AuthorizationRule{cidrRule(), celRule(), geoRule()},
 			},
 			want: []string{"cidr"},
+		},
+		{
+			name: "prefix stops at the first operation rule",
+			authorization: &ir.Authorization{
+				Rules: []*ir.AuthorizationRule{cidrRule(), operationRule(), geoRule()},
+			},
+			want: []string{"cidr"},
+		},
+		{
+			name: "prefix stops at an operation allow rule and does not pick a later CIDR deny",
+			authorization: &ir.Authorization{
+				Rules: []*ir.AuthorizationRule{operationAllow, cidrRule()},
+			},
+			want: []string{},
 		},
 		{
 			name: "leading authentication-dependent rule yields an empty prefix",
@@ -166,6 +200,23 @@ func Test_isPreAuthRule(t *testing.T) {
 		{name: "JWT", rule: jwtRule(), want: false},
 		{name: "headers", rule: headerRule(), want: false},
 		{name: "CEL", rule: celRule(), want: false},
+		{name: "operation", rule: operationRule(), want: false},
+		{
+			name: "path only",
+			rule: &ir.AuthorizationRule{
+				Principal: cidrRule().Principal,
+				Operation: &egv1a1.Operation{Path: &egv1a1.PathMatch{Value: "/old"}},
+			},
+			want: false,
+		},
+		{
+			name: "method only",
+			rule: &ir.AuthorizationRule{
+				Principal: cidrRule().Principal,
+				Operation: &egv1a1.Operation{Methods: []gwapiv1.HTTPMethod{gwapiv1.HTTPMethodGet}},
+			},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -263,6 +314,16 @@ func Test_routeNeedsPreAuthRBAC(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "authentication with a path deny rule followed by a CIDR deny",
+			route: &ir.HTTPRoute{
+				Security: &ir.SecurityFeatures{
+					OIDC:          &ir.OIDC{},
+					Authorization: &ir.Authorization{Rules: []*ir.AuthorizationRule{operationRule(), cidrRule()}},
+				},
+			},
+			want: false,
+		},
+		{
 			name: "authentication with a geo deny prefix",
 			route: &ir.HTTPRoute{
 				Security: &ir.SecurityFeatures{
@@ -279,4 +340,57 @@ func Test_routeNeedsPreAuthRBAC(t *testing.T) {
 			assert.Equal(t, tt.want, routeNeedsPreAuthRBAC(tt.route))
 		})
 	}
+}
+
+func Test_rbacPatchRoute(t *testing.T) {
+	irRoute := &ir.HTTPRoute{
+		Security: &ir.SecurityFeatures{
+			OIDC: &ir.OIDC{},
+			Authorization: &ir.Authorization{
+				DefaultAction: egv1a1.AuthorizationActionDeny,
+				Rules: []*ir.AuthorizationRule{
+					{
+						Name:   "allow-admin-get",
+						Action: egv1a1.AuthorizationActionAllow,
+						Operation: &egv1a1.Operation{
+							Methods: []gwapiv1.HTTPMethod{gwapiv1.HTTPMethodGet},
+							Path: &egv1a1.PathMatch{
+								Type:  new(gwapiv1.PathMatchPathPrefix),
+								Value: "/admin",
+							},
+						},
+					},
+					cidrRule(),
+				},
+			},
+		},
+	}
+
+	route := &routev3.Route{}
+	require.NoError(t, (&rbac{}).patchRoute(route, irRoute, nil))
+
+	cfg := route.GetTypedPerFilterConfig()
+
+	// A path-dependent policy must not be pre-auth enforced: the path and
+	// methods can change between the pre-auth filter and the main RBAC filter.
+	_, hasPreAuth := cfg[rbacPreAuthFilterName]
+	assert.False(t, hasPreAuth, "pre-auth RBAC config must not be set for a path-dependent policy")
+
+	// The main RBAC filter must keep the full policy, including the operation
+	// rule and the real default action.
+	mainAny, ok := cfg[egv1a1.EnvoyFilterRBAC.String()]
+	require.True(t, ok, "main RBAC per-route config must be set")
+	var mainPerRoute rbacv3.RBACPerRoute
+	require.NoError(t, mainAny.UnmarshalTo(&mainPerRoute))
+
+	matchers := mainPerRoute.Rbac.Matcher.GetMatcherList().GetMatchers()
+	require.Len(t, matchers, 2)
+	assert.Equal(t, "allow-admin-get", matchers[0].GetOnMatch().GetAction().GetName())
+	assert.Equal(t, "cidr", matchers[1].GetOnMatch().GetAction().GetName())
+
+	defaultAction := mainPerRoute.Rbac.Matcher.GetOnNoMatch().GetAction()
+	assert.Equal(t, "default", defaultAction.GetName())
+	var defaultCfg rbacconfigv3.Action
+	require.NoError(t, defaultAction.GetTypedConfig().UnmarshalTo(&defaultCfg))
+	assert.Equal(t, rbacconfigv3.RBAC_DENY, defaultCfg.GetAction())
 }

@@ -191,24 +191,12 @@ func hasPreRBACAuthentication(sf *ir.SecurityFeatures) bool {
 		sf.JWT != nil
 }
 
-// authIndependentPrefix returns the longest leading run of authorization rules
-// whose principal matches only on client IP (clientCIDRs) and/or geo location
-// (clientIPGeoLocations) — the principals that can be evaluated before any
-// authentication filter runs. It stops at the first rule whose principal needs
-// authentication state (a JWT or header principal), or that uses CEL, which can
-// reference authentication-derived headers, metadata, or filter state. It is a
-// contiguous prefix, not a filter: once an auth-dependent rule is seen, later
-// IP/geo rules are excluded too.
-//
-// The prefix must be contiguous to preserve the policy's first-match-wins
-// semantics. Because these rules keep their original order and all precede any
-// auth-dependent rule, the pre-auth filter can only reach the same verdict the
-// main filter would at the same rule position:
-//   - a Deny in the prefix is enforced early (a 403 the main filter would also
-//     return), and
-//   - an Allow in the prefix is non-terminal — the request falls through to the
-//     authentication filters and the main RBAC filter, which re-evaluates the
-//     full policy (including the real default action).
+// authIndependentPrefix returns the leading rules that match only client IP or
+// geolocation. JWT, header, CEL, and operation matches end the prefix.
+// Later IP/geo rules stay excluded to preserve first-match-wins semantics.
+// A Deny in the prefix rejects the request before authentication. An Allow
+// continues to authentication and the main RBAC filter, which enforces the full
+// policy and its default action.
 func authIndependentPrefix(authorization *ir.Authorization) []*ir.AuthorizationRule {
 	if authorization == nil {
 		return nil
@@ -226,16 +214,14 @@ func authIndependentPrefix(authorization *ir.Authorization) []*ir.AuthorizationR
 }
 
 // isPreAuthRule reports whether a rule can be evaluated before authentication.
-// Only client IP / geo principals and operation matches qualify. CEL is excluded
-// because it can reference authentication-derived headers, metadata, or filter
-// state.
+// CEL can use authentication-derived state. Operation matches use the path or
+// method, which intervening filters such as Lua can change before main RBAC.
+// These matches must stay out of the early prefix.
 //
-// NOTE: this is intentionally an exclusion check. If a new matching field is
-// added to ir.AuthorizationRule or ir.Principal, it MUST be considered here, or
-// such rules may be wrongly enforced pre-auth. Test_isPreAuthRule pins every
-// field to force that review.
+// This exclusion check must account for new AuthorizationRule and Principal
+// fields. Test_isPreAuthRule pins their fields to require that review.
 func isPreAuthRule(rule *ir.AuthorizationRule) bool {
-	return rule.CEL == nil && rule.Principal.JWT == nil && len(rule.Principal.Headers) == 0
+	return rule.CEL == nil && rule.Operation == nil && rule.Principal.JWT == nil && len(rule.Principal.Headers) == 0
 }
 
 // patchRoute patches the provided route with the RBAC config if applicable.

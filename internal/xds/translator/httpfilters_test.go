@@ -116,6 +116,68 @@ func Test_sortHTTPFilters(t *testing.T) {
 			},
 		},
 		{
+			name: "geoip stays before pre-auth rbac when moved after oauth2",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2),
+				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+			},
+			filterOrder: []egv1a1.FilterPosition{
+				{Name: egv1a1.EnvoyFilterGeoIP, After: new(egv1a1.EnvoyFilterOAuth2)},
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+			},
+		},
+		{
+			name: "geoip stays before pre-auth rbac when moved immediately before oauth2",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2),
+				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+			},
+			filterOrder: []egv1a1.FilterPosition{
+				{Name: egv1a1.EnvoyFilterGeoIP, Before: new(egv1a1.EnvoyFilterOAuth2)},
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+			},
+		},
+		{
+			name: "custom geoip order is unchanged without pre-auth rbac",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+			},
+			filterOrder: []egv1a1.FilterPosition{
+				{Name: egv1a1.EnvoyFilterGeoIP, After: new(egv1a1.EnvoyFilterOAuth2)},
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterOAuth2),
+				httpFilterForTest(egv1a1.EnvoyFilterGeoIP),
+				httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+			},
+		},
+		{
 			name: "custom filter order-singleton filter",
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
@@ -480,6 +542,47 @@ func Test_sortHTTPFilters(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := sortHTTPFilters(tt.filters, tt.filterOrder)
 			assert.Equalf(t, tt.want, result, "sortHTTPFilters(%v)", tt.filters)
+		})
+	}
+}
+
+func Test_sortHTTPFiltersPreAuthBeforeAuthentication(t *testing.T) {
+	for _, auth := range []egv1a1.EnvoyFilter{
+		egv1a1.EnvoyFilterExtAuthz,
+		egv1a1.EnvoyFilterAPIKeyAuth,
+		egv1a1.EnvoyFilterBasicAuth,
+		egv1a1.EnvoyFilterOAuth2,
+		egv1a1.EnvoyFilterJWTAuthn,
+	} {
+		t.Run(string(auth), func(t *testing.T) {
+			for _, withGeoIP := range []bool{false, true} {
+				filters := []*hcmv3.HttpFilter{
+					httpFilterForTest(egv1a1.EnvoyFilterCORS),
+					httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+					httpFilterForTest(auth + "/first"),
+					httpFilterForTest(auth + "/second"),
+					httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+					httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				}
+				want := []*hcmv3.HttpFilter{}
+				if withGeoIP {
+					filters = append(filters, httpFilterForTest(egv1a1.EnvoyFilterGeoIP))
+					want = append(want, httpFilterForTest(egv1a1.EnvoyFilterGeoIP))
+				}
+				want = append(want,
+					httpFilterForTest(egv1a1.EnvoyFilter(rbacPreAuthFilterName)),
+					httpFilterForTest(auth+"/first"),
+					httpFilterForTest(auth+"/second"),
+					httpFilterForTest(egv1a1.EnvoyFilterCORS),
+					httpFilterForTest(egv1a1.EnvoyFilterRBAC),
+					httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				)
+
+				result := sortHTTPFilters(filters, []egv1a1.FilterPosition{
+					{Name: auth, Before: new(egv1a1.EnvoyFilterCORS)},
+				})
+				assert.Equal(t, want, result, "withGeoIP=%v", withGeoIP)
+			}
 		})
 	}
 }

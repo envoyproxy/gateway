@@ -1076,10 +1076,14 @@ Under the hood, Envoy Gateway uses a series of [Envoy HTTP filters](https://www.
 to process HTTP requests and responses, and to apply various policies.
 
 By default, Envoy Gateway applies the following filters in the order shown:
+* envoy.filters.http.custom_response
 * envoy.filters.http.health_check
 * envoy.filters.http.fault
 * envoy.filters.http.cors
 * envoy.filters.http.csrf
+* envoy.filters.http.header_mutation
+* envoy.filters.http.geoip
+* envoy.filters.http.pre_auth_rbac (internal, when required)
 * envoy.filters.http.ext_authz
 * envoy.filters.http.api_key_auth
 * envoy.filters.http.basic_auth
@@ -1090,14 +1094,16 @@ By default, Envoy Gateway applies the following filters in the order shown:
 * envoy.filters.http.lua
 * envoy.filters.http.ext_proc
 * envoy.filters.http.wasm
+* envoy.filters.http.dynamic_modules
 * envoy.filters.http.rbac
 * envoy.filters.http.local_ratelimit
 * envoy.filters.http.ratelimit
+* envoy.filters.http.bandwidth_limit
 * envoy.filters.http.grpc_web
 * envoy.filters.http.grpc_stats
-* envoy.filters.http.custom_response
 * envoy.filters.http.credential_injector
 * envoy.filters.http.compressor
+* envoy.filters.http.dynamic_forward_proxy
 * envoy.filters.http.router
 
 The default order in which these filters are applied is opinionated and may not suit all use cases.
@@ -1107,6 +1113,13 @@ To address this, Envoy Gateway allows you to adjust the execution order of these
 name and a filter to place it before or after. These configurations are applied in the order they are listed.
 If a filter occurs in multiple configurations, the final order is the result of applying all these configurations in order.
 To avoid conflicts, it is recommended to only specify one configuration per filter.
+
+The internal `pre_auth_rbac` filter rejects requests that match leading geo/IP deny rules before authentication.
+It cannot be named in `filterOrder`.
+When this filter is present, Envoy Gateway keeps GeoIP before it and authentication filters after it.
+These dependencies override conflicting custom positions.
+Policies with operation, JWT, header, or CEL matches end the early rule prefix.
+The main RBAC filter still enforces the full policy.
 
 For example, the following configuration moves the `envoy.filters.http.wasm` filter before the `envoy.filters.http.jwt_authn`
 filter and the `envoy.filters.http.cors` filter after the `envoy.filters.http.basic_auth` filter:

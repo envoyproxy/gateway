@@ -281,6 +281,8 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 		}
 	}
 
+	enforcePreAuthRBACOrder(l)
+
 	// Collect the sorted filters.
 	i := 0
 	for element := l.Front(); element != nil; element = element.Next() {
@@ -289,6 +291,46 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 	}
 
 	return filters
+}
+
+// enforcePreAuthRBACOrder preserves the dependencies of the internal pre-auth
+// filter after custom ordering. Otherwise, missing GeoIP headers can make an
+// Allow rule fail to match, and authentication can redirect before a Deny rule.
+func enforcePreAuthRBACOrder(filters *list.List) {
+	var preAuth, geoIP *list.Element
+	for element := filters.Front(); element != nil; element = element.Next() {
+		filter := element.Value.(*hcmv3.HttpFilter)
+		switch {
+		case filter.Name == rbacPreAuthFilterName:
+			preAuth = element
+		case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
+			geoIP = element
+		}
+	}
+	if preAuth == nil {
+		return
+	}
+
+	for element := filters.Front(); element != preAuth; element = element.Next() {
+		filter := element.Value.(*hcmv3.HttpFilter)
+		if isFilterType(filter, egv1a1.EnvoyFilterExtAuthz) ||
+			isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth) ||
+			isFilterType(filter, egv1a1.EnvoyFilterBasicAuth) ||
+			isFilterType(filter, egv1a1.EnvoyFilterOAuth2) ||
+			isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn) {
+			filters.MoveBefore(preAuth, element)
+			break
+		}
+	}
+
+	if geoIP != nil {
+		for element := preAuth.Next(); element != nil; element = element.Next() {
+			if element == geoIP {
+				filters.MoveBefore(geoIP, preAuth)
+				break
+			}
+		}
+	}
 }
 
 // patchHCMWithFilters builds and appends HTTP Filters to the HTTP connection
