@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -40,6 +41,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -3420,4 +3422,183 @@ func TestCRDExistsWithClient(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, exists)
 	})
+}
+
+// TestReconcileIsolatesTransientErrorPerGatewayClass verifies that a transient error while
+// processing one managed GatewayClass does not prevent the other managed GatewayClasses in the
+// same Reconcile call from having their status and resources refreshed. Before this was fixed,
+// Reconcile aborted the entire batch on the first transient error, leaving every other managed
+// GatewayClass's status/resources untouched until a later, unrelated success reset the shared
+// workqueue's backoff.
+func TestReconcileIsolatesTransientErrorPerGatewayClass(t *testing.T) {
+	const (
+		ns            = "default"
+		flakyEPName   = "flaky-envoy-proxy"
+		healthyGCName = "healthy-gc"
+		flakyGCName   = "flaky-gc"
+	)
+
+	flakyEP := test.GetEnvoyProxy(types.NamespacedName{Namespace: ns, Name: flakyEPName}, false)
+
+	healthyGC := test.GetGatewayClass(healthyGCName, egv1a1.GatewayControllerName, nil)
+	flakyGC := test.GetGatewayClass(flakyGCName, egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
+		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+		Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+		Namespace: gwapiv1.Namespace(ns),
+		Name:      gwapiv1.ObjectName(flakyEPName),
+	})
+
+	// Simulate a transient (ServiceUnavailable) error only when fetching the EnvoyProxy
+	// referenced by flakyGC's parametersRef - every other Get/List succeeds normally.
+	flakyGet := interceptor.Funcs{
+		Get: func(ctx context.Context, cli client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if _, ok := obj.(*egv1a1.EnvoyProxy); ok && key.Name == flakyEPName {
+				return kerrors.NewServiceUnavailable("simulated transient error")
+			}
+			return cli.Get(ctx, key, obj, opts...)
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(healthyGC, flakyGC, flakyEP).
+		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
+		WithInterceptorFuncs(flakyGet).
+		Build()
+
+	pResources := new(message.ProviderResources)
+	r := &gatewayAPIReconciler{
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client:          fakeClient,
+		classController: egv1a1.GatewayControllerName,
+		namespace:       ns,
+		envoyGateway:    &egv1a1.EnvoyGateway{},
+		mergeGateways:   sets.New[string](),
+		resources:       pResources,
+	}
+
+	_, err := r.Reconcile(t.Context(), reconcile.Request{})
+	require.Error(t, err, "Reconcile should surface the transient error so the workqueue retries it")
+
+	// The healthy GatewayClass must still have been processed and marked Accepted this pass,
+	// despite the flaky GatewayClass's transient failure earlier/later in the same batch.
+	healthyStatus, ok := pResources.GatewayClassStatuses.Load(types.NamespacedName{Name: healthyGCName})
+	require.True(t, ok, "healthy GatewayClass status should have been stored despite the other class's transient error")
+	var acceptedCond *metav1.Condition
+	for i := range healthyStatus.Conditions {
+		if healthyStatus.Conditions[i].Type == string(gwapiv1.GatewayClassConditionStatusAccepted) {
+			acceptedCond = &healthyStatus.Conditions[i]
+		}
+	}
+	require.NotNil(t, acceptedCond, "healthy GatewayClass should have an Accepted condition")
+	require.Equal(t, metav1.ConditionTrue, acceptedCond.Status)
+
+	// ... and its resources should have been stored in the shared GatewayAPIResources map.
+	stored, ok := pResources.GatewayAPIResources.Load(string(egv1a1.GatewayControllerName))
+	require.True(t, ok)
+	found := false
+	for _, gwcResource := range *stored.Resources {
+		if gwcResource.GatewayClass != nil && gwcResource.GatewayClass.Name == healthyGCName {
+			found = true
+		}
+	}
+	require.True(t, found, "healthy GatewayClass's resources should be present in the stored batch")
+
+	// The flaky GatewayClass must NOT have been marked Accepted this pass - it's retried later.
+	_, ok = pResources.GatewayClassStatuses.Load(types.NamespacedName{Name: flakyGCName})
+	require.False(t, ok, "flaky GatewayClass status should not be stored this pass; it failed transiently")
+}
+
+// TestReconcilePreservesPriorResourcesOnTransientError verifies that when a previously reconciled
+// GatewayClass hits a transient error, its last-published resources are carried forward into the
+// new snapshot instead of being omitted. Reconcile Store()s the entire ControllerResources slice
+// as one snapshot, and the Gateway API runner's mark-and-sweep logic treats any GatewayClass
+// missing from that snapshot as deleted - so simply skipping the flaky class would tear down its
+// InfraIR, XdsIR, and statuses until the retry succeeds.
+func TestReconcilePreservesPriorResourcesOnTransientError(t *testing.T) {
+	const (
+		ns     = "default"
+		epName = "flaky-envoy-proxy"
+		gcName = "flaky-gc"
+		gwName = "gw-1"
+		gwPort = int32(80)
+	)
+
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
+	ep := test.GetEnvoyProxy(types.NamespacedName{Namespace: ns, Name: epName}, false)
+	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
+		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+		Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+		Namespace: gwapiv1.Namespace(ns),
+		Name:      gwapiv1.ObjectName(epName),
+	})
+	gw := test.GetGateway(types.NamespacedName{Namespace: ns, Name: gwName}, gcName, gwPort)
+
+	// Toggled on after the first, successful Reconcile so the second Reconcile hits a
+	// transient error only when fetching the EnvoyProxy referenced by the GatewayClass's
+	// parametersRef - every other Get/List keeps succeeding normally.
+	failNextGet := false
+	flakyGet := interceptor.Funcs{
+		Get: func(ctx context.Context, cli client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if failNextGet {
+				if _, ok := obj.(*egv1a1.EnvoyProxy); ok && key.Name == epName {
+					return kerrors.NewServiceUnavailable("simulated transient error")
+				}
+			}
+			return cli.Get(ctx, key, obj, opts...)
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(gc, ep, gw, namespace).
+		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
+		WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
+		WithInterceptorFuncs(flakyGet).
+		Build()
+
+	pResources := new(message.ProviderResources)
+	r := &gatewayAPIReconciler{
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client:          fakeClient,
+		classController: egv1a1.GatewayControllerName,
+		namespace:       ns,
+		envoyGateway:    &egv1a1.EnvoyGateway{},
+		mergeGateways:   sets.New[string](),
+		resources:       pResources,
+	}
+
+	// First pass: everything succeeds, so the GatewayClass's Gateway is published normally.
+	_, err := r.Reconcile(t.Context(), reconcile.Request{})
+	require.NoError(t, err)
+
+	stored, ok := pResources.GatewayAPIResources.Load(string(egv1a1.GatewayControllerName))
+	require.True(t, ok)
+	firstPassResource := findResourcesByGatewayClass(*stored.Resources, gcName)
+	require.NotNil(t, firstPassResource, "GatewayClass's resources should be published after a successful Reconcile")
+	require.Len(t, firstPassResource.Gateways, 1, "the Gateway should have been collected on the successful pass")
+
+	// Second pass: the EnvoyProxy fetch now fails transiently.
+	failNextGet = true
+	_, err = r.Reconcile(t.Context(), reconcile.Request{})
+	require.Error(t, err, "Reconcile should surface the transient error so the workqueue retries it")
+
+	stored, ok = pResources.GatewayAPIResources.Load(string(egv1a1.GatewayControllerName))
+	require.True(t, ok)
+	secondPassResource := findResourcesByGatewayClass(*stored.Resources, gcName)
+	require.NotNil(t, secondPassResource,
+		"the flaky GatewayClass's previously published resources must be preserved in the new snapshot, "+
+			"not dropped, or the Gateway API runner's mark-and-sweep will tear down its InfraIR/XdsIR/statuses")
+	require.Len(t, secondPassResource.Gateways, 1, "the previously collected Gateway should still be present")
+}
+
+// findResourcesByGatewayClass returns the *resource.Resources entry for the named GatewayClass
+// from a ControllerResources slice, or nil if absent.
+func findResourcesByGatewayClass(resources resource.ControllerResources, gcName string) *resource.Resources {
+	for _, r := range resources {
+		if r != nil && r.GatewayClass != nil && r.GatewayClass.Name == gcName {
+			return r
+		}
+	}
+	return nil
 }
