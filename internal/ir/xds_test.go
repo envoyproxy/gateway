@@ -1392,6 +1392,16 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "cluster per setting has traffic override",
+			input: RouteDestination{
+				Settings: []*DestinationSetting{
+					{Name: "a"},
+					{Name: "b", Traffic: &ClusterTrafficFeatures{}},
+				},
+			},
+			expected: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -2334,6 +2344,43 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestRouteDestinationHasTrafficInSettings(t *testing.T) {
+	cases := []struct {
+		name     string
+		dest     *RouteDestination
+		expected bool
+	}{
+		{
+			name:     "no settings",
+			dest:     &RouteDestination{},
+			expected: false,
+		},
+		{
+			name: "settings without traffic",
+			dest: &RouteDestination{
+				Settings: []*DestinationSetting{{Name: "a"}, {Name: "b"}},
+			},
+			expected: false,
+		},
+		{
+			name: "one setting with traffic",
+			dest: &RouteDestination{
+				Settings: []*DestinationSetting{
+					{Name: "a"},
+					{Name: "b", Traffic: &ClusterTrafficFeatures{}},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.dest.HasTrafficInSettings())
 		})
 	}
 }
