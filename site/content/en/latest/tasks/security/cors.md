@@ -21,10 +21,15 @@ is only supported on the [HTTPRoute][] resource.
 When configuring CORS either an origin with a precise hostname can be configured or an hostname containing a wildcard prefix,
 allowing all subdomains of the specified hostname.
 In addition to that the entire origin (with or without specifying a scheme) can be a wildcard to allow all origins.
+A SecurityPolicy can also allow origins that match a regular expression in [`allowOriginRegexes`][CORSOriginRegex].
+Regular expressions use [RE2][] syntax, except for the `\C` escape sequence, which is not supported.
+The regular expression must match the entire origin, including the scheme and the port if present.
+A regular expression that matches the literal string `*` is rejected. Use `allowOrigins: ["*"]` to allow all origins.
 
 ### Configuring CORS with SecurityPolicy
 
-The below example defines a SecurityPolicy that allows CORS for requests originating from `http://*.foo.com`.
+The below example defines a SecurityPolicy that allows CORS for requests originating from `http://*.foo.com`, and from
+origins matching the regular expression `https://preview-[0-9]+\.example\.com`, such as `https://preview-123.example.com`.
 It also enables credentialed requests with `allowCredentials: true`.
 
 {{< tabpane text=true >}}
@@ -44,6 +49,8 @@ spec:
   cors:
     allowOrigins:
     - "http://*.foo.com"
+    allowOriginRegexes:
+    - 'https://preview-[0-9]+\.example\.com'
     allowCredentials: true
     allowMethods:
     - GET
@@ -75,6 +82,8 @@ spec:
   cors:
     allowOrigins:
     - "http://*.foo.com"
+    allowOriginRegexes:
+    - 'https://preview-[0-9]+\.example\.com'
     allowCredentials: true
     allowMethods:
     - GET
@@ -249,6 +258,27 @@ curl -H "Origin: http://www.foo.com:8080" \
   1> /dev/null
 ```
 
+If you applied the SecurityPolicy, a request from `https://preview-123.example.com` is also allowed because it matches
+the regular expression in `allowOriginRegexes`:
+
+```shell
+curl -H "Origin: https://preview-123.example.com" \
+  -H "Host: www.example.com" \
+  -H "Access-Control-Request-Method: GET" \
+  -X OPTIONS -v -s \
+  http://$GATEWAY_HOST \
+  1> /dev/null
+```
+
+You should see the below response, indicating that the request from `https://preview-123.example.com` is allowed:
+
+```shell
+< access-control-allow-origin: https://preview-123.example.com
+```
+
+A request from `https://preview-123.example.com:8443` is not allowed because the regular expression must match the
+entire origin, including the port number.
+
 Note:
 * CORS specification requires that the browsers to send a preflight request to the server to ask if it's allowed
 to access the limited resource in another domains. The browsers are supposed to follow the response from the server to
@@ -278,3 +308,5 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
 [HTTPCORSFilter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpcorsfilter
+[RE2]: https://github.com/google/re2/wiki/Syntax
+[CORSOriginRegex]: ../../../api/extension_types#corsoriginregex

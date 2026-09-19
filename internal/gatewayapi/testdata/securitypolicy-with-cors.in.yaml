@@ -111,6 +111,8 @@ securityPolicies:
       - "http://*.example.com"
       - "http://foo.bar.com"
       - "https://*"
+      allowOriginRegexes:
+      - 'https://preview-[0-9]+\.example\.com(:8443)?'
       allowMethods:
       - GET
       - POST
@@ -135,6 +137,8 @@ securityPolicies:
       allowOrigins:
       - "https://*.test.com:8080"
       - "https://www.test.org:8080"
+      allowOriginRegexes:
+      - 'https://preview-[0-9]+\.example\.com'
       allowMethods:
       - GET
       - POST
