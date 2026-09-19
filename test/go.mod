@@ -4,6 +4,10 @@ go 1.27.1
 
 replace github.com/envoyproxy/gateway => ../
 
+replace sigs.k8s.io/gateway-api => github.com/zirain-dev/gateway-api v0.0.0-20260914075327-7c51128a5d91
+
+replace sigs.k8s.io/gateway-api/conformance => github.com/zirain-dev/gateway-api/conformance v0.0.0-20260914075327-7c51128a5d91
+
 require (
 	fortio.org/fortio v1.73.2
 	fortio.org/log v1.18.3
