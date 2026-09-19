@@ -199,6 +199,14 @@ type EnvoyProxySpec struct {
 	// +optional
 	PreserveRouteOrder *bool `json:"preserveRouteOrder,omitempty"`
 
+	// EnableRoutePriority determines whether the gateway.envoyproxy.io/route-priority
+	// annotation is used to order HTTPRoute and GRPCRoute matches. Higher values
+	// take precedence. When unset or false, the annotation is ignored.
+	// Default: False
+	//
+	// +optional
+	EnableRoutePriority *bool `json:"enableRoutePriority,omitempty"`
+
 	// LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies
 	// Default: Strict
 	//
