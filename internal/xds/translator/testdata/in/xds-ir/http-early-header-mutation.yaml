@@ -25,42 +25,42 @@ http:
   hostnames:
   - "*"
   headers:
-    earlyAddRequestHeaders:
-    - name: "some-header"
-      value:
-      - "some-value1,some-value2"
-      append: true
-    - name: "some-header-2"
-      value:
-      - "some-value"
-      append: true
-    - name: "some-header3"
-      value:
-      - "some-value"
-      append: false
-    - name: "some-header4"
-      value:
-      - "some-value"
-      append: false
-    - name: "empty-header"
-      value:
-      append: false
-    earlyRemoveRequestHeaders:
-    - "some-header5"
-    - "some-header6"
-    earlyRemoveRequestHeadersOnMatch:
-    - distinct: false
-      exact: my-removed-header-value
-      name: ""
-    - distinct: false
-      name: ""
-      prefix: removed-prefix-
-    - distinct: false
-      name: ""
-      suffix: -removed-suffix
-    - distinct: false
-      name: ""
-      safeRegex: removed-regex-.*
+    earlyRequestHeaderMutations:
+    - write:
+        name: "some-header"
+        value: "some-value1,some-value2"
+        action: Append
+    - write:
+        name: "some-header-2"
+        value: "some-value"
+        action: Append
+    - write:
+        name: "some-header3"
+        value: "some-value"
+        action: Overwrite
+    - write:
+        name: "some-header4"
+        value: "some-value"
+        action: Overwrite
+    - write:
+        name: "empty-header"
+        value: ""
+        action: Overwrite
+        keepEmptyValue: true
+    - remove: "some-header5"
+    - remove: "some-header6"
+    - removeOnMatch:
+        name: ""
+        exact: my-removed-header-value
+    - removeOnMatch:
+        name: ""
+        prefix: removed-prefix-
+    - removeOnMatch:
+        name: ""
+        suffix: -removed-suffix
+    - removeOnMatch:
+        name: ""
+        safeRegex: removed-regex-.*
   routes:
   - name: "second-route"
     hostname: "*"
