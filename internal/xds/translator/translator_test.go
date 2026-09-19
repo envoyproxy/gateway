@@ -224,6 +224,15 @@ func TestTranslateXds(t *testing.T) {
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
+
+			extensionConfigs, ok := tCtx.XdsResources[resourcev3.ExtensionConfigType]
+			if ok && len(extensionConfigs) > 0 {
+				if test.OverrideTestData() {
+					keep.Insert(inputFileName + ".ecds.yaml")
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, extensionConfigs), filepath.Join("testdata", "out", "xds-ir", inputFileName+".ecds.yaml")))
+				}
+				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".ecds.yaml"), requireResourcesToYAMLString(t, extensionConfigs))
+			}
 		})
 	}
 
@@ -426,6 +435,14 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
+			}
+
+			extensionConfigs, ok := tCtx.XdsResources[resourcev3.ExtensionConfigType]
+			if ok && len(extensionConfigs) > 0 {
+				if test.OverrideTestData() {
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, extensionConfigs), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".ecds.yaml")))
+				}
+				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".ecds.yaml"), requireResourcesToYAMLString(t, extensionConfigs))
 			}
 		})
 	}

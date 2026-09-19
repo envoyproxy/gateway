@@ -1,0 +1,1 @@
+Reduced the size of the HTTP filter chain for gateways using Lua `EnvoyExtensionPolicy` resources. Scripts are now stored once per listener in the Lua filter's `sourceCodes` map and referenced by name from each route, so a listener with many route-scoped Lua policies gets a single filter rather than one per policy, and Envoy builds one Lua VM set per distinct script.

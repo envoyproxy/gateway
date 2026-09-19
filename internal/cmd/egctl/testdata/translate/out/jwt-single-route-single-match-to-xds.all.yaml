@@ -478,3 +478,4 @@ xds:
                 envoy.filters.http.jwt_authn:
                   '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
                   requirementName: example_610fd14578c340be
+    - '@type': type.googleapis.com/envoy.admin.v3.EcdsConfigDump
