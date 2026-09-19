@@ -1598,3 +1598,4 @@ xds:
               name: grpcroute/default/backend/rule/0/match/0/www_grpc-example_com
               route:
                 cluster: grpcroute/default/backend/rule/0
+    - '@type': type.googleapis.com/envoy.admin.v3.EcdsConfigDump
