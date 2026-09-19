@@ -307,7 +307,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		var mergeUnsafeForRule bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.HTTPBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeUnsafeForRule = t.mergeIncompatibleForWeightedRule(gatewayCtx, httpRoute, backendRefs, rule.SessionPersistence != nil)
+			mergeUnsafeForRule = t.mergeIncompatibleForWeightedRule(httpRoute, backendRefs, rule.SessionPersistence != nil)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
@@ -877,7 +877,6 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 // clusters in one rule, consistent hashing can still be configured independently on each merged
 // cluster.
 func (t *Translator) mergeIncompatibleForWeightedRule(
-	gatewayCtx *GatewayContext,
 	routeCtx RouteContext,
 	backendRefs []gwapiv1.BackendObjectReference,
 	sessionPersistent bool,
@@ -888,7 +887,7 @@ func (t *Translator) mergeIncompatibleForWeightedRule(
 		return false
 	}
 	// Delegate to the remaining multi-backendRef checks.
-	return t.weightedRuleBackendsMustBeInOneCluster(routeCtx, backendRefs, sessionPersistent, gatewayCtx)
+	return t.weightedRuleBackendsMustBeInOneCluster(routeCtx, backendRefs, sessionPersistent)
 }
 
 // mergeIncompatibleForSingleClusterRule reports whether a rule-level condition makes cluster
@@ -908,17 +907,12 @@ func (t *Translator) mergeIncompatibleForSingleClusterRule(
 // HTTP/GRPC rule needs all its backends kept in one Envoy cluster, so they can't be split into
 // per-identity clusters.
 //
-// Every feature whose behavior depends on the backends sharing one cluster — priority failover
-// and session affinity — MUST be listed here. Consistent hash is deliberately excluded: Envoy
-// selects the weighted cluster first, then applies that cluster's hash policy to select an
-// endpoint. Envoy's route hash support for weighted-cluster selection was added in
-// https://github.com/envoyproxy/envoy/pull/41244, following the behavior clarified in
-// https://github.com/envoyproxy/envoy/issues/21675.
+// Priority failover and session affinity require backends to share one cluster.
+// Consistent hashing supports separate weighted clusters.
 func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
 	routeCtx RouteContext,
 	backendRefs []gwapiv1.BackendObjectReference,
 	sessionPersistent bool,
-	gatewayCtx *GatewayContext,
 ) bool {
 	// Session persistence needs all of a rule's backends in one cluster to track affinity.
 	if sessionPersistent {
@@ -1559,7 +1553,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.GRPCBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeIncompatible = t.mergeIncompatibleForWeightedRule(gatewayCtx, grpcRoute, backendRefs, false)
+			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, false)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule

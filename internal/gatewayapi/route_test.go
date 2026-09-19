@@ -929,13 +929,11 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 	serviceRef2 := gwapiv1.BackendObjectReference{Name: "service-2"}
 
 	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route-1"}}}
-	gatewayCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gateway-1"}}}
 
 	tests := []struct {
 		name              string
 		backendRefs       []gwapiv1.BackendObjectReference
 		sessionPersistent bool
-		gatewayCtx        *GatewayContext
 		want              bool
 	}{
 		{
@@ -955,21 +953,8 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 			want:        true,
 		},
 		{
-			name:        "multiple plain backendRefs with ConsistentHash",
-			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
-			gatewayCtx:  gatewayCtx,
-			want:        false,
-		},
-		{
-			name:        "multiple plain backendRefs with ConsistentHash but nil gatewayCtx",
-			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
-			gatewayCtx:  nil,
-			want:        false,
-		},
-		{
 			name:        "multiple plain backendRefs, no incompatibility",
 			backendRefs: []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
-			gatewayCtx:  gatewayCtx,
 			want:        false,
 		},
 	}
@@ -978,7 +963,7 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 			tr := &Translator{TranslatorContext: &TranslatorContext{
 				BackendMap: map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
 			}}
-			got := tr.mergeIncompatibleForWeightedRule(tc.gatewayCtx, route, tc.backendRefs, tc.sessionPersistent)
+			got := tr.mergeIncompatibleForWeightedRule(route, tc.backendRefs, tc.sessionPersistent)
 			require.Equal(t, tc.want, got)
 		})
 	}
