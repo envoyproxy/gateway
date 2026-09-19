@@ -263,6 +263,13 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		errs = errors.Join(errs, err)
 	}
 
+	// Move the configuration of ECDS-eligible HTTP filters out of the listeners and into
+	// their own resources, so that changing one of them does not drain the listener. This
+	// runs before the JSON patches and the extension hook so that both see the final shape.
+	if err := extractFiltersToECDS(tCtx); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// All XDS resources is ready, let's do the patch.
 	if err := processJSONPatches(ctx, tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
 		// Since JSONPatch error is user-triggered, we don't fail the entire xDS translation so that the remaining
