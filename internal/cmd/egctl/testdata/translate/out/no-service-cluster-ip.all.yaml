@@ -403,3 +403,4 @@ xds:
                 cluster: httproute/envoy-gateway-system/routes/rule/0
                 upgradeConfigs:
                 - upgradeType: websocket
+    - '@type': type.googleapis.com/envoy.admin.v3.EcdsConfigDump

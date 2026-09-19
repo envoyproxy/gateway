@@ -14,27 +14,116 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/default/policy-for-http-route/lua/0
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-                end
-        - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
-                end
-        - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')
-                end
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/0
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/1
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/2
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/3
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/4
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/5
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/6
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/7
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/8
+        - configDiscovery:
+            applyDefaultConfigWithoutWarming: true
+            configSource:
+              ads: {}
+              resourceApiVersion: V3
+            defaultConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            typeUrls:
+            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          disabled: true
+          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/9
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

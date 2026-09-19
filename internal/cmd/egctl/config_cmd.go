@@ -50,6 +50,7 @@ func proxyCommand() *cobra.Command {
 	c.AddCommand(allConfigCmd())
 	c.AddCommand(bootstrapConfigCmd())
 	c.AddCommand(clusterConfigCmd())
+	c.AddCommand(ecdsConfigCmd())
 	c.AddCommand(endpointConfigCmd())
 	c.AddCommand(listenerConfigCmd())
 	c.AddCommand(routeConfigCmd())
