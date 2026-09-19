@@ -28,7 +28,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils"
 	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
@@ -873,9 +872,10 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 }
 
 // mergeIncompatibleForWeightedRule reports whether a rule-level condition makes cluster
-// deduplication unsafe for any of this rule's backendRefs: session persistence, a fallback
-// backend, or ConsistentHash load balancing. For HTTP/GRPC, whose weighted-clusters route action
-// can represent multiple distinct clusters in one rule.
+// deduplication unsafe for any of this rule's backendRefs: session persistence or a fallback
+// backend. For HTTP/GRPC, whose weighted-clusters route action can represent multiple distinct
+// clusters in one rule, consistent hashing can still be configured independently on each merged
+// cluster.
 func (t *Translator) mergeIncompatibleForWeightedRule(
 	gatewayCtx *GatewayContext,
 	routeCtx RouteContext,
@@ -908,8 +908,12 @@ func (t *Translator) mergeIncompatibleForSingleClusterRule(
 // HTTP/GRPC rule needs all its backends kept in one Envoy cluster, so they can't be split into
 // per-identity clusters.
 //
-// Every feature whose behavior depends on the backends sharing one cluster — hash ring, priority
-// failover, session affinity — MUST be listed here.
+// Every feature whose behavior depends on the backends sharing one cluster — priority failover
+// and session affinity — MUST be listed here. Consistent hash is deliberately excluded: Envoy
+// selects the weighted cluster first, then applies that cluster's hash policy to select an
+// endpoint. Envoy's route hash support for weighted-cluster selection was added in
+// https://github.com/envoyproxy/envoy/pull/41244, following the behavior clarified in
+// https://github.com/envoyproxy/envoy/issues/21675.
 func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
 	routeCtx RouteContext,
 	backendRefs []gwapiv1.BackendObjectReference,
@@ -923,12 +927,6 @@ func (t *Translator) weightedRuleBackendsMustBeInOneCluster(
 	// A fallback backend relies on Envoy's priority-based failover within a single cluster.
 	for _, ref := range backendRefs {
 		if t.isFallbackBackend(ref, NamespaceDerefOr(ref.Namespace, routeCtx.GetNamespace())) {
-			return true
-		}
-	}
-	// ConsistentHash needs the full combined backend pool, not per-identity split clusters.
-	if gatewayCtx != nil {
-		if t.BTPLoadBalancerIndex.IsConsistentHash(utils.NamespacedName(gatewayCtx.Gateway)) {
 			return true
 		}
 	}
