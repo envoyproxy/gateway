@@ -263,10 +263,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				claimedSections[key].Insert(sectionKey)
 
 				// Translate for listener matching section name
-				var (
-					err                 error
-					http3WarningMessage string
-				)
+				var err error
 				for _, l := range gateway.listeners {
 					// Find IR
 					irKey := t.getIRKey(l.gateway.Gateway)
@@ -279,10 +276,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					if string(l.Name) == section {
 						err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, scopeSpecificSection)
 						if err == nil {
-							httpIR := gwXdsIR.GetHTTPListener(irListenerName(l))
-							if shouldDisableHTTP3ForClientValidation(policy, httpIR) {
-								http3WarningMessage = disabledHTTP3WarningMessage([]string{string(l.Name)})
-							}
 							err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 						}
 						break
@@ -301,12 +294,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Set Accepted condition if it is unset
 				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
-
-				// Set Warning condition if HTTP/3 was disabled for the listener
-				if http3WarningMessage != "" {
-					status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
-						status.PolicyReasonUnsupportedHTTP3ClientValidation, http3WarningMessage, policy.Generation)
-				}
 
 				// Check for deprecated fields and set warning if any are found
 				if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
@@ -452,10 +439,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					claimedScopes[gatewayKey].Insert(scopeKey)
 
 					// Translate sections that have not yet been targeted
-					var (
-						errs                   error
-						http3DisabledListeners []string
-					)
+					var errs error
 					for _, l := range gateway.listeners {
 						if policyTargetsLS && !listenersBelongToLS(l, ls) {
 							continue
@@ -484,9 +468,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 						if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, scope); err != nil {
 							errs = errors.Join(errs, err)
 						} else {
-							if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
-								http3DisabledListeners = append(http3DisabledListeners, string(l.Name))
-							}
 							if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 								errs = errors.Join(errs, err)
 							}
@@ -511,12 +492,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 					// Set Accepted condition if it is unset
 					status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
-
-					// Set Warning condition if HTTP/3 was disabled for the listener
-					if len(http3DisabledListeners) > 0 {
-						status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
-							status.PolicyReasonUnsupportedHTTP3ClientValidation, disabledHTTP3WarningMessage(http3DisabledListeners), policy.Generation)
-					}
 
 					// Check for deprecated fields and set warning if any are found
 					if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
@@ -663,40 +638,6 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 	return nil
 }
 
-// shouldDisableHTTP3ForClientValidation checks if HTTP/3 should be disabled for a listener
-// because envoy does not support downstream client TLS validation over QUIC yet.
-// https://github.com/envoyproxy/envoy/blob/11299f21b37743680a715819ef7e16d12a4d8b8d/source/common/quic/quic_server_transport_socket_factory.cc#L27-L29
-func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, httpIR *ir.HTTPListener) bool {
-	if httpIR == nil || httpIR.TLS == nil {
-		return false
-	}
-	if policy.Spec.HTTP3 == nil {
-		return false
-	}
-	if policy.Spec.TLS == nil || policy.Spec.TLS.ClientValidation == nil {
-		return false
-	}
-	return true
-}
-
-func disabledHTTP3WarningMessage(listenerNames []string) string {
-	if len(listenerNames) == 0 {
-		return ""
-	}
-
-	target := fmt.Sprintf("listener %q", listenerNames[0])
-
-	if len(listenerNames) > 1 {
-		sort.Strings(listenerNames)
-		target = fmt.Sprintf("listeners %v", listenerNames)
-	}
-
-	return fmt.Sprintf(
-		"HTTP/3 was disabled for %s because Envoy does not support downstream client TLS validation over QUIC",
-		target,
-	)
-}
-
 func (t *Translator) translateClientTrafficPolicyForListener(
 	policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources,
@@ -800,7 +741,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		}
 
 		// enable http3 if set and TLS is enabled
-		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil && !shouldDisableHTTP3ForClientValidation(policy, httpIR) {
+		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil {
 			http3 := &ir.HTTP3Settings{}
 			if policy.Spec.HTTP3.AdvertisedPort != nil {
 				http3.AdvertisedPort = new(uint32(*policy.Spec.HTTP3.AdvertisedPort))

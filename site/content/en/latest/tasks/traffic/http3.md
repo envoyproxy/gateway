@@ -113,6 +113,11 @@ Verify the [Gateway][] status:
 kubectl get gateway/eg -o yaml
 ```
 
+HTTP/3 can be combined with client certificate validation. Set `spec.tls.clientValidation` on the
+same ClientTrafficPolicy, as described in [Mutual TLS: External Clients to the Gateway][], and the
+QUIC listener will request and validate client certificates like the TCP listener does. This
+requires Envoy Proxy v1.40 or later; earlier versions reject the listener configuration.
+
 ## Testing
 
 {{< tabpane text=true >}}
@@ -144,4 +149,5 @@ Hence we need external loadbalancer to test this feature out.
 
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[Mutual TLS: External Clients to the Gateway]: ../../security/mutual-tls
 [Secret]: https://kubernetes.io/docs/concepts/configuration/secret/

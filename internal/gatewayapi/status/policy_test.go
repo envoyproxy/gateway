@@ -123,14 +123,14 @@ func TestSetWarningForPolicyAncestorMergesWarnings(t *testing.T) {
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, "example.com/controller",
 		egv1a1.PolicyReasonDeprecatedField, "deprecated field warning", 1)
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, "example.com/controller",
-		PolicyReasonUnsupportedHTTP3ClientValidation, "http3 warning", 1)
+		gwapiv1.PolicyConditionReason("OtherWarning"), "other warning", 1)
 
 	if assert.Len(t, policyStatus.Ancestors, 1) {
 		conditions := policyStatus.Ancestors[0].Conditions
 		if assert.Len(t, conditions, 1) {
 			assert.Equal(t, string(egv1a1.PolicyConditionWarning), conditions[0].Type)
 			assert.Equal(t, string(PolicyReasonMultipleWarnings), conditions[0].Reason)
-			assert.Equal(t, "deprecated field warning; http3 warning", conditions[0].Message)
+			assert.Equal(t, "deprecated field warning; other warning", conditions[0].Message)
 		}
 	}
 }
