@@ -245,7 +245,7 @@ func containsWasm(httpListeners []*ir.HTTPListener) bool {
 func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTable, envoyClientCertificate *ir.TLSCertificate, metrics *ir.Metrics) error {
 	ds := &ir.DestinationSetting{
 		Weight:    new(uint32(1)),
-		Protocol:  ir.GRPC,
+		Protocol:  ir.HTTP2,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
 		Name:      destinationSettingName(wasmHTTPServiceClusterName),
 		// TODO: tracked with issue #6861

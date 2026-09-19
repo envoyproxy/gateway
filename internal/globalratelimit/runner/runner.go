@@ -22,6 +22,7 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -147,12 +148,13 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-			parentCtx := ctx
-			if update.Value != nil && update.Value.Context != nil {
-				parentCtx = update.Value.Context
+			parentCtx := update.Value.ParentContext(ctx)
+			var startOpts []trace.SpanStartOption
+			if !update.Delete && !update.Initial {
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 			}
 
-			traceCtx, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription")
+			traceCtx, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription", startOpts...)
 			defer span.End()
 
 			traceLogger := r.Logger.WithTrace(traceCtx)

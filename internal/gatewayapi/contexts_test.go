@@ -394,3 +394,97 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 		})
 	}
 }
+
+func TestIsParentRefEqual(t *testing.T) {
+	const routeNS = "route-ns"
+
+	testCases := []struct {
+		name     string
+		ref1     gwapiv1.ParentReference
+		ref2     gwapiv1.ParentReference
+		expected bool
+	}{
+		{
+			name:     "identical bare refs",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1"},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-1"},
+			expected: true,
+		},
+		{
+			name:     "different name",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1"},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-2"},
+			expected: false,
+		},
+		{
+			name:     "nil group and kind default to Gateway",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1"},
+			ref2:     gwapiv1.ParentReference{Group: GroupPtr(gwapiv1.GroupName), Kind: KindPtr(resource.KindGateway), Name: "gateway-1"},
+			expected: true,
+		},
+		{
+			name:     "nil namespace defaults to the route namespace",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1"},
+			ref2:     gwapiv1.ParentReference{Namespace: NamespacePtr(routeNS), Name: "gateway-1"},
+			expected: true,
+		},
+		{
+			name:     "different namespace",
+			ref1:     gwapiv1.ParentReference{Namespace: NamespacePtr("ns-1"), Name: "gateway-1"},
+			ref2:     gwapiv1.ParentReference{Namespace: NamespacePtr("ns-2"), Name: "gateway-1"},
+			expected: false,
+		},
+		{
+			// Regression: refs distinguished only by port must not compare equal,
+			// otherwise both collapse onto a single RouteParentStatus.
+			name:     "no sectionName, different port",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(8080)},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(8443)},
+			expected: false,
+		},
+		{
+			name:     "no sectionName, same port",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(8080)},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(8080)},
+			expected: true,
+		},
+		{
+			name:     "no sectionName, one port unset",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1", Port: PortNumPtr(8080)},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-1"},
+			expected: false,
+		},
+		{
+			name:     "same sectionName, different port",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("http"), Port: PortNumPtr(8080)},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("http"), Port: PortNumPtr(8443)},
+			expected: false,
+		},
+		{
+			name:     "same sectionName, same port",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("http"), Port: PortNumPtr(8080)},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("http"), Port: PortNumPtr(8080)},
+			expected: true,
+		},
+		{
+			name:     "different sectionName",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("http")},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("https")},
+			expected: false,
+		},
+		{
+			name:     "one sectionName unset",
+			ref1:     gwapiv1.ParentReference{Name: "gateway-1", SectionName: SectionNamePtr("http")},
+			ref2:     gwapiv1.ParentReference{Name: "gateway-1"},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, IsParentRefEqual(tc.ref1, tc.ref2, routeNS))
+			// Equality must be symmetric.
+			require.Equal(t, tc.expected, IsParentRefEqual(tc.ref2, tc.ref1, routeNS))
+		})
+	}
+}

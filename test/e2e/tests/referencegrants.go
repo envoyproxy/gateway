@@ -18,10 +18,10 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, MultiReferenceGrantsSameNamespaceTest)
+	ConformanceTests = append(ConformanceTests, MultiReferenceGrantsSameNamespace)
 }
 
-var MultiReferenceGrantsSameNamespaceTest = suite.ConformanceTest{
+var MultiReferenceGrantsSameNamespace = suite.ConformanceTest{
 	ShortName:   "MultiReferenceGrantsSameNamespace",
 	Description: "Test for multiple reference grants in the same namespace",
 	Manifests:   []string{"testdata/multi-referencegrants-same-namespace-services.yaml", "testdata/multi-referencegrants-same-namespace.yaml"},
@@ -30,6 +30,11 @@ var MultiReferenceGrantsSameNamespaceTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "multi-referencegrant-same-namespace", Namespace: resourceNS}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: resourceNS}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		appBackendNamespace := "multireferencegrants-ns"
+		WaitForPodsReady(t, suite.Client, appBackendNamespace, map[string]string{"app": "app-backend-v1"})
+		WaitForPodsReady(t, suite.Client, appBackendNamespace, map[string]string{"app": "app-backend-v2"})
+		WaitForPodsReady(t, suite.Client, appBackendNamespace, map[string]string{"app": "app-backend-v3"})
 
 		targetHost := "multireferencegrant.local"
 		targetNS := "multireferencegrants-ns"
