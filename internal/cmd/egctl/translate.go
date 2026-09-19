@@ -170,6 +170,7 @@ func validResourceTypes() []envoyConfigType {
 		ClusterEnvoyConfigType,
 		ListenerEnvoyConfigType,
 		RouteEnvoyConfigType,
+		EcdsEnvoyConfigType,
 		AllEnvoyConfigType,
 	}
 }
@@ -459,6 +460,7 @@ func constructConfigDump(resources *resource.Resources, tCtx *xds_types.Resource
 	routeConfigs := &adminv3.RoutesConfigDump{}
 	clusterConfigs := &adminv3.ClustersConfigDump{}
 	endpointConfigs := &adminv3.EndpointsConfigDump{}
+	ecdsConfigs := &adminv3.EcdsConfigDump{}
 
 	// construct bootstrap config
 	var bootstrapConfigurations string
@@ -563,6 +565,24 @@ func constructConfigDump(resources *resource.Resources, tCtx *xds_types.Resource
 		return nil, err
 	}
 	if configs, err := anypb.New(routeConfigs); err == nil {
+		globalConfigs.Configs = append(globalConfigs.Configs, configs)
+	}
+
+	// construct extension configs, the HTTP filter configurations served over ECDS
+	extensionConfigs := tCtx.XdsResources[resourcev3.ExtensionConfigType]
+	for _, extensionConfig := range extensionConfigs {
+		e, err := anypb.New(extensionConfig)
+		if err != nil {
+			return nil, err
+		}
+		ecdsConfigs.EcdsFilters = append(ecdsConfigs.EcdsFilters, &adminv3.EcdsConfigDump_EcdsFilterConfig{
+			EcdsFilter: e,
+		})
+	}
+	if err := ecdsConfigs.Validate(); err != nil {
+		return nil, err
+	}
+	if configs, err := anypb.New(ecdsConfigs); err == nil {
 		globalConfigs.Configs = append(globalConfigs.Configs, configs)
 	}
 

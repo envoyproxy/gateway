@@ -292,6 +292,17 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		}
 	}
 
+	// Serve ECDS-eligible filter configs as their own resources, so editing one does not
+	// drain the listener. Runs last to keep EnvoyPatchPolicy and extension servers seeing
+	// the config inline in the HCM, as they always have.
+	//
+	// TODO: for them to work on the ECDS resources instead, they would have to run after
+	// this, EnvoyPatchPolicy would need the TypedExtensionConfig type, and the extension
+	// server new hooks.
+	if err := extractFiltersToECDS(tCtx); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	// Repair system_ca_certificates before validation so the restored canonical secret
 	// passes ValidateAll and the snapshot remains publishable.
 	// EnvoyPatchPolicy tampering is caught earlier per-policy inside processJSONPatches.
@@ -924,6 +935,10 @@ func replaceHCMInFilterChain(hcm *hcmv3.HttpConnectionManager, filterChain *list
 	return nil
 }
 
+// errHCMNotFound is returned when a filter chain holds no HTTP connection manager, so
+// callers can tell that apart from a manager that is present but cannot be unmarshaled.
+var errHCMNotFound = errors.New("http connection manager not found")
+
 func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConnectionManager, error) {
 	for _, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
@@ -934,7 +949,7 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 			return hcm, nil
 		}
 	}
-	return nil, errors.New("http connection manager not found")
+	return nil, errHCMNotFound
 }
 
 func buildHTTP3AltSvcHeader(port uint32) *corev3.HeaderValueOption {

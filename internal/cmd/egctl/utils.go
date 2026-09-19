@@ -24,6 +24,7 @@ var (
 	EndpointEnvoyConfigType  envoyConfigType = "endpoint"
 	ListenerEnvoyConfigType  envoyConfigType = "listener"
 	RouteEnvoyConfigType     envoyConfigType = "route"
+	EcdsEnvoyConfigType      envoyConfigType = "ecds"
 	AllEnvoyConfigType       envoyConfigType = "all"
 )
 
@@ -57,6 +58,12 @@ func findXDSResourceFromConfigDump(resourceType envoyConfigType, globalConfigs *
 	case RouteEnvoyConfigType:
 		for _, cfg := range globalConfigs.Configs {
 			if cfg.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.RoutesConfigDump" {
+				return cfg, nil
+			}
+		}
+	case EcdsEnvoyConfigType:
+		for _, cfg := range globalConfigs.Configs {
+			if cfg.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.EcdsConfigDump" {
 				return cfg, nil
 			}
 		}
