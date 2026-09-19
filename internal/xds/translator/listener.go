@@ -686,15 +686,27 @@ func hasHCMInDefaultFilterChain(xdsListener *listenerv3.Listener) bool {
 }
 
 func (t *Translator) addXdsTCPFilterChain(
-	xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string,
-	accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection,
-	tlsConfig *ir.TLSConfig,
+	xdsListener *listenerv3.Listener, tcpListener *ir.TCPListener, irRoute *ir.TCPRoute,
+	clusterName string, accesslog *ir.AccessLog,
 ) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
 
-	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
+	var snis []string
+	if irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil {
+		snis = irRoute.TLS.TLSInspectorConfig.SNIs
+	}
+	if len(snis) == 0 {
+		// Fall back to the Gateway listener hostname. Multiple listeners can share one xDS
+		// listener (an HTTPS and a TLS listener on the same port, for example), and Envoy NACKs
+		// a listener whose filter chains do not all have a distinct match. The hostnames are
+		// already unique here: the Gateway API layer marks a listener Conflicted when another
+		// listener on the same port resolves to the same SNI, so it never reaches the IR.
+		snis = tcpListener.Hostnames
+	}
+
+	isTLSPassthrough := len(snis) > 0 || (irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil)
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := ptr.Deref(irRoute.StatName, "")
 	if statPrefix == "" {
@@ -716,21 +728,16 @@ func (t *Translator) addXdsTCPFilterChain(
 		clusterName,
 		statPrefix,
 		accesslog,
-		timeout,
-		connection,
+		tcpListener.Timeout,
+		tcpListener.Connection,
 	)
 	if err != nil {
 		return err
 	}
 
-	var snis []string
-	if irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil {
-		snis = irRoute.TLS.TLSInspectorConfig.SNIs
-	}
-
 	var fingerprints []ir.TLSFingerprintType
-	if tlsConfig != nil {
-		fingerprints = tlsConfig.Fingerprints
+	if tcpListener.TLS != nil {
+		fingerprints = tcpListener.TLS.Fingerprints
 	}
 
 	if err := addServerNamesMatch(xdsListener, filterChain, snis, fingerprints); err != nil {
