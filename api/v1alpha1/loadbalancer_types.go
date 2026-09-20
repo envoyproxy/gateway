@@ -370,6 +370,17 @@ type PreferLocalZone struct {
 	// +kubebuilder:validation:Maximum=100
 	// +optional
 	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty"`
+
+	// FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+	// cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+	// drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+	// across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+	// requests instead, applying backpressure to clients and giving the backend room to
+	// recover.
+	// Defaults to false.
+	//
+	// +optional
+	FailTrafficOnPanic *bool `json:"failTrafficOnPanic,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
