@@ -24,7 +24,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: http-80
         serverHeaderTransformation: PASS_THROUGH
@@ -63,7 +62,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https1
         serverHeaderTransformation: PASS_THROUGH
@@ -82,7 +80,6 @@
           - name: first-listener
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -110,7 +107,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https2
         serverHeaderTransformation: PASS_THROUGH
@@ -129,7 +125,6 @@
           - name: first-listener
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
@@ -170,7 +165,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-2/https-http3
         serverHeaderTransformation: PASS_THROUGH
@@ -189,7 +183,6 @@
             - name: envoy-gateway/tls-secret-1
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
             tlsParams:
               tlsMaximumProtocolVersion: TLSv1_3
@@ -226,7 +219,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-2/https-http3
         serverHeaderTransformation: PASS_THROUGH
@@ -245,7 +237,6 @@
           - name: envoy-gateway/tls-secret-1
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           tlsParams:
             tlsMaximumProtocolVersion: TLSv1_3

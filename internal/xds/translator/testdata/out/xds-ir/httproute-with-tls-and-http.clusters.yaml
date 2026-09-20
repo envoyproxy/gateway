@@ -49,7 +49,6 @@
               name: system_ca_certificates
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: example.com
   type: EDS

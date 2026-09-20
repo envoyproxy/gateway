@@ -1,0 +1,1 @@
+Added a `maxRequestHeaderLimit` field under `ClientTrafficPolicy`'s `headers` to configure the maximum request header size (Envoy's `max_request_headers_kb`) without an EnvoyPatchPolicy. The value is a Quantity rounded up to the nearest KiB, must be at least 1Ki, and cannot exceed 8192Ki.

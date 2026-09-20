@@ -178,7 +178,7 @@ spec:
     spec:
       containers:
         - name: tls-backend
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           volumeMounts:
             - name: secret-volume
               mountPath: /etc/secret-volume
