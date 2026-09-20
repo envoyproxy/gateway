@@ -44,7 +44,6 @@
               name: system_ca_certificates
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: backend-1.example.com
   type: EDS
@@ -102,7 +101,6 @@
               name: system_ca_certificates
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: backend-2.example.com
   type: EDS
@@ -160,7 +158,6 @@
               name: system_ca_certificates
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
         sni: backend-3.example.com
   type: EDS

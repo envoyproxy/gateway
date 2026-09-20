@@ -3,7 +3,8 @@ http:
     externalPort: 443
     hostnames:
       - "*.example.com"
-    http3: {}
+    http3:
+      advertisedPort: 8443
     metadata:
       kind: Gateway
       name: gateway-1
@@ -27,7 +28,8 @@ http:
     externalPort: 443
     hostnames:
       - foo.example.com
-    http3: {}
+    http3:
+      advertisedPort: 8443
     metadata:
       kind: Gateway
       name: gateway-1
@@ -82,7 +84,8 @@ http:
     externalPort: 443
     hostnames:
       - bar.example.com
-    http3: {}
+    http3:
+      advertisedPort: 9443
     metadata:
       kind: Gateway
       name: gateway-1

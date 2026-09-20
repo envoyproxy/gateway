@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -417,6 +419,149 @@ func TestProcessBackendRefsEndpointSliceIndexDisabled(t *testing.T) {
 	require.Equal(t, service.Name, gwcResource.Services[0].Name)
 	require.Len(t, gwcResource.EndpointSlices, 1)
 	require.Equal(t, matchingEndpointSlice.Name, gwcResource.EndpointSlices[0].Name)
+}
+
+func TestProcessRateLimitService(t *testing.T) {
+	const ns = "envoy-gateway-system"
+	rateLimitService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rateLimitServiceName,
+			Namespace: ns,
+		},
+	}
+	matchingEndpointSlice := test.GetEndpointSlice(
+		types.NamespacedName{Namespace: ns, Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false)
+	otherEndpointSlice := test.GetEndpointSlice(
+		types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
+
+	testCases := []struct {
+		name           string
+		envoyGateway   *egv1a1.EnvoyGateway
+		objects        []client.Object
+		expectNotFound bool
+		expectSvc      bool
+		expectEPS      bool
+	}{
+		{
+			name:         "global rate limit disabled",
+			envoyGateway: &egv1a1.EnvoyGateway{},
+			objects:      []client.Object{rateLimitService, matchingEndpointSlice, otherEndpointSlice},
+			expectSvc:    false,
+			expectEPS:    false,
+		},
+		{
+			// Mirrors processEnvoyTLSSecret: a Get error (including NotFound) is
+			// returned to the caller, which logs it and continues rather than
+			// failing the reconcile - this Service may not exist yet at startup.
+			name:           "global rate limit enabled but service not found",
+			envoyGateway:   &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			objects:        nil,
+			expectNotFound: true,
+			expectSvc:      false,
+			expectEPS:      false,
+		},
+		{
+			name:         "global rate limit enabled and service discovered",
+			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
+			objects:      []client.Object{rateLimitService, matchingEndpointSlice, otherEndpointSlice},
+			expectSvc:    true,
+			expectEPS:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(tc.objects...).
+				WithIndex(&discoveryv1.EndpointSlice{}, serviceEndpointSliceIndex, serviceEndpointSliceIndexFunc).
+				Build()
+
+			r := &gatewayAPIReconciler{
+				log:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				client:       fakeClient,
+				namespace:    ns,
+				envoyGateway: tc.envoyGateway,
+			}
+
+			gwcResource := resource.NewResources()
+			err := r.processRateLimitService(t.Context(), gwcResource, newResourceMapping())
+			if tc.expectNotFound {
+				require.Error(t, err)
+				require.True(t, kerrors.IsNotFound(err))
+			} else {
+				require.NoError(t, err)
+			}
+
+			if tc.expectSvc {
+				require.Len(t, gwcResource.Services, 1)
+				require.Equal(t, rateLimitServiceName, gwcResource.Services[0].Name)
+			} else {
+				require.Empty(t, gwcResource.Services)
+			}
+
+			if tc.expectEPS {
+				require.Len(t, gwcResource.EndpointSlices, 1)
+				require.Equal(t, matchingEndpointSlice.Name, gwcResource.EndpointSlices[0].Name)
+			} else {
+				require.Empty(t, gwcResource.EndpointSlices)
+			}
+		})
+	}
+}
+
+func TestProcessGatewaysListsExtensionResourcesOnce(t *testing.T) {
+	const ns = "default"
+	extFilterGVK := schema.GroupVersionKind{Group: "gateway.example.io", Version: "v1alpha1", Kind: "CustomFilter"}
+	extBackendGVK := schema.GroupVersionKind{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"}
+
+	gc := test.GetGatewayClass("test", egv1a1.GatewayControllerName, nil)
+	gw1 := test.GetGateway(types.NamespacedName{Namespace: ns, Name: "gw-1"}, gc.Name, 80)
+	gw2 := test.GetGateway(types.NamespacedName{Namespace: ns, Name: "gw-2"}, gc.Name, 80)
+
+	newExtResource := func(gvk schema.GroupVersionKind, name string) *unstructured.Unstructured {
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		u.SetName(name)
+		u.SetNamespace(ns)
+		return u
+	}
+
+	сalls := map[string]int{}
+	countingLists := interceptor.Funcs{
+		List: func(ctx context.Context, cli client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+			if uList, ok := list.(*unstructured.UnstructuredList); ok {
+				сalls[strings.TrimSuffix(uList.GroupVersionKind().Kind, "List")]++
+			}
+			return cli.List(ctx, list, opts...)
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(newTestScheme(extFilterGVK, extBackendGVK)).
+		WithObjects(gc, gw1, gw2,
+			newExtResource(extFilterGVK, "custom-filter"),
+			newExtResource(extBackendGVK, "s3-backend")).
+		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
+		WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
+		WithInterceptorFuncs(countingLists).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client:         fakeClient,
+		extGVKs:        []schema.GroupVersionKind{extFilterGVK},
+		extBackendGVKs: []schema.GroupVersionKind{extBackendGVK},
+	}
+
+	resourceTree := resource.NewResources()
+	resourceMap := newResourceMapping()
+	require.NoError(t, r.processGateways(t.Context(), gc, resourceTree, resourceMap))
+
+	require.Len(t, resourceTree.Gateways, 2)
+	require.Equal(t, 1, сalls[extFilterGVK.Kind])  // called only once
+	require.Equal(t, 1, сalls[extBackendGVK.Kind]) // called only once
+	require.Len(t, resourceMap.extensionRefFilters, 2)
 }
 
 func TestRemoveGatewayClassFinalizer(t *testing.T) {
@@ -2644,6 +2789,73 @@ func TestIsTransientError(t *testing.T) {
 			require.Equal(t, tc.expected, actual)
 		})
 	}
+}
+
+// TestProcessListenerSetsDoesNotTrackRouteslessSelectorMatchedNamespace verifies that
+// processListenerSets does NOT track a namespace in allAssociatedNamespaces merely because its
+// labels satisfy a listener's allowedRoutes.namespaces.selector. Only namespaces containing an
+// indexed candidate Route (or another tracked resource) need tracking: the route processors
+// already add those namespaces regardless of selector matching, and re-fetch them fresh on every
+// reconcile, so a namespace with nothing in it has no effect on translation either way. Broadly
+// materializing every selector match would force a cluster-wide Namespace list per listener on
+// every reconcile and needlessly expand the translated snapshot.
+func TestProcessListenerSetsDoesNotTrackRouteslessSelectorMatchedNamespace(t *testing.T) {
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+	scheme := envoygateway.GetScheme()
+
+	fromSelector := gwapiv1.NamespacesFromSelector
+	xls := &gwapiv1.ListenerSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-xls",
+			Namespace: "default",
+		},
+		Spec: gwapiv1.ListenerSetSpec{
+			ParentRef: gwapiv1.ParentGatewayReference{
+				Name:      gwapiv1.ObjectName("test-gateway"),
+				Namespace: new(gwapiv1.Namespace("default")),
+			},
+			Listeners: []gwapiv1.ListenerEntry{
+				{
+					Name:     gwapiv1.SectionName("http"),
+					Protocol: gwapiv1.ProtocolType("HTTP"),
+					Port:     gwapiv1.PortNumber(8080),
+					AllowedRoutes: &gwapiv1.AllowedRoutes{
+						Namespaces: &gwapiv1.RouteNamespaces{
+							From:     &fromSelector,
+							Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	// This namespace has no route, secret, or any other resource in it. Its labels match the
+	// ListenerSet listener's allowedRoutes selector, but that alone must not cause it to be tracked.
+	matchingEmptyNS := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "matching-empty",
+			Labels: map[string]string{"env": "prod"},
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(xls, matchingEmptyNS).
+		WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
+		Build()
+
+	r := &gatewayAPIReconciler{
+		client: fakeClient,
+		log:    logger,
+	}
+
+	resourceTree := resource.NewResources()
+	resourceMap := newResourceMapping()
+	err := r.processListenerSets(context.Background(), "default/test-gateway", resourceMap, resourceTree)
+	require.NoError(t, err)
+
+	require.False(t, resourceMap.allAssociatedNamespaces.Has("matching-empty"),
+		"a namespace matched only by allowedRoutes.namespaces.selector, with no candidate route or other resource, must not be tracked")
 }
 
 func TestProcessCTPCrlRefs(t *testing.T) {

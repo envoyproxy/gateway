@@ -25,7 +25,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: first-listener
         requestHeadersTimeout: 15s

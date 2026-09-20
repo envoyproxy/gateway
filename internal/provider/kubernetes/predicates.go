@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -33,6 +34,11 @@ import (
 const (
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	envoyTLSSecretName = "envoy"
+	// rateLimitServiceName is the name of the in-cluster Service fronting the
+	// envoy-ratelimit deployment. It is not referenced by any Gateway API
+	// backendRef, so it needs its own reconcile-trigger checks below, mirroring
+	// the OIDC HMAC and Envoy TLS Secrets.
+	rateLimitServiceName = "envoy-ratelimit"
 )
 
 // hasMatchingController returns true if the provided object is a GatewayClass
@@ -80,6 +86,52 @@ func isNamespaceSelectorBypassInfrastructureResource(obj any) bool {
 	default:
 		return false
 	}
+}
+
+func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesListener(ctx context.Context) bool {
+	gtwList := &gwapiv1.GatewayList{}
+	if err := r.client.List(ctx, gtwList, &client.ListOptions{}); err != nil {
+		// If we can't list Gateways, we can't determine if
+		// any of them have SelectorAllowedRoutes set to true, so we return true.
+		return true
+	}
+
+	for i := range gtwList.Items {
+		gtw := &gtwList.Items[i]
+		for _, l := range gtw.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
+				return true
+			}
+		}
+	}
+
+	if !r.listenerSetCRDExists {
+		return false
+	}
+
+	listenerSetList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(ctx, listenerSetList, &client.ListOptions{}); err != nil {
+		// If we can't list ListenerSet, we can't determine if
+		// any of them have SelectorAllowedRoutes set to true, so we return true.
+		return true
+	}
+	for i := range listenerSetList.Items {
+		ls := &listenerSetList.Items[i]
+		for _, l := range ls.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func hasNamespacesFromSelector(ar *gwapiv1.AllowedRoutes) bool {
+	if ar == nil || ar.Namespaces == nil {
+		return false
+	}
+	return ptr.Deref(ar.Namespaces.From, gwapiv1.NamespacesFromSame) == gwapiv1.NamespacesFromSelector
 }
 
 type NamespaceGetter interface {
@@ -473,6 +525,22 @@ func (r *gatewayAPIReconciler) isEnvoyTLSSecret(nsName *types.NamespacedName) bo
 	return *nsName == envoyTLSSecret
 }
 
+// isRateLimitService returns true if nsName is the in-cluster envoy-ratelimit
+// Service, and global rate limiting is configured. The gatewayapi translator
+// discovers this Service's endpoints to build an EDS-based ratelimit_cluster,
+// so changes to it (or its EndpointSlices, see validateEndpointSliceForReconcile)
+// must trigger reconciliation even though nothing references it as a backendRef.
+func (r *gatewayAPIReconciler) isRateLimitService(nsName *types.NamespacedName) bool {
+	if r.envoyGateway == nil || r.envoyGateway.RateLimit == nil {
+		return false
+	}
+	rateLimitService := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      rateLimitServiceName,
+	}
+	return *nsName == rateLimitService
+}
+
 // validateServiceForReconcile tries finding the owning Gateway of the Service
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
@@ -503,6 +571,10 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	nsName := utils.NamespacedName(svc)
+	if r.isRateLimitService(&nsName) {
+		return true
+	}
+
 	if r.isRouteReferencingBackend(&nsName) {
 		return true
 	}
@@ -683,6 +755,10 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 
 	if isMCS {
 		nsName.Name = multiClusterSvcName
+	}
+
+	if r.isRateLimitService(&nsName) {
+		return true
 	}
 
 	if r.isRouteReferencingBackend(&nsName) {

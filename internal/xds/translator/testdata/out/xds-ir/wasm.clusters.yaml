@@ -90,7 +90,6 @@
         - name: envoy-gateway-system/envoy
           sdsConfig:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
         tlsParams:
           tlsMaximumProtocolVersion: TLSv1_3
