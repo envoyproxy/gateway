@@ -2053,6 +2053,14 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 
 		if match.SourceCIDR != nil {
+			// A rule carries a single CIDR match: it becomes one masked_remote_address
+			// entry in the descriptor chain. A second selector would overwrite the first
+			// and be dropped without a trace, so reject it instead.
+			if irRule.CIDRMatch != nil {
+				return nil, fmt.Errorf("unable to translate rateLimit: " +
+					"only one clientSelector per rule may specify sourceCIDR")
+			}
+
 			distinct := false
 			if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
 				distinct = true
