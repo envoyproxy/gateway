@@ -90,7 +90,7 @@ func (*apiKeyAuth) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) 
 
 // patchRoute patches the provided route with the apiKeyAuth config if applicable.
 // Note: this method overwrites the HCM level filter config with the per route filter config.
-func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

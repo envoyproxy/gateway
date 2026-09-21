@@ -122,7 +122,7 @@ func (*localRateLimit) patchResources(*types.ResourceVersionTable,
 	return nil
 }
 
-func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error {
+func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, _ string) error {
 	routeAction := route.GetRoute()
 
 	// Return early if no rate limit config exists.

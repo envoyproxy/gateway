@@ -62,7 +62,7 @@ func TestJWTAuthnDeduplicatesIdenticalRouteProviders(t *testing.T) {
 	jwtFilter := &jwt{}
 	for _, irRoute := range irListener.Routes {
 		xdsRoute := &routev3.Route{}
-		require.NoError(t, jwtFilter.patchRoute(xdsRoute, irRoute, irListener))
+		require.NoError(t, jwtFilter.patchRoute(xdsRoute, irRoute, irListener, irListener.Name))
 
 		var perRouteConfig jwtauthnv3.PerRouteConfig
 		require.NoError(t, xdsRoute.GetTypedPerFilterConfig()["envoy.filters.http.jwt_authn"].UnmarshalTo(&perRouteConfig))
