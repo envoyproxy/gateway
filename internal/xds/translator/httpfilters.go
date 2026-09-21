@@ -70,6 +70,10 @@ type httpFilter interface {
 type OrderedHTTPFilter struct {
 	filter *hcmv3.HttpFilter
 	order  int
+	// index orders filters that share an order, i.e. several filters of the same type on
+	// one listener. It is kept apart from order rather than added to it so that a type
+	// with many filters cannot reach the next type's order.
+	index int
 }
 
 type OrderedHTTPFilters []*OrderedHTTPFilter
@@ -92,6 +96,7 @@ type OrderedHTTPFilters []*OrderedHTTPFilter
 // a default order 50.
 func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	order := 50
+	index := 0
 
 	// Set a rational order for all the filters.
 	// When the fault filter is configured to be at the first, the computation of
@@ -129,13 +134,13 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 12
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 13 + mustGetFilterIndex(filter.Name)
+		order, index = 13, mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
-		order = 100 + mustGetFilterIndex(filter.Name)
+		order, index = 100, mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
-		order = 200 + mustGetFilterIndex(filter.Name)
+		order, index = 200, mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterDynamicModules):
-		order = 250 + mustGetFilterIndex(filter.Name)
+		order, index = 250, mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
 		order = 300
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
@@ -163,6 +168,7 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	return &OrderedHTTPFilter{
 		filter: filter,
 		order:  order,
+		index:  index,
 	}
 }
 
@@ -173,15 +179,19 @@ func (o OrderedHTTPFilters) Len() int {
 }
 
 func (o OrderedHTTPFilters) Less(i, j int) bool {
-	// Sort on name if the order is equal
-	// to keep the order stable and avoiding
-	// listener drains
-	if o[i].order == o[j].order {
-		return o[i].filter.Name < o[j].filter.Name
+	if o[i].order != o[j].order {
+		return o[i].order < o[j].order
 	}
 
-	// Sort on order
-	return o[i].order < o[j].order
+	// Several filters of one type run in the order of their index.
+	if o[i].index != o[j].index {
+		return o[i].index < o[j].index
+	}
+
+	// Sort on name if the rest is equal
+	// to keep the order stable and avoiding
+	// listener drains
+	return o[i].filter.Name < o[j].filter.Name
 }
 
 func (o OrderedHTTPFilters) Swap(i, j int) {

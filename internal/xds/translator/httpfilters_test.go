@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"fmt"
 	"testing"
 
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
@@ -440,4 +441,37 @@ func httpFilterForTest(name egv1a1.EnvoyFilter) *hcmv3.HttpFilter {
 	return &hcmv3.HttpFilter{
 		Name: string(name),
 	}
+}
+
+// A filter type with many filters must not sort past the next type. Folding the index into
+// the order did exactly that: the 38th Lua filter reached 50, the order given to filters
+// this switch does not recognize, and the 88th reached ExtProc's 100.
+func TestSortHTTPFiltersManyOfOneType(t *testing.T) {
+	filters := []*hcmv3.HttpFilter{
+		{Name: "envoy.filters.http.router"},
+		{Name: "envoy.filters.http.ext_proc/securitypolicy/default/policy/extproc/0"},
+		{Name: "envoy.filters.http.some_unrecognized_filter"},
+	}
+	for i := 40 - 1; i >= 0; i-- {
+		filters = append(filters, &hcmv3.HttpFilter{
+			Name: fmt.Sprintf("envoy.filters.http.lua/envoy-gateway/gateway-1/http/%d", i),
+		})
+	}
+
+	sorted := sortHTTPFilters(filters, nil)
+
+	names := make([]string, 0, len(sorted))
+	for _, filter := range sorted {
+		names = append(names, filter.Name)
+	}
+
+	for i := range 40 {
+		assert.Equal(t, fmt.Sprintf("envoy.filters.http.lua/envoy-gateway/gateway-1/http/%d", i), names[i],
+			"lua filters run in slot order")
+	}
+	assert.Equal(t, []string{
+		"envoy.filters.http.some_unrecognized_filter",
+		"envoy.filters.http.ext_proc/securitypolicy/default/policy/extproc/0",
+		"envoy.filters.http.router",
+	}, names[40:], "every lua filter runs before the rest")
 }
