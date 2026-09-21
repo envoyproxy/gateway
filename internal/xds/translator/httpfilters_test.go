@@ -427,6 +427,23 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 			},
 		},
+		{
+			// Adding the index within a type to the type's base order let a type run past
+			// the next one: Lua starts at 13 and a filter this switch does not recognize
+			// gets 50, so the 38th Lua filter sorted after it, and the 88th reached
+			// ext_proc at 100.
+			name: "many filters of one type stay within their own order",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterLua + "/envoy-gateway/gateway-1/http/38"),
+				httpFilterForTest("envoy.filters.http.unrecognized"),
+				httpFilterForTest(egv1a1.EnvoyFilterLua + "/envoy-gateway/gateway-1/http/0"),
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterLua + "/envoy-gateway/gateway-1/http/0"),
+				httpFilterForTest(egv1a1.EnvoyFilterLua + "/envoy-gateway/gateway-1/http/38"),
+				httpFilterForTest("envoy.filters.http.unrecognized"),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
