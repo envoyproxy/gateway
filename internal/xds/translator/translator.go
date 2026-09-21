@@ -135,6 +135,12 @@ type Translator struct {
 	// caIndex resolves TLSCACertificate.Digest against the current Translate() call's
 	// xdsIR.CACertificates registry. Rebuilt at the start of every Translate() call.
 	caIndex caCertificateIndex
+
+	// ecdsFilterNames holds the HCM filters this Translate() call generated and that are
+	// eligible to be served over ECDS. Recorded while the filters are built, before any
+	// EnvoyPatchPolicy or extension server runs, so a filter somebody else added is never
+	// mistaken for one of ours. Rebuilt at the start of every Translate() call.
+	ecdsFilterNames sets.Set[string]
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -191,6 +197,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 	t.extensionIndex = newExtensionResourceIndex(xdsIR)
 	t.caIndex = newCACertificateIndex(xdsIR)
+	t.ecdsFilterNames = sets.New[string]()
 
 	tCtx := new(types.ResourceVersionTable)
 
@@ -304,7 +311,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	// TODO: for them to work on the ECDS resources instead, they would have to run after
 	// this, EnvoyPatchPolicy would need the TypedExtensionConfig type, and the extension
 	// server new hooks.
-	if err := extractFiltersToECDS(tCtx); err != nil {
+	if err := t.extractFiltersToECDS(tCtx); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
