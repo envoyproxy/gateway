@@ -957,6 +957,16 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 	}
 }
 
+func TestBuildRateLimitRuleTracksUserDefinedName(t *testing.T) {
+	unnamed, err := buildRateLimitRule(&egv1a1.RateLimitRule{})
+	require.NoError(t, err)
+	require.False(t, unnamed.NameFromUser)
+
+	named, err := buildRateLimitRule(&egv1a1.RateLimitRule{Name: new("by-client")})
+	require.NoError(t, err)
+	require.True(t, named.NameFromUser)
+}
+
 func TestBTPRoutingTypeIndex(t *testing.T) {
 	serviceRouting := egv1a1.ServiceRoutingType
 	endpointRouting := egv1a1.EndpointRoutingType
