@@ -7,8 +7,6 @@ package translator
 
 import (
 	"errors"
-	"strconv"
-	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -31,7 +29,7 @@ var ecdsEligibleFilters = []egv1a1.EnvoyFilter{
 // into its own xDS resource, leaving a config_discovery reference behind. Envoy then
 // applies a config change in place instead of draining the listener. Walking the finished
 // listeners visits each filter chain once, including chains shared by several Gateways.
-func extractFiltersToECDS(tCtx *types.ResourceVersionTable) error {
+func (t *Translator) extractFiltersToECDS(tCtx *types.ResourceVersionTable) error {
 	var errs error
 	for _, res := range tCtx.XdsResources[resourcev3.ListenerType] {
 		xdsListener, ok := res.(*listenerv3.Listener)
@@ -39,7 +37,7 @@ func extractFiltersToECDS(tCtx *types.ResourceVersionTable) error {
 			continue
 		}
 		for _, filterChain := range allFilterChains(xdsListener) {
-			if err := extractFilterChainToECDS(tCtx, filterChain); err != nil {
+			if err := t.extractFilterChainToECDS(tCtx, filterChain); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -56,7 +54,7 @@ func allFilterChains(xdsListener *listenerv3.Listener) []*listenerv3.FilterChain
 	return filterChains
 }
 
-func extractFilterChainToECDS(tCtx *types.ResourceVersionTable, filterChain *listenerv3.FilterChain) error {
+func (t *Translator) extractFilterChainToECDS(tCtx *types.ResourceVersionTable, filterChain *listenerv3.FilterChain) error {
 	hcm, err := findHCMinFilterChain(filterChain)
 	if errors.Is(err, errHCMNotFound) {
 		// A filter chain without an HCM, a TCP proxy for example, has no HTTP filters.
@@ -71,7 +69,7 @@ func extractFilterChainToECDS(tCtx *types.ResourceVersionTable, filterChain *lis
 		patched bool
 	)
 	for _, httpFilter := range hcm.HttpFilters {
-		if !ecdsEligible(httpFilter) || httpFilter.GetTypedConfig() == nil {
+		if !t.ecdsFilterNames.Has(httpFilter.Name) || httpFilter.GetTypedConfig() == nil {
 			continue
 		}
 		if err := addECDSResource(tCtx, httpFilter); err != nil {
@@ -87,26 +85,19 @@ func extractFilterChainToECDS(tCtx *types.ResourceVersionTable, filterChain *lis
 	return errors.Join(errs, replaceHCMInFilterChain(hcm, filterChain))
 }
 
-// ecdsEligible reports whether this pass owns the filter. Only names Envoy Gateway
-// generates, "<filter type>/<listener>/<slot>", qualify: a filter added by an
-// EnvoyPatchPolicy or an extension server keeps its config where its author put it, and
-// two of those could claim the same ECDS resource name.
-func ecdsEligible(httpFilter *hcmv3.HttpFilter) bool {
-	for _, filterType := range ecdsEligibleFilters {
-		suffix, ok := strings.CutPrefix(httpFilter.Name, string(filterType)+"/")
-		if !ok {
-			continue
+// recordECDSFilterNames remembers the ECDS-eligible filters of a manager Envoy Gateway
+// has just built, so the extraction pass can tell them from filters an EnvoyPatchPolicy or
+// an extension server adds later. Matching on the name alone would not do: a filter called
+// "envoy.filters.http.lua/my-filter/0" is indistinguishable from one of ours.
+func (t *Translator) recordECDSFilterNames(mgr *hcmv3.HttpConnectionManager) {
+	for _, httpFilter := range mgr.HttpFilters {
+		for _, filterType := range ecdsEligibleFilters {
+			if isFilterType(httpFilter, filterType) {
+				t.ecdsFilterNames.Insert(httpFilter.Name)
+				break
+			}
 		}
-		slotAt := strings.LastIndex(suffix, "/")
-		if slotAt <= 0 {
-			continue
-		}
-		if _, err := strconv.Atoi(suffix[slotAt+1:]); err != nil {
-			continue
-		}
-		return true
 	}
-	return false
 }
 
 // addECDSResource registers the filter's config as an ECDS resource and points the filter

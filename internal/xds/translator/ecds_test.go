@@ -8,69 +8,97 @@ package translator
 import (
 	"testing"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // The pass runs after the JSON patches and the extension hook, so it has to tell the
-// filters Envoy Gateway generated from the ones somebody else added. Lifting a filter
-// that Envoy Gateway did not name would move its configuration out from under its author,
-// and two of them could claim the same ECDS resource name.
-func TestECDSEligible(t *testing.T) {
-	tests := []struct {
-		name       string
-		filterName string
-		expected   bool
-	}{
-		{
-			name:       "a generated lua filter",
-			filterName: "envoy.filters.http.lua/envoy-gateway/gateway-1/http/0",
-			expected:   true,
+// filters Envoy Gateway generated from the ones somebody else added. Matching on the name
+// would not do it: a patched-in filter can look exactly like one of ours.
+func TestRecordECDSFilterNames(t *testing.T) {
+	generated := "envoy.filters.http.lua/envoy-gateway/gateway-1/http/0"
+	patchedIn := "envoy.filters.http.lua/my-filter/0"
+
+	tr := &Translator{ecdsFilterNames: sets.New[string]()}
+	tr.recordECDSFilterNames(&hcmv3.HttpConnectionManager{
+		HttpFilters: []*hcmv3.HttpFilter{
+			{Name: generated},
+			{Name: "envoy.filters.http.wasm/envoy-gateway/gateway-1/http/0"},
+			{Name: "envoy.filters.http.router"},
 		},
-		{
-			name:       "a filter type that is not eligible",
-			filterName: "envoy.filters.http.wasm/envoy-gateway/gateway-1/http/0",
-			expected:   false,
+	})
+
+	assert.True(t, tr.ecdsFilterNames.Has(generated))
+	// A filter type that is not eligible stays inline.
+	assert.False(t, tr.ecdsFilterNames.Has("envoy.filters.http.wasm/envoy-gateway/gateway-1/http/0"))
+	// And one added after Envoy Gateway built the manager was never recorded, even though
+	// its name has the same shape as a generated one.
+	assert.False(t, tr.ecdsFilterNames.Has(patchedIn))
+}
+
+// A filter an EnvoyPatchPolicy or an extension server added keeps its configuration inline,
+// where its author put it, even when its name looks like one Envoy Gateway generates.
+func TestExtractFilterChainToECDSLeavesForeignFilters(t *testing.T) {
+	generated := "envoy.filters.http.lua/envoy-gateway/gateway-1/http/0"
+	patchedIn := "envoy.filters.http.lua/my-filter/0"
+
+	luaAny, err := anypb.New(&luafilterv3.Lua{})
+	require.NoError(t, err)
+
+	mgr := &hcmv3.HttpConnectionManager{
+		StatPrefix: "http-10080",
+		RouteSpecifier: &hcmv3.HttpConnectionManager_Rds{
+			Rds: &hcmv3.Rds{RouteConfigName: "envoy-gateway/gateway-1/http"},
 		},
-		{
-			name:       "a bare filter added by a patch",
-			filterName: "envoy.filters.http.lua",
-			expected:   false,
+		HttpFilters: []*hcmv3.HttpFilter{
+			{Name: generated, ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: luaAny}},
+			{Name: patchedIn, ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: luaAny}},
 		},
-		{
-			name:       "a patched filter carrying a name of its own",
-			filterName: "envoy.filters.http.lua/my-own-filter",
-			expected:   false,
-		},
-		{
-			name:       "a patched filter whose last segment is not a slot",
-			filterName: "envoy.filters.http.lua/envoy-gateway/gateway-1/http/mine",
-			expected:   false,
-		},
+	}
+	mgrAny, err := anypb.New(mgr)
+	require.NoError(t, err)
+
+	filterChain := &listenerv3.FilterChain{
+		Filters: []*listenerv3.Filter{{
+			Name:       wellknown.HTTPConnectionManager,
+			ConfigType: &listenerv3.Filter_TypedConfig{TypedConfig: mgrAny},
+		}},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, ecdsEligible(&hcmv3.HttpFilter{Name: tc.filterName}))
-		})
-	}
+	tr := &Translator{ecdsFilterNames: sets.New(generated)}
+	tCtx := &types.ResourceVersionTable{}
+	require.NoError(t, tr.extractFilterChainToECDS(tCtx, filterChain))
+
+	extensionConfigs := tCtx.XdsResources[resourcev3.ExtensionConfigType]
+	require.Len(t, extensionConfigs, 1)
+	assert.Equal(t, generated, extensionConfigs[0].(*corev3.TypedExtensionConfig).Name)
+
+	patched := &hcmv3.HttpConnectionManager{}
+	require.NoError(t, filterChain.Filters[0].GetTypedConfig().UnmarshalTo(patched))
+	assert.NotNil(t, patched.HttpFilters[0].GetConfigDiscovery(), "generated filter moves to ECDS")
+	assert.NotNil(t, patched.HttpFilters[1].GetTypedConfig(), "foreign filter stays inline")
 }
 
 // A filter chain with no HTTP connection manager is skipped, but one whose manager cannot
 // be read is a translation error rather than a chain quietly served without its filters.
 func TestExtractFilterChainToECDSUnreadableHCM(t *testing.T) {
+	tr := &Translator{ecdsFilterNames: sets.New[string]()}
 	tCtx := &types.ResourceVersionTable{}
 
 	noHCM := &listenerv3.FilterChain{
 		Filters: []*listenerv3.Filter{{Name: "envoy.filters.network.tcp_proxy"}},
 	}
-	require.NoError(t, extractFilterChainToECDS(tCtx, noHCM))
+	require.NoError(t, tr.extractFilterChainToECDS(tCtx, noHCM))
 
 	unreadableHCM := &listenerv3.FilterChain{
 		Filters: []*listenerv3.Filter{{
@@ -83,5 +111,5 @@ func TestExtractFilterChainToECDSUnreadableHCM(t *testing.T) {
 			},
 		}},
 	}
-	assert.Error(t, extractFilterChainToECDS(tCtx, unreadableHCM))
+	assert.Error(t, tr.extractFilterChainToECDS(tCtx, unreadableHCM))
 }

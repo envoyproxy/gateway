@@ -296,6 +296,11 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 		}
 	}
 
+	// Nothing but Envoy Gateway has touched this manager yet, so every eligible filter in
+	// it now is one we generated. Recording them here is what lets the ECDS pass, which
+	// runs after the JSON patches and the extension hook, leave other people's filters be.
+	t.recordECDSFilterNames(mgr)
+
 	// RateLimit filter is handled separately because it relies on the global
 	// rate limit server configuration.
 	t.patchHCMWithRateLimit(mgr, irListener)
