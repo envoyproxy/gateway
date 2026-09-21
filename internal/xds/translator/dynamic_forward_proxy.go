@@ -58,7 +58,7 @@ func (*dynamicForwardProxy) patchHCM(mgr *hcmv3.HttpConnectionManager, irListene
 	return nil
 }
 
-func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

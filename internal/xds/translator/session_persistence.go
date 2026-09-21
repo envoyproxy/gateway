@@ -160,7 +160,7 @@ func buildStatefulSessionFilterPerRouteConfig(route *ir.HTTPRoute) (*statefulses
 }
 
 // patchRoute patches the provide Route with a filter's Route level configuration.
-func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

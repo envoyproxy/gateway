@@ -292,7 +292,7 @@ func buildGeoIPProviderExtension(geoIPProvider *ir.GeoIPProvider, requirements g
 	}, nil
 }
 
-func (*geoip) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListener) error {
+func (*geoip) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListener, string) error {
 	return nil
 }
 

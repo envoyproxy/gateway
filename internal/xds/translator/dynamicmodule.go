@@ -189,7 +189,7 @@ func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []
 }
 
 // patchRoute enables the corresponding dynamic module filter for the provided route.
-func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (*dynamicModule) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

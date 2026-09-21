@@ -124,12 +124,17 @@ func perRouteFilterName(filterType egv1a1.EnvoyFilter, configName string) string
 }
 
 func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool {
+	return findHCMFilter(mgr, filterName) != nil
+}
+
+// findHCMFilter returns the named HTTP filter of the manager, or nil if it has none.
+func findHCMFilter(mgr *hcmv3.HttpConnectionManager, filterName string) *hcmv3.HttpFilter {
 	for _, existingFilter := range mgr.HttpFilters {
 		if existingFilter.Name == filterName {
-			return true
+			return existingFilter
 		}
 	}
-	return false
+	return nil
 }
 
 func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {

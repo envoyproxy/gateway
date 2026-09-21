@@ -99,7 +99,7 @@ func (*apiKeyAuth) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) 
 // Note: the per route config does not replace the listener level config as a whole. Envoy
 // merges them field by field, falling back to the listener level config for the credentials
 // and the key sources that the per route config leaves empty.
-func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
