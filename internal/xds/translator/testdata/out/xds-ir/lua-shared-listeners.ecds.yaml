@@ -1,0 +1,41 @@
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/0
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+    sourceCodes:
+      envoyextensionpolicy/default/policy-for-bar/lua/0:
+        inlineString: function envoy_on_request(request_handle) request_handle:logInfo('bar')
+          end
+      envoyextensionpolicy/default/policy-for-foo/lua/0:
+        inlineString: function envoy_on_request(request_handle) request_handle:logInfo('foo')
+          end
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/1
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+    sourceCodes:
+      envoyextensionpolicy/default/policy-for-bar/lua/1:
+        inlineString: function envoy_on_response(response_handle) response_handle:logInfo('bar-2')
+          end
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/2
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/3
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/4
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/5
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/6
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/7
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/8
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+- name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/9
+  typedConfig:
+    '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua

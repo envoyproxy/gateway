@@ -98,6 +98,6 @@ func (*healthCheck) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute)
 	return nil
 }
 
-func (*healthCheck) patchRoute(_ *routev3.Route, _ *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (*healthCheck) patchRoute(_ *routev3.Route, _ *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	return nil
 }
