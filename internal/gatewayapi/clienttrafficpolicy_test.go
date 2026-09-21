@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestCtpSpecHasClusterScopedFields(t *testing.T) {
@@ -35,6 +36,24 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 			require.Equal(t, tc.want, ctpSpecHasClusterScopedFields(tc.spec))
 		})
 	}
+}
+
+func TestValidatePortOverlapForClientTrafficPolicyGatewayNamePrefix(t *testing.T) {
+	gateway := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gw"}},
+	}
+	listener := &ListenerContext{
+		Listener: &gwapiv1.Listener{Name: "http"},
+		gateway:  gateway,
+	}
+	xds := &ir.Xds{HTTP: []*ir.HTTPListener{
+		{CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/gw/http", Port: 8081}},
+		{CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/gw/http-2", Port: 8081}},
+		{CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/gw-b/http", Port: 8081}},
+	}}
+
+	err := validatePortOverlapForClientTrafficPolicy(listener, xds, scopeEntireGateway)
+	require.EqualError(t, err, "ClientTrafficPolicy is being applied to multiple http (non https) listeners (envoy-gateway/gw-b/http) on the same port, which is not allowed")
 }
 
 func TestCTPClusterSettingsIndex(t *testing.T) {
