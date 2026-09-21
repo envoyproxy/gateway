@@ -1506,7 +1506,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				errs = errors.Join(errs, fmt.Errorf("%s cannot write a header with an invalid value. Header: %q", modType, name))
 				continue
 			}
-			action := ir.HeaderWriteAppend
+			action := ir.HeaderWriteAdd
 			if m.Write.Action != "" {
 				action = ir.HeaderWriteAction(m.Write.Action)
 			}
@@ -1576,7 +1576,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				Write: &ir.HeaderWrite{
 					Name:           headerKey,
 					Value:          addHeader.Value,
-					Action:         ir.HeaderWriteAppend,
+					Action:         ir.HeaderWriteAdd,
 					KeepEmptyValue: addHeader.Value == "",
 				},
 			})
@@ -1618,7 +1618,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				Write: &ir.HeaderWrite{
 					Name:           headerKey,
 					Value:          setHeader.Value,
-					Action:         ir.HeaderWriteOverwrite,
+					Action:         ir.HeaderWriteSet,
 					KeepEmptyValue: setHeader.Value == "",
 				},
 			})

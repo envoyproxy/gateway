@@ -18,18 +18,18 @@ spec:
             header:
               name: "x-ordered-header"
               value: "1"
-            action: Overwrite
+            action: Set
         - write:
             header:
               name: "x-ordered-header"
               value: "2"
-            action: Append
+            action: Add
         - remove: "x-ordered-recreate"
         - write:
             header:
               name: "x-ordered-recreate"
               value: "recreated"
-            action: Append
+            action: Add
       add:
         - name: "early-added-header"
           value: "early"

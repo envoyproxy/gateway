@@ -854,7 +854,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					Headers: &egv1a1.HeaderSettings{
 						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
 							Mutations: []egv1a1.HTTPHeaderMutation{
-								{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}, Action: egv1a1.HeaderWriteOverwrite}},
+								{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}, Action: egv1a1.HeaderWriteSet}},
 								{Remove: new("x-baz")},
 							},
 						},

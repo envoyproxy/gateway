@@ -22,11 +22,11 @@ http:
     - write:
         name: "regular-append-header"
         value: "regular-value"
-        action: Append
+        action: Add
     - write:
         name: "regular-set-header"
         value: "set-value"
-        action: Overwrite
+        action: Set
   routes:
   - name: "first-route"
     hostname: "*"

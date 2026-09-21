@@ -208,15 +208,15 @@ xdsIR:
       headers:
         earlyRequestHeaderMutations:
         - write:
-            action: Append
+            action: Add
             name: my-added-header
             value: my-added-header-value
         - write:
-            action: Append
+            action: Add
             name: my-multi-added-header
             value: value1,value2
         - write:
-            action: Overwrite
+            action: Set
             name: my-set-header
             value: my-set-header-value
         - remove: my-removed-header
@@ -239,15 +239,15 @@ xdsIR:
         enableEnvoyHeaders: true
         lateResponseHeaderMutations:
         - write:
-            action: Append
+            action: Add
             name: my-added-response-header
             value: my-added-response-header-value
         - write:
-            action: Overwrite
+            action: Set
             name: my-set-response-header
             value: my-set-response-header-value
         - write:
-            action: Overwrite
+            action: Set
             name: my-multi-set-response-header
             value: value1,value2
         - remove: my-removed-response-header
@@ -286,15 +286,15 @@ xdsIR:
       headers:
         earlyRequestHeaderMutations:
         - write:
-            action: Append
+            action: Add
             name: my-added-header
             value: my-added-header-value
         - write:
-            action: Append
+            action: Add
             name: my-multi-added-header
             value: value1,value2
         - write:
-            action: Overwrite
+            action: Set
             name: my-set-header
             value: my-set-header-value
         - remove: my-removed-header
@@ -317,15 +317,15 @@ xdsIR:
         enableEnvoyHeaders: true
         lateResponseHeaderMutations:
         - write:
-            action: Append
+            action: Add
             name: my-added-response-header
             value: my-added-response-header-value
         - write:
-            action: Overwrite
+            action: Set
             name: my-set-response-header
             value: my-set-response-header-value
         - write:
-            action: Overwrite
+            action: Set
             name: my-multi-set-response-header
             value: value1,value2
         - remove: my-removed-response-header

@@ -9,11 +9,11 @@ http:
     - write:
         name: "x-foo"
         value: "1"
-        action: Overwrite
+        action: Set
     - write:
         name: "x-foo"
         value: "2"
-        action: Append
+        action: Add
     - remove: "x-secret"
     - removeOnMatch:
         name: ""
@@ -21,7 +21,7 @@ http:
     - write:
         name: "x-secret"
         value: "regenerated"
-        action: Overwrite
+        action: Set
     - write:
         name: "x-if-absent"
         value: "default"
@@ -29,7 +29,7 @@ http:
     - write:
         name: "x-if-exists"
         value: "override"
-        action: OverwriteIfExists
+        action: SetIfExists
   routes:
   - name: "early-route"
     hostname: "*"
@@ -50,11 +50,11 @@ http:
     - write:
         name: "x-resp"
         value: "a"
-        action: Overwrite
+        action: Set
     - write:
         name: "x-resp"
         value: "b"
-        action: Append
+        action: Add
     - remove: "server"
   routes:
   - name: "late-route"

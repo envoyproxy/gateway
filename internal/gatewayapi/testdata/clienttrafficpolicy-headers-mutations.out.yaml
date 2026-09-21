@@ -12,12 +12,12 @@ clientTrafficPolicies:
           value: legacy-value
         mutations:
         - write:
-            action: Overwrite
+            action: Set
             header:
               name: x-foo
               value: "1"
         - write:
-            action: Append
+            action: Add
             header:
               name: x-foo
               value: "2"
@@ -26,19 +26,19 @@ clientTrafficPolicies:
             type: RegularExpression
             value: ^x-internal-.*
         - write:
-            action: OverwriteIfExists
+            action: SetIfExists
             header:
               name: x-if-exists
               value: override
       lateResponseHeaders:
         mutations:
         - write:
-            action: Overwrite
+            action: Set
             header:
               name: x-resp
               value: a
         - write:
-            action: Append
+            action: Add
             header:
               name: x-resp
               value: b
@@ -157,11 +157,11 @@ xdsIR:
       headers:
         earlyRequestHeaderMutations:
         - write:
-            action: Overwrite
+            action: Set
             name: x-foo
             value: "1"
         - write:
-            action: Append
+            action: Add
             name: x-foo
             value: "2"
         - remove: x-secret
@@ -170,20 +170,20 @@ xdsIR:
             name: ""
             safeRegex: ^x-internal-.*
         - write:
-            action: OverwriteIfExists
+            action: SetIfExists
             name: x-if-exists
             value: override
         - write:
-            action: Append
+            action: Add
             name: x-legacy
             value: legacy-value
         lateResponseHeaderMutations:
         - write:
-            action: Overwrite
+            action: Set
             name: x-resp
             value: a
         - write:
-            action: Append
+            action: Add
             name: x-resp
             value: b
         - remove: server

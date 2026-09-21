@@ -3312,7 +3312,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. The value may contain<br />Envoy substitution format operators such as "%REQ(x-foo)%", which are<br />evaluated per request.<br />See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators |
-| `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Append | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Append. |
+| `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Add | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Add. |
 | `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether the header is still written when its<br />value is empty. This matters for values produced by substitution<br />formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at<br />request time. Envoy drops such headers by default; set this to true to<br />keep them with an empty value.<br />When unset, it defaults to true only if the configured value itself is<br />the empty string, so a literal empty header is always written. |
 
 
@@ -3580,18 +3580,18 @@ _Appears in:_
 _Underlying type:_ _string_
 
 HeaderWriteAction controls how a header value is written when a header with
-the same name already exists. The values mirror Envoy's
-HeaderValueOption.HeaderAppendAction.
+the same name already exists. The names match the Add, Set and AddIfAbsent
+fields of HTTPHeaderFilter.
 
 _Appears in:_
 - [HTTPHeaderWrite](#httpheaderwrite)
 
 | Value | Description |
 | ----- | ----------- |
-| `Append` | HeaderWriteAppend appends the value if the header exists, or adds the<br />header otherwise. (Envoy: APPEND_IF_EXISTS_OR_ADD)<br /> | 
-| `Overwrite` | HeaderWriteOverwrite overwrites the value if the header exists, or adds<br />the header otherwise. (Envoy: OVERWRITE_IF_EXISTS_OR_ADD)<br /> | 
+| `Add` | HeaderWriteAdd appends the value if the header exists, or adds the<br />header otherwise. (Envoy: APPEND_IF_EXISTS_OR_ADD)<br /> | 
+| `Set` | HeaderWriteSet overwrites the value if the header exists, or adds<br />the header otherwise. (Envoy: OVERWRITE_IF_EXISTS_OR_ADD)<br /> | 
 | `AddIfAbsent` | HeaderWriteAddIfAbsent adds the header only if it is not already present.<br />(Envoy: ADD_IF_ABSENT)<br /> | 
-| `OverwriteIfExists` | HeaderWriteOverwriteIfExists overwrites the value only if the header is<br />already present, and does nothing otherwise. (Envoy: OVERWRITE_IF_EXISTS)<br /> | 
+| `SetIfExists` | HeaderWriteSetIfExists overwrites the value only if the header is<br />already present, and does nothing otherwise. (Envoy: OVERWRITE_IF_EXISTS)<br /> | 
 
 
 #### HealthCheck

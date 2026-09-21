@@ -12,12 +12,12 @@ clientTrafficPolicies:
             header:
               name: "x-foo"
               value: "1"
-            action: Overwrite
+            action: Set
         - write:
             header:
               name: "x-foo"
               value: "2"
-            action: Append
+            action: Add
         - remove: "x-secret"
         - removeOnMatch:
             type: RegularExpression
@@ -26,7 +26,7 @@ clientTrafficPolicies:
             header:
               name: "x-if-exists"
               value: "override"
-            action: OverwriteIfExists
+            action: SetIfExists
         add:
         - name: "x-legacy"
           value: "legacy-value"
@@ -36,12 +36,12 @@ clientTrafficPolicies:
             header:
               name: "x-resp"
               value: "a"
-            action: Overwrite
+            action: Set
         - write:
             header:
               name: "x-resp"
               value: "b"
-            action: Append
+            action: Add
         - remove: "server"
     targetRef:
       group: gateway.networking.k8s.io

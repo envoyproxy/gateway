@@ -2450,14 +2450,14 @@ type HeaderWrite struct {
 type HeaderWriteAction string
 
 const (
-	// HeaderWriteAppend maps to Envoy APPEND_IF_EXISTS_OR_ADD.
-	HeaderWriteAppend HeaderWriteAction = "Append"
-	// HeaderWriteOverwrite maps to Envoy OVERWRITE_IF_EXISTS_OR_ADD.
-	HeaderWriteOverwrite HeaderWriteAction = "Overwrite"
+	// HeaderWriteAdd maps to Envoy APPEND_IF_EXISTS_OR_ADD.
+	HeaderWriteAdd HeaderWriteAction = "Add"
+	// HeaderWriteSet maps to Envoy OVERWRITE_IF_EXISTS_OR_ADD.
+	HeaderWriteSet HeaderWriteAction = "Set"
 	// HeaderWriteAddIfAbsent maps to Envoy ADD_IF_ABSENT.
 	HeaderWriteAddIfAbsent HeaderWriteAction = "AddIfAbsent"
-	// HeaderWriteOverwriteIfExists maps to Envoy OVERWRITE_IF_EXISTS.
-	HeaderWriteOverwriteIfExists HeaderWriteAction = "OverwriteIfExists"
+	// HeaderWriteSetIfExists maps to Envoy OVERWRITE_IF_EXISTS.
+	HeaderWriteSetIfExists HeaderWriteAction = "SetIfExists"
 )
 
 // URLRewrite holds the details for how to rewrite a request

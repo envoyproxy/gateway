@@ -104,11 +104,11 @@ func buildHeaderMutationRules(mutations []ir.HeaderMutation) []*mutation_rulesv3
 		case m.Write != nil:
 			var appendAction corev3.HeaderValueOption_HeaderAppendAction
 			switch m.Write.Action {
-			case ir.HeaderWriteOverwrite:
+			case ir.HeaderWriteSet:
 				appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 			case ir.HeaderWriteAddIfAbsent:
 				appendAction = corev3.HeaderValueOption_ADD_IF_ABSENT
-			case ir.HeaderWriteOverwriteIfExists:
+			case ir.HeaderWriteSetIfExists:
 				appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS
 			default:
 				appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD

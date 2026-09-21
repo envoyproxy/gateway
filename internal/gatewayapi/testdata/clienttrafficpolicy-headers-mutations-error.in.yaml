@@ -12,18 +12,18 @@ clientTrafficPolicies:
             header:
               name: "Example/Header/1"
               value: "valid"
-            action: Overwrite
+            action: Set
         - write:
             header:
               name: "example-header-2"
               value: "  invalid"
-            action: Append
+            action: Add
         - remove: ""
         - write:
             header:
               name: "example-header-3"
               value: "valid"
-            action: Append
+            action: Add
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

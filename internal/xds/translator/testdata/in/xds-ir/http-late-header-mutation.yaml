@@ -29,23 +29,23 @@ http:
     - write:
         name: "some-header"
         value: "some-value1,some-value2"
-        action: Append
+        action: Add
     - write:
         name: "some-header-2"
         value: "some-value"
-        action: Append
+        action: Add
     - write:
         name: "some-header3"
         value: "some-value"
-        action: Overwrite
+        action: Set
     - write:
         name: "some-header4"
         value: "some-value"
-        action: Overwrite
+        action: Set
     - write:
         name: "empty-header"
         value: ""
-        action: Overwrite
+        action: Set
         keepEmptyValue: true
     - remove: "some-header5"
     - remove: "some-header6"

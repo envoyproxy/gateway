@@ -1238,10 +1238,10 @@ type HTTPHeaderWrite struct {
 	Header gwapiv1.HTTPHeader `json:"header"`
 
 	// Action controls how the header value is written when a header with the
-	// same name already exists. Defaults to Append.
+	// same name already exists. Defaults to Add.
 	//
 	// +optional
-	// +kubebuilder:default=Append
+	// +kubebuilder:default=Add
 	Action HeaderWriteAction `json:"action,omitempty"`
 
 	// KeepEmptyValue controls whether the header is still written when its
@@ -1258,28 +1258,28 @@ type HTTPHeaderWrite struct {
 }
 
 // HeaderWriteAction controls how a header value is written when a header with
-// the same name already exists. The values mirror Envoy's
-// HeaderValueOption.HeaderAppendAction.
+// the same name already exists. The names match the Add, Set and AddIfAbsent
+// fields of HTTPHeaderFilter.
 //
-// +kubebuilder:validation:Enum=Append;Overwrite;AddIfAbsent;OverwriteIfExists
+// +kubebuilder:validation:Enum=Add;Set;AddIfAbsent;SetIfExists
 type HeaderWriteAction string
 
 const (
-	// HeaderWriteAppend appends the value if the header exists, or adds the
+	// HeaderWriteAdd appends the value if the header exists, or adds the
 	// header otherwise. (Envoy: APPEND_IF_EXISTS_OR_ADD)
-	HeaderWriteAppend HeaderWriteAction = "Append"
+	HeaderWriteAdd HeaderWriteAction = "Add"
 
-	// HeaderWriteOverwrite overwrites the value if the header exists, or adds
+	// HeaderWriteSet overwrites the value if the header exists, or adds
 	// the header otherwise. (Envoy: OVERWRITE_IF_EXISTS_OR_ADD)
-	HeaderWriteOverwrite HeaderWriteAction = "Overwrite"
+	HeaderWriteSet HeaderWriteAction = "Set"
 
 	// HeaderWriteAddIfAbsent adds the header only if it is not already present.
 	// (Envoy: ADD_IF_ABSENT)
 	HeaderWriteAddIfAbsent HeaderWriteAction = "AddIfAbsent"
 
-	// HeaderWriteOverwriteIfExists overwrites the value only if the header is
+	// HeaderWriteSetIfExists overwrites the value only if the header is
 	// already present, and does nothing otherwise. (Envoy: OVERWRITE_IF_EXISTS)
-	HeaderWriteOverwriteIfExists HeaderWriteAction = "OverwriteIfExists"
+	HeaderWriteSetIfExists HeaderWriteAction = "SetIfExists"
 )
 
 // LocalObjectKeyReference selects a key from a local object.

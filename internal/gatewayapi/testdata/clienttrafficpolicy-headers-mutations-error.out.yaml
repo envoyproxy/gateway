@@ -9,18 +9,18 @@ clientTrafficPolicies:
       earlyRequestHeaders:
         mutations:
         - write:
-            action: Overwrite
+            action: Set
             header:
               name: Example/Header/1
               value: valid
         - write:
-            action: Append
+            action: Add
             header:
               name: example-header-2
               value: '  invalid'
         - remove: ""
         - write:
-            action: Append
+            action: Add
             header:
               name: example-header-3
               value: valid
@@ -141,7 +141,7 @@ xdsIR:
       headers:
         earlyRequestHeaderMutations:
         - write:
-            action: Append
+            action: Add
             name: example-header-3
             value: valid
         withUnderscoresAction: RejectRequest

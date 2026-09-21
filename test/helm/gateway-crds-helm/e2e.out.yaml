@@ -4897,15 +4897,15 @@ spec:
                                 specified action.
                               properties:
                                 action:
-                                  default: Append
+                                  default: Add
                                   description: |-
                                     Action controls how the header value is written when a header with the
-                                    same name already exists. Defaults to Append.
+                                    same name already exists. Defaults to Add.
                                   enum:
-                                  - Append
-                                  - Overwrite
+                                  - Add
+                                  - Set
                                   - AddIfAbsent
-                                  - OverwriteIfExists
+                                  - SetIfExists
                                   type: string
                                 header:
                                   description: |-
@@ -5267,15 +5267,15 @@ spec:
                                 specified action.
                               properties:
                                 action:
-                                  default: Append
+                                  default: Add
                                   description: |-
                                     Action controls how the header value is written when a header with the
-                                    same name already exists. Defaults to Append.
+                                    same name already exists. Defaults to Add.
                                   enum:
-                                  - Append
-                                  - Overwrite
+                                  - Add
+                                  - Set
                                   - AddIfAbsent
-                                  - OverwriteIfExists
+                                  - SetIfExists
                                   type: string
                                 header:
                                   description: |-
