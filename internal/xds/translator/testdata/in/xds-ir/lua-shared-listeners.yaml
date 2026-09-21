@@ -1,3 +1,7 @@
+# Two IR listeners on one port, so they collapse into a single xDS filter chain and
+# share one HCM. The Lua slots belong to that HCM: the listener needs as many slots as
+# the deepest route chain across both listeners, and each listener's scripts merge into
+# the slots already there rather than adding a bucket of their own.
 http:
 - address: 0.0.0.0
   hostnames:
