@@ -15,7 +15,7 @@ import (
 func ecdsConfigCmd() *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:     "ecds <pod-name>",
-		Aliases: []string{"e"},
+		Aliases: []string{"ec"},
 		Short:   "Retrieves extension config Envoy xDS resources from the specified pod",
 		Long:    `Retrieves information about the HTTP filter configurations that Envoy Gateway serves over ECDS to the Envoy instance in the specified pod.`,
 		Example: `  # Retrieve summary about extension configuration for a given pod from Envoy.
@@ -28,7 +28,7 @@ func ecdsConfigCmd() *cobra.Command {
   egctl config envoy-proxy ecds <pod-name> -n <pod-namespace> -o yaml
 
   # Retrieve full configuration dump with short syntax
-  egctl c proxy e <pod-name> -n <pod-namespace>
+  egctl c proxy ec <pod-name> -n <pod-namespace>
 `,
 		Run: func(c *cobra.Command, args []string) {
 			cmdutil.CheckErr(runEcdsConfig(c, args))
