@@ -69,9 +69,20 @@ type httpFilter interface {
 	patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error
 }
 
+const (
+	// filterOrderUnrecognized is where a filter type newOrderedHTTPFilter was never given
+	// an order runs: after everything placed deliberately, before the router.
+	filterOrderUnrecognized = 90
+	// filterOrderRouter is last, the router ends the chain.
+	filterOrderRouter = 100
+)
+
 type OrderedHTTPFilter struct {
 	filter *hcmv3.HttpFilter
 	order  int
+	// index orders filters sharing an order, i.e. several of the same type on one
+	// listener. Kept apart from order so a type cannot reach the next type's.
+	index int
 }
 
 type OrderedHTTPFilters []*OrderedHTTPFilter
@@ -89,11 +100,11 @@ type OrderedHTTPFilters []*OrderedHTTPFilter
 //   - the router filter must be the last one since it's a terminal filter.
 //
 // Important: please modify this method and set the order for the new filter
-// when adding a new filter in the HCM filter chain.
-// If the order is not explicitly specified in this method, a filter will be set
-// a default order 50.
+// when adding a new filter in the HCM filter chain. Unrecognized ones run at
+// filterOrderUnrecognized.
 func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
-	order := 50
+	order := filterOrderUnrecognized
+	index := 0
 
 	// Set a rational order for all the filters.
 	// When the fault filter is configured to be at the first, the computation of
@@ -131,40 +142,41 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 12
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 13 + mustGetFilterIndex(filter.Name)
+		order, index = 13, mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
-		order = 100 + mustGetFilterIndex(filter.Name)
+		order, index = 14, mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
-		order = 200 + mustGetFilterIndex(filter.Name)
+		order, index = 15, mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterDynamicModules):
-		order = 250 + mustGetFilterIndex(filter.Name)
+		order, index = 16, mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
-		order = 300
+		order = 17
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
-		order = 301
+		order = 18
 	case isFilterType(filter, egv1a1.EnvoyFilterLocalRateLimit):
-		order = 302
+		order = 19
 	case isFilterType(filter, egv1a1.EnvoyFilterRateLimit):
-		order = 303
+		order = 20
 	case isFilterType(filter, egv1a1.EnvoyFilterBandwidthLimit):
-		order = 304
+		order = 21
 	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
-		order = 305
+		order = 22
 	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
-		order = 306
+		order = 23
 	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
-		order = 307
+		order = 24
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
-		order = 308
+		order = 25
 	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
-		order = 309
+		order = 26
 	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
-		order = 310
+		order = filterOrderRouter
 	}
 
 	return &OrderedHTTPFilter{
 		filter: filter,
 		order:  order,
+		index:  index,
 	}
 }
 
@@ -175,15 +187,19 @@ func (o OrderedHTTPFilters) Len() int {
 }
 
 func (o OrderedHTTPFilters) Less(i, j int) bool {
-	// Sort on name if the order is equal
-	// to keep the order stable and avoiding
-	// listener drains
-	if o[i].order == o[j].order {
-		return o[i].filter.Name < o[j].filter.Name
+	if o[i].order != o[j].order {
+		return o[i].order < o[j].order
 	}
 
-	// Sort on order
-	return o[i].order < o[j].order
+	// Several filters of one type run in the order of their index.
+	if o[i].index != o[j].index {
+		return o[i].index < o[j].index
+	}
+
+	// Sort on name if the rest is equal
+	// to keep the order stable and avoiding
+	// listener drains
+	return o[i].filter.Name < o[j].filter.Name
 }
 
 func (o OrderedHTTPFilters) Swap(i, j int) {
