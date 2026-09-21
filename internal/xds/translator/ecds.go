@@ -110,14 +110,14 @@ func ecdsEligible(httpFilter *hcmv3.HttpFilter) bool {
 }
 
 // addECDSResource registers the filter's config as an ECDS resource and points the filter
-// at it. The filter name doubles as the resource name, so it is unique per IR listener
-// rather than per filter chain: an HTTP/3 listener's TCP and QUIC HCMs carry the same
-// filter name, share a RouteConfiguration, and so share one resource.
+// at it. The filter name doubles as the resource name and is scoped to a
+// RouteConfiguration, so the resource carries the scripts of every IR listener whose
+// routes land in that route config, and is referenced by every HCM serving it.
 //
-// TODO: an EnvoyPatchPolicy or an extension server would not normally treat a listener's
-// TCP and QUIC chains differently, so the two copies should stay identical. If one ever
-// edited only one of them, last write wins here, and ECDS cannot express the difference
-// anyway, since both chains resolve the same name.
+// TODO: with HTTP/3 that is two managers, the TCP one and the QUIC one, holding identical
+// copies of the filter. An EnvoyPatchPolicy or an extension server would not normally
+// treat them differently, but if one edited a single copy, last write wins here, and ECDS
+// cannot express the difference anyway since both resolve the same name.
 func addECDSResource(tCtx *types.ResourceVersionTable, httpFilter *hcmv3.HttpFilter) error {
 	typeURL := httpFilter.GetTypedConfig().GetTypeUrl()
 	extensionConfig := &corev3.TypedExtensionConfig{
@@ -138,7 +138,7 @@ func addECDSResource(tCtx *types.ResourceVersionTable, httpFilter *hcmv3.HttpFil
 	httpFilter.ConfigType = &hcmv3.HttpFilter_ConfigDiscovery{
 		ConfigDiscovery: &corev3.ExtensionConfigSource{
 			ConfigSource:                     makeConfigSource(),
-			TypeUrls:                         []string{httpFilter.GetTypedConfig().GetTypeUrl()},
+			TypeUrls:                         []string{typeURL},
 			DefaultConfig:                    defaultConfig,
 			ApplyDefaultConfigWithoutWarming: true,
 		},

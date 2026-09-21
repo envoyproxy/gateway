@@ -65,7 +65,11 @@ func TestPatchHCMLuaSharesScriptsAcrossRoutes(t *testing.T) {
 		},
 	}
 
-	mgr := &hcmv3.HttpConnectionManager{}
+	mgr := &hcmv3.HttpConnectionManager{
+		RouteSpecifier: &hcmv3.HttpConnectionManager_Rds{
+			Rds: &hcmv3.Rds{RouteConfigName: irListener.Name},
+		},
+	}
 	require.NoError(t, (&lua{}).patchHCM(mgr, irListener))
 
 	require.Len(t, mgr.HttpFilters, luaSlotCount(2))
@@ -88,4 +92,59 @@ func TestPatchHCMLuaSharesScriptsAcrossRoutes(t *testing.T) {
 	require.NoError(t, mgr.HttpFilters[2].GetTypedConfig().UnmarshalTo(spare))
 	assert.Empty(t, spare.SourceCodes)
 	assert.Nil(t, spare.DefaultSourceCode)
+}
+
+// Several non-TLS Gateway listeners on one port share a single HCM, and so share one
+// RouteConfiguration. Their Lua filters have to share one set of slots too, or each
+// listener adds a bucket of its own and the filter chain grows with the listener count.
+func TestPatchHCMLuaSharesSlotsAcrossListenersOnOneHCM(t *testing.T) {
+	first := "function envoy_on_request(h) h:logInfo('first') end"
+	second := "function envoy_on_request(h) h:logInfo('second') end"
+	stacked := "function envoy_on_response(h) h:logInfo('stacked') end"
+
+	mgr := &hcmv3.HttpConnectionManager{
+		RouteSpecifier: &hcmv3.HttpConnectionManager_Rds{
+			Rds: &hcmv3.Rds{RouteConfigName: "envoy-gateway/gateway-1/http"},
+		},
+	}
+
+	listeners := []*ir.HTTPListener{
+		{
+			Name: "envoy-gateway/gateway-1/http",
+			Routes: []*ir.HTTPRoute{{
+				Name: "route-1",
+				EnvoyExtensions: &ir.EnvoyExtensionFeatures{
+					Luas: []ir.Lua{{Name: "policy/first/lua/0", Code: &first}},
+				},
+			}},
+		},
+		{
+			Name: "envoy-gateway/gateway-1/http2",
+			Routes: []*ir.HTTPRoute{{
+				Name: "route-2",
+				EnvoyExtensions: &ir.EnvoyExtensionFeatures{
+					Luas: []ir.Lua{
+						{Name: "policy/second/lua/0", Code: &second},
+						{Name: "policy/second/lua/1", Code: &stacked},
+					},
+				},
+			}},
+		},
+	}
+	for _, irListener := range listeners {
+		require.NoError(t, (&lua{}).patchHCM(mgr, irListener))
+	}
+
+	// One bucket for the HCM, not one per listener.
+	require.Len(t, mgr.HttpFilters, luaSlotCount(2))
+	assert.Equal(t, "envoy.filters.http.lua/envoy-gateway/gateway-1/http/0", mgr.HttpFilters[0].Name)
+
+	slot0 := &luafilterv3.Lua{}
+	require.NoError(t, mgr.HttpFilters[0].GetTypedConfig().UnmarshalTo(slot0))
+	assert.Equal(t, first, slot0.SourceCodes["policy/first/lua/0"].GetInlineString())
+	assert.Equal(t, second, slot0.SourceCodes["policy/second/lua/0"].GetInlineString())
+
+	slot1 := &luafilterv3.Lua{}
+	require.NoError(t, mgr.HttpFilters[1].GetTypedConfig().UnmarshalTo(slot1))
+	assert.Equal(t, stacked, slot1.SourceCodes["policy/second/lua/1"].GetInlineString())
 }

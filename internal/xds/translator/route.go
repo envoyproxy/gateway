@@ -45,7 +45,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, routeCfgName string, backendIndex backendClusterIndex) (*routev3.Route, error) {
 	connectMatch := httpRoute.Traffic.HasConnectUpgrade()
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
@@ -163,7 +163,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	}
 
 	// Add per route filter configs to the route, if needed.
-	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
+	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener, routeCfgName); err != nil {
 		return nil, err
 	}
 

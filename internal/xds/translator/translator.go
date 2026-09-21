@@ -747,7 +747,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, xdsRouteCfg.Name, t.backendIndex)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)

@@ -106,7 +106,7 @@ func listenerContainsCSRF(irListener *ir.HTTPListener) bool {
 }
 
 // patchRoute patches the provided route with the CSRF config if applicable.
-func (*csrf) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (*csrf) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
