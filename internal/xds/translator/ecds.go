@@ -13,7 +13,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	resourceTypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	"google.golang.org/protobuf/types/known/anypb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -122,16 +121,17 @@ func addECDSResource(tCtx *types.ResourceVersionTable, httpFilter *hcmv3.HttpFil
 		return err
 	}
 
-	// An Any with no bytes decodes to a default-constructed message of that type, so the
-	// filter is a no-op, rather than a 503, until its ECDS resource arrives.
-	defaultConfig := &anypb.Any{TypeUrl: typeURL}
-
+	// The listener warms until the scripts arrive, since Envoy subscribes to ECDS only after
+	// it has processed the listener and would otherwise serve requests through empty slots.
+	//
+	// No default config, so a delivery that fails or is rejected leaves the slot without one
+	// and Envoy answers with a 500.
+	//
+	// TODO: add a failOpen field to the Lua API to let requests pass through instead.
 	httpFilter.ConfigType = &hcmv3.HttpFilter_ConfigDiscovery{
 		ConfigDiscovery: &corev3.ExtensionConfigSource{
-			ConfigSource:                     makeConfigSource(),
-			TypeUrls:                         []string{typeURL},
-			DefaultConfig:                    defaultConfig,
-			ApplyDefaultConfigWithoutWarming: true,
+			ConfigSource: makeConfigSource(),
+			TypeUrls:     []string{typeURL},
 		},
 	}
 	return nil
