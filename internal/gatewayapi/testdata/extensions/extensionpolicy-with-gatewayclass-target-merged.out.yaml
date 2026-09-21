@@ -1,0 +1,533 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    logging: {}
+    mergeGateways: true
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    data: attached to all listeners under the merged GatewayClass
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: envoy-gateway-class
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    data: attached only to the http3 listener across the merged GatewayClass
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: envoy-gateway-class
+      sectionName: http3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+        sectionName: http3
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test3
+    namespace: envoy-gateway
+  spec:
+    data: sectionName matches no listener, so it must fail with TargetNotFound
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: envoy-gateway-class
+      sectionName: http-unknown
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+        sectionName: http-unknown
+      conditions:
+      - lastTransitionTime: null
+        message: No section name http-unknown found for GatewayClass envoy-gateway-class
+        reason: TargetNotFound
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test4
+    namespace: envoy-gateway
+  spec:
+    data: attached to all listeners under the merged GatewayClass via a label selector
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: GatewayClass
+      matchLabels:
+        tier: shared
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test6
+    namespace: envoy-gateway
+  spec:
+    data: matched by both a targetRef and a selector; must be attached only once per
+      listener
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: envoy-gateway-class
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: GatewayClass
+      matchLabels:
+        tier: shared
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    labels:
+      tier: shared
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http1
+      port: 81
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http2
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-2
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http3
+      port: 82
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http3
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway-class:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeGateways: true
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+      listeners:
+      - name: envoy-gateway/gateway-1/http1
+        ports:
+        - containerPort: 10081
+          name: http-81
+          protocol: HTTP
+          servicePort: 81
+      - name: envoy-gateway/gateway-1/http2
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      - name: envoy-gateway/gateway-2/http3
+        ports:
+        - containerPort: 10082
+          name: http-82
+          protocol: HTTP
+          servicePort: 82
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway-class
+      namespace: ""
+xdsIR:
+  envoy-gateway-class:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    extensionResources:
+    - name: foo.example.io/bar/envoy-gateway/test1
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test1
+          namespace: envoy-gateway
+        spec:
+          data: attached to all listeners under the merged GatewayClass
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: GatewayClass
+            name: envoy-gateway-class
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - name: foo.example.io/bar/envoy-gateway/test2
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test2
+          namespace: envoy-gateway
+        spec:
+          data: attached only to the http3 listener across the merged GatewayClass
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: GatewayClass
+            name: envoy-gateway-class
+            sectionName: http3
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+              sectionName: http3
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - name: foo.example.io/bar/envoy-gateway/test4
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test4
+          namespace: envoy-gateway
+        spec:
+          data: attached to all listeners under the merged GatewayClass via a label
+            selector
+          targetSelectors:
+          - group: gateway.networking.k8s.io
+            kind: GatewayClass
+            matchLabels:
+              tier: shared
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - name: foo.example.io/bar/envoy-gateway/test6
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test6
+          namespace: envoy-gateway
+        spec:
+          data: matched by both a targetRef and a selector; must be attached only
+            once per listener
+          targetRefs:
+          - group: gateway.networking.k8s.io
+            kind: GatewayClass
+            name: envoy-gateway-class
+          targetSelectors:
+          - group: gateway.networking.k8s.io
+            kind: GatewayClass
+            matchLabels:
+              tier: shared
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionServerPolicies:
+    - name: foo.example.io/bar/envoy-gateway/test1
+    - name: foo.example.io/bar/envoy-gateway/test2
+    - name: foo.example.io/bar/envoy-gateway/test4
+    - name: foo.example.io/bar/envoy-gateway/test6
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-class-3b1df594
+          sectionName: "8080"
+        name: envoy-gateway-class
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-class-3b1df594
+            sectionName: "8080"
+          name: envoy-gateway-class
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test1
+      - name: foo.example.io/bar/envoy-gateway/test4
+      - name: foo.example.io/bar/envoy-gateway/test6
+      externalPort: 81
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http1
+      name: envoy-gateway/gateway-1/http1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10081
+    - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test1
+      - name: foo.example.io/bar/envoy-gateway/test4
+      - name: foo.example.io/bar/envoy-gateway/test6
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http2
+      name: envoy-gateway/gateway-1/http2
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test1
+      - name: foo.example.io/bar/envoy-gateway/test2
+      - name: foo.example.io/bar/envoy-gateway/test4
+      - name: foo.example.io/bar/envoy-gateway/test6
+      externalPort: 82
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http3
+      name: envoy-gateway/gateway-2/http3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10082
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

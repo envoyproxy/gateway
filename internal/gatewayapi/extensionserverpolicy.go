@@ -12,8 +12,11 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -95,6 +98,7 @@ func (t *Translator) ProcessExtensionServerPolicies(
 	// 2. Policies targeting routes (HTTPRoute/GRPCRoute)
 	// 3. Policies targeting Listeners
 	// 4. Policies targeting Gateways
+	// 5. Policies targeting a GatewayClass (only meaningful when mergeGateways is enabled)
 
 	// Process the policies targeting route rules.
 	for i := range policies {
@@ -164,6 +168,30 @@ func (t *Translator) ProcessExtensionServerPolicies(
 		}
 	}
 
+	// TODO: ExtensionServerPolicy does not support targeting a ListenerSet, unlike SecurityPolicy,
+	// EnvoyExtensionPolicy, and BackendTrafficPolicy, which all have isListenerSet/isListenerSetListener
+	// branches here. A policy with targetRef.kind: ListenerSet falls through every bucket above and
+	// is silently dropped with no ancestor status set. Needs a processExtensionServerPolicyForListenerSet
+	// and a corresponding processing loop, mirroring the other policy types.
+
+	// Process the policies targeting a GatewayClass (only meaningful when mergeGateways is enabled).
+	for i := range policies {
+		if !validPolicy[i] {
+			continue
+		}
+		// GatewayClass is cluster-scoped, so plain refs are resolved without the policy's namespace.
+		// This keeps them identical to selector-derived refs, letting composePolicyTargetRefs dedupe
+		// a GatewayClass matched by both.
+		targetRefs := composePolicyTargetRefs(
+			resolveGatewayClassTargetsFromSelectors(targetRefsList[i].TargetSelectors, resources.GatewayClass),
+			resolvePolicyTargetsFromReferences(targetRefsList[i], ""))
+		for _, currTarget := range targetRefs {
+			if isGatewayClass(currTarget) || isGatewayClassListener(currTarget) {
+				t.processExtensionServerPolicyForGatewayClass(xdsIR, getOrInitPolicy(i), currTarget)
+			}
+		}
+	}
+
 	// Only include policies that were accepted (have at least one ancestor status set).
 	for _, key := range handledPoliciesOrder {
 		policy := handledPolicies[key]
@@ -173,6 +201,38 @@ func (t *Translator) ProcessExtensionServerPolicies(
 	}
 
 	return res, errs
+}
+
+// resolveGatewayClassTargetsFromSelectors returns gatewayClass as a target for every selector of
+// kind GatewayClass whose labels match it. GatewayClass is cluster-scoped, so the selector's
+// namespace criteria and ReferenceGrants, which resolvePolicyTargetsFromSelectors applies to
+// namespaced targets, do not apply here.
+func resolveGatewayClassTargetsFromSelectors(
+	targetSelectors []egv1a1.TargetSelector,
+	gatewayClass *gwapiv1.GatewayClass,
+) []targetRefWithTimestamp {
+	if gatewayClass == nil {
+		return nil
+	}
+	for _, currSelector := range targetSelectors {
+		if string(currSelector.Kind) != resource.KindGatewayClass ||
+			string(ptr.Deref(currSelector.Group, gwapiv1.GroupName)) != gwapiv1.GroupName {
+			continue
+		}
+		if !selectorFromTargetSelector(currSelector).Matches(labels.Set(gatewayClass.GetLabels())) {
+			continue
+		}
+		// Every matching selector resolves to the same, single GatewayClass.
+		return []targetRefWithTimestamp{{
+			CreationTimestamp: gatewayClass.GetCreationTimestamp(),
+			policyTargetReferenceWithSectionName: policyTargetReferenceWithSectionName{
+				Group: gwapiv1.GroupName,
+				Kind:  resource.KindGatewayClass,
+				Name:  gwapiv1.ObjectName(gatewayClass.GetName()),
+			},
+		}}
+	}
+	return nil
 }
 
 func extractTargetRefs(policy *unstructured.Unstructured) (egv1a1.PolicyTargetReferences, error) {
@@ -296,6 +356,23 @@ func (t *Translator) processExtensionServerPolicyForGateway(
 		return
 	}
 
+	// When mergeGateways is enabled, every Gateway under the GatewayClass shares a single xDS IR
+	// entry keyed by GatewayClass name, and gwIR.ExtensionServerPolicies is forwarded once to the
+	// PostTranslation hook for that whole shared tree. A Gateway-targeted policy therefore can't be
+	// isolated to its Gateway - the policy must target the GatewayClass instead.
+	if t.MergeGateways {
+		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
+		gatewayNN := utils.NamespacedName(gateway)
+		ancestorRef := getAncestorRefForPolicy(gatewayNN, currTarget.SectionName)
+		resolveErr := &status.PolicyResolveError{
+			Reason:  gwapiv1.PolicyReasonInvalid,
+			Message: "ExtensionServerPolicy cannot target a Gateway when mergeGateways is enabled for its GatewayClass; target the GatewayClass instead",
+		}
+		status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
+		policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+		return
+	}
+
 	// Append policy extension server policy list for related gateway.
 	gatewayKey := t.getIRKey(gateway.Gateway)
 	gwIR := xdsIR[gatewayKey]
@@ -386,29 +463,58 @@ func (t *Translator) translateExtServerPolicyForGateway(
 ) bool {
 	irKey := t.getIRKey(gateway.Gateway)
 	gwIR := xdsIR[irKey]
+
+	// Gateway-kind targeting is only reached when mergeGateways is disabled (see the caller), so
+	// gwIR already belongs solely to this Gateway. A whole-Gateway target covers every listener,
+	// including those contributed by ListenerSets, while a sectionName only matches the Gateway's
+	// own listeners, consistent with the other Gateway-scoped policy types.
+	listenerNames := sets.New[string]()
+	for _, listener := range gatewayPolicyTargetListeners(gateway, target) {
+		listenerNames.Insert(irListenerName(listener))
+	}
+
+	return t.attachExtensionRefToListeners(gwIR, gateway, policy, listenerNames, nil)
+}
+
+// attachExtensionRefToListeners appends policy as an ExtensionRef to every listener in gwIR that is
+// in listenerNames (when non-nil) and whose name matches sectionName (when non-nil). It reports
+// whether at least one listener was matched.
+func (t *Translator) attachExtensionRefToListeners(gwIR *ir.Xds,
+	gwCtx *GatewayContext, policy *unstructured.Unstructured, listenerNames sets.Set[string], sectionName *gwapiv1.SectionName,
+) bool {
+	matches := func(name string) bool {
+		if listenerNames != nil && !listenerNames.Has(name) {
+			return false
+		}
+		if sectionName != nil {
+			shortName := name[strings.LastIndex(name, "/")+1:]
+			if string(*sectionName) != shortName {
+				return false
+			}
+		}
+		return true
+	}
+
 	found := false
 	for _, currListener := range gwIR.HTTP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+		if !matches(currListener.Name) {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gwCtx, policy))
 		found = true
 	}
 	for _, currListener := range gwIR.TCP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+		if !matches(currListener.Name) {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gwCtx, policy))
 		found = true
 	}
 	for _, currListener := range gwIR.UDP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+		if !matches(currListener.Name) {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gwCtx, policy))
 		found = true
 	}
 	return found
@@ -431,6 +537,69 @@ func (t *Translator) appendUnstructuredRefIfAbsent(gwIR *ir.Xds, gatewayCtx *Gat
 	return append(refs, ref)
 }
 
+// processExtensionServerPolicyForGatewayClass handles a policy whose targetRef.kind is GatewayClass.
+// This only resolves when mergeGateways is enabled for the class, since only then do all of the
+// class's Gateways share a single xDS IR entry (keyed by GatewayClass name) that the policy can
+// meaningfully attach to.
+func (t *Translator) processExtensionServerPolicyForGatewayClass(
+	xdsIR resource.XdsIRMap,
+	policy *unstructured.Unstructured,
+	currTarget policyTargetReferenceWithSectionName,
+) {
+	// Not the GatewayClass this Translator is responsible for; stay silent, consistent with how
+	// a Gateway targetRef that doesn't resolve to an accepted Gateway is handled. This must be
+	// checked before the mergeGateways validation below, since every GatewayClass in the cluster
+	// is translated independently and each Translator only knows about its own GatewayClassName -
+	// otherwise a Translator for an unrelated, non-merged GatewayClass would incorrectly stamp an
+	// Invalid status onto a policy that actually targets a different, merged GatewayClass.
+	if currTarget.Name != t.GatewayClassName {
+		return
+	}
+
+	ancestorRef := getAncestorRefForGatewayClassPolicy(currTarget.Name, currTarget.SectionName)
+
+	if !t.MergeGateways {
+		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
+		resolveErr := &status.PolicyResolveError{
+			Reason:  gwapiv1.PolicyReasonInvalid,
+			Message: "ExtensionServerPolicy cannot target a GatewayClass unless mergeGateways is enabled for it",
+		}
+		status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
+		policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+		return
+	}
+
+	gwXdsIR, ok := xdsIR[string(t.GatewayClassName)]
+	if !ok {
+		return
+	}
+
+	found := t.attachExtensionRefToListeners(gwXdsIR, nil, policy, nil, currTarget.SectionName)
+
+	// A sectionName that matches no listener across the merged Gateways must fail to attach with
+	// a status explaining why, rather than being silently dropped while still reaching the
+	// extension server via ExtensionServerPolicies.
+	if !found && currTarget.SectionName != nil {
+		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
+		resolveErr := &status.PolicyResolveError{
+			Reason: gwapiv1.PolicyReasonTargetNotFound,
+			Message: fmt.Sprintf("No section name %s found for %s %s",
+				string(*currTarget.SectionName), resource.KindGatewayClass, currTarget.Name),
+		}
+		status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
+		policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+		return
+	}
+
+	gwXdsIR.ExtensionServerPolicies = t.appendUnstructuredRefIfAbsent(gwXdsIR, nil, gwXdsIR.ExtensionServerPolicies, policy)
+
+	if found {
+		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
+		status.SetAcceptedForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration())
+		policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+	}
+}
+
 // getOrCreateExtensionResource returns a ref to obj. It registers obj once per distinct identity
 // into gwIR.ExtensionResources and returns a lightweight name-only ref, using
 // t.ExtensionResourceMap as a find-or-create cache; a later call for an already-registered
@@ -442,13 +611,21 @@ func (t *Translator) getOrCreateExtensionResource(
 	gatewayCtx *GatewayContext,
 	obj *unstructured.Unstructured,
 ) *ir.UnstructuredRef {
-	if gatewayCtx == nil {
+	// With mergeGateways, every Gateway of the class shares one IR keyed by the GatewayClass name,
+	// so a name can be scoped even without a gateway context (e.g. a GatewayClass-targeted policy).
+	var irKey string
+	switch {
+	case t.MergeGateways:
+		irKey = string(t.GatewayClassName)
+	case gatewayCtx != nil:
+		irKey = t.getIRKey(gatewayCtx.Gateway)
+	default:
 		return &ir.UnstructuredRef{Object: obj}
 	}
 
 	gvk := obj.GroupVersionKind()
 	key := ExtensionResourceKey{
-		GatewayIRKey: t.getIRKey(gatewayCtx.Gateway),
+		GatewayIRKey: irKey,
 		Group:        gvk.Group,
 		Kind:         gvk.Kind,
 		Namespace:    obj.GetNamespace(),
