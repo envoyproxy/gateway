@@ -3641,6 +3641,12 @@ spec:
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.bandwidthLimit)'
+            - message: ConsistentHash load balancing is not allowed when targeting
+                a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.loadBalancer)
+                || self.loadBalancer.type != ''ConsistentHash'''
             - message: sectionName is not supported when targeting a backend
               rule: '!has(self.targetRef) || !(self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || !has(self.targetRef.sectionName)'
