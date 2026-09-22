@@ -271,7 +271,7 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 					// target does not match the current route
 					continue
 				}
-				r.ExtensionServerPolicies = appendUnstructuredRefIfAbsent(r.ExtensionServerPolicies, policy)
+				r.ExtensionServerPolicies = t.appendUnstructuredRefIfAbsent(gwXDS, gtwCtx, r.ExtensionServerPolicies, policy)
 				found = true
 			}
 		}
@@ -298,7 +298,8 @@ func (t *Translator) processExtensionServerPolicyForGateway(
 
 	// Append policy extension server policy list for related gateway.
 	gatewayKey := t.getIRKey(gateway.Gateway)
-	xdsIR[gatewayKey].ExtensionServerPolicies = appendUnstructuredRefIfAbsent(xdsIR[gatewayKey].ExtensionServerPolicies, policy)
+	gwIR := xdsIR[gatewayKey]
+	gwIR.ExtensionServerPolicies = t.appendUnstructuredRefIfAbsent(gwIR, gateway, gwIR.ExtensionServerPolicies, policy)
 
 	if t.translateExtServerPolicyForGateway(policy, gateway, currTarget, xdsIR) {
 		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
@@ -391,9 +392,7 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		if target.SectionName != nil && string(*target.SectionName) != listenerName {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, &ir.UnstructuredRef{
-			Object: policy,
-		})
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
 		found = true
 	}
 	for _, currListener := range gwIR.TCP {
@@ -401,9 +400,7 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		if target.SectionName != nil && string(*target.SectionName) != listenerName {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, &ir.UnstructuredRef{
-			Object: policy,
-		})
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
 		found = true
 	}
 	for _, currListener := range gwIR.UDP {
@@ -411,19 +408,73 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		if target.SectionName != nil && string(*target.SectionName) != listenerName {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, &ir.UnstructuredRef{
-			Object: policy,
-		})
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
 		found = true
 	}
 	return found
 }
 
-func appendUnstructuredRefIfAbsent(refs []*ir.UnstructuredRef, policy *unstructured.Unstructured) []*ir.UnstructuredRef {
-	for _, ref := range refs {
-		if ref.Object == policy {
+// appendUnstructuredRefIfAbsent appends a ref to obj to refs, unless refs already carries a ref
+// to the same resource. Identity is compared by the stable Name getOrCreateExtensionResource
+// derives for obj, or by Object pointer when no gateway context is available to scope a name.
+func (t *Translator) appendUnstructuredRefIfAbsent(gwIR *ir.Xds, gatewayCtx *GatewayContext, refs []*ir.UnstructuredRef, obj *unstructured.Unstructured) []*ir.UnstructuredRef {
+	ref := t.getOrCreateExtensionResource(gwIR, gatewayCtx, obj)
+	for _, existing := range refs {
+		if ref.Object != nil {
+			if existing.Object == ref.Object {
+				return refs
+			}
+		} else if existing.Name == ref.Name {
 			return refs
 		}
 	}
-	return append(refs, &ir.UnstructuredRef{Object: policy})
+	return append(refs, ref)
+}
+
+// getOrCreateExtensionResource returns a ref to obj. It registers obj once per distinct identity
+// into gwIR.ExtensionResources and returns a lightweight name-only ref, using
+// t.ExtensionResourceMap as a find-or-create cache; a later call for an already-registered
+// identity refreshes the canonical entry to the new obj rather than keeping the first one seen.
+// When no gateway context is available to scope a name, it falls back to a self-contained ref
+// with obj embedded directly.
+func (t *Translator) getOrCreateExtensionResource(
+	gwIR *ir.Xds,
+	gatewayCtx *GatewayContext,
+	obj *unstructured.Unstructured,
+) *ir.UnstructuredRef {
+	if gatewayCtx == nil {
+		return &ir.UnstructuredRef{Object: obj}
+	}
+
+	gvk := obj.GroupVersionKind()
+	key := ExtensionResourceKey{
+		GatewayIRKey: t.getIRKey(gatewayCtx.Gateway),
+		Group:        gvk.Group,
+		Kind:         gvk.Kind,
+		Namespace:    obj.GetNamespace(),
+		Name:         obj.GetName(),
+	}
+
+	if canonical, ok := t.ExtensionResourceMap[key]; ok {
+		// Refresh to the object instance being registered now. The same identity can be
+		// resolved from more than one source (e.g. an extensionRef/custom backend as well as
+		// an ExtensionServerPolicy target), each holding its own *unstructured.Unstructured
+		// copy, and later phases (e.g. ExtensionServerPolicy status) mutate their copy in
+		// place after registering it here. Keeping the most recently registered copy
+		// canonical ensures those mutations remain visible to anything resolving by Name,
+		// instead of pinning the registry to a stale, earlier copy.
+		canonical.Object = obj
+		return &ir.UnstructuredRef{Name: canonical.Name}
+	}
+	if t.ExtensionResourceMap == nil {
+		t.ExtensionResourceMap = make(map[ExtensionResourceKey]*ir.UnstructuredRef)
+	}
+
+	name := irExtensionResourceName(&key)
+	canonical := &ir.UnstructuredRef{Name: name, Object: obj}
+	t.ExtensionResourceMap[key] = canonical
+	if gwIR != nil {
+		gwIR.ExtensionResources = append(gwIR.ExtensionResources, canonical)
+	}
+	return &ir.UnstructuredRef{Name: name}
 }

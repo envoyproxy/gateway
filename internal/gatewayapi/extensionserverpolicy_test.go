@@ -9,10 +9,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestExtractTargetRefs(t *testing.T) {
@@ -152,32 +154,85 @@ func TestExtractTargetRefs(t *testing.T) {
 }
 
 func TestAppendUnstructuredRefIfAbsent(t *testing.T) {
+	tt := &Translator{}
 	p1 := &unstructured.Unstructured{Object: map[string]any{"metadata": map[string]any{"name": "p1"}}}
 	p2 := &unstructured.Unstructured{Object: map[string]any{"metadata": map[string]any{"name": "p2"}}}
 
 	// append nil list
-	refs := appendUnstructuredRefIfAbsent(nil, p1)
+	refs := tt.appendUnstructuredRefIfAbsent(nil, nil, nil, p1)
 	require.Len(t, refs, 1)
 	require.Same(t, p1, refs[0].Object)
 
 	// append valid list
-	refs = appendUnstructuredRefIfAbsent(refs, p2)
+	refs = tt.appendUnstructuredRefIfAbsent(nil, nil, refs, p2)
 	require.Len(t, refs, 2)
 	require.Same(t, p1, refs[0].Object)
 	require.Same(t, p2, refs[1].Object)
 
 	// append objects that were already added
-	refs = appendUnstructuredRefIfAbsent(refs, p1)
+	refs = tt.appendUnstructuredRefIfAbsent(nil, nil, refs, p1)
 	require.Len(t, refs, 2)
-	refs = appendUnstructuredRefIfAbsent(refs, p2)
+	refs = tt.appendUnstructuredRefIfAbsent(nil, nil, refs, p2)
 	require.Len(t, refs, 2)
 
 	// existence check if only done using pointers, adding a policy with the same name
 	// but a different pointer should work
 	p1Copy := &unstructured.Unstructured{Object: map[string]any{"metadata": map[string]any{"name": "p1"}}}
-	refs = appendUnstructuredRefIfAbsent(refs, p1Copy)
+	refs = tt.appendUnstructuredRefIfAbsent(nil, nil, refs, p1Copy)
 	require.Len(t, refs, 3)
 	require.Same(t, p1Copy, refs[2].Object)
+}
+
+func TestGetOrCreateExtensionResource(t *testing.T) {
+	newObj := func(name string) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "example.io/v1",
+			"kind":       "Foo",
+			"metadata":   map[string]any{"name": name, "namespace": "ns1"},
+		}}
+	}
+	gatewayCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "ns1", Name: "gw1"}}}
+
+	t.Run("no gateway context embeds the object directly", func(t *testing.T) {
+		tt := &Translator{}
+		gwIR := &ir.Xds{}
+		obj := newObj("obj1")
+
+		ref := tt.getOrCreateExtensionResource(gwIR, nil, obj)
+		require.Same(t, obj, ref.Object)
+		require.Empty(t, ref.Name)
+		require.Empty(t, gwIR.ExtensionResources)
+	})
+
+	t.Run("registers each distinct identity once", func(t *testing.T) {
+		tt := &Translator{TranslatorContext: &TranslatorContext{}}
+		gwIR := &ir.Xds{}
+		obj1 := newObj("obj1")
+
+		ref1 := tt.getOrCreateExtensionResource(gwIR, gatewayCtx, obj1)
+		require.Nil(t, ref1.Object)
+		require.NotEmpty(t, ref1.Name)
+		require.Len(t, gwIR.ExtensionResources, 1)
+		require.Same(t, obj1, gwIR.ExtensionResources[0].Object)
+		require.Equal(t, ref1.Name, gwIR.ExtensionResources[0].Name)
+
+		// A second, distinct *unstructured.Unstructured with the same GVK+namespace+name
+		// identity reuses the existing registry entry rather than adding a new one, but
+		// refreshes the canonical object to this newer copy rather than keeping the first
+		// one seen (e.g. a copy later mutated with ExtensionServerPolicy status must not be
+		// shadowed by an earlier, stale copy registered from route/filter processing).
+		obj1Again := newObj("obj1")
+		ref2 := tt.getOrCreateExtensionResource(gwIR, gatewayCtx, obj1Again)
+		require.Equal(t, ref1.Name, ref2.Name)
+		require.Nil(t, ref2.Object)
+		require.Len(t, gwIR.ExtensionResources, 1)
+		require.Same(t, obj1Again, gwIR.ExtensionResources[0].Object)
+
+		// A resource with a different identity gets its own registry entry.
+		ref3 := tt.getOrCreateExtensionResource(gwIR, gatewayCtx, newObj("obj2"))
+		require.NotEqual(t, ref1.Name, ref3.Name)
+		require.Len(t, gwIR.ExtensionResources, 2)
+	})
 }
 
 func TestMergeAncestorsForExtensionServerPolicies(t *testing.T) {

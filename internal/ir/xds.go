@@ -193,6 +193,12 @@ type Xds struct {
 	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
 	// source of truth for a cluster's Settings/Metadata.
 	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
+	// ExtensionResources holds extension-introduced resources deduplicated into a single shared
+	// entry, keyed by their Name. Other IR fields reference these via UnstructuredRef.Name instead
+	// of embedding Object.
+	//
+	// +optional
+	ExtensionResources []*UnstructuredRef `json:"extensionResources,omitempty" yaml:"extensionResources,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -1356,6 +1362,16 @@ type EnvoyExtensionFeatures struct {
 //
 // +k8s:deepcopy-gen=true
 type UnstructuredRef struct {
+	// Name uniquely identifies this resource within a single Xds.ExtensionResources registry, in
+	// which case Object is nil here and must be looked up by Name. It is derived from the
+	// resource's GroupVersionKind and namespaced name as "<group>/<kind>/<namespace>/<name>",
+	// lowercasing only the group and kind, e.g. "foo.example.io/bar/default/my-bar". When Group
+	// is empty, the leading segment is omitted: "<kind>/<namespace>/<name>". Empty when Object is
+	// embedded directly instead (no gateway scope was available to dedup against).
+	//
+	// +optional
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
 }
 
