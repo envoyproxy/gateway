@@ -301,11 +301,11 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 
 	// Serve ECDS-eligible filter configs as their own resources, so editing one does not
 	// drain the listener. Runs last to keep EnvoyPatchPolicy and extension servers seeing
-	// the config inline in the HCM, as they always have.
+	// the config inline in the HCM.
 	//
-	// TODO: for them to work on the ECDS resources instead, they would have to run after
-	// this, EnvoyPatchPolicy would need the TypedExtensionConfig type, and the extension
-	// server new hooks.
+	// TODO: for EnvoyPatchPolicy and extension servers to work on the ECDS resources instead,
+	// they would have to run after this, EnvoyPatchPolicy would need the TypedExtensionConfig
+	// type, and the extension server new hooks.
 	if err := t.extractFiltersToECDS(tCtx); err != nil {
 		errs = errors.Join(errs, err)
 	}
