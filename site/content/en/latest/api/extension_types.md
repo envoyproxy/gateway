@@ -3342,14 +3342,14 @@ _Appears in:_
 
 
 
-HTTPRedirectFilter defines extended options for a RequestRedirect filter.
+HTTPRedirectFilter defines a redirect with a regex path transformation.
 
 _Appears in:_
 - [HTTPRouteFilterSpec](#httproutefilterspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  true  |  | Path transforms the path in the redirect Location header using RE2 matching<br />and substitution. The query string is preserved. Capture groups use backslash<br />references such as \1, not $1. All matching portions are replaced.<br />If the pattern does not match, the path is unchanged but the redirect still<br />occurs. Constrain the HTTPRoute matches to avoid redirecting to the same URL.<br />The native RequestRedirect supplies the scheme, hostname, port and status code.<br />Substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'. |
+| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  true  |  | Path transforms the path in the redirect Location header using RE2 matching<br />and substitution. The query string is preserved. Capture groups use backslash<br />references such as \1, not $1. All matching portions are replaced.<br />If the pattern does not match, the path is unchanged but the redirect still<br />occurs. Constrain the HTTPRoute matches to avoid redirecting to the same URL.<br />An optional native RequestRedirect can override the scheme, hostname, port<br />and status code.<br />Substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'. |
 
 
 #### HTTPRouteFilter
@@ -3381,7 +3381,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |  |
-| `redirect` | _[HTTPRedirectFilter](#httpredirectfilter)_ |  false  |  | Redirect extends a Gateway API RequestRedirect filter with a regex path<br />transformation. Both filters must be configured on the same HTTPRoute rule,<br />and the RequestRedirect filter must not specify path. Filter order does not<br />affect the resulting redirect. Only one redirect extension is allowed per rule.<br />Redirect cannot be combined with URL rewriting or direct responses, and is<br />not supported on GRPCRoutes or backendRefs. |
+| `redirect` | _[HTTPRedirectFilter](#httpredirectfilter)_ |  false  |  | Redirect returns a redirect response with a regex path transformation.<br />Without a Gateway API RequestRedirect filter, the status code defaults to 302,<br />the request scheme and hostname are preserved, and the port is derived from<br />the Gateway listener. An optional RequestRedirect filter on the same HTTPRoute<br />rule can override the scheme, hostname, port and status code, but must not<br />specify path. Filter order does not affect the resulting redirect.<br />Only one redirect extension is allowed per rule.<br />Redirect cannot be combined with URL rewriting or direct responses, and is<br />not supported on GRPCRoutes or backendRefs. |
 | `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  | DirectResponse returns a fixed response for matching requests.<br />When this filter is referenced from a GRPCRoute, only a non-2xx status code<br />is supported. gRPC signals success with a grpc-status trailer and a response<br />message, which a direct response cannot produce, so a 2xx status code (which<br />maps to the gRPC OK status) yields an invalid response for gRPC clients. Use a<br />non-2xx status code to deny or block gRPC requests (e.g. 403 maps to<br />PERMISSION_DENIED, 404 to UNIMPLEMENTED, 429/503 to UNAVAILABLE). |
 | `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
 | `matches` | _[HTTPRouteMatchFilter](#httproutematchfilter) array_ |  false  |  | Matches defines additional matching criteria for the HTTPRoute rule.<br />As with HTTPRouteRule.Matches, the rule is matched if any one match applies.<br />When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the<br />effective matching is the logical AND of the two sets. |

@@ -152,9 +152,14 @@ func (t *Translator) ProcessHTTPFilters(
 		}
 	}
 
-	if redirectPath != nil && httpFiltersContext.RedirectResponse != nil {
-		httpFiltersContext.RedirectResponse.Path = &ir.ExtendedHTTPPathModifier{
-			RegexMatchReplace: redirectPath,
+	if redirectPath != nil {
+		if httpFiltersContext.RedirectResponse == nil && len(errs.GetAllErrors()) == 0 {
+			httpFiltersContext.RedirectResponse = &ir.Redirect{StatusCode: new(int32(302))}
+		}
+		if httpFiltersContext.RedirectResponse != nil {
+			httpFiltersContext.RedirectResponse.Path = &ir.ExtendedHTTPPathModifier{
+				RegexMatchReplace: redirectPath,
+			}
 		}
 	}
 
@@ -860,7 +865,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	return nil
 }
 
-// processRedirectExtension composes a rule's native redirect and its extension.
+// processRedirectExtension validates a rule's redirect extension and optional native redirect.
 // Other extension handling, including unresolved references, remains in the
 // normal filter processing path.
 func processRedirectExtension(filters []gwapiv1.HTTPRouteFilter, route RouteContext, resources *resource.Resources) (*ir.RegexMatchReplace, status.Error) {
@@ -905,9 +910,11 @@ func processRedirectExtension(filters []gwapiv1.HTTPRouteFilter, route RouteCont
 	switch {
 	case duplicateExtension:
 		return invalid("only one redirect extension is supported per HTTPRoute rule", gwapiv1.RouteReasonIncompatibleFilters)
-	case redirectCount != 1 || redirect == nil:
-		return invalid("redirect requires exactly one RequestRedirect filter on the same HTTPRoute rule", gwapiv1.RouteReasonIncompatibleFilters)
-	case redirect.Path != nil:
+	case redirectCount > 1:
+		return invalid("redirect supports at most one RequestRedirect filter on the same HTTPRoute rule", gwapiv1.RouteReasonIncompatibleFilters)
+	case redirectCount == 1 && redirect == nil:
+		return invalid("RequestRedirect filter must specify requestRedirect", gwapiv1.RouteReasonIncompatibleFilters)
+	case redirect != nil && redirect.Path != nil:
 		return invalid("redirect path cannot be combined with RequestRedirect.path", gwapiv1.RouteReasonIncompatibleFilters)
 	case conflictingAction:
 		return invalid("redirect cannot be combined with URLRewrite or DirectResponse", gwapiv1.RouteReasonIncompatibleFilters)

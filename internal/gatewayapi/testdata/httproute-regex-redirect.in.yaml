@@ -59,6 +59,28 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     namespace: default
+    name: standalone-redirect
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    hostnames:
+    - standalone.example.com
+    rules:
+    - matches:
+      - path:
+          type: RegularExpression
+          value: '^/blogs/([0-9]+)$'
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: regex-redirect
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
     name: conflicting-redirect
   spec:
     parentRefs:

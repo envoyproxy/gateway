@@ -71,29 +71,54 @@ func TestBuildRouteTracingSampling(t *testing.T) {
 }
 
 func TestBuildRegexRedirectAction(t *testing.T) {
-	route := &ir.HTTPRoute{
-		Name:      "regex-redirect",
-		PathMatch: &ir.StringMatch{SafeRegex: new(`^/blogs/([0-9]+)$`)},
-		Redirect: &ir.Redirect{
-			Scheme: new("https"), Hostname: new("example.com"), Port: new(uint32(8443)), StatusCode: new(int32(302)),
-			Path: &ir.ExtendedHTTPPathModifier{RegexMatchReplace: &ir.RegexMatchReplace{
-				Pattern: `^/blogs/([0-9]+)$`, Substitution: `/post-\1`,
-			}},
-		},
+	for _, tc := range []struct {
+		name     string
+		scheme   *string
+		hostname *string
+		port     uint32
+	}{
+		{name: "standalone", port: 80},
+		{name: "standalone non-default port", port: 8080},
+		{name: "composed", scheme: new("https"), hostname: new("example.com"), port: 8443},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			route := &ir.HTTPRoute{
+				Name:      "regex-redirect",
+				PathMatch: &ir.StringMatch{SafeRegex: new(`^/blogs/([0-9]+)$`)},
+				Redirect: &ir.Redirect{
+					Scheme: tc.scheme, Hostname: tc.hostname, Port: &tc.port, StatusCode: new(int32(302)),
+					Path: &ir.ExtendedHTTPPathModifier{RegexMatchReplace: &ir.RegexMatchReplace{
+						Pattern: `^/blogs/([0-9]+)$`, Substitution: `/post-\1`,
+					}},
+				},
+			}
+			got, err := buildXdsRoute(route, &ir.HTTPListener{}, nil)
+			require.NoError(t, err)
+			require.NoError(t, got.ValidateAll())
+			require.Nil(t, got.GetRoute())
+			require.NotNil(t, got.GetRedirect())
+			redirect := got.GetRedirect()
+			if tc.scheme == nil {
+				require.Nil(t, redirect.SchemeRewriteSpecifier)
+			} else {
+				require.Equal(t, *tc.scheme, redirect.GetSchemeRedirect())
+			}
+			if tc.hostname == nil {
+				require.Empty(t, redirect.HostRedirect)
+			} else {
+				require.Equal(t, *tc.hostname, redirect.HostRedirect)
+			}
+			if tc.port == 80 {
+				require.Zero(t, redirect.PortRedirect)
+			} else {
+				require.Equal(t, tc.port, redirect.PortRedirect)
+			}
+			require.Equal(t, routev3.RedirectAction_FOUND, redirect.ResponseCode)
+			require.Equal(t, `^/blogs/([0-9]+)$`, redirect.GetRegexRewrite().Pattern.Regex)
+			require.Equal(t, `/post-\1`, redirect.GetRegexRewrite().Substitution)
+			require.False(t, redirect.StripQuery)
+		})
 	}
-	got, err := buildXdsRoute(route, &ir.HTTPListener{}, nil)
-	require.NoError(t, err)
-	require.NoError(t, got.ValidateAll())
-	require.Nil(t, got.GetRoute())
-	require.NotNil(t, got.GetRedirect())
-	redirect := got.GetRedirect()
-	require.Equal(t, "https", redirect.GetSchemeRedirect())
-	require.Equal(t, "example.com", redirect.HostRedirect)
-	require.Equal(t, uint32(8443), redirect.PortRedirect)
-	require.Equal(t, routev3.RedirectAction_FOUND, redirect.ResponseCode)
-	require.Equal(t, `^/blogs/([0-9]+)$`, redirect.GetRegexRewrite().Pattern.Regex)
-	require.Equal(t, `/post-\1`, redirect.GetRegexRewrite().Substitution)
-	require.False(t, redirect.StripQuery)
 }
 
 func TestBuildHashPolicy(t *testing.T) {

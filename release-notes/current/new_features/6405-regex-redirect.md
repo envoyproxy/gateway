@@ -1,1 +1,1 @@
-Added regex path transformations for HTTP redirects through HTTPRouteFilter.redirect, composed with the Gateway API RequestRedirect filter.
+Added regex path transformations for HTTP redirects through HTTPRouteFilter.redirect, usable standalone with a default 302 status code or composed with an optional Gateway API RequestRedirect filter to override the scheme, hostname, port and status code.

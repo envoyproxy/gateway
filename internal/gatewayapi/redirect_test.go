@@ -17,6 +17,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestRedirectExtension(t *testing.T) {
@@ -24,16 +25,53 @@ func TestRedirectExtension(t *testing.T) {
 		name   string
 		mutate func(*[]gwapiv1.HTTPRouteFilter, *egv1a1.HTTPRouteFilter)
 		err    string
+		want   *ir.Redirect
 	}{
 		{name: "native first"},
 		{name: "extension first", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) { slices.Reverse(*filters) }},
-		{name: "missing redirect", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) { *filters = (*filters)[1:] }, err: "requires exactly one RequestRedirect"},
+		{name: "standalone", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) { *filters = (*filters)[1:] },
+			want: &ir.Redirect{StatusCode: new(int32(302))}},
+		{name: "status override only", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
+			(*filters)[0].RequestRedirect = &gwapiv1.HTTPRequestRedirectFilter{StatusCode: new(301)}
+		}, want: &ir.Redirect{StatusCode: new(int32(301))}},
+		{name: "invalid native scheme", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
+			(*filters)[0].RequestRedirect.Scheme = new("ftp")
+		}, err: "scheme: ftp is unsupported"},
+		{name: "nil native redirect", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
+			(*filters)[0].RequestRedirect = nil
+		}, err: "RequestRedirect filter must specify requestRedirect"},
 		{name: "duplicate extension", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
 			*filters = append(*filters, (*filters)[1])
 		}, err: "only one redirect extension"},
 		{name: "duplicate native", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
 			*filters = append(*filters, (*filters)[0])
-		}, err: "requires exactly one RequestRedirect"},
+		}, err: "at most one RequestRedirect"},
+		{name: "standalone duplicate extension", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
+			*filters = append((*filters)[1:], (*filters)[1])
+		}, err: "only one redirect extension"},
+		{name: "standalone rewrite conflict", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
+			*filters = append((*filters)[1:], gwapiv1.HTTPRouteFilter{Type: gwapiv1.HTTPRouteFilterURLRewrite, URLRewrite: &gwapiv1.HTTPURLRewriteFilter{}})
+		}, err: "cannot be combined with URLRewrite"},
+		{name: "standalone direct response conflict", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) {
+			*filters = (*filters)[1:]
+			hrf.Spec.DirectResponse = &egv1a1.HTTPDirectResponseFilter{}
+		}, err: "cannot be combined with URLRewrite or DirectResponse"},
+		{name: "standalone invalid pattern", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) {
+			*filters = (*filters)[1:]
+			hrf.Spec.Redirect.Path.ReplaceRegexMatch.Pattern = "("
+		}, err: "valid RE2"},
+		{name: "standalone unresolved extension", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) {
+			*filters = (*filters)[1:]
+			hrf.Name = "different"
+		}, err: "Unable to translate HTTPRouteFilter"},
+		{name: "standalone unresolved additional reference", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
+			*filters = append((*filters)[1:], gwapiv1.HTTPRouteFilter{
+				Type: gwapiv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1.LocalObjectReference{
+					Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "missing",
+				},
+			})
+		}, err: "Unable to translate HTTPRouteFilter"},
 		{name: "native path conflict", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
 			(*filters)[0].RequestRedirect.Path = &gwapiv1.HTTPPathModifier{Type: gwapiv1.FullPathHTTPPathModifier, ReplaceFullPath: new("/landing")}
 		}, err: "cannot be combined with RequestRedirect.path"},
@@ -60,7 +98,11 @@ func TestRedirectExtension(t *testing.T) {
 		{name: "invalid capture", mutate: func(_ *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) {
 			hrf.Spec.Redirect.Path.ReplaceRegexMatch.Substitution = `/post-\2`
 		}, err: "valid RE2 capture references"},
-		{name: "unresolved extension", mutate: func(_ *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) { hrf.Name = "different" }, err: "Unable to translate HTTPRouteFilter"},
+		{name: "unresolved extension", mutate: func(_ *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) { hrf.Name = "different" },
+			err: "Unable to translate HTTPRouteFilter",
+			want: &ir.Redirect{
+				Scheme: new("https"), Hostname: new("example.com"), Port: new(uint32(8443)), StatusCode: new(int32(301)),
+			}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			hrf := &egv1a1.HTTPRouteFilter{
@@ -87,17 +129,22 @@ func TestRedirectExtension(t *testing.T) {
 			if tc.err != "" {
 				require.NotEmpty(t, errs)
 				require.Contains(t, errs[0].Error(), tc.err)
+				require.Equal(t, tc.want, got.RedirectResponse)
 				return
 			}
 			require.Empty(t, errs)
 			require.NotNil(t, got.RedirectResponse)
 			require.NoError(t, got.RedirectResponse.Validate())
-			require.Equal(t, "https", *got.RedirectResponse.Scheme)
-			require.Equal(t, "example.com", *got.RedirectResponse.Hostname)
-			require.Equal(t, uint32(8443), *got.RedirectResponse.Port)
-			require.Equal(t, int32(301), *got.RedirectResponse.StatusCode)
-			require.Equal(t, `^/blogs/([0-9]+)$`, got.RedirectResponse.Path.RegexMatchReplace.Pattern)
-			require.Equal(t, `/post-\1`, got.RedirectResponse.Path.RegexMatchReplace.Substitution)
+			want := tc.want
+			if want == nil {
+				want = &ir.Redirect{
+					Scheme: new("https"), Hostname: new("example.com"), Port: new(uint32(8443)), StatusCode: new(int32(301)),
+				}
+			}
+			want.Path = &ir.ExtendedHTTPPathModifier{RegexMatchReplace: &ir.RegexMatchReplace{
+				Pattern: `^/blogs/([0-9]+)$`, Substitution: `/post-\1`,
+			}}
+			require.Equal(t, want, got.RedirectResponse)
 			require.Nil(t, got.URLRewrite)
 		})
 	}
@@ -258,13 +305,23 @@ func TestRedirectExtensionBackendRef(t *testing.T) {
 			Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "redirect",
 		}},
 	}
-	_, err := translator.processDestinationFilters(resource.KindHTTPRoute, BackendRefWithFilters{Filters: filters}, nil, route,
-		&resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{{
-			ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
-			Spec: egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
-				Type:              egv1a1.RegexHTTPPathModifier,
-				ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "old", Substitution: "new"},
-			}}},
-		}}}, nil)
-	require.ErrorContains(t, err, "not supported on backendRefs")
+	for _, tc := range []struct {
+		name    string
+		filters []gwapiv1.HTTPRouteFilter
+	}{
+		{name: "composed", filters: filters},
+		{name: "standalone", filters: filters[1:]},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := translator.processDestinationFilters(resource.KindHTTPRoute, BackendRefWithFilters{Filters: tc.filters}, nil, route,
+				&resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{{
+					ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
+					Spec: egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+						Type:              egv1a1.RegexHTTPPathModifier,
+						ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "old", Substitution: "new"},
+					}}},
+				}}}, nil)
+			require.ErrorContains(t, err, "not supported on backendRefs")
+		})
+	}
 }

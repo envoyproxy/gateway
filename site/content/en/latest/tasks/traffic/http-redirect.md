@@ -13,12 +13,12 @@ redirect paths through its `HTTPRouteFilter` extension. To learn more about HTTP
 
 ## Regex Redirect Paths
 
-Use `HTTPRouteFilter.spec.redirect` together with a native `RequestRedirect` filter to construct a redirect
-path using regex capture groups. The native filter supplies the scheme, hostname, port and status code;
-the extension supplies the path transformation. Envoy produces one redirect response without forwarding
-the request to a backend. The two filters can appear in either order.
+Use `HTTPRouteFilter.spec.redirect` to construct a redirect path using regex capture groups.
+The extension works on its own: it defaults to status 302, preserves the request scheme and hostname,
+and derives the port from the Gateway listener. Envoy produces one redirect response without forwarding
+the request to a backend.
 
-This example redirects `/blogs/123` to `https://example.com/post-123` with status 301:
+This example redirects `/blogs/123` to `/post-123` on the same host with status 302:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -34,11 +34,6 @@ spec:
             type: RegularExpression
             value: '^/blogs/([0-9]+)$'
       filters:
-        - type: RequestRedirect
-          requestRedirect:
-            scheme: https
-            hostname: example.com
-            statusCode: 301
         - type: ExtensionRef
           extensionRef:
             group: gateway.envoyproxy.io
@@ -65,8 +60,26 @@ curl -i "http://${GATEWAY_HOST}/blogs/123?source=email"
 ```
 
 ```console
-HTTP/1.1 301 Moved Permanently
-location: https://example.com/post-123?source=email
+HTTP/1.1 302 Found
+location: http://<GATEWAY_HOST>/post-123?source=email
+```
+
+To override the scheme, hostname, port or status code, add an optional native `RequestRedirect`
+filter to the same rule. For example, the following filters redirect to
+`https://example.com/post-123` with status 301. The two filters can appear in either order.
+
+```yaml
+filters:
+  - type: RequestRedirect
+    requestRedirect:
+      scheme: https
+      hostname: example.com
+      statusCode: 301
+  - type: ExtensionRef
+    extensionRef:
+      group: gateway.envoyproxy.io
+      kind: HTTPRouteFilter
+      name: regex-redirect
 ```
 
 The regex transforms only the path; the original query string is preserved. Use RE2 replacement syntax
@@ -74,11 +87,11 @@ The regex transforms only the path; the original query string is preserved. Use 
 matching portions. Substitutions must be non-empty and cannot contain NUL, CR, LF, `?` or `#`.
 
 The transformation regex does not decide whether the route matches. If it does not match the path, the
-native redirect still applies with the unchanged path. Use appropriate HTTPRoute matches to avoid a
+redirect still applies with the unchanged path. Use appropriate HTTPRoute matches to avoid a
 redirect back to the same URL.
 
-Only one redirect extension is supported per HTTPRoute rule, and it requires exactly one native
-`RequestRedirect` filter. The native filter must not specify `path`, since it would conflict with the
+Only one redirect extension and at most one native `RequestRedirect` filter are supported per HTTPRoute
+rule. If present, the native filter must not specify `path`, since it would conflict with the
 extension's path transformation. Conflicts are reported in route status. Redirect extensions cannot
 be combined with URL rewrite or direct response filters, or attached to GRPCRoutes or backendRefs.
 

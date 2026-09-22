@@ -15,7 +15,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 4
+    - attachedRoutes: 5
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -183,6 +183,45 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
+    name: standalone-redirect
+    namespace: default
+  spec:
+    hostnames:
+    - standalone.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: regex-redirect
+        type: ExtensionRef
+      matches:
+      - path:
+          type: RegularExpression
+          value: ^/blogs/([0-9]+)$
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
     name: conflicting-redirect
     namespace: default
   spec:
@@ -294,8 +333,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'HTTPRouteFilter default/regex-redirect: redirect requires exactly
-          one RequestRedirect filter on the same HTTPRoute rule.'
+        message: 'HTTPRouteFilter default/regex-redirect: redirect cannot be combined
+          with URLRewrite or DirectResponse.'
         reason: IncompatibleFilters
         status: "False"
         type: Accepted
@@ -391,6 +430,26 @@ xdsIR:
           port: 443
           scheme: https
           statusCode: 301
+      - hostname: standalone.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: standalone-redirect
+          namespace: default
+        name: httproute/default/standalone-redirect/rule/0/match/0/standalone_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          safeRegex: ^/blogs/([0-9]+)$
+        redirect:
+          path:
+            fullReplace: null
+            prefixMatchReplace: null
+            regexMatchReplace:
+              pattern: ^/blogs/([0-9]+)$
+              substitution: /post-\1
+          port: 80
+          statusCode: 302
       - directResponse:
           statusCode: 500
         hostname: '*'

@@ -23,7 +23,7 @@ func init() {
 
 var RegexRedirectTest = suite.ConformanceTest{
 	ShortName:   "RegexRedirect",
-	Description: "Regex redirect paths compose with native redirects in either filter order",
+	Description: "Regex redirects work standalone or compose with native redirects in either filter order",
 	Manifests:   []string{"testdata/regex-redirect.yaml"},
 	Test: func(t *testing.T, s *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
@@ -34,6 +34,8 @@ var RegexRedirectTest = suite.ConformanceTest{
 			path, location string
 			code           int
 		}{
+			{"/standalone/123", "http://redirect.example/post-123", 302},
+			{"/standalone/123?utm_source=email&x=%2F", "http://redirect.example/post-123?utm_source=email&x=%2F", 302},
 			{"/blogs/123", "https://example.com/post-123", 301},
 			{"/blogs/123?utm_source=email&x=1", "https://example.com/post-123?utm_source=email&x=1", 301},
 			{"/blogs/not-a-number", "https://example.com/blogs/not-a-number", 301},
@@ -43,7 +45,7 @@ var RegexRedirectTest = suite.ConformanceTest{
 		} {
 			t.Run(tc.path, func(t *testing.T) {
 				expected := http.ExpectedResponse{
-					Request:   http.Request{Path: tc.path, UnfollowRedirect: true},
+					Request:   http.Request{Host: "redirect.example", Path: tc.path, UnfollowRedirect: true},
 					Response:  http.Response{StatusCode: tc.code, Headers: map[string]string{"Location": tc.location}},
 					Namespace: ns,
 				}
