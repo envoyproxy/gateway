@@ -40,22 +40,7 @@ const (
 
 // ShutdownManager serves shutdown manager process for Envoy proxies.
 func ShutdownManager(readyTimeout time.Duration) error {
-	// Setup HTTP handler
-	handler := http.NewServeMux()
-	handler.HandleFunc(ShutdownManagerHealthCheckPath, func(_ http.ResponseWriter, _ *http.Request) {})
-	handler.HandleFunc(ShutdownManagerReadyPath, func(w http.ResponseWriter, _ *http.Request) {
-		shutdownReadyHandler(w, readyTimeout, ShutdownReadyFile)
-	})
-
-	// Setup HTTP server
-	srv := http.Server{
-		Handler:           handler,
-		Addr:              fmt.Sprintf(":%d", ShutdownManagerPort),
-		ReadTimeout:       5 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       15 * time.Second,
-	}
+	srv := shutdownManagerServer(readyTimeout)
 
 	// Setup signal handling
 	c := make(chan struct{})
@@ -82,6 +67,26 @@ func ShutdownManager(readyTimeout time.Duration) error {
 	// Wait until done
 	<-c
 	return nil
+}
+
+func shutdownManagerServer(readyTimeout time.Duration) http.Server {
+	// Setup HTTP handler
+	handler := http.NewServeMux()
+	handler.HandleFunc(ShutdownManagerHealthCheckPath, func(_ http.ResponseWriter, _ *http.Request) {})
+	handler.HandleFunc(ShutdownManagerReadyPath, func(w http.ResponseWriter, _ *http.Request) {
+		shutdownReadyHandler(w, readyTimeout, ShutdownReadyFile)
+	})
+
+	// Setup HTTP server
+	return http.Server{
+		Handler:           handler,
+		Addr:              fmt.Sprintf(":%d", ShutdownManagerPort),
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		// The readiness handler can wait for the full drain timeout before responding.
+		WriteTimeout: readyTimeout + 5*time.Second,
+		IdleTimeout:  15 * time.Second,
+	}
 }
 
 // shutdownReadyHandler handles the endpoint used by a preStop hook on the Envoy

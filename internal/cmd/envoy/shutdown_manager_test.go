@@ -19,6 +19,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestShutdownManagerWriteTimeout(t *testing.T) {
+	readyTimeout := 75 * time.Second
+	server := shutdownManagerServer(readyTimeout)
+	require.Greater(t, server.WriteTimeout, readyTimeout)
+}
+
 // setupFakeEnvoyStats set up an HTTP server return content
 func setupFakeEnvoyStats(t *testing.T, content string) *http.Server {
 	// Reuse the bound listener instead of closing and re-binding the port.
