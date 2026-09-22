@@ -478,6 +478,9 @@ const (
 	// EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.
 	EnvoyFilterDynamicForwardProxy EnvoyFilter = "envoy.filters.http.dynamic_forward_proxy"
 
+	// EnvoyFilterAlternateProtocolsCache defines the Envoy HTTP alternate protocols cache filter.
+	EnvoyFilterAlternateProtocolsCache EnvoyFilter = "envoy.filters.http.alternate_protocols_cache"
+
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
 
