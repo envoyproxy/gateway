@@ -29,8 +29,10 @@ func TestRedirectExtension(t *testing.T) {
 	}{
 		{name: "native first"},
 		{name: "extension first", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) { slices.Reverse(*filters) }},
-		{name: "standalone", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) { *filters = (*filters)[1:] },
-			want: &ir.Redirect{StatusCode: new(int32(302))}},
+		{
+			name: "standalone", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) { *filters = (*filters)[1:] },
+			want: &ir.Redirect{StatusCode: new(int32(302))},
+		},
 		{name: "status override only", mutate: func(filters *[]gwapiv1.HTTPRouteFilter, _ *egv1a1.HTTPRouteFilter) {
 			(*filters)[0].RequestRedirect = &gwapiv1.HTTPRequestRedirectFilter{StatusCode: new(301)}
 		}, want: &ir.Redirect{StatusCode: new(int32(301))}},
@@ -98,11 +100,13 @@ func TestRedirectExtension(t *testing.T) {
 		{name: "invalid capture", mutate: func(_ *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) {
 			hrf.Spec.Redirect.Path.ReplaceRegexMatch.Substitution = `/post-\2`
 		}, err: "valid RE2 capture references"},
-		{name: "unresolved extension", mutate: func(_ *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) { hrf.Name = "different" },
+		{
+			name: "unresolved extension", mutate: func(_ *[]gwapiv1.HTTPRouteFilter, hrf *egv1a1.HTTPRouteFilter) { hrf.Name = "different" },
 			err: "Unable to translate HTTPRouteFilter",
 			want: &ir.Redirect{
 				Scheme: new("https"), Hostname: new("example.com"), Port: new(uint32(8443)), StatusCode: new(int32(301)),
-			}},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			hrf := &egv1a1.HTTPRouteFilter{
