@@ -672,7 +672,23 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 		}
 		return nil, nil, ErrNoValidCACertificate
 	}
-	return []byte(ca), nil, nil
+	return t.internCACertBundle(ca), nil, nil
+}
+
+// internCACertBundle returns a slice holding ca, reusing the one already handed out
+// for identical content within this translation. Destinations that validate against
+// the same CA then share a single backing array; see the deep-copy contract in
+// internal/ir/deepcopy.go for why sharing is safe.
+func (t *Translator) internCACertBundle(ca string) []byte {
+	if cached, ok := t.CACertBundleMap[ca]; ok {
+		return cached
+	}
+	if t.CACertBundleMap == nil {
+		t.CACertBundleMap = make(map[string][]byte)
+	}
+	bundle := []byte(ca)
+	t.CACertBundleMap[ca] = bundle
+	return bundle
 }
 
 func getAncestorRefs(policy *gwapiv1.BackendTLSPolicy) []*gwapiv1.ParentReference {
