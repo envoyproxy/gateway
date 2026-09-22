@@ -109,7 +109,7 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 }
 
 // mergeLuaSourceCodes adds the scripts to a slot filter another IR listener already put in
-// this HCM, so listeners sharing a manager share its Lua VMs instead of each building a set.
+// this HCM.
 func mergeLuaSourceCodes(filter *hcmv3.HttpFilter, sourceCodes map[string]*corev3.DataSource) error {
 	if len(sourceCodes) == 0 {
 		return nil
@@ -164,9 +164,10 @@ func buildHCMLuaFilter(scope string, slot int, sourceCodes map[string]*corev3.Da
 	}, nil
 }
 
-// luaFilterScope returns the name the Lua filters of this HCM are grouped under. It is the
-// RouteConfiguration the manager serves, because that is what the IR listeners sharing an
-// HCM have in common, and what routes key their per-filter config against.
+// luaFilterScope returns the name the Lua filters of this HCM are grouped under: the
+// RouteConfiguration it serves, set from the first IR listener to build the manager and
+// shared by the rest. The filter name is also used as its ECDS resource name, so it has
+// to be unique across the proxy, and every route reaching this HCM keys on the same scope.
 func luaFilterScope(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) string {
 	if name := mgr.GetRds().GetRouteConfigName(); name != "" {
 		return name
@@ -175,8 +176,8 @@ func luaFilterScope(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListene
 }
 
 // luaFilterName returns the name of the HCM Lua filter serving the given slot. The scope
-// keeps the name, which doubles as the filter's ECDS resource name, unique across the
-// proxy, and the trailing index orders the filters within the HCM, see newOrderedHTTPFilter.
+// keeps it unique across the proxy, the trailing index orders the filters within the HCM,
+// see newOrderedHTTPFilter.
 func luaFilterName(scope string, slot int) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterLua, fmt.Sprintf("%s/%d", scope, slot))
 }
