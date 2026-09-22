@@ -2,18 +2,25 @@
 title: "Request Buffering"
 ---
 
-The [Envoy buffer filter] is used to stop filter iteration and wait for a fully buffered complete request. This is useful in different situations including protecting some applications from having to deal with partial requests and high network latency.
+Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to control how much of a request body Envoy may
+buffer, and whether requests are fully buffered before being forwarded upstream. This instantiated resource can be linked to a [Gateway][],
+or [HTTPRoute][].
 
-Enabling request buffering requires specifying a size limit for the buffer. Any requests that are larger than the limit will stop the buffering and return a HTTP 413 Content Too Large response.
+If the target of the BackendTrafficPolicy is a Gateway, the configuration will be applied to all xRoutes under that Gateway.
 
-Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to enable request buffering.
-This instantiated resource can be linked to a [Gateway][], or [HTTPRoute][].
+Configuring `requestBuffer` requires specifying a size limit. Any request whose buffered body is larger than the limit will stop the
+buffering and return a HTTP 413 Content Too Large response. The `requestBuffer.mode` field selects how that limit is enforced:
 
-If the target of the BackendTrafficPolicy is a Gateway, the request buffering will be applied to all xRoutes under that Gateway.
+- `BufferAndLimit` (the default) stops filter iteration and waits for a fully buffered complete request before forwarding it upstream, using the
+  [Envoy buffer filter]. This is useful in several situations, including protecting applications from having to deal with partial requests
+  and high network latency.
+- `LimitOnly` only raises the request body buffer limit for the route, without enabling full request buffering. Use it when a filter later
+  in the chain — such as ext_proc, Lua, or WASM — buffers the request body and the default buffer limit is too small.
 
-Warning: Request buffering requires Envoy to fully receive the request before forwarding it upstream. This does not work with streaming or
-upgrade-based traffic such as gRPC streaming and WebSocket. Enabling `requestBuffer` for those routes can cause requests to hang indefinitely
-because the request may never be forwarded upstream. Use request buffering only on non-streaming HTTP request flows.
+Warning: `BufferAndLimit` requires Envoy to fully receive the request before forwarding it upstream. This does not work with streaming or
+upgrade-based traffic such as gRPC streaming and WebSocket. Using `BufferAndLimit` for those routes can cause requests to hang indefinitely
+because the request may never be forwarded upstream. Use full request buffering only on non-streaming HTTP request flows, or use
+`LimitOnly` instead, which is compatible with streaming and protocol upgrades.
 
 ## Prerequisites
 
@@ -193,6 +200,34 @@ HTTP 413 Payload Too Large response
 Payload Too Large
 Status Code: 413
 ```
+
+## Raising the Buffer Limit Without Full Buffering
+
+Set `mode: LimitOnly` to raise the request body buffer limit for a route without buffering the whole request in the gateway. The Envoy
+buffer filter is not inserted in this mode, so the route stays compatible with streaming and protocol upgrades. The limit is still enforced,
+but only against whatever a filter later in the chain — such as ext_proc, Lua, or WASM — actually buffers.
+
+Switch the existing policy over to `LimitOnly`:
+
+```shell
+kubectl patch backendtrafficpolicy/request-buffer --type=merge -p '{"spec":{"requestBuffer":{"mode":"LimitOnly"}}}'
+```
+
+Now send the same payload that was rejected above. Nothing in the filter chain buffers the request body, so the request is streamed
+upstream and succeeds even though it is larger than the 4 byte limit:
+
+```shell
+curl -H "Host: www.example.com" "http://${GATEWAY_HOST}/foo" -XPOST -d '{"key": "value"}' -w "\nStatus Code: %{http_code}"
+```
+
+```
+Status Code: 200
+```
+
+This limit is independent of the connection buffer limits configured through `ClientTrafficPolicy` and `BackendTrafficPolicy`. The
+connection buffer limits control downstream and upstream connection read/write buffering and back pressure, while `requestBuffer.limit`
+sets the maximum size of an individual request body that Envoy may buffer for HTTP processing. For HTTP/1, connection buffer limits can
+still affect how request body data is read and buffered, so configure them large enough for the request body buffering you expect to allow.
 
 ## Clean-Up
 
