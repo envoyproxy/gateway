@@ -2319,14 +2319,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			allRuleBackendRefs = distinctBackendObjectReferences(tlsRoute, allRuleBackendRefs)
 		}
 
+		var mergeIncompatible bool
+		if mergeBackendsEnabled {
+			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(allRuleBackendRefs)
+		}
+
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, tlsRoute, parentRef, rule.Name)
-
-			var mergeIncompatible bool
-			if mergeBackendsEnabled {
-				mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(allRuleBackendRefs)
-			}
 
 			for i := range rule.BackendRefs {
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
@@ -2461,7 +2461,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
-						false,
+						mergeIncompatible,
 					),
 					Metadata: routeRuleMetadata,
 				}
@@ -2635,7 +2635,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
-						false,
+						mergeIncompatible,
 					),
 				}
 			}
@@ -2799,7 +2799,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
-						false,
+						mergeIncompatible,
 					),
 					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}
