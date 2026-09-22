@@ -245,7 +245,6 @@ type httpRouteWithBackendDestinations struct {
 	routeRuleMetadata        *ir.ResourceMetadata
 	routeRuleName            *gwapiv1.SectionName
 	statName                 *string
-	requiresSingleCluster    bool
 }
 
 func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*httpRouteWithBackendDestinations, []status.Error, []int) {
@@ -485,7 +484,6 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				routeWithBackends.destName = destName
 				routeWithBackends.routeRuleMetadata = routeRuleMetadata
 				routeWithBackends.routeRuleName = rule.Name
-				routeWithBackends.requiresSingleCluster = mergeUnsafeForRule
 				if pattern != "" {
 					routeWithBackends.statName = new(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 				}
@@ -990,15 +988,13 @@ func (t *Translator) routeDestinationForListener(
 	routeRuleMetadata *ir.ResourceMetadata,
 	statName *string,
 	routeBackendDestinations []routeBackendRefDestination,
-	requiresSingleCluster bool,
 ) *ir.RouteDestination {
 	hasClusterSettings := t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, listener, routeRuleName)
 
 	destination := &ir.RouteDestination{
-		Name:                  destName,
-		Metadata:              routeRuleMetadata,
-		StatName:              statName,
-		RequiresSingleCluster: requiresSingleCluster,
+		Name:     destName,
+		Metadata: routeRuleMetadata,
+		StatName: statName,
 	}
 	for _, bd := range routeBackendDestinations {
 		if bd.backendClusterKey == nil || hasClusterSettings {
@@ -1710,7 +1706,6 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				routeWithBackends.destName = destName
 				routeWithBackends.routeRuleMetadata = routeRuleMetadata
 				routeWithBackends.routeRuleName = rule.Name
-				routeWithBackends.requiresSingleCluster = mergeIncompatible
 				if pattern != "" {
 					routeWithBackends.statName = new(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
 				}
@@ -1950,7 +1945,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 						routeWithBackends.routeRuleMetadata,
 						routeWithBackends.statName,
 						routeWithBackends.routeBackendDestinations,
-						routeWithBackends.requiresSingleCluster,
 					)
 				}
 
@@ -2469,7 +2463,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
-						mergeIncompatible,
 					),
 					Metadata: routeRuleMetadata,
 				}
@@ -2643,7 +2636,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
-						mergeIncompatible,
 					),
 				}
 			}
@@ -2807,7 +2799,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
-						mergeIncompatible,
 					),
 					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}

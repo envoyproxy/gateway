@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -603,16 +602,6 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	}
 	backendPolicyMap[key] = policy
 
-	// Unmerged with gwPolicy: route.Traffic already reflects it, merging again here would
-	// leak an untouched field back over the route's own resolved value.
-	var backendTraffic *ir.ClusterTrafficFeatures
-	var backendTrafficErr error
-	if tf, err := t.buildTrafficFeatures(policy, nil); err != nil || tf == nil {
-		backendTrafficErr = err
-	} else {
-		backendTraffic = tf.ClusterFeatures()
-	}
-
 	matchedGWs := make(sets.Set[types.NamespacedName])
 	mergedGWs := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
 	for _, gw := range gateways {
@@ -665,167 +654,6 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			if gwPolicy != nil {
 				mergedGWs[gwNN] = gwPolicy
 			}
-		}
-
-		unsupportedRoutes := make(map[string]bool) // dedupe within this gateway
-		needsTranslationError := false
-
-		for _, http := range x.HTTP {
-			for _, route := range http.Routes {
-				rd := route.Destination
-				if rd == nil {
-					continue
-				}
-				for _, ds := range rd.Settings {
-					if backendPolicyKeyFromMetadata(ds.Metadata) != key {
-						continue
-					}
-
-					if rd.RequiresSingleCluster {
-						if rd.Metadata != nil {
-							unsupportedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
-						}
-						continue
-					}
-
-					if backendTraffic == nil {
-						needsTranslationError = needsTranslationError || backendTrafficErr != nil
-						continue
-					}
-
-					resolved := &ir.ClusterTrafficFeatures{}
-					if cf := route.Traffic.ClusterFeatures(); cf != nil {
-						*resolved = *cf
-					}
-					overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
-					overrideIfSet(&resolved.ProxyProtocol, backendTraffic.ProxyProtocol)
-					overrideIfSet(&resolved.HealthCheck, backendTraffic.HealthCheck)
-					overrideIfSet(&resolved.AdmissionControl, backendTraffic.AdmissionControl)
-					overrideIfSet(&resolved.CircuitBreaker, backendTraffic.CircuitBreaker)
-					overrideIfSet(&resolved.Timeout, backendTraffic.Timeout)
-					overrideIfSet(&resolved.TCPKeepalive, backendTraffic.TCPKeepalive)
-					overrideIfSet(&resolved.BackendConnection, backendTraffic.BackendConnection)
-					overrideIfSet(&resolved.HTTP2, backendTraffic.HTTP2)
-					overrideIfSet(&resolved.DNS, backendTraffic.DNS)
-					resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
-
-					ds.Traffic = resolved
-					matchedGWs.Insert(gwNN)
-				}
-			}
-		}
-
-		for _, tcpListener := range x.TCP {
-			for _, tcpRoute := range tcpListener.Routes {
-				rd := tcpRoute.Destination
-				if rd == nil {
-					continue
-				}
-				for _, ds := range rd.Settings {
-					if backendPolicyKeyFromMetadata(ds.Metadata) != key {
-						continue
-					}
-					if rd.RequiresSingleCluster {
-						if rd.Metadata != nil {
-							unsupportedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
-						}
-						continue
-					}
-
-					if backendTraffic == nil {
-						needsTranslationError = needsTranslationError || backendTrafficErr != nil
-						continue
-					}
-
-					resolved := &ir.ClusterTrafficFeatures{
-						LoadBalancer:      tcpRoute.LoadBalancer,
-						ProxyProtocol:     tcpRoute.ProxyProtocol,
-						CircuitBreaker:    tcpRoute.CircuitBreaker,
-						HealthCheck:       tcpRoute.HealthCheck,
-						Timeout:           tcpRoute.Timeout,
-						TCPKeepalive:      tcpRoute.TCPKeepalive,
-						BackendConnection: tcpRoute.BackendConnection,
-						DNS:               tcpRoute.DNS,
-					}
-					overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
-					overrideIfSet(&resolved.ProxyProtocol, backendTraffic.ProxyProtocol)
-					overrideIfSet(&resolved.CircuitBreaker, backendTraffic.CircuitBreaker)
-					overrideIfSet(&resolved.HealthCheck, backendTraffic.HealthCheck)
-					overrideIfSet(&resolved.Timeout, backendTraffic.Timeout)
-					overrideIfSet(&resolved.TCPKeepalive, backendTraffic.TCPKeepalive)
-					overrideIfSet(&resolved.BackendConnection, backendTraffic.BackendConnection)
-					overrideIfSet(&resolved.DNS, backendTraffic.DNS)
-					resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
-
-					ds.Traffic = resolved
-					matchedGWs.Insert(gwNN)
-				}
-			}
-		}
-
-		for _, udpListener := range x.UDP {
-			if udpListener.Route == nil {
-				continue
-			}
-			udpRoute := udpListener.Route
-			rd := udpRoute.Destination
-			if rd == nil {
-				continue
-			}
-			for _, ds := range rd.Settings {
-				if backendPolicyKeyFromMetadata(ds.Metadata) != key {
-					continue
-				}
-				if rd.RequiresSingleCluster {
-					if rd.Metadata != nil {
-						unsupportedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
-					}
-					continue
-				}
-
-				if backendTraffic == nil {
-					needsTranslationError = needsTranslationError || backendTrafficErr != nil
-					continue
-				}
-
-				resolved := &ir.ClusterTrafficFeatures{
-					LoadBalancer: udpRoute.LoadBalancer,
-					DNS:          udpRoute.DNS,
-				}
-				overrideIfSet(&resolved.LoadBalancer, backendTraffic.LoadBalancer)
-				overrideIfSet(&resolved.ProxyProtocol, backendTraffic.ProxyProtocol)
-				overrideIfSet(&resolved.HealthCheck, backendTraffic.HealthCheck)
-				overrideIfSet(&resolved.CircuitBreaker, backendTraffic.CircuitBreaker)
-				overrideIfSet(&resolved.Timeout, backendTraffic.Timeout)
-				overrideIfSet(&resolved.TCPKeepalive, backendTraffic.TCPKeepalive)
-				overrideIfSet(&resolved.BackendConnection, backendTraffic.BackendConnection)
-				overrideIfSet(&resolved.HTTP2, backendTraffic.HTTP2)
-				overrideIfSet(&resolved.DNS, backendTraffic.DNS)
-				resolved.Timeout = resolved.Timeout.ClusterOnly().AsTimeout()
-
-				ds.Traffic = resolved
-				matchedGWs.Insert(gwNN)
-			}
-		}
-
-		if needsTranslationError {
-			ref := getAncestorRefForPolicy(gwNN, nil)
-			status.SetTranslationErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
-				status.Error2ConditionMsg(backendTrafficErr))
-		}
-
-		// One combined Warning per gateway, never per occurrence.
-		if len(unsupportedRoutes) > 0 {
-			names := make([]string, 0, len(unsupportedRoutes))
-			for name := range unsupportedRoutes {
-				names = append(names, name)
-			}
-			sort.Strings(names)
-			ref := getAncestorRefForPolicy(gwNN, nil)
-			status.SetWarningForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName,
-				egv1a1.PolicyReasonUnsupportedBackendTrafficPolicy,
-				fmt.Sprintf("This backend-targeted BackendTrafficPolicy cannot apply because these rules share a single Envoy cluster with other backendRefs, which this route kind cannot split: %s", strings.Join(names, ", ")),
-				policy.Generation)
 		}
 	}
 

@@ -547,7 +547,6 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(ir.RouteDestination{}, "RequiresSingleCluster"),
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
@@ -859,7 +858,6 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(ir.RouteDestination{}, "RequiresSingleCluster"),
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})

@@ -1482,12 +1482,8 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		isRoute:      true,
 	}
 
-	if traffic := determineSettingTraffic(settings); traffic != nil {
-		applyTraffic(clusterArgs, traffic)
-	} else {
-		clusterArgs.loadBalancer = route.LoadBalancer
-		clusterArgs.dns = route.DNS
-	}
+	clusterArgs.loadBalancer = route.LoadBalancer
+	clusterArgs.dns = route.DNS
 
 	return clusterArgs
 }
@@ -1512,18 +1508,14 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		isRoute:        true,
 	}
 
-	if traffic := determineSettingTraffic(settings); traffic != nil {
-		applyTraffic(clusterArgs, traffic)
-	} else {
-		clusterArgs.loadBalancer = route.LoadBalancer
-		clusterArgs.proxyProtocol = route.ProxyProtocol
-		clusterArgs.circuitBreaker = route.CircuitBreaker
-		clusterArgs.tcpkeepalive = route.TCPKeepalive
-		clusterArgs.healthCheck = route.HealthCheck
-		clusterArgs.timeout = route.Timeout.ClusterOnly()
-		clusterArgs.backendConnection = route.BackendConnection
-		clusterArgs.dns = route.DNS
-	}
+	clusterArgs.loadBalancer = route.LoadBalancer
+	clusterArgs.proxyProtocol = route.ProxyProtocol
+	clusterArgs.circuitBreaker = route.CircuitBreaker
+	clusterArgs.tcpkeepalive = route.TCPKeepalive
+	clusterArgs.healthCheck = route.HealthCheck
+	clusterArgs.timeout = route.Timeout.ClusterOnly()
+	clusterArgs.backendConnection = route.BackendConnection
+	clusterArgs.dns = route.DNS
 
 	return clusterArgs
 }
@@ -1557,11 +1549,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	if traffic := determineSettingTraffic(settings); traffic != nil {
-		applyTraffic(clusterArgs, traffic)
-	} else {
-		applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
-	}
+	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
 
 	return clusterArgs
 }

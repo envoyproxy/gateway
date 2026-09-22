@@ -3443,8 +3443,6 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 	// same either way.
 	target := policyTargetReferenceWithSectionName{Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"), Namespace: gwapiv1.Namespace("default")}
 	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
-	otherMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-2"}
-	multiSettings := []*ir.DestinationSetting{{Metadata: matchMD}, {Metadata: otherMD}}
 	singleSetting := []*ir.DestinationSetting{{Metadata: matchMD}}
 
 	requireEmpty := func(t *testing.T, policy *egv1a1.BackendTrafficPolicy) {
@@ -3483,20 +3481,6 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 		{
 			name:   "UDP destination nil is skipped, not matched",
 			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: nil}}}},
-			policy: newBackendTargetPolicy(),
-			check:  requireEmpty,
-		},
-		{
-			// No Metadata on the RouteDestination itself - the blocked-route name can't be
-			// recorded, so this occurrence is silently skipped rather than warned about.
-			name:   "TCP multi-setting match with nil route Metadata is silently skipped",
-			x:      &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: &ir.RouteDestination{Settings: multiSettings, RequiresSingleCluster: true}}}}}},
-			policy: newBackendTargetPolicy(),
-			check:  requireEmpty,
-		},
-		{
-			name:   "UDP multi-setting match with nil route Metadata is silently skipped",
-			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: &ir.RouteDestination{Settings: multiSettings, RequiresSingleCluster: true}}}}},
 			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},

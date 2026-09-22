@@ -2124,14 +2124,6 @@ type RouteDestination struct {
 	// RouteDestination metadata is primarily derived from the xRoute resources. In some cases,
 	// the primary resource is a Policy or Envoy Proxy, when non-xRoute backendRefs are used.
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	// RequiresSingleCluster marks a destination whose Settings must all resolve to one Envoy
-	// cluster regardless of backend-targeted Traffic overrides - e.g. a rule with a fallback
-	// backend, session persistence, or consistent-hash LB, where Envoy's priority-failover,
-	// affinity, or hash-ring mechanism only works within a single cluster's load assignment.
-	// Deliberately not serialized (json:"-" yaml:"-"): it is a same-process signal produced by
-	// route.go and consumed by backendtrafficpolicy.go within a single Translate call, and must
-	// never leak into golden testdata fixtures or egctl/troubleshoot dumps.
-	RequiresSingleCluster bool `json:"-" yaml:"-"`
 }
 
 // Validate the fields within the RouteDestination structure. BackendCluster-level validation
@@ -2159,8 +2151,7 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 		r.HasFiltersInSettings() ||
 		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
 		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings() ||
-		r.HasTrafficInSettings()
+		r.HasMixedAutoSNISettings()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -2188,19 +2179,6 @@ func (r *RouteDestination) HasFiltersInSettings() bool {
 	for _, setting := range r.Settings {
 		filters := setting.Filters
 		if filters != nil {
-			return true
-		}
-	}
-	return false
-}
-
-// HasTrafficInSettings returns true if any setting in the destination has its own Traffic
-// override from a backend-targeted BackendTrafficPolicy. Forces per-setting cluster splitting so
-// the override doesn't silently bundle away into a shared cluster with sibling backendRefs that
-// lack one.
-func (r *RouteDestination) HasTrafficInSettings() bool {
-	for _, setting := range r.Settings {
-		if setting.Traffic != nil {
 			return true
 		}
 	}
@@ -2357,10 +2335,6 @@ type DestinationSetting struct {
 	// * invalid 500
 	// * without endpoints 503
 	Invalid bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
-	// Traffic holds cluster-scoped settings from a backend-targeted BackendTrafficPolicy,
-	// already merged over whatever route-level Traffic applies. A Setting that carries this is
-	// always split into its own Envoy cluster.
-	Traffic *ClusterTrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // Validate the fields within the DestinationSetting structure
