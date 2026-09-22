@@ -269,6 +269,32 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"rateLimit is not allowed when targeting a backend"},
 		},
 		{
+			desc: "Backend targetRef with ConsistentHash load balancer is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.envoyproxy.io"),
+								Kind:  gwapiv1.Kind("Backend"),
+								Name:  gwapiv1.ObjectName("backend-1"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.ConsistentHashLoadBalancerType,
+							ConsistentHash: &egv1a1.ConsistentHash{
+								Type: egv1a1.SourceIPConsistentHashType,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"ConsistentHash load balancing is not allowed when targeting a backend"},
+		},
+		{
 			desc: "ServiceImport targetRef with sectionName is rejected",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -415,10 +441,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					MergeType: new(egv1a1.StrategicMerge),
-					ClusterSettings: egv1a1.ClusterSettings{
-						Retry: &egv1a1.Retry{},
-					},
+					MergeType:         new(egv1a1.StrategicMerge),
+					Retry:             &egv1a1.Retry{},
 					RateLimit:         &egv1a1.RateLimitSpec{},
 					FaultInjection:    &egv1a1.FaultInjection{},
 					UseClientProtocol: &val,
@@ -466,10 +490,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					MergeType: new(egv1a1.StrategicMerge),
-					ClusterSettings: egv1a1.ClusterSettings{
-						Retry: &egv1a1.Retry{},
-					},
+					MergeType:         new(egv1a1.StrategicMerge),
+					Retry:             &egv1a1.Retry{},
 					RateLimit:         &egv1a1.RateLimitSpec{},
 					FaultInjection:    &egv1a1.FaultInjection{},
 					UseClientProtocol: &val,
@@ -519,10 +541,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					MergeType: new(egv1a1.StrategicMerge),
-					ClusterSettings: egv1a1.ClusterSettings{
-						Retry: &egv1a1.Retry{},
-					},
+					MergeType:         new(egv1a1.StrategicMerge),
+					Retry:             &egv1a1.Retry{},
 					RateLimit:         &egv1a1.RateLimitSpec{},
 					FaultInjection:    &egv1a1.FaultInjection{},
 					UseClientProtocol: &val,
