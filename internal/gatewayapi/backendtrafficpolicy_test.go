@@ -3490,13 +3490,13 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 			// No Metadata on the RouteDestination itself - the blocked-route name can't be
 			// recorded, so this occurrence is silently skipped rather than warned about.
 			name:   "TCP multi-setting match with nil route Metadata is silently skipped",
-			x:      &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: &ir.RouteDestination{Settings: multiSettings}}}}}},
+			x:      &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: &ir.RouteDestination{Settings: multiSettings, RequiresSingleCluster: true}}}}}},
 			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},
 		{
 			name:   "UDP multi-setting match with nil route Metadata is silently skipped",
-			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: &ir.RouteDestination{Settings: multiSettings}}}}},
+			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: &ir.RouteDestination{Settings: multiSettings, RequiresSingleCluster: true}}}}},
 			policy: newBackendTargetPolicy(),
 			check:  requireEmpty,
 		},

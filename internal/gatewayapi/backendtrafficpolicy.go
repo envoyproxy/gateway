@@ -681,6 +681,13 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 						continue
 					}
 
+					if rd.RequiresSingleCluster {
+						if rd.Metadata != nil {
+							unsupportedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
+						}
+						continue
+					}
+
 					if backendTraffic == nil {
 						needsTranslationError = needsTranslationError || backendTrafficErr != nil
 						continue
@@ -718,7 +725,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					if backendPolicyKeyFromMetadata(ds.Metadata) != key {
 						continue
 					}
-					if len(rd.Settings) > 1 {
+					if rd.RequiresSingleCluster {
 						if rd.Metadata != nil {
 							unsupportedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
 						}
@@ -769,7 +776,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				if backendPolicyKeyFromMetadata(ds.Metadata) != key {
 					continue
 				}
-				if len(rd.Settings) > 1 {
+				if rd.RequiresSingleCluster {
 					if rd.Metadata != nil {
 						unsupportedRoutes[fmt.Sprintf("%s %s/%s", rd.Metadata.Kind, rd.Metadata.Namespace, rd.Metadata.Name)] = true
 					}
