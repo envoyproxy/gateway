@@ -17,7 +17,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Testing Direct Response
 
-Note: the size of the response body (whether provided in-line or via a reference) cannot exceed 4096 bytes.
+Envoy defaults direct-response bodies to 4096 bytes. For larger configured bodies, Envoy Gateway automatically raises `max_direct_response_body_size_bytes` to 1 MiB (or to the body size when it exceeds 1 MiB); see `DefaultMaxDirectResponseBodySize`, `DefaultCRDMaxSize`, and `addRouteToRouteConfig` in [`internal/xds/translator/translator.go`](https://github.com/envoyproxy/gateway/blob/main/internal/xds/translator/translator.go).
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
