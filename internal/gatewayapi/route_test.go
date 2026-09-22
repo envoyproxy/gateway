@@ -799,6 +799,41 @@ func TestShouldMergeBackend(t *testing.T) {
 	}
 }
 
+func TestRouteDestinationForListenerRequiresSingleCluster(t *testing.T) {
+	tr := &Translator{TranslatorContext: &TranslatorContext{
+		BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{},
+	}}
+	gwIR := &ir.Xds{}
+	gwNN := types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"}
+	gatewayCtx := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: gwNN.Namespace, Name: gwNN.Name}},
+	}
+	listener := &ListenerContext{
+		Listener: &gwapiv1.Listener{},
+		gateway:  gatewayCtx,
+	}
+	routeCtx := &HTTPRouteContext{
+		HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: gwNN.Namespace}},
+	}
+	backendDest := routeBackendRefDestination{
+		ds: &ir.DestinationSetting{Name: "setting-1"},
+	}
+
+	dest := tr.routeDestinationForListener(
+		gwIR, gatewayCtx, routeCtx, listener, nil, "dest-1", nil, nil,
+		[]routeBackendRefDestination{backendDest}, true, /* requiresSingleCluster */
+	)
+
+	require.True(t, dest.RequiresSingleCluster)
+
+	destFalse := tr.routeDestinationForListener(
+		gwIR, gatewayCtx, routeCtx, listener, nil, "dest-2", nil, nil,
+		[]routeBackendRefDestination{backendDest}, false,
+	)
+
+	require.False(t, destFalse.RequiresSingleCluster)
+}
+
 func TestIsMergeableBackendKind(t *testing.T) {
 	dynamicResolverType := egv1a1.BackendTypeDynamicResolver
 	tests := []struct {

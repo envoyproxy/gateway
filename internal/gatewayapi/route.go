@@ -988,13 +988,15 @@ func (t *Translator) routeDestinationForListener(
 	routeRuleMetadata *ir.ResourceMetadata,
 	statName *string,
 	routeBackendDestinations []routeBackendRefDestination,
+	requiresSingleCluster bool,
 ) *ir.RouteDestination {
 	hasClusterSettings := t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, listener, routeRuleName)
 
 	destination := &ir.RouteDestination{
-		Name:     destName,
-		Metadata: routeRuleMetadata,
-		StatName: statName,
+		Name:                  destName,
+		Metadata:              routeRuleMetadata,
+		StatName:              statName,
+		RequiresSingleCluster: requiresSingleCluster,
 	}
 	for _, bd := range routeBackendDestinations {
 		if bd.backendClusterKey == nil || hasClusterSettings {
@@ -1945,6 +1947,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 						routeWithBackends.routeRuleMetadata,
 						routeWithBackends.statName,
 						routeWithBackends.routeBackendDestinations,
+						false,
 					)
 				}
 
@@ -2463,6 +2466,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
+						false,
 					),
 					Metadata: routeRuleMetadata,
 				}
@@ -2636,6 +2640,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
+						false,
 					),
 				}
 			}
@@ -2799,6 +2804,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 						routeRuleMetadata,
 						nil,
 						routeBackendDestinations,
+						false,
 					),
 					Metadata: buildResourceMetadata(tcpRoute, nil),
 				}
