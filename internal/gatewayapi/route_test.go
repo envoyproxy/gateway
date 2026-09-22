@@ -799,6 +799,14 @@ func TestShouldMergeBackend(t *testing.T) {
 	}
 }
 
+func TestHTTPRouteWithBackendDestinationsCarriesRequiresSingleCluster(t *testing.T) {
+	rwb := &httpRouteWithBackendDestinations{
+		route:                 &ir.HTTPRoute{Name: "route-1"},
+		requiresSingleCluster: true,
+	}
+	require.True(t, rwb.requiresSingleCluster)
+}
+
 func TestRouteDestinationForListenerRequiresSingleCluster(t *testing.T) {
 	tr := &Translator{TranslatorContext: &TranslatorContext{
 		BackendClusterMap: map[BackendClusterKey]*ir.BackendCluster{},

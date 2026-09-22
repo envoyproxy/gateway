@@ -245,6 +245,7 @@ type httpRouteWithBackendDestinations struct {
 	routeRuleMetadata        *ir.ResourceMetadata
 	routeRuleName            *gwapiv1.SectionName
 	statName                 *string
+	requiresSingleCluster    bool
 }
 
 func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*httpRouteWithBackendDestinations, []status.Error, []int) {
@@ -484,6 +485,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				routeWithBackends.destName = destName
 				routeWithBackends.routeRuleMetadata = routeRuleMetadata
 				routeWithBackends.routeRuleName = rule.Name
+				routeWithBackends.requiresSingleCluster = mergeUnsafeForRule
 				if pattern != "" {
 					routeWithBackends.statName = new(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 				}
@@ -1708,6 +1710,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				routeWithBackends.destName = destName
 				routeWithBackends.routeRuleMetadata = routeRuleMetadata
 				routeWithBackends.routeRuleName = rule.Name
+				routeWithBackends.requiresSingleCluster = mergeIncompatible
 				if pattern != "" {
 					routeWithBackends.statName = new(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
 				}
@@ -1947,7 +1950,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 						routeWithBackends.routeRuleMetadata,
 						routeWithBackends.statName,
 						routeWithBackends.routeBackendDestinations,
-						false,
+						routeWithBackends.requiresSingleCluster,
 					)
 				}
 
