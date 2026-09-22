@@ -7,7 +7,7 @@ backendTrafficPolicies:
   spec:
     requestBuffer:
       limit: 4Mi
-      mode: BufferAndLimit
+      mode: LimitOnly
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -40,6 +40,7 @@ backendTrafficPolicies:
   spec:
     requestBuffer:
       limit: 4Mi
+      mode: LimitOnly
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -331,8 +332,7 @@ xdsIR:
           name: ""
           prefix: /foo
         traffic:
-          requestBuffer:
-            limit: 4Mi
+          requestBodyBufferLimit: 4194304
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -414,8 +414,7 @@ xdsIR:
           name: ""
           prefix: /foo
         traffic:
-          requestBuffer:
-            limit: 4Mi
+          requestBodyBufferLimit: 4194304
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
