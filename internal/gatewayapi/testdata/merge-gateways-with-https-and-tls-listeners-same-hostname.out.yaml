@@ -327,8 +327,11 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 443
+<<<<<<< HEAD
       hostnames:
       - bar.example.com
+=======
+>>>>>>> c5777756e (fix(gatewayapi): conflict HTTPS and TLS listeners sharing a hostname when gateways are merged (#10013))
       metadata:
         kind: Gateway
         name: gateway-tls-distinct-hostname
