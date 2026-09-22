@@ -563,16 +563,10 @@ func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 
 // processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
 // Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for conflict
-// detection, then applies it wherever the backend actually resolves: into the Traffic of every
-// matching, already-registered BackendCluster, or, for a backend that isn't merged, directly onto
-// the matching inline DestinationSetting(s) for HTTPRoute/GRPCRoute/TCPRoute/UDPRoute. A
-// TCPRoute/UDPRoute/TLSRoute rule with more than one backendRef sharing a single Envoy cluster
-// can't isolate the policy to just its target and gets a Warning instead. A gateway with
-// mergeBackends disabled only gets a Disabled ancestor if it actually references the backend -
-// otherwise it's skipped entirely, rather than reporting Disabled on every unrelated gateway that
-// merely happens to have mergeBackends off. A backend that's referenced but never resolves for
-// some other reason (per-listener ClusterSettings divergence, dynamic resolver, etc.) gets no
-// settings and no error.
+// detection, then applies it to the Traffic of every matching merged BackendCluster. A gateway
+// with mergeBackends disabled only gets a Disabled ancestor if it actually references the
+// backend; otherwise it's skipped entirely. A backend that never merges or doesn't resolve for
+// other reasons gets no policy applied and no error.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
