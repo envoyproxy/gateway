@@ -413,6 +413,37 @@ _Appears in:_
 | `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
+#### BackendHTTP3Mode
+
+_Underlying type:_ _string_
+
+BackendHTTP3Mode determines when Envoy uses HTTP/3 to reach a backend.
+
+_Appears in:_
+- [BackendHTTP3Settings](#backendhttp3settings)
+
+| Value | Description |
+| ----- | ----------- |
+| `Auto` | BackendHTTP3ModeAuto uses HTTP/3 only for backends that advertise support for it<br />through an alt-svc response header. Envoy races a QUIC connection against a TCP one<br />and uses whichever is established first, so it falls back to HTTP/1.1 or HTTP/2 when<br />QUIC is unavailable.<br /> | 
+| `Always` | BackendHTTP3ModeAlways always uses HTTP/3, without falling back to TCP. Use this only<br />in environments where the backend is known to speak HTTP/3 and UDP is not blocked.<br /> | 
+
+
+#### BackendHTTP3Settings
+
+
+
+BackendHTTP3Settings provides HTTP/3 configuration for backend connections.
+
+_Appears in:_
+- [BackendSettings](#backendsettings)
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `mode` | _[BackendHTTP3Mode](#backendhttp3mode)_ |  false  | Auto | Mode determines when HTTP/3 is used to reach the backend.<br />Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc. |
+
+
 #### BackendMetrics
 
 
@@ -488,6 +519,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be<br />configured with TLS through a BackendTLSPolicy or the Backend's spec.tls. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 
 
@@ -619,6 +651,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be<br />configured with TLS through a BackendTLSPolicy or the Backend's spec.tls. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
@@ -1131,6 +1164,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be<br />configured with TLS through a BackendTLSPolicy or the Backend's spec.tls. |
 
 
 #### ClusterTranslationConfig

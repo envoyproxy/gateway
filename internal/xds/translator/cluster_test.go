@@ -502,7 +502,7 @@ func TestBuildClusterHTTPFiltersCredentialInjectionInvalidHeader(t *testing.T) {
 		}},
 	}
 
-	filters, secrets, err := buildClusterHTTPFilters(args)
+	filters, secrets, err := buildClusterHTTPFilters(args, false)
 
 	require.Error(t, err)
 	require.Nil(t, filters)

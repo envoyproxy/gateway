@@ -105,3 +105,14 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 
 	return http2, errs
 }
+
+func buildIRBackendHTTP3Settings(http3Settings *egv1a1.BackendHTTP3Settings) *ir.BackendHTTP3Settings {
+	if http3Settings == nil {
+		return nil
+	}
+	mode := egv1a1.BackendHTTP3ModeAuto
+	if http3Settings.Mode != nil {
+		mode = *http3Settings.Mode
+	}
+	return &ir.BackendHTTP3Settings{Mode: string(mode)}
+}
