@@ -233,6 +233,36 @@ func TestGetOrCreateExtensionResource(t *testing.T) {
 		require.NotEqual(t, ref1.Name, ref3.Name)
 		require.Len(t, gwIR.ExtensionResources, 2)
 	})
+
+	// An extensionRef filter and an ExtensionServerPolicy can target the same route at once,
+	// each populating its own field on ir.HTTPRoute (ExtensionRefs vs ExtensionServerPolicies)
+	// but sharing the same central gwIR.ExtensionResources / t.ExtensionResourceMap registry.
+	t.Run("filter and policy refs on the same route share the central registry", func(t *testing.T) {
+		tt := &Translator{TranslatorContext: &TranslatorContext{}}
+		gwIR := &ir.Xds{}
+		filterObj := newObj("filter-obj")
+		policyObj := newObj("policy-obj")
+
+		route1 := &ir.HTTPRoute{}
+		route1.ExtensionRefs = append(route1.ExtensionRefs, tt.getOrCreateExtensionResource(gwIR, gatewayCtx, filterObj))
+		route1.ExtensionServerPolicies = tt.appendUnstructuredRefIfAbsent(gwIR, gatewayCtx, route1.ExtensionServerPolicies, policyObj)
+
+		require.Len(t, route1.ExtensionRefs, 1)
+		require.Len(t, route1.ExtensionServerPolicies, 1)
+		require.NotEqual(t, route1.ExtensionRefs[0].Name, route1.ExtensionServerPolicies[0].Name)
+		require.Len(t, gwIR.ExtensionResources, 2)
+
+		// A second route sharing the same gateway, targeted by the same policy and referencing
+		// the same filter object (e.g. two rules pointing at the same extension resource),
+		// reuses both registry entries instead of duplicating them.
+		route2 := &ir.HTTPRoute{}
+		route2.ExtensionRefs = append(route2.ExtensionRefs, tt.getOrCreateExtensionResource(gwIR, gatewayCtx, newObj("filter-obj")))
+		route2.ExtensionServerPolicies = tt.appendUnstructuredRefIfAbsent(gwIR, gatewayCtx, route2.ExtensionServerPolicies, newObj("policy-obj"))
+
+		require.Len(t, gwIR.ExtensionResources, 2)
+		require.Equal(t, route1.ExtensionRefs[0].Name, route2.ExtensionRefs[0].Name)
+		require.Equal(t, route1.ExtensionServerPolicies[0].Name, route2.ExtensionServerPolicies[0].Name)
+	})
 }
 
 func TestMergeAncestorsForExtensionServerPolicies(t *testing.T) {
