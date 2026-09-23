@@ -1,5 +1,7 @@
 // Copyright Envoy Gateway Authors
 // SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
 
 package gatewayapi
 
@@ -8,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -41,7 +42,7 @@ func TestListenerRoutingDestinationNameWithoutContext(t *testing.T) {
 		{name: "no-listener", gateway: &GatewayContext{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, "destination", translator.listenerRoutingDestinationName("destination", tc.gateway, nil, tc.listener, ptr.To(gwapiv1.SectionName("rule"))))
+			require.Equal(t, "destination", translator.listenerRoutingDestinationName("destination", tc.gateway, nil, tc.listener, new(gwapiv1.SectionName("rule"))))
 		})
 	}
 }
