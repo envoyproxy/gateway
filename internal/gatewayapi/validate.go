@@ -408,6 +408,20 @@ func isSpecValidForConflictChecks(listener *ListenerContext) bool {
 	return !hasInvalidCondition(listener)
 }
 
+// isAlreadyConflicted returns whether an earlier conflict-detection pass (protocol,
+// hostname, or layer4) has already marked this listener Conflicted=True. Such a
+// listener is excluded from the IR, so it must not be allowed to reserve a
+// (protocol, hostname, port) slot in validateConflictedMergedListeners and block a
+// valid listener on another Gateway from winning that slot.
+func isAlreadyConflicted(listener *ListenerContext) bool {
+	for _, cond := range listener.GetConditions() {
+		if cond.Type == string(gwapiv1.ListenerConditionConflicted) && cond.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
 // validateAllowedNamespaces validates namespace selector configuration.
 // Returns true if the namespace spec is valid, false otherwise.
 func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) bool {
@@ -889,9 +903,11 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 	listenerSets := sets.Set[string]{}
 	for _, gateway := range gateways {
 		for _, listener := range gateway.listeners {
-			// Skip listeners that are already marked as invalid from per-listener validation.
-			// This prevents an invalid first listener from blocking valid subsequent listeners.
-			if !isSpecValidForConflictChecks(listener) {
+			// Skip listeners that are already marked as invalid from per-listener validation,
+			// or already excluded by an earlier conflict-detection pass. Otherwise a listener
+			// that never reaches the IR would still reserve its key here, blocking a valid
+			// listener on another Gateway from winning that (protocol, hostname, port) slot.
+			if !isSpecValidForConflictChecks(listener) || isAlreadyConflicted(listener) {
 				continue
 			}
 			hostname := new(gwapiv1.Hostname)
