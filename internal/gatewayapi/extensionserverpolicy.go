@@ -455,6 +455,10 @@ func (t *Translator) getOrCreateExtensionResource(
 		Name:         obj.GetName(),
 	}
 
+	if t.ExtensionResourceMap == nil {
+		t.ExtensionResourceMap = make(map[ExtensionResourceKey]*ir.UnstructuredRef)
+	}
+
 	if canonical, ok := t.ExtensionResourceMap[key]; ok {
 		// Refresh to the object instance being registered now. The same identity can be
 		// resolved from more than one source (e.g. an extensionRef/custom backend as well as
@@ -465,9 +469,6 @@ func (t *Translator) getOrCreateExtensionResource(
 		// instead of pinning the registry to a stale, earlier copy.
 		canonical.Object = obj
 		return &ir.UnstructuredRef{Name: canonical.Name}
-	}
-	if t.ExtensionResourceMap == nil {
-		t.ExtensionResourceMap = make(map[ExtensionResourceKey]*ir.UnstructuredRef)
 	}
 
 	name := irExtensionResourceName(&key)
