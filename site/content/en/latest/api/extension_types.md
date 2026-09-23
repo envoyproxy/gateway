@@ -2812,6 +2812,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `service` | _string_ |  false  |  | Service to send in the health check request.<br />If this is not specified, then the health check request applies to the entire<br />server and not to a specific service. |
+| `hostname` | _string_ |  false  |  | Hostname defines the value of the :authority header sent with active gRPC<br />health checks. Authority selection uses this order: this field, the<br />associated Backend endpoint hostname if available, then the effective Route<br />hostname. If none of them is set, Envoy falls back to the name of the<br />cluster, which is not a valid authority and is rejected by some gRPC<br />servers. |
 
 
 #### GRPCExtAuthService
