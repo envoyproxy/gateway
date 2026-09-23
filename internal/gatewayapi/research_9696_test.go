@@ -1,5 +1,7 @@
 // Copyright Envoy Gateway Authors
 // SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
 
 package gatewayapi
 
@@ -10,11 +12,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
-	"github.com/stretchr/testify/require"
 )
 
 // Research-only: assert intended listener routing, without modifying production code.

@@ -1,5 +1,7 @@
 // Copyright Envoy Gateway Authors
 // SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
 
 package gatewayapi
 
@@ -12,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -61,9 +62,9 @@ func TestMirrorRuleRouting(t *testing.T) {
 							}
 							if ruleIdx == 1 {
 								first := *r.Spec.Rules[0].DeepCopy()
-								first.Name = ptr.To(gwapiv1.SectionName("other-rule"))
+								first.Name = new(gwapiv1.SectionName("other-rule"))
 								first.Filters = nil
-								first.Matches = []gwapiv1.HTTPRouteMatch{{Path: &gwapiv1.HTTPPathMatch{Type: ptr.To(gwapiv1.PathMatchExact), Value: ptr.To("/other")}}}
+								first.Matches = []gwapiv1.HTTPRouteMatch{{Path: &gwapiv1.HTTPPathMatch{Type: new(gwapiv1.PathMatchExact), Value: new("/other")}}}
 								r.Spec.Rules = append([]gwapiv1.HTTPRouteRule{first}, r.Spec.Rules...)
 							}
 						} else {
@@ -73,9 +74,9 @@ func TestMirrorRuleRouting(t *testing.T) {
 							}
 							if ruleIdx == 1 {
 								first := *r.Spec.Rules[0].DeepCopy()
-								first.Name = ptr.To(gwapiv1.SectionName("other-rule"))
+								first.Name = new(gwapiv1.SectionName("other-rule"))
 								first.Filters = nil
-								first.Matches = []gwapiv1.GRPCRouteMatch{{Method: &gwapiv1.GRPCMethodMatch{Service: ptr.To("other.Service")}}}
+								first.Matches = []gwapiv1.GRPCRouteMatch{{Method: &gwapiv1.GRPCMethodMatch{Service: new("other.Service")}}}
 								r.Spec.Rules = append([]gwapiv1.GRPCRouteRule{first}, r.Spec.Rules...)
 							}
 						}
@@ -90,9 +91,9 @@ func TestMirrorRuleRouting(t *testing.T) {
 							eps.Endpoints[0].Addresses = []string{"10.0.0.8"}
 							resources.EndpointSlices = append(resources.EndpointSlices, eps)
 							if kind == "HTTP" {
-								resources.HTTPRoutes[0].Spec.Rules[0].Filters[0].RequestMirror.BackendRef.Namespace = ptr.To(gwapiv1.Namespace("mirror-ns"))
+								resources.HTTPRoutes[0].Spec.Rules[0].Filters[0].RequestMirror.BackendRef.Namespace = new(gwapiv1.Namespace("mirror-ns"))
 							} else {
-								resources.GRPCRoutes[0].Spec.Rules[0].Filters[0].RequestMirror.BackendRef.Namespace = ptr.To(gwapiv1.Namespace("mirror-ns"))
+								resources.GRPCRoutes[0].Spec.Rules[0].Filters[0].RequestMirror.BackendRef.Namespace = new(gwapiv1.Namespace("mirror-ns"))
 							}
 							if scenario == "cross-namespace" {
 								grants := &resource.Resources{}
