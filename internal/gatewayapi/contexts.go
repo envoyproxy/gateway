@@ -905,9 +905,7 @@ type TranslatorContext struct {
 
 	// CACertBundleMap interns assembled CA bundles by content, so that destinations
 	// validating against the same CA share one backing array instead of each holding
-	// its own copy. Rebuilt with the rest of the context on every translation, so it
-	// cannot serve bytes from a Secret, ConfigMap or ClusterTrustBundle that has since
-	// changed.
+	// its own copy.
 	CACertBundleMap map[string][]byte
 }
 
