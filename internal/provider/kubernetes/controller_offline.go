@@ -95,6 +95,7 @@ func NewOfflineGatewayAPIController(
 
 	r := &gatewayAPIReconciler{
 		client:            cli,
+		apiReader:         cli,
 		log:               cfg.Logger,
 		classController:   gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		namespace:         cfg.ControllerNamespace,
