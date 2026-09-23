@@ -891,7 +891,6 @@ type TranslatorContext struct {
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
-	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 }
 
