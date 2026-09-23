@@ -213,6 +213,7 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 func TestDeployment(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	cases := []struct {
 		caseName             string
@@ -828,6 +829,7 @@ func loadDeployment(caseName string) (*appsv1.Deployment, error) {
 func TestDaemonSet(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	cases := []struct {
 		caseName             string
@@ -1309,6 +1311,7 @@ func loadDaemonSet(caseName string) (*appsv1.DaemonSet, error) {
 func TestService(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	svcType := egv1a1.ServiceTypeClusterIP
 	cases := []struct {
@@ -1632,6 +1635,7 @@ func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
 func TestPDB(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	cases := []struct {
 		caseName             string
@@ -1776,6 +1780,7 @@ func TestPDB(t *testing.T) {
 func TestHorizontalPodAutoscaler(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	cases := []struct {
 		caseName             string
@@ -2179,6 +2184,178 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	}
 }
 
+// TestEnvoyProxyPatchDisabled verifies that when EnvoyGateway disables
+// EnvoyProxy resource patches, the Kubernetes resource `patch` fields
+// configured on EnvoyProxy's Kubernetes provider settings are ignored when
+// rendering Deployment, DaemonSet, Service, HorizontalPodAutoscaler, and
+// PodDisruptionBudget resources, rather than being merged onto the rendered
+// object.
+func TestEnvoyProxyPatchDisabled(t *testing.T) {
+	newRender := func(t *testing.T, disablePatch bool, configure func(kube *egv1a1.EnvoyProxyKubernetesProvider)) *ResourceRender {
+		t.Helper()
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+		if disablePatch {
+			cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Disabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
+		}
+
+		infra := newTestInfra()
+		provider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+		provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+		configure(provider.Kubernetes)
+
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+		require.NoError(t, err)
+		return r
+	}
+
+	t.Run("deployment", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}`),
+			},
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyDeployment.Patch = patch
+		}
+
+		unpatched, err := newRender(t, true, func(*egv1a1.EnvoyProxyKubernetesProvider) {}).Deployment()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).Deployment()
+		require.NoError(t, err)
+		assert.True(t, enabled.Spec.Template.Spec.HostNetwork)
+
+		disabled, err := newRender(t, true, configure).Deployment()
+		require.NoError(t, err)
+		assert.False(t, disabled.Spec.Template.Spec.HostNetwork)
+		assert.Equal(t, unpatched, disabled)
+	})
+
+	t.Run("daemonset", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}`),
+			},
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyDaemonSet = &egv1a1.KubernetesDaemonSetSpec{Patch: patch}
+		}
+		baseline := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyDaemonSet = &egv1a1.KubernetesDaemonSetSpec{}
+		}
+
+		unpatched, err := newRender(t, true, baseline).DaemonSet()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).DaemonSet()
+		require.NoError(t, err)
+		assert.True(t, enabled.Spec.Template.Spec.HostNetwork)
+
+		disabled, err := newRender(t, true, configure).DaemonSet()
+		require.NoError(t, err)
+		assert.False(t, disabled.Spec.Template.Spec.HostNetwork)
+		assert.Equal(t, unpatched, disabled)
+	})
+
+	t.Run("service", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"metadata":{"annotations":{"tenant-injected":"true"}}}`),
+			},
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyService.Patch = patch
+		}
+
+		unpatched, err := newRender(t, true, func(*egv1a1.EnvoyProxyKubernetesProvider) {}).Service()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).Service()
+		require.NoError(t, err)
+		assert.Equal(t, "true", enabled.Annotations["tenant-injected"])
+
+		disabled, err := newRender(t, true, configure).Service()
+		require.NoError(t, err)
+		assert.NotContains(t, disabled.Annotations, "tenant-injected")
+		assert.Equal(t, unpatched, disabled)
+	})
+
+	t.Run("horizontalpodautoscaler", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"spec":{"minReplicas":9}}`),
+			},
+		}
+		hpaBase := func() *egv1a1.KubernetesHorizontalPodAutoscalerSpec {
+			return &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: new(int32(1)),
+				MaxReplicas: new(int32(10)),
+			}
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			hpa := hpaBase()
+			hpa.Patch = patch
+			kube.EnvoyHpa = hpa
+		}
+		baseline := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyHpa = hpaBase()
+		}
+
+		unpatched, err := newRender(t, true, baseline).HorizontalPodAutoscaler()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).HorizontalPodAutoscaler()
+		require.NoError(t, err)
+		require.NotNil(t, enabled.Spec.MinReplicas)
+		assert.EqualValues(t, 9, *enabled.Spec.MinReplicas)
+
+		disabled, err := newRender(t, true, configure).HorizontalPodAutoscaler()
+		require.NoError(t, err)
+		require.NotNil(t, disabled.Spec.MinReplicas)
+		assert.EqualValues(t, 1, *disabled.Spec.MinReplicas)
+		assert.Equal(t, unpatched, disabled)
+	})
+
+	t.Run("poddisruptionbudget", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"metadata":{"annotations":{"tenant-injected":"true"}}}`),
+			},
+		}
+		pdbBase := func() *egv1a1.KubernetesPodDisruptionBudgetSpec {
+			return &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: new(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+			}
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			pdb := pdbBase()
+			pdb.Patch = patch
+			kube.EnvoyPDB = pdb
+		}
+		baseline := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyPDB = pdbBase()
+		}
+
+		unpatched, err := newRender(t, true, baseline).PodDisruptionBudget()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).PodDisruptionBudget()
+		require.NoError(t, err)
+		assert.Equal(t, "true", enabled.Annotations["tenant-injected"])
+
+		disabled, err := newRender(t, true, configure).PodDisruptionBudget()
+		require.NoError(t, err)
+		assert.NotContains(t, disabled.Annotations, "tenant-injected")
+		assert.Equal(t, unpatched, disabled)
+	})
+}
+
 func writeTestDataToFile(filename string, resources []any) error {
 	var combinedYAML []byte
 	for i, res := range resources {
@@ -2238,6 +2415,7 @@ func TestSanitizeControllerServiceAccount(t *testing.T) {
 		cfg, err := config.New(os.Stdout, os.Stderr)
 		require.NoError(t, err)
 		cfg.ControllerServiceAccountName = saName
+		cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 		if gwNamespaceMode {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
@@ -2320,6 +2498,7 @@ func TestCheckResourceName(t *testing.T) {
 		cfg, err := config.New(os.Stdout, os.Stderr)
 		require.NoError(t, err)
 		cfg.ControllerName = name
+		cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 		if gwNamespaceMode {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
@@ -2443,6 +2622,7 @@ func TestCheckPodSpecVolumes(t *testing.T) {
 		cfg, err := config.New(os.Stdout, os.Stderr)
 		require.NoError(t, err)
 		cfg.ControllerName = controllerName
+		cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 		if gwNamespaceMode {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,

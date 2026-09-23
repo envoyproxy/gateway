@@ -80,6 +80,10 @@ type ResourceRender struct {
 
 	TopologyInjectorDisabled bool
 
+	// EnvoyProxyPatchDisabled disables applying the Kubernetes resource `patch`
+	// fields configured on EnvoyProxy's Kubernetes provider settings.
+	EnvoyProxyPatchDisabled bool
+
 	GatewayNamespaceMode bool
 
 	// ownerReferenceUID store the uid of its owner reference. Key is the kind of owner resource.
@@ -116,6 +120,7 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		infra:                    infra.GetProxyInfra(),
 		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
 		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
+		EnvoyProxyPatchDisabled:  !kubeInfra.GetEnvoyGateway().RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
 		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
 		ownerReferenceUID:        ownerReference,
 	}, nil
@@ -410,7 +415,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// apply merge patch to service
 	var err error
-	if svc, err = utils.MergeWithPatch(svc, envoyServiceConfig.Patch); err != nil {
+	if svc, err = utils.MergeWithPatch(svc, envoyServiceConfig.Patch, r.EnvoyProxyPatchDisabled); err != nil {
 		return nil, err
 	}
 
@@ -564,7 +569,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// apply merge patch to deployment
-	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch); err != nil {
+	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch, r.EnvoyProxyPatchDisabled); err != nil {
 		return nil, err
 	}
 
@@ -643,7 +648,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// apply merge patch to DaemonSet
-	if daemonSet, err = utils.MergeWithPatch(daemonSet, daemonSetConfig.Patch); err != nil {
+	if daemonSet, err = utils.MergeWithPatch(daemonSet, daemonSetConfig.Patch, r.EnvoyProxyPatchDisabled); err != nil {
 		return nil, err
 	}
 
@@ -680,7 +685,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		resourceName = *pdb.Name
 	}
 
-	return infracommon.GetPodDisruptionBudget(pdb, r.stableSelector(), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences())
+	return infracommon.GetPodDisruptionBudget(pdb, r.stableSelector(), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences(), r.EnvoyProxyPatchDisabled)
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
@@ -733,7 +738,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	var err error
-	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
+	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch, r.EnvoyProxyPatchDisabled); err != nil {
 		return nil, err
 	}
 
