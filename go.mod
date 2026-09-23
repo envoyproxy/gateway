@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.27
+go 1.26.8
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
@@ -39,7 +39,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	github.com/tetratelabs/func-e v1.6.0
-	github.com/tsaarni/certyaml v0.13.0
+	github.com/tsaarni/certyaml v0.12.0
 	github.com/yuin/gopher-lua v1.1.2
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.46.0
