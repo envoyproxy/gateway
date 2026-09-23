@@ -5304,7 +5304,7 @@ spec:
                       ServerHeaderTransformation is set to Overwrite or AppendIfAbsent.
                     maxLength: 256
                     minLength: 1
-                    pattern: ^[!-~]+$
+                    pattern: "^[!-~]([ \t!-~]*[!-~])?$"
                     type: string
                   withUnderscoresAction:
                     description: |-
