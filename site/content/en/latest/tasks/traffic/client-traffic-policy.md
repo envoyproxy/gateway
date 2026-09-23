@@ -731,5 +731,77 @@ Request Header Fields Too Large
 Only one `ClientTrafficPolicy` can set `maxRequestHeaderLimit` per Envoy listener. When multiple plaintext (HTTP, non-TLS) listeners on the same Gateway share the same port, only a Gateway-scoped (not listener/`sectionName`-scoped) `ClientTrafficPolicy` may set this field, since Envoy Gateway collapses same-port plaintext listeners into a single Envoy listener.
 {{% /alert %}}
 
+### Configure the Server Response Header
+
+This feature allows you to configure how the `Server` response header is handled, mapping to the Envoy [`server_header_transformation`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-server-header-transformation) and [`server_name`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-server-name) HTTP connection manager settings.
+
+`serverHeaderTransformation` accepts:
+
+- `Overwrite`: always write `serverName` to the `Server` header.
+- `AppendIfAbsent`: write `serverName` only when the response does not already carry a `Server` header.
+- `PassThrough`: leave the `Server` header untouched. This is the default, which keeps Envoy hidden from the `Server` header.
+
+`serverName` only takes effect with `Overwrite` or `AppendIfAbsent`.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-server-header
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    serverHeaderTransformation: Overwrite
+    serverName: my-gateway
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-server-header
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    serverHeaderTransformation: Overwrite
+    serverName: my-gateway
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Curl the example app through Envoy proxy:
+
+```shell
+curl -v http://$GATEWAY_HOST/get -H "Host: www.example.com"
+```
+
+You should expect the configured `Server` header in the response:
+
+```shell
+< HTTP/1.1 200 OK
+< server: my-gateway
+```
+
+{{% alert title="Note" color="primary" %}}
+As with `maxRequestHeaderLimit`, these settings apply per Envoy listener. When multiple plaintext (HTTP, non-TLS) listeners on the same Gateway share the same port, Envoy Gateway collapses them into a single Envoy listener and only the first listener's settings take effect.
+{{% /alert %}}
+
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

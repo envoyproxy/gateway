@@ -708,6 +708,14 @@ type ProxyProtocolSettings struct {
 	Optional bool `json:"optional,omitempty" yaml:"optional,omitempty"`
 }
 
+type ServerHeaderTransformation egv1a1.ServerHeaderTransformation
+
+const (
+	ServerHeaderTransformationOverwrite      = ServerHeaderTransformation(egv1a1.ServerHeaderTransformationOverwrite)
+	ServerHeaderTransformationAppendIfAbsent = ServerHeaderTransformation(egv1a1.ServerHeaderTransformationAppendIfAbsent)
+	ServerHeaderTransformationPassThrough    = ServerHeaderTransformation(egv1a1.ServerHeaderTransformationPassThrough)
+)
+
 type WithUnderscoresAction egv1a1.WithUnderscoresAction
 
 const (
@@ -983,6 +991,15 @@ type HeaderSettings struct {
 	// MaxRequestHeadersKB defines the maximum request headers size in KiB allowed for incoming connections.
 	// Maps to the Envoy `max_request_headers_kb` HTTP connection manager setting.
 	MaxRequestHeadersKB *uint32 `json:"maxRequestHeadersKB,omitempty" yaml:"maxRequestHeadersKB,omitempty"`
+
+	// ServerHeaderTransformation determines how the Server response header is handled.
+	// Defaults to PassThrough, which hides Envoy from the Server header.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-serverheadertransformation
+	ServerHeaderTransformation *ServerHeaderTransformation `json:"serverHeaderTransformation,omitempty" yaml:"serverHeaderTransformation,omitempty"`
+
+	// ServerName is the value written to the Server response header.
+	// It only takes effect when ServerHeaderTransformation is Overwrite or AppendIfAbsent.
+	ServerName *string `json:"serverName,omitempty" yaml:"serverName,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections

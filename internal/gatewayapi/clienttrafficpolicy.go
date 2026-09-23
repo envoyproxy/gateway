@@ -1031,6 +1031,14 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		httpIR.Headers.RequestID = new(ir.RequestIDActionPreserveOrGenerate)
 	}
 
+	if headerSettings.ServerHeaderTransformation != nil {
+		httpIR.Headers.ServerHeaderTransformation = new(ir.ServerHeaderTransformation(*headerSettings.ServerHeaderTransformation))
+	}
+
+	if headerSettings.ServerName != nil {
+		httpIR.Headers.ServerName = headerSettings.ServerName
+	}
+
 	if headerSettings.XForwardedClientCert != nil {
 		httpIR.Headers.XForwardedClientCert = &ir.XForwardedClientCert{
 			Mode: ptr.Deref(headerSettings.XForwardedClientCert.Mode, egv1a1.XFCCForwardModeSanitize),
