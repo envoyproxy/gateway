@@ -1237,6 +1237,8 @@ type TrafficFeatures struct {
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+	// RequestBodyBufferLimit is the maximum number of bytes Envoy may buffer for an individual request body.
+	RequestBodyBufferLimit *uint64 `json:"requestBodyBufferLimit,omitempty" yaml:"requestBodyBufferLimit,omitempty"`
 }
 
 // ClusterFeatures returns the cluster-scoped subset of these traffic features, or nil if there are
@@ -1542,10 +1544,15 @@ type OIDC struct {
 	// CSRFTokenTTL configures the lifetime of the csrf token Envoy stores in the cookie.
 	CSRFTokenTTL *metav1.Duration `json:"csrfTokenTTL,omitempty"`
 
+	// CodeVerifierTTL configures the lifetime of the PKCE code verifier Envoy stores in the cookie.
+	CodeVerifierTTL *metav1.Duration `json:"codeVerifierTTL,omitempty"`
+
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
 	// These cookies are set by the oauth filter, including: AccessToken,
 	// OauthHMAC, OauthExpires, IdToken, RefreshToken, OauthNonce and CodeVerifier.
+	// It defaults to a digest of the policy identity, and can be pinned by the user
+	// through the OIDC cookieNames.suffix field.
 	CookieSuffix string `json:"cookieSuffix,omitempty"`
 
 	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.

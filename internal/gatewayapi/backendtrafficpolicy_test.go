@@ -218,7 +218,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		}
 
 		tf, err := tr.buildTrafficFeatures(policy, nil)
-		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
 
@@ -244,8 +244,107 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		require.NoError(t, err)
 
 		tf, err := tr.buildTrafficFeatures(mergedPolicy, owners)
-		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
+	})
+}
+
+func TestBuildTrafficFeaturesRequestBufferMode(t *testing.T) {
+	t.Run("mode LimitOnly is allowed with httpUpgrade", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+					Mode:  new(egv1a1.RequestBufferModeLimitOnly),
+				},
+				HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+					{Type: "websocket"},
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy, nil)
+		require.NoError(t, err)
+		require.NotNil(t, tf)
+		// LimitOnly must not enable the Buffer filter, only the route-level body buffer limit.
+		require.Nil(t, tf.RequestBuffer)
+		require.Equal(t, new(uint64(1024*1024)), tf.RequestBodyBufferLimit)
+	})
+
+	t.Run("mode BufferAndLimit only sets the buffer filter", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+					Mode:  new(egv1a1.RequestBufferModeBufferAndLimit),
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy, nil)
+		require.NoError(t, err)
+		require.NotNil(t, tf)
+		require.NotNil(t, tf.RequestBuffer)
+		require.Nil(t, tf.RequestBodyBufferLimit)
+	})
+
+	t.Run("an unset mode defaults to BufferAndLimit", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy, nil)
+		require.NoError(t, err)
+		require.NotNil(t, tf)
+		require.NotNil(t, tf.RequestBuffer)
+		require.Nil(t, tf.RequestBodyBufferLimit)
+	})
+
+	t.Run("mode LimitOnly is not bound by the buffer filter uint32 ceiling", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					// Rejected under BufferAndLimit, but the route-level limit is a uint64.
+					Limit: resource.MustParse("5000Mi"),
+					Mode:  new(egv1a1.RequestBufferModeLimitOnly),
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy, nil)
+		require.NoError(t, err)
+		require.NotNil(t, tf)
+		require.Equal(t, new(uint64(5000*1024*1024)), tf.RequestBodyBufferLimit)
+	})
+
+	t.Run("an omitted limit is rejected in both modes", func(t *testing.T) {
+		for _, mode := range []*egv1a1.RequestBufferMode{
+			nil,
+			new(egv1a1.RequestBufferModeBufferAndLimit),
+			new(egv1a1.RequestBufferModeLimitOnly),
+		} {
+			tr := &Translator{}
+			policy := &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					// Limit is optional in the schema, so it can reach the translator as a zero Quantity.
+					RequestBuffer: &egv1a1.RequestBuffer{Mode: mode},
+				},
+			}
+
+			tf, err := tr.buildTrafficFeatures(policy, nil)
+			require.ErrorContains(t, err, "limit value 0 is out of range, must be greater than 0")
+			require.NotNil(t, tf)
+			require.Nil(t, tf.RequestBuffer)
+			require.Nil(t, tf.RequestBodyBufferLimit)
+		}
 	})
 }
 
@@ -1647,7 +1746,9 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 								SectionName: new(gwapiv1.SectionName("http")),
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 				{
@@ -2341,8 +2442,10 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{
+								LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+							},
 						},
 					},
 				},
@@ -2367,8 +2470,10 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: roundRobinType},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{
+								LoadBalancer: &egv1a1.LoadBalancer{Type: roundRobinType},
+							},
 						},
 					},
 				},
@@ -2394,8 +2499,10 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{
+								LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+							},
 						},
 					},
 				},
@@ -2418,8 +2525,10 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{
+								LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+							},
 						},
 					},
 				},
@@ -2462,8 +2571,10 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: roundRobinType},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{
+								LoadBalancer: &egv1a1.LoadBalancer{Type: roundRobinType},
+							},
 						},
 					},
 				},
@@ -2481,8 +2592,10 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{
+								LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+							},
 						},
 					},
 				},
@@ -2523,8 +2636,10 @@ func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{
+								LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
+							},
 						},
 					},
 				},
@@ -2571,7 +2686,7 @@ func TestBtpSpecHasClusterScopedFields(t *testing.T) {
 		},
 		{
 			name: "ClusterSettings field set",
-			spec: &egv1a1.BackendTrafficPolicySpec{ClusterSettings: *circuitBreakerSet},
+			spec: &egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: *circuitBreakerSet}},
 			want: true,
 		},
 		{
@@ -2608,7 +2723,9 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 						},
 					},
 				},
-				ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: circuitBreaker},
+				BackendSettings: egv1a1.BackendSettings{
+					ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: circuitBreaker},
+				},
 			},
 		},
 	}
@@ -2819,7 +2936,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 				{
@@ -2860,7 +2979,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 				{
@@ -2918,7 +3039,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								SectionName: &ruleName,
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -2958,7 +3081,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -2998,7 +3123,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								SectionName: new(gwapiv1.SectionName("http")),
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3024,7 +3151,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3052,7 +3181,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								SectionName: &lsListenerName,
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3079,7 +3210,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3106,7 +3239,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
