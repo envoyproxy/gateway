@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
     GOARCH=${TARGETARCH} \
     go build -o /bin/backend-utilization -ldflags "${GO_LDFLAGS}" .
 
-FROM gcr.io/distroless/static-debian11
+FROM gcr.io/distroless/static-debian11@sha256:1dbe426d60caed5d19597532a2d74c8056cd7b1674042b88f7328690b5ead8ed
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/backend-utilization /
 
