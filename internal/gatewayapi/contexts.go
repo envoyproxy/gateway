@@ -901,7 +901,6 @@ type TranslatorContext struct {
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
-	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 }
 
