@@ -160,8 +160,9 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    extensionServerPolicies:
-    - object:
+    extensionResources:
+    - name: foo.example.io/bar/envoy-gateway/test2
+      object:
         apiVersion: foo.example.io/v1alpha1
         kind: Bar
         metadata:
@@ -202,6 +203,8 @@ xdsIR:
               status: "True"
               type: Accepted
             controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionServerPolicies:
+    - name: foo.example.io/bar/envoy-gateway/test2
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -224,47 +227,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       extensionRefs:
-      - object:
-          apiVersion: foo.example.io/v1alpha1
-          kind: Bar
-          metadata:
-            name: test2
-            namespace: envoy-gateway
-          spec:
-            data: attached to multiple gateways
-            targetRefs:
-            - group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-2
-            - group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-          status:
-            ancestors:
-            - ancestorRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: gateway-2
-                namespace: envoy-gateway
-              conditions:
-              - lastTransitionTime: null
-                message: Policy has been accepted.
-                reason: Accepted
-                status: "True"
-                type: Accepted
-              controllerName: gateway.envoyproxy.io/gatewayclass-controller
-            - ancestorRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: gateway-1
-                namespace: envoy-gateway
-              conditions:
-              - lastTransitionTime: null
-                message: Policy has been accepted.
-                reason: Accepted
-                status: "True"
-                type: Accepted
-              controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      - name: foo.example.io/bar/envoy-gateway/test2
       externalPort: 81
       hostnames:
       - '*'
@@ -287,8 +250,9 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    extensionServerPolicies:
-    - object:
+    extensionResources:
+    - name: foo.example.io/bar/envoy-gateway/test2
+      object:
         apiVersion: foo.example.io/v1alpha1
         kind: Bar
         metadata:
@@ -329,6 +293,8 @@ xdsIR:
               status: "True"
               type: Accepted
             controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionServerPolicies:
+    - name: foo.example.io/bar/envoy-gateway/test2
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -351,47 +317,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       extensionRefs:
-      - object:
-          apiVersion: foo.example.io/v1alpha1
-          kind: Bar
-          metadata:
-            name: test2
-            namespace: envoy-gateway
-          spec:
-            data: attached to multiple gateways
-            targetRefs:
-            - group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-2
-            - group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-          status:
-            ancestors:
-            - ancestorRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: gateway-2
-                namespace: envoy-gateway
-              conditions:
-              - lastTransitionTime: null
-                message: Policy has been accepted.
-                reason: Accepted
-                status: "True"
-                type: Accepted
-              controllerName: gateway.envoyproxy.io/gatewayclass-controller
-            - ancestorRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: gateway-1
-                namespace: envoy-gateway
-              conditions:
-              - lastTransitionTime: null
-                message: Policy has been accepted.
-                reason: Accepted
-                status: "True"
-                type: Accepted
-              controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      - name: foo.example.io/bar/envoy-gateway/test2
       externalPort: 80
       hostnames:
       - '*'

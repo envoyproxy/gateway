@@ -105,6 +105,16 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionResources:
+    - name: foo.example.io/foo/default/test
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Foo
+        metadata:
+          name: test
+          namespace: default
+        spec:
+          data: stuff
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -163,14 +173,7 @@ xdsIR:
             protocol: GRPC
             weight: 1
         extensionRefs:
-        - object:
-            apiVersion: foo.example.io/v1alpha1
-            kind: Foo
-            metadata:
-              name: test
-              namespace: default
-            spec:
-              data: stuff
+        - name: foo.example.io/foo/default/test
         hostname: '*'
         isHTTP2: true
         metadata:
