@@ -2932,7 +2932,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		// Handle custom backend resources defined in extension manager
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
 			// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
-			unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources)
+			var gwIR *ir.Xds
+			if gatewayCtx != nil {
+				gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
+			}
+			unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources, gwIR, gatewayCtx)
 
 			// Check if the custom backend resource was found
 			if unstructuredRef == nil {
@@ -3409,6 +3413,8 @@ func (t *Translator) processBackendExtensions(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	resources *resource.Resources,
+	gwIR *ir.Xds,
+	gatewayCtx *GatewayContext,
 ) *ir.UnstructuredRef { // This list of resources will be empty unless an extension is loaded (and introduces resources)
 	for _, res := range resources.ExtensionRefFilters {
 		if res.GetKind() == string(*backendRef.Kind) && res.GetName() == string(backendRef.Name) && res.GetNamespace() == backendNamespace {
@@ -3420,7 +3426,7 @@ func (t *Translator) processBackendExtensions(
 				group := apiVers[:idx]
 				if group == string(*backendRef.Group) {
 					res := res // Capture loop variable
-					return &ir.UnstructuredRef{Object: &res}
+					return t.getOrCreateExtensionResource(gwIR, gatewayCtx, &res)
 				}
 			}
 		}

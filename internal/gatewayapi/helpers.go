@@ -579,6 +579,13 @@ func irBackendClusterName(key *BackendClusterKey) string {
 	return base + "/" + strings.ToLower(string(key.Protocol))
 }
 
+func irExtensionResourceName(key *ExtensionResourceKey) string {
+	if key.Group == "" {
+		return fmt.Sprintf("%s/%s/%s", strings.ToLower(key.Kind), key.Namespace, key.Name)
+	}
+	return fmt.Sprintf("%s/%s/%s/%s", strings.ToLower(key.Group), strings.ToLower(key.Kind), key.Namespace, key.Name)
+}
+
 func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
 }
