@@ -895,11 +895,14 @@ type CACertificateKey struct {
 	Digest       string
 }
 
-// ResolvedCAKey identifies the CA of a resource already resolved during this translation, so
-// its other destinations can reuse the entry instead of re-reading the refs.
+// ResolvedCAKey identifies a resource whose CA was already resolved. It keys on the resource
+// rather than the CA's secret name, which a Backend and a BackendTLSPolicy of the same name
+// and namespace mint identically.
 type ResolvedCAKey struct {
 	GatewayIRKey string
-	CAName       string
+	Kind         string
+	Namespace    string
+	Name         string
 }
 
 type TranslatorContext struct {
@@ -914,7 +917,7 @@ type TranslatorContext struct {
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
-	ResolvedCAMap           map[ResolvedCAKey]*ir.CACertificateEntry
+	ResolvedCAMap           map[ResolvedCAKey]string
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
