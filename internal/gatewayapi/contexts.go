@@ -888,6 +888,20 @@ type ExtensionResourceKey struct {
 	Name         string
 }
 
+// CACertificateKey identifies a shared upstream CA bundle within a gateway's IR by a digest
+// of its content.
+type CACertificateKey struct {
+	GatewayIRKey string
+	Digest       string
+}
+
+// ResolvedCAKey identifies the CA of a resource already resolved during this translation, so
+// its other destinations can reuse the entry instead of re-reading the refs.
+type ResolvedCAKey struct {
+	GatewayIRKey string
+	CAName       string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -899,14 +913,11 @@ type TranslatorContext struct {
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
+	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
+	ResolvedCAMap           map[ResolvedCAKey]*ir.CACertificateEntry
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
-
-	// CACertBundleMap interns assembled CA bundles by content, so that destinations
-	// validating against the same CA share one backing array instead of each holding
-	// its own copy.
-	CACertBundleMap map[string][]byte
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {

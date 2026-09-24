@@ -581,43 +581,57 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 	}
 }
 
-// BenchmarkXdsIRDeepCopy measures the copy the watchable map performs on every store
-// and once per subscriber. Many destinations validating against one CA is the shape
-// that dominates the control-plane heap on large gateways, so the IR is built directly
-// rather than translated: it keeps the benchmark independent of fixture loading and
-// lets the destination count be the variable that matters.
+// BenchmarkXdsIRDeepCopy measures the copy the watchable map performs on every store and
+// once per subscriber. Many destinations validating against one CA is the shape that
+// dominates the control-plane heap, so it compares the bundle carried per destination
+// against a single shared entry in Xds.CACertificates that destinations name.
 func BenchmarkXdsIRDeepCopy(b *testing.B) {
 	caBundle := []byte(caBundlePEM())
 
-	for _, destinations := range []int{100, 1000} {
-		b.Run(fmt.Sprintf("destinations=%d", destinations), func(b *testing.B) {
-			listener := &ir.HTTPListener{
-				CoreListenerDetails: ir.CoreListenerDetails{Name: "listener"},
+	build := func(destinations int, central bool) *ir.Xds {
+		listener := &ir.HTTPListener{
+			CoreListenerDetails: ir.CoreListenerDetails{Name: "listener"},
+		}
+		for i := 0; i < destinations; i++ {
+			// One policy per destination, all trusting the same CA: the shape a cluster of
+			// backends behind one corporate CA produces.
+			ca := &ir.TLSCACertificate{Name: fmt.Sprintf("policy-%d/default-ca", i)}
+			if central {
+				ca.Digest = "sha256-shared"
+			} else {
+				ca.Certificate = caBundle
 			}
-			for i := 0; i < destinations; i++ {
-				listener.Routes = append(listener.Routes, &ir.HTTPRoute{
-					Name: fmt.Sprintf("route-%d", i),
-					Destination: &ir.RouteDestination{
-						Name: fmt.Sprintf("dest-%d", i),
-						Settings: []*ir.DestinationSetting{{
-							Name: fmt.Sprintf("setting-%d", i),
-							TLS: &ir.TLSUpstreamConfig{
-								CACertificate: &ir.TLSCACertificate{
-									Name:        "shared-ca",
-									Certificate: caBundle,
-								},
-							},
-						}},
-					},
-				})
-			}
-			xdsIR := &ir.Xds{HTTP: []*ir.HTTPListener{listener}}
+			listener.Routes = append(listener.Routes, &ir.HTTPRoute{
+				Name: fmt.Sprintf("route-%d", i),
+				Destination: &ir.RouteDestination{
+					Name: fmt.Sprintf("dest-%d", i),
+					Settings: []*ir.DestinationSetting{{
+						Name: fmt.Sprintf("setting-%d", i),
+						TLS:  &ir.TLSUpstreamConfig{CACertificate: ca},
+					}},
+				},
+			})
+		}
+		xdsIR := &ir.Xds{HTTP: []*ir.HTTPListener{listener}}
+		if central {
+			xdsIR.CACertificates = []*ir.CACertificateEntry{{Digest: "sha256-shared", Certificate: caBundle}}
+		}
+		return xdsIR
+	}
 
-			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				_ = xdsIR.DeepCopy()
-			}
-		})
+	for _, destinations := range []int{100, 1000} {
+		for _, tc := range []struct {
+			name    string
+			central bool
+		}{{"perDestination", false}, {"central", true}} {
+			b.Run(fmt.Sprintf("destinations=%d/%s", destinations, tc.name), func(b *testing.B) {
+				xdsIR := build(destinations, tc.central)
+				b.ReportAllocs()
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					_ = xdsIR.DeepCopy()
+				}
+			})
+		}
 	}
 }

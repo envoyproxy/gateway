@@ -199,6 +199,12 @@ type Xds struct {
 	//
 	// +optional
 	ExtensionResources []*UnstructuredRef `json:"extensionResources,omitempty" yaml:"extensionResources,omitempty"`
+
+	// CACertificates holds upstream CA bundles deduplicated by content, so policies trusting
+	// the same CA share one entry whichever Secret or ConfigMap they read it from.
+	//
+	// +optional
+	CACertificates []*CACertificateEntry `json:"caCertificates,omitempty" yaml:"caCertificates,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -619,10 +625,24 @@ type TLSCrl struct {
 type TLSCACertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-	// Certificate content.
+	// Digest names the Xds.CACertificates entry holding this reference's bytes. Empty when
+	// Certificate is carried inline instead, which happens where no gateway IR is in scope
+	// to register against.
+	Digest string `json:"digest,omitempty" yaml:"digest,omitempty"`
+	// Certificate content. Empty when the bytes live in Xds.CACertificates under Digest.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
+}
+
+// CACertificateEntry is one CA bundle in Xds.CACertificates, shared by every
+// TLSCACertificate whose Digest matches.
+// +k8s:deepcopy-gen=true
+type CACertificateEntry struct {
+	// Digest content-addresses Certificate, and is what references join on.
+	Digest string `json:"digest" yaml:"digest"`
+	// Certificate content.
+	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate

@@ -1,1 +1,0 @@
-Reduced control-plane memory on gateways where many backends validate against the same CA by sharing the immutable TLS certificate bytes across IR copies instead of duplicating them, and by interning CA bundles so destinations referencing the same CA hold one copy.
