@@ -695,7 +695,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 // entry regardless of which Secret or ConfigMap they read it from.
 func caDigest(bundle []byte) string {
 	sum := sha256.Sum256(bundle)
-	return "sha256-" + hex.EncodeToString(sum[:8])
+	return "sha256-" + hex.EncodeToString(sum[:])
 }
 
 // registeredCAEntryFor returns the entry already registered for a policy's CA name, if the
