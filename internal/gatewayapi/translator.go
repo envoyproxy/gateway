@@ -361,7 +361,6 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	)
 	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
 	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
-	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
 
 	// Pre-compute which gateways/listeners have a ClientTrafficPolicy-sourced
 	// cluster-affecting override, for O(1) lookup during route processing.

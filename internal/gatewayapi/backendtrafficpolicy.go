@@ -136,33 +136,11 @@ func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
 	return hasClusterSettings || replacesParent
 }
 
-// BTPLoadBalancerIndex reports, per gateway, whether a BackendTrafficPolicy attached to it sets
-// LoadBalancer to ConsistentHash.
-type BTPLoadBalancerIndex struct {
-	*policyIndex[bool]
-}
-
-// newBTPLoadBalancerIndex allocates a BTPLoadBalancerIndex.
-func newBTPLoadBalancerIndex() *BTPLoadBalancerIndex {
-	return &BTPLoadBalancerIndex{policyIndex: newPolicyIndex[bool]()}
-}
-
-// IsConsistentHash reports whether gatewayNN has a BackendTrafficPolicy setting LoadBalancer to
-// ConsistentHash.
-func (idx *BTPLoadBalancerIndex) IsConsistentHash(gatewayNN types.NamespacedName) bool {
-	if idx == nil {
-		return false
-	}
-	isConsistentHash, _ := idx.LookupExact(gatewayScope(gatewayNN))
-	return isConsistentHash
-}
-
-// BTPIndexes groups the three pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
+// BTPIndexes groups the two pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
 // together in one pass over btps.
 type BTPIndexes struct {
 	RoutingType     *BTPRoutingTypeIndex
 	ClusterSettings *BTPClusterSettingsIndex
-	LoadBalancer    *BTPLoadBalancerIndex
 }
 
 // BuildBTPIndexes builds BTPIndexes, resolving each BackendTrafficPolicy's targets at most once.
@@ -177,7 +155,6 @@ func BuildBTPIndexes(
 ) *BTPIndexes {
 	routingTypeIdx := newBTPRoutingTypeIndex()
 	clusterSettingsIdx := newBTPClusterSettingsIndex()
-	loadBalancerIdx := newBTPLoadBalancerIndex()
 
 	allTargets := make([]client.Object, 0, len(routes)+len(gateways)+len(listenerSets))
 	allTargets = append(allTargets, routes...)
@@ -191,9 +168,8 @@ func BuildBTPIndexes(
 	for _, btp := range btps {
 		hasRoutingType := btp.Spec.RoutingType != nil
 		hasClusterScoped := btpSpecHasClusterScopedFields(&btp.Spec)
-		hasLoadBalancer := btp.Spec.LoadBalancer != nil
 
-		// Unlike ClusterSettings/LoadBalancer, RoutingType can never be skipped here: every
+		// Unlike ClusterSettings, RoutingType can never be skipped here: every
 		// accepted BTP must claim its target's first-write-wins slot, even one that sets nothing
 		// at all, so a younger conflicting policy can't silently win, and so a route/rule-level
 		// policy with MergeType unset can still pin its scope to nil instead of inheriting.
@@ -226,7 +202,7 @@ func BuildBTPIndexes(
 				routingTypeIdx.setRouteLevel(nn, kind, btp.Spec.RoutingType, btp.Spec.MergeType)
 			}
 
-			// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
+			// ClusterSettings only informs merge-eligibility, so it's moot when no
 			// accepted gateway can enable merging; RoutingType (above) applies regardless.
 			if mergeBackendsEnabled {
 				switch {
@@ -244,16 +220,6 @@ func BuildBTPIndexes(
 				default:
 					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
 				}
-
-				switch {
-				case kind == resource.KindGateway && ref.SectionName == nil:
-					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
-					// LoadBalancer unset, so a younger conflicting BTP can't silently win it.
-					loadBalancerIdx.setGatewayLevel(nn, hasLoadBalancer && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType)
-				default:
-					// A listener/listenerSet/route-rule/route-level LoadBalancer setting already disqualifies
-					// its own rule from merging on its own, so it's never looked up here.
-				}
 			}
 		}
 	}
@@ -261,7 +227,6 @@ func BuildBTPIndexes(
 	return &BTPIndexes{
 		RoutingType:     routingTypeIdx,
 		ClusterSettings: clusterSettingsIdx,
-		LoadBalancer:    loadBalancerIdx,
 	}
 }
 
