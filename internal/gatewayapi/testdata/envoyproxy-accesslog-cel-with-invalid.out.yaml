@@ -1,3 +1,110 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    logging: {}
+    provider:
+      kubernetes:
+        envoyDeployment:
+          container:
+            env:
+            - name: env_a
+              value: env_a_value
+            - name: env_b
+              value: env_b_name
+            image: envoyproxy/envoy:distroless-dev
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsUser: 2000
+          pod:
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: cloud.google.com/gke-nodepool
+                      operator: In
+                      values:
+                      - router-node
+            annotations:
+              key1: val1
+              key2: val2
+            securityContext:
+              fsGroup: 2000
+              fsGroupChangePolicy: OnRootMismatch
+              runAsGroup: 3000
+              runAsUser: 1000
+            tolerations:
+            - effect: NoSchedule
+              key: node-type
+              operator: Exists
+              value: router
+            volumes:
+            - name: certs
+              secret:
+                secretName: envoy-cert
+          replicas: 2
+        envoyService:
+          type: LoadBalancer
+      type: Kubernetes
+    telemetry:
+      accessLog:
+        settings:
+        - format:
+            text: |
+              [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+            type: Text
+          matches:
+          - response.code >= 400
+          - )++++
+          sinks:
+          - file:
+              path: /dev/stdout
+            type: File
+          - openTelemetry:
+              host: otel-collector.monitoring.svc.cluster.local
+              port: 4317
+              resourceAttributes:
+                k8s.cluster.name: cluster-1
+            type: OpenTelemetry
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: test
+      namespace: envoy-gateway-system
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -14,13 +121,6 @@ gateways:
       port: 80
       protocol: HTTP
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Invalid access log backendRefs in the referenced EnvoyProxy: invalid
-        CEL expression: )++++'
-      reason: InvalidParameters
-      status: "False"
-      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -124,7 +224,18 @@ infraIR:
                     resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -143,6 +254,36 @@ infraIR:
       namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
+    accessLog:
+      openTelemetry:
+      - authority: otel-collector.monitoring.svc.cluster.local
+        celMatches:
+        - response.code >= 400
+        destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
+          name: accesslog_otel_0_1
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: otel-collector.monitoring.svc.cluster.local
+              port: 4317
+            name: accesslog_otel_0_1/backend/-1
+            protocol: GRPC
+            weight: 1
+        resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
+        text: |
+          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+      text:
+      - celMatches:
+        - response.code >= 400
+        format: |
+          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+        path: /dev/stdout
     globalResources:
       proxyServiceCluster:
         metadata:
