@@ -368,6 +368,9 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		if listenerContext == listener {
 			continue
 		}
+		if listener.hostnameConflictLoser {
+			continue
+		}
 		if listenerContext != nil && listenerContext.Port != listener.Port {
 			continue
 		}
@@ -574,6 +577,13 @@ func irBackendClusterName(key *BackendClusterKey) string {
 		return base
 	}
 	return base + "/" + strings.ToLower(string(key.Protocol))
+}
+
+func irExtensionResourceName(key *ExtensionResourceKey) string {
+	if key.Group == "" {
+		return fmt.Sprintf("%s/%s/%s", strings.ToLower(key.Kind), key.Namespace, key.Name)
+	}
+	return fmt.Sprintf("%s/%s/%s/%s", strings.ToLower(key.Group), strings.ToLower(key.Kind), key.Namespace, key.Name)
 }
 
 func irRuleName(policyNamespace, policyName string, ruleIndex int) string {

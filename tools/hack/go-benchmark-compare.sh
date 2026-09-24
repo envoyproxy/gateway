@@ -1,12 +1,16 @@
 #!/bin/bash
 
-# go-benchmark-compare.sh - Compare benchmark results between PR and main branch
+# go-benchmark-compare.sh - Compare benchmark results between PR and its base branch
 # Usage: go-benchmark-compare.sh [--help]
 
 set -euo pipefail
 
 # Environment variables with defaults
 REGRESSION_THRESHOLD=${REGRESSION_THRESHOLD:-5}
+# Baseline to compare against. CI passes the PR's base branch so that release
+# branch PRs are not compared against main, which tracks a different Go
+# toolchain and feature set.
+BASE_REF=${BASE_REF:-origin/main}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BENCHSTAT=${BENCHSTAT:-go tool -modfile="$REPO_ROOT/tools/go.mod" benchstat}
@@ -16,13 +20,14 @@ usage() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-Compare benchmark performance between PR branch and main branch.
+Compare benchmark performance between the PR branch and its base branch.
 
 OPTIONS:
     --help          Show this help message
 
 ENVIRONMENT VARIABLES:
     REGRESSION_THRESHOLD    Regression threshold percentage (default: 5)
+    BASE_REF                Baseline git ref to compare against (default: origin/main)
 
 EXIT CODES:
     0    Success (no significant regressions)
@@ -34,7 +39,7 @@ EOF
 # Function to cleanup temporary files
 cleanup() {
     local exit_code=$?
-    rm -f "$REPO_ROOT/pr-bench.txt" "$REPO_ROOT/main-bench.txt" "$REPO_ROOT/comparison.txt"
+    rm -f "$REPO_ROOT/pr-bench.txt" "$REPO_ROOT/base-bench.txt" "$REPO_ROOT/comparison.txt"
     exit $exit_code
 }
 
@@ -131,14 +136,19 @@ if ! run_benchmark "pr-bench.txt" "$current_branch"; then
     exit 1
 fi
 
-# Switch to main branch and run benchmarks
-log "Switching to main branch..."
-if ! git checkout origin/main --quiet; then
-    log "ERROR: Failed to checkout main branch"
+# Switch to the base branch and run benchmarks
+if ! git rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null; then
+    log "ERROR: Base ref $BASE_REF not found; ensure the checkout has full history"
     exit 1
 fi
 
-if ! run_benchmark "main-bench.txt" "origin/main"; then
+log "Switching to base ref $BASE_REF..."
+if ! git checkout "$BASE_REF" --quiet; then
+    log "ERROR: Failed to checkout base ref $BASE_REF"
+    exit 1
+fi
+
+if ! run_benchmark "base-bench.txt" "$BASE_REF"; then
     # Return to original state before failing
     git checkout "$current_commit" --quiet || true
     exit 1
@@ -152,7 +162,7 @@ fi
 
 # Compare benchmarks using benchstat
 log "Comparing benchmark results..."
-if ! $BENCHSTAT main-bench.txt pr-bench.txt > comparison.txt 2>&1; then
+if ! $BENCHSTAT base-bench.txt pr-bench.txt > comparison.txt 2>&1; then
     log "WARNING: Benchstat comparison had issues, but continuing..."
 fi
 

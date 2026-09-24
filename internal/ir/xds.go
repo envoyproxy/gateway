@@ -193,6 +193,12 @@ type Xds struct {
 	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
 	// source of truth for a cluster's Settings/Metadata.
 	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
+	// ExtensionResources holds extension-introduced resources deduplicated into a single shared
+	// entry, keyed by their Name. Other IR fields reference these via UnstructuredRef.Name instead
+	// of embedding Object.
+	//
+	// +optional
+	ExtensionResources []*UnstructuredRef `json:"extensionResources,omitempty" yaml:"extensionResources,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -1237,6 +1243,8 @@ type TrafficFeatures struct {
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+	// RequestBodyBufferLimit is the maximum number of bytes Envoy may buffer for an individual request body.
+	RequestBodyBufferLimit *uint64 `json:"requestBodyBufferLimit,omitempty" yaml:"requestBodyBufferLimit,omitempty"`
 }
 
 // ClusterFeatures returns the cluster-scoped subset of these traffic features, or nil if there are
@@ -1356,6 +1364,16 @@ type EnvoyExtensionFeatures struct {
 //
 // +k8s:deepcopy-gen=true
 type UnstructuredRef struct {
+	// Name uniquely identifies this resource within a single Xds.ExtensionResources registry, in
+	// which case Object is nil here and must be looked up by Name. It is derived from the
+	// resource's GroupVersionKind and namespaced name as "<group>/<kind>/<namespace>/<name>",
+	// lowercasing only the group and kind, e.g. "foo.example.io/bar/default/my-bar". When Group
+	// is empty, the leading segment is omitted: "<kind>/<namespace>/<name>". Empty when Object is
+	// embedded directly instead (no gateway scope was available to dedup against).
+	//
+	// +optional
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
 }
 
@@ -1542,10 +1560,15 @@ type OIDC struct {
 	// CSRFTokenTTL configures the lifetime of the csrf token Envoy stores in the cookie.
 	CSRFTokenTTL *metav1.Duration `json:"csrfTokenTTL,omitempty"`
 
+	// CodeVerifierTTL configures the lifetime of the PKCE code verifier Envoy stores in the cookie.
+	CodeVerifierTTL *metav1.Duration `json:"codeVerifierTTL,omitempty"`
+
 	// CookieSuffix will be added to the name of the cookies set by the oauth filter.
 	// Adding a suffix avoids multiple oauth filters from overwriting each other's cookies.
 	// These cookies are set by the oauth filter, including: AccessToken,
-	// OauthHMAC, OauthExpires, IdToken, and RefreshToken.
+	// OauthHMAC, OauthExpires, IdToken, RefreshToken, OauthNonce and CodeVerifier.
+	// It defaults to a digest of the policy identity, and can be pinned by the user
+	// through the OIDC cookieNames.suffix field.
 	CookieSuffix string `json:"cookieSuffix,omitempty"`
 
 	// CookieNameOverrides can optionally override the generated name of the cookies set by the oauth filter.
@@ -2878,6 +2901,8 @@ type GlobalResources struct {
 	// EnvoyClientCertificate holds the client certificate secret for envoy to use when establishing a TLS connection to
 	// control plane components. For example, the rate limit service, WASM HTTP server, etc.
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
+	// RateLimitServiceCluster holds the rate limit service endpoints discovered from Kubernetes resources.
+	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.

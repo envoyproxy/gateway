@@ -1,7 +1,11 @@
+# The Gateways below are named for this test alone. The suite deletes a test's
+# resources when it finishes, so a Gateway name shared with another test is deleted
+# and recreated back to back, and the recreated Gateway can end up without status.
+# xref https://github.com/envoyproxy/gateway/issues/8677
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: internet-gateway
+  name: internet-gateway-for-hr-status
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: internet
@@ -81,7 +85,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: internet-gateway
+  - name: internet-gateway-for-hr-status
     sectionName: http
   - name: private-gateway-for-hr-status
     sectionName: http

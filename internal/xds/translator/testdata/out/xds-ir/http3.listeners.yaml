@@ -31,7 +31,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-wildcard
         serverHeaderTransformation: PASS_THROUGH
@@ -50,7 +49,6 @@
             - name: envoy-gateway/tls-secret-1
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
             tlsParams:
               tlsMaximumProtocolVersion: TLSv1_3
@@ -83,7 +81,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-foo
         serverHeaderTransformation: PASS_THROUGH
@@ -102,7 +99,6 @@
             - name: envoy-gateway/tls-secret-1
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
             tlsParams:
               tlsMaximumProtocolVersion: TLSv1_3
@@ -135,7 +131,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-bar
         serverHeaderTransformation: PASS_THROUGH
@@ -154,7 +149,6 @@
             - name: envoy-gateway/tls-secret-1
               sdsConfig:
                 ads: {}
-                initialFetchTimeout: 0s
                 resourceApiVersion: V3
             tlsParams:
               tlsMaximumProtocolVersion: TLSv1_3
@@ -194,7 +188,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-wildcard
         serverHeaderTransformation: PASS_THROUGH
@@ -212,7 +205,6 @@
           - name: envoy-gateway/tls-secret-1
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           tlsParams:
             tlsMaximumProtocolVersion: TLSv1_3
@@ -243,7 +235,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-foo
         serverHeaderTransformation: PASS_THROUGH
@@ -261,7 +252,6 @@
           - name: envoy-gateway/tls-secret-1
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           tlsParams:
             tlsMaximumProtocolVersion: TLSv1_3
@@ -292,7 +282,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: envoy-gateway/gateway-1/https-bar
         serverHeaderTransformation: PASS_THROUGH
@@ -310,7 +299,6 @@
           - name: envoy-gateway/tls-secret-1
             sdsConfig:
               ads: {}
-              initialFetchTimeout: 0s
               resourceApiVersion: V3
           tlsParams:
             tlsMaximumProtocolVersion: TLSv1_3

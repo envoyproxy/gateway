@@ -898,14 +898,14 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 			if listener.Hostname != nil {
 				hostname = listener.Hostname
 			}
-			portProtocolHostname := fmt.Sprintf("%s:%s:%d", listener.Protocol, *hostname, listener.Port)
+			// Use the protocol class rather than the protocol itself: HTTPS and TLS listeners
+			// share a port by matching on SNI, so two of them with the same hostname cannot both
+			// be served no matter which Gateway they came from. This mirrors what
+			// validateConflictedHostnameListeners already does within a single Gateway.
+			portProtocolHostname := fmt.Sprintf("%s:%s:%d", getProtocolForListener(listener), *hostname, listener.Port)
 			if listenerSets.Has(portProtocolHostname) {
-				listener.SetCondition(
-					gwapiv1.ListenerConditionConflicted,
-					metav1.ConditionTrue,
-					gwapiv1.ListenerReasonHostnameConflict,
-					"Port, protocol and hostname tuple must be unique for every listener",
-				)
+				setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict,
+					"Port, protocol and hostname tuple must be unique for every listener")
 			}
 			listenerSets.Insert(portProtocolHostname)
 		}
@@ -1174,6 +1174,7 @@ func (t *Translator) validateConflictedHostnameListeners(gateways []*GatewayCont
 				if winner, hasWinner := hostnameWinners[hostname]; hasWinner {
 					// A winner exists: only the non-winner listeners are conflicted.
 					if listener != winner {
+						listener.hostnameConflictLoser = true
 						setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict, conflictMsg)
 					}
 				} else if info.hostnames[hostname] > 1 {
