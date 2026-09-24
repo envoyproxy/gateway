@@ -634,6 +634,33 @@ func TestValidateXds(t *testing.T) {
 	}
 }
 
+func TestTLSCertificateValidateDistinguishesMissingSDSFields(t *testing.T) {
+	tests := []struct {
+		name string
+		sds  *SDSConfig
+		want error
+	}{
+		{
+			name: "scheme",
+			sds:  &SDSConfig{SecretName: "listener", Address: "/var/run/sds.sock"},
+			want: ErrTLSSDSSchemeEmpty,
+		},
+		{
+			name: "address",
+			sds:  &SDSConfig{SecretName: "listener", Scheme: "unix"},
+			want: ErrTLSSDSAddressEmpty,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := (&TLSCertificate{SDS: test.sds}).Validate()
+
+			require.ErrorIs(t, err, test.want)
+		})
+	}
+}
+
 func TestValidateHTTPListener(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -741,9 +768,10 @@ func TestValidateTCPListener(t *testing.T) {
 
 func TestValidateTLSListenerConfig(t *testing.T) {
 	tests := []struct {
-		name  string
-		input TLSConfig
-		want  error
+		name    string
+		input   TLSConfig
+		want    error
+		wantErr bool
 	}{
 		{
 			name: "happy",
@@ -754,6 +782,75 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 				}},
 			},
 			want: nil,
+		},
+		{
+			name: "SDS happy",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						Scheme:     "unix",
+						Address:    "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+				}},
+			},
+			want: nil,
+		},
+		{
+			name: "SDS with inline certificate and private key",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						Scheme:     "unix",
+						Address:    "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+					Certificate: []byte("server-cert"),
+					PrivateKey:  []byte("priv-key"),
+				}},
+			},
+			want: ErrTLSCertificateMultipleSources,
+		},
+		{
+			name: "SDS with inline OCSP staple",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{
+						SecretName: "default",
+						Scheme:     "unix",
+						Address:    "/var/run/secrets/workload-spiffe-uds/socket",
+					},
+					OCSPStaple: []byte("ocsp-staple"),
+				}},
+			},
+			want: ErrTLSCertificateMultipleSources,
+		},
+		{
+			name: "SDS empty",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "SDS missing URL",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{SecretName: "default"},
+				}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "SDS missing secret name",
+			input: TLSConfig{
+				Certificates: []TLSCertificate{{
+					SDS: &SDSConfig{Scheme: "unix", Address: "/x"},
+				}},
+			},
+			wantErr: true,
 		},
 		{
 			name: "invalid server cert",
@@ -776,6 +873,10 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if test.wantErr {
+				require.Error(t, (&test.input).Validate())
+				return
+			}
 			if test.want == nil {
 				require.NoError(t, (&test.input).Validate())
 			} else {

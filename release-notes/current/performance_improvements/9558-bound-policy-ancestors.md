@@ -1,1 +1,0 @@
-Fixed translation latency growing quadratically when many policies share the same target by capping each policy's `status.ancestors` at the CRD limit as ancestors are added, instead of only truncating during post-processing.

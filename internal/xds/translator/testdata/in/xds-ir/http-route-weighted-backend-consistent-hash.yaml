@@ -1,0 +1,49 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  # A weighted split across two distinct backend clusters (cluster-per-setting is
+  # triggered by the per-backendRef filter) combined with a ConsistentHash load
+  # balancer. use_hash_policy must be set on the weighted clusters so the cluster
+  # selection is driven by the request hash policy instead of being random per
+  # request, pinning a client to a single backend across the split.
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          headers:
+          - name: x-user-id
+    destination:
+      name: "first-route-dest"
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: "1.1.1.1"
+          port: 50001
+        weight: 80
+        name: "first-route-dest/backend/0"
+        filters:
+          addRequestHeaders:
+          - name: x-backend
+            value:
+            - primary
+            append: false
+      - addressType: IP
+        endpoints:
+        - host: "2.2.2.2"
+          port: 50002
+        weight: 20
+        name: "first-route-dest/backend/1"
+        filters:
+          addRequestHeaders:
+          - name: x-backend
+            value:
+            - backup
+            append: false

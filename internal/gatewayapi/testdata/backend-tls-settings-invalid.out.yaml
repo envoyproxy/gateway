@@ -170,7 +170,7 @@ httpRoutes:
         name: backend-2
       matches:
       - path:
-          value: /
+          value: /route-2
   status:
     parents:
     - conditions:
@@ -278,19 +278,6 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - directResponse:
-          statusCode: 500
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-1
-          namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /
       - destination:
           metadata:
             kind: HTTPRoute
@@ -316,6 +303,19 @@ xdsIR:
           name: httproute-2
           namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""

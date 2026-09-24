@@ -24,7 +24,6 @@
         rds:
           configSource:
             ads: {}
-            initialFetchTimeout: 0s
             resourceApiVersion: V3
           routeConfigName: listener-1
         serverHeaderTransformation: PASS_THROUGH

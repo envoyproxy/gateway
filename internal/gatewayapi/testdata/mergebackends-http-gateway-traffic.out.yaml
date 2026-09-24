@@ -116,7 +116,7 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /rule-1
+          value: /rule-2
       name: rule-1
   status:
     parents:
@@ -284,7 +284,7 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /rule-1
+          prefix: /rule-2
         traffic:
           circuitBreaker:
             maxConnections: 1024

@@ -1,0 +1,18 @@
+- ignorePortInHostMatching: true
+  name: default/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    name: default/gateway-1/http/*
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/*
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ext_proc/envoyextensionpolicy/default/policy-for-http-route/extproc/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

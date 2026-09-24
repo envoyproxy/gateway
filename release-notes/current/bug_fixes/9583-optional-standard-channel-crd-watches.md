@@ -1,1 +1,0 @@
-Fixed Envoy Gateway crash-looping at startup on clusters whose Gateway API CRD bundle omits ListenerSet, GRPCRoute or TLSRoute, such as GKE's managed gateway-api-crds addon, by making those watches conditional on the CRD being present.

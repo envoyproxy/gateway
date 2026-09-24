@@ -1,0 +1,28 @@
+- ignorePortInHostMatching: true
+  name: test1
+  virtualHosts:
+  - domains:
+    - '*'
+    name: test1/*
+    routes:
+    - match:
+        prefix: /
+      name: route1
+      route:
+        cluster: test1-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: test2
+  virtualHosts:
+  - domains:
+    - '*'
+    name: test2/*
+    routes:
+    - match:
+        prefix: /
+      name: route2
+      route:
+        cluster: test2-dest
+        upgradeConfigs:
+        - upgradeType: websocket

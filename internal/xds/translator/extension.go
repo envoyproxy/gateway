@@ -28,7 +28,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) error {
+func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager, idx extensionResourceIndex) error {
 	// Do nothing unless there is an extension manager and the ir.HTTPRoute has extension filters
 	if em == nil || (len(irRoute.ExtensionRefs) == 0 && len(irRoute.ExtensionServerPolicies) == 0) {
 		return nil
@@ -45,11 +45,11 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	}
 	unstructuredResources := make([]*unstructured.Unstructured, len(irRoute.ExtensionRefs))
 	for refIdx, ref := range irRoute.ExtensionRefs {
-		unstructuredResources[refIdx] = ref.Object
+		unstructuredResources[refIdx] = resolveUnstructuredRef(ref, idx)
 	}
 	unstructuredPolicies := make([]*unstructured.Unstructured, len(irRoute.ExtensionServerPolicies))
 	for refIdx, ref := range irRoute.ExtensionServerPolicies {
-		unstructuredPolicies[refIdx] = ref.Object
+		unstructuredPolicies[refIdx] = resolveUnstructuredRef(ref, idx)
 	}
 
 	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
@@ -170,7 +170,7 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	return nil
 }
 
-func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, extensionRefs []*ir.UnstructuredRef, em *extensionTypes.Manager) error {
+func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, extensionRefs []*ir.UnstructuredRef, em *extensionTypes.Manager, idx extensionResourceIndex) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -185,7 +185,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	if extListenerHookClient != nil {
 		unstructuredResources := make([]*unstructured.Unstructured, len(extensionRefs))
 		for refIdx, ref := range extensionRefs {
-			unstructuredResources[refIdx] = ref.Object
+			unstructuredResources[refIdx] = resolveUnstructuredRef(ref, idx)
 		}
 		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources)
 		if err != nil {
@@ -211,7 +211,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	return nil
 }
 
-func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []*ir.UnstructuredRef) error {
+func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []*ir.UnstructuredRef, idx extensionResourceIndex) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -228,6 +228,14 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	if extensionInsertHookClient == nil {
 		return nil
 	}
+
+	// The hook client reads Object directly off each ref (e.g. for per-extension GroupKind
+	// filtering), so resolve name-only refs to their canonical Object before handing them off.
+	resolvedPolicies := make([]*ir.UnstructuredRef, len(policies))
+	for i, policy := range policies {
+		resolvedPolicies[i] = &ir.UnstructuredRef{Object: resolveUnstructuredRef(policy, idx)}
+	}
+	policies = resolvedPolicies
 
 	// Get translation configuration and determine which resources to include
 	translationConfig := extManager.GetTranslationHookConfig()
@@ -321,7 +329,7 @@ func deepCopyPtr(src, dest interface{}) error {
 	}
 	srcVal := reflect.ValueOf(src)
 	destVal := reflect.ValueOf(dest)
-	if srcVal.Kind() == reflect.Ptr && destVal.Kind() == reflect.Ptr {
+	if srcVal.Kind() == reflect.Pointer && destVal.Kind() == reflect.Pointer {
 		srcElem := srcVal.Elem()
 		destVal = reflect.New(srcElem.Type())
 		destElem := destVal.Elem()

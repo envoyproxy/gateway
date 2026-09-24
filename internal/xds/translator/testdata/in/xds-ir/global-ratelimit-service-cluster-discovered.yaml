@@ -1,0 +1,51 @@
+globalResources:
+  envoyClientCertificate:
+    name: envoy-gateway-system/envoy
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+  # RateLimitServiceCluster is populated when the gatewayapi translator discovers the
+  # in-cluster envoy-ratelimit Service/EndpointSlices. When set, the xds translator must
+  # build the ratelimit_cluster from these endpoints instead of the DNS-resolved fallback
+  # host/port derived from GlobalRateLimit.ServiceURL.
+  rateLimitServiceCluster:
+    name: ratelimit_cluster
+    settings:
+    - name: ratelimit_cluster/backend/-1
+      protocol: GRPC
+      addressType: IP
+      endpoints:
+      - host: "10.10.0.1"
+        port: 8081
+      - host: "10.10.0.2"
+        port: 8081
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-user-id"
+              exact: "one"
+            limit:
+              requests: 5
+              unit: second
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

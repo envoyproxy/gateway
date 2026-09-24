@@ -1,1 +1,0 @@
-Fixed Gateway status reporting `Programmed: False` with reason `AddressNotAssigned` when the Envoy LoadBalancer service has no load balancer ingress (e.g. bare-metal clusters without a load balancer controller) but has addresses configured in `spec.externalIPs`, such as via an EnvoyProxy service patch. The external IPs are now used as a fallback for the Gateway status addresses.

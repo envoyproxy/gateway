@@ -111,7 +111,7 @@ func newBTPClusterSettingsIndex() *BTPClusterSettingsIndex {
 	return &BTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
 }
 
-// HasClusterSettingsBelowGateway reports whether a route-rule, route, or listener-level
+// HasClusterSettingsBelowGateway reports whether a route-rule, route, listener, or ListenerSet-level
 // BackendTrafficPolicy contributes backend-cluster-scoped settings for the given target, or
 // targets it with MergeType unset. A gateway-level setting is never the answer here: it applies
 // uniformly to every route sharing a merged cluster, so it can't cause a divergence -
@@ -122,12 +122,13 @@ func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
 	routeNN types.NamespacedName,
 	gatewayNN types.NamespacedName,
 	listenerName *gwapiv1.SectionName,
+	listenerSetNN *types.NamespacedName,
 	routeRuleName *gwapiv1.SectionName,
 ) bool {
 	if idx == nil {
 		return false
 	}
-	hasClusterSettings, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, nil, routeRuleName)
+	hasClusterSettings, replacesParent := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
 	// replacesParent catches what hasClusterSettings alone would miss: a rule's own BTP with
 	// MergeType nil and no cluster-scoped field (false) still resolves to its own empty settings,
 	// not the gateway's - diverging from a sibling rule that has no BTP and does inherit the
@@ -135,33 +136,11 @@ func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
 	return hasClusterSettings || replacesParent
 }
 
-// BTPLoadBalancerIndex reports, per gateway, whether a BackendTrafficPolicy attached to it sets
-// LoadBalancer to ConsistentHash.
-type BTPLoadBalancerIndex struct {
-	*policyIndex[bool]
-}
-
-// newBTPLoadBalancerIndex allocates a BTPLoadBalancerIndex.
-func newBTPLoadBalancerIndex() *BTPLoadBalancerIndex {
-	return &BTPLoadBalancerIndex{policyIndex: newPolicyIndex[bool]()}
-}
-
-// IsConsistentHash reports whether gatewayNN has a BackendTrafficPolicy setting LoadBalancer to
-// ConsistentHash.
-func (idx *BTPLoadBalancerIndex) IsConsistentHash(gatewayNN types.NamespacedName) bool {
-	if idx == nil {
-		return false
-	}
-	isConsistentHash, _ := idx.LookupExact(gatewayScope(gatewayNN))
-	return isConsistentHash
-}
-
-// BTPIndexes groups the three pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
+// BTPIndexes groups the two pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
 // together in one pass over btps.
 type BTPIndexes struct {
 	RoutingType     *BTPRoutingTypeIndex
 	ClusterSettings *BTPClusterSettingsIndex
-	LoadBalancer    *BTPLoadBalancerIndex
 }
 
 // BuildBTPIndexes builds BTPIndexes, resolving each BackendTrafficPolicy's targets at most once.
@@ -176,7 +155,6 @@ func BuildBTPIndexes(
 ) *BTPIndexes {
 	routingTypeIdx := newBTPRoutingTypeIndex()
 	clusterSettingsIdx := newBTPClusterSettingsIndex()
-	loadBalancerIdx := newBTPLoadBalancerIndex()
 
 	allTargets := make([]client.Object, 0, len(routes)+len(gateways)+len(listenerSets))
 	allTargets = append(allTargets, routes...)
@@ -190,9 +168,8 @@ func BuildBTPIndexes(
 	for _, btp := range btps {
 		hasRoutingType := btp.Spec.RoutingType != nil
 		hasClusterScoped := btpSpecHasClusterScopedFields(&btp.Spec)
-		hasLoadBalancer := btp.Spec.LoadBalancer != nil
 
-		// Unlike ClusterSettings/LoadBalancer, RoutingType can never be skipped here: every
+		// Unlike ClusterSettings, RoutingType can never be skipped here: every
 		// accepted BTP must claim its target's first-write-wins slot, even one that sets nothing
 		// at all, so a younger conflicting policy can't silently win, and so a route/rule-level
 		// policy with MergeType unset can still pin its scope to nil instead of inheriting.
@@ -225,33 +202,23 @@ func BuildBTPIndexes(
 				routingTypeIdx.setRouteLevel(nn, kind, btp.Spec.RoutingType, btp.Spec.MergeType)
 			}
 
-			// ClusterSettings/LoadBalancer only inform merge-eligibility, so they're moot when no
+			// ClusterSettings only informs merge-eligibility, so it's moot when no
 			// accepted gateway can enable merging; RoutingType (above) applies regardless.
 			if mergeBackendsEnabled {
-				// TODO(#9619): unlike routingTypeIdx above, this switch has no ListenerSet case, so
-				// ListenerSet-level BTP attachment isn't tracked here.
 				switch {
 				case kind == resource.KindGateway && ref.SectionName != nil:
 					clusterSettingsIdx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
 				case kind == resource.KindGateway:
 					// Gateway-level settings apply uniformly to every route sharing a merged
 					// cluster, so they don't disqualify merging - no entry needed.
+				case kind == resource.KindListenerSet && ref.SectionName != nil:
+					clusterSettingsIdx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+				case kind == resource.KindListenerSet:
+					clusterSettingsIdx.setListenerSetLevel(nn, hasClusterScoped, true)
 				case ref.SectionName != nil:
 					clusterSettingsIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, hasClusterScoped, btp.Spec.MergeType)
 				default:
 					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
-				}
-
-				// TODO(#9619): same gap as clusterSettingsIdx above - this switch has no
-				// ListenerSet case either, so ListenerSet-level BTP attachment isn't tracked here.
-				switch {
-				case kind == resource.KindGateway && ref.SectionName == nil:
-					// Every accepted Gateway-wide BTP must claim this slot, even one that leaves
-					// LoadBalancer unset, so a younger conflicting BTP can't silently win it.
-					loadBalancerIdx.setGatewayLevel(nn, hasLoadBalancer && btp.Spec.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType)
-				default:
-					// A listener/route-rule/route-level LoadBalancer setting already disqualifies
-					// its own rule from merging on its own, so it's never looked up here.
 				}
 			}
 		}
@@ -260,7 +227,6 @@ func BuildBTPIndexes(
 	return &BTPIndexes{
 		RoutingType:     routingTypeIdx,
 		ClusterSettings: clusterSettingsIdx,
-		LoadBalancer:    loadBalancerIdx,
 	}
 }
 
@@ -1432,7 +1398,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					}
 				}
 
-				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
+				if localTo, err := buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err == nil {
 					r.Traffic.Timeout = localTo
 				}
 
@@ -1488,6 +1454,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
+		rbbl        *uint64
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		err, errs   error
@@ -1505,13 +1472,13 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 			errs = errors.Join(errs, err)
 		}
 	}
-	if lb, err = buildLoadBalancer(&policy.Spec.ClusterSettings); err != nil {
+	if lb, err = buildLoadBalancer(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
 	}
-	pp = buildProxyProtocol(&policy.Spec.ClusterSettings)
-	hc = buildHealthCheck(&policy.Spec.ClusterSettings)
-	if cb, err = buildCircuitBreaker(&policy.Spec.ClusterSettings); err != nil {
+	pp = buildProxyProtocol(&policy.Spec.BackendSettings)
+	hc = buildHealthCheck(&policy.Spec.BackendSettings)
+	if cb, err = buildCircuitBreaker(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "CircuitBreaker")
 		errs = errors.Join(errs, err)
 	}
@@ -1521,7 +1488,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	if policy.Spec.AdmissionControl != nil {
 		ac = t.buildAdmissionControl(policy)
 	}
-	if ka, err = buildTCPKeepAlive(&policy.Spec.ClusterSettings); err != nil {
+	if ka, err = buildTCPKeepAlive(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
 		errs = errors.Join(errs, err)
 	}
@@ -1531,12 +1498,12 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	if to, err = buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err != nil {
+	if to, err = buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
 		errs = errors.Join(errs, err)
 	}
 
-	if bc, err = buildBackendConnection(&policy.Spec.ClusterSettings); err != nil {
+	if bc, err = buildBackendConnection(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "BackendConnection")
 		errs = errors.Join(errs, err)
 	}
@@ -1551,7 +1518,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	if rb, err = buildRequestBuffer(policy.Spec.RequestBuffer); err != nil {
+	if rb, rbbl, err = buildRequestBuffer(policy.Spec.RequestBuffer); err != nil {
 		err = perr.WithMessage(err, "RequestBuffer")
 		errs = errors.Join(errs, err)
 	}
@@ -1564,33 +1531,36 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 	if rb != nil && len(httpUpgrade) > 0 {
-		err = errors.New("requestBuffer cannot be used together with httpUpgrade")
+		err = errors.New("requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
 		err = perr.WithMessage(err, "RequestBuffer")
 		errs = errors.Join(errs, err)
 	}
 
-	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
+	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
 
 	return &ir.TrafficFeatures{
-		RateLimit:         rl,
-		BandwidthLimit:    bl,
-		LoadBalancer:      lb,
-		ProxyProtocol:     pp,
-		HealthCheck:       hc,
-		CircuitBreaker:    cb,
-		FaultInjection:    fi,
-		AdmissionControl:  ac,
-		TCPKeepalive:      ka,
-		Retry:             rt,
-		BackendConnection: bc,
-		HTTP2:             h2,
-		DNS:               ds,
-		Timeout:           to,
-		ResponseOverride:  ro,
-		RequestBuffer:     rb,
-		Compression:       cp,
-		HTTPUpgrade:       httpUpgrade,
-		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
+		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			LoadBalancer:      lb,
+			ProxyProtocol:     pp,
+			HealthCheck:       hc,
+			AdmissionControl:  ac,
+			CircuitBreaker:    cb,
+			Timeout:           to,
+			TCPKeepalive:      ka,
+			BackendConnection: bc,
+			HTTP2:             h2,
+			DNS:               ds,
+		},
+		RateLimit:              rl,
+		BandwidthLimit:         bl,
+		FaultInjection:         fi,
+		Retry:                  rt,
+		ResponseOverride:       ro,
+		Compression:            cp,
+		HTTPUpgrade:            httpUpgrade,
+		Telemetry:              buildBackendTelemetry(policy.Spec.Telemetry),
+		RequestBuffer:          rb,
+		RequestBodyBufferLimit: rbbl,
 	}, errs
 }
 
@@ -1748,7 +1718,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 			}
 
 			r.Traffic = tf.DeepCopy()
-			if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
+			if localTo, err := buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
 
@@ -1772,7 +1742,10 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	// via hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here.
 	if applyToBackendClusters && errs == nil {
 		for _, bc := range x.BackendClusters {
-			bc.Traffic = tf.DeepCopy()
+			bc.Traffic = tf.ClusterTrafficFeatures.DeepCopy()
+			// Drop the route-scoped timeout members: they are never read from a cluster, and a
+			// merged cluster must not advertise settings it cannot honor.
+			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
 			bc.UseClientProtocol = policy.Spec.UseClientProtocol
 		}
 	}
@@ -2318,36 +2291,53 @@ func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {
 }
 
 func makeIrTriggerSet(in []egv1a1.TriggerEnum) []ir.TriggerEnum {
-	triggerSet := sets.NewString()
+	triggerSet := sets.New[string]()
 	for _, r := range in {
 		triggerSet.Insert(string(r))
 	}
 	irTriggers := make([]ir.TriggerEnum, 0, triggerSet.Len())
 
-	for _, r := range triggerSet.List() {
+	for _, r := range sets.List(triggerSet) {
 		irTriggers = append(irTriggers, ir.TriggerEnum(r))
 	}
 	return irTriggers
 }
 
-func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
+// buildRequestBuffer translates the request buffer spec into its IR representation. Depending on the
+// configured mode it returns either the full request buffering settings, which are translated into the
+// Envoy Buffer filter, or a plain request body buffer limit, which is translated into the route-level
+// request body buffer limit.
+func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, *uint64, error) {
 	if spec == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	maxBytes, ok := spec.Limit.AsInt64()
 	if !ok {
-		return nil, fmt.Errorf("limit must be convertible to an int64")
+		return nil, nil, fmt.Errorf("limit must be convertible to an int64")
 	}
 
-	if maxBytes < 0 || maxBytes > math.MaxUint32 {
-		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
+	// Limit is optional in the schema, so an omitted limit reaches us as a zero Quantity. A zero limit
+	// would reject every buffered request with a 413, so treat it as invalid rather than propagating it.
+	if maxBytes <= 0 {
+		return nil, nil, fmt.Errorf("limit value %s is out of range, must be greater than 0", spec.Limit.String())
+	}
+
+	if ptr.Deref(spec.Mode, egv1a1.RequestBufferModeBufferAndLimit) == egv1a1.RequestBufferModeLimitOnly {
+		// The route-level request body buffer limit is a uint64, so it is not capped at MaxUint32 like
+		// the Buffer filter is. Anything above MaxInt64 is already rejected by the AsInt64 check above.
+		return nil, new(uint64(maxBytes)), nil
+	}
+
+	// The Envoy Buffer filter's max_request_bytes is a uint32.
+	if maxBytes > math.MaxUint32 {
+		return nil, nil, fmt.Errorf("limit value %s is out of range, must be between 1 and %d",
 			spec.Limit.String(), math.MaxUint32)
 	}
 
 	return &ir.RequestBuffer{
 		Limit: spec.Limit,
-	}, nil
+	}, nil, nil
 }
 
 func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.ResponseOverride, error) {
@@ -2380,6 +2370,10 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, 
 					Value: code.Value,
 				})
 			}
+		}
+
+		for _, h := range ro.Match.ResponseHeaders {
+			match.ResponseHeaders = append(match.ResponseHeaders, *irStringMatch(string(h.Name), h.Value))
 		}
 
 		if ro.Redirect != nil {

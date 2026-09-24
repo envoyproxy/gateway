@@ -59,7 +59,7 @@ httpRoutes:
               headers:
                 - type: Exact
                   name: x-org-id
-                  value: test-org
+                  value: test-org-2
           backendRefs:
             - name: service-1
               port: 8080
