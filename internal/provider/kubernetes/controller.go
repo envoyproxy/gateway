@@ -3461,6 +3461,9 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 
 		// Add the referenced SecretRefs, ConfigMapRefs, and ClusterTrustBundleRefs in EnvoyExtensionPolicies to the resourceTree
 		for _, wasm := range policy.Spec.Wasm {
+			if wasm.Code == nil {
+				continue
+			}
 			if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
 				if err := r.processSecretRef(
 					ctx,
