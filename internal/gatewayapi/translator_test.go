@@ -1219,6 +1219,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
+		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
 	}{
 		ReadyListener:           a.ReadyListener,
@@ -1233,6 +1234,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
+		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
 	}
 

@@ -127,6 +127,10 @@ type Translator struct {
 	// backendIndex resolves BackendClusterRef.Name against the current Translate() call's
 	// xdsIR.BackendClusters registry. Rebuilt at the start of every Translate() call.
 	backendIndex backendClusterIndex
+
+	// extensionIndex resolves UnstructuredRef.Name against the current Translate() call's
+	// xdsIR.ExtensionResources registry. Rebuilt at the start of every Translate() call.
+	extensionIndex extensionResourceIndex
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -181,6 +185,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	defer phases.EndInFlight()
 
 	t.backendIndex = newBackendClusterIndex(xdsIR)
+	t.extensionIndex = newExtensionResourceIndex(xdsIR)
 
 	tCtx := new(types.ResourceVersionTable)
 
@@ -275,7 +280,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	phases.Start("XdsTranslator.processExtensionPostTranslationHook",
 		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
 	)
-	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies)
+	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies, t.extensionIndex)
 	phases.End()
 	if err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
@@ -384,14 +389,15 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 		alreadyIncludedPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
 		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
 			for _, pol := range irListener.GetExtensionRefs() {
-				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
+				obj := resolveUnstructuredRef(pol, t.extensionIndex)
+				key := utils.GetNamespacedNameWithGroupKind(obj)
 				if !alreadyIncludedPolicies.Has(key) {
 					policies = append(policies, pol)
 					alreadyIncludedPolicies.Insert(key)
 				}
 			}
 		}
-		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
+		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager, t.extensionIndex); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -437,7 +443,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var (
-		http3EnabledListeners = make(map[listenerKey]*ir.HTTP3Settings) // Map to track HTTP3 settings for listeners by address and port
+		http3EnabledListeners = make(map[listenerKey]struct{}) // Set to track HTTP3 enablement by listener address and port
 		errs                  error
 	)
 
@@ -445,13 +451,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	for _, httpListener := range httpListeners {
 		// If HTTP3 is enabled, we need to track it for the listener
 		if httpListener.HTTP3 != nil {
-			http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}] = httpListener.HTTP3
+			http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}] = struct{}{}
 		}
 	}
 
 	for _, httpListener := range httpListeners {
 		var (
-			http3Settings                      *ir.HTTP3Settings // HTTP3 settings for the listener, if any
 			http3Enabled                       bool
 			tcpXDSListener                     *listenerv3.Listener // TCP Listener for HTTP1/HTTP2 traffic
 			quicXDSListener                    *listenerv3.Listener // UDP(QUIC) Listener for HTTP3 traffic
@@ -463,7 +468,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			err                                error
 		)
 
-		http3Settings, http3Enabled = http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
+		_, http3Enabled = http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
 
 		// Search for an existing TCP listener on the same address + port combination.
 		// Right now, the address is always 0.0.0.0/::, and we need to revisit the logic in the method if we want to support
@@ -622,7 +627,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// Generate xDS virtual hosts and routes for the given HTTPListener,
 		// and add them to the xDS route config.
-		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, healthCheckLog, http3Settings); err != nil {
+		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, healthCheckLog, http3Enabled); err != nil {
 			errs = errors.Join(errs, err)
 		}
 
@@ -676,7 +681,7 @@ func (t *Translator) addRouteToRouteConfig(
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
 	healthCheckLog *ir.ProxyHealthCheckLog,
-	http3Settings *ir.HTTP3Settings,
+	http3Enabled bool,
 ) error {
 	var (
 		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
@@ -740,7 +745,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		// Check if an extension want to modify the route we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
+		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -750,8 +755,12 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 
-		if http3Settings != nil {
-			http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.ExternalPort))
+		if http3Enabled {
+			advertisedPort := httpListener.ExternalPort
+			if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
+				advertisedPort = *httpListener.HTTP3.AdvertisedPort
+			}
+			http3AltSvcHeader := buildHTTP3AltSvcHeader(advertisedPort)
 			if xdsRoute.ResponseHeadersToAdd == nil {
 				xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 			}
@@ -765,7 +774,7 @@ func (t *Translator) addRouteToRouteConfig(
 			if len(httpRoute.ExtensionRefs) > 0 {
 				extensionResources = make([]*unstructured.Unstructured, len(httpRoute.ExtensionRefs))
 				for refIdx, ref := range httpRoute.ExtensionRefs {
-					extensionResources[refIdx] = ref.Object
+					extensionResources[refIdx] = resolveUnstructuredRef(ref, t.extensionIndex)
 				}
 			}
 
@@ -928,7 +937,7 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 	return nil, errors.New("http connection manager not found")
 }
 
-func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
+func buildHTTP3AltSvcHeader(port uint32) *corev3.HeaderValueOption {
 	return &corev3.HeaderValueOption{
 		Append: &wrapperspb.BoolValue{Value: true},
 		Header: &corev3.HeaderValue{

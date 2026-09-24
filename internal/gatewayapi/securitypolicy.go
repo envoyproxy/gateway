@@ -1932,8 +1932,16 @@ func validateJWTProvider(providers []egv1a1.JWTProvider) error {
 			switch {
 			case len(claimToHeader.Header) == 0:
 				errs = append(errs, fmt.Errorf("header must be set for claimToHeader provider: %s", claimToHeader.Header))
-			case len(claimToHeader.Claim) == 0:
-				errs = append(errs, fmt.Errorf("claim must be set for claimToHeader provider: %s", claimToHeader.Claim))
+			case len(claimToHeader.Claim) == 0 && len(claimToHeader.ClaimPath) == 0:
+				errs = append(errs, fmt.Errorf("either claim or claimPath must be set for claimToHeader header: %s", claimToHeader.Header))
+			case len(claimToHeader.Claim) != 0 && len(claimToHeader.ClaimPath) != 0:
+				errs = append(errs, fmt.Errorf("only one of claim or claimPath may be set for claimToHeader header: %s", claimToHeader.Header))
+			}
+			for _, segment := range claimToHeader.ClaimPath {
+				if len(segment) == 0 {
+					errs = append(errs, fmt.Errorf("claimPath segments must not be empty for claimToHeader header: %s", claimToHeader.Header))
+					break
+				}
 			}
 		}
 	}
@@ -2211,6 +2219,14 @@ func (t *Translator) buildOIDC(
 			irOIDC.CSRFTokenTTL = ir.MetaV1DurationPtr(d)
 		} else {
 			return nil, fmt.Errorf("invalid csrfTokenTTL: %w", err)
+		}
+	}
+
+	if oidc.CodeVerifierTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.CodeVerifierTTL)); err == nil {
+			irOIDC.CodeVerifierTTL = ir.MetaV1DurationPtr(d)
+		} else {
+			return nil, fmt.Errorf("invalid codeVerifierTTL: %w", err)
 		}
 	}
 
@@ -2793,7 +2809,7 @@ func (t *Translator) buildExtAuth(
 		http              = policy.Spec.ExtAuth.HTTP
 		grpc              = policy.Spec.ExtAuth.GRPC
 		backendRefs       []egv1a1.BackendRef
-		backendSettings   *egv1a1.ClusterSettings
+		backendSettings   *egv1a1.BackendSettings
 		protocol          ir.AppProtocol
 		rd                *ir.RouteDestination
 		authority         string

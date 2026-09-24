@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -26,6 +27,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
@@ -36,6 +38,7 @@ func init() {
 		MetricCompressorGzipTest,
 		MetricCompressorBrotliTest,
 		MetricCompressorZstdTest,
+		OtelMetricPrefixTest,
 	)
 }
 
@@ -179,6 +182,60 @@ var MetricCompressorZstdTest = suite.ConformanceTest{
 	},
 }
 
+var OtelMetricPrefixTest = suite.ConformanceTest{
+	ShortName:   "OtelMetricPrefix",
+	Description: "Make sure metrics arrive with configured prefix",
+	Manifests:   []string{"testdata/metrics-with-prefix.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "metric-otel-prefix", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "metric-otel-prefix", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		expectedResponse := httputils.ExpectedResponse{
+			Request: httputils.Request{
+				Path: "/prom-prefix",
+			},
+			Response: httputils.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+
+		httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+		err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+			ok, err := scrapeMetricsHasPrefix(suite.Client, types.NamespacedName{
+				Namespace: "monitoring",
+				Name:      "prefix-metrix-gtw-metrics",
+			}, 19001, "/metrics", "eg_e2e_prefix")
+			if err != nil {
+				tlog.Logf(t, "failed to scrape metrics: %v", err)
+				return false, nil
+			}
+			return ok, nil
+		})
+		require.NoError(t, err, "failed to retrieve metrics with expected prefix within timeout.")
+	},
+}
+
+func scrapeMetricsHasPrefix(c client.Client, nn types.NamespacedName, port int32, path, prefix string) (bool, error) {
+	url, err := RetrieveURL(c, nn, port, path)
+	if err != nil {
+		return false, err
+	}
+	mfs, err := RetrieveMetrics(url, 5*time.Second)
+	if err != nil {
+		return false, err
+	}
+	for name := range mfs {
+		if strings.HasPrefix(name, prefix) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns string, compressorType egv1a1.CompressorType) {
 	compressor := strings.ToLower(string(compressorType)) // Gzip -> gzip
 	routeName := fmt.Sprintf("%s-route", compressor)
@@ -202,9 +259,13 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 	}
 	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-	// stats exposed at port 19001
-	statsHost := strings.Replace(gwAddr, ":80", ":19001", 1)
-	statsAddr := fmt.Sprintf("http://%s/stats/prometheus", statsHost)
+	// Scrape the stats endpoint through a port-forward to the proxy pod rather than through the
+	// Gateway's LoadBalancer address: MetalLB recycles addresses from its pool as tests create and
+	// delete Services, so a probe of <gateway address>:19001 can be answered by whatever owned that
+	// address a moment earlier, which shows up as a confusing HTTP error instead of a connect error.
+	fwd := proxyStatsForwarder(t, suite, gwNN)
+	defer fwd.Stop()
+	statsAddr := fmt.Sprintf("http://%s/stats/prometheus", fwd.Address())
 	tlog.Logf(t, "check stats from %s", statsAddr)
 
 	err := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
@@ -218,6 +279,33 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 	if err != nil {
 		tlog.Errorf(t, "failed to check stats encoding: %v", err)
 	}
+}
+
+// proxyStatsForwarder starts a port-forward to the stats port of the Envoy proxy pod backing the
+// given Gateway. The caller is responsible for stopping the returned forwarder.
+func proxyStatsForwarder(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName) kube.PortForwarder {
+	t.Helper()
+
+	cli, err := kube.NewForRestConfig(suite.RestConfig)
+	require.NoError(t, err)
+
+	pods, err := cli.PodsForSelector(GetGatewayResourceNamespace(),
+		"app.kubernetes.io/name=envoy",
+		fmt.Sprintf("gateway.envoyproxy.io/owning-gateway-name=%s", gwNN.Name),
+		fmt.Sprintf("gateway.envoyproxy.io/owning-gateway-namespace=%s", gwNN.Namespace),
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, pods.Items, "no Envoy proxy pod found for Gateway %s", gwNN.String())
+
+	// stats are exposed at port 19001
+	fwd, err := kube.NewLocalPortForwarder(cli, types.NamespacedName{
+		Namespace: pods.Items[0].Namespace,
+		Name:      pods.Items[0].Name,
+	}, 0, 19001)
+	require.NoError(t, err)
+	require.NoError(t, fwd.Start())
+
+	return fwd
 }
 
 func checkStatsEncoding(suite *suite.ConformanceTestSuite, statsAddr string, compressorType egv1a1.CompressorType) error {

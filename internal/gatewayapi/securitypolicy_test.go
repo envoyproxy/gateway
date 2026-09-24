@@ -400,6 +400,65 @@ func Test_JWTProvider(t *testing.T) {
 			wantError: true,
 		},
 		{
+			name: "valid security policy with jwtClaimToHeader claimPath",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header:    "X-Tenant-Name",
+							ClaimPath: []string{"https://auth.sitecorecloud.io/claims/tenant_name"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "jwtClaimToHeader with both claim and claimPath set",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header:    "test",
+							Claim:     "test",
+							ClaimPath: []string{"test"},
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "jwtClaimToHeader with neither claim nor claimPath set",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header: "test",
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
 			name: "unspecified issuer",
 			Providers: []egv1a1.JWTProvider{
 				{

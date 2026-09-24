@@ -766,13 +766,10 @@ func IsParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
 	}
 
 	// Compare SectionName (optional field)
-	if ref1.SectionName == nil && ref2.SectionName == nil {
-		return true
-	}
-	if ref1.SectionName == nil || ref2.SectionName == nil {
+	if (ref1.SectionName == nil) != (ref2.SectionName == nil) {
 		return false
 	}
-	if *ref1.SectionName != *ref2.SectionName {
+	if ref1.SectionName != nil && *ref1.SectionName != *ref2.SectionName {
 		return false
 	}
 
@@ -882,6 +879,15 @@ type BackendClusterKey struct {
 	Protocol     ir.AppProtocol
 }
 
+// ExtensionResourceKey identifies a unique extension-introduced resource per gateway for dedup.
+type ExtensionResourceKey struct {
+	GatewayIRKey string
+	Group        string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -892,9 +898,9 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
-	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 }
 

@@ -82,6 +82,14 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	XDSServer *XDSServer `json:"xdsServer,omitempty"`
 
+	// Debounce defines how Envoy Gateway coalesces bursts of resource changes
+	// before reconciling them into new configuration for Envoy Proxy.
+	// If unspecified, debouncing is disabled and every change is reconciled on
+	// its own. Applies to the Kubernetes provider only.
+	//
+	// +optional
+	Debounce *Debounce `json:"debounce,omitempty"`
+
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
@@ -244,6 +252,46 @@ type XDSServer struct {
 	//
 	// +optional
 	MaxReceiveMessageSize *resource.Quantity `json:"maxReceiveMessageSize,omitempty"`
+}
+
+// Debounce defines how Envoy Gateway coalesces bursts of resource changes before
+// reconciling them into new configuration for Envoy Proxy.
+//
+// Without debouncing, each resource change costs a full reconcile, so a burst of
+// changes rebuilds the resource tree, retranslates and pushes once per change even
+// though only the resulting state matters. That spends control plane CPU on work that
+// is immediately superseded, and makes the proxies apply configuration that will be
+// replaced moments later.
+//
+// Debouncing merges changes that arrive close together into a single reconcile, so the
+// cost of a burst approaches that of a single change. The tradeoff is that propagation
+// of a change, and of the status derived from it, may be delayed by up to Max.
+//
+// Debouncing is opt in: it is on whenever this field is set, and off when it is
+// left unset.
+//
+// This applies to the Kubernetes provider only. It has no effect when the resource
+// provider is File, whose reconcile loop is driven directly by file change events.
+type Debounce struct {
+	// After is the quiet period. A pending batch of changes is flushed once no new
+	// change has arrived for this duration, so isolated changes still propagate
+	// promptly.
+	//
+	// If unspecified, defaults to 100ms.
+	//
+	// +optional
+	// +kubebuilder:default="100ms"
+	After *gwapiv1.Duration `json:"after,omitempty"`
+
+	// Max bounds how long a change may be held before a flush is forced. Under
+	// sustained churn the quiet period never elapses, so this caps how far behind
+	// the proxies' configuration can fall.
+	//
+	// Must be greater than or equal to After. If unspecified, defaults to 10s.
+	//
+	// +optional
+	// +kubebuilder:default="10s"
+	Max *gwapiv1.Duration `json:"max,omitempty"`
 }
 
 // LeaderElection defines the desired leader election settings.
