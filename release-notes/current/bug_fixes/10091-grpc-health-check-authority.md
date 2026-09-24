@@ -5,4 +5,7 @@ valid in an authority, and gRPC servers built on `golang.org/x/net` v0.59.0 or l
 with `PROTOCOL_ERROR`, leaving every endpoint marked `failed_active_hc` and clients receiving
 `no healthy upstream` from a healthy backend. The authority now defaults to the effective route
 hostname, mirroring the HTTP health checker, and `BackendTrafficPolicy` gained
-`healthCheck.active.grpc.hostname` to set it explicitly.
+`healthCheck.active.grpc.hostname` to set it explicitly. Upgrading alone does not fix routes with a
+wildcard hostname or no hostname: neither is a valid authority, so unless the backend endpoint
+defines a `hostname` in a `Backend` resource, the authority still falls back to the cluster name, and
+`healthCheck.active.grpc.hostname` must be set explicitly.
