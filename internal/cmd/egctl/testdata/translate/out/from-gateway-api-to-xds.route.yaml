@@ -33,6 +33,10 @@ xds:
               cluster: httproute/default/backend/rule/0
               upgradeConfigs:
               - upgradeType: websocket
+            typedPerFilterConfig:
+              envoy.filters.http.lua/default/eg/http/0:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+                name: envoyextensionpolicy/default/lua-example/lua/0
     - routeConfig:
         '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
         ignorePortInHostMatching: true
