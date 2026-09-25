@@ -384,9 +384,8 @@ func (t *Translator) addHCMToXDSListener(
 				RouteConfigName: routeConfigName(irListener, t.xdsNameSchemeV2()),
 			},
 		},
-		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
-		// Hide the Envoy proxy in the Server header by default
-		ServerHeaderTransformation: hcmv3.HttpConnectionManager_PASS_THROUGH,
+		HttpProtocolOptions:        http1ProtocolOptions(irListener.HTTP1),
+		ServerHeaderTransformation: buildServerHeaderTransformation(irListener.Headers),
 		// Add HTTP2 protocol options
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2),
@@ -414,6 +413,11 @@ func (t *Translator) addHCMToXDSListener(
 	// Set the maximum request headers size if configured.
 	if h := irListener.Headers; h != nil && h.MaxRequestHeadersKB != nil {
 		mgr.MaxRequestHeadersKb = wrapperspb.UInt32(*h.MaxRequestHeadersKB)
+	}
+
+	// Set the value written to the Server header if configured.
+	if h := irListener.Headers; h != nil && h.ServerName != nil {
+		mgr.ServerName = *h.ServerName
 	}
 
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
@@ -1337,6 +1341,20 @@ func buildHeadersWithUnderscoresAction(in *ir.HeaderSettings) corev3.HttpProtoco
 		}
 	}
 	return corev3.HttpProtocolOptions_REJECT_REQUEST
+}
+
+func buildServerHeaderTransformation(in *ir.HeaderSettings) hcmv3.HttpConnectionManager_ServerHeaderTransformation {
+	if in != nil && in.ServerHeaderTransformation != nil {
+		switch *in.ServerHeaderTransformation {
+		case ir.ServerHeaderTransformationOverwrite:
+			return hcmv3.HttpConnectionManager_OVERWRITE
+		case ir.ServerHeaderTransformationAppendIfAbsent:
+			return hcmv3.HttpConnectionManager_APPEND_IF_ABSENT
+		case ir.ServerHeaderTransformationPassThrough:
+			return hcmv3.HttpConnectionManager_PASS_THROUGH
+		}
+	}
+	return hcmv3.HttpConnectionManager_PASS_THROUGH
 }
 
 func buildForwardClientCertDetailsAction(in *ir.HeaderSettings) hcmv3.HttpConnectionManager_ForwardClientCertDetails {
