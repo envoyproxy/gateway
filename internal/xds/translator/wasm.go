@@ -124,10 +124,19 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 		return nil, err
 	}
 
-	vmConfig := &wasmv3.VmConfig{
-		VmId:    wasm.Name, // Do not share VMs across different filters
-		Runtime: vmRuntimeV8,
-		Code: &corev3.AsyncDataSource{
+	var codeSource *corev3.AsyncDataSource
+	if wasm.LocalCode != nil {
+		codeSource = &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Local{
+				Local: &corev3.DataSource{
+					Specifier: &corev3.DataSource_Filename{
+						Filename: wasm.LocalCode.Filename,
+					},
+				},
+			},
+		}
+	} else {
+		codeSource = &corev3.AsyncDataSource{
 			Specifier: &corev3.AsyncDataSource_Remote{
 				Remote: &corev3.RemoteDataSource{
 					HttpUri: &corev3.HttpUri{
@@ -147,7 +156,13 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 					},
 				},
 			},
-		},
+		}
+	}
+
+	vmConfig := &wasmv3.VmConfig{
+		VmId:    wasm.Name, // Do not share VMs across different filters
+		Runtime: vmRuntimeV8,
+		Code:    codeSource,
 	}
 
 	if wasm.HostKeys != nil {

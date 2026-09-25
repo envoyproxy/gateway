@@ -1,0 +1,1 @@
+Added support for loading Wasm extensions from a local file on the Envoy proxy's filesystem via a new `Local` code source type in `EnvoyExtensionPolicy`. This enables mounting Wasm modules using Kubernetes ImageVolumes or other volume types without requiring network access to the Envoy Gateway Wasm cache server.
