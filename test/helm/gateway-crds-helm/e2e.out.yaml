@@ -1162,6 +1162,14 @@ spec:
                   active:
                     description: Active health check configuration
                     properties:
+                      disableConnectionReuse:
+                        description: |-
+                          DisableConnectionReuse determines whether the active health check connection to a
+                          backend host is closed after each health check probe. When set to true, Envoy opens a
+                          new connection for each health check, which is useful for backends (such as
+                          haproxy-style agent checks) that do not expect a reused connection.
+                          Defaults to false, which reuses the connection across probes.
+                        type: boolean
                       grpc:
                         description: |-
                           GRPC defines the configuration of the GRPC health checker.
@@ -7271,6 +7279,14 @@ spec:
                             active:
                               description: Active health check configuration
                               properties:
+                                disableConnectionReuse:
+                                  description: |-
+                                    DisableConnectionReuse determines whether the active health check connection to a
+                                    backend host is closed after each health check probe. When set to true, Envoy opens a
+                                    new connection for each health check, which is useful for backends (such as
+                                    haproxy-style agent checks) that do not expect a reused connection.
+                                    Defaults to false, which reuses the connection across probes.
+                                  type: boolean
                                 grpc:
                                   description: |-
                                     GRPC defines the configuration of the GRPC health checker.
@@ -22301,6 +22317,14 @@ spec:
                                               active:
                                                 description: Active health check configuration
                                                 properties:
+                                                  disableConnectionReuse:
+                                                    description: |-
+                                                      DisableConnectionReuse determines whether the active health check connection to a
+                                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                                      new connection for each health check, which is useful for backends (such as
+                                                      haproxy-style agent checks) that do not expect a reused connection.
+                                                      Defaults to false, which reuses the connection across probes.
+                                                    type: boolean
                                                   grpc:
                                                     description: |-
                                                       GRPC defines the configuration of the GRPC health checker.
@@ -23995,6 +24019,14 @@ spec:
                                               active:
                                                 description: Active health check configuration
                                                 properties:
+                                                  disableConnectionReuse:
+                                                    description: |-
+                                                      DisableConnectionReuse determines whether the active health check connection to a
+                                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                                      new connection for each health check, which is useful for backends (such as
+                                                      haproxy-style agent checks) that do not expect a reused connection.
+                                                      Defaults to false, which reuses the connection across probes.
+                                                    type: boolean
                                                   grpc:
                                                     description: |-
                                                       GRPC defines the configuration of the GRPC health checker.
@@ -25944,6 +25976,14 @@ spec:
                                         active:
                                           description: Active health check configuration
                                           properties:
+                                            disableConnectionReuse:
+                                              description: |-
+                                                DisableConnectionReuse determines whether the active health check connection to a
+                                                backend host is closed after each health check probe. When set to true, Envoy opens a
+                                                new connection for each health check, which is useful for backends (such as
+                                                haproxy-style agent checks) that do not expect a reused connection.
+                                                Defaults to false, which reuses the connection across probes.
+                                              type: boolean
                                             grpc:
                                               description: |-
                                                 GRPC defines the configuration of the GRPC health checker.
@@ -27759,6 +27799,14 @@ spec:
                                   active:
                                     description: Active health check configuration
                                     properties:
+                                      disableConnectionReuse:
+                                        description: |-
+                                          DisableConnectionReuse determines whether the active health check connection to a
+                                          backend host is closed after each health check probe. When set to true, Envoy opens a
+                                          new connection for each health check, which is useful for backends (such as
+                                          haproxy-style agent checks) that do not expect a reused connection.
+                                          Defaults to false, which reuses the connection across probes.
+                                        type: boolean
                                       grpc:
                                         description: |-
                                           GRPC defines the configuration of the GRPC health checker.
@@ -31187,6 +31235,14 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
@@ -32741,6 +32797,14 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
@@ -34612,6 +34676,14 @@ spec:
                                     active:
                                       description: Active health check configuration
                                       properties:
+                                        disableConnectionReuse:
+                                          description: |-
+                                            DisableConnectionReuse determines whether the active health check connection to a
+                                            backend host is closed after each health check probe. When set to true, Envoy opens a
+                                            new connection for each health check, which is useful for backends (such as
+                                            haproxy-style agent checks) that do not expect a reused connection.
+                                            Defaults to false, which reuses the connection across probes.
+                                          type: boolean
                                         grpc:
                                           description: |-
                                             GRPC defines the configuration of the GRPC health checker.
@@ -36605,6 +36677,14 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
