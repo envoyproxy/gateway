@@ -34,6 +34,12 @@ const (
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// envoyZoneEnvVar is the Envoy pod locality zone name
 	envoyZoneEnvVar = "ENVOY_SERVICE_ZONE"
+	// shutdownManagerTmpVolumeName is the name of the emptyDir volume mounted at /tmp
+	// on the shutdown-manager container. The shutdown-manager signals drain completion
+	// by creating /tmp/shutdown-ready, which must keep working even when the
+	// securityContext replicated from the Envoy container enforces
+	// readOnlyRootFilesystem: true.
+	shutdownManagerTmpVolumeName = "shutdown-manager-tmp"
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -205,6 +211,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      shutdownManagerTmpVolumeName,
+					MountPath: "/tmp",
+				},
+			},
 			StartupProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
@@ -405,6 +417,17 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 	}
 
 	volumes = append(volumes, sdsVolume)
+
+	// Writable /tmp for the shutdown-manager so it can create /tmp/shutdown-ready
+	// even when its securityContext (replicated from the Envoy container) sets
+	// readOnlyRootFilesystem: true.
+	volumes = append(volumes, corev1.Volume{
+		Name: shutdownManagerTmpVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	})
+
 	return resource.ExpectedVolumes(pod, volumes)
 }
 
