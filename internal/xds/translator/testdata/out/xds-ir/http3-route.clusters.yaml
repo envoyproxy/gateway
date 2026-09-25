@@ -1,0 +1,217 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/http3-auto/rule/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: httproute/default/http3-auto/rule/0
+  perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: envoy.transport_sockets.quic
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicUpstreamTransport
+      upstreamTlsContext:
+        commonTlsContext: {}
+  transportSocketMatches:
+  - match:
+      name: httproute/default/http3-auto/rule/0/tls/0
+    name: httproute/default/http3-auto/rule/0/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.quic
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicUpstreamTransport
+        upstreamTlsContext:
+          commonTlsContext:
+            combinedValidationContext:
+              defaultValidationContext:
+                matchTypedSubjectAltNames:
+                - matcher:
+                    exact: example.com
+                  sanType: DNS
+              validationContextSdsSecretConfig:
+                name: policy-btls/policies-ca
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+          sni: example.com
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      autoConfig:
+        alternateProtocolsCacheOptions:
+          name: Service-default-h3-backend-272d699d
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+        http3ProtocolOptions: {}
+        httpProtocolOptions: {}
+      httpFilters:
+      - name: envoy.filters.http.alternate_protocols_cache
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.alternate_protocols_cache.v3.FilterConfig
+      - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/http3-auto-2/rule/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: httproute/default/http3-auto-2/rule/0
+  perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: envoy.transport_sockets.quic
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicUpstreamTransport
+      upstreamTlsContext:
+        commonTlsContext: {}
+  transportSocketMatches:
+  - match:
+      name: httproute/default/http3-auto-2/rule/0/tls/0
+    name: httproute/default/http3-auto-2/rule/0/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.quic
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicUpstreamTransport
+        upstreamTlsContext:
+          commonTlsContext:
+            combinedValidationContext:
+              defaultValidationContext:
+                matchTypedSubjectAltNames:
+                - matcher:
+                    exact: example.com
+                  sanType: DNS
+              validationContextSdsSecretConfig:
+                name: policy-btls/policies-ca
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+          sni: example.com
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      autoConfig:
+        alternateProtocolsCacheOptions:
+          name: Service-default-h3-backend-272d699d
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+        http3ProtocolOptions: {}
+        httpProtocolOptions: {}
+      httpFilters:
+      - name: envoy.filters.http.alternate_protocols_cache
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.alternate_protocols_cache.v3.FilterConfig
+      - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/http3-always/rule/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: httproute/default/http3-always/rule/0
+  perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: envoy.transport_sockets.quic
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicUpstreamTransport
+      upstreamTlsContext:
+        commonTlsContext: {}
+  transportSocketMatches:
+  - match:
+      name: httproute/default/http3-always/rule/0/tls/0
+    name: httproute/default/http3-always/rule/0/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.quic
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicUpstreamTransport
+        upstreamTlsContext:
+          commonTlsContext:
+            combinedValidationContext:
+              defaultValidationContext:
+                matchTypedSubjectAltNames:
+                - matcher:
+                    exact: example.com
+                  sanType: DNS
+              validationContextSdsSecretConfig:
+                name: policy-btls/policies-ca
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+          sni: example.com
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http3ProtocolOptions: {}
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/http3-no-tls/rule/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: httproute/default/http3-no-tls/rule/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

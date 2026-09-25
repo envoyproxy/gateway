@@ -692,6 +692,13 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+
+	// HTTP3 enables HTTP/3 for backend connections.
+	// QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+	// configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+	//
+	// +optional
+	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty"`
 }
 
 // BackendSettings provides the various knobs that can be set to control how traffic to a given
@@ -777,6 +784,31 @@ type HTTP2KeepaliveSettings struct {
 	// IdleInterval specifies how long a connection must be idle before a PING is sent.
 	// +optional
 	IdleInterval *gwapiv1.Duration `json:"idleInterval,omitempty"`
+}
+
+// BackendHTTP3Mode determines when Envoy uses HTTP/3 to reach a backend.
+// +kubebuilder:validation:Enum=Auto;Always
+type BackendHTTP3Mode string
+
+const (
+	// BackendHTTP3ModeAuto uses HTTP/3 only for backends that advertise support for it
+	// through an alt-svc response header. Envoy races a QUIC connection against a TCP one
+	// and uses whichever is established first, so it falls back to HTTP/1.1 or HTTP/2 when
+	// QUIC is unavailable.
+	BackendHTTP3ModeAuto BackendHTTP3Mode = "Auto"
+	// BackendHTTP3ModeAlways always uses HTTP/3, without falling back to TCP. Use this only
+	// in environments where the backend is known to speak HTTP/3 and UDP is not blocked.
+	BackendHTTP3ModeAlways BackendHTTP3Mode = "Always"
+)
+
+// BackendHTTP3Settings provides HTTP/3 configuration for backend connections.
+type BackendHTTP3Settings struct {
+	// Mode determines when HTTP/3 is used to reach the backend.
+	// Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+	//
+	// +kubebuilder:default=Auto
+	// +optional
+	Mode *BackendHTTP3Mode `json:"mode,omitempty"`
 }
 
 // GRPCSettings provides gRPC configuration for listeners.

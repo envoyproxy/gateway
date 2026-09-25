@@ -1,0 +1,35 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-http3/http
+  virtualHosts:
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-http3/http/*
+    routes:
+    - match:
+        path: /auto-route
+      name: auto-route
+      route:
+        cluster: httproute/default/http3-auto/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: /auto-route-2
+      name: auto-route-2
+      route:
+        cluster: httproute/default/http3-auto-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: /always-route
+      name: always-route
+      route:
+        cluster: httproute/default/http3-always/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: /no-tls-route
+      name: no-tls-route
+      route:
+        cluster: httproute/default/http3-no-tls/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket

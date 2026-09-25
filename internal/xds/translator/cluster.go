@@ -20,6 +20,7 @@ import (
 	dnsclusterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
+	alternateprotocolscachev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/alternate_protocols_cache/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	hcfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/health_check/event_sinks/file/v3"
@@ -34,6 +35,7 @@ import (
 	round_robinv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/round_robin/v3"
 	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
+	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -52,11 +54,15 @@ import (
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
 const (
 	extensionOptionsKey = "envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+	// alternateProtocolsCacheFilterName is the upstream HTTP filter that records alt-svc
+	// advertisements into the cluster's alternate protocols cache, enabling HTTP/3 discovery.
+	alternateProtocolsCacheFilterName = "envoy.filters.http.alternate_protocols_cache"
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 	tcpClusterPerConnectTimeout             = 10 * time.Second
@@ -80,6 +86,7 @@ type xdsClusterArgs struct {
 	routeHostname     string
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
+	http3Settings     *ir.BackendHTTP3Settings
 	timeout           *ir.ClusterTimeout
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
@@ -313,6 +320,16 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// Set Proxy Protocol
 	proxyProtocolEnabled := args.proxyProtocol != nil
+
+	// QUIC always runs over TLS, and PROXY protocol has no QUIC equivalent, so HTTP/3 needs
+	// requiresAutoHTTPConfig: every destination TLS, none of them TCP, at least one present.
+	// That is also what guarantees this cluster ends up with a transport socket for the QUIC
+	// one to wrap. HTTP/2 and gRPC backends are excluded because auto_config would leave their
+	// protocol to ALPN. The gatewayapi translator reports these through the policy status;
+	// this guard keeps a bad IR from producing a config Envoy would reject.
+	requiresHTTP3 := args.http3Settings != nil && requiresAutoHTTPConfig && !proxyProtocolEnabled &&
+		!forceHTTP1UpstreamProtocol && !args.useClientProtocol && !requiresHTTP2Options
+
 	if proxyProtocolEnabled {
 		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket, requiresAutoHTTPConfig)
 	} else if args.tSocket != nil {
@@ -325,6 +342,13 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			if err != nil {
 				// TODO: Log something here
 				return nil, err
+			}
+			if requiresHTTP3 {
+				// Wrap, rather than replace, the upstream TLS context: the QUIC leg uses it for the
+				// HTTP/3 handshake and, in Auto mode, the TCP leg uses it for HTTP/1.1 or HTTP/2.
+				if socket, err = buildQuicUpstreamTransportSocket(socket); err != nil {
+					return nil, err
+				}
 			}
 			if proxyProtocolEnabled {
 				socket = buildProxyProtocolSocket(args.proxyProtocol, socket, requiresAutoHTTPConfig)
@@ -354,8 +378,19 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TransportSocket = dummyTransportSocket
 	}
 
-	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol)
+	// Envoy validates HTTP/3 against the cluster's default transport socket, not against the
+	// transport socket matches, and rejects the cluster unless that socket is a QUIC one. The
+	// matches still carry the real TLS contexts and take effect for actual connections.
+	if requiresHTTP3 && cluster.TransportSocket.GetTypedConfig().MessageIs(&tlsv3.UpstreamTlsContext{}) {
+		quicSocket, err := buildQuicUpstreamTransportSocket(cluster.TransportSocket)
+		if err != nil {
+			return nil, err
+		}
+		cluster.TransportSocket = quicSocket
+	}
+
+	// build common, HTTP/1, HTTP/2 and HTTP/3 protocol options for cluster
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol, requiresHTTP3)
 	if err != nil {
 		return nil, err
 	}
@@ -1101,6 +1136,30 @@ func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpo
 	return *ep.Hostname
 }
 
+// buildQuicUpstreamTransportSocket wraps an upstream TLS transport socket in a QUIC one.
+// QUIC's handshake is TLS 1.3, so Envoy requires the TLS context to be carried inside
+// QuicUpstreamTransport rather than configured alongside it. ALPN is left untouched: Envoy
+// uses "h3" on the QUIC leg, and the wrapped context's own ALPN on the TCP leg.
+func buildQuicUpstreamTransportSocket(tlsSocket *corev3.TransportSocket) (*corev3.TransportSocket, error) {
+	tlsCtx := &tlsv3.UpstreamTlsContext{}
+	if err := tlsSocket.GetTypedConfig().UnmarshalTo(tlsCtx); err != nil {
+		return nil, err
+	}
+
+	quicCtx := &quicv3.QuicUpstreamTransport{UpstreamTlsContext: tlsCtx}
+	quicCtxAny, err := proto.ToAnyWithValidation(quicCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev3.TransportSocket{
+		Name: wellknown.TransportSocketQuic,
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: quicCtxAny,
+		},
+	}, nil
+}
+
 func hasTimeoutArgs(args *xdsClusterArgs) bool {
 	if args.timeout == nil || args.timeout.HTTP == nil {
 		return false
@@ -1111,15 +1170,20 @@ func hasTimeoutArgs(args *xdsClusterArgs) bool {
 		(!args.isRoute && timeout.MaxStreamDuration != nil) // Only set cluster-level maxStreamDuration for non-route clusters
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol, requiresHTTP3 bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresCommonHTTPOptions := hasTimeoutArgs(args) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
 	requiresHTTP1Options := args.http1Settings != nil &&
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
+	// Always uses HTTP/3 unconditionally; Auto only reaches for it once the backend has
+	// advertised support through alt-svc, and falls back to TCP otherwise.
+	alwaysHTTP3 := requiresHTTP3 && args.http3Settings.Mode == string(egv1a1.BackendHTTP3ModeAlways)
+	autoHTTP3 := requiresHTTP3 && !alwaysHTTP3
+
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
-		args.admissionControl != nil
+		args.admissionControl != nil || autoHTTP3
 
 	var clusterHashPolicy []*routev3.RouteAction_HashPolicy
 	if !args.isRoute && args.loadBalancer != nil {
@@ -1128,7 +1192,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
 		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI ||
-		forceHTTP1UpstreamProtocol || len(clusterHashPolicy) > 0
+		forceHTTP1UpstreamProtocol || requiresHTTP3 || len(clusterHashPolicy) > 0
 
 	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
@@ -1182,6 +1246,29 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 				},
 			},
 		}
+	// HTTP/3 only, with no TCP fallback.
+	case alwaysHTTP3:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http3ProtocolOptions{
+					Http3ProtocolOptions: &corev3.Http3ProtocolOptions{},
+				},
+			},
+		}
+	// HTTP/3 when the backend advertises it via alt-svc, racing against TCP otherwise. The cache
+	// holds what alt-svc advertised; without it every request would look like the first one and
+	// QUIC would never be attempted.
+	case autoHTTP3:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_AutoConfig{
+			AutoConfig: &httpv3.HttpProtocolOptions_AutoHttpConfig{
+				HttpProtocolOptions:  http1Opts,
+				Http2ProtocolOptions: http2Opts,
+				Http3ProtocolOptions: &corev3.Http3ProtocolOptions{},
+				AlternateProtocolsCacheOptions: &corev3.AlternateProtocolsCacheOptions{
+					Name: alternateProtocolsCacheName(args),
+				},
+			},
+		}
 	case requiresHTTP2Options:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
@@ -1232,7 +1319,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 		err     error
 	)
 	if requiresHTTPFilters {
-		filters, secrets, err = buildClusterHTTPFilters(args)
+		filters, secrets, err = buildClusterHTTPFilters(args, autoHTTP3)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1251,7 +1338,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 }
 
 // buildClusterHTTPFilters builds the upstream HTTP filters for the cluster.
-func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv3.Secret, error) {
+func buildClusterHTTPFilters(args *xdsClusterArgs, autoHTTP3 bool) ([]*hcmv3.HttpFilter, []*tlsv3.Secret, error) {
 	filters := make([]*hcmv3.HttpFilter, 0)
 	secrets := make([]*tlsv3.Secret, 0)
 	if len(args.settings) > 0 {
@@ -1277,6 +1364,18 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 		filters = append(filters, filter)
 	}
 
+	// The alternate protocols cache filter is what writes alt-svc advertisements into the
+	// cluster's cache, so Auto mode has nothing to act on without it. Its own
+	// alternate_protocols_cache_options field is deprecated and ignored by Envoy, which reads
+	// the options off the cluster the request was routed to.
+	if autoHTTP3 {
+		filter, err := buildAlternateProtocolsCacheFilter()
+		if err != nil {
+			return nil, nil, err
+		}
+		filters = append(filters, filter)
+	}
+
 	// UpstreamCodec filter is required as the terminal filter for the upstream HTTP filters.
 	if len(filters) > 0 {
 		upstreamCodec, err := buildUpstreamCodecFilter()
@@ -1286,6 +1385,42 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 		filters = append(filters, upstreamCodec)
 	}
 	return filters, secrets, nil
+}
+
+// alternateProtocolsCacheName names the alt-svc cache after the destination's backends rather
+// than after the cluster. Envoy Gateway builds one cluster per route rule, so a backend fronted
+// by many routes would otherwise get one cache per route, per worker thread, each having to
+// relearn the same alt-svc advertisement before it could use HTTP/3. Naming by backend lets those
+// clusters share what they learn, while keeping unrelated backends — notably dynamic resolver
+// clusters, which see one origin per Host header — from evicting each other's entries.
+func alternateProtocolsCacheName(args *xdsClusterArgs) string {
+	backends := make([]string, 0, len(args.settings))
+	for _, ds := range args.settings {
+		if ds == nil || ds.Metadata == nil || ds.Metadata.Name == "" {
+			// Without backend metadata there is nothing stable to share on, so fall back to a
+			// cache private to this cluster.
+			return args.name
+		}
+		backends = append(backends, fmt.Sprintf("%s/%s/%s", ds.Metadata.Kind, ds.Metadata.Namespace, ds.Metadata.Name))
+	}
+	if len(backends) == 0 {
+		return args.name
+	}
+	sort.Strings(backends)
+	return utils.GetHashedName(strings.Join(backends, ","), 48)
+}
+
+func buildAlternateProtocolsCacheFilter() (*hcmv3.HttpFilter, error) {
+	cacheAny, err := proto.ToAnyWithValidation(&alternateprotocolscachev3.FilterConfig{})
+	if err != nil {
+		return nil, err
+	}
+	return &hcmv3.HttpFilter{
+		Name: alternateProtocolsCacheFilterName,
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: cacheAny,
+		},
+	}, nil
 }
 
 func buildUpstreamCodecFilter() (*hcmv3.HttpFilter, error) {

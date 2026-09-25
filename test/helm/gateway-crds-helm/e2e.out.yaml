@@ -1652,6 +1652,22 @@ spec:
                       Default: TerminateConnection
                     type: string
                 type: object
+              http3:
+                description: |-
+                  HTTP3 enables HTTP/3 for backend connections.
+                  QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                  configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                properties:
+                  mode:
+                    default: Auto
+                    description: |-
+                      Mode determines when HTTP/3 is used to reach the backend.
+                      Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                    enum:
+                    - Auto
+                    - Always
+                    type: string
+                type: object
               httpUpgrade:
                 description: |-
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
@@ -7779,6 +7795,22 @@ spec:
                                 It's recommended for L2 Envoy deployments to set this value to TerminateStream.
                                 https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
                                 Default: TerminateConnection
+                              type: string
+                          type: object
+                        http3:
+                          description: |-
+                            HTTP3 enables HTTP/3 for backend connections.
+                            QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                            configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                          properties:
+                            mode:
+                              default: Auto
+                              description: |-
+                                Mode determines when HTTP/3 is used to reach the backend.
+                                Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                              enum:
+                              - Auto
+                              - Always
                               type: string
                           type: object
                         loadBalancer:
@@ -22865,6 +22897,22 @@ spec:
                                                   Default: TerminateConnection
                                                 type: string
                                             type: object
+                                          http3:
+                                            description: |-
+                                              HTTP3 enables HTTP/3 for backend connections.
+                                              QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                                              configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                            properties:
+                                              mode:
+                                                default: Auto
+                                                description: |-
+                                                  Mode determines when HTTP/3 is used to reach the backend.
+                                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                                enum:
+                                                - Auto
+                                                - Always
+                                                type: string
+                                            type: object
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
@@ -24557,6 +24605,22 @@ spec:
                                                   It's recommended for L2 Envoy deployments to set this value to TerminateStream.
                                                   https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
                                                   Default: TerminateConnection
+                                                type: string
+                                            type: object
+                                          http3:
+                                            description: |-
+                                              HTTP3 enables HTTP/3 for backend connections.
+                                              QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                                              configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                            properties:
+                                              mode:
+                                                default: Auto
+                                                description: |-
+                                                  Mode determines when HTTP/3 is used to reach the backend.
+                                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                                enum:
+                                                - Auto
+                                                - Always
                                                 type: string
                                             type: object
                                           loadBalancer:
@@ -26483,6 +26547,22 @@ spec:
                                             Default: TerminateConnection
                                           type: string
                                       type: object
+                                    http3:
+                                      description: |-
+                                        HTTP3 enables HTTP/3 for backend connections.
+                                        QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                                        configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                      properties:
+                                        mode:
+                                          default: Auto
+                                          description: |-
+                                            Mode determines when HTTP/3 is used to reach the backend.
+                                            Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                          enum:
+                                          - Auto
+                                          - Always
+                                          type: string
+                                      type: object
                                     loadBalancer:
                                       description: |-
                                         LoadBalancer policy to apply when routing traffic from the gateway to
@@ -28290,6 +28370,22 @@ spec:
                                       It's recommended for L2 Envoy deployments to set this value to TerminateStream.
                                       https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
                                       Default: TerminateConnection
+                                    type: string
+                                type: object
+                              http3:
+                                description: |-
+                                  HTTP3 enables HTTP/3 for backend connections.
+                                  QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                                  configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                properties:
+                                  mode:
+                                    default: Auto
+                                    description: |-
+                                      Mode determines when HTTP/3 is used to reach the backend.
+                                      Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                    enum:
+                                    - Auto
+                                    - Always
                                     type: string
                                 type: object
                               loadBalancer:
@@ -31702,6 +31798,22 @@ spec:
                                   Default: TerminateConnection
                                 type: string
                             type: object
+                          http3:
+                            description: |-
+                              HTTP3 enables HTTP/3 for backend connections.
+                              QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                              configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                            properties:
+                              mode:
+                                default: Auto
+                                description: |-
+                                  Mode determines when HTTP/3 is used to reach the backend.
+                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                enum:
+                                - Auto
+                                - Always
+                                type: string
+                            type: object
                           loadBalancer:
                             description: |-
                               LoadBalancer policy to apply when routing traffic from the gateway to
@@ -33254,6 +33366,22 @@ spec:
                                   It's recommended for L2 Envoy deployments to set this value to TerminateStream.
                                   https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
                                   Default: TerminateConnection
+                                type: string
+                            type: object
+                          http3:
+                            description: |-
+                              HTTP3 enables HTTP/3 for backend connections.
+                              QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                              configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                            properties:
+                              mode:
+                                default: Auto
+                                description: |-
+                                  Mode determines when HTTP/3 is used to reach the backend.
+                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                enum:
+                                - Auto
+                                - Always
                                 type: string
                             type: object
                           loadBalancer:
@@ -35144,6 +35272,22 @@ spec:
                                         It's recommended for L2 Envoy deployments to set this value to TerminateStream.
                                         https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
                                         Default: TerminateConnection
+                                      type: string
+                                  type: object
+                                http3:
+                                  description: |-
+                                    HTTP3 enables HTTP/3 for backend connections.
+                                    QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                                    configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                  properties:
+                                    mode:
+                                      default: Auto
+                                      description: |-
+                                        Mode determines when HTTP/3 is used to reach the backend.
+                                        Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                      enum:
+                                      - Auto
+                                      - Always
                                       type: string
                                   type: object
                                 loadBalancer:
@@ -37118,6 +37262,22 @@ spec:
                                   It's recommended for L2 Envoy deployments to set this value to TerminateStream.
                                   https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
                                   Default: TerminateConnection
+                                type: string
+                            type: object
+                          http3:
+                            description: |-
+                              HTTP3 enables HTTP/3 for backend connections.
+                              QUIC, and therefore HTTP/3, always runs over TLS, so the backend must be
+                              configured with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                            properties:
+                              mode:
+                                default: Auto
+                                description: |-
+                                  Mode determines when HTTP/3 is used to reach the backend.
+                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                enum:
+                                - Auto
+                                - Always
                                 type: string
                             type: object
                           loadBalancer:

@@ -95,6 +95,7 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.TCPKeepalive != nil ||
 		spec.Connection != nil ||
 		spec.HTTP2 != nil ||
+		spec.HTTP3 != nil ||
 		spec.DNS != nil ||
 		spec.AdmissionControl != nil ||
 		spec.UseClientProtocol != nil
@@ -1213,17 +1214,22 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 		targetListenerName = irListenerName(policyTargetListener)
 	}
 
-	// Apply IR to all relevant routes
+	// Apply IR to all relevant routes. Accumulate separately: errs is what decides whether a
+	// route gets a 500 direct response, and xdsIR iteration order is random, so feeding this
+	// back into errs would fail an arbitrary subset of the gateways.
+	var http3Errs error
 	for key, x := range xdsIR {
 		// if policyTargetListener is not nil, only apply within its parent Gateway
 		if policyTargetListener != nil && key != t.getIRKey(policyTargetListener.gateway.Gateway) {
 			// Skip if not the gateway wanted
 			continue
 		}
-		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, targetListenerName)
+		if err := t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, targetListenerName); err != nil {
+			http3Errs = errors.Join(http3Errs, err)
+		}
 	}
 
-	return errs
+	return errors.Join(errs, http3Errs)
 }
 
 func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
@@ -1281,7 +1287,9 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		// should not happen.
 		return nil
 	}
-	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, irListenerName(policyTargetListener))
+	if err := t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, irListenerName(policyTargetListener)); err != nil {
+		errs = errors.Join(errs, err)
+	}
 
 	return errs
 }
@@ -1292,7 +1300,8 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	target policyTargetReferenceWithSectionName,
 	x *ir.Xds,
 	policyTargetListenerName string,
-) {
+) error {
+	var http3Errs error
 	routeStatName := ""
 	if tf.Telemetry != nil && tf.Telemetry.Metrics != nil {
 		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
@@ -1405,6 +1414,10 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
+				if err := validateBackendHTTP3(r); err != nil {
+					r.Traffic.HTTP3 = nil
+					http3Errs = errors.Join(http3Errs, err)
+				}
 				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
@@ -1416,6 +1429,8 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 			"error", errs,
 		)
 	}
+
+	return http3Errs
 }
 
 // mergeBackendTrafficPolicy merges route policy into gateway policy, returning the merged
@@ -1549,6 +1564,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 			TCPKeepalive:      ka,
 			BackendConnection: bc,
 			HTTP2:             h2,
+			HTTP3:             buildIRBackendHTTP3Settings(policy.Spec.HTTP3),
 			DNS:               ds,
 		},
 		RateLimit:              rl,
@@ -1646,6 +1662,11 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		routeStatName = ptr.Deref(tf.Telemetry.Metrics.RouteStatName, "")
 	}
 
+	// Kept separate from errs: errs decides whether routes get a 500 direct response and
+	// whether gateway-level settings reach x.BackendClusters, and a single route losing
+	// HTTP/3 must not trigger either for the routes that follow it.
+	var http3Errs error
+
 	irKey := t.getIRKey(gtwCtx.Gateway)
 	// Should exist since we've validated this
 	x := xdsIR[irKey]
@@ -1726,6 +1747,11 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
 
+			if err := validateBackendHTTP3(r); err != nil {
+				r.Traffic.HTTP3 = nil
+				http3Errs = errors.Join(http3Errs, err)
+			}
+
 			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
 	}
@@ -1744,6 +1770,48 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	if applyToBackendClusters && errs == nil {
 		for _, bc := range x.BackendClusters {
 			applyGatewayPolicyToMergedCluster(bc, tf, policy.Spec.UseClientProtocol)
+		}
+	}
+
+	return errors.Join(errs, http3Errs)
+}
+
+// validateBackendHTTP3 reports why HTTP/3 cannot be used to reach the route's backends.
+// QUIC always runs over TLS and replaces the cluster's TCP transport socket, so it is
+// incompatible with plaintext backends and with settings that assume a TCP stream.
+func validateBackendHTTP3(r *ir.HTTPRoute) error {
+	if r.Traffic == nil || r.Traffic.HTTP3 == nil {
+		return nil
+	}
+
+	var errs error
+	if r.Destination == nil || !r.Destination.AllSettingsHaveTLS() {
+		errs = errors.Join(errs, fmt.Errorf(
+			"HTTP3: route %s has backends without TLS; HTTP/3 requires TLS to the backend, "+
+				"configured with a BackendTLSPolicy or the Backend's spec.tls", r.Name))
+	}
+	if ptr.Deref(r.UseClientProtocol, false) {
+		errs = errors.Join(errs, errors.New("HTTP3: useClientProtocol cannot be used together with http3"))
+	}
+	if r.Traffic.ProxyProtocol != nil {
+		errs = errors.Join(errs, errors.New("HTTP3: proxyProtocol cannot be used together with http3, it has no QUIC equivalent"))
+	}
+	if r.Destination != nil {
+		for _, ds := range r.Destination.Settings {
+			if ds == nil {
+				continue
+			}
+			if ds.ForceHTTP1Upstream {
+				errs = errors.Join(errs, errors.New("HTTP3: backends requiring HTTP/1.1 upstream cannot be used together with http3"))
+				break
+			}
+		}
+		for _, ds := range r.Destination.Settings {
+			if ds != nil && (ds.Protocol == ir.HTTP2 || ds.Protocol == ir.GRPC) {
+				errs = errors.Join(errs, errors.New(
+					"HTTP3: backends with an HTTP/2 or gRPC appProtocol cannot be used together with http3"))
+				break
+			}
 		}
 	}
 

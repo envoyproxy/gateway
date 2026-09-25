@@ -3020,6 +3020,7 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Connection":        true,
 		"DNS":               true,
 		"HTTP2":             true,
+		"HTTP3":             true,
 		"MergeType":         false,
 		"RateLimit":         false,
 		"BandwidthLimit":    false,
