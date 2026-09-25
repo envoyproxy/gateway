@@ -131,6 +131,9 @@ const (
 	// match and substitution to the request path.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-path-regex
 	PathRegexHTTPHostnameModifier HTTPHostnameModifierType = "PathRegex"
+	// SetHTTPHostnameModifier indicates that the Host header value would be replaced with the hostname specified in set.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-literal
+	SetHTTPHostnameModifier HTTPHostnameModifierType = "Set"
 )
 
 type ReplaceRegexMatch struct {
@@ -195,14 +198,26 @@ type HTTPPathModifier struct {
 // +kubebuilder:validation:XValidation:message="header must be specified for Header type",rule="!(!has(self.header) && self.type == 'Header')"
 // +kubebuilder:validation:XValidation:message="pathRegex must be nil if the type is not PathRegex",rule="!(has(self.pathRegex) && self.type != 'PathRegex')"
 // +kubebuilder:validation:XValidation:message="pathRegex must be specified for PathRegex type",rule="!(!has(self.pathRegex) && self.type == 'PathRegex')"
+// +kubebuilder:validation:XValidation:message="set must be nil if the type is not Set",rule="!(has(self.set) && self.type != 'Set')"
+// +kubebuilder:validation:XValidation:message="set must be specified for Set type",rule="!(!has(self.set) && self.type == 'Set')"
 type HTTPHostnameModifier struct {
-	// +kubebuilder:validation:Enum=Header;Backend;PathRegex
+	// +kubebuilder:validation:Enum=Header;Backend;PathRegex;Set
 	// +kubebuilder:validation:Required
 	Type HTTPHostnameModifierType `json:"type"`
 
 	// Header is the name of the header whose value would be used to rewrite the Host header
 	// +optional
 	Header *string `json:"header,omitempty"`
+
+	// Set is the hostname the Host header is rewritten to.
+	//
+	// Unlike the other modifiers this is a fixed value rather than one derived
+	// from the request, so it can differ per backend when the filter is
+	// attached to a backendRef. That is what allows a weighted route to send
+	// each of its backends a Host addressed to that backend.
+	//
+	// +optional
+	Set *gwapiv1.PreciseHostname `json:"set,omitempty"`
 
 	// PathRegex defines a regex match and substitution applied to the request path to compute
 	// the rewritten Host header.

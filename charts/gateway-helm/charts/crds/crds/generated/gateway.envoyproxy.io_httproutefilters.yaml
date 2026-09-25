@@ -458,6 +458,18 @@ spec:
                         - pattern
                         - substitution
                         type: object
+                      set:
+                        description: |-
+                          Set is the hostname the Host header is rewritten to.
+
+                          Unlike the other modifiers this is a fixed value rather than one derived
+                          from the request, so it can differ per backend when the filter is
+                          attached to a backendRef. That is what allows a weighted route to send
+                          each of its backends a Host addressed to that backend.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
                       type:
                         description: HTTPPathModifierType defines the type of Hostname
                           rewrite.
@@ -465,6 +477,7 @@ spec:
                         - Header
                         - Backend
                         - PathRegex
+                        - Set
                         type: string
                     required:
                     - type
@@ -478,6 +491,10 @@ spec:
                       rule: '!(has(self.pathRegex) && self.type != ''PathRegex'')'
                     - message: pathRegex must be specified for PathRegex type
                       rule: '!(!has(self.pathRegex) && self.type == ''PathRegex'')'
+                    - message: set must be nil if the type is not Set
+                      rule: '!(has(self.set) && self.type != ''Set'')'
+                    - message: set must be specified for Set type
+                      rule: '!(!has(self.set) && self.type == ''Set'')'
                   path:
                     description: Path defines a path rewrite.
                     properties:

@@ -905,6 +905,16 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							hm = &ir.HTTPHostModifier{
 								Backend: new(true),
 							}
+						case egv1a1.SetHTTPHostnameModifier:
+							if hrf.Spec.URLRewrite.Hostname.Set == nil || *hrf.Spec.URLRewrite.Hostname.Set == "" {
+								return status.NewRouteStatusError(
+									errors.New("Set must be specified when rewrite hostname type is \"Set\""),
+									gwapiv1.RouteReasonUnsupportedValue,
+								).WithType(gwapiv1.RouteConditionAccepted)
+							}
+							hm = &ir.HTTPHostModifier{
+								Name: new(string(*hrf.Spec.URLRewrite.Hostname.Set)),
+							}
 						case egv1a1.PathRegexHTTPHostnameModifier:
 							if hrf.Spec.URLRewrite.Hostname.PathRegex == nil ||
 								hrf.Spec.URLRewrite.Hostname.PathRegex.Pattern == "" ||

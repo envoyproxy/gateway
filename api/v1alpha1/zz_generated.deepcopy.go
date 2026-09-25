@@ -4743,6 +4743,11 @@ func (in *HTTPHostnameModifier) DeepCopyInto(out *HTTPHostnameModifier) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Set != nil {
+		in, out := &in.Set, &out.Set
+		*out = new(v1.PreciseHostname)
+		**out = **in
+	}
 	if in.PathRegex != nil {
 		in, out := &in.PathRegex, &out.PathRegex
 		*out = new(HostnamePathRegexRewrite)

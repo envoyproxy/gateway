@@ -133,6 +133,47 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "Valid Set",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.SetHTTPHostnameModifier,
+							Set:  new(gwapiv1.PreciseHostname("backend-1.example.com")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Set without a hostname",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.SetHTTPHostnameModifier,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"set must be specified for Set type"},
+		},
+		{
+			desc: "set on a type that is not Set",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type: egv1a1.BackendHTTPHostnameModifier,
+							Set:  new(gwapiv1.PreciseHostname("backend-1.example.com")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"set must be nil if the type is not Set"},
+		},
+		{
 			desc: "invalid PathRegex substitution with control characters",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
