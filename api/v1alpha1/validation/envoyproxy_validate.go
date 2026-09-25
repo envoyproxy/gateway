@@ -56,6 +56,14 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 		errs = append(errs, validateProxyTelemetryErrs...)
 	}
 
+	// Mirrors the EnvoyProxySpec CEL rule "mergeGateways and mergeBackends cannot
+	// both be enabled". The CEL rule only runs through Kubernetes admission, which
+	// the embedded default EnvoyProxy spec loaded from an EnvoyGateway file never
+	// goes through, so this method has to enforce it explicitly too.
+	if spec != nil && ptr.Deref(spec.MergeGateways, false) && spec.MergeBackends != nil {
+		errs = append(errs, errors.New("mergeGateways and mergeBackends cannot both be enabled"))
+	}
+
 	// validate filter order
 	if spec != nil && spec.FilterOrder != nil {
 		if err := validateFilterOrder(spec.FilterOrder); err != nil {

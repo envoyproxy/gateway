@@ -7,6 +7,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,6 +16,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/env"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 const (
@@ -96,10 +98,36 @@ func (s *Server) Validate() ([]string, error) {
 	case len(s.ControllerNamespace) == 0:
 		return nil, errors.New("namespace is empty string")
 	}
-	if err := validation.ValidateEnvoyGateway(s.EnvoyGateway); err != nil {
+	if err := ValidateEnvoyGateway(s.EnvoyGateway); err != nil {
 		return nil, err
 	}
 
 	warnings := validation.WarnEnvoyGateway(s.EnvoyGateway)
 	return warnings, nil
+}
+
+// validateEnvoyGateway validates the provided EnvoyGateway config, including
+// the bootstrap override under the embedded default EnvoyProxy spec.
+//
+// api/v1alpha1/validation.ValidateEnvoyGateway intentionally skips that check:
+// validating a bootstrap override means patching it onto the internal xDS
+// bootstrap template and diffing the result, which the api package cannot do
+// without depending on internal packages (see validateEnvoyProxySpec's doc
+// comment). Standalone EnvoyProxy resources get the same extra check in
+// internal/gatewayapi/translator.go's validateEnvoyProxy; this is the
+// equivalent for the merged default spec used by the config loader, so that
+// an override which breaks dynamic_resources or the xDS cluster is rejected
+// here too, rather than leaving Envoy unable to reach the control plane.
+func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
+	if err := validation.ValidateEnvoyGateway(eg); err != nil {
+		return err
+	}
+
+	if eg.EnvoyProxy != nil && eg.EnvoyProxy.Bootstrap != nil {
+		if err := bootstrap.Validate(eg.EnvoyProxy.Bootstrap); err != nil {
+			return fmt.Errorf("invalid EnvoyProxy template: %w", err)
+		}
+	}
+
+	return nil
 }
