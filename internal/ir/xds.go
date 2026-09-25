@@ -2278,6 +2278,14 @@ type BackendCluster struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 }
 
+// Protocol reports the upstream protocol this cluster serves.
+func (b *BackendCluster) Protocol() AppProtocol {
+	if b == nil || b.Setting == nil {
+		return ""
+	}
+	return b.Setting.Protocol
+}
+
 func (b *BackendCluster) Validate() error {
 	var errs error
 	if len(b.Name) == 0 {
