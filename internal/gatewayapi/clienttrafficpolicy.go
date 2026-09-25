@@ -640,7 +640,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 				// originated from the same target. The origin is encoded in the listener name by construction.
 				var prefix string
 				if scope == scopeEntireGateway {
-					prefix = extractGatewayNameFromListener(irListenerName)
+					prefix = extractGatewayNameFromListener(irListenerName) + "/"
 				} else {
 					prefix = extractListenerSetPrefixFromListener(irListenerName)
 				}
