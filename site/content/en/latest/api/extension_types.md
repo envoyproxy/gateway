@@ -1019,6 +1019,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcp` | _[TCPClientTimeout](#tcpclienttimeout)_ |  false  |  | Timeout settings for TCP. |
 | `http` | _[HTTPClientTimeout](#httpclienttimeout)_ |  false  |  | Timeout settings for HTTP. |
+| `udp` | _[UDPClientTimeout](#udpclienttimeout)_ |  false  |  | Timeout settings for UDP. |
 
 
 #### ClientTrafficPolicy
@@ -6867,6 +6868,20 @@ _Appears in:_
 | `internal` | The gRPC status code in the response headers is “internal”.<br /> | 
 | `resource-exhausted` | The gRPC status code in the response headers is “resource-exhausted”.<br /> | 
 | `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
+
+
+#### UDPClientTimeout
+
+
+
+UDPClientTimeout only provides timeout configuration on the listener whose protocol is UDP.
+
+_Appears in:_
+- [ClientTimeout](#clienttimeout)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | IdleTimeout for a UDP session. Idle time is defined as a period in which<br />there are no datagrams sent or received on either the upstream or<br />downstream side of the session. When the timeout fires, the session is<br />removed and its upstream socket is released.<br />Default: 1 minute. |
 
 
 #### UnixSocket

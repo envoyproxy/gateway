@@ -999,6 +999,17 @@ type ClientTimeout struct {
 
 	// Timeout settings for HTTP.
 	HTTP *HTTPClientTimeout `json:"http,omitempty" yaml:"http,omitempty"`
+
+	// Timeout settings for UDP.
+	UDP *UDPClientTimeout `json:"udp,omitempty" yaml:"udp,omitempty"`
+}
+
+// UDPClientTimeout set the configuration for client UDP sessions.
+// +k8s:deepcopy-gen=true
+type UDPClientTimeout struct {
+	// IdleTimeout for a UDP session. Idle time is defined as a period in which there are no
+	// datagrams sent or received on either the upstream or downstream side of the session.
+	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty" yaml:"idleTimeout,omitempty"`
 }
 
 // TCPClientTimeout set the configuration for client TCP (not HTTP).
@@ -2831,6 +2842,8 @@ func (t TLSInspectorConfig) Validate() error {
 // +k8s:deepcopy-gen=true
 type UDPListener struct {
 	CoreListenerDetails `json:",inline" yaml:",inline"`
+	// ClientTimeout sets the timeout configuration for downstream connections.
+	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Route associated with UDP traffic to the listener.
 	Route *UDPRoute `json:"route,omitempty" yaml:"route,omitempty"`
 }

@@ -71,6 +71,24 @@ type ClientTimeout struct {
 	//
 	// +optional
 	HTTP *HTTPClientTimeout `json:"http,omitempty"`
+
+	// Timeout settings for UDP.
+	//
+	// +optional
+	UDP *UDPClientTimeout `json:"udp,omitempty"`
+}
+
+// UDPClientTimeout only provides timeout configuration on the listener whose protocol is UDP.
+type UDPClientTimeout struct {
+	// IdleTimeout for a UDP session. Idle time is defined as a period in which
+	// there are no datagrams sent or received on either the upstream or
+	// downstream side of the session. When the timeout fires, the session is
+	// removed and its upstream socket is released.
+	// Default: 1 minute.
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="idleTimeout must be greater than 0"
+	IdleTimeout *gwapiv1.Duration `json:"idleTimeout,omitempty"`
 }
 
 // TCPClientTimeout only provides timeout configuration on the listener whose protocol is TCP or TLS.
