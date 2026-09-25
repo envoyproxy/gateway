@@ -725,6 +725,14 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		}
 	}
 
+	var udpIR *ir.UDPListener
+	for _, udp := range gwXdsIR.UDP {
+		if udp.Name == irListenerName {
+			udpIR = udp
+			break
+		}
+	}
+
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
 		keepalive     *ir.TCPKeepalive
@@ -884,6 +892,18 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		tcpIR.Timeout = timeout
 	}
 
+	if udpIR != nil {
+		// Early return if got any errors
+		if errs != nil {
+			// Remove the UDP route if there are any errors
+			// The listener will still be created, but any client traffic will be forwarded to the default empty cluster
+			udpIR.Route = nil
+			return errs
+		}
+
+		udpIR.Timeout = timeout
+	}
+
 	return nil
 }
 
@@ -998,6 +1018,18 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			irHTTPTimeout.RequestHeadersReceivedTimeout = ir.MetaV1DurationPtr(d)
 		}
 		irClientTimeout.HTTP = irHTTPTimeout
+	}
+
+	if clientTimeout.UDP != nil {
+		irUDPTimeout := &ir.UDPClientTimeout{}
+		if clientTimeout.UDP.IdleTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.UDP.IdleTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid UDP IdleTimeout value %s", *clientTimeout.UDP.IdleTimeout)
+			}
+			irUDPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
+		}
+		irClientTimeout.UDP = irUDPTimeout
 	}
 
 	return irClientTimeout, nil
