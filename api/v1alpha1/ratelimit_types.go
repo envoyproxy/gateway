@@ -69,6 +69,7 @@ type LocalRateLimit struct {
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.overrides))", message="overrides is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -91,6 +92,8 @@ const (
 
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.overrides) && has(self.limit.fromMetadata))", message="overrides and limit.fromMetadata are mutually exclusive"
 type RateLimitRule struct {
 	// ClientSelectors holds the list of select conditions to select
 	// specific clients using attributes from the traffic flow.
@@ -143,6 +146,38 @@ type RateLimitRule struct {
 	//
 	// +optional
 	XRateLimitHeaders *XRateLimitHeadersOption `json:"xRateLimitHeaders,omitempty"`
+	// Overrides replaces the rule limit for specific Distinct identity values.
+	// Each override shares the parent rule's identity key (header, query parameter,
+	// or CIDR) and Envoy rate-limit action. The rate limit service applies
+	// most-specific-wins: a matching override value uses that override's limit;
+	// any other Distinct value uses the parent rule limit.
+	//
+	// Only supported on Global rate limit rules whose clientSelectors contain
+	// exactly one Distinct identity. Method and path matches may be combined
+	// with that identity; extra headers, query parameters, or a second Distinct
+	// identity may not. Mutually exclusive with limit.fromMetadata.
+	// Distinct-only shape and unique override values are enforced at translate time.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=64
+	Overrides []RateLimitOverride `json:"overrides,omitempty"`
+}
+
+// RateLimitOverride replaces the parent Distinct rule limit for one identity value.
+//
+// +kubebuilder:validation:XValidation:rule="self.value != '*'", message="override value must not be '*'"
+// +kubebuilder:validation:XValidation:rule="!has(self.limit.fromMetadata)", message="limit.fromMetadata is not supported on overrides"
+type RateLimitOverride struct {
+	// Value is the Distinct identity value this override applies to, for example
+	// a specific header or query parameter value, or a single client IP.
+	// Must be unique across overrides on the same rule. The wildcard "*" is not allowed.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	Value string `json:"value"`
+	// Limit is the rate limit applied when the Distinct identity equals Value.
+	Limit RateLimitValue `json:"limit"`
 }
 
 type RateLimitCost struct {

@@ -1952,6 +1952,100 @@ spec:
                               - requests
                               - unit
                               type: object
+                            overrides:
+                              description: |-
+                                Overrides replaces the rule limit for specific Distinct identity values.
+                                Each override shares the parent rule's identity key (header, query parameter,
+                                or CIDR) and Envoy rate-limit action. The rate limit service applies
+                                most-specific-wins: a matching override value uses that override's limit;
+                                any other Distinct value uses the parent rule limit.
+
+                                Only supported on Global rate limit rules whose clientSelectors contain
+                                exactly one Distinct identity. Method and path matches may be combined
+                                with that identity; extra headers, query parameters, or a second Distinct
+                                identity may not. Mutually exclusive with limit.fromMetadata.
+                                Distinct-only shape and unique override values are enforced at translate time.
+                              items:
+                                description: RateLimitOverride replaces the parent
+                                  Distinct rule limit for one identity value.
+                                properties:
+                                  limit:
+                                    description: Limit is the rate limit applied when
+                                      the Distinct identity equals Value.
+                                    properties:
+                                      fromMetadata:
+                                        description: |-
+                                          FromMetadata sources the limit value from per-request dynamic metadata.
+                                          When the referenced metadata value is present, it overrides Requests/Unit for that
+                                          request; otherwise Requests/Unit are used as the default.
+
+                                          The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                          property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                          filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                          Only supported for Global Rate Limits.
+                                        properties:
+                                          key:
+                                            description: Key is the key to retrieve
+                                              the limit value from within the namespaced
+                                              filter metadata.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: Namespace is the namespace
+                                              of the dynamic metadata.
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - key
+                                        - namespace
+                                        type: object
+                                      requests:
+                                        description: |-
+                                          Requests is the number of requests (or cost units, when used with
+                                          cost-based rate limiting) allowed per Unit.
+                                        format: int64
+                                        maximum: 4294967295
+                                        minimum: 0
+                                        type: integer
+                                      unit:
+                                        description: |-
+                                          RateLimitUnit specifies the intervals for setting rate limits.
+                                          Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Week", "Month" and "Year".
+                                        enum:
+                                        - Second
+                                        - Minute
+                                        - Hour
+                                        - Day
+                                        - Week
+                                        - Month
+                                        - Year
+                                        type: string
+                                    required:
+                                    - requests
+                                    - unit
+                                    type: object
+                                  value:
+                                    description: |-
+                                      Value is the Distinct identity value this override applies to, for example
+                                      a specific header or query parameter value, or a single client IP.
+                                      Must be unique across overrides on the same rule. The wildcard "*" is not allowed.
+                                    maxLength: 1024
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - limit
+                                - value
+                                type: object
+                                x-kubernetes-validations:
+                                - message: override value must not be '*'
+                                  rule: self.value != '*'
+                                - message: limit.fromMetadata is not supported on
+                                    overrides
+                                  rule: '!has(self.limit.fromMetadata)'
+                              maxItems: 64
+                              minItems: 1
+                              type: array
                             shadowMode:
                               description: |-
                                 ShadowMode indicates whether this rate-limit rule runs in shadow mode.
@@ -1979,6 +2073,10 @@ spec:
                           required:
                           - limit
                           type: object
+                          x-kubernetes-validations:
+                          - message: overrides and limit.fromMetadata are mutually
+                              exclusive
+                            rule: '!(has(self.overrides) && has(self.limit.fromMetadata))'
                         maxItems: 256
                         type: array
                     required:
@@ -2364,6 +2462,100 @@ spec:
                               - requests
                               - unit
                               type: object
+                            overrides:
+                              description: |-
+                                Overrides replaces the rule limit for specific Distinct identity values.
+                                Each override shares the parent rule's identity key (header, query parameter,
+                                or CIDR) and Envoy rate-limit action. The rate limit service applies
+                                most-specific-wins: a matching override value uses that override's limit;
+                                any other Distinct value uses the parent rule limit.
+
+                                Only supported on Global rate limit rules whose clientSelectors contain
+                                exactly one Distinct identity. Method and path matches may be combined
+                                with that identity; extra headers, query parameters, or a second Distinct
+                                identity may not. Mutually exclusive with limit.fromMetadata.
+                                Distinct-only shape and unique override values are enforced at translate time.
+                              items:
+                                description: RateLimitOverride replaces the parent
+                                  Distinct rule limit for one identity value.
+                                properties:
+                                  limit:
+                                    description: Limit is the rate limit applied when
+                                      the Distinct identity equals Value.
+                                    properties:
+                                      fromMetadata:
+                                        description: |-
+                                          FromMetadata sources the limit value from per-request dynamic metadata.
+                                          When the referenced metadata value is present, it overrides Requests/Unit for that
+                                          request; otherwise Requests/Unit are used as the default.
+
+                                          The referenced metadata value must be a struct containing an integer "requests_per_unit"
+                                          property and a "unit" property with a value parseable to a RateLimitUnit. An upstream
+                                          filter (e.g. ext_proc) is responsible for writing this struct into dynamic metadata.
+
+                                          Only supported for Global Rate Limits.
+                                        properties:
+                                          key:
+                                            description: Key is the key to retrieve
+                                              the limit value from within the namespaced
+                                              filter metadata.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: Namespace is the namespace
+                                              of the dynamic metadata.
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - key
+                                        - namespace
+                                        type: object
+                                      requests:
+                                        description: |-
+                                          Requests is the number of requests (or cost units, when used with
+                                          cost-based rate limiting) allowed per Unit.
+                                        format: int64
+                                        maximum: 4294967295
+                                        minimum: 0
+                                        type: integer
+                                      unit:
+                                        description: |-
+                                          RateLimitUnit specifies the intervals for setting rate limits.
+                                          Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Week", "Month" and "Year".
+                                        enum:
+                                        - Second
+                                        - Minute
+                                        - Hour
+                                        - Day
+                                        - Week
+                                        - Month
+                                        - Year
+                                        type: string
+                                    required:
+                                    - requests
+                                    - unit
+                                    type: object
+                                  value:
+                                    description: |-
+                                      Value is the Distinct identity value this override applies to, for example
+                                      a specific header or query parameter value, or a single client IP.
+                                      Must be unique across overrides on the same rule. The wildcard "*" is not allowed.
+                                    maxLength: 1024
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - limit
+                                - value
+                                type: object
+                                x-kubernetes-validations:
+                                - message: override value must not be '*'
+                                  rule: self.value != '*'
+                                - message: limit.fromMetadata is not supported on
+                                    overrides
+                                  rule: '!has(self.limit.fromMetadata)'
+                              maxItems: 64
+                              minItems: 1
+                              type: array
                             shadowMode:
                               description: |-
                                 ShadowMode indicates whether this rate-limit rule runs in shadow mode.
@@ -2391,6 +2583,10 @@ spec:
                           required:
                           - limit
                           type: object
+                          x-kubernetes-validations:
+                          - message: overrides and limit.fromMetadata are mutually
+                              exclusive
+                            rule: '!(has(self.overrides) && has(self.limit.fromMetadata))'
                         maxItems: 16
                         type: array
                         x-kubernetes-validations:
@@ -2399,6 +2595,8 @@ spec:
                         - message: limit fromMetadata is not supported for Local Rate
                             Limits
                           rule: self.all(r, !has(r.limit.fromMetadata))
+                        - message: overrides is not supported for Local Rate Limits
+                          rule: self.all(r, !has(r.overrides))
                     type: object
                   type:
                     description: |-
