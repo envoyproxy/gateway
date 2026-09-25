@@ -306,6 +306,17 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			caseName: "shutdown-manager-readonly-rootfs",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Container: &egv1a1.KubernetesContainerSpec{
+					SecurityContext: &corev1.SecurityContext{
+						ReadOnlyRootFilesystem: new(true),
+					},
+				},
+			},
+		},
+		{
 			caseName:  "bootstrap",
 			infra:     newTestInfra(),
 			deploy:    nil,

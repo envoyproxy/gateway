@@ -1,0 +1,1 @@
+Fixed the shutdown-manager failing to create /tmp/shutdown-ready (breaking graceful shutdown and delaying proxy pod termination by the full grace period) when the Envoy container's securityContext sets readOnlyRootFilesystem: true, by mounting a writable emptyDir at /tmp on the shutdown-manager.
