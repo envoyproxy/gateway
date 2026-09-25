@@ -46,3 +46,19 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-4/rule/0/backend/0
+- clusterName: resolver
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.8
+            portValue: 443
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: resolver/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: resolver/backend/0

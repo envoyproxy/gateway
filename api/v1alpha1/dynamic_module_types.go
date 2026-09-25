@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // DynamicModuleSourceType specifies the types of sources for dynamic module code.
@@ -144,4 +145,27 @@ type DynamicModule struct {
 	// +optional
 	// +kubebuilder:default=false
 	TerminalFilter *bool `json:"terminalFilter,omitempty"`
+
+	// Backends defines Envoy clusters used by this module.
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	Backends []ExtensionBackend `json:"backends,omitempty"`
+}
+
+// ExtensionBackend defines a named backend for an extension.
+type ExtensionBackend struct {
+	// Name is the Envoy cluster name. Dynamic module configuration must use
+	// the same name. Configurations in one proxy deployment must use the same
+	// backend for this name.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	Name string `json:"name"`
+
+	// BackendRef references the one backend for this cluster.
+	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
 }

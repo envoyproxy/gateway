@@ -108,6 +108,9 @@ type MergeBackendsConfig struct {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
+	// extensionBackendRoutes records routes for cluster name conflict checks.
+	extensionBackendRoutes map[*ir.HTTPRoute]extensionBackendRoute
+
 	// TranslatorContext holds pre-indexed resource maps for efficient lookup resources
 	// during translation operations.
 	*TranslatorContext
