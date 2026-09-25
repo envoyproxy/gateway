@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
@@ -208,8 +209,9 @@ func postEnvoyAdminAPI(path string) error {
 	return nil
 }
 
+// getTotalConnections returns the number of active downstream connections, including UDP proxy sessions.
 func getTotalConnections(port int) (*int, error) {
-	return getDownstreamCXActive(port)
+	return getActiveConnectionsAndUDPSessions(port)
 }
 
 // Define struct to decode JSON response into; expecting a single stat in the response in the format:
@@ -223,7 +225,7 @@ type envoyStatsResponse struct {
 
 func getStatsFromEnvoyStatsEndpoint(port int, statFilter string) (*envoyStatsResponse, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s//stats?filter=%s&format=json",
-		net.JoinHostPort("localhost", strconv.Itoa(port)), statFilter))
+		net.JoinHostPort("localhost", strconv.Itoa(port)), url.QueryEscape(statFilter)))
 	if err != nil {
 		return nil, err
 	}
@@ -249,13 +251,14 @@ func getStatsFromEnvoyStatsEndpoint(port int, statFilter string) (*envoyStatsRes
 	return r, nil
 }
 
-// getDownstreamCXActive retrieves the total number of open connections from Envoy's listener downstream_cx_active stat
-func getDownstreamCXActive(port int) (*int, error) {
-	// Send request to Envoy admin API to retrieve listener.\.$.downstream_cx_active stat
-	statFilter := "^listener\\..*\\.downstream_cx_active$"
+// getActiveConnectionsAndUDPSessions retrieves the total number of open downstream connections and
+// UDP proxy sessions. UDP listeners have no connections, so their traffic only shows up in the
+// UDP proxy's downstream_sess_active stat.
+func getActiveConnectionsAndUDPSessions(port int) (*int, error) {
+	statFilter := "^(listener\\..*\\.downstream_cx_active|udp\\..*\\.downstream_sess_active)$"
 	r, err := getStatsFromEnvoyStatsEndpoint(port, statFilter)
 	if err != nil {
-		return nil, fmt.Errorf("error getting listener downstream_cx_active stat: %w", err)
+		return nil, fmt.Errorf("error getting active connection and UDP session stats: %w", err)
 	}
 
 	totalConnection := filterDownstreamCXActive(r)
