@@ -692,6 +692,9 @@ func (t *Translator) addRouteToRouteConfig(
 		maxDirectResponseBodySize uint32 = DefaultMaxDirectResponseBodySize
 	)
 
+	// Compute listener-wide GeoIP header removals once for all routes.
+	geoIPHeaders := geoIPHeadersToRemove(httpListener)
+
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
 		// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
@@ -736,7 +739,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex, geoIPHeaders)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
