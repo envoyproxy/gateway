@@ -169,3 +169,20 @@ spec:
           name: backend
           port: 9000
           weight: 1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: lua-example
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(request_handle)
+          request_handle:headers():add("x-lua", "on")
+        end
