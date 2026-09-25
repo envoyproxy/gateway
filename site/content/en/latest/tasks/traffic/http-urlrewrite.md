@@ -565,6 +565,7 @@ In addition to core Gateway-API rewrite options, Envoy Gateway supports extended
 The `HTTPRouteFilter` API can be configured to rewrite the Host header value to:
 - The value of a different request header
 - The DNS name of the backend that the request is routed to
+- A fixed hostname you specify, which may differ per backend
 
 In the following example, the host header is rewritten to the value of the x-custom-host header.
 
@@ -696,6 +697,169 @@ $ curl -L -vvv --header "Host: host.header.rewrite.example" --header "x-custom-h
 
 You can see that the host is rewritten from `host.header.rewrite.example`, to the value of the provided
 `x-custom-host` header `foo`. The original host header is preserved in the `X-Forwarded-Host` header.
+
+## Rewrite URL Host Name to a Fixed Value
+
+The `Set` hostname modifier rewrites the Host header to a hostname you specify, rather than one
+derived from the request. Because the value is fixed rather than computed, an `HTTPRouteFilter`
+using `Set` can be attached to an individual `backendRef`, which gives each backend in a rule its
+own Host header.
+
+That is what a weighted split across two origins needs. In the following example, 95% of traffic
+goes to `backend-blue` with a Host header of `blue.example.com`, and 5% goes to `backend-green`
+with a Host header of `green.example.com`. A rule-level filter could not express this, because it
+applies one rewrite to every backend in the rule.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-hostname-set
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - host.set.rewrite.example
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: "/set"
+      backendRefs:
+      - name: backend-blue
+        port: 3000
+        weight: 95
+        filters:
+          - type: ExtensionRef
+            extensionRef:
+              group: gateway.envoyproxy.io
+              kind: HTTPRouteFilter
+              name: set-host-blue
+      - name: backend-green
+        port: 3000
+        weight: 5
+        filters:
+          - type: ExtensionRef
+            extensionRef:
+              group: gateway.envoyproxy.io
+              kind: HTTPRouteFilter
+              name: set-host-green
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: set-host-blue
+spec:
+  urlRewrite:
+    hostname:
+      type: Set
+      set: blue.example.com
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: set-host-green
+spec:
+  urlRewrite:
+    hostname:
+      type: Set
+      set: green.example.com
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-filter-hostname-set
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - host.set.rewrite.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: "/set"
+      backendRefs:
+        - name: backend-blue
+          port: 3000
+          weight: 95
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: set-host-blue
+        - name: backend-green
+          port: 3000
+          weight: 5
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: set-host-green
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: set-host-blue
+spec:
+  urlRewrite:
+    hostname:
+      type: Set
+      set: blue.example.com
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: set-host-green
+spec:
+  urlRewrite:
+    hostname:
+      type: Set
+      set: green.example.com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Querying `http://${GATEWAY_HOST}/set` repeatedly shows the Host header the request arrived at the
+backend with, which differs by the backend that served it.
+
+```console
+$ curl -L -vvv --header "Host: host.set.rewrite.example" "http://${GATEWAY_HOST}/set"
+...
+< HTTP/1.1 200 OK
+<
+{
+ "path": "/set",
+ "host": "blue.example.com",
+ "method": "GET",
+ "proto": "HTTP/1.1",
+ "headers": {
+  "X-Forwarded-Host": [
+   "host.set.rewrite.example"
+  ],
+ },
+ "namespace": "default",
+ "pod": "backend-blue-6fdd4b9bd8-8vlc5"
+...
+```
+
+A `Set` filter can also be attached at the rule level, in the rule's `filters` field, when every
+backend in the rule should receive the same Host header.
 
 ## Disabling X-Forwarded-Host Header
 
