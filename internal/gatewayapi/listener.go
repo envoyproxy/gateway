@@ -745,8 +745,8 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 		address  = netutils.IPv4ListenerAddress
 	)
 
-	if envoyProxy != nil && envoyProxy.Spec.IPFamily != nil {
-		ipFamily = *envoyProxy.Spec.IPFamily
+	if envoyIPFamily := getEnvoyIPFamily(envoyProxy); envoyIPFamily != nil {
+		ipFamily = *envoyIPFamily
 	}
 	if ipFamily == egv1a1.IPv6 || ipFamily == egv1a1.DualStack {
 		address = netutils.IPv6ListenerAddress

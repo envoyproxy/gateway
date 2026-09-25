@@ -3643,6 +3643,7 @@ _Appears in:_
 | `IPv4` | IPv4 defines the IPv4 family.<br /> | 
 | `IPv6` | IPv6 defines the IPv6 family.<br /> | 
 | `DualStack` | DualStack defines the dual-stack family.<br />When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses<br />for incoming client traffic, enabling support for both IP protocol versions.<br /> | 
+| `PreferDualStack` | PreferDualStack defines the dual-stack family, degrading to the single family<br />the cluster provides instead of failing when the cluster is not dual-stack.<br /> | 
 
 
 #### ImagePullPolicy

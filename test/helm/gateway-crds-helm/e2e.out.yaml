@@ -10832,6 +10832,7 @@ spec:
                 - IPv4
                 - IPv6
                 - DualStack
+                - PreferDualStack
                 type: string
               logging:
                 default:
