@@ -67,6 +67,7 @@ _Appears in:_
 | `logName` | _string_ |  false  |  | LogName defines the friendly name of the access log to be returned in<br />StreamAccessLogsMessage.Identifier. This allows the access log server<br />to differentiate between different access logs coming from the same Envoy. |
 | `type` | _[ALSEnvoyProxyAccessLogType](#alsenvoyproxyaccesslogtype)_ |  true  |  | Type defines the type of accesslog. Supported types are "HTTP" and "TCP". |
 | `http` | _[ALSEnvoyProxyHTTPAccessLogConfig](#alsenvoyproxyhttpaccesslogconfig)_ |  false  |  | HTTP defines additional configuration specific to HTTP access logs. |
+| `buffer` | _[AccessLogBufferSettings](#accesslogbuffersettings)_ |  false  |  | Buffer defines how access log entries are buffered before being flushed to the<br />access log service. |
 
 
 #### ALSEnvoyProxyAccessLogType
@@ -115,6 +116,29 @@ _Appears in:_
 | `extractFrom` | _[ExtractFrom](#extractfrom) array_ |  true  |  | ExtractFrom is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
 | `forwardClientIDHeader` | _string_ |  false  |  | ForwardClientIDHeader is the name of the header to forward the client identity to the backend<br />service. The header will be added to the request with the client id as the value. |
 | `sanitize` | _boolean_ |  false  |  | Sanitize indicates whether to remove the API key from the request before forwarding it to the backend service. |
+
+
+#### AccessLogBufferSettings
+
+
+
+AccessLogBufferSettings configures how Envoy buffers access log entries before
+flushing them to the sink.
+
+Entries accumulate until FlushInterval elapses or SizeBytes worth have been buffered,
+whichever comes first, at which point Envoy flushes. Entries are discarded, and counted
+by the sink's `logs_dropped` stat, only when a flush cannot drain the buffer. How much
+of a sink outage the buffer absorbs therefore depends on both settings, since only
+entries still buffered when the sink returns are delivered.
+
+_Appears in:_
+- [ALSEnvoyProxyAccessLog](#alsenvoyproxyaccesslog)
+- [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `flushInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | FlushInterval defines how often buffered access log entries are flushed to the sink.<br />Entries are flushed when this interval elapses or when SizeBytes worth of entries have<br />been buffered, whichever comes first.<br />Must be greater than 0. Defaults to 1s. |
+| `sizeBytes` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | SizeBytes defines the soft size limit of the access log entry buffer.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Envoy carries this as a 32-bit unsigned integer, so values of 4Gi and above are<br />rejected when the EnvoyProxy is translated rather than at admission.<br />Defaults to 16384 bytes. |
 
 
 #### ActiveHealthCheck
@@ -4693,6 +4717,7 @@ _Appears in:_
 | `resources` | _object (keys:string, values:string)_ |  false  |  | Resources is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).<br />Deprecated: Use ResourceAttributes instead. |
 | `resourceAttributes` | _object (keys:string, values:string)_ |  false  |  | ResourceAttributes is a set of labels that describe the source of a log entry, including envoy node info.<br />It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 | `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
+| `buffer` | _[AccessLogBufferSettings](#accesslogbuffersettings)_ |  false  |  | Buffer defines how access log entries are buffered before being flushed to the<br />OpenTelemetry collector. |
 
 
 #### OpenTelemetryTracingProvider
