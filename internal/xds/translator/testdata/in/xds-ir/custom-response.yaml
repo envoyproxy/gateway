@@ -118,3 +118,26 @@ http:
                 response:
                   body: eyJlcnJvciI6ImNvbWJpbmVkIG1hdGNoIn0=
                   contentType: application/json
+              - match:
+                  requestHeaders:
+                    - name: X-Client-Type
+                      exact: browser
+                name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/3
+                response:
+                  body: bWF0Y2hlZCByZXF1ZXN0IGhlYWRlcg==
+                  contentType: text/plain
+              - match:
+                  statusCodes:
+                    - value: 502
+                  requestHeaders:
+                    - name: X-Client-Type
+                      prefix: mobile-
+                    - name: X-Tenant
+                      safeRegex: "^acme-.*$"
+                  responseHeaders:
+                    - name: X-Error-Type
+                      exact: upstream-timeout
+                name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/4
+                response:
+                  body: eyJlcnJvciI6ImNvbWJpbmVkIHJlcXVlc3QgYW5kIHJlc3BvbnNlIG1hdGNoIn0=
+                  contentType: application/json
