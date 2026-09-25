@@ -38,6 +38,7 @@ import (
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
@@ -92,6 +93,9 @@ type Config struct {
 
 type Runner struct {
 	Config
+	// endpointFastPath is non-nil when the EndpointFastPath runtime flag is enabled; it
+	// patches endpoint updates into the snapshot without a full translation.
+	endpointFastPath *endpointFastPath
 }
 
 func New(cfg *Config) *Runner {
@@ -152,6 +156,7 @@ func (r *Runner) Close() error { return nil }
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+	endpointFastPath := r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath)
 	r.cache = cache.NewSnapshotCache(true, r.Logger)
 
 	// Set up the gRPC server and register the xDS handler.
@@ -224,10 +229,24 @@ func (r *Runner) Start(ctx context.Context) error {
 	// Start and listen xDS gRPC Server.
 	go r.serveXdsServer(ctx)
 
+	// Set up the endpoint fast path: endpoint updates published by the provider
+	// are patched into the snapshot as EDS-only updates, without waiting for a
+	// full translation. r.endpointFastPath must be assigned before the translate
+	// goroutine below starts reading it.
+	if endpointFastPath && r.ProviderResources != nil {
+		r.endpointFastPath = newEndpointFastPath(r.cache, r.ExtensionManager, r.Logger)
+		r.Logger.Info("endpoint fast path enabled")
+	}
+
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	sub := r.XdsIR.Subscribe(ctx)
 	go r.translateFromSubscription(sub)
+
+	if r.endpointFastPath != nil {
+		epSub := r.ProviderResources.EndpointUpdates.Subscribe(ctx)
+		go r.endpointFastPath.subscribe(epSub, r.Name())
+	}
 	r.Logger.Info("started")
 	return err
 }
@@ -297,6 +316,9 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 			)
 
 			if update.Delete {
+				if r.endpointFastPath != nil {
+					r.endpointFastPath.OnDelete(key)
+				}
 				if err := r.cache.GenerateNewSnapshot(key, nil, traceCtx); err != nil {
 					traceLogger.Error(err, "failed to delete the snapshot")
 					errChan <- err
@@ -358,12 +380,12 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				// Note: invalid EnvoyPatchPolicies are considered user-level errors and will not prevent the snapshot from being updated.
 				if err == nil {
 					if result.XdsResources != nil {
-						if r.cache == nil {
+						switch r.cache {
+						case nil:
 							r.Logger.Error(err, "failed to init snapshot cache")
 							errChan <- err
-						} else {
-							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, traceCtx); err != nil {
+						default:
+							if err := r.generateSnapshot(key, val.XdsIR, result, traceCtx); err != nil {
 								r.Logger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}
@@ -406,6 +428,24 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 		},
 	)
 	r.Logger.Info("subscriber shutting down")
+}
+
+// generateSnapshot serializes full-snapshot publication with endpoint patches,
+// keeping the snapshot and the fast-path contexts aligned.
+func (r *Runner) generateSnapshot(irKey string, xdsIR *ir.Xds, table *xtypes.ResourceVersionTable, ctx context.Context) error {
+	if r.endpointFastPath != nil {
+		r.endpointFastPath.mu.Lock()
+		defer r.endpointFastPath.mu.Unlock()
+		r.endpointFastPath.updateEDSForFullSnapshot(irKey, xdsIR, table)
+	}
+
+	err := r.cache.GenerateNewSnapshot(irKey, table.XdsResources, ctx)
+	if err != nil && r.endpointFastPath != nil {
+		// Creation and publication failures can leave different snapshots live.
+		// Fall back to the full pipeline until a successful build restores contexts.
+		delete(r.endpointFastPath.edsContextsByIRKey, irKey)
+	}
+	return err
 }
 
 func (r *Runner) loadTLSConfig() (*tls.Config, error) {
