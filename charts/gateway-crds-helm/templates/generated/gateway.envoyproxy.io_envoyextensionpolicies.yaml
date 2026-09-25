@@ -2427,6 +2427,18 @@ spec:
 
                         Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
                       type: string
+                    shareVM:
+                      default: false
+                      description: |-
+                        ShareVM allows this extension to share a Wasm VM with other extensions that
+                        enable sharing in the same EnvoyExtensionPolicy namespace. Envoy determines
+                        VM compatibility using the Wasm code and VM configuration, including environment
+                        variables. Each Envoy worker has its own VM.
+
+                        Sharing a VM shares module-level state and VM failures. Plugin names and root
+                        IDs are not changed; matching plugin identities may also share a root context.
+                        If false or unset, each policy's Wasm entry uses its own VM ID.
+                      type: boolean
                   required:
                   - code
                   type: object

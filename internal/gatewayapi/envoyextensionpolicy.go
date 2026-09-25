@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1771,6 +1772,20 @@ func (t *Translator) buildWasm(
 
 	if config.Env != nil && len(config.Env.HostKeys) > 0 {
 		wasmIR.HostKeys = config.Env.HostKeys
+	}
+
+	if ptr.Deref(config.ShareVM, false) {
+		// Envoy v1.39.1 computes the VM cache key before remote code is fetched on
+		// a cache miss. Include the resolved module checksum so different modules
+		// cannot reuse the first downloaded module's VM, even with remote.sha256 set.
+		// Use the cache-computed module checksum, not the optional user checksum
+		// (which identifies the image rather than the module for OCI sources).
+		wasmIR.VMID = fmt.Sprintf("envoyextensionpolicy/%s/wasm/%s", policy.Namespace, wasmIR.Code.SHA256)
+		// Envoy includes the environment configuration in its VM identity. Emit
+		// equivalent host-key sets in the same order without modifying the policy.
+		wasmIR.HostKeys = slices.Clone(wasmIR.HostKeys)
+		slices.Sort(wasmIR.HostKeys)
+		wasmIR.HostKeys = slices.Compact(wasmIR.HostKeys)
 	}
 
 	return wasmIR, nil

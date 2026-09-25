@@ -14,7 +14,87 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/wasm"
 )
+
+func TestBuildWasmVMSharing(t *testing.T) {
+	const (
+		moduleSHA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		otherSHA  = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+		imageSHA  = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+		sharedID  = "envoyextensionpolicy/shop/wasm/" + moduleSHA
+	)
+	tests := []struct {
+		name         string
+		shareVM      *bool
+		namespace    string
+		policyName   string
+		moduleSHA    string
+		image        bool
+		hostKeys     []string
+		wantVMID     string
+		wantHostKeys []string
+	}{
+		{
+			name: "omitted", namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			hostKeys: []string{"REGION", "API_TOKEN"}, wantHostKeys: []string{"REGION", "API_TOKEN"},
+		},
+		{
+			name: "disabled", shareVM: new(false), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			hostKeys: []string{"REGION", "API_TOKEN"}, wantHostKeys: []string{"REGION", "API_TOKEN"},
+		},
+		{
+			name: "shared with canonical host keys", shareVM: new(true), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			hostKeys: []string{"REGION", "API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: sharedID,
+		},
+		{
+			name: "same module in another policy", shareVM: new(true), namespace: "shop", policyName: "b", moduleSHA: moduleSHA,
+			hostKeys: []string{"API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: sharedID,
+		},
+		{
+			name: "another namespace", shareVM: new(true), namespace: "other", policyName: "a", moduleSHA: moduleSHA,
+			wantVMID: "envoyextensionpolicy/other/wasm/" + moduleSHA,
+		},
+		{
+			name: "changed module at the same URL", shareVM: new(true), namespace: "shop", policyName: "a", moduleSHA: otherSHA,
+			wantVMID: "envoyextensionpolicy/shop/wasm/" + otherSHA,
+		},
+		{
+			name: "OCI uses extracted module checksum", shareVM: new(true), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			image: true, wantVMID: sharedID,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policy := &egv1a1.EnvoyExtensionPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: tt.namespace, Name: tt.policyName}}
+			config := &egv1a1.Wasm{
+				ShareVM: tt.shareVM,
+				Env:     &egv1a1.WasmEnv{HostKeys: tt.hostKeys},
+				Code: egv1a1.WasmCodeSource{
+					Type: egv1a1.HTTPWasmCodeSourceType,
+					HTTP: &egv1a1.HTTPWasmCodeSource{URL: "https://example.com/plugin.wasm"},
+				},
+			}
+			if tt.image {
+				config.Code = egv1a1.WasmCodeSource{
+					Type:  egv1a1.ImageWasmCodeSourceType,
+					Image: &egv1a1.ImageWasmCodeSource{URL: "example.com/plugin:v1", SHA256: new(imageSHA)},
+				}
+			}
+			original := config.DeepCopy()
+			cache := &caCapturingMockWasmCache{GetFunc: func(_ string, _ *wasm.GetOptions) (string, string, error) {
+				return "https://envoy-gateway/plugin.wasm", tt.moduleSHA, nil
+			}}
+			translator := &Translator{TranslatorContext: &TranslatorContext{}, WasmCache: cache}
+			got, err := translator.buildWasm(irConfigNameForWasm(policy, 0), config, policy, 0, &resource.Resources{})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantVMID, got.VMID)
+			assert.Equal(t, tt.wantHostKeys, got.HostKeys)
+			assert.Equal(t, original, config, "translation must not mutate the policy")
+		})
+	}
+}
 
 func Test_hasTag(t *testing.T) {
 	tests := []struct {
