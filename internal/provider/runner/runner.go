@@ -65,13 +65,21 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 
 	r.Logger.Info("Running provider", "type", p.Type())
-	go func() {
-		if err := p.Start(ctx); err != nil {
-			r.Logger.Error(err, "unable to start provider")
-		}
-	}()
+	go r.startProvider(ctx, p, errNotifier)
 
 	return nil
+}
+
+// startProvider runs p and reports a failure through errNotifier, so that the
+// manager exiting - because the leader lease was lost, for example - ends the
+// process rather than leaving it alive with no provider and no health endpoint.
+// Provider.Start returns nil once ctx is cancelled, so a clean shutdown reports
+// nothing.
+func (r *Runner) startProvider(ctx context.Context, p provider.Provider, errNotifier message.RunnerErrorNotifier) {
+	if err := p.Start(ctx); err != nil {
+		r.Logger.Error(err, "unable to start provider")
+		errNotifier.Store(err)
+	}
 }
 
 func (r *Runner) createKubernetesProvider(ctx context.Context, errors message.RunnerErrorNotifier) (*kubernetes.Provider, error) {
