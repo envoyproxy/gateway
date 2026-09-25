@@ -197,6 +197,38 @@ type HTTPActiveHealthChecker struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024
 	Path string `json:"path" yaml:"path"`
+	// Version defines the HTTP protocol version used to send active health check
+	// requests to the backend.
+	//
+	// Envoy sends health check requests over dedicated connections. If their protocol
+	// version doesn't match the protocol the backend speaks, every health check fails and
+	// all endpoints of the backend are marked unhealthy.
+	//
+	// Defaults to Auto, which resolves the version from the effective upstream protocol
+	// of the backend: HTTP2 if the backend is configured to use HTTP/2, through a
+	// `kubernetes.io/h2c`, `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or by being
+	// the backend of a GRPCRoute, and HTTP1 otherwise.
+	//
+	// How the resolved version is applied depends on the backend:
+	//
+	//   - For plaintext backends, the resolved version is the version used, since no
+	//     protocol is negotiated on the connection.
+	//   - For backends that use TLS and negotiate their protocol through ALPN, health
+	//     checks negotiate it the same way: both HTTP/2 and HTTP/1.1 are offered on health
+	//     check connections, and every endpoint is checked over the protocol it selects.
+	//     The resolved version is used for an endpoint that negotiates nothing.
+	//   - For backends that use TLS and a fixed protocol, health check connections only
+	//     offer the protocol matching the resolved version, so that an endpoint isn't
+	//     checked over a protocol that requests to it never use.
+	//
+	// Set this field explicitly when the health check endpoint and the application
+	// endpoint of the backend use different protocols, for example when the backend
+	// serves HTTP/1.1 traffic but only accepts HTTP/2 health check requests. An
+	// explicitly configured version is always the version used.
+	//
+	// +kubebuilder:default=Auto
+	// +optional
+	Version *HTTPHealthCheckVersion `json:"version,omitempty" yaml:"version,omitempty"`
 	// Method defines the HTTP method used for health checking.
 	// Defaults to GET
 	// +kubebuilder:validation:MaxLength=16
@@ -219,6 +251,21 @@ type HTTPActiveHealthChecker struct {
 	// +optional
 	RequestBody *ActiveHealthCheckPayload `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
 }
+
+// HTTPHealthCheckVersion specifies the HTTP protocol version used to send active
+// HTTP health check requests to the backend.
+// +kubebuilder:validation:Enum=Auto;HTTP1;HTTP2
+type HTTPHealthCheckVersion string
+
+const (
+	// HTTPHealthCheckVersionAuto derives the health check protocol version from the
+	// effective upstream protocol of the backend.
+	HTTPHealthCheckVersionAuto HTTPHealthCheckVersion = "Auto"
+	// HTTPHealthCheckVersionHTTP1 sends health check requests using HTTP/1.1.
+	HTTPHealthCheckVersionHTTP1 HTTPHealthCheckVersion = "HTTP1"
+	// HTTPHealthCheckVersionHTTP2 sends health check requests using HTTP/2.
+	HTTPHealthCheckVersionHTTP2 HTTPHealthCheckVersion = "HTTP2"
+)
 
 // TCPActiveHealthChecker defines the settings of tcp health check.
 type TCPActiveHealthChecker struct {
