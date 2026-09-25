@@ -1,0 +1,128 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    mergeGateways: true
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+    labels:
+      tier: shared
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http1
+      protocol: HTTP
+      port: 81
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http2
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http3
+      protocol: HTTP
+      port: 82
+      allowedRoutes:
+        namespaces:
+          from: All
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: GatewayClass
+      group: gateway.networking.k8s.io
+      name: envoy-gateway-class
+    data: "attached to all listeners under the merged GatewayClass"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: GatewayClass
+      group: gateway.networking.k8s.io
+      name: envoy-gateway-class
+      sectionName: http3
+    data: "attached only to the http3 listener across the merged GatewayClass"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test3
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: GatewayClass
+      group: gateway.networking.k8s.io
+      name: envoy-gateway-class
+      sectionName: http-unknown
+    data: "sectionName matches no listener, so it must fail with TargetNotFound"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test4
+    namespace: envoy-gateway
+  spec:
+    targetSelectors:
+    - kind: GatewayClass
+      group: gateway.networking.k8s.io
+      matchLabels:
+        tier: shared
+    data: "attached to all listeners under the merged GatewayClass via a label selector"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test5
+    namespace: envoy-gateway
+  spec:
+    targetSelectors:
+    - kind: GatewayClass
+      group: gateway.networking.k8s.io
+      matchLabels:
+        tier: other
+    data: "selector matches no GatewayClass, so it is ignored"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test6
+    namespace: envoy-gateway
+  spec:
+    targetRefs:
+    - kind: GatewayClass
+      group: gateway.networking.k8s.io
+      name: envoy-gateway-class
+    targetSelectors:
+    - kind: GatewayClass
+      group: gateway.networking.k8s.io
+      matchLabels:
+        tier: shared
+    data: "matched by both a targetRef and a selector; must be attached only once per listener"
