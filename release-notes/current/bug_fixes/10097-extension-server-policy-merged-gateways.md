@@ -1,0 +1,1 @@
+Fixed extension server policies that target a Gateway being attached to the listeners of every Gateway in the GatewayClass when mergeGateways is enabled, so that such a policy now applies only to the targeted Gateway's listeners, or only to the listener named by its sectionName.

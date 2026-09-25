@@ -858,6 +858,8 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
+				// Private keys are written to the golden file as "[redacted]".
+				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
