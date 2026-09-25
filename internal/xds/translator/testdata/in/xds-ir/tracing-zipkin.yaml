@@ -36,6 +36,7 @@ tracing:
     zipkin:
       enable128BitTraceId: true
       disableSharedSpanContext: true
+      traceContextOption: UseB3WithW3CPropagation
 http:
   - name: "first-listener"
     address: "::"
