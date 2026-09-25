@@ -88,6 +88,10 @@ func (r *Runner) createKubernetesProvider(ctx context.Context, errors message.Ru
 	// Store the Kubernetes client created by the provider in the server config so that it can be used by the
 	// infrastructure runner to reconcile the Envoy Proxy and rate limit infra resources.
 	r.KubernetesClient.Set(p.GetClient())
+	// Also store an uncached API reader for conflict checks that must observe
+	// resources the label-filtered cache would miss (e.g. an unmanaged same-name
+	// Deployment/DaemonSet in GatewayNamespace mode).
+	r.KubernetesClient.SetAPIReader(p.GetAPIReader())
 
 	return p, err
 }
