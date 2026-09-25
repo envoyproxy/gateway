@@ -36,7 +36,7 @@ func init() {
 var TLSRouteAuthzWithClientIP = suite.ConformanceTest{
 	ShortName:   "TLSRouteAuthzWithClientIP",
 	Description: "Authorization with client IP Allow/Deny list for TLS routes (passthrough)",
-	Manifests:   []string{"testdata/tlsroute-authorization-client-ip.yaml"},
+	Manifests:   []string{"testdata/tlsroute-passthrough-authorization-client-ip.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		tlsRouteNNBlocked := types.NamespacedName{Name: "tls-backend-authorization-blocked", Namespace: ns}
@@ -65,12 +65,12 @@ var TLSRouteAuthzWithClientIP = suite.ConformanceTest{
 
 		t.Run("blocked client IP cannot connect to blocked.example.com", func(t *testing.T) {
 			testTLSRouteConnectionBlocked(t, gwAddr, "blocked.example.com")
-			verifyRBACStats(t, promClient, false)
+			verifyRBACStats(t, promClient, false, "tls-passthrough-8443")
 		})
 
 		t.Run("allowed client IP can connect to allowed.example.com", func(t *testing.T) {
 			testTLSRouteConnectionAllowed(t, gwAddr, "allowed.example.com")
-			verifyRBACStats(t, promClient, true)
+			verifyRBACStats(t, promClient, true, "tls-passthrough-8443")
 		})
 	},
 }
@@ -163,7 +163,7 @@ func testTLSRouteConnectionAllowed(t *testing.T, gwAddr, hostname string) {
 	t.Fatalf("Connection was established but got an empty response; expected the backend to reply")
 }
 
-func verifyRBACStats(t *testing.T, promClient *prometheus.Client, expectAllowed bool) {
+func verifyRBACStats(t *testing.T, promClient *prometheus.Client, expectAllowed bool, listenerPrefix string) {
 	t.Helper()
 
 	metric := "envoy_rbac_denied"
@@ -171,9 +171,9 @@ func verifyRBACStats(t *testing.T, promClient *prometheus.Client, expectAllowed 
 		metric = "envoy_rbac_allowed"
 	}
 
-	// Query RBAC metrics for the specific TLS listener (tls-passthrough-8443)
+	// Query RBAC metrics for the specific TLS listener
 	// This ensures we're checking stats for THIS test's traffic, not other tests
-	query := metric + `{envoy_rbac_prefix="tls-passthrough-8443"}`
+	query := metric + `{envoy_rbac_prefix="` + listenerPrefix + `"}`
 
 	// Poll for RBAC stats with a short timeout
 	err := wait.PollUntilContextTimeout(context.Background(), time.Second, time.Minute, true,
