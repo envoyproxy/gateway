@@ -114,30 +114,43 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):
 		// Ensure header mutation run before ext auth which might consume the header.
 		order = 5
-	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
+	// GeoIP populates the geo metadata headers consumed by the RBAC filters. It
+	// must run before the pre-auth RBAC filter (and therefore before the
+	// authentication filters) so that authentication-independent geo/IP deny
+	// rules can be enforced before authentication.
+	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
 		order = 6
-	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
+	// The pre-auth RBAC filter enforces authentication-independent authorization
+	// rules (e.g. clientIPGeoLocations, clientCIDRs) before the authentication
+	// filters, so that a denied client is rejected with 403 before OAuth2/ext_authz
+	// can redirect or challenge it (issue #8913). Its name is deliberately chosen
+	// so that it does not share the main RBAC filter's prefix
+	// (envoy.filters.http.rbac); this keeps the two filters independently
+	// orderable and ensures a user filterOrder targeting RBAC does not move it.
+	case strings.HasPrefix(filter.Name, rbacPreAuthFilterName):
 		order = 7
-	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
+	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 8
-	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
+	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
 		order = 9
-	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
 		order = 10
-	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
 		order = 11
-	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
 		order = 12
+	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
+		order = 13
+	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+		order = 14
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 13 + mustGetFilterIndex(filter.Name)
+		order = 15 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):
 		order = 200 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterDynamicModules):
 		order = 250 + mustGetFilterIndex(filter.Name)
-	case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
-		order = 300
 	case isFilterType(filter, egv1a1.EnvoyFilterRBAC):
 		order = 301
 	case isFilterType(filter, egv1a1.EnvoyFilterLocalRateLimit):
@@ -268,6 +281,8 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 		}
 	}
 
+	enforcePreAuthRBACOrder(l)
+
 	// Collect the sorted filters.
 	i := 0
 	for element := l.Front(); element != nil; element = element.Next() {
@@ -276,6 +291,46 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 	}
 
 	return filters
+}
+
+// enforcePreAuthRBACOrder preserves the dependencies of the internal pre-auth
+// filter after custom ordering. Otherwise, missing GeoIP headers can make an
+// Allow rule fail to match, and authentication can redirect before a Deny rule.
+func enforcePreAuthRBACOrder(filters *list.List) {
+	var preAuth, geoIP *list.Element
+	for element := filters.Front(); element != nil; element = element.Next() {
+		filter := element.Value.(*hcmv3.HttpFilter)
+		switch {
+		case filter.Name == rbacPreAuthFilterName:
+			preAuth = element
+		case isFilterType(filter, egv1a1.EnvoyFilterGeoIP):
+			geoIP = element
+		}
+	}
+	if preAuth == nil {
+		return
+	}
+
+	for element := filters.Front(); element != preAuth; element = element.Next() {
+		filter := element.Value.(*hcmv3.HttpFilter)
+		if isFilterType(filter, egv1a1.EnvoyFilterExtAuthz) ||
+			isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth) ||
+			isFilterType(filter, egv1a1.EnvoyFilterBasicAuth) ||
+			isFilterType(filter, egv1a1.EnvoyFilterOAuth2) ||
+			isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn) {
+			filters.MoveBefore(preAuth, element)
+			break
+		}
+	}
+
+	if geoIP != nil {
+		for element := preAuth.Next(); element != nil; element = element.Next() {
+			if element == geoIP {
+				filters.MoveBefore(geoIP, preAuth)
+				break
+			}
+		}
+	}
 }
 
 // patchHCMWithFilters builds and appends HTTP Filters to the HTTP connection

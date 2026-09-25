@@ -18,6 +18,16 @@ GeoIP authorization requires:
 - client IP detection on [ClientTrafficPolicy][]
 - a [SecurityPolicy][] attached to a [Gateway][], [HTTPRoute][] or [GRPCRoute][]
 
+## Interaction with authentication
+
+On routes with authentication, Envoy Gateway evaluates leading geo/IP rules before authentication if the prefix contains a Deny rule.
+A matching Deny returns `403` before OIDC can redirect the client.
+The prefix ends at the first rule with an operation, JWT, header, or CEL match.
+Path and method matches remain after authentication because intervening filters can change those values.
+
+The early filter defaults to Allow and does not replace the full authorization policy.
+Allow-only policies with `defaultAction: Deny` can still redirect unmatched clients to the identity provider.
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
