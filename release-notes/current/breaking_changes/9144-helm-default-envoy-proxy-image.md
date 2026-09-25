@@ -1,0 +1,1 @@
+Because the gateway-helm chart now sets a default `global.images.envoyProxy.image`, `global.imageRegistry` and `global.imagePullSecrets` also apply to the managed Envoy Proxy image; mirror the Envoy Proxy image into that registry before upgrading, or set `global.images.envoyProxy.image: ""` to keep the previous behavior.
