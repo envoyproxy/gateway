@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -1151,6 +1152,21 @@ func useInsecureOIDCDiscoveryHTTPClient(t *testing.T) {
 	t.Cleanup(func() {
 		newOIDCDiscoveryHTTPClient = original
 	})
+
+	// Successful discovery results are retained process-wide, isolate them per test.
+	useFreshOIDCDiscoveryFallbackCache(t, maxOIDCDiscoveryFallbackEntries)
+}
+
+// useFreshOIDCDiscoveryFallbackCache replaces the process-wide OIDC discovery fallback cache
+// with an empty one for the duration of the test.
+func useFreshOIDCDiscoveryFallbackCache(t *testing.T, maxEntries int) {
+	t.Helper()
+
+	original := oidcDiscoveryFallback
+	oidcDiscoveryFallback = newOIDCDiscoveryFallbackCache(maxEntries)
+	t.Cleanup(func() {
+		oidcDiscoveryFallback = original
+	})
 }
 
 func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
@@ -1226,6 +1242,148 @@ func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, cfgAfter)
 	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cached error")
+}
+
+func TestTranslatorFetchEndpointsFromIssuerFallsBackToLastSuccessfulDiscovery(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		fail      atomic.Bool
+		server    *httptest.Server
+	)
+
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		if fail.Load() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, server.URL+"/token", server.URL+"/authorize")
+	}))
+	t.Cleanup(server.Close)
+	useInsecureOIDCDiscoveryHTTPClient(t)
+
+	// First translation: discovery succeeds.
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.Equal(t, server.URL+"/token", cfg.TokenEndpoint)
+	require.Equal(t, server.URL+"/authorize", cfg.AuthorizationEndpoint)
+	require.Equal(t, int32(1), callCount.Load())
+
+	// Second translation (new Translator, new per-translation cache): the issuer is temporarily
+	// failing. The endpoints discovered previously must be reused instead of failing the policy.
+	fail.Store(true)
+	tr = &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfgFallback, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err, "failed discovery should fall back to the last successful one")
+	require.Equal(t, cfg.TokenEndpoint, cfgFallback.TokenEndpoint)
+	require.Equal(t, cfg.AuthorizationEndpoint, cfgFallback.AuthorizationEndpoint)
+	require.Greater(t, callCount.Load(), int32(1), "discovery should be re-attempted in a new translation")
+
+	// Within the same translation the fallback result is reused without contacting the issuer again.
+	attempts := callCount.Load()
+	cfgAgain, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.Equal(t, cfgFallback, cfgAgain)
+	require.Equal(t, attempts, callCount.Load(), "fallback should be reused within the same translation")
+
+	// Once the issuer recovers, fresh discovery results are used again.
+	fail.Store(false)
+	tr = &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfgRecovered, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.Equal(t, server.URL+"/token", cfgRecovered.TokenEndpoint)
+	require.Equal(t, attempts+1, callCount.Load())
+}
+
+func TestTranslatorFetchEndpointsFromIssuerNoFallbackWithoutPriorSuccess(t *testing.T) {
+	var callCount atomic.Int32
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		callCount.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(server.Close)
+	useInsecureOIDCDiscoveryHTTPClient(t)
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Positive(t, callCount.Load())
+	require.Equal(t, 0, oidcDiscoveryFallback.Len(), "failed discovery must not be retained")
+}
+
+func TestOIDCDiscoveryFallbackCacheEvictsLeastRecentlyUsed(t *testing.T) {
+	cache := newOIDCDiscoveryFallbackCache(2)
+	cfgA := &OpenIDConfig{AuthorizationEndpoint: "https://a/authorize"}
+	cfgB := &OpenIDConfig{AuthorizationEndpoint: "https://b/authorize"}
+	cfgC := &OpenIDConfig{AuthorizationEndpoint: "https://c/authorize"}
+
+	cache.Set("https://a", cfgA)
+	cache.Set("https://b", cfgB)
+	require.Equal(t, 2, cache.Len())
+
+	// Touch a so that b becomes the least recently used entry.
+	got, ok := cache.Get("https://a")
+	require.True(t, ok)
+	require.Equal(t, cfgA, got)
+
+	cache.Set("https://c", cfgC)
+	require.Equal(t, 2, cache.Len())
+
+	_, ok = cache.Get("https://b")
+	require.False(t, ok, "least recently used issuer should be evicted")
+	got, ok = cache.Get("https://a")
+	require.True(t, ok)
+	require.Equal(t, cfgA, got)
+	got, ok = cache.Get("https://c")
+	require.True(t, ok)
+	require.Equal(t, cfgC, got)
+
+	// Updating an existing issuer replaces its value without growing the cache.
+	cfgA2 := &OpenIDConfig{AuthorizationEndpoint: "https://a/authorize2"}
+	cache.Set("https://a", cfgA2)
+	require.Equal(t, 2, cache.Len())
+	got, ok = cache.Get("https://a")
+	require.True(t, ok)
+	require.Equal(t, cfgA2, got)
+}
+
+func TestOIDCDiscoveryFallbackCacheConcurrentAccess(t *testing.T) {
+	cache := newOIDCDiscoveryFallbackCache(4)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			issuer := fmt.Sprintf("https://issuer-%d", i%6)
+			for j := 0; j < 200; j++ {
+				cache.Set(issuer, &OpenIDConfig{TokenEndpoint: issuer + "/token"})
+				if cfg, ok := cache.Get(issuer); ok {
+					require.Equal(t, issuer+"/token", cfg.TokenEndpoint)
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	require.LessOrEqual(t, cache.Len(), 4)
 }
 
 // / tiny helper to build a minimal SecurityPolicy
