@@ -1,5 +1,11 @@
 dashboard:
   mode: grafana-operator
+  labels:
+    team: gateway
+    app.kubernetes.io/part-of: envoy-gateway
+  annotations:
+    owner: platform-team
+    argocd.argoproj.io/sync-options: Override=true
 prometheus:
   enabled: false
 grafana:
