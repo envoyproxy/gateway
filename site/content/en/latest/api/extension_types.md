@@ -7139,6 +7139,21 @@ _Appears in:_
 | `DraftVersion03` | XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03<br />for this rate limit rule, regardless of the global ClientTrafficPolicy setting.<br /> | 
 
 
+#### ZipkinTraceContextOption
+
+_Underlying type:_ _string_
+
+ZipkinTraceContextOption defines the trace context headers used by the Zipkin tracer.
+
+_Appears in:_
+- [ZipkinTracingProvider](#zipkintracingprovider)
+
+| Value | Description |
+| ----- | ----------- |
+| `UseB3` | ZipkinTraceContextOptionUseB3 uses B3 headers only, for both extraction and injection.<br /> | 
+| `UseB3WithW3CPropagation` | ZipkinTraceContextOptionUseB3WithW3CPropagation extracts the trace context from B3 headers,<br />falling back to the W3C traceparent header if B3 headers are absent, and injects both<br />B3 and W3C traceparent headers.<br /> | 
+
+
 #### ZipkinTracingProvider
 
 
@@ -7152,6 +7167,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enable128BitTraceId` | _boolean_ |  false  |  | Enable128BitTraceID determines whether a 128bit trace id will be used<br />when creating a new trace instance. If set to false, a 64bit trace<br />id will be used. |
 | `disableSharedSpanContext` | _boolean_ |  false  |  | DisableSharedSpanContext determines whether the default Envoy behaviour of<br />client and server spans sharing the same span context should be disabled. |
+| `traceContextOption` | _[ZipkinTraceContextOption](#zipkintracecontextoption)_ |  false  |  | TraceContextOption determines which trace context headers are used to extract<br />the trace context from downstream requests and to inject it into upstream requests.<br />Defaults to UseB3. |
 
 
 #### ZoneAware
