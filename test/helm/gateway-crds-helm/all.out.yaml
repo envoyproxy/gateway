@@ -53490,6 +53490,27 @@ spec:
           spec:
             description: Spec defines the desired state of HTTPRouteFilter.
             properties:
+              backendPriority:
+                description: |-
+                  BackendPriority sets the Envoy locality priority of the endpoints belonging to the
+                  backendRef this filter is attached to, enabling priority-based failover between the
+                  backendRefs of a single route rule.
+
+                  This filter is only valid when referenced from a backendRef's filters. Referencing it
+                  from a route rule's filters is rejected: a rule-level filter applies uniformly to every
+                  backendRef of the rule, and a uniform priority carries no failover meaning.
+                properties:
+                  value:
+                    description: |-
+                      Value is the locality priority assigned to this backendRef's endpoints.
+                      0 is the highest priority.
+                    format: int32
+                    maximum: 128
+                    minimum: 0
+                    type: integer
+                required:
+                - value
+                type: object
               credentialInjection:
                 description: |-
                   HTTPCredentialInjectionFilter defines the configuration to inject credentials into the request.

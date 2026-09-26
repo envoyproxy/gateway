@@ -3165,6 +3165,29 @@ _Appears in:_
 | `requestBody` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  |  | RequestBody defines the HTTP request body payload sent during health checking. |
 
 
+#### HTTPBackendPriorityFilter
+
+
+
+HTTPBackendPriorityFilter configures Envoy's priority-based locality failover for a single
+backendRef. Envoy sends traffic to the lowest priority value that has enough healthy
+endpoints, and only spills over to the next value as that health degrades.
+
+It is highly recommended to configure active or passive health checks so that failover
+can be detected when the higher priority backends become unhealthy.
+
+This overrides the priority derived from the referenced Backend's fallback field.
+For additional details, see
+https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/priority
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `value` | _integer_ |  true  |  | Value is the locality priority assigned to this backendRef's endpoints.<br />0 is the highest priority. |
+
+
 #### HTTPClientTimeout
 
 
