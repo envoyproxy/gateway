@@ -1,0 +1,56 @@
+# Tests that a Gateway-wide CTP correctly detects a port conflict when another
+# Gateway's name is a string prefix of the targeted Gateway's name (e.g. "gw" vs
+# "gw-b"). Without a trailing separator in the prefix comparison, "envoy-gateway/gw"
+# would falsely match "envoy-gateway/gw-b/http" listeners, hiding the conflict.
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeGateways: true
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: ctp-gw-wide
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gw
+    tcpKeepalive:
+      probes: 5
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gw
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      hostname: gw.example.com
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gw-b
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      hostname: gw-b.example.com
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same

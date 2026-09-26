@@ -462,11 +462,14 @@ func irStringKey(gatewayNs, gatewayName string) string {
 // The listener name format can be:
 // - Gateway: "namespace/gateway/listener"
 // - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
-// Returns "namespace/gateway" in both cases.
+// Returns "namespace/gateway/" in both cases.
 func extractGatewayNameFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
 	if len(parts) >= 2 {
-		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+		// Trailing slash is intentional: prevents a Gateway name from falsely
+		// matching another whose name shares the same string prefix (e.g. "gw" matching "gw-b")
+		// when used as a prefix in strings.Index comparisons.
+		return fmt.Sprintf("%s/%s/", parts[0], parts[1])
 	}
 	// should never happen
 	return listenerName
