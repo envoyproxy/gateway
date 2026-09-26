@@ -147,6 +147,106 @@ Verify the EnvoyExtensionPolicy status:
 kubectl get envoyextensionpolicy/wasm-test -o yaml
 ```
 
+### Sharing a Wasm VM Across Policies
+
+By default, each Wasm extension runs in its own Envoy Wasm VM, so the same Wasm module
+attached through several [EnvoyExtensionPolicy][] resources is loaded once per policy.
+
+Set the same `vmID` on those extensions to have Envoy run them in a single VM instead.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test-a
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend-a
+  wasm:
+  - name: wasm-filter
+    vmID: shared-wasm-filter
+    code:
+      type: HTTP
+      http:
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test-b
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend-b
+  wasm:
+  - name: wasm-filter
+    vmID: shared-wasm-filter
+    code:
+      type: HTTP
+      http:
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test-a
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend-a
+  wasm:
+  - name: wasm-filter
+    vmID: shared-wasm-filter
+    code:
+      type: HTTP
+      http:
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-test-b
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend-b
+  wasm:
+  - name: wasm-filter
+    vmID: shared-wasm-filter
+    code:
+      type: HTTP
+      http:
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Extensions sharing a VM also share its global state, and the VM is started with the
+configuration of whichever extension initializes it first. Only give the same `vmID` to
+extensions that are backed by the same Wasm module.
+
 ### Testing
 
 Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
