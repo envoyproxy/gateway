@@ -893,11 +893,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 	}
 
 	if udpIR != nil {
-		// Early return if got any errors
+		// An invalid policy is reported without being applied. Unlike TCP, the route is kept:
+		// UDP listeners only use the timeout, so dropping traffic wouldn't protect anything.
 		if errs != nil {
-			// Remove the UDP route if there are any errors
-			// The listener will still be created, but any client traffic will be forwarded to the default empty cluster
-			udpIR.Route = nil
 			return errs
 		}
 
