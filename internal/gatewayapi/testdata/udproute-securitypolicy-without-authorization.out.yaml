@@ -1,0 +1,170 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-udp
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: udp
+      port: 8088
+      protocol: UDP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: udp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+infraIR:
+  envoy-gateway/gateway-udp:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway-udp/udp
+        ports:
+        - containerPort: 8088
+          name: udp-8088
+          protocol: UDP
+          servicePort: 8088
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-udp
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-udp
+      namespace: envoy-gateway-system
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: sp-udpr-no-auth
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udpr-app
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-udp
+        namespace: envoy-gateway
+        sectionName: udp
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    name: udpr-app
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-udp
+      namespace: envoy-gateway
+      sectionName: udp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: UDP Port 8163 not found on Service default/service-1
+        reason: PortNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-udp
+        namespace: envoy-gateway
+        sectionName: udp
+xdsIR:
+  envoy-gateway/gateway-udp:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-udp-2934226e
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-udp
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-udp-2934226e
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-udp
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    udp:
+    - address: 0.0.0.0
+      externalPort: 8088
+      metadata:
+        kind: Gateway
+        name: gateway-udp
+        namespace: envoy-gateway
+        sectionName: udp
+      name: envoy-gateway/gateway-udp/udp
+      port: 8088
+      route:
+        destination:
+          metadata:
+            kind: UDPRoute
+            name: udpr-app
+            namespace: default
+          name: udproute/default/udpr-app/rule/-1
+        name: udproute/default/udpr-app
