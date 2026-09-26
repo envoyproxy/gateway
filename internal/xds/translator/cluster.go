@@ -676,6 +676,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
 			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
 				ServiceName: ptr.Deref(healthcheck.GRPC.Service, ""),
+				Authority:   grpcHealthCheckAuthority(healthcheck.GRPC, routeHostname),
 			},
 		}
 	}
@@ -708,6 +709,23 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
 	if healthcheck.Host != "" {
 		return healthcheck.Host
+	}
+	return routeHostname
+}
+
+// grpcHealthCheckAuthority returns the value of the :authority header sent with
+// active gRPC health checks. When left empty, Envoy falls back to the name of
+// the cluster, which contains slashes and is therefore not a valid authority:
+// gRPC servers built on recent versions of golang.org/x/net reject it with a
+// PROTOCOL_ERROR, marking every endpoint as unhealthy.
+func grpcHealthCheckAuthority(healthcheck *ir.GRPCHealthChecker, routeHostname string) string {
+	if healthcheck.Authority != "" {
+		return healthcheck.Authority
+	}
+	// A wildcard route hostname is not a valid authority either, so it is no
+	// better a default than the cluster name.
+	if strings.HasPrefix(routeHostname, "*") {
+		return ""
 	}
 	return routeHostname
 }
@@ -1089,10 +1107,13 @@ func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
 }
 
 func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) string {
-	// If active HTTP health check has an explicit hostname override, keep that
+	// If the active health check has an explicit hostname override, keep that
 	// cluster-level host. Route hostname is only a default, so Backend endpoint
 	// hostname can still override it through EndpointHealthCheckConfig.
 	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" && hc.Active.HTTP.Host != "*" {
+		return ""
+	}
+	if hc.Active.GRPC != nil && hc.Active.GRPC.Authority != "" {
 		return ""
 	}
 	if ep == nil || ep.Hostname == nil {

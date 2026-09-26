@@ -3731,6 +3731,10 @@ type GRPCHealthChecker struct {
 	// which the health check should be requested. If not specified, then the default
 	// is to send a health check request for the entire server.
 	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
+	// Authority is the value of the :authority header in the gRPC health check request.
+	// If not specified, the effective route hostname is used, and if that is not
+	// available either, Envoy falls back to the cluster name.
+	Authority string `json:"authority,omitempty" yaml:"authority,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.
