@@ -753,7 +753,8 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
-	if err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR); err != nil {
+	hasApplicableRoute, err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR)
+	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -764,6 +765,13 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// The policy attached to its target, but none of the targeted listeners has a route it can be
+	// applied to, so it never reaches the generated configuration.
+	// Warn instead of silently reporting Accepted only.
+	if err == nil && !hasApplicableRoute {
+		status.SetNoAttachedRoutesWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+	}
 
 	// Determine this policy's own scope so we can look up routes merged into it
 	// and child scopes overriding it.
@@ -853,7 +861,8 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
+	hasApplicableRoute, err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR)
+	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -864,6 +873,13 @@ func (t *Translator) processSecurityPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// The policy attached to its target, but none of the targeted listeners has a route it can be
+	// applied to, so it never reaches the generated configuration.
+	// Warn instead of silently reporting Accepted only.
+	if err == nil && !hasApplicableRoute {
+		status.SetNoAttachedRoutesWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+	}
 
 	// Determine this policy's own scope so we can look up merged and overriding
 	// child scopes from the relation maps.
@@ -1493,7 +1509,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
-) error {
+) (bool, error) {
 	return t.translateSecurityPolicyForListeners(
 		policy,
 		gtwCtx,
@@ -1509,7 +1525,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
-) error {
+) (bool, error) {
 	return t.translateSecurityPolicyForListeners(
 		policy,
 		gtwCtx,
@@ -1519,13 +1535,16 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	)
 }
 
+// translateSecurityPolicyForListeners applies the policy to every route of the target listeners.
+// It reports whether any of those listeners has a route the policy can be applied to: an HTTP route
+// for any feature, or a TCP route when the policy only carries Authorization.
 func (t *Translator) translateSecurityPolicyForListeners(
 	policy *egv1a1.SecurityPolicy,
 	gtwCtx *GatewayContext,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	targetListeners []*ListenerContext,
-) error {
+) (bool, error) {
 	// Build IR
 	noOwners := &securityPolicyOwners{}
 	var (
@@ -1644,10 +1663,15 @@ func (t *Translator) translateSecurityPolicyForListeners(
 
 	routesWithDirectResponse := sets.New[string]()
 	hasBaseErrs := errs != nil
+	hasApplicableRoute := false
 	directResponse := &ir.CustomResponse{StatusCode: new(uint32(500))}
 	for _, h := range x.HTTP {
 		if !listenerNames.Has(h.Name) {
 			continue
+		}
+
+		if len(h.Routes) > 0 {
+			hasApplicableRoute = true
 		}
 
 		var (
@@ -1717,6 +1741,9 @@ func (t *Translator) translateSecurityPolicyForListeners(
 			if !listenerNames.Has(tl.Name) {
 				continue
 			}
+
+			hasApplicableRoute = true
+
 			// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 			// targeting a lesser specific scope(Gateway).
 			for _, r := range tl.Routes {
@@ -1729,7 +1756,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		}
 	}
 
-	return errs
+	return hasApplicableRoute, errs
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
