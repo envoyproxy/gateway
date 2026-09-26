@@ -3058,6 +3058,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			r.log.Info("backend resource CRD not found, skipping watch", "resource", gvk.String())
 			continue
 		}
+		allowed, err := canListResource(ctx, mgr.GetAPIReader(), gvk)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			r.log.Info("no list permission for backend resource, skipping watch", "resource", gvk.String())
+			continue
+		}
 		r.extBackendCRDExists[gvk] = true
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
@@ -3245,6 +3253,32 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	resourceMap.allAssociatedEnvoyProxies.Insert(key)
+}
+
+// canListResource reports whether this controller may list gvk.
+//
+// crdExists is not sufficient on its own: it resolves through discovery, and the
+// default system:discovery ClusterRole grants discovery to every authenticated
+// ServiceAccount. It therefore answers "is this Kind served?" rather than "can I
+// list it?". Registering a watch the ServiceAccount cannot list fails the
+// informer's initial LIST, which times out WaitForCacheSync for every watched
+// kind and crash-loops the controller, stopping reconciliation of resources that
+// have nothing to do with the extension.
+//
+// A Forbidden response is reported as not-allowed so the caller can skip the
+// watch; every other error is returned, so a transient API failure is not
+// mistaken for a permanent RBAC gap.
+func canListResource(ctx context.Context, reader client.Reader, gvk schema.GroupVersionKind) (bool, error) {
+	probe := &unstructured.UnstructuredList{}
+	probe.SetGroupVersionKind(gvk)
+	switch err := reader.List(ctx, probe, client.Limit(1)); {
+	case err == nil:
+		return true, nil
+	case kerrors.IsForbidden(err):
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it.
