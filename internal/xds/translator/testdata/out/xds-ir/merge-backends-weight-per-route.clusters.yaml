@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: httproute/default/http-route-a/rule/0/backend/1
   ignoreHealthOnHostRemoval: true
@@ -37,6 +38,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: httproute/default/http-route-b/rule/0/backend/1
   ignoreHealthOnHostRemoval: true
@@ -67,6 +69,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: service/default/shared-service/8080/http
   ignoreHealthOnHostRemoval: true

@@ -7,6 +7,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: first-route-www.test.com-dest
   ignoreHealthOnHostRemoval: true
@@ -30,6 +31,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: second-route-www.test.com-dest
   ignoreHealthOnHostRemoval: true
@@ -90,6 +92,7 @@
   edsClusterConfig:
     edsConfig:
       ads: {}
+      initialFetchTimeout: 0s
       resourceApiVersion: V3
     serviceName: "192_168_1_250_8080"
   ignoreHealthOnHostRemoval: true
