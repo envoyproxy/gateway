@@ -15,35 +15,50 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.compressor.brotli/e26d3c81
+          name: envoy.filters.http.compressor.brotli/1bfd081b
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
             compressorLibrary:
               name: envoy.compression.brotli.compressor
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
+                chunkSize: 8192
+                disableLiteralContextModeling: true
+                encoderMode: TEXT
+                inputBlockBits: 16
+                quality: 11
+                windowBits: 24
             responseDirectionConfig:
               commonConfig:
                 minContentLength: 100
         - disabled: true
-          name: envoy.filters.http.compressor.gzip/7a4115a
+          name: envoy.filters.http.compressor.gzip/3c99d23c
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
             compressorLibrary:
               name: envoy.compression.gzip.compressor
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+                chunkSize: 8192
+                compressionLevel: COMPRESSION_LEVEL_9
+                compressionStrategy: RLE
+                memoryLevel: 8
+                windowBits: 15
             responseDirectionConfig:
               commonConfig:
                 minContentLength: 200
         - disabled: true
-          name: envoy.filters.http.compressor.zstd/8fc9f56
+          name: envoy.filters.http.compressor.zstd/a5a075d9
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
             compressorLibrary:
               name: envoy.compression.zstd.compressor
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+                chunkSize: 65536
+                compressionLevel: 22
+                enableChecksum: true
+                strategy: BTULTRA2
             responseDirectionConfig:
               commonConfig:
                 minContentLength: 300
