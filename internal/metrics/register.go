@@ -7,6 +7,7 @@ package metrics
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -32,8 +34,9 @@ const (
 )
 
 type Runner struct {
-	cfg    *config.Server
-	server *http.Server
+	cfg      *config.Server
+	server   *http.Server
+	listener net.Listener
 }
 
 func New(cfg *config.Server) *Runner {
@@ -42,7 +45,7 @@ func New(cfg *config.Server) *Runner {
 	}
 }
 
-func (r *Runner) Start(_ context.Context) error {
+func (r *Runner) Start(ctx context.Context) error {
 	metricsLogger := r.cfg.Logger.WithName("metrics")
 	otel.SetLogger(metricsLogger.Logger)
 
@@ -57,7 +60,7 @@ func (r *Runner) Start(_ context.Context) error {
 	}
 
 	if !options.pullOptions.disable {
-		return r.start(options.address, handler)
+		return r.start(ctx, options.address, handler, options.tls)
 	}
 
 	return nil
@@ -76,14 +79,37 @@ func (r *Runner) Close() error {
 	return nil
 }
 
-func (r *Runner) start(address string, handler http.Handler) error {
+func (r *Runner) start(ctx context.Context, address string, handler http.Handler, tlsOptions metricsTLSOptions) error {
 	handlers := http.NewServeMux()
 
 	metricsLogger := r.cfg.Logger.WithName("metrics")
-	metricsLogger.Info("starting metrics server", "address", address)
+	metricsLogger.Info("starting metrics server", "address", address, "secure", tlsOptions.enabled)
 	if handler != nil {
 		handlers.Handle(defaultEndpoint, handler)
 	}
+
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		return fmt.Errorf("failed to listen on metrics address %s: %w", address, err)
+	}
+
+	if tlsOptions.enabled {
+		certWatcher, err := certwatcher.New(tlsOptions.certFile, tlsOptions.keyFile)
+		if err != nil {
+			_ = listener.Close()
+			return fmt.Errorf("failed to load metrics TLS certificate: %w", err)
+		}
+
+		listener = tls.NewListener(listener, &tls.Config{
+			GetCertificate: certWatcher.GetCertificate,
+		})
+		go func() {
+			if err := certWatcher.Start(ctx); err != nil && ctx.Err() == nil {
+				metricsLogger.Error(err, "metrics TLS certificate watcher stopped")
+			}
+		}()
+	}
+	r.listener = listener
 
 	r.server = &http.Server{
 		Handler:           handlers,
@@ -94,9 +120,8 @@ func (r *Runner) start(address string, handler http.Handler) error {
 		IdleTimeout:       15 * time.Second,
 	}
 
-	// Listen And Serve Metrics Server.
 	go func() {
-		if err := r.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := r.server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			metricsLogger.Error(err, "start metrics server failed")
 		}
 	}()
@@ -107,6 +132,14 @@ func (r *Runner) start(address string, handler http.Handler) error {
 func (r *Runner) newOptions() (registerOptions, error) {
 	newOpts := registerOptions{}
 	newOpts.address = net.JoinHostPort(egv1a1.GatewayMetricsHost, fmt.Sprint(egv1a1.GatewayMetricsPort))
+	newOpts.tls = metricsTLSOptions{
+		enabled:  r.cfg.MetricsTLS.Enabled,
+		certFile: r.cfg.MetricsTLS.CertFile,
+		keyFile:  r.cfg.MetricsTLS.KeyFile,
+	}
+	if newOpts.tls.enabled && (newOpts.tls.certFile == "" || newOpts.tls.keyFile == "") {
+		return newOpts, fmt.Errorf("metrics TLS requires both certificate and key files")
+	}
 
 	if r.cfg.EnvoyGateway.DisablePrometheus() {
 		newOpts.pullOptions.disable = true
@@ -275,6 +308,7 @@ func (r *Runner) registerOTELgRPCexporter(otelOpts *[]metric.Option, opts *regis
 
 type registerOptions struct {
 	address     string
+	tls         metricsTLSOptions
 	pullOptions struct {
 		registry prometheus.Registerer
 		gatherer prometheus.Gatherer
@@ -283,6 +317,12 @@ type registerOptions struct {
 	pushOptions struct {
 		sinks []metricsSink
 	}
+}
+
+type metricsTLSOptions struct {
+	enabled  bool
+	certFile string
+	keyFile  string
 }
 
 type metricsSink struct {

@@ -24,7 +24,11 @@ spec:
     {{- include "eg.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.deployment.pod.annotations }}
+      {{- $podAnnotations := deepCopy .Values.deployment.pod.annotations }}
+      {{- if .Values.metrics.tls.enable }}
+      {{- $_ := set $podAnnotations "prometheus.io/scheme" "https" }}
+      {{- end }}
+      {{- with $podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -60,6 +64,11 @@ spec:
       - args:
         - server
         - --config-path=/config/envoy-gateway.yaml
+        {{- if .Values.metrics.tls.enable }}
+        - --metrics-tls-enable
+        - --metrics-tls-cert-file=/etc/envoy-gateway/metrics-tls/tls.crt
+        - --metrics-tls-key-file=/etc/envoy-gateway/metrics-tls/tls.key
+        {{- end }}
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
@@ -100,6 +109,11 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+        {{- if .Values.metrics.tls.enable }}
+        - mountPath: /etc/envoy-gateway/metrics-tls
+          name: metrics-tls
+          readOnly: true
+        {{- end }}
         - mountPath: /var/lib/eg/wasm
           name: wasm-cache
         {{- with .Values.deployment.pod.extraVolumeMounts }}
@@ -119,6 +133,11 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
+      {{- if .Values.metrics.tls.enable }}
+      - name: metrics-tls
+        secret:
+          secretName: {{ required "metrics.tls.secretRef.name is required when metrics.tls.enable is true" .Values.metrics.tls.secretRef.name | quote }}
+      {{- end }}
       # Writable cache for Wasm modules; required because the controller's
       # root filesystem is read-only by default (readOnlyRootFilesystem).
       - name: wasm-cache
