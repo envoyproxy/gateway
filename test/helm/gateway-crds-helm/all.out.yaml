@@ -29975,6 +29975,22 @@ spec:
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
                     type: object
+                  udp:
+                    description: Timeout settings for UDP.
+                    properties:
+                      idleTimeout:
+                        description: |-
+                          IdleTimeout for a UDP session. Idle time is defined as a period in which
+                          there are no datagrams sent or received on either the upstream or
+                          downstream side of the session. When the timeout fires, the session is
+                          removed and its upstream socket is released.
+                          Default: 1 minute.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: idleTimeout must be greater than 0
+                          rule: duration(self) > duration('0s')
+                    type: object
                 type: object
               tls:
                 description: TLS settings configure TLS termination settings with
