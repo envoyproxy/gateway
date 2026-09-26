@@ -1377,7 +1377,7 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		}
 
 		// Apply TLS from Backend resource, BackendTLSPolicy, and EnvoyProxy.
-		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, resources, gwCtx)
+		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, resources, gwCtx, nil)
 		if err != nil {
 			return nil, nil, err
 		}

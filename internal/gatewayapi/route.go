@@ -2886,6 +2886,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
 	// Process BackendTLSPolicy first to ensure status is set.
+	var gwIR *ir.Xds
+	if gatewayCtx != nil {
+		gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
+	}
 	tls, tlsErr := t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
@@ -2899,6 +2903,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		},
 		resources,
 		gatewayCtx,
+		gwIR,
 	)
 	if tlsErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)

@@ -95,6 +95,9 @@ type xdsClusterArgs struct {
 	logger            logging.Logger
 	healthCheckLog    *ir.ProxyHealthCheckLog
 	isRoute           bool
+	// caIndex resolves name-only TLSCACertificate references in settings against the
+	// current xdsIR's CACertificates registry. Nil when the settings carry their bytes.
+	caIndex caCertificateIndex
 }
 
 type EndpointType int

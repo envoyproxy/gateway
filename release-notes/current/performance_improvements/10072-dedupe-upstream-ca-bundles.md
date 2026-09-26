@@ -1,0 +1,1 @@
+Reduced control-plane memory on gateways where many backends validate against the same CA by storing each upstream CA bundle once per gateway and referencing it by a digest of its content, instead of carrying a copy on every route destination.
