@@ -289,7 +289,7 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 
 // patchRoute patches the provided route with the extAuth config if applicable.
 // Note: this method enables the corresponding extAuth filter for the provided route.
-func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

@@ -131,6 +131,12 @@ type Translator struct {
 	// extensionIndex resolves UnstructuredRef.Name against the current Translate() call's
 	// xdsIR.ExtensionResources registry. Rebuilt at the start of every Translate() call.
 	extensionIndex extensionResourceIndex
+
+	// ecdsFilterNames holds the HCM filters this Translate() call generated and that are
+	// eligible to be served over ECDS. Recorded while the filters are built, before any
+	// EnvoyPatchPolicy or extension server runs, so a filter somebody else added is never
+	// mistaken for one of ours. Rebuilt at the start of every Translate() call.
+	ecdsFilterNames sets.Set[string]
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -186,6 +192,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 	t.extensionIndex = newExtensionResourceIndex(xdsIR)
+	t.ecdsFilterNames = sets.New[string]()
 
 	tCtx := new(types.ResourceVersionTable)
 
@@ -290,6 +297,17 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		} else {
 			t.Logger.Error(err, "Extension Manager PostTranslation failure")
 		}
+	}
+
+	// Serve ECDS-eligible filter configs as their own resources, so editing one does not
+	// drain the listener. Runs last to keep EnvoyPatchPolicy and extension servers seeing
+	// the config inline in the HCM.
+	//
+	// TODO: for EnvoyPatchPolicy and extension servers to work on the ECDS resources instead,
+	// they would have to run after this, EnvoyPatchPolicy would need the TypedExtensionConfig
+	// type, and the extension server new hooks.
+	if err := t.extractFiltersToECDS(tCtx); err != nil {
+		errs = errors.Join(errs, err)
 	}
 
 	// Repair system_ca_certificates before validation so the restored canonical secret
@@ -736,7 +754,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, xdsRouteCfg.Name, t.backendIndex)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
@@ -924,6 +942,10 @@ func replaceHCMInFilterChain(hcm *hcmv3.HttpConnectionManager, filterChain *list
 	return nil
 }
 
+// errHCMNotFound is returned when a filter chain holds no HTTP connection manager, so
+// callers can tell that apart from a manager that is present but cannot be unmarshaled.
+var errHCMNotFound = errors.New("http connection manager not found")
+
 func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConnectionManager, error) {
 	for _, filter := range filterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
@@ -934,7 +956,7 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 			return hcm, nil
 		}
 	}
-	return nil, errors.New("http connection manager not found")
+	return nil, errHCMNotFound
 }
 
 func buildHTTP3AltSvcHeader(port uint32) *corev3.HeaderValueOption {

@@ -18,6 +18,7 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
+	extensionv3 "github.com/envoyproxy/go-control-plane/envoy/service/extension/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
 	runtimev3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
@@ -266,6 +267,7 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	listenerv3.RegisterListenerDiscoveryServiceServer(g, srv)
 	routev3.RegisterRouteDiscoveryServiceServer(g, srv)
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
+	extensionv3.RegisterExtensionConfigDiscoveryServiceServer(g, srv)
 }
 
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {

@@ -110,7 +110,7 @@ func (*bandwidthLimit) patchResources(*types.ResourceVersionTable, []*ir.HTTPRou
 	return nil
 }
 
-func (*bandwidthLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
+func (*bandwidthLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, _ string) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

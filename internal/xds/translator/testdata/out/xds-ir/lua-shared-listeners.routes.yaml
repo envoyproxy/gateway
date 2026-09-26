@@ -2,12 +2,12 @@
   name: envoy-gateway/gateway-1/http
   virtualHosts:
   - domains:
-    - www.example.com
-    name: envoy-gateway/gateway-1/http/www_example_com
+    - foo.example.com
+    name: envoy-gateway/gateway-1/http/foo_example_com
     routes:
     - match:
         pathSeparatedPrefix: /foo
-      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+      name: httproute/default/httproute-1/rule/0/match/0/foo_example_com
       route:
         cluster: httproute/default/httproute-1/rule/0
         upgradeConfigs:
@@ -15,13 +15,14 @@
       typedPerFilterConfig:
         envoy.filters.http.lua/envoy-gateway/gateway-1/http/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          filterContext:
-            mode: strict
-            token_header: x-api-key
-          name: envoyextensionpolicy/default/policy-for-http-route/lua/0
+          name: envoyextensionpolicy/default/policy-for-foo/lua/0
+  - domains:
+    - bar.example.com
+    name: envoy-gateway/gateway-1/http2/bar_example_com
+    routes:
     - match:
         pathSeparatedPrefix: /bar
-      name: httproute/default/httproute-2/rule/0/match/0/www_example_com
+      name: httproute/default/httproute-2/rule/0/match/0/bar_example_com
       route:
         cluster: httproute/default/httproute-2/rule/0
         upgradeConfigs:
@@ -29,7 +30,7 @@
       typedPerFilterConfig:
         envoy.filters.http.lua/envoy-gateway/gateway-1/http/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+          name: envoyextensionpolicy/default/policy-for-bar/lua/0
         envoy.filters.http.lua/envoy-gateway/gateway-1/http/1:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1
+          name: envoyextensionpolicy/default/policy-for-bar/lua/1
