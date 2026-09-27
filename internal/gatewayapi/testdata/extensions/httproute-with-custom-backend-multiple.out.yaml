@@ -119,6 +119,51 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionResources:
+    - name: storage.example.io/s3backend/default/s3-backend-1
+      object:
+        apiVersion: storage.example.io/v1alpha1
+        kind: S3Backend
+        metadata:
+          name: s3-backend-1
+          namespace: default
+        spec:
+          bucket: my-s3-bucket
+          endpoint: s3.amazonaws.com
+          region: us-west-2
+    - name: storage.example.io/s3backend/default/s3-backend-2
+      object:
+        apiVersion: storage.example.io/v1alpha1
+        kind: S3Backend
+        metadata:
+          name: s3-backend-2
+          namespace: default
+        spec:
+          bucket: my-s3-bucket
+          endpoint: s3.amazonaws.com
+          region: us-west-2
+    - name: storage.example.io/s3backend/default/s3-backend-3
+      object:
+        apiVersion: storage.example.io/v1alpha1
+        kind: S3Backend
+        metadata:
+          name: s3-backend-3
+          namespace: default
+        spec:
+          bucket: my-s3-bucket
+          endpoint: s3.amazonaws.com
+          region: us-west-2
+    - name: storage.example.io/s3backend/default/s3-backend-4
+      object:
+        apiVersion: storage.example.io/v1alpha1
+        kind: S3Backend
+        metadata:
+          name: s3-backend-4
+          namespace: default
+        spec:
+          bucket: my-s3-bucket
+          endpoint: s3.amazonaws.com
+          region: us-west-2
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -168,26 +213,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/1
             weight: 1
         extensionRefs:
-        - object:
-            apiVersion: storage.example.io/v1alpha1
-            kind: S3Backend
-            metadata:
-              name: s3-backend-1
-              namespace: default
-            spec:
-              bucket: my-s3-bucket
-              endpoint: s3.amazonaws.com
-              region: us-west-2
-        - object:
-            apiVersion: storage.example.io/v1alpha1
-            kind: S3Backend
-            metadata:
-              name: s3-backend-2
-              namespace: default
-            spec:
-              bucket: my-s3-bucket
-              endpoint: s3.amazonaws.com
-              region: us-west-2
+        - name: storage.example.io/s3backend/default/s3-backend-1
+        - name: storage.example.io/s3backend/default/s3-backend-2
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -213,26 +240,8 @@ xdsIR:
             name: httproute/default/httproute-1/rule/1/backend/1
             weight: 1
         extensionRefs:
-        - object:
-            apiVersion: storage.example.io/v1alpha1
-            kind: S3Backend
-            metadata:
-              name: s3-backend-3
-              namespace: default
-            spec:
-              bucket: my-s3-bucket
-              endpoint: s3.amazonaws.com
-              region: us-west-2
-        - object:
-            apiVersion: storage.example.io/v1alpha1
-            kind: S3Backend
-            metadata:
-              name: s3-backend-4
-              namespace: default
-            spec:
-              bucket: my-s3-bucket
-              endpoint: s3.amazonaws.com
-              region: us-west-2
+        - name: storage.example.io/s3backend/default/s3-backend-3
+        - name: storage.example.io/s3backend/default/s3-backend-4
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
