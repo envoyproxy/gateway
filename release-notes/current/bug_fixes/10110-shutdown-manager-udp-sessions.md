@@ -1,0 +1,1 @@
+Fixed the shutdown manager exiting after the minimum drain period while UDP proxy sessions were still active. The drain now also waits for `udp.*.downstream_sess_active` to reach the exit threshold. UDP sessions only close on their idle timeout (60s by default), so a proxy that has handled UDP traffic recently may wait until the drain timeout before exiting.

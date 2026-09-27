@@ -127,6 +127,10 @@ type Translator struct {
 	// backendIndex resolves BackendClusterRef.Name against the current Translate() call's
 	// xdsIR.BackendClusters registry. Rebuilt at the start of every Translate() call.
 	backendIndex backendClusterIndex
+
+	// extensionIndex resolves UnstructuredRef.Name against the current Translate() call's
+	// xdsIR.ExtensionResources registry. Rebuilt at the start of every Translate() call.
+	extensionIndex extensionResourceIndex
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -181,6 +185,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	defer phases.EndInFlight()
 
 	t.backendIndex = newBackendClusterIndex(xdsIR)
+	t.extensionIndex = newExtensionResourceIndex(xdsIR)
 
 	tCtx := new(types.ResourceVersionTable)
 
@@ -275,7 +280,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	phases.Start("XdsTranslator.processExtensionPostTranslationHook",
 		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
 	)
-	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies)
+	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies, t.extensionIndex)
 	phases.End()
 	if err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
@@ -384,14 +389,15 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 		alreadyIncludedPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
 		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
 			for _, pol := range irListener.GetExtensionRefs() {
-				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
+				obj := resolveUnstructuredRef(pol, t.extensionIndex)
+				key := utils.GetNamespacedNameWithGroupKind(obj)
 				if !alreadyIncludedPolicies.Has(key) {
 					policies = append(policies, pol)
 					alreadyIncludedPolicies.Insert(key)
 				}
 			}
 		}
-		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
+		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager, t.extensionIndex); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -739,7 +745,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		// Check if an extension want to modify the route we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
+		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -768,7 +774,7 @@ func (t *Translator) addRouteToRouteConfig(
 			if len(httpRoute.ExtensionRefs) > 0 {
 				extensionResources = make([]*unstructured.Unstructured, len(httpRoute.ExtensionRefs))
 				for refIdx, ref := range httpRoute.ExtensionRefs {
-					extensionResources[refIdx] = ref.Object
+					extensionResources[refIdx] = resolveUnstructuredRef(ref, t.extensionIndex)
 				}
 			}
 
