@@ -3014,9 +3014,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	r.log.Info("Watching gatewayAPI related objects")
 
 	// Watch any additional GVKs from the registered extension.
-	uPredicates := []predicate.TypedPredicate[*unstructured.Unstructured]{
-		predicate.TypedGenerationChangedPredicate[*unstructured.Unstructured]{},
-	}
+	uPredicates := commonPredicates[*unstructured.Unstructured]()
 	if r.namespaceLabel != nil {
 		uPredicates = append(uPredicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
 			return r.hasMatchingNamespaceLabels(obj)
@@ -3063,11 +3061,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.extBackendCRDExists[gvk] = true
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
+		extBackendPredicates := commonPredicates[*unstructured.Unstructured]()
+		if r.namespaceLabel != nil {
+			extBackendPredicates = append(extBackendPredicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
+				return r.hasMatchingNamespaceLabels(obj)
+			}))
+		}
 		if err := c.Watch(source.Kind(mgr.GetCache(), u,
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *unstructured.Unstructured) []reconcile.Request {
 				return r.enqueueClass(ctx, si)
 			}),
-			uPredicates...)); err != nil {
+			extBackendPredicates...)); err != nil {
 			return err
 		}
 		r.log.Info("Watching additional backend resource", "resource", gvk.String())

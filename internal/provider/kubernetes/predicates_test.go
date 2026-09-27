@@ -15,10 +15,12 @@ import (
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -64,6 +66,69 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.hasMatchingController(tc.gc)
 			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+func TestUnstructuredCommonPredicates(t *testing.T) {
+	base := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "example.com/v1",
+		"kind":       "ExtensionResource",
+		"metadata": map[string]any{
+			"name":      "resource",
+			"namespace": "default",
+		},
+	}}
+
+	testCases := []struct {
+		name   string
+		mutate func(*unstructured.Unstructured)
+		expect bool
+	}{
+		{
+			name: "generation changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetGeneration(1)
+			},
+			expect: true,
+		},
+		{
+			name: "labels changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetLabels(map[string]string{"environment": "test"})
+			},
+			expect: true,
+		},
+		{
+			name: "annotations changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetAnnotations(map[string]string{"example.com/config": "updated"})
+			},
+			expect: true,
+		},
+		{
+			name: "status changed only",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.Object["status"] = map[string]any{"state": "ready"}
+			},
+			expect: false,
+		},
+	}
+
+	predicates := commonPredicates[*unstructured.Unstructured]()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updated := base.DeepCopy()
+			tc.mutate(updated)
+
+			matched := false
+			for _, p := range predicates {
+				matched = matched || p.Update(event.TypedUpdateEvent[*unstructured.Unstructured]{
+					ObjectOld: base,
+					ObjectNew: updated,
+				})
+			}
+			require.Equal(t, tc.expect, matched)
 		})
 	}
 }

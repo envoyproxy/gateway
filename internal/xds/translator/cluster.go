@@ -1755,6 +1755,7 @@ func (BackendClusterTranslator) asClusterArgs(name string,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
 		healthCheckLog:    extra.healthCheckLog,
+		isRoute:           true,
 	}
 
 	applyTraffic(clusterArgs, extra.traffic)
