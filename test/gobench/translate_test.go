@@ -12,14 +12,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/cmd/egctl"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/internal/ir"
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/anypb"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/envoyproxy/gateway/internal/cmd/egctl"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // Reused YAML snippets.
@@ -185,6 +187,27 @@ spec:
   timeout:
     http:
       requestReceivedTimeout: 30s
+`
+	envoyPatchPolicyYAML = `---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: route-timeouts
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+      name: default/eg/http
+      operation:
+        op: add
+        jsonPath: $.virtual_hosts[*].routes[*].route
+        path: /timeout
+        value: 30s
 `
 	envoyExtensionPolicyYAML = `---
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -513,8 +536,9 @@ endpoints:
 // Benchmark cases: small / medium / large.
 func BenchmarkGatewayAPItoXDS(b *testing.B) {
 	type benchCase struct {
-		name string
-		yaml string
+		name           string
+		yaml           string
+		serviceRouting bool
 	}
 	medium := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
 		genHTTPRoutes(50) +
@@ -583,7 +607,7 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 			}
 			opts := &egctl.TranslationOptions{
 				GlobalRateLimitEnabled:  true,
-				EndpointRoutingDisabled: false,
+				EndpointRoutingDisabled: tc.serviceRouting,
 				EnvoyPatchPolicyEnabled: true,
 				BackendEnabled:          true,
 			}
