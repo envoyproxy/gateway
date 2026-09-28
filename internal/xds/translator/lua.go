@@ -7,7 +7,7 @@ package translator
 
 import (
 	"errors"
-	"fmt"
+	"strconv"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -32,9 +32,9 @@ type lua struct{}
 var _ httpFilter = &lua{}
 
 // luaSlotBucket rounds the number of Lua slots up to a multiple of itself. The slot count
-// is the one Lua change that still rewrites, and so drains, the listener, so a listener
-// stays at 10 slots whether it uses 1 or 10. An unused slot carries an empty Lua config
-// and builds no VM; listeners with no Lua at all get no slots.
+// is the one Lua change that rewrites, and so drains, the listener, so a listener stays
+// at 10 slots whether it uses 1 or 10. A slot is an empty placeholder and builds no VM;
+// listeners with no Lua at all get no slots.
 const luaSlotBucket = 10
 
 // luaSlotCount returns how many Lua filters to put in the HCM for a listener whose
@@ -46,14 +46,10 @@ func luaSlotCount(maxPerRoute int) int {
 	return ((maxPerRoute + luaSlotBucket - 1) / luaSlotBucket) * luaSlotBucket
 }
 
-// patchHCM builds and appends the lua Filters to the HTTP Connection Manager, one per
-// slot, a slot being the position a script occupies in a route's Lua chain. Scripts that
-// can run in a slot are stored once in that filter's sourceCodes map and routes select
-// one by name, so neither the filter chain nor the VM count grows with the route count.
-// Lua filters are created in disabled mode.
-//
-// Several IR listeners can share one HCM, so this may be called more than once for the
-// same manager; each call merges its scripts into the slots already there.
+// patchHCM appends one disabled, empty Lua filter per slot to the HTTP Connection Manager,
+// a slot being the position a script occupies in a route's Lua chain. The scripts
+// themselves travel with the routes, so the listener never changes when a policy does.
+// Several IR listeners can share one HCM, so this may run more than once per manager.
 func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
@@ -63,100 +59,37 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 	}
 
 	maxPerRoute := 0
-	sourceCodes := map[int]map[string]*corev3.DataSource{}
 	for _, route := range irListener.Routes {
 		if !routeContainsLua(route) {
 			continue
 		}
-		if count := len(route.EnvoyExtensions.Luas); count > maxPerRoute {
-			maxPerRoute = count
-		}
-		for slot, ep := range route.EnvoyExtensions.Luas {
-			if ep.Code == nil {
-				continue
-			}
-			if _, ok := sourceCodes[slot]; !ok {
-				sourceCodes[slot] = map[string]*corev3.DataSource{}
-			}
-			sourceCodes[slot][ep.Name] = &corev3.DataSource{
-				Specifier: &corev3.DataSource_InlineString{
-					InlineString: *ep.Code,
-				},
-			}
-		}
+		maxPerRoute = max(maxPerRoute, len(route.EnvoyExtensions.Luas))
 	}
-
-	scope := luaFilterScope(mgr, irListener)
 
 	var errs error
 	for slot := range luaSlotCount(maxPerRoute) {
-		name := luaFilterName(scope, slot)
-		if existing := findHCMFilter(mgr, name); existing != nil {
-			if err := mergeLuaSourceCodes(existing, sourceCodes[slot]); err != nil {
-				errs = errors.Join(errs, err)
-			}
+		if hcmContainsFilter(mgr, luaFilterName(slot)) {
 			continue
 		}
-		filter, err := buildHCMLuaFilter(scope, slot, sourceCodes[slot])
+		filter, err := buildHCMLuaFilter(slot)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
 		}
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
-
 	return errs
 }
 
-// mergeLuaSourceCodes adds the scripts to a slot filter another IR listener already put in
-// this HCM.
-func mergeLuaSourceCodes(filter *hcmv3.HttpFilter, sourceCodes map[string]*corev3.DataSource) error {
-	if len(sourceCodes) == 0 {
-		return nil
-	}
-
-	luaProto := &luafilterv3.Lua{}
-	if err := filter.GetTypedConfig().UnmarshalTo(luaProto); err != nil {
-		return err
-	}
-	if luaProto.SourceCodes == nil {
-		luaProto.SourceCodes = map[string]*corev3.DataSource{}
-	}
-	for name, code := range sourceCodes {
-		luaProto.SourceCodes[name] = code
-	}
-	if err := luaProto.ValidateAll(); err != nil {
-		return err
-	}
-	luaAny, err := anypb.New(luaProto)
+// buildHCMLuaFilter returns the placeholder Lua filter for a slot. It carries no script
+// and is disabled, so it does nothing until a route configures it.
+func buildHCMLuaFilter(slot int) (*hcmv3.HttpFilter, error) {
+	luaAny, err := anypb.New(&luafilterv3.Lua{})
 	if err != nil {
-		return err
-	}
-	filter.ConfigType = &hcmv3.HttpFilter_TypedConfig{TypedConfig: luaAny}
-
-	return nil
-}
-
-// buildHCMLuaFilter returns a Lua filter for HCM holding every script that can run in
-// the given slot, keyed by the name the routes reference it with.
-func buildHCMLuaFilter(scope string, slot int, sourceCodes map[string]*corev3.DataSource) (*hcmv3.HttpFilter, error) {
-	var (
-		luaProto *luafilterv3.Lua
-		luaAny   *anypb.Any
-		err      error
-	)
-	luaProto = &luafilterv3.Lua{
-		SourceCodes: sourceCodes,
-	}
-	if err = luaProto.ValidateAll(); err != nil {
 		return nil, err
 	}
-	if luaAny, err = anypb.New(luaProto); err != nil {
-		return nil, err
-	}
-
 	return &hcmv3.HttpFilter{
-		Name:     luaFilterName(scope, slot),
+		Name:     luaFilterName(slot),
 		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: luaAny,
@@ -164,22 +97,10 @@ func buildHCMLuaFilter(scope string, slot int, sourceCodes map[string]*corev3.Da
 	}, nil
 }
 
-// luaFilterScope returns the name the Lua filters of this HCM are grouped under: the
-// RouteConfiguration it serves, set from the first IR listener to build the manager and
-// shared by the rest. The filter name is also used as its ECDS resource name, so it has
-// to be unique across the proxy, and every route reaching this HCM keys on the same scope.
-func luaFilterScope(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) string {
-	if name := mgr.GetRds().GetRouteConfigName(); name != "" {
-		return name
-	}
-	return irListener.Name
-}
-
-// luaFilterName returns the name of the HCM Lua filter serving the given slot. The scope
-// keeps it unique across the proxy, the trailing index orders the filters within the HCM,
-// see newOrderedHTTPFilter.
-func luaFilterName(scope string, slot int) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterLua, fmt.Sprintf("%s/%d", scope, slot))
+// luaFilterName returns the name of the HCM Lua filter serving the given slot. The
+// trailing index orders the filters within the HCM, see newOrderedHTTPFilter.
+func luaFilterName(slot int) string {
+	return perRouteFilterName(egv1a1.EnvoyFilterLua, strconv.Itoa(slot))
 }
 
 // routeContainsLua returns true if Luas exists for the provided route.
@@ -196,8 +117,8 @@ func (*lua) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) err
 	return nil
 }
 
-// patchRoute patches the provided route so Lua filters are enabled if applicable.
-func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener, routeCfgName string) error {
+// patchRoute gives each of the route's Lua scripts to the slot filter at its position.
+func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -213,18 +134,27 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 		if err != nil {
 			return err
 		}
-		if err := enableFilterOnRoute(route, luaFilterName(routeCfgName, slot), routeCfg); err != nil {
+		if err := enableFilterOnRoute(route, luaFilterName(slot), routeCfg); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// buildLuaRouteFilterConfig selects the script this route runs by name, which both
-// enables the disabled HCM filter and points it at a VM the filter already owns.
+// buildLuaRouteFilterConfig carries the script on the route. The shared VM id is the
+// script's own name, so every route running this script shares one set of Lua VMs
+// instead of each building its own, while scripts of different policies stay apart.
 func buildLuaRouteFilterConfig(lua ir.Lua) (proto.Message, error) {
+	if lua.Code == nil {
+		return nil, errors.New("lua code is nil")
+	}
 	perRoute := &luafilterv3.LuaPerRoute{
-		Override: &luafilterv3.LuaPerRoute_Name{Name: lua.Name},
+		Override: &luafilterv3.LuaPerRoute_SourceCode{
+			SourceCode: &corev3.DataSource{
+				Specifier: &corev3.DataSource_InlineString{InlineString: *lua.Code},
+			},
+		},
+		SharedVmId: lua.Name,
 	}
 
 	if lua.FilterContext == nil || lua.FilterContext.Raw == nil {

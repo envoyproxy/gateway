@@ -19,7 +19,6 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
-	extensionv3 "github.com/envoyproxy/go-control-plane/envoy/service/extension/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
 	runtimev3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
@@ -280,7 +279,6 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	listenerv3.RegisterListenerDiscoveryServiceServer(g, srv)
 	routev3.RegisterRouteDiscoveryServiceServer(g, srv)
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
-	extensionv3.RegisterExtensionConfigDiscoveryServiceServer(g, srv)
 }
 
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
@@ -377,20 +375,10 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 							r.Logger.Error(err, "failed to init snapshot cache")
 							errChan <- err
 						} else {
-							// Routes can reference config inside ECDS resources, and the two are
-							// delivered separately. Publish in steps so nothing is referenced before
-							// it arrives or after it is removed.
-							ordered, err := translator.OrderedXdsResources(r.cache.LastResources(key), result.XdsResources)
-							if err != nil {
-								r.Logger.Error(err, "failed to order the xds resources, publishing them in one step")
-								ordered = []xtypes.XdsResources{result.XdsResources}
-							}
-							for _, resources := range ordered {
-								if err := r.cache.GenerateNewSnapshot(key, resources, traceCtx); err != nil {
-									r.Logger.Error(err, "failed to generate a snapshot")
-									errChan <- err
-									break
-								}
+							// Update snapshot cache
+							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, traceCtx); err != nil {
+								r.Logger.Error(err, "failed to generate a snapshot")
+								errChan <- err
 							}
 						}
 					} else {

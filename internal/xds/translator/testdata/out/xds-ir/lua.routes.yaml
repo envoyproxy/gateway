@@ -13,12 +13,15 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/envoy-gateway/gateway-1/http/0:
+        envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           filterContext:
             mode: strict
             token_header: x-api-key
-          name: envoyextensionpolicy/default/policy-for-http-route/lua/0
+          sharedVmId: envoyextensionpolicy/default/policy-for-http-route/lua/0
+          sourceCode:
+            inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
+              end
     - match:
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-2/rule/0/match/0/www_example_com
@@ -27,9 +30,15 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/envoy-gateway/gateway-1/http/0:
+        envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
-        envoy.filters.http.lua/envoy-gateway/gateway-1/http/1:
+          sharedVmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+          sourceCode:
+            inlineString: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
+              end
+        envoy.filters.http.lua/1:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1
+          sharedVmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1
+          sourceCode:
+            inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')
+              end
