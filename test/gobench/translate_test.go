@@ -6,9 +6,18 @@
 package gobench
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/anypb"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/cmd/egctl"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -177,6 +186,27 @@ spec:
   timeout:
     http:
       requestReceivedTimeout: 30s
+`
+	envoyPatchPolicyYAML = `---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: route-timeouts
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+      name: default/eg/http
+      operation:
+        op: add
+        jsonPath: $.virtual_hosts[*].routes[*].route
+        path: /timeout
+        value: 30s
 `
 	envoyExtensionPolicyYAML = `---
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -431,8 +461,9 @@ endpoints:
 // Benchmark cases: small / medium / large.
 func BenchmarkGatewayAPItoXDS(b *testing.B) {
 	type benchCase struct {
-		name string
-		yaml string
+		name           string
+		yaml           string
+		serviceRouting bool
 	}
 	medium := baseYAML + backendYAML + tlsSecretYAML + clientTrafficPolicyYAML +
 		genHTTPRoutes(50) +
@@ -468,6 +499,18 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 			name: "large",
 			yaml: large,
 		},
+		// The YAML loader does not load EndpointSlices. Service routing gives these
+		// cases forwarding routes for the policy to patch.
+		{
+			name:           "medium-jsonpath",
+			yaml:           genJSONPathResources(50),
+			serviceRouting: true,
+		},
+		{
+			name:           "large-jsonpath",
+			yaml:           genJSONPathResources(500),
+			serviceRouting: true,
+		},
 	}
 
 	for _, tc := range cases {
@@ -478,7 +521,7 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 			}
 			opts := &egctl.TranslationOptions{
 				GlobalRateLimitEnabled:  true,
-				EndpointRoutingDisabled: false,
+				EndpointRoutingDisabled: tc.serviceRouting,
 				EnvoyPatchPolicyEnabled: true,
 				BackendEnabled:          true,
 			}
@@ -493,4 +536,49 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 			}
 		})
 	}
+}
+
+func genJSONPathResources(routeCount int) string {
+	return baseYAML + tlsSecretYAML + genHTTPRoutes(routeCount) + genService(routeCount) + envoyPatchPolicyYAML
+}
+
+func TestGatewayAPItoXDSJSONPath(t *testing.T) {
+	const routeCount = 3
+	rs, err := resource.LoadResourcesFromYAMLBytes([]byte(genJSONPathResources(routeCount)), true, nil)
+	require.NoError(t, err)
+	for _, route := range rs.HTTPRoutes {
+		route.Spec.Rules[0].Timeouts = &gwapiv1.HTTPRouteTimeouts{Request: new(gwapiv1.Duration("10s"))}
+	}
+
+	result, err := egctl.TranslateGatewayAPIToXds("default", "cluster.local", "route", rs,
+		&egctl.TranslationOptions{EnvoyPatchPolicyEnabled: true, EndpointRoutingDisabled: true})
+	require.NoError(t, err)
+	var patched, unchanged int
+	for _, config := range result {
+		data, err := json.Marshal(config)
+		require.NoError(t, err)
+		wrapper := new(anypb.Any)
+		require.NoError(t, protojson.Unmarshal(data, wrapper))
+		dump := new(adminv3.RoutesConfigDump)
+		require.NoError(t, wrapper.UnmarshalTo(dump))
+		for _, entry := range dump.DynamicRouteConfigs {
+			routes := new(routev3.RouteConfiguration)
+			require.NoError(t, entry.RouteConfig.UnmarshalTo(routes))
+			for _, host := range routes.VirtualHosts {
+				for _, route := range host.Routes {
+					want := 10 * time.Second
+					if routes.Name == "default/eg/http" {
+						want = 30 * time.Second
+						patched++
+					} else {
+						unchanged++
+					}
+					require.Equal(t, want, route.GetRoute().GetTimeout().AsDuration())
+					require.NotEmpty(t, route.GetRoute().GetCluster(), "patching timeouts must preserve routing")
+				}
+			}
+		}
+	}
+	require.Equal(t, routeCount, patched)
+	require.Positive(t, unchanged, "other listeners must retain their route timeouts")
 }

@@ -136,7 +136,7 @@ var SessionPersistenceTest = suite.ConformanceTest{
 					if diff := cmp.Diff(cookie, &stdhttp.Cookie{
 						Name:     "Session-A",
 						MaxAge:   10,
-						Path:     requestPath,
+						Path:     "/",
 						HttpOnly: true,
 						Quoted:   true,
 					}, cmpopts.IgnoreFields(stdhttp.Cookie{}, "Value", "Raw"), // Ignore the value as it is random.

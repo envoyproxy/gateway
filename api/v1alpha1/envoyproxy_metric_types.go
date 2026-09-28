@@ -122,6 +122,11 @@ type ProxyOpenTelemetrySink struct {
 	//
 	// +optional
 	ReportHistogramsAsDeltas *bool `json:"reportHistogramsAsDeltas,omitempty"`
+	// Prefix configures the OpenTelemetry sink to prepend the given prefix to emitted stat names,
+	// the full stat name will be `<prefix>.<stat_name>`.
+	//
+	// +optional
+	Prefix *string `json:"prefix,omitempty"`
 	// Headers is a list of additional headers to send with OTLP export requests.
 	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
 	// +optional

@@ -46,6 +46,7 @@ http:
         refreshToken: true
         defaultRefreshTokenTTL: 48h
         csrfTokenTTL: 35m
+        codeVerifierTTL: 2m
   - name: "second-route"
     hostname: "*"
     pathMatch:

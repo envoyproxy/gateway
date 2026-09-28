@@ -6,6 +6,7 @@
 package egctl
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -83,6 +84,10 @@ func (fw *fakePortForwarder) Start() error {
 	return nil
 }
 
+func (fw *fakePortForwarder) StartWithContext(_ context.Context) error {
+	return fw.Start()
+}
+
 func (fw *fakePortForwarder) Stop() {}
 
 func (fw *fakePortForwarder) Address() string {
@@ -97,6 +102,10 @@ type failingStartPortForwarder struct {
 
 func (fw *failingStartPortForwarder) Start() error {
 	return fw.err
+}
+
+func (fw *failingStartPortForwarder) StartWithContext(_ context.Context) error {
+	return fw.Start()
 }
 
 func (fw *failingStartPortForwarder) Stop() {}

@@ -228,6 +228,10 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 		oauth2.Config.CsrfTokenExpiresIn = durationpb.New(oidc.CSRFTokenTTL.Duration)
 	}
 
+	if oidc.CodeVerifierTTL != nil {
+		oauth2.Config.CodeVerifierTokenExpiresIn = durationpb.New(oidc.CodeVerifierTTL.Duration)
+	}
+
 	if oidc.ForwardIDTokenHeader != nil {
 		oauth2.Config.ForwardIdToken = &oauth2v3.OAuth2TokenForwarding{
 			Header: *oidc.ForwardIDTokenHeader,
