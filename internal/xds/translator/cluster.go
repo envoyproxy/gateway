@@ -850,7 +850,6 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker, metrics *i
 						MaxConnections: &wrapperspb.UInt32Value{
 							Value: *circuitBreaker.PerEndpoint.MaxConnections,
 						},
-						TrackRemaining: trackRemaining,
 					},
 				}
 			}
