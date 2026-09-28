@@ -671,6 +671,47 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 		},
 
 		{
+			// Status entries owned by another controller must never be dropped by us, even if
+			// their parentRef is no longer in the route's spec - that controller manages them.
+			name: "old contains another controller's parentRef that was removed from the route's spec - should be preserved.",
+			args: args{
+				old: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "istio.io/gateway-controller",
+						ParentRef: gwapiv1.ParentReference{
+							Name: "gateway1",
+						},
+						Conditions: []metav1.Condition{
+							{
+								Type:   string(gwapiv1.RouteConditionAccepted),
+								Status: metav1.ConditionTrue,
+								Reason: "Accepted",
+							},
+						},
+					},
+				},
+				new: []gwapiv1.RouteParentStatus{},
+				specParentRefs: []gwapiv1.ParentReference{
+					{Name: "gateway2"},
+				},
+			},
+			want: []gwapiv1.RouteParentStatus{
+				{
+					ControllerName: "istio.io/gateway-controller",
+					ParentRef: gwapiv1.ParentReference{
+						Name: "gateway1",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: "Accepted",
+						},
+					},
+				},
+			},
+		},
+		{
 			// Regression test: new was computed while gateway2 was still in spec.ParentRefs, but by the time
 			// the merge runs the parentRef has already been removed from spec. The stale entry in new must be
 			// dropped rather than leaking into the merged status.
@@ -1111,7 +1152,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mergeRouteParentStatus("default", tt.args.old, tt.args.new, tt.args.specParentRefs); !reflect.DeepEqual(got, tt.want) {
+			if got := mergeRouteParentStatus("default", egv1a1.GatewayControllerName, tt.args.old, tt.args.new, tt.args.specParentRefs); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeRouteParentStatus() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1149,8 +1190,9 @@ func Test_updateStatusFromSubscriptions_HTTPRoute(t *testing.T) {
 
 	updater := &fakeUpdater{updates: make(chan Update, 1)}
 	r := &gatewayAPIReconciler{
-		log:           logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
-		statusUpdater: updater,
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		classController: egv1a1.GatewayControllerName,
+		statusUpdater:   updater,
 		subscriptions: &subscriptions{
 			httpRouteStatuses: httpRouteStatuses.Subscribe(ctx),
 		},
