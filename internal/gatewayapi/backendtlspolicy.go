@@ -765,6 +765,9 @@ func upstreamCASecretName(refs []gwapiv1.ObjectReference, defaultNamespace strin
 
 // sharedCACertificate returns the reference to use when name is already registered for this
 // gateway, letting a later policy reading the same source objects skip re-reading them.
+//
+// Dropping SDS here is safe: an SDS-backed ref carries no bytes, so shareCACertificate never
+// registers a name for it and this can never hit for one.
 func (t *Translator) sharedCACertificate(gwIR *ir.Xds, gtwCtx *GatewayContext, name string) *ir.TLSCACertificate {
 	if gwIR == nil || gtwCtx == nil || name == "" {
 		return nil

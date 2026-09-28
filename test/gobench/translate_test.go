@@ -637,8 +637,9 @@ func BenchmarkXdsIRDeepCopy(b *testing.B) {
 		}
 		for i := 0; i < destinations; i++ {
 			// One policy per destination, all trusting the same CA: the shape a cluster of
-			// backends behind one corporate CA produces. Naming the secret after the source
-			// object is what lets every destination share one entry.
+			// backends behind one corporate CA produces. The perDestination arm keeps the old
+			// consumer-derived name as a pre-optimization baseline; the translator no longer
+			// produces that shape.
 			ca := &ir.TLSCACertificate{Name: "configmap/default/ca-cmap"}
 			if !central {
 				ca.Name = fmt.Sprintf("policy-%d/default-ca", i)
