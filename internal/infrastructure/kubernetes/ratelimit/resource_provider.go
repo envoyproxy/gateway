@@ -277,6 +277,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					ImagePullSecrets:              r.rateLimitDeployment.Pod.ImagePullSecrets,
 					NodeSelector:                  r.rateLimitDeployment.Pod.NodeSelector,
 					TopologySpreadConstraints:     r.rateLimitDeployment.Pod.TopologySpreadConstraints,
+					// Honor rateLimitDeployment.pod.priorityClassName so the rate limit
+					// pod uses the same scheduling priority as other managed workloads.
+					PriorityClassName: ptr.Deref(r.rateLimitDeployment.Pod.PriorityClassName, ""),
 				},
 			},
 			RevisionHistoryLimit:    new(int32(10)),

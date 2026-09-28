@@ -260,3 +260,97 @@ func formatJSON(s []byte) (string, error) {
 	}
 	return string(buf), nil
 }
+
+func TestApplyJSONPatchesMultipleMatches(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		doc           string
+		patches       []ir.JSONPatchOperation
+		want          string
+		errorContains string
+	}{
+		{
+			name: "later JSONPath sees earlier changes",
+			doc:  `{"items":[{},{}]}`,
+			patches: []ir.JSONPatchOperation{
+				{Op: "add", JSONPath: new("$.items[*]"), Path: new("/enabled"), Value: &apiextensionsv1.JSON{Raw: []byte("true")}},
+				{Op: "add", JSONPath: new("$.items[?(@.enabled == true)]"), Path: new("/selected"), Value: &apiextensionsv1.JSON{Raw: []byte("true")}},
+			},
+			want: `{"items":[{"enabled":true,"selected":true},{"enabled":true,"selected":true}]}`,
+		},
+		{
+			name: "array removals preserve match order",
+			doc:  `{"values":[0,1,2,3]}`,
+			patches: []ir.JSONPatchOperation{
+				{Op: "remove", JSONPath: new("$.values[0,1]")},
+			},
+			want: `{"values":[1,3]}`,
+		},
+		{
+			name: "array insertions preserve match order",
+			doc:  `{"values":[0,1]}`,
+			patches: []ir.JSONPatchOperation{
+				{Op: "add", JSONPath: new("$.values[0,1]"), Value: &apiextensionsv1.JSON{Raw: []byte("9")}},
+			},
+			want: `{"values":[9,9,0,1]}`,
+		},
+		{
+			name: "move reads the source after each operation",
+			doc:  `{"values":[0,1,2,3]}`,
+			patches: []ir.JSONPatchOperation{
+				{Op: "move", JSONPath: new("$.values[2,3]"), From: new("/values/0")},
+			},
+			want: `{"values":[2,0,3,1]}`,
+		},
+		{
+			name: "copy into multiple objects",
+			doc:  `{"source":{"value":1},"items":[{},{}]}`,
+			patches: []ir.JSONPatchOperation{
+				{Op: "copy", JSONPath: new("$.items[*]"), Path: new("/copy"), From: new("/source")},
+			},
+			want: `{"source":{"value":1},"items":[{"copy":{"value":1}},{"copy":{"value":1}}]}`,
+		},
+		{
+			name: "validation failure does not skip later patches",
+			doc:  `{"items":[{},{}]}`,
+			patches: []ir.JSONPatchOperation{
+				{Op: "invalid", Path: new("/unused")},
+				{Op: "add", JSONPath: new("$.items[*]"), Path: new("/value"), Value: &apiextensionsv1.JSON{Raw: []byte("1")}},
+			},
+			want:          `{"items":[{"value":1},{"value":1}]}`,
+			errorContains: "unsupported JSONPatch operation",
+		},
+		{
+			name: "remove failure after an earlier match succeeds",
+			doc:  `{"items":[{"value":1},{},{"value":3}]}`,
+			patches: []ir.JSONPatchOperation{
+				{Op: "remove", JSONPath: new("$.items[*]"), Path: new("/value")},
+			},
+			errorContains: "/items/1/value",
+		},
+		{
+			name: "test failure after an earlier match succeeds",
+			doc:  `{"values":[1,2,1]}`,
+			patches: []ir.JSONPatchOperation{
+				{Op: "test", JSONPath: new("$.values[*]"), Value: &apiextensionsv1.JSON{Raw: []byte("1")}},
+			},
+			errorContains: "/values/1",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := []byte(tc.doc)
+			got, err := ApplyJSONPatches(input, tc.patches...)
+			if tc.errorContains != "" {
+				require.ErrorContains(t, err, tc.errorContains)
+			} else {
+				require.NoError(t, err)
+			}
+			if tc.want == "" {
+				require.Empty(t, got)
+			} else {
+				require.JSONEq(t, tc.want, string(got))
+			}
+			require.Equal(t, tc.doc, string(input), "input must remain unchanged")
+		})
+	}
+}
