@@ -16,7 +16,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"maps"
 	"math"
 	"strconv"
 	"sync"
@@ -53,7 +52,6 @@ type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
 	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
-	LastResources(string) types.XdsResources
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
 }
@@ -74,8 +72,6 @@ type snapshotCache struct {
 	deltaStreamDuration streamDurationMap
 	snapshotVersion     int64
 	lastSnapshot        snapshotMap
-	lastResources       map[string]types.XdsResources
-	lastBaseVersion     map[string]string
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
 }
@@ -94,14 +90,6 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	if !sc.IsValid() {
 		version = s.newSnapshotVersion()
 	}
-	// One translation may publish several snapshots in a row, all under the same trace,
-	// and a repeated version is taken by the cache as nothing to send. Keep the bare trace
-	// id as the base and suffix every later snapshot, so no two of them share a version.
-	if version == s.lastBaseVersion[irKey] {
-		version += "-" + s.newSnapshotVersion()
-	} else {
-		s.lastBaseVersion[irKey] = version
-	}
 
 	// Create a snapshot with all xDS resources.
 	snapshot, err := cachev3.NewSnapshot(
@@ -117,11 +105,9 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	// Delete snapshot from cache if resources are nil
 	if resources == nil {
 		delete(s.lastSnapshot, irKey)
-		delete(s.lastResources, irKey)
 	} else {
 		// Update snapshot in cache
 		s.lastSnapshot[irKey] = snapshot
-		s.lastResources[irKey] = maps.Clone(resources)
 	}
 
 	for _, node := range s.getNodeIDs(irKey) {
@@ -136,14 +122,6 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	}
 
 	return nil
-}
-
-// LastResources returns the resources last published for irKey, or nil when there is none.
-func (s *snapshotCache) LastResources(irKey string) types.XdsResources {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.lastResources[irKey]
 }
 
 // newSnapshotVersion increments the current snapshotVersion
@@ -169,8 +147,6 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 		SnapshotCache:       cachev3.NewSnapshotCache(ads, &Hash, wrappedLogger),
 		log:                 wrappedLogger,
 		lastSnapshot:        make(snapshotMap),
-		lastResources:       make(map[string]types.XdsResources),
-		lastBaseVersion:     make(map[string]string),
 		streamIDNodeInfo:    make(nodeInfoMap),
 		nodeFrequency:       make(nodeFrequencyMap),
 		streamDuration:      make(streamDurationMap),

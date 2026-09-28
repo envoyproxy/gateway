@@ -799,9 +799,6 @@
               }
             }
           ]
-        },
-        {
-          "@type": "type.googleapis.com/envoy.admin.v3.EcdsConfigDump"
         }
       ]
     }

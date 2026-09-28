@@ -14,86 +14,46 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/0
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/1
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/2
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/3
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/4
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/5
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/6
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/7
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/8
-        - configDiscovery:
-            configSource:
-              ads: {}
-              resourceApiVersion: V3
-            typeUrls:
-            - type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-          disabled: true
-          name: envoy.filters.http.lua/envoy-gateway/gateway-1/http/9
+        - disabled: true
+          name: envoy.filters.http.lua/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/2
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/3
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/4
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/5
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/6
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/7
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/8
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/9
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

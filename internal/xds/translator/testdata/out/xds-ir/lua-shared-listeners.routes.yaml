@@ -13,9 +13,26 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/envoy-gateway/gateway-1/http/0:
+        envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          name: envoyextensionpolicy/default/policy-for-foo/lua/0
+          sharedVmId: envoyextensionpolicy/default/policy-for-foo/lua/0
+          sourceCode:
+            inlineString: function envoy_on_request(request_handle) request_handle:logInfo('foo')
+              end
+    - match:
+        pathSeparatedPrefix: /foo2
+      name: httproute/default/httproute-1/rule/0/match/1/foo_example_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.lua/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          sharedVmId: envoyextensionpolicy/default/policy-for-foo/lua/0
+          sourceCode:
+            inlineString: function envoy_on_request(request_handle) request_handle:logInfo('foo')
+              end
   - domains:
     - bar.example.com
     name: envoy-gateway/gateway-1/http2/bar_example_com
@@ -28,9 +45,15 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/envoy-gateway/gateway-1/http/0:
+        envoy.filters.http.lua/0:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          name: envoyextensionpolicy/default/policy-for-bar/lua/0
-        envoy.filters.http.lua/envoy-gateway/gateway-1/http/1:
+          sharedVmId: envoyextensionpolicy/default/policy-for-bar/lua/0
+          sourceCode:
+            inlineString: function envoy_on_request(request_handle) request_handle:logInfo('bar')
+              end
+        envoy.filters.http.lua/1:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-          name: envoyextensionpolicy/default/policy-for-bar/lua/1
+          sharedVmId: envoyextensionpolicy/default/policy-for-bar/lua/1
+          sourceCode:
+            inlineString: function envoy_on_response(response_handle) response_handle:logInfo('bar-2')
+              end

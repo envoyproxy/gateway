@@ -2,6 +2,9 @@
 # share one HCM. The Lua slots belong to that HCM: the listener needs as many slots as
 # the deepest route chain across both listeners, and each listener's scripts merge into
 # the slots already there rather than adding a bucket of their own.
+#
+# The first listener has two routes under one policy. Both carry the same script and
+# the same sharedVmId, which is what makes Envoy run them on one set of Lua VMs.
 http:
 - address: 0.0.0.0
   hostnames:
@@ -29,6 +32,29 @@ http:
       distinct: false
       name: ""
       prefix: /foo
+    envoyExtensions:
+      luas:
+      - code: function envoy_on_request(request_handle)
+          request_handle:logInfo('foo')
+          end
+        name: envoyextensionpolicy/default/policy-for-foo/lua/0
+  - destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
+    hostname: foo.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-1/rule/0/match/1/foo_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo2
     envoyExtensions:
       luas:
       - code: function envoy_on_request(request_handle)
