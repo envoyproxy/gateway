@@ -40,6 +40,11 @@ const (
 
 // ShutdownManager serves shutdown manager process for Envoy proxies.
 func ShutdownManager(readyTimeout time.Duration) error {
+	// Clear a shutdown ready marker left behind by a previous drain, e.g.
+	// after a container restart within the same pod, where the emptyDir
+	// backing /tmp persists for the pod's lifetime.
+	clearShutdownReadyFile(ShutdownReadyFile)
+
 	// Setup HTTP handler
 	handler := http.NewServeMux()
 	handler.HandleFunc(ShutdownManagerHealthCheckPath, func(_ http.ResponseWriter, _ *http.Request) {})
@@ -82,6 +87,24 @@ func ShutdownManager(readyTimeout time.Duration) error {
 	// Wait until done
 	<-c
 	return nil
+}
+
+// clearShutdownReadyFile removes a stale shutdown ready file if one exists,
+// ensuring a fresh drain sequence is required after each (re)start.
+func clearShutdownReadyFile(readyFile string) {
+	_, err := os.Stat(readyFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logger.Error(err, "error checking for stale shutdown ready file")
+		}
+		return
+	}
+
+	if err := os.Remove(readyFile); err != nil {
+		logger.Error(err, "error removing stale shutdown ready file")
+	} else {
+		logger.Info("removed stale shutdown ready file")
+	}
 }
 
 // shutdownReadyHandler handles the endpoint used by a preStop hook on the Envoy
