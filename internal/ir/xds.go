@@ -4373,7 +4373,6 @@ type GRPCJSONTranscoder struct {
 	// Envoy treats an empty list as "filter disabled".
 	Services                     []string                 `json:"services" yaml:"services"`
 	PrintOptions                 *egv1a1.JSONPrintOptions `json:"printOptions,omitempty" yaml:"printOptions,omitempty"`
-	MatchIncomingRequestRoute    *bool                    `json:"matchIncomingRequestRoute,omitempty" yaml:"matchIncomingRequestRoute,omitempty"`
 	IgnoredQueryParameters       []string                 `json:"ignoredQueryParameters,omitempty" yaml:"ignoredQueryParameters,omitempty"`
 	AutoMapping                  *bool                    `json:"autoMapping,omitempty" yaml:"autoMapping,omitempty"`
 	IgnoreUnknownQueryParameters *bool                    `json:"ignoreUnknownQueryParameters,omitempty" yaml:"ignoreUnknownQueryParameters,omitempty"`

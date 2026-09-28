@@ -66,18 +66,14 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: grpc-json-transcoder-httproute
+  name: grpc-json-transcoder
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
   - name: same-namespace
   hostnames:
-  - "httproute.transcoder.example.com"
+  - "transcoder.example.com"
   rules:
-  # The transcoder is attached to this rule only. After transcoding Envoy re-matches on the
-  # rewritten gRPC method path, which lands on the rule below with no transcoder config of
-  # its own -- the response is still transcoded back to JSON because Envoy resolves filter
-  # enablement once, against the route matched at decodeHeaders.
   - matches:
     - path:
         type: PathPrefix
@@ -88,17 +84,6 @@ spec:
         group: gateway.envoyproxy.io
         kind: HTTPRouteFilter
         name: grpc-json-transcoder
-    backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: grpc-infra-backend-v1
-      port: 8080
-  # This scenario serves the rewritten path with a second HTTPRoute rule; the GRPCRoute
-  # below is the other way.
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/gateway_api_conformance.echo_basic.grpcecho.GrpcEcho"
     backendRefs:
     - group: gateway.envoyproxy.io
       kind: Backend
@@ -120,116 +105,56 @@ spec:
         kind: ConfigMap
         name: grpc-echo-proto-descriptor
 ---
-# Same transcoding, but the rewritten gRPC method path is served by a GRPCRoute rather than
-# a second HTTPRoute rule. The filter still attaches to the HTTPRoute rule, because that is
-# where the JSON request arrives; the GRPCRoute carries no transcoder config at all.
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: grpc-json-transcoder-grpcroute-httproute
-  namespace: gateway-conformance-infra
-spec:
-  parentRefs:
-  - name: same-namespace
-  hostnames:
-  - "grpcroute.transcoder.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/v1/grpc-echo"
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: HTTPRouteFilter
-        name: grpc-json-transcoder-grpcroute
-    backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: grpc-infra-backend-v1
-      port: 8080
----
+# Serves the gRPC method path the transcoder rewrites to, and stamps a header that would
+# reach the backend if Envoy re-matched the transcoded request onto this route.
 apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
-  name: grpc-json-transcoder-grpcroute
+  name: grpc-json-transcoder
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
   - name: same-namespace
   hostnames:
-  - "grpcroute.transcoder.example.com"
+  - "transcoder.example.com"
   rules:
   - matches:
     - method:
         service: gateway_api_conformance.echo_basic.grpcecho.GrpcEcho
-    backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: grpc-infra-backend-v1
-      port: 8080
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: HTTPRouteFilter
-metadata:
-  name: grpc-json-transcoder-grpcroute
-  namespace: gateway-conformance-infra
-spec:
-  grpcJSONTranscoder:
-    services:
-    - gateway_api_conformance.echo_basic.grpcecho.GrpcEcho
-    protoDescriptor:
-      valueRef:
-        group: ""
-        kind: ConfigMap
-        name: grpc-echo-proto-descriptor
----
-# The transcoder rewrites :path but matchIncomingRequestRoute keeps the route that already
-# matched, so no route for the rewritten gRPC method path is needed at all -- one HTTPRoute
-# with one rule is the whole configuration.
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: grpc-json-transcoder-single-route
-  namespace: gateway-conformance-infra
-spec:
-  parentRefs:
-  - name: same-namespace
-  hostnames:
-  - "single.transcoder.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/v1/grpc-echo"
     filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: HTTPRouteFilter
-        name: grpc-json-transcoder-single-route
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        set:
+        - name: x-matched-grpcroute
+          value: "true"
     backendRefs:
     - group: gateway.envoyproxy.io
       kind: Backend
       name: grpc-infra-backend-v1
       port: 8080
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: HTTPRouteFilter
+apiVersion: v1
+kind: Secret
 metadata:
-  name: grpc-json-transcoder-single-route
+  name: grpc-json-transcoder-basic-auth
+  namespace: gateway-conformance-infra
+data:
+  # user1:test1
+  .htpasswd: "dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo="
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: grpc-json-transcoder
   namespace: gateway-conformance-infra
 spec:
-  grpcJSONTranscoder:
-    matchIncomingRequestRoute: true
-    services:
-    - gateway_api_conformance.echo_basic.grpcecho.GrpcEcho
-    protoDescriptor:
-      valueRef:
-        group: ""
-        kind: ConfigMap
-        name: grpc-echo-proto-descriptor
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: grpc-json-transcoder
+  basicAuth:
+    users:
+      name: grpc-json-transcoder-basic-auth
 ---
 # FileDescriptorSet for the conformance grpcecho service, generated with
 # `protoc --include_imports` so the imported google/api files travel with it. The source is

@@ -27,7 +27,6 @@ http:
       printOptions:
         addWhitespace: true
         alwaysPrintPrimitiveFields: false
-      matchIncomingRequestRoute: true
       autoMapping: true
       ignoreUnknownQueryParameters: true
       convertGRPCStatus: true

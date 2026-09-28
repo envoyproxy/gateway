@@ -77,6 +77,7 @@ var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 const (
 	requestMirrorDirectResponseConflictMsg = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
 	requestMirrorRedirectConflictMsg       = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
+	grpcJSONTranscoderConflictMsg          = "%s cannot be used when the rule also configures a grpcJSONTranscoder filter: it would apply to the transcoded gRPC method path"
 	grpcDirectResponse2xxMsg               = "DirectResponse with a 2xx status code is not supported for GRPCRoute: a 2xx status maps to the gRPC OK status, but a direct response cannot carry a gRPC response message, so the client would receive an invalid response. Use a non-2xx status code to deny or block the request instead"
 )
 
@@ -160,6 +161,29 @@ func (t *Translator) ProcessHTTPFilters(
 			errors.New(requestMirrorRedirectConflictMsg),
 			gwapiv1.RouteReasonIncompatibleFilters,
 		).WithType(gwapiv1.RouteConditionAccepted))
+	}
+	// The router reads :path after the transcoder has replaced it with the gRPC method, so
+	// anything it derives from the path acts on the method instead of the JSON path it was
+	// written for. Literal, header and backend host rewrites do not read :path.
+	if httpFiltersContext.GRPCJSONTranscoder != nil {
+		var conflict string
+		switch rw := httpFiltersContext.URLRewrite; {
+		case httpFiltersContext.RedirectResponse != nil:
+			conflict = "RequestRedirect"
+		case rw != nil && rw.Path != nil:
+			conflict = "URLRewrite with a path modifier"
+		case rw != nil && rw.Host != nil && rw.Host.PathRegex != nil:
+			conflict = "URLRewrite with a PathRegex hostname"
+		}
+		if conflict != "" {
+			// Dropping the transcoder too keeps it from answering ahead of the 500.
+			httpFiltersContext.GRPCJSONTranscoder = nil
+			httpFiltersContext.DirectResponse = &ir.CustomResponse{StatusCode: new(uint32(500))}
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf(grpcJSONTranscoderConflictMsg, conflict),
+				gwapiv1.RouteReasonIncompatibleFilters,
+			).WithType(gwapiv1.RouteConditionAccepted))
+		}
 	}
 
 	return httpFiltersContext, errs.GetAllErrors()

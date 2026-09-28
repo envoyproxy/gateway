@@ -22,6 +22,9 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -50,119 +53,108 @@ var GRPCJSONTranscoderTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "grpc-json-transcoder", Namespace: ns}
 
-		// By default the transcoder rewrites :path to the gRPC method and Envoy matches
-		// routes again, so the rewritten path needs a route of its own -- both ways of
-		// providing one are exercised here. matchIncomingRequestRoute opts out of the
-		// re-match and needs no second route at all.
-		for _, tc := range []struct {
-			name          string
-			route         string
-			host          string
-			postTranscode string
-			// grpcRoute, when set, serves the rewritten path and must be programmed
-			// before the transcoded request can succeed.
-			grpcRoute string
-		}{
-			{
-				name:          "second HTTPRoute rule serves the rewritten path",
-				route:         "grpc-json-transcoder-httproute",
-				host:          "httproute.transcoder.example.com",
-				postTranscode: "HTTPRoute",
-			},
-			{
-				name:          "GRPCRoute serves the rewritten path",
-				route:         "grpc-json-transcoder-grpcroute-httproute",
-				host:          "grpcroute.transcoder.example.com",
-				postTranscode: "GRPCRoute",
-				grpcRoute:     "grpc-json-transcoder-grpcroute",
-			},
-			{
-				name:          "matchIncomingRequestRoute keeps the original route",
-				route:         "grpc-json-transcoder-single-route",
-				host:          "single.transcoder.example.com",
-				postTranscode: "none, the matched route is kept",
-			},
-		} {
-			t.Run(tc.name, func(t *testing.T) {
-				routeNN := types.NamespacedName{Name: tc.route, Namespace: ns}
-				gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
-					suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
+			suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		// The GRPCRoute has to be programmed for the no-re-match assertion to mean anything.
+		kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
+			suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.GRPCRoute{}, false, routeNN)
+		SecurityPolicyMustBeAccepted(t, suite.Client, routeNN, suite.ControllerName, gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		})
 
-				// Without this the transcoded request races the GRPCRoute being
-				// programmed and is answered 404 until it catches up.
-				if tc.grpcRoute != "" {
-					kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
-						suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.GRPCRoute{}, false,
-						types.NamespacedName{Name: tc.grpcRoute, Namespace: ns})
-				}
+		// From EchoTwo's google.api.http option.
+		url := fmt.Sprintf("http://%s/v1/grpc-echo/echo-two", gwAddr)
 
-				// From EchoTwo's google.api.http option.
-				url := fmt.Sprintf("http://%s/v1/grpc-echo/echo-two", gwAddr)
-
-				var body grpcEchoResponse
-				var lastErr error
-				err := wait.PollUntilContextTimeout(context.Background(), time.Second,
-					suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
-						req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-						if err != nil {
-							return false, err
-						}
-						req.Host = tc.host
-
-						res, err := http.DefaultClient.Do(req)
-						if err != nil {
-							lastErr = err
-							return false, nil
-						}
-						defer res.Body.Close()
-
-						raw, err := io.ReadAll(res.Body)
-						if err != nil {
-							lastErr = err
-							return false, nil
-						}
-
-						if res.StatusCode != http.StatusOK {
-							lastErr = fmt.Errorf("expected 200, got %d: %s", res.StatusCode, raw)
-							return false, nil
-						}
-						if ct := res.Header.Get("content-type"); !strings.HasPrefix(ct, "application/json") {
-							lastErr = fmt.Errorf("expected a JSON content-type, got %q", ct)
-							return false, nil
-						}
-						if gs := res.Header.Get("grpc-status"); gs != "0" {
-							lastErr = fmt.Errorf("expected grpc-status 0, got %q", gs)
-							return false, nil
-						}
-
-						body = grpcEchoResponse{}
-						if err := json.Unmarshal(raw, &body); err != nil {
-							lastErr = fmt.Errorf("response is not the transcoded EchoResponse: %w: %s", err, raw)
-							return false, nil
-						}
-						return true, nil
-					})
-				if err != nil {
-					t.Fatalf("never got a transcoded response from %s (host %s, %s post-transcode route): %v (last error: %v)",
-						url, tc.host, tc.postTranscode, err, lastErr)
-				}
-
-				if got := body.Assertions.FullyQualifiedMethod; got != grpcEchoMethod {
-					t.Errorf("expected the backend to see method %s, got %s", grpcEchoMethod, got)
-				}
-
-				var upstreamContentType string
-				for _, h := range body.Assertions.Headers {
-					if strings.EqualFold(h.Key, "content-type") {
-						upstreamContentType = h.Value
-						break
+		// Bounded per attempt: without a timeout one hung request consumes the whole poll.
+		client := &http.Client{Timeout: 5 * time.Second}
+		// pollUntil sends the JSON request until check accepts the response.
+		pollUntil := func(t *testing.T, authorization string, check func(*http.Response, []byte) error) {
+			t.Helper()
+			var lastErr error
+			err := wait.PollUntilContextTimeout(context.Background(), time.Second,
+				suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
+					req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+					if err != nil {
+						return false, err
 					}
-				}
-				if !strings.HasPrefix(upstreamContentType, "application/grpc") {
-					t.Errorf("expected the backend to receive an application/grpc content-type, got %q", upstreamContentType)
-				}
-			})
+					req.Host = "transcoder.example.com"
+					if authorization != "" {
+						req.Header.Set("Authorization", authorization)
+					}
+
+					res, err := client.Do(req)
+					if err != nil {
+						lastErr = err
+						return false, nil
+					}
+					defer res.Body.Close()
+
+					raw, err := io.ReadAll(res.Body)
+					if err != nil {
+						lastErr = err
+						return false, nil
+					}
+					if lastErr = check(res, raw); lastErr != nil {
+						return false, nil
+					}
+					return true, nil
+				})
+			if err != nil {
+				t.Fatalf("%s: %v (last error: %v)", url, err, lastErr)
+			}
 		}
+
+		// Basic auth runs before the transcoder, so this holds with or without a re-match; the
+		// x-matched-grpcroute check below is what catches one.
+		t.Run("SecurityPolicy on a transcoding HTTPRoute is enforced", func(t *testing.T) {
+			pollUntil(t, "", func(res *http.Response, raw []byte) error {
+				if res.StatusCode != http.StatusUnauthorized {
+					return fmt.Errorf("expected 401, got %d: %s", res.StatusCode, raw)
+				}
+				return nil
+			})
+		})
+
+		t.Run("transcoded request stays on the HTTPRoute", func(t *testing.T) {
+			var body grpcEchoResponse
+			pollUntil(t, "Basic dXNlcjE6dGVzdDE=", func(res *http.Response, raw []byte) error { // user1:test1
+				if res.StatusCode != http.StatusOK {
+					return fmt.Errorf("expected 200, got %d: %s", res.StatusCode, raw)
+				}
+				if ct := res.Header.Get("content-type"); !strings.HasPrefix(ct, "application/json") {
+					return fmt.Errorf("expected a JSON content-type, got %q", ct)
+				}
+				if gs := res.Header.Get("grpc-status"); gs != "0" {
+					return fmt.Errorf("expected grpc-status 0, got %q", gs)
+				}
+				body = grpcEchoResponse{}
+				if err := json.Unmarshal(raw, &body); err != nil {
+					return fmt.Errorf("response is not the transcoded EchoResponse: %w: %s", err, raw)
+				}
+				return nil
+			})
+
+			if got := body.Assertions.FullyQualifiedMethod; got != grpcEchoMethod {
+				t.Errorf("expected the backend to see method %s, got %s", grpcEchoMethod, got)
+			}
+
+			var upstreamContentType string
+			for _, h := range body.Assertions.Headers {
+				switch strings.ToLower(h.Key) {
+				case "content-type":
+					upstreamContentType = h.Value
+				case "x-matched-grpcroute":
+					t.Errorf("transcoded request was re-matched onto the GRPCRoute")
+				}
+			}
+			if !strings.HasPrefix(upstreamContentType, "application/grpc") {
+				t.Errorf("expected the backend to receive an application/grpc content-type, got %q", upstreamContentType)
+			}
+		})
 	},
 }

@@ -28,16 +28,6 @@ type GRPCJSONTranscoder struct {
 	// +optional
 	PrintOptions *JSONPrintOptions `json:"printOptions,omitempty"`
 
-	// MatchIncomingRequestRoute keeps the route that matched the incoming request after
-	// the transcoder rewrites the path to the gRPC method.
-	//
-	// When false (the default), the rewritten path is matched against the routing table
-	// again, so a route matching the gRPC method must also exist or the request is
-	// answered with 404. Either a GRPCRoute for the service, or an HTTPRoute matching
-	// `/<package>.<Service>/<Method>`, satisfies this.
-	// +optional
-	MatchIncomingRequestRoute *bool `json:"matchIncomingRequestRoute,omitempty"`
-
 	// IgnoredQueryParameters defines query parameters to ignore during transcoding.
 	// +optional
 	// +listType=set

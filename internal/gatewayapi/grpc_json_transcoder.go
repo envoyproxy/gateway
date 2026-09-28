@@ -51,7 +51,6 @@ func (t *Translator) buildGRPCJSONTranscoder(
 		ProtoDescriptorBin:           descriptor.bin,
 		Services:                     services,
 		PrintOptions:                 cfg.PrintOptions,
-		MatchIncomingRequestRoute:    cfg.MatchIncomingRequestRoute,
 		IgnoredQueryParameters:       cfg.IgnoredQueryParameters,
 		AutoMapping:                  cfg.AutoMapping,
 		IgnoreUnknownQueryParameters: cfg.IgnoreUnknownQueryParameters,

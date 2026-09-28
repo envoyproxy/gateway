@@ -244,8 +244,6 @@ spec:
   - "grpc.example.com"
   rules:
   # The JSON path clients call, taken from the google.api.http option on SayHello.
-  # One rule is enough because matchIncomingRequestRoute keeps the request here after
-  # the transcoder rewrites :path.
   - matches:
     - path:
         type: PathPrefix
@@ -274,9 +272,6 @@ spec:
         name: greeter-proto-descriptor
     services:
     - example.Greeter
-    # Without this the rewritten :path is matched against the route table again, and
-    # /example.Greeter/SayHello needs a route of its own.
-    matchIncomingRequestRoute: true
     printOptions:
       addWhitespace: true
       preserveProtoFieldNames: true

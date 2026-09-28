@@ -97,7 +97,10 @@ func buildGRPCJSONTranscoderConfig(transcoder *ir.GRPCJSONTranscoder) (*anypb.An
 		}
 	}
 
-	cfg.MatchIncomingRequestRoute = ptr.Deref(transcoder.MatchIncomingRequestRoute, false)
+	// Filters ordered before the transcoder (authn, authz, rate limiting) have already
+	// evaluated the incoming route's policy. Re-matching on the rewritten gRPC path would
+	// send the request to a route whose policy those filters never checked.
+	cfg.MatchIncomingRequestRoute = true
 	cfg.AutoMapping = ptr.Deref(transcoder.AutoMapping, false)
 	cfg.IgnoreUnknownQueryParameters = ptr.Deref(transcoder.IgnoreUnknownQueryParameters, false)
 	cfg.ConvertGrpcStatus = ptr.Deref(transcoder.ConvertGRPCStatus, false)

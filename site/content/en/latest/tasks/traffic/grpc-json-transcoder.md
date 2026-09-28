@@ -62,7 +62,7 @@ spec:
 ## Configuration
 
 Create an `HTTPRouteFilter` that points at the ConfigMap, and reference it from the HTTPRoute rule that receives the
-JSON traffic. `matchIncomingRequestRoute: true` keeps the request on the route that matched it, so one rule is enough:
+JSON traffic:
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -78,7 +78,6 @@ spec:
         name: greeter-proto-descriptor
     services:
     - example.Greeter
-    matchIncomingRequestRoute: true
 ```
 
 ```yaml
@@ -116,51 +115,27 @@ When `services` is omitted, every service declared by the descriptor's own proto
 that come from imported files. Naming them explicitly is worth doing when the descriptor carries more than you want to
 expose.
 
-## Routing the rewritten path separately
+## Policies and routing
 
-`matchIncomingRequestRoute` defaults to `false`, which is Envoy's own default. In that mode the transcoder rewrites
-`:path` to the gRPC method (`/example.Greeter/SayHello`) and Envoy matches the routing table again, so a route for the
-rewritten path must exist or the request gets a 404.
+The transcoder rewrites `:path` to the gRPC method (`/example.Greeter/SayHello`), but the request stays on the HTTPRoute
+rule that matched the JSON path; the route table is not matched again. Everything that governs the request — backend,
+timeouts, retries, and every policy — comes from that HTTPRoute. A [GRPCRoute][] for the same service on the same
+hostname serves native gRPC clients only, and its policies do not apply to transcoded requests. Attach authentication,
+authorization, and rate limiting to the HTTPRoute that receives the JSON traffic.
 
-Leave it unset when you want the gRPC method to route on its own terms — a different backend, a different timeout, or
-policies attached to a [GRPCRoute][]. Either a second HTTPRoute rule or a GRPCRoute for the service satisfies the
-re-match:
+That holds for the default filter order. A filter that `EnvoyProxy.spec.filterOrder` moves after the transcoder can
+clear the route cache — ExtAuth or JWT with `recomputeRoute`, an ExtProc server whose response sets
+`clear_route_cache`, or a Lua, Wasm, or dynamic module extension — and Envoy then matches the gRPC method path again,
+possibly onto a GRPCRoute whose policies never ran.
 
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: grpc-route
-spec:
-  parentRefs:
-  - name: eg
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /v1/hello
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: HTTPRouteFilter
-        name: grpc-transcoder
-    backendRefs:
-    - name: grpc-service
-      port: 9000
-  # Serves the rewritten path. A GRPCRoute for example.Greeter works here too.
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /example.Greeter
-    backendRefs:
-    - name: grpc-service
-      port: 9000
-```
+Anything the router derives from `:path` sees the transcoded gRPC method instead of the JSON path, so these cannot share
+a rule with the transcoder: a `URLRewrite` that modifies the path, a `URLRewrite` with a `PathRegex` hostname, and a
+`RequestRedirect`. Such a rule is rejected with `IncompatibleFilters` on the HTTPRoute's `Accepted` condition and returns
+`500`. Literal, header, and backend hostname rewrites are unaffected.
 
-Only the rule receiving the JSON request needs the filter — the response is still transcoded back to JSON even when the
-re-match lands on a route with no transcoder config, because Envoy resolves filter enablement once, against the route
-matched at `decodeHeaders`.
+The transcoded path also carries no query string, so a `BackendTrafficPolicy` that hashes on query parameters
+(`loadBalancer.consistentHash.type: QueryParams`) finds none on these routes and spreads requests as if unhashed. It is
+not rejected.
 
 ## Diagnosing a bad descriptor
 

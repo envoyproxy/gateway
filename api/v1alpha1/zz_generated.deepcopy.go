@@ -4115,11 +4115,6 @@ func (in *GRPCJSONTranscoder) DeepCopyInto(out *GRPCJSONTranscoder) {
 		*out = new(JSONPrintOptions)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.MatchIncomingRequestRoute != nil {
-		in, out := &in.MatchIncomingRequestRoute, &out.MatchIncomingRequestRoute
-		*out = new(bool)
-		**out = **in
-	}
 	if in.IgnoredQueryParameters != nil {
 		in, out := &in.IgnoredQueryParameters, &out.IgnoredQueryParameters
 		*out = make([]string, len(*in))
