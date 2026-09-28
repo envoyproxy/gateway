@@ -1221,6 +1221,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies []*ir.UnstructuredRef
 		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
+		CACertificates          []*ir.CACertificateEntry
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,
@@ -1236,6 +1237,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
 		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
+		CACertificates:          a.CACertificates,
 	}
 
 	// Ensure we didn't drop an exported field.
