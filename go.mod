@@ -12,10 +12,10 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v29.8.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
-	github.com/envoyproxy/go-control-plane v0.14.1-0.20260902172201-0f2cd005953e
-	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260902172201-0f2cd005953e
-	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260902172201-0f2cd005953e
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260902172201-0f2cd005953e
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260927022543-fc8912c55e30
+	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260927022543-fc8912c55e30
+	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260927022543-fc8912c55e30
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260927022543-fc8912c55e30
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.9.11
@@ -229,7 +229,7 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20260805114148-88456608a4f6 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
+	github.com/prometheus/client_model v0.6.3 // indirect
 	github.com/prometheus/common v0.70.1 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
