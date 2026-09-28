@@ -879,6 +879,32 @@ type BackendClusterKey struct {
 	Protocol     ir.AppProtocol
 }
 
+// ExtensionResourceKey identifies a unique extension-introduced resource per gateway for dedup.
+type ExtensionResourceKey struct {
+	GatewayIRKey string
+	Group        string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
+// CACertificateKey identifies a shared upstream CA bundle within a gateway's IR by a digest
+// of its content.
+type CACertificateKey struct {
+	GatewayIRKey string
+	Digest       string
+}
+
+// ResolvedCAKey identifies a resource whose CA was already resolved. It keys on the resource
+// rather than the CA's secret name, which a Backend and a BackendTLSPolicy of the same name
+// and namespace mint identically.
+type ResolvedCAKey struct {
+	GatewayIRKey string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -889,10 +915,12 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
+	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
+	ResolvedCAMap           map[ResolvedCAKey]string
 	protoDescriptors        map[types.NamespacedName]*parsedProtoDescriptor
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
-	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 }
 
