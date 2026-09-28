@@ -29,7 +29,7 @@
         combinedValidationContext:
           defaultValidationContext: {}
           validationContextSdsSecretConfig:
-            name: backend-1/default-ca
+            name: configmap/default/ca-cmap
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
