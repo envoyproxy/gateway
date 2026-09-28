@@ -364,9 +364,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 			desc: "Valid BackendPriority with highest priority",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
-					BackendPriority: &egv1a1.HTTPBackendPriorityFilter{
-						Value: 0,
-					},
+					BackendPriority: new(int32(0)),
 				}
 			},
 			wantErrors: []string{},
@@ -375,9 +373,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 			desc: "Valid BackendPriority with max value",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
-					BackendPriority: &egv1a1.HTTPBackendPriorityFilter{
-						Value: 128,
-					},
+					BackendPriority: new(int32(128)),
 				}
 			},
 			wantErrors: []string{},
@@ -386,13 +382,11 @@ func TestHTTPRouteFilter(t *testing.T) {
 			desc: "Invalid BackendPriority exceeding max value",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
-					BackendPriority: &egv1a1.HTTPBackendPriorityFilter{
-						Value: 129,
-					},
+					BackendPriority: new(int32(129)),
 				}
 			},
 			wantErrors: []string{
-				"spec.backendPriority.value: Invalid value: 129:",
+				"spec.backendPriority: Invalid value: 129:",
 				"should be less than or equal to 128",
 			},
 		},
