@@ -8,6 +8,7 @@ package naming
 import (
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
@@ -90,4 +91,32 @@ func TestBounded(t *testing.T) {
 			assert.LessOrEqual(t, len(Bounded(strings.Repeat("x", 500), n)), n)
 		}
 	})
+}
+
+// A budget too small to hold the hash suffix must still terminate. TruncateToBytes would
+// otherwise spin forever on a negative budget, since DecodeLastRuneInString returns size 0
+// once the string is empty.
+func TestBoundedTerminatesOnTightBudget(t *testing.T) {
+	long := strings.Repeat("a", 24)
+	for _, maxBytes := range []int{-5, 0, 1, 8, 16, 17, 18} {
+		done := make(chan string, 1)
+		go func() { done <- Bounded(long, maxBytes) }()
+		select {
+		case got := <-done:
+			assert.NotEmpty(t, got, "maxBytes=%d", maxBytes)
+		case <-time.After(3 * time.Second):
+			t.Fatalf("Bounded(maxBytes=%d) did not return", maxBytes)
+		}
+	}
+}
+
+func TestTruncateToBytesNegativeBudget(t *testing.T) {
+	done := make(chan string, 1)
+	go func() { done <- TruncateToBytes("abc", -1) }()
+	select {
+	case got := <-done:
+		assert.Empty(t, got)
+	case <-time.After(3 * time.Second):
+		t.Fatal("TruncateToBytes did not return on a negative budget")
+	}
 }
