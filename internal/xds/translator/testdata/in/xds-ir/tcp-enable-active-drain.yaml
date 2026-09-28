@@ -1,0 +1,15 @@
+tcp:
+  - name: "tcp-listener"
+    address: "::"
+    port: 10081
+    routes:
+      - name: "tcp-route"
+        destination:
+          name: "tcp-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "tcp-route-dest/backend/0"
+    tcp:
+      enableActiveDrain: true
