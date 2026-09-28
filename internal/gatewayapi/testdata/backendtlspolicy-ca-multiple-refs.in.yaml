@@ -1,0 +1,217 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-btls
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-btls
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-btls
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                type: Exact
+                value: "/exact"
+          backendRefs:
+            - name: http-backend
+              namespace: backends
+              port: 8080
+        - matches:
+            - path:
+                type: Exact
+                value: "/reversed"
+          backendRefs:
+            - name: http-backend-2
+              namespace: backends
+              port: 8080
+
+referenceGrants:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: ReferenceGrant
+    metadata:
+      name: refg-route-svc
+      namespace: backends
+    spec:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          namespace: envoy-gateway
+      to:
+        - group: ""
+          kind: Service
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: http-backend
+      namespace: backends
+    spec:
+      clusterIP: 10.11.12.13
+      ports:
+        - port: 8080
+          name: http
+          protocol: TCP
+          targetPort: 8080
+
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: http-backend-2
+      namespace: backends
+    spec:
+      clusterIP: 10.11.12.14
+      ports:
+        - port: 8080
+          name: http
+          protocol: TCP
+          targetPort: 8080
+
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-http-backend
+      namespace: backends
+      labels:
+        kubernetes.io/service-name: http-backend
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "10.244.0.11"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-http-backend-2
+      namespace: backends
+      labels:
+        kubernetes.io/service-name: http-backend-2
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "10.244.0.12"
+        conditions:
+          ready: true
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ca-cmap
+      namespace: backends
+    data:
+      ca.crt: |
+        -----BEGIN CERTIFICATE-----
+        MIIDJzCCAg+gAwIBAgIUAl6UKIuKmzte81cllz5PfdN2IlIwDQYJKoZIhvcNAQEL
+        BQAwIzEQMA4GA1UEAwwHbXljaWVudDEPMA0GA1UECgwGa3ViZWRiMB4XDTIzMTAw
+        MjA1NDE1N1oXDTI0MTAwMTA1NDE1N1owIzEQMA4GA1UEAwwHbXljaWVudDEPMA0G
+        A1UECgwGa3ViZWRiMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwSTc
+        1yj8HW62nynkFbXo4VXKv2jC0PM7dPVky87FweZcTKLoWQVPQE2p2kLDK6OEszmM
+        yyr+xxWtyiveremrWqnKkNTYhLfYPhgQkczib7eUalmFjUbhWdLvHakbEgCodn3b
+        kz57mInX2VpiDOKg4kyHfiuXWpiBqrCx0KNLpxo3DEQcFcsQTeTHzh4752GV04RU
+        Ti/GEWyzIsl4Rg7tGtAwmcIPgUNUfY2Q390FGqdH4ahn+mw/6aFbW31W63d9YJVq
+        ioyOVcaMIpM5B/c7Qc8SuhCI1YGhUyg4cRHLEw5VtikioyE3X04kna3jQAj54YbR
+        bpEhc35apKLB21HOUQIDAQABo1MwUTAdBgNVHQ4EFgQUyvl0VI5vJVSuYFXu7B48
+        6PbMEAowHwYDVR0jBBgwFoAUyvl0VI5vJVSuYFXu7B486PbMEAowDwYDVR0TAQH/
+        BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAMLxrgFVMuNRq2wAwcBt7SnNR5Cfz
+        2MvXq5EUmuawIUi9kaYjwdViDREGSjk7JW17vl576HjDkdfRwi4E28SydRInZf6J
+        i8HZcZ7caH6DxR335fgHVzLi5NiTce/OjNBQzQ2MJXVDd8DBmG5fyatJiOJQ4bWE
+        A7FlP0RdP3CO3GWE0M5iXOB2m1qWkE2eyO4UHvwTqNQLdrdAXgDQlbam9e4BG3Gg
+        d/6thAkWDbt/QNT+EJHDCvhDRKh1RuGHyg+Y+/nebTWWrFWsktRrbOoHCZiCpXI1
+        3eXE6nt0YkgtDxG22KqnhpAg9gUSs2hlhoxyvkzyF0mu6NhPlwAgnq7+/Q==
+        -----END CERTIFICATE-----
+
+clusterTrustBundles:
+  - apiVersion: certificates.k8s.io/v1beta1
+    kind: ClusterTrustBundle
+    metadata:
+      creationTimestamp: "2025-06-18T03:19:03Z"
+      name: ca-cluster-trust-bundle
+    spec:
+      trustBundle: |
+        -----BEGIN CERTIFICATE-----
+        MIIDQzCCAiugAwIBAgIBATANBgkqhkiG9w0BAQsFADBCMRMwEQYDVQQKEwpFbnZv
+        eVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBHYXRld2F5
+        IENBMCAXDTI0MDMxMDE1MzIxN1oYDzIxMjQwMzEwMTYzMjE3WjBCMRMwEQYDVQQK
+        EwpFbnZveVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBH
+        YXRld2F5IENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7ZFmGB4e
+        m1KdGEohAZBfqydAEGLDHJ1YyfHWdd+vBAevdW64bZx3pggJOtgCnePuFd02rDQS
+        dlsJlX/6mFtoQilo6wvxDSJRfaTDbtfTjw+7k8yfd/Jsmh0RWG+UeyI7Na9sXAz7
+        b57mpxsCoNowzeK5ETiOGGNWPcjENJkSnBarz5muN00xIZWBU+yN5PLJNxZvxpZJ
+        Ol/SSI8sno0e0PxAmp3fe7QaXiZj/TAGJPGuTJkUxrHqyZGJtYUxsS8A0dT1zBjj
+        izA5Dp+b5yzYo23Hh7BgpbZ7X4gsDThFuwCD6fHyepuv2zHPqvSsdqg2hAhDp91R
+        zrn7a9GxG2VSIwIDAQABo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUw
+        AwEB/zAdBgNVHQ4EFgQUUpP1aZ1M2KIuPPWrNPDV2c5CngowDQYJKoZIhvcNAQEL
+        BQADggEBAGSEkAVz+Z0qS4FmA0q4SCpIIq64bsdEjiUzev7pK1LEK0/Y28QBPixV
+        cUXfax18VPR9pls1JgXto9qY+C0hnRZic6611QTJlWK1p6dinQ/eDdYCBC+nv5xx
+        ssASwmplIxMvj3S1qF6dr7sMI2ZVD5HElTWdO19UBLyhiKKZW2KxDsYj+5NRwGFe
+        G+JuDgq7njUM8mdyYk0NehefdBUEUUCQtnwUtW95/429XwqQROuRDteGT9kjD+Y5
+        ea5mW4mfqLeuGJXZs9bdWjKKdLQPrn9IshPysWqz2Hz8dQ1f7N9/g8UWVSjd4cyx
+        S5EAolzVv0yB7wHCWCgfG/ckdOTUNnE=
+        -----END CERTIFICATE-----
+backendTLSPolicies:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls
+      namespace: backends
+    spec:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: http-backend
+          sectionName: http
+      validation:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+          - name: ca-cluster-trust-bundle
+            group: ""
+            kind: ClusterTrustBundle
+        hostname: example.com
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls-reversed
+      namespace: backends
+    spec:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: http-backend-2
+          sectionName: http
+      validation:
+        caCertificateRefs:
+          - name: ca-cluster-trust-bundle
+            group: ""
+            kind: ClusterTrustBundle
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+        hostname: example.com
