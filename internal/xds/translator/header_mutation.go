@@ -57,7 +57,7 @@ func (*headerMutation) patchResources(*types.ResourceVersionTable, []*ir.HTTPRou
 	return nil
 }
 
-func (*headerMutation) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListener, string) error {
+func (*headerMutation) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListener) error {
 	return nil
 }
 
