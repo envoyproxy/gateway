@@ -204,9 +204,32 @@ func TestGetTotalConnections(t *testing.T) {
 			expectedCount: new(1),
 		},
 		{
+			name: "udp_downstream_sess_active",
+			input: `{
+    "stats": [
+        {"name": "listener.0.0.0.0_5300.downstream_cx_active", "value": 0},
+        {"name": "listener.0.0.0.0_5300.worker_0.downstream_cx_active", "value": 0},
+        {"name": "udp.service.downstream_sess_active", "value": 3}
+    ]
+}`,
+			expectedCount: new(3),
+		},
+		{
+			name: "tcp_and_udp",
+			input: `{
+    "stats": [
+        {"name": "listener.0.0.0.0_8000.downstream_cx_active", "value": 1},
+        {"name": "listener.0.0.0.0_8000.worker_0.downstream_cx_active", "value": 1},
+        {"name": "listener.0.0.0.0_19001.downstream_cx_active", "value": 2},
+        {"name": "udp.service.downstream_sess_active", "value": 2}
+    ]
+}`,
+			expectedCount: new(3),
+		},
+		{
 			name:          "invalid",
 			input:         `{"stats":[{"name":"listener.0.0.0.0_8000.downstream_cx_active","value":1]}`,
-			expectedError: errors.New("error getting listener downstream_cx_active stat"),
+			expectedError: errors.New("error getting active connection and UDP session stats"),
 		},
 	}
 
