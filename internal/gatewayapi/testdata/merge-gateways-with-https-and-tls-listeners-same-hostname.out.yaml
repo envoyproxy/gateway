@@ -327,6 +327,8 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 443
+      hostnames:
+      - bar.example.com
       metadata:
         kind: Gateway
         name: gateway-tls-distinct-hostname
