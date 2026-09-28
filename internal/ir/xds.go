@@ -368,6 +368,12 @@ type HTTPListener struct {
 	// HTTP/2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
 	// We use a standalone field to avoid messing with the ClientTrafficPolicy ALPN config.
 	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
+	// TLSOverlapsHostnames contains the hostnames of the other listeners whose certificate SANs overlap with this
+	// listener's certificate SANs. HTTP/2 requests for these hostnames may be coalesced onto this listener's connections.
+	TLSOverlapsHostnames []string `json:"tlsOverlapsHostnames,omitempty" yaml:"tlsOverlapsHostnames,omitempty"`
+	// OverlappingTLSHandling controls how this listener handles HTTP/2 when its TLS configuration overlaps another
+	// listener. An empty value preserves the default ALPN downgrade.
+	OverlappingTLSHandling OverlappingTLSHandling `json:"overlappingTLSHandling,omitempty" yaml:"overlappingTLSHandling,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// TCPKeepalive configuration for the listener
@@ -479,6 +485,16 @@ func (t TLSVersion) Int() uint16 {
 		return tls.VersionTLS13
 	}
 }
+
+// OverlappingTLSHandling controls how listeners with overlapping TLS configuration handle HTTP/2.
+type OverlappingTLSHandling egv1a1.OverlappingTLSHandling
+
+const (
+	// OverlappingTLSHandlingDowngradeToHTTP1 preserves the default ALPN downgrade.
+	OverlappingTLSHandlingDowngradeToHTTP1 = OverlappingTLSHandling(egv1a1.OverlappingTLSHandlingDowngradeToHTTP1)
+	// OverlappingTLSHandlingMisdirectedRequest keeps HTTP/2 enabled and returns 421 for misdirected requests.
+	OverlappingTLSHandlingMisdirectedRequest = OverlappingTLSHandling(egv1a1.OverlappingTLSHandlingMisdirectedRequest)
+)
 
 type TLSFingerprintType egv1a1.TLSFingerprintType
 

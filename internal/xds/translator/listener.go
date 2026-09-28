@@ -476,6 +476,11 @@ func (t *Translator) addHCMToXDSListener(
 		}
 	}
 
+	// The 421 routes match HTTP/2 requests only, so the protocol filter is not needed on HTTP/3 listeners.
+	if !http3Listener && detectMisdirectedRequests(irListener) {
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.DownstreamProtocol)
+	}
+
 	if http3Listener {
 		mgr.CodecType = hcmv3.HttpConnectionManager_HTTP3
 		mgr.Http3ProtocolOptions = &corev3.Http3ProtocolOptions{}
@@ -534,10 +539,17 @@ func (t *Translator) addHCMToXDSListener(
 		} else {
 			config := irListener.TLS.DeepCopy()
 			// If the listener has overlapping TLS config with other listeners, we need to disable HTTP/2
-			// to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
+			// to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/),
+			// unless misdirected requests are detected and answered with 421 instead.
 			// Note: if ALPN is explicitly set by the user using ClientTrafficPolicy, we keep it as is
 			if irListener.TLSOverlaps && config.ALPNProtocols == nil {
-				config.ALPNProtocols = []string{"http/1.1"}
+				switch irListener.OverlappingTLSHandling {
+				case ir.OverlappingTLSHandlingMisdirectedRequest:
+					// Keep HTTP/2 enabled; misdirected requests receive 421.
+				default:
+					// An unset or unrecognized value preserves the safe HTTP/1.1 downgrade.
+					config.ALPNProtocols = []string{"http/1.1"}
+				}
 			}
 			tSocket, err = buildXdsDownstreamTLSSocket(config)
 		}
