@@ -96,7 +96,7 @@ go.test.cel: manifests # Run the CEL validation tests
 .PHONY: go.test.benchmark
 go.test.benchmark: ## Run benchmark tests for translation performance
 	@$(LOG_TARGET)
-	cd test && go test -timeout=15m -run='^$$' -bench=. -benchmem -benchtime=1x -count=6 ./gobench
+	cd test && go test -timeout=15m -bench=. -benchmem -benchtime=1x -count=6 ./gobench
 
 .PHONY: go.test.standalone
 go.test.standalone: ## Run standalone-mode integration tests

@@ -193,6 +193,18 @@ type Xds struct {
 	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
 	// source of truth for a cluster's Settings/Metadata.
 	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
+	// ExtensionResources holds extension-introduced resources deduplicated into a single shared
+	// entry, keyed by their Name. Other IR fields reference these via UnstructuredRef.Name instead
+	// of embedding Object.
+	//
+	// +optional
+	ExtensionResources []*UnstructuredRef `json:"extensionResources,omitempty" yaml:"extensionResources,omitempty"`
+
+	// CACertificates holds upstream CA bundles deduplicated by content, so policies trusting
+	// the same CA share one entry whichever Secret or ConfigMap they read it from.
+	//
+	// +optional
+	CACertificates []*CACertificateEntry `json:"caCertificates,omitempty" yaml:"caCertificates,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -613,10 +625,24 @@ type TLSCrl struct {
 type TLSCACertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-	// Certificate content.
+	// Digest names the Xds.CACertificates entry holding this reference's bytes. Empty when
+	// Certificate is carried inline instead, which happens where no gateway IR is in scope
+	// to register against.
+	Digest string `json:"digest,omitempty" yaml:"digest,omitempty"`
+	// Certificate content. Empty when the bytes live in Xds.CACertificates under Digest.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
+}
+
+// CACertificateEntry is one CA bundle in Xds.CACertificates, shared by every
+// TLSCACertificate whose Digest matches.
+// +k8s:deepcopy-gen=true
+type CACertificateEntry struct {
+	// Digest content-addresses Certificate, and is what references join on.
+	Digest string `json:"digest" yaml:"digest"`
+	// Certificate content.
+	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate
@@ -1352,6 +1378,16 @@ type EnvoyExtensionFeatures struct {
 //
 // +k8s:deepcopy-gen=true
 type UnstructuredRef struct {
+	// Name uniquely identifies this resource within a single Xds.ExtensionResources registry, in
+	// which case Object is nil here and must be looked up by Name. It is derived from the
+	// resource's GroupVersionKind and namespaced name as "<group>/<kind>/<namespace>/<name>",
+	// lowercasing only the group and kind, e.g. "foo.example.io/bar/default/my-bar". When Group
+	// is empty, the leading segment is omitted: "<kind>/<namespace>/<name>". Empty when Object is
+	// embedded directly instead (no gateway scope was available to dedup against).
+	//
+	// +optional
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
 }
 
@@ -2251,6 +2287,14 @@ type BackendCluster struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 }
 
+// Protocol reports the upstream protocol this cluster serves.
+func (b *BackendCluster) Protocol() AppProtocol {
+	if b == nil || b.Setting == nil {
+		return ""
+	}
+	return b.Setting.Protocol
+}
+
 func (b *BackendCluster) Validate() error {
 	var errs error
 	if len(b.Name) == 0 {
@@ -2648,6 +2692,9 @@ func (s StringMatch) Validate() error {
 // +k8s:deepcopy-gen=true
 type TCPListener struct {
 	CoreListenerDetails `json:",inline" yaml:",inline"`
+	// Hostnames from the Gateway listener, matched against the SNI of an incoming
+	// connection. Only set for TLS listeners; TCP listeners have no hostname.
+	Hostnames []string `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
