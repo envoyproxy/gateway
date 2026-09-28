@@ -1,0 +1,1 @@
+Added an optional `claimPath` field to `SecurityPolicy`'s JWT `claimToHeaders`, letting claims whose names contain dots — such as URI-namespaced OIDC claims like `https://example.com/claims/tenant_name` — be extracted into a header via explicit path segments instead of the dot-split `claim` field.

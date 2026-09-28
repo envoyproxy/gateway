@@ -73,8 +73,8 @@ func buildHCMRequestBufferFilter(spec *ir.RequestBuffer) (*hcmv3.HttpFilter, err
 		return nil, fmt.Errorf("invalid Limit value %s", spec.Limit.String())
 	}
 
-	if maxBytes < 0 || maxBytes > math.MaxUint32 {
-		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
+	if maxBytes <= 0 || maxBytes > math.MaxUint32 {
+		return nil, fmt.Errorf("limit value %s is out of range, must be between 1 and %d",
 			spec.Limit.String(), math.MaxUint32)
 	}
 
@@ -126,8 +126,8 @@ func buildRequestBufferPerRouteProto(spec *ir.RequestBuffer) (*anypb.Any, error)
 		return nil, fmt.Errorf("invalid Limit value %s", spec.Limit.String())
 	}
 
-	if maxBytes < 0 || maxBytes > math.MaxUint32 {
-		return nil, fmt.Errorf("limit value %s is out of range, must be between 0 and %d",
+	if maxBytes <= 0 || maxBytes > math.MaxUint32 {
+		return nil, fmt.Errorf("limit value %s is out of range, must be between 1 and %d",
 			spec.Limit.String(), math.MaxUint32)
 	}
 
