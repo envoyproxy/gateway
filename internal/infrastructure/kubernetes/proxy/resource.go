@@ -416,12 +416,10 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 		},
 	}
 
-	volumes = append(volumes, sdsVolume)
-
 	// Writable /tmp for the shutdown-manager so it can create /tmp/shutdown-ready
 	// even when its securityContext (replicated from the Envoy container) sets
 	// readOnlyRootFilesystem: true.
-	volumes = append(volumes, corev1.Volume{
+	volumes = append(volumes, sdsVolume, corev1.Volume{
 		Name: shutdownManagerTmpVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
