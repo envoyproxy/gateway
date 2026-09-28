@@ -3778,6 +3778,14 @@ KubernetesPatchSpec defines how to perform the patch operation.
 Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
 Note also that, currently, strings containing literal JSON are _rejected_.
 
+Warning: this patch is merged directly onto the fully-computed Kubernetes resource with no
+allowlist on which fields may be set. Whoever can author the EnvoyProxy resource that carries
+this patch can therefore set arbitrary fields — including hostPath volumes, hostNetwork/hostPID,
+privileged containers, or an arbitrary image/command — on a resource that Envoy Gateway's own,
+more privileged, ServiceAccount applies. Because EnvoyProxy is commonly namespace-scoped and
+tenant-authored, treat this field as untrusted input in multi-tenant clusters: restrict who may
+set it via RBAC, or disable EnvoyGateway's `EnvoyProxyPatch` runtime flag.
+
 _Appears in:_
 - [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
 - [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
@@ -5671,6 +5679,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
+| `EnvoyProxyPatch` | EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on<br />EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve<br />pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and<br />tenant-authored, a patch may grant arbitrary access to resources applied by Envoy<br />Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters<br />where tenants can author their own EnvoyProxy resources.<br /> | 
 
 
 #### RuntimeFlags

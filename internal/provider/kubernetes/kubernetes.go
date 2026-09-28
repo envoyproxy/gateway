@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -418,21 +419,28 @@ func (p *Provider) GetClient() client.Client {
 	return p.client
 }
 
-// Start starts the Provider synchronously until a message is received from ctx.
+// Start starts the Provider synchronously, blocking until the manager and
+// all of its registered runnables have exited.
 func (p *Provider) Start(ctx context.Context) error {
-	errChan := make(chan error)
-	go func() {
-		errChan <- p.manager.Start(ctx)
-	}()
-	go signalProviderReady(ctx, p.manager.GetCache().WaitForCacheSync, p.providerReady)
+	cacheCtx, cancel := context.WithCancel(ctx)
 
-	// Wait for the manager to exit or an explicit stop.
-	select {
-	case <-ctx.Done():
-		return nil
-	case err := <-errChan:
-		return err
-	}
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		signalProviderReady(cacheCtx, p.manager.GetCache().WaitForCacheSync, p.providerReady)
+	})
+	defer func() {
+		// Cancel first so WaitForCacheSync unblocks even if manager.Start returned
+		// before ctx was canceled -- e.g. a startup failure such as a health-probe or
+		// metrics listener bind error, which controller-runtime surfaces before it ever
+		// starts the caches. Without this, wg.Wait() below would block forever waiting
+		// on ctx, which the caller won't cancel until this Start call returns.
+		cancel()
+		wg.Wait()
+	}()
+
+	// manager.Start blocks until ctx is done and every registered Runnable,
+	// including the status subscription runnable, has returned.
+	return p.manager.Start(ctx)
 }
 
 func signalProviderReady(

@@ -131,6 +131,10 @@ type Translator struct {
 	// feature is enabled.
 	EnvoyPatchPolicyEnabled bool
 
+	// EnvoyProxyPatchDisabled disables applying the Kubernetes resource `patch`
+	// fields configured on EnvoyProxy's Kubernetes provider settings.
+	EnvoyProxyPatchDisabled bool
+
 	// LuaEnvoyExtensionPolicyDisabled when the Lua EnvoyExtensionPolicy feature is disabled.
 	LuaEnvoyExtensionPolicyDisabled bool
 

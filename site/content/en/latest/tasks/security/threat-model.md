@@ -131,7 +131,7 @@ Ultimately, the data of interest in a threat model is the business data processe
 | Data Name / Type | Notes | Confidentiality | Integrity | Availability |
 | ------------ | ------------ | ------------ |--------------- | ------------ |
 | Static Configuration Data | Static configuration data is used to configure Envoy Gateway at startup. This data structure allows for a Provider to be set, which Envoy Gateway calls to establish its runtime configuration, resolve services and persist data. Unauthorised modification of static configuration data could enable the Envoy Gateway admin interface to be configured, logging parameters to be modified, global rate limiting configuration to be misconfigured, or malicious extensions registered for the Envoy Gateway Control Plane.  A compromise of confidentiality could potentially give an attacker some useful reconnaissance information. A compromise of the availability of this information at startup time would result in Envoy Gateway starting with default parameters. | Medium | High | Low |
-| Dynamic Configuration Data | Dynamic configuration data represents the desired state of the Data Plane, and is defined through Envoy Gateway and Gateway API Kubernetes resources. Unauthorised modification of this data could lead to vulnerabilities in an organisation’s Data Plane infrastructure via misconfiguration of an EnvoyProxy custom resource. Misconfiguration of Gateway API objects such as HTTPRoutes or TLSRoutes could result in traffic being directed to incorrect backends. A compromise of confidentiality could potentially give an attacker some useful reconnaissance information. A compromise of the availability of this information could result in tenant application traffic not being routable until the configuration is recovered and reapplied. | Medium | High | Medium |
+| Dynamic Configuration Data | Dynamic configuration data represents the desired state of the Data Plane, and is defined through Envoy Gateway and Gateway API Kubernetes resources. Unauthorised modification of this data could lead to vulnerabilities in an organisation's Data Plane infrastructure via misconfiguration of an EnvoyProxy custom resource. Specifically, the `envoyDeployment.patch` field in EnvoyProxy resources allows strategic/JSON merge patches over the full Deployment specification with insufficient validation, which could be exploited to inject dangerous configurations such as `hostPath` mounts, `hostNetwork`, `hostPID`, privileged containers, or arbitrary images and commands. This could enable privilege escalation from namespace-scoped access to node-root and cluster compromise. Misconfiguration of Gateway API objects such as HTTPRoutes or TLSRoutes could result in traffic being directed to incorrect backends. A compromise of confidentiality could potentially give an attacker some useful reconnaissance information. A compromise of the availability of this information could result in tenant application traffic not being routable until the configuration is recovered and reapplied. | Medium | High | Medium |
 | TLS Private Keys | TLS Private Keys, typically in PEM format, are used to initiate secure connections and encrypt communications. In the context of this threat model, private keys will be associated with the server side of an inbound TLS connection being terminated at a secure gateway configured through Envoy Gateway. Unauthorised exposure could lead to security threats such as person-in-the-middle attacks, whereby the confidentiality or integrity of business data could be compromised. A compromise of integrity may lead to similar consequences if an attacker could insert their own key material. An availability compromise could lead to tenant services being unavailable until new key material is generated and an appropriate CSR submitted. | High | High | Medium |
 | TLS Certificates | X.509 certificates represent the binding of a public key (associated with the private key described above) to an identity in a TLS handshake. If an attacker could compromise the integrity of a certificate, they may be able to bind the identity of a TLS termination point to a key pair under their control, enabling person-in-the middle attacks. An availability compromise could lead to tenant services being unavailable until new key material is generated and an appropriate CSR submitted. | Low | High | Medium |
 | JWKs | JWK (JSON Web Key) containing a public key used to validate JWTs for the client authentication use case considered in this threat model. If an attacker could compromise the integrity of a JWK or  JSON web key set (JWKS), they could potentially authenticate to a service maliciously. Unavailability of an endpoint exposing JWKs could lead to client requests which require authentication being denied. | Low | High | Medium |
@@ -275,6 +275,34 @@ When considering internal threat actors, we chose to follow the [security model]
  **Threat**: Unauthorised creation or misconfiguration of Gateway API resources by a threat actor with cluster-scoped access.
 
  **Recommendation**: Configure the apiGroup and resource fields in RBAC policies to restrict access to [Gateway](https://gateway-api.sigs.k8s.io/) and [GatewayClass](https://gateway-api.sigs.k8s.io/api-types/gatewayclass/) resources. Enable namespace isolation by using the namespace field, preventing unauthorised access to gateways in other namespaces.
+
+### EGTM-026 Privilege escalation via EnvoyProxy deployment patch
+
+|**ID**|**UID**|**Category**|**Priority**|
+|--------------|---------------|-----------------------|-----------------|
+|EGTM-026|EGTM-EG-009|Envoy Gateway|High|
+
+ **Risk**: There is a risk that a tenant with RBAC permissions to create or modify EnvoyProxy resources in their namespace could exploit insufficient validation of the `envoyDeployment.patch` field to inject dangerous pod configurations (such as `hostPath` mounts, `hostNetwork`, `hostPID`, `privileged` containers, or arbitrary images/commands). Since the patched Deployment is applied by the controller service account into the controller namespace, this could lead to node-level privilege escalation and potential cluster compromise, affecting the confidentiality, integrity, and availability of all cluster resources.
+
+ **Threat**: Malicious tenant exploits EnvoyProxy custom resource patch capabilities to inject privileged configurations, escalate to node-root access, and compromise the entire cluster.
+
+ **Recommendation**: Restrict access to EnvoyProxy custom resources through strict RBAC policies. In multi-tenant environments, tenants should not have permissions to create or modify EnvoyProxy resources. If EnvoyProxy customization is required, implement one of the following mitigations:
+
+ - Disable EnvoyGateway's `EnvoyProxyPatch` runtime flag to globally block the `patch` field across all EnvoyProxy-managed Kubernetes resources (`envoyDeployment`, `envoyDaemonSet`, `envoyService`, `envoyHpa`, `envoyPDB`), regardless of which namespace or GatewayClass/Gateway the EnvoyProxy resource is sourced from. Any patch present on an EnvoyProxy is dropped at render time and surfaced as a `Warning`/`PatchDisabled` status condition on that EnvoyProxy, while the Gateway keeps being reconciled and serving traffic. This flag is enabled by default to preserve pre-existing behavior, so multi-tenant clusters where tenants can author their own EnvoyProxy resources should opt out explicitly:
+
+     ```yaml
+     runtimeFlags:
+         disabled:
+         - EnvoyProxyPatch
+     ```
+
+ - Deploy admission webhooks (such as [OPA Gatekeeper](https://github.com/open-policy-agent/gatekeeper) or [Kyverno](https://kyverno.io/)) to validate EnvoyProxy resources and enforce an allowlist of permitted fields in the `envoyDeployment.patch`. Block dangerous configurations including `hostPath`, `hostNetwork`, `hostPID`, `privileged`, and container image overrides.
+
+ - Use [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) with enforced `restricted` or `baseline` standards on the controller namespace to prevent deployment of pods with elevated privileges.
+
+ - Follow the [recommended multi-tenancy model](../operations/deployment-mode#multi-tenancy) where each tenant deploys their own Envoy Gateway controller in a namespace they own, limiting the blast radius of any compromise.
+
+ - Implement GitOps workflows where EnvoyProxy resources are managed centrally by cluster operators rather than by tenant developers, ensuring proper review and validation before deployment.
 
 ### EGTM-009 Co-tenant misconfigures resource across namespaces
 
