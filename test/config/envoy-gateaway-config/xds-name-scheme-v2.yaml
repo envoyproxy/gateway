@@ -26,6 +26,7 @@ data:
     runtimeFlags:
       enabled:
       - XDSNameSchemeV2
+      - EnvoyProxyPatch
     telemetry:
       traces:
         sink:

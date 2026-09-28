@@ -1,0 +1,1 @@
+Fixed a panic in the xDS server's Kubernetes JWT authentication when the TokenReview response contains an `Extra` field without the pod name key (`authentication.kubernetes.io/pod-name`). Such tokens (e.g. service account tokens not bound to a pod) are now rejected with an `Unauthenticated` error instead of crashing the control plane.

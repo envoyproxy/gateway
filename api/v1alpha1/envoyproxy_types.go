@@ -725,6 +725,11 @@ const (
 	EnvoyProxyReasonAccepted EnvoyProxyConditionReason = "Accepted"
 
 	EnvoyProxyReasonInvalidParameters EnvoyProxyConditionReason = "InvalidParameters"
+
+	// EnvoyProxyReasonPatchDisabled indicates that one or more Kubernetes resource
+	// `patch` fields configured on this EnvoyProxy were ignored because patching is
+	// disabled in the EnvoyGateway configuration.
+	EnvoyProxyReasonPatchDisabled EnvoyProxyConditionReason = "PatchDisabled"
 )
 
 // +kubebuilder:object:root=true
