@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -62,7 +61,7 @@ type UpdateHandler struct {
 	// cache may lag behind the API server under high watch-event churn (issue #9536).
 	apiReader     client.Reader
 	updateChannel chan Update
-	wg            *sync.WaitGroup
+	ready         chan struct{}
 }
 
 func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Reader) *UpdateHandler {
@@ -71,10 +70,8 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 		client:        client,
 		apiReader:     apiReader,
 		updateChannel: make(chan Update, 1000),
-		wg:            new(sync.WaitGroup),
+		ready:         make(chan struct{}),
 	}
-
-	u.wg.Add(1)
 
 	return u
 }
@@ -147,7 +144,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	defer u.log.Info("stopped status update handler")
 
 	// Enable Updaters to start sending updates to this handler.
-	u.wg.Done()
+	close(u.ready)
 
 	for {
 		select {
@@ -166,26 +163,33 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 func (u *UpdateHandler) Writer() Updater {
 	return &UpdateWriter{
 		updateChannel: u.updateChannel,
-		wg:            u.wg,
+		ready:         u.ready,
 	}
 }
 
 // Updater describes an interface to send status updates somewhere.
 type Updater interface {
-	Send(u Update)
+	Send(ctx context.Context, update Update)
 }
 
 // UpdateWriter takes status updates and sends these to the UpdateHandler via a channel.
 type UpdateWriter struct {
 	updateChannel chan<- Update
-	wg            *sync.WaitGroup
+	ready         <-chan struct{}
 }
 
 // Send sends the given Update off to the update channel for writing by the UpdateHandler.
-func (u *UpdateWriter) Send(update Update) {
-	// Wait until updater is ready
-	u.wg.Wait()
-	u.updateChannel <- update
+func (u *UpdateWriter) Send(ctx context.Context, update Update) {
+	select {
+	case <-ctx.Done():
+		return
+	case <-u.ready:
+	}
+
+	select {
+	case <-ctx.Done():
+	case u.updateChannel <- update:
+	}
 }
 
 // isStatusEqual checks if two objects have equivalent status.

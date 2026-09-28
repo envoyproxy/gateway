@@ -565,6 +565,14 @@ const (
 // KubernetesPatchSpec defines how to perform the patch operation.
 // Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
 // Note also that, currently, strings containing literal JSON are _rejected_.
+//
+// Warning: this patch is merged directly onto the fully-computed Kubernetes resource with no
+// allowlist on which fields may be set. Whoever can author the EnvoyProxy resource that carries
+// this patch can therefore set arbitrary fields — including hostPath volumes, hostNetwork/hostPID,
+// privileged containers, or an arbitrary image/command — on a resource that Envoy Gateway's own,
+// more privileged, ServiceAccount applies. Because EnvoyProxy is commonly namespace-scoped and
+// tenant-authored, treat this field as untrusted input in multi-tenant clusters: restrict who may
+// set it via RBAC, or disable EnvoyGateway's `EnvoyProxyPatch` runtime flag.
 type KubernetesPatchSpec struct {
 	// Type is the type of merge operation to perform
 	//

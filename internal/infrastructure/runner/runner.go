@@ -7,6 +7,7 @@ package runner
 
 import (
 	"context"
+	"sync"
 
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
@@ -32,10 +33,15 @@ type Config struct {
 type Runner struct {
 	Config
 	mgr infrastructure.Manager
+
+	// done tracks goroutines started by Start so that Close can wait for
+	// them to exit before closing mgr, which they call into.
+	done sync.WaitGroup
 }
 
 // Close implements Runner interface.
 func (r *Runner) Close() error {
+	r.done.Wait()
 	return r.mgr.Close()
 }
 
@@ -64,38 +70,39 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 
 	// This is a blocking function that subscribes to the infraIR and initializes the infrastructure.
-	subscribeInitInfraAndCloseInfraIRMessage := func() {
-		// Subscribe and Close in same goroutine to avoid race condition.
+	subscribeInitInfra := func() {
+		// Subscribe to InfraIR updates.
 		sub := r.InfraIR.Subscribe(ctx)
-		go r.updateProxyInfraFromSubscription(ctx, sub)
+		r.done.Go(func() {
+			r.updateProxyInfraFromSubscription(ctx, sub)
+		})
 
 		// Create the shared ratelimit infra during startup.
-		go r.initializeRateLimitInfra(ctx)
+		r.done.Go(func() {
+			r.initializeRateLimitInfra(ctx)
+		})
 
 		r.Logger.Info("started")
 		<-ctx.Done()
-		r.InfraIR.Close()
 		r.Logger.Info("shutting down")
 	}
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
 	// to avoid multiple EG instances processing envoy proxy infra resources.
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes &&
+	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
 		!ptr.Deref(r.EnvoyGateway.Provider.Kubernetes.LeaderElection.Disable, false) {
-		go func() {
+		r.done.Go(func() {
 			select {
 			case <-ctx.Done():
-				// As a follower EG instance close infraIR when the context is done.
-				r.InfraIR.Close()
 				return
 			case <-r.Elected:
-				// As a leader EG instance subscribe to infraIR to initialize the infrastructure and Close when the context is done.
-				subscribeInitInfraAndCloseInfraIRMessage()
+				// As a leader EG instance subscribe to infraIR to initialize the infrastructure.
+				subscribeInitInfra()
 			}
-		}()
+		})
 	} else {
-		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure and Close when the context is done.
-		go subscribeInitInfraAndCloseInfraIRMessage()
+		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure.
+		r.done.Go(subscribeInitInfra)
 	}
 	return err
 }
