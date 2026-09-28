@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -362,6 +363,198 @@ func TestValidateDescriptorPool(t *testing.T) {
 		})
 		require.ErrorContains(t, err, "failed to build a proto descriptor pool")
 		require.ErrorContains(t, err, "test.v1.Ping")
+	})
+}
+
+// Each case links in protodesc.NewFiles but fails Envoy's in-order DescriptorPool::BuildFile.
+func TestValidateDescriptorStructure(t *testing.T) {
+	echo := func(t *testing.T) *descriptorpb.FileDescriptorSet {
+		fds := &descriptorpb.FileDescriptorSet{}
+		require.NoError(t, proto.Unmarshal(grpcEchoDescriptorBin(t), fds))
+		return fds
+	}
+
+	t.Run("import listed after its importer", func(t *testing.T) {
+		fds := echo(t)
+		slices.Reverse(fds.File)
+		require.ErrorContains(t, loadDescriptorSet(t, fds), "lists grpcecho.proto before its import google/api/annotations.proto")
+	})
+
+	t.Run("weak dependency index out of range", func(t *testing.T) {
+		fds := echo(t)
+		last := fds.File[len(fds.File)-1]
+		last.WeakDependency = []int32{42}
+		require.ErrorContains(t, loadDescriptorSet(t, fds), "dependency index 42 out of range")
+	})
+
+	t.Run("uninterpreted option", func(t *testing.T) {
+		fds := echo(t)
+		last := fds.File[len(fds.File)-1]
+		last.Service[0].Method[0].Options.UninterpretedOption = []*descriptorpb.UninterpretedOption{{
+			Name: []*descriptorpb.UninterpretedOption_NamePart{{NamePart: proto.String("unknown"), IsExtension: proto.Bool(true)}},
+		}}
+		require.ErrorContains(t, loadDescriptorSet(t, fds), "has uninterpreted options")
+	})
+}
+
+// protobuf's DescriptorBuilder rejects these JSON-name clashes and NewFiles does not; the
+// accepted cases are the ones it only warns about or allows.
+func TestValidateJSONNames(t *testing.T) {
+	field := func(name, jsonName string) *descriptorpb.FieldDescriptorProto {
+		f := &descriptorpb.FieldDescriptorProto{
+			Name:   proto.String(name),
+			Number: proto.Int32(int32(len(name) + len(jsonName))),
+			Label:  descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+			Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+		}
+		if jsonName != "" {
+			f.JsonName = proto.String(jsonName)
+		}
+		return f
+	}
+	value := func(name string, n int32) *descriptorpb.EnumValueDescriptorProto {
+		return &descriptorpb.EnumValueDescriptorProto{Name: proto.String(name), Number: proto.Int32(n)}
+	}
+	file := func(syntax string, fields []*descriptorpb.FieldDescriptorProto, values ...*descriptorpb.EnumValueDescriptorProto) *descriptorpb.FileDescriptorProto {
+		f := &descriptorpb.FileDescriptorProto{
+			Name: proto.String("t.proto"), Package: proto.String("t"), Syntax: proto.String(syntax),
+			MessageType: []*descriptorpb.DescriptorProto{{Name: proto.String("M"), Field: fields}},
+		}
+		if len(values) > 0 {
+			f.EnumType = []*descriptorpb.EnumDescriptorProto{{Name: proto.String("Foo"), Value: values}}
+		}
+		return f
+	}
+
+	for _, tc := range []struct {
+		name    string
+		file    *descriptorpb.FileDescriptorProto
+		wantErr string
+	}{
+		{"distinct names", file("proto3", []*descriptorpb.FieldDescriptorProto{field("a", ""), field("b", "")}), ""},
+		{
+			"proto3 default names clash",
+			file("proto3", []*descriptorpb.FieldDescriptorProto{field("foo_bar", ""), field("fooBar", "")}),
+			`same JSON name "fooBar"`,
+		},
+		{
+			"proto2 default names clash is a warning",
+			file("proto2", []*descriptorpb.FieldDescriptorProto{field("foo_bar", ""), field("fooBar", "")}), "",
+		},
+		{
+			"proto2 custom names clash",
+			file("proto2", []*descriptorpb.FieldDescriptorProto{field("a", "x"), field("b", "x")}),
+			`same JSON name "x"`,
+		},
+		{
+			"custom name shaped like an extension",
+			file("proto3", []*descriptorpb.FieldDescriptorProto{field("a", "[a]")}),
+			"may not start with '[' and end with ']'",
+		},
+		{
+			"enum values collide without the prefix",
+			file("proto2", nil, value("FOO_BAR", 0), value("BAR", 1)),
+			"values FOO_BAR and BAR collide",
+		},
+		{"enum alias with the same number", file("proto3", nil, value("FOO_BAR", 0), value("BAR", 0)), ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateJSONNames(tc.file)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+
+	t.Run("proto2 legacy option allows the enum collision", func(t *testing.T) {
+		f := file("proto2", nil, value("FOO_BAR", 0), value("BAR", 1))
+		f.EnumType[0].Options = &descriptorpb.EnumOptions{DeprecatedLegacyJsonFieldConflicts: proto.Bool(true)}
+		require.NoError(t, validateJSONNames(f))
+	})
+}
+
+// A file repeated verbatim loads in Envoy, which returns the already-built copy.
+func TestDropRepeatedFiles(t *testing.T) {
+	echo := func(t *testing.T) *descriptorpb.FileDescriptorSet {
+		fds := &descriptorpb.FileDescriptorSet{}
+		require.NoError(t, proto.Unmarshal(grpcEchoDescriptorBin(t), fds))
+		return fds
+	}
+
+	t.Run("identical copy is accepted", func(t *testing.T) {
+		fds := echo(t)
+		fds.File = append(fds.File, proto.Clone(fds.File[0]).(*descriptorpb.FileDescriptorProto))
+		require.NoError(t, loadDescriptorSet(t, fds))
+	})
+	t.Run("differing copy is rejected", func(t *testing.T) {
+		fds := echo(t)
+		changed := proto.Clone(fds.File[0]).(*descriptorpb.FileDescriptorProto)
+		changed.Package = proto.String("other")
+		fds.File = append(fds.File, changed)
+		require.ErrorContains(t, loadDescriptorSet(t, fds), "failed to build a proto descriptor pool")
+	})
+	t.Run("copy with source info is rejected, as in Envoy", func(t *testing.T) {
+		fds := echo(t)
+		fds.File[0].SourceCodeInfo = &descriptorpb.SourceCodeInfo{}
+		fds.File = append(fds.File, proto.Clone(fds.File[0]).(*descriptorpb.FileDescriptorProto))
+		require.ErrorContains(t, loadDescriptorSet(t, fds), "failed to build a proto descriptor pool")
+	})
+}
+
+// With convertGRPCStatus Envoy loads its own any.proto and status.proto into the set's pool
+// when their symbols are missing; each case here makes that load fail.
+func TestValidateGRPCStatusBuiltins(t *testing.T) {
+	file := func(name, pkg string, deps []string, msgs ...*descriptorpb.DescriptorProto) *descriptorpb.FileDescriptorProto {
+		return &descriptorpb.FileDescriptorProto{
+			Name: proto.String(name), Package: proto.String(pkg), Syntax: proto.String("proto3"),
+			Dependency: deps, MessageType: msgs,
+		}
+	}
+	msg := func(name string) *descriptorpb.DescriptorProto {
+		return &descriptorpb.DescriptorProto{Name: proto.String(name)}
+	}
+	svc := func(deps ...string) *descriptorpb.FileDescriptorProto {
+		f := file("svc.proto", "test.v1", deps, msg("Req"), msg("Resp"))
+		f.Service = []*descriptorpb.ServiceDescriptorProto{{
+			Name: proto.String("Echo"),
+			Method: []*descriptorpb.MethodDescriptorProto{{
+				Name: proto.String("Ping"), InputType: proto.String(".test.v1.Req"), OutputType: proto.String(".test.v1.Resp"),
+			}},
+		}}
+		return f
+	}
+	build := func(t *testing.T, convert bool, files ...*descriptorpb.FileDescriptorProto) error {
+		t.Helper()
+		bin, err := proto.Marshal(&descriptorpb.FileDescriptorSet{File: files})
+		require.NoError(t, err)
+		tr := &Translator{TranslatorContext: &TranslatorContext{}}
+		tr.SetConfigMaps([]*corev1.ConfigMap{configMap("d", nil, map[string][]byte{"proto-descriptor": bin})})
+		_, err = tr.buildGRPCJSONTranscoder(&egv1a1.GRPCJSONTranscoder{
+			ProtoDescriptor: egv1a1.ProtoDescriptor{
+				ValueRef: gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "d"},
+			},
+			Services:          []string{"test.v1.Echo"},
+			ConvertGRPCStatus: &convert,
+		}, "n", "default")
+		return err
+	}
+	vendoredAny := file("third_party/google/protobuf/any.proto", "google.protobuf", nil, msg("Any"))
+
+	t.Run("builtins added to a set without them", func(t *testing.T) {
+		require.NoError(t, build(t, true, svc()))
+	})
+	t.Run("vendored Any is fine without the flag", func(t *testing.T) {
+		require.NoError(t, build(t, false, vendoredAny, svc(vendoredAny.GetName())))
+	})
+	t.Run("vendored Any leaves status.proto's import unresolved", func(t *testing.T) {
+		require.ErrorContains(t, build(t, true, vendoredAny, svc(vendoredAny.GetName())),
+			"Envoy adds its own google/rpc/status.proto, which imports google/protobuf/any.proto")
+	})
+	t.Run("file at a builtin's path without its symbol", func(t *testing.T) {
+		require.ErrorContains(t, build(t, true, file("google/rpc/status.proto", "other.v1", nil, msg("Other")), svc()),
+			"conflict with the proto descriptor")
 	})
 }
 

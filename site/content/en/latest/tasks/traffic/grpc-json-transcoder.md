@@ -140,8 +140,10 @@ not rejected.
 ## Diagnosing a bad descriptor
 
 The descriptor is parsed and validated when the route is translated, not when Envoy loads the listener. A descriptor that
-is malformed, missing its imports, or does not declare a service you named in `services` makes the rule return `500` and
-records the reason on the HTTPRoute's `Accepted` condition:
+is malformed, missing its imports, lists a file before the files it imports, has two fields whose JSON names clash or
+two enum values that become the same name once the enum-name prefix is stripped, or does not declare a service you named
+in `services` makes the rule return `500` and records the reason on the HTTPRoute's `Accepted` condition. A file repeated verbatim, as concatenating two descriptor sets that share an import
+produces, is accepted:
 
 ```shell
 kubectl get httproute grpc-route -o yaml
@@ -152,6 +154,11 @@ naming a field the message does not have, a `response_body` that is not a `googl
 path template in any binding, such as `v1/hello` without the leading `/` or an unclosed `{`. The template check is
 slightly stricter than Envoy's: literals cannot contain `*` or `{`, variable names must be protobuf field names, and no
 variable may follow `**`.
+
+With `convertGRPCStatus`, Envoy adds its own `google/protobuf/any.proto` and `google/rpc/status.proto` to the
+descriptor when they do not declare `google.protobuf.Any` and `google.rpc.Status`. A descriptor that declares `Any` at
+another path, as compiling vendored well-known protos from `third_party/` does, or that has a different file at one of
+those two paths, is rejected the same way.
 
 ## Clean-Up
 

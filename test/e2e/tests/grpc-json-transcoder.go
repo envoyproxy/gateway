@@ -183,8 +183,26 @@ var GRPCJSONTranscoderTest = suite.ConformanceTest{
 				path:    "/v1/invalid-template",
 				wantMsg: `invalid path template "v1/invalid-template"`,
 			},
+			{
+				route:   "grpc-json-transcoder-misordered",
+				host:    "misordered.transcoder.example.com",
+				path:    "/v1/ping",
+				wantMsg: "lists b.proto before its import a.proto",
+			},
+			{
+				route:   "grpc-json-transcoder-vendored-any",
+				host:    "vendored-any.transcoder.example.com",
+				path:    "/v1/ping",
+				wantMsg: "Envoy adds its own google/rpc/status.proto, which imports google/protobuf/any.proto",
+			},
+			{
+				route:   "grpc-json-transcoder-json-name-clash",
+				host:    "json-name-clash.transcoder.example.com",
+				path:    "/v1/ping",
+				wantMsg: `fields foo_bar and fooBar have the same JSON name "fooBar"`,
+			},
 		} {
-			t.Run("invalid binding is rejected on the route: "+tc.route, func(t *testing.T) {
+			t.Run("invalid descriptor is rejected on the route: "+tc.route, func(t *testing.T) {
 				// Polls on the message, not only the reason: before the ConfigMap is seen the
 				// route is already rejected with UnsupportedValue, for a different cause.
 				nn := types.NamespacedName{Name: tc.route, Namespace: ns}

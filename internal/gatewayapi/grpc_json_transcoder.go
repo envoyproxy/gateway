@@ -9,18 +9,22 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
 	"google.golang.org/genproto/googleapis/api/annotations"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/known/anypb"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -51,6 +55,11 @@ func (t *Translator) buildGRPCJSONTranscoder(
 	if err := validateHTTPBindings(descriptor.files, services); err != nil {
 		return nil, err
 	}
+	if ptr.Deref(cfg.ConvertGRPCStatus, false) {
+		if err := validateGRPCStatusBuiltins(descriptor); err != nil {
+			return nil, err
+		}
+	}
 
 	return &ir.GRPCJSONTranscoder{
 		Name:                         name,
@@ -71,6 +80,7 @@ type parsedProtoDescriptor struct {
 	// and re-unmarshalled once per referencing rule on every translation.
 	err   error
 	bin   []byte
+	fds   *descriptorpb.FileDescriptorSet
 	files *protoregistry.Files
 	// all is every service declared in the set; roots omits those declared by files that
 	// another file imports.
@@ -119,7 +129,11 @@ func parseProtoDescriptor(cm *corev1.ConfigMap, key types.NamespacedName) (*pars
 		return nil, fmt.Errorf("failed to parse proto descriptor as a FileDescriptorSet: %s",
 			trimProtoPrefix(err))
 	}
+	fds.File = dropRepeatedFiles(fds.File)
 	if err := validateDescriptorClosure(fds); err != nil {
+		return nil, err
+	}
+	if err := validateDescriptorStructure(fds); err != nil {
 		return nil, err
 	}
 	files, err := validateDescriptorPool(fds)
@@ -134,7 +148,7 @@ func parseProtoDescriptor(cm *corev1.ConfigMap, key types.NamespacedName) (*pars
 		imported.Insert(file.GetDependency()...)
 	}
 
-	d := &parsedProtoDescriptor{bin: bin, files: files, all: sets.New[string]()}
+	d := &parsedProtoDescriptor{bin: bin, fds: fds, files: files, all: sets.New[string]()}
 	for _, file := range fds.GetFile() {
 		for _, svc := range file.GetService() {
 			name := svc.GetName()
@@ -222,6 +236,281 @@ func validateDescriptorClosure(fds *descriptorpb.FileDescriptorSet) error {
 			strings.Join(sets.List(missing), ", "))
 	}
 	return nil
+}
+
+// validateDescriptorStructure checks what protodesc.NewFiles does not but Envoy's pool
+// does. Envoy builds the files one at a time in set order with no fallback, so each import
+// must precede the file importing it, dependency indices must be in range, and options must
+// already be interpreted. protoc output meets all three; a concatenation of sets may not.
+func validateDescriptorStructure(fds *descriptorpb.FileDescriptorSet) error {
+	built := sets.New[string]()
+	for _, f := range fds.GetFile() {
+		for _, dep := range f.GetDependency() {
+			if !built.Has(dep) {
+				return fmt.Errorf("proto descriptor lists %s before its import %s, and Envoy loads files "+
+					"in order; generate it with `protoc --include_imports` instead of concatenating sets",
+					f.GetName(), dep)
+			}
+		}
+		for _, i := range slices.Concat(f.GetPublicDependency(), f.GetWeakDependency()) {
+			if i < 0 || int(i) >= len(f.GetDependency()) {
+				return fmt.Errorf("proto descriptor file %s has dependency index %d out of range", f.GetName(), i)
+			}
+		}
+		if hasUninterpretedOption(f.ProtoReflect()) {
+			return fmt.Errorf("proto descriptor file %s has uninterpreted options, which protoc never emits", f.GetName())
+		}
+		if err := validateJSONNames(f); err != nil {
+			return fmt.Errorf("proto descriptor file %s: %w", f.GetName(), err)
+		}
+		built.Insert(f.GetName())
+	}
+	return nil
+}
+
+// dropRepeatedFiles removes later copies of a file that are identical to an earlier one, as
+// concatenating two sets that share an import produces. Envoy's pool accepts such a copy
+// only when it serializes the same as the loaded file, which drops source_code_info, so a
+// copy carrying that is kept and rejected by linking.
+func dropRepeatedFiles(files []*descriptorpb.FileDescriptorProto) []*descriptorpb.FileDescriptorProto {
+	first := map[string]*descriptorpb.FileDescriptorProto{}
+	out := files[:0:0]
+	for _, f := range files {
+		if prev, ok := first[f.GetName()]; ok && f.SourceCodeInfo == nil && proto.Equal(prev, f) {
+			continue
+		}
+		if _, ok := first[f.GetName()]; !ok {
+			first[f.GetName()] = f
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// validateJSONNames mirrors protobuf's CheckFieldJsonNameUniqueness and
+// CheckEnumValueUniqueness, which Envoy's pool enforces and protodesc.NewFiles does not.
+// Field JSON names must be unique both with and without custom json_name values; in proto2
+// a clash involving a default name is only a warning there. Enum values must stay distinct
+// once the enum-name prefix is stripped and they are PascalCased. Editions files are
+// treated as proto3, which is stricter than protobuf when they opt into LEGACY_BEST_EFFORT.
+func validateJSONNames(f *descriptorpb.FileDescriptorProto) error {
+	proto2 := f.GetSyntax() == "" || f.GetSyntax() == "proto2"
+
+	checkEnum := func(scope string, e *descriptorpb.EnumDescriptorProto) error {
+		if proto2 && e.GetOptions().GetDeprecatedLegacyJsonFieldConflicts() {
+			return nil
+		}
+		prefix := strings.ToLower(strings.ReplaceAll(e.GetName(), "_", ""))
+		seen := map[string]*descriptorpb.EnumValueDescriptorProto{}
+		for _, v := range e.GetValue() {
+			key := enumValueToPascalCase(removeEnumPrefix(prefix, v.GetName()))
+			prev, ok := seen[key]
+			if !ok {
+				seen[key] = v
+				continue
+			}
+			if prev.GetName() != v.GetName() && prev.GetNumber() != v.GetNumber() {
+				return fmt.Errorf("enum %s: values %s and %s collide once the enum-name prefix is "+
+					"stripped", qualify(scope, e.GetName()), prev.GetName(), v.GetName())
+			}
+		}
+		return nil
+	}
+
+	var checkMessage func(scope string, m *descriptorpb.DescriptorProto) error
+	checkMessage = func(scope string, m *descriptorpb.DescriptorProto) error {
+		name := qualify(scope, m.GetName())
+		if !m.GetOptions().GetDeprecatedLegacyJsonFieldConflicts() {
+			for _, useCustom := range []bool{false, true} {
+				type seenField struct {
+					field  *descriptorpb.FieldDescriptorProto
+					custom bool
+				}
+				seen := map[string]seenField{}
+				for _, fd := range m.GetField() {
+					jsonName, custom := jsonCamelCase(fd.GetName()), false
+					if useCustom && fd.JsonName != nil && fd.GetJsonName() != jsonName {
+						jsonName, custom = fd.GetJsonName(), true
+					}
+					if custom && strings.HasPrefix(jsonName, "[") && strings.HasSuffix(jsonName, "]") {
+						return fmt.Errorf("message %s: custom JSON name %q of field %s may not start with "+
+							"'[' and end with ']'", name, jsonName, fd.GetName())
+					}
+					prev, ok := seen[jsonName]
+					if !ok {
+						seen[jsonName] = seenField{fd, custom}
+						continue
+					}
+					if (useCustom && !custom && !prev.custom) || (proto2 && (!custom || !prev.custom)) {
+						continue
+					}
+					return fmt.Errorf("message %s: fields %s and %s have the same JSON name %q",
+						name, prev.field.GetName(), fd.GetName(), jsonName)
+				}
+			}
+		}
+		for _, e := range m.GetEnumType() {
+			if err := checkEnum(name, e); err != nil {
+				return err
+			}
+		}
+		for _, nested := range m.GetNestedType() {
+			if err := checkMessage(name, nested); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	for _, e := range f.GetEnumType() {
+		if err := checkEnum(f.GetPackage(), e); err != nil {
+			return err
+		}
+	}
+	for _, m := range f.GetMessageType() {
+		if err := checkMessage(f.GetPackage(), m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func qualify(scope, name string) string {
+	if scope == "" {
+		return name
+	}
+	return scope + "." + name
+}
+
+// jsonCamelCase is protobuf's ToJsonName: drop each '_' and upper-case the byte after it.
+func jsonCamelCase(s string) string {
+	var b strings.Builder
+	upper := false
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case c == '_':
+			upper = true
+		case upper:
+			b.WriteByte(asciiUpper(c))
+			upper = false
+		default:
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
+}
+
+// enumValueToPascalCase is protobuf's EnumValueToPascalCase.
+func enumValueToPascalCase(s string) string {
+	var b strings.Builder
+	upper := true
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case c == '_':
+			upper = true
+		case upper:
+			b.WriteByte(asciiUpper(c))
+			upper = false
+		default:
+			b.WriteByte(asciiLower(c))
+		}
+	}
+	return b.String()
+}
+
+// removeEnumPrefix is protobuf's PrefixRemover::MaybeRemove; prefix is the enum name
+// lower-cased with underscores removed.
+func removeEnumPrefix(prefix, s string) string {
+	i, j := 0, 0
+	for ; i < len(s) && j < len(prefix); i++ {
+		if s[i] == '_' {
+			continue
+		}
+		if asciiLower(s[i]) != prefix[j] {
+			return s
+		}
+		j++
+	}
+	if j < len(prefix) {
+		return s
+	}
+	for i < len(s) && s[i] == '_' {
+		i++
+	}
+	if i == len(s) {
+		return s
+	}
+	return s[i:]
+}
+
+func asciiUpper(c byte) byte {
+	if 'a' <= c && c <= 'z' {
+		return c - 'a' + 'A'
+	}
+	return c
+}
+
+func asciiLower(c byte) byte {
+	if 'A' <= c && c <= 'Z' {
+		return c - 'A' + 'a'
+	}
+	return c
+}
+
+// validateGRPCStatusBuiltins mirrors what Envoy does for convert_grpc_status once the set is
+// loaded: for google.protobuf.Any and then google.rpc.Status, if the pool lacks the symbol it
+// adds the defining file from its own compiled-in protos, into the same pool. That load fails
+// when the set declares Any in a file with another path, since status.proto imports it by
+// its canonical one, or when the set already has a file at one of those paths.
+func validateGRPCStatusBuiltins(d *parsedProtoDescriptor) error {
+	fds := &descriptorpb.FileDescriptorSet{File: slices.Clone(d.fds.GetFile())}
+	paths := sets.New[string]()
+	for _, f := range fds.File {
+		paths.Insert(f.GetName())
+	}
+	for _, builtin := range []protoreflect.FileDescriptor{
+		anypb.File_google_protobuf_any_proto,
+		spb.File_google_rpc_status_proto,
+	} {
+		if _, err := d.files.FindDescriptorByName(builtin.Messages().Get(0).FullName()); err == nil {
+			continue
+		}
+		for i := range builtin.Imports().Len() {
+			if dep := builtin.Imports().Get(i).Path(); !paths.Has(dep) {
+				return fmt.Errorf("convertGRPCStatus: Envoy adds its own %s, which imports %s, and the "+
+					"proto descriptor has no file at that path", builtin.Path(), dep)
+			}
+		}
+		fds.File = append(fds.File, protodesc.ToFileDescriptorProto(builtin))
+		paths.Insert(builtin.Path())
+	}
+	if _, err := protodesc.NewFiles(fds); err != nil {
+		return fmt.Errorf("convertGRPCStatus: Envoy adds its own google/protobuf/any.proto and "+
+			"google/rpc/status.proto where missing, and they conflict with the proto descriptor: %s",
+			trimProtoPrefix(err))
+	}
+	return nil
+}
+
+// hasUninterpretedOption reports whether m or any message nested in it sets
+// uninterpreted_option.
+func hasUninterpretedOption(m protoreflect.Message) bool {
+	found := false
+	m.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		switch {
+		case fd.Name() == "uninterpreted_option":
+			found = true
+		case fd.Message() == nil || fd.IsMap():
+		case fd.IsList():
+			for i := 0; i < v.List().Len() && !found; i++ {
+				found = hasUninterpretedOption(v.List().Get(i).Message())
+			}
+		default:
+			found = hasUninterpretedOption(v.Message())
+		}
+		return !found
+	})
+	return found
 }
 
 // validateDescriptorPool links the descriptor graph, which unmarshalling does not: a set

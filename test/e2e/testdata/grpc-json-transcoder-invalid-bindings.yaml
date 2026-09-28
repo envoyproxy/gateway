@@ -1,6 +1,206 @@
-# Each route below references a descriptor that links cleanly but carries a google.api.http
-# binding Envoy's transcoder refuses to load. Without translation-time validation the filter
-# would reach the listener and Envoy would reject the whole listener update.
+# Each route below references a descriptor that links cleanly but that Envoy's transcoder
+# refuses to load: a bad google.api.http binding, files out of dependency order, or a
+# vendored google.protobuf.Any that convertGRPCStatus trips over. Without translation-time
+# validation the filter would reach the listener and Envoy would reject the whole listener
+# update.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grpc-json-transcoder-json-name-clash
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames:
+  - "json-name-clash.transcoder.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/v1"
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: grpc-json-transcoder-json-name-clash
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: grpc-infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: grpc-json-transcoder-json-name-clash
+  namespace: gateway-conformance-infra
+spec:
+  grpcJSONTranscoder:
+    services:
+    - t.S
+    protoDescriptor:
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: grpc-json-transcoder-json-name-clash
+---
+# Two proto3 fields sharing a JSON name, which protoc refuses but other generators may emit:
+#
+#   syntax = "proto3";
+#   package t;
+#   message M { string foo_bar = 1; string fooBar = 2; }
+#   service S { rpc P(M) returns (M); }
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grpc-json-transcoder-json-name-clash
+  namespace: gateway-conformance-infra
+data:
+  proto-descriptor: |
+    ClAKB3QucHJvdG8SAXQiJAoBTRIPCgdmb29fYmFyGAEgASgJEg4KBmZvb0JhchgCIAEoCTIUCgFTEg8KAVASBC50Lk0aBC50Lk1i
+    BnByb3RvMw==
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grpc-json-transcoder-vendored-any
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames:
+  - "vendored-any.transcoder.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/v1"
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: grpc-json-transcoder-vendored-any
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: grpc-infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: grpc-json-transcoder-vendored-any
+  namespace: gateway-conformance-infra
+spec:
+  grpcJSONTranscoder:
+    services:
+    - transcoder.status.v1.VendoredAny
+    # Envoy then adds its own google/rpc/status.proto, whose import of
+    # google/protobuf/any.proto is not in the set. The same descriptor loads without this.
+    convertGRPCStatus: true
+    protoDescriptor:
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: grpc-json-transcoder-vendored-any
+---
+# The well-known protos vendored under third_party/ and compiled with -I .:
+#
+#   // third_party/google/protobuf/any.proto
+#   syntax = "proto3";
+#   package google.protobuf;
+#   message Any { string type_url = 1; bytes value = 2; }
+#
+#   // svc.proto
+#   syntax = "proto3";
+#   package transcoder.status.v1;
+#   import "third_party/google/protobuf/any.proto";
+#   message PingRequest { google.protobuf.Any detail = 1; }
+#   message PingResponse {}
+#   service VendoredAny { rpc Ping(PingRequest) returns (PingResponse); }
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grpc-json-transcoder-vendored-any
+  namespace: gateway-conformance-infra
+data:
+  proto-descriptor: |
+    CnkKJXRoaXJkX3BhcnR5L2dvb2dsZS9wcm90b2J1Zi9hbnkucHJvdG8SD2dvb2dsZS5wcm90b2J1ZiI3CgNBbnkSGgoIdHlwZV91
+    cmwYASABKAlSCHR5cGVfdXJsEhQKBXZhbHVlGAIgASgMUgV2YWx1ZWIGcHJvdG8zCvsBCglzdmMucHJvdG8SFHRyYW5zY29kZXIu
+    c3RhdHVzLnYxGiV0aGlyZF9wYXJ0eS9nb29nbGUvcHJvdG9idWYvYW55LnByb3RvIjsKC1BpbmdSZXF1ZXN0EiwKBmRldGFpbBgB
+    IAEoCzIULmdvb2dsZS5wcm90b2J1Zi5BbnlSBmRldGFpbCIOCgxQaW5nUmVzcG9uc2UyXAoLVmVuZG9yZWRBbnkSTQoEUGluZxIh
+    LnRyYW5zY29kZXIuc3RhdHVzLnYxLlBpbmdSZXF1ZXN0GiIudHJhbnNjb2Rlci5zdGF0dXMudjEuUGluZ1Jlc3BvbnNlYgZwcm90
+    bzM=
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grpc-json-transcoder-misordered
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames:
+  - "misordered.transcoder.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/v1"
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: grpc-json-transcoder-misordered
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: grpc-infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: grpc-json-transcoder-misordered
+  namespace: gateway-conformance-infra
+spec:
+  grpcJSONTranscoder:
+    services:
+    - transcoder.order.v1.Misordered
+    protoDescriptor:
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: grpc-json-transcoder-misordered
+---
+# b.proto (service Misordered, importing a.proto for its messages) listed before a.proto, as
+# `cat b.pb a.pb` produces:
+#
+#   // a.proto
+#   syntax = "proto3";
+#   package transcoder.order.v1;
+#   message PingRequest {}
+#   message PingResponse {}
+#
+#   // b.proto
+#   syntax = "proto3";
+#   package transcoder.order.v1;
+#   import "a.proto";
+#   service Misordered { rpc Ping(PingRequest) returns (PingResponse); }
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grpc-json-transcoder-misordered
+  namespace: gateway-conformance-infra
+data:
+  proto-descriptor: |
+    CooBCgdiLnByb3RvEhN0cmFuc2NvZGVyLm9yZGVyLnYxGgdhLnByb3RvMlkKCk1pc29yZGVyZWQSSwoEUGluZxIgLnRyYW5zY29k
+    ZXIub3JkZXIudjEuUGluZ1JlcXVlc3QaIS50cmFuc2NvZGVyLm9yZGVyLnYxLlBpbmdSZXNwb25zZWIGcHJvdG8zCkUKB2EucHJv
+    dG8SE3RyYW5zY29kZXIub3JkZXIudjEiDQoLUGluZ1JlcXVlc3QiDgoMUGluZ1Jlc3BvbnNlYgZwcm90bzM=
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
