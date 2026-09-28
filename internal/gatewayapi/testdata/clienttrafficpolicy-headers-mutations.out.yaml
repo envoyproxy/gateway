@@ -1,16 +1,50 @@
-backendTrafficPolicies:
+clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
+  kind: ClientTrafficPolicy
   metadata:
-    name: btp-gateway-consistent-hash
+    name: target-gateway-1
     namespace: envoy-gateway
   spec:
-    loadBalancer:
-      consistentHash:
-        type: SourceIP
-      type: ConsistentHash
-    targetRefs:
-    - group: gateway.networking.k8s.io
+    headers:
+      earlyRequestHeaders:
+        add:
+        - name: x-legacy
+          value: legacy-value
+        mutations:
+        - write:
+            action: Set
+            header:
+              name: x-foo
+              value: "1"
+        - write:
+            action: Add
+            header:
+              name: x-foo
+              value: "2"
+        - remove: x-secret
+        - removeOnMatch:
+            type: RegularExpression
+            value: ^x-internal-.*
+        - write:
+            action: SetIfExists
+            header:
+              name: x-if-exists
+              value: override
+      lateResponseHeaders:
+        mutations:
+        - write:
+            action: Set
+            header:
+              name: x-resp
+              value: a
+        - write:
+            action: Add
+            header:
+              name: x-resp
+              value: b
+        - remove: server
+    targetRef:
+      group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -26,6 +60,11 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -38,13 +77,13 @@ gateways:
     listeners:
     - allowedRoutes:
         namespaces:
-          from: All
-      name: http
+          from: Same
+      name: http-1
       port: 80
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -61,65 +100,17 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: http-1
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: http-route-1
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-        weight: 60
-      - name: service-2
-        port: 8080
-        weight: 40
-      matches:
-      - path:
-          value: /split
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      config:
-        apiVersion: gateway.envoyproxy.io/v1alpha1
-        kind: EnvoyProxy
-        metadata:
-          name: test
-          namespace: envoy-gateway-system
-        spec:
-          logging: {}
-          mergeBackends: {}
-        status: {}
       listeners:
-      - name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10080
           name: http-80
@@ -163,69 +154,52 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
+      headers:
+        earlyRequestHeaderMutations:
+        - write:
+            action: Set
+            name: x-foo
+            value: "1"
+        - write:
+            action: Add
+            name: x-foo
+            value: "2"
+        - remove: x-secret
+        - removeOnMatch:
+            distinct: false
+            name: ""
+            safeRegex: ^x-internal-.*
+        - write:
+            action: SetIfExists
+            name: x-if-exists
+            value: override
+        - write:
+            action: Add
+            name: x-legacy
+            value: legacy-value
+        lateResponseHeaderMutations:
+        - write:
+            action: Set
+            name: x-resp
+            value: a
+        - write:
+            action: Add
+            name: x-resp
+            value: b
+        - remove: server
+        withUnderscoresAction: RejectRequest
       hostnames:
       - '*'
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
-      name: envoy-gateway/gateway-1/http
+        sectionName: http-1
+      name: envoy-gateway/gateway-1/http-1
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-      routes:
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: http-route-1
-            namespace: default
-          name: httproute/default/http-route-1/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/http-route-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 60
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/http-route-1/rule/0/backend/1
-            protocol: HTTP
-            weight: 40
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: http-route-1
-          namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: btp-gateway-consistent-hash
-            namespace: envoy-gateway
-        name: httproute/default/http-route-1/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /split
-        traffic:
-          loadBalancer:
-            consistentHash:
-              sourceIP: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

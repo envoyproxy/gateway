@@ -1,0 +1,28 @@
+- ignorePortInHostMatching: true
+  name: early-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: early-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: early-route
+      route:
+        cluster: early-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: late-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: late-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: late-route
+      route:
+        cluster: late-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

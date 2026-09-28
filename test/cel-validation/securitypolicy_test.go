@@ -1291,6 +1291,138 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "jwt with claim path to headers",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										ClaimPath: []string{"https://example.com/claims/tenant_name"},
+										Header:    "x-tenant-name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "jwt with both claim and claimPath set",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										Claim:     "name",
+										ClaimPath: []string{"https://example.com/claims/tenant_name"},
+										Header:    "x-tenant-name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"exactly one of claim or claimpath must be specified"},
+		},
+		{
+			desc: "jwt with neither claim nor claimPath set",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										Header: "x-tenant-name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"exactly one of claim or claimpath must be specified"},
+		},
+		{
+			desc: "jwt with empty claimPath segment",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										ClaimPath: []string{""},
+										Header:    "x-tenant-name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
+		},
+		{
 			desc: "jwt with recomputeRoute",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{

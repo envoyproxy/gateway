@@ -134,28 +134,24 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       headers:
-        earlyAddRequestHeaders:
-        - addIfAbsent: true
-          append: false
-          name: my-early-default-header
-          value:
-          - my-early-default-value
-        - addIfAbsent: true
-          append: false
-          name: another-early-default-header
-          value:
-          - another-early-value
-        lateAddResponseHeaders:
-        - addIfAbsent: true
-          append: false
-          name: my-default-header
-          value:
-          - my-default-value
-        - addIfAbsent: true
-          append: false
-          name: another-default-header
-          value:
-          - another-value
+        earlyRequestHeaderMutations:
+        - write:
+            action: AddIfAbsent
+            name: my-early-default-header
+            value: my-early-default-value
+        - write:
+            action: AddIfAbsent
+            name: another-early-default-header
+            value: another-early-value
+        lateResponseHeaderMutations:
+        - write:
+            action: AddIfAbsent
+            name: my-default-header
+            value: my-default-value
+        - write:
+            action: AddIfAbsent
+            name: another-default-header
+            value: another-value
         withUnderscoresAction: RejectRequest
       hostnames:
       - '*'

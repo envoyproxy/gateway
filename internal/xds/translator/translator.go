@@ -127,6 +127,10 @@ type Translator struct {
 	// backendIndex resolves BackendClusterRef.Name against the current Translate() call's
 	// xdsIR.BackendClusters registry. Rebuilt at the start of every Translate() call.
 	backendIndex backendClusterIndex
+
+	// extensionIndex resolves UnstructuredRef.Name against the current Translate() call's
+	// xdsIR.ExtensionResources registry. Rebuilt at the start of every Translate() call.
+	extensionIndex extensionResourceIndex
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -181,6 +185,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	defer phases.EndInFlight()
 
 	t.backendIndex = newBackendClusterIndex(xdsIR)
+	t.extensionIndex = newExtensionResourceIndex(xdsIR)
 
 	tCtx := new(types.ResourceVersionTable)
 
@@ -275,7 +280,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	phases.Start("XdsTranslator.processExtensionPostTranslationHook",
 		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
 	)
-	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies)
+	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies, t.extensionIndex)
 	phases.End()
 	if err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
@@ -384,14 +389,15 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 		alreadyIncludedPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
 		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
 			for _, pol := range irListener.GetExtensionRefs() {
-				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
+				obj := resolveUnstructuredRef(pol, t.extensionIndex)
+				key := utils.GetNamespacedNameWithGroupKind(obj)
 				if !alreadyIncludedPolicies.Has(key) {
 					policies = append(policies, pol)
 					alreadyIncludedPolicies.Insert(key)
 				}
 			}
 		}
-		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
+		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager, t.extensionIndex); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -739,7 +745,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		// Check if an extension want to modify the route we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
+		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex); err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -768,7 +774,7 @@ func (t *Translator) addRouteToRouteConfig(
 			if len(httpRoute.ExtensionRefs) > 0 {
 				extensionResources = make([]*unstructured.Unstructured, len(httpRoute.ExtensionRefs))
 				for refIdx, ref := range httpRoute.ExtensionRefs {
-					extensionResources[refIdx] = ref.Object
+					extensionResources[refIdx] = resolveUnstructuredRef(ref, t.extensionIndex)
 				}
 			}
 
@@ -951,8 +957,6 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs, err error
-	var sharedEmptyTCPRoute *ir.TCPRoute
-	emptyFilterChainAdded := make(map[string]bool)
 
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
@@ -1031,12 +1035,10 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			}
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
+				tcpListener,
 				route,
 				singleClusterDestinationName(route.Destination),
 				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1045,37 +1047,29 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
-			// Reuse shared EmptyCluster across all listeners without routes
+			// The EmptyCluster itself is shared by every listener that needs a placeholder.
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
 
-			if sharedEmptyTCPRoute == nil {
-				sharedEmptyTCPRoute = &ir.TCPRoute{
+			// Name the placeholder after its listener so the chains stay distinguishable in
+			// config dumps when several listeners share one xDS listener.
+			emptyRoute := &ir.TCPRoute{
+				Name: tcpListener.Name + "/no-routes",
+				Destination: &ir.RouteDestination{
 					Name: emptyClusterName,
-					Destination: &ir.RouteDestination{
-						Name: emptyClusterName,
-					},
-				}
+				},
 			}
-
-			// Only add the filter chain once per xDS listener; multiple IR listeners may share
-			// the same address/port and map to the same xDS listener.
-			if !emptyFilterChainAdded[xdsListener.Name] {
-				if err := t.addXdsTCPFilterChain(
-					xdsListener,
-					sharedEmptyTCPRoute,
-					emptyClusterName,
-					accesslog,
-					tcpListener.Timeout,
-					tcpListener.Connection,
-					tcpListener.TLS,
-				); err != nil {
-					errs = errors.Join(errs, err)
-				}
-				emptyFilterChainAdded[xdsListener.Name] = true
+			if err := t.addXdsTCPFilterChain(
+				xdsListener,
+				tcpListener,
+				emptyRoute,
+				emptyClusterName,
+				accesslog,
+			); err != nil {
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
