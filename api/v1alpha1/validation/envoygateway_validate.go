@@ -8,6 +8,7 @@ package validation
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -314,6 +315,11 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 
 	if len(extensionManager.Hooks.XDSTranslator.Pre) == 0 && len(extensionManager.Hooks.XDSTranslator.Post) == 0 {
 		return fmt.Errorf("registered extension has no hooks specified")
+	}
+
+	if len(extensionManager.CertificateResources) > 0 &&
+		!slices.Contains(extensionManager.Hooks.XDSTranslator.Post, egv1a1.XDSTLSCertificate) {
+		return fmt.Errorf("certificateResources requires the %s hook to be registered", egv1a1.XDSTLSCertificate)
 	}
 
 	err := validateExtensionService(extensionManager.Service)
