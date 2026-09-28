@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -49,7 +50,10 @@ type grpcEchoResponse struct {
 var GRPCJSONTranscoderTest = suite.ConformanceTest{
 	ShortName:   "GRPCJSONTranscoder",
 	Description: "Transcode a JSON/HTTP request into a gRPC call using the gRPC-JSON transcoder",
-	Manifests:   []string{"testdata/grpc-json-transcoder.yaml"},
+	Manifests: []string{
+		"testdata/grpc-json-transcoder.yaml",
+		"testdata/grpc-json-transcoder-invalid-bindings.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -68,13 +72,14 @@ var GRPCJSONTranscoderTest = suite.ConformanceTest{
 		})
 
 		// From EchoTwo's google.api.http option.
-		url := fmt.Sprintf("http://%s/v1/grpc-echo/echo-two", gwAddr)
+		const host, path = "transcoder.example.com", "/v1/grpc-echo/echo-two"
 
 		// Bounded per attempt: without a timeout one hung request consumes the whole poll.
 		client := &http.Client{Timeout: 5 * time.Second}
 		// pollUntil sends the JSON request until check accepts the response.
-		pollUntil := func(t *testing.T, authorization string, check func(*http.Response, []byte) error) {
+		pollUntil := func(t *testing.T, host, path, authorization string, check func(*http.Response, []byte) error) {
 			t.Helper()
+			url := fmt.Sprintf("http://%s%s", gwAddr, path)
 			var lastErr error
 			err := wait.PollUntilContextTimeout(context.Background(), time.Second,
 				suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
@@ -82,7 +87,7 @@ var GRPCJSONTranscoderTest = suite.ConformanceTest{
 					if err != nil {
 						return false, err
 					}
-					req.Host = "transcoder.example.com"
+					req.Host = host
 					if authorization != "" {
 						req.Header.Set("Authorization", authorization)
 					}
@@ -105,14 +110,14 @@ var GRPCJSONTranscoderTest = suite.ConformanceTest{
 					return true, nil
 				})
 			if err != nil {
-				t.Fatalf("%s: %v (last error: %v)", url, err, lastErr)
+				t.Fatalf("%s (host %s): %v (last error: %v)", url, host, err, lastErr)
 			}
 		}
 
 		// Basic auth runs before the transcoder, so this holds with or without a re-match; the
 		// x-matched-grpcroute check below is what catches one.
 		t.Run("SecurityPolicy on a transcoding HTTPRoute is enforced", func(t *testing.T) {
-			pollUntil(t, "", func(res *http.Response, raw []byte) error {
+			pollUntil(t, host, path, "", func(res *http.Response, raw []byte) error {
 				if res.StatusCode != http.StatusUnauthorized {
 					return fmt.Errorf("expected 401, got %d: %s", res.StatusCode, raw)
 				}
@@ -122,7 +127,7 @@ var GRPCJSONTranscoderTest = suite.ConformanceTest{
 
 		t.Run("transcoded request stays on the HTTPRoute", func(t *testing.T) {
 			var body grpcEchoResponse
-			pollUntil(t, "Basic dXNlcjE6dGVzdDE=", func(res *http.Response, raw []byte) error { // user1:test1
+			pollUntil(t, host, path, "Basic dXNlcjE6dGVzdDE=", func(res *http.Response, raw []byte) error { // user1:test1
 				if res.StatusCode != http.StatusOK {
 					return fmt.Errorf("expected 200, got %d: %s", res.StatusCode, raw)
 				}
@@ -155,6 +160,79 @@ var GRPCJSONTranscoderTest = suite.ConformanceTest{
 			if !strings.HasPrefix(upstreamContentType, "application/grpc") {
 				t.Errorf("expected the backend to receive an application/grpc content-type, got %q", upstreamContentType)
 			}
+		})
+
+		for _, tc := range []struct {
+			route, host, path, wantMsg string
+		}{
+			{
+				route:   "grpc-json-transcoder-invalid-body",
+				host:    "invalid-body.transcoder.example.com",
+				path:    "/v1/invalid-body",
+				wantMsg: `body "missing": no field "missing"`,
+			},
+			{
+				route:   "grpc-json-transcoder-invalid-response-body",
+				host:    "invalid-response-body.transcoder.example.com",
+				path:    "/v1/invalid-response-body",
+				wantMsg: "must be a google.api.HttpBody field",
+			},
+			{
+				route:   "grpc-json-transcoder-invalid-template",
+				host:    "invalid-template.transcoder.example.com",
+				path:    "/v1/invalid-template",
+				wantMsg: `invalid path template "v1/invalid-template"`,
+			},
+		} {
+			t.Run("invalid binding is rejected on the route: "+tc.route, func(t *testing.T) {
+				// Polls on the message, not only the reason: before the ConfigMap is seen the
+				// route is already rejected with UnsupportedValue, for a different cause.
+				nn := types.NamespacedName{Name: tc.route, Namespace: ns}
+				var msg string
+				err := wait.PollUntilContextTimeout(context.Background(), time.Second,
+					suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
+						route := &gwapiv1.HTTPRoute{}
+						if err := suite.Client.Get(ctx, nn, route); err != nil {
+							return false, nil
+						}
+						for _, p := range route.Status.Parents {
+							for _, c := range p.Conditions {
+								if c.Type == string(gwapiv1.RouteConditionAccepted) &&
+									c.Status == metav1.ConditionFalse &&
+									c.Reason == string(gwapiv1.RouteReasonUnsupportedValue) {
+									msg = c.Message
+									return strings.Contains(msg, tc.wantMsg), nil
+								}
+							}
+						}
+						return false, nil
+					})
+				if err != nil {
+					t.Fatalf("expected Accepted=False with a message containing %q, last message %q: %v", tc.wantMsg, msg, err)
+				}
+
+				pollUntil(t, tc.host, tc.path, "", func(res *http.Response, raw []byte) error {
+					if res.StatusCode != http.StatusInternalServerError {
+						return fmt.Errorf("expected 500, got %d: %s", res.StatusCode, raw)
+					}
+					return nil
+				})
+			})
+		}
+
+		// Runs after the invalid routes are known to be translated. Had their filters reached
+		// Envoy, it would reject every later listener update, including this one.
+		t.Run("listener still accepts updates", func(t *testing.T) {
+			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/grpc-json-transcoder-late.yaml", true)
+			kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+				kubernetes.NewGatewayRef(gwNN), types.NamespacedName{Name: "grpc-json-transcoder-late", Namespace: ns})
+
+			pollUntil(t, "late.transcoder.example.com", path, "", func(res *http.Response, raw []byte) error {
+				if res.StatusCode != http.StatusOK || res.Header.Get("grpc-status") != "0" {
+					return fmt.Errorf("expected a transcoded 200, got %d: %s", res.StatusCode, raw)
+				}
+				return nil
+			})
 		})
 	},
 }

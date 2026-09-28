@@ -12,8 +12,11 @@ import (
 	"strings"
 	"unicode"
 
+	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,6 +48,9 @@ func (t *Translator) buildGRPCJSONTranscoder(
 	if err != nil {
 		return nil, err
 	}
+	if err := validateHTTPBindings(descriptor.files, services); err != nil {
+		return nil, err
+	}
 
 	return &ir.GRPCJSONTranscoder{
 		Name:                         name,
@@ -63,8 +69,9 @@ func (t *Translator) buildGRPCJSONTranscoder(
 type parsedProtoDescriptor struct {
 	// err records a descriptor that failed to load, so a broken ConfigMap is not re-read
 	// and re-unmarshalled once per referencing rule on every translation.
-	err error
-	bin []byte
+	err   error
+	bin   []byte
+	files *protoregistry.Files
 	// all is every service declared in the set; roots omits those declared by files that
 	// another file imports.
 	all   sets.Set[string]
@@ -115,7 +122,8 @@ func parseProtoDescriptor(cm *corev1.ConfigMap, key types.NamespacedName) (*pars
 	if err := validateDescriptorClosure(fds); err != nil {
 		return nil, err
 	}
-	if err := validateDescriptorPool(fds); err != nil {
+	files, err := validateDescriptorPool(fds)
+	if err != nil {
 		return nil, err
 	}
 
@@ -126,7 +134,7 @@ func parseProtoDescriptor(cm *corev1.ConfigMap, key types.NamespacedName) (*pars
 		imported.Insert(file.GetDependency()...)
 	}
 
-	d := &parsedProtoDescriptor{bin: bin, all: sets.New[string]()}
+	d := &parsedProtoDescriptor{bin: bin, files: files, all: sets.New[string]()}
 	for _, file := range fds.GetFile() {
 		for _, svc := range file.GetService() {
 			name := svc.GetName()
@@ -220,11 +228,201 @@ func validateDescriptorClosure(fds *descriptorpb.FileDescriptorSet) error {
 // whose method references an undeclared message decodes cleanly, then loses the whole
 // listener when Envoy fails to build its own pool. Linking here makes it this route's
 // problem instead.
-func validateDescriptorPool(fds *descriptorpb.FileDescriptorSet) error {
-	if _, err := protodesc.NewFiles(fds); err != nil {
-		return fmt.Errorf("failed to build a proto descriptor pool: %s", trimProtoPrefix(err))
+func validateDescriptorPool(fds *descriptorpb.FileDescriptorSet) (*protoregistry.Files, error) {
+	files, err := protodesc.NewFiles(fds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build a proto descriptor pool: %s", trimProtoPrefix(err))
+	}
+	return files, nil
+}
+
+// validateHTTPBindings rejects the google.api.http bindings that fail Envoy's
+// JsonTranscoderConfig constructor, which would reject the listener. protoc checks none
+// of them. Only the top-level rule's body and response_body are resolved there; every
+// binding's path template is parsed.
+func validateHTTPBindings(files *protoregistry.Files, services []string) error {
+	for _, svc := range services {
+		d, err := files.FindDescriptorByName(protoreflect.FullName(svc))
+		if err != nil {
+			return err
+		}
+		methods := d.(protoreflect.ServiceDescriptor).Methods()
+		for i := range methods.Len() {
+			m := methods.Get(i)
+			opts, ok := m.Options().(*descriptorpb.MethodOptions)
+			if !ok || !proto.HasExtension(opts, annotations.E_Http) {
+				continue
+			}
+			rule := proto.GetExtension(opts, annotations.E_Http).(*annotations.HttpRule)
+
+			if _, err := resolveFieldPath(m.Input(), rule.GetBody()); err != nil {
+				return fmt.Errorf("method %s: body %q: %w", m.FullName(), rule.GetBody(), err)
+			}
+			field, err := resolveFieldPath(m.Output(), rule.GetResponseBody())
+			if err != nil {
+				return fmt.Errorf("method %s: response_body %q: %w", m.FullName(), rule.GetResponseBody(), err)
+			}
+			if field != nil && (field.Message() == nil || field.Message().FullName() != "google.api.HttpBody") {
+				return fmt.Errorf("method %s: response_body %q must be a google.api.HttpBody field, "+
+					"Envoy does not support other types", m.FullName(), rule.GetResponseBody())
+			}
+			if err := validateHTTPPatterns(rule); err != nil {
+				return fmt.Errorf("method %s: %w", m.FullName(), err)
+			}
+		}
 	}
 	return nil
+}
+
+// validateHTTPPatterns parses the path template of rule and of every additional binding,
+// as PathMatcherUtility::RegisterByHttpRule registers them. A rule with no pattern
+// registers nothing.
+func validateHTTPPatterns(rule *annotations.HttpRule) error {
+	var path string
+	switch p := rule.GetPattern().(type) {
+	case *annotations.HttpRule_Get:
+		path = p.Get
+	case *annotations.HttpRule_Put:
+		path = p.Put
+	case *annotations.HttpRule_Post:
+		path = p.Post
+	case *annotations.HttpRule_Delete:
+		path = p.Delete
+	case *annotations.HttpRule_Patch:
+		path = p.Patch
+	case *annotations.HttpRule_Custom:
+		path = p.Custom.GetPath()
+	}
+	if rule.GetPattern() != nil && !validHTTPTemplate(path) {
+		return fmt.Errorf("invalid path template %q", path)
+	}
+	for _, b := range rule.GetAdditionalBindings() {
+		if err := validateHTTPPatterns(b); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validHTTPTemplate accepts a subset of grpc-httpjson-transcoding's HttpTemplate::Parse, so
+// anything it accepts Envoy accepts too:
+//
+//	Template = "/" | "/" Segments [ ":" Literal ] ;
+//	Segments = Segment { "/" Segment } ;
+//	Segment  = "*" | "**" | Literal | "{" Ident { "." Ident } [ "=" Segments ] "}" ;
+//
+// It is stricter where Envoy is loose: literals exclude "/:{}*", identifiers are protobuf
+// field names, and nothing but literals may follow "**" (Envoy's ValidateParts), which also
+// rules out a variable there since "{x}" means "{x=*}".
+func validHTTPTemplate(t string) bool {
+	if t == "/" {
+		return true
+	}
+	p := &templateParser{s: t}
+	return p.consume('/') && p.segments(false) && (!p.consume(':') || p.literal()) && p.i == len(p.s)
+}
+
+type templateParser struct {
+	s        string
+	i        int
+	wildcard bool // a "**" segment has been parsed
+}
+
+func (p *templateParser) consume(c byte) bool {
+	if p.i < len(p.s) && p.s[p.i] == c {
+		p.i++
+		return true
+	}
+	return false
+}
+
+func (p *templateParser) segments(inVariable bool) bool {
+	for {
+		if !p.segment(inVariable) {
+			return false
+		}
+		if !p.consume('/') {
+			return true
+		}
+	}
+}
+
+func (p *templateParser) segment(inVariable bool) bool {
+	switch {
+	case strings.HasPrefix(p.s[p.i:], "**"):
+		p.i += 2
+		if p.wildcard {
+			return false
+		}
+		p.wildcard = true
+		return true
+	case p.consume('*'):
+		return !p.wildcard
+	case p.consume('{'):
+		if inVariable || p.wildcard || !p.ident() {
+			return false
+		}
+		for p.consume('.') {
+			if !p.ident() {
+				return false
+			}
+		}
+		if p.consume('=') && !p.segments(true) {
+			return false
+		}
+		return p.consume('}')
+	default:
+		return p.literal()
+	}
+}
+
+func (p *templateParser) literal() bool {
+	start := p.i
+	for p.i < len(p.s) && !strings.ContainsRune("/:{}*", rune(p.s[p.i])) {
+		p.i++
+	}
+	return p.i > start
+}
+
+func (p *templateParser) ident() bool {
+	start := p.i
+	for ; p.i < len(p.s); p.i++ {
+		c := p.s[p.i]
+		letter := c == '_' || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+		if !letter && (p.i == start || c < '0' || c > '9') {
+			break
+		}
+	}
+	return p.i > start
+}
+
+// resolveFieldPath mirrors Envoy's TypeHelper::ResolveFieldPath: "*" or "" selects the whole
+// message (nil field), a segment matches a field's JSON name and then its proto name (the
+// order of proto-converter's TypeInfo::FindField), and every segment but the last must be a
+// message.
+func resolveFieldPath(msg protoreflect.MessageDescriptor, path string) (protoreflect.FieldDescriptor, error) {
+	if path == "*" {
+		return nil, nil
+	}
+	var field protoreflect.FieldDescriptor
+	for seg := range strings.SplitSeq(path, ".") {
+		if seg == "" {
+			continue
+		}
+		if field != nil {
+			if field.Kind() != protoreflect.MessageKind {
+				return nil, fmt.Errorf("%s is not a message", field.Name())
+			}
+			msg = field.Message()
+		}
+		if field = msg.Fields().ByJSONName(seg); field == nil {
+			field = msg.Fields().ByName(protoreflect.Name(seg))
+		}
+		if field == nil {
+			return nil, fmt.Errorf("no field %q in %s", seg, msg.FullName())
+		}
+	}
+	return field, nil
 }
 
 // resolveTranscodedServices returns the services to transcode. Envoy treats an empty list

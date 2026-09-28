@@ -147,6 +147,12 @@ records the reason on the HTTPRoute's `Accepted` condition:
 kubectl get httproute grpc-route -o yaml
 ```
 
+The same applies to a `google.api.http` option that protoc accepts but Envoy cannot load: a `body` or `response_body`
+naming a field the message does not have, a `response_body` that is not a `google.api.HttpBody` field, or a malformed
+path template in any binding, such as `v1/hello` without the leading `/` or an unclosed `{`. The template check is
+slightly stricter than Envoy's: literals cannot contain `*` or `{`, variable names must be protobuf field names, and no
+variable may follow `**`.
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.

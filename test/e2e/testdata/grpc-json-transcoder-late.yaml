@@ -1,0 +1,44 @@
+# Applied after the invalid-binding routes are rejected. A new HTTPRouteFilter adds a new
+# HCM filter, so this only transcodes if Envoy accepted the listener update that carries it.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grpc-json-transcoder-late
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames:
+  - "late.transcoder.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/v1/grpc-echo"
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: grpc-json-transcoder-late
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: grpc-infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: grpc-json-transcoder-late
+  namespace: gateway-conformance-infra
+spec:
+  grpcJSONTranscoder:
+    services:
+    - gateway_api_conformance.echo_basic.grpcecho.GrpcEcho
+    protoDescriptor:
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: grpc-echo-proto-descriptor
