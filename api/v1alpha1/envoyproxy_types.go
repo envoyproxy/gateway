@@ -717,6 +717,8 @@ type EnvoyProxyConditionType string
 
 const (
 	EnvoyProxyConditionAccepted EnvoyProxyConditionType = "Accepted"
+
+	EnvoyProxyConditionWarning EnvoyProxyConditionType = "Warning"
 )
 
 type EnvoyProxyConditionReason string
