@@ -129,7 +129,7 @@
                   exact: primary.foo.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: backend-fqdn/default-ca
+              name: configmap/default/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

@@ -65,7 +65,7 @@ func TestHashPrefix(t *testing.T) {
 	// sha256("abc") = ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
 	assert.Equal(t, "ba7816bf", HashPrefix("abc", 4))
 	assert.Equal(t, "ba7816bf8f01cfea", HashPrefix("abc", 8))
-	assert.NotEqual(t, HashPrefix("abc", 8), HashPrefix("abd", 8))
+	assert.NotEqual(t, HashPrefix("abc", 8), HashPrefix("abz", 8))
 }
 
 func TestBounded(t *testing.T) {

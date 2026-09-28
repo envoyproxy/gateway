@@ -7,13 +7,13 @@ package translator
 
 import "github.com/envoyproxy/gateway/internal/ir"
 
-// caCertificateIndex resolves a TLSCACertificate's Digest against ir.Xds.CACertificates.
+// caCertificateIndex resolves a TLSCACertificate's Name against ir.Xds.CACertificates.
 type caCertificateIndex map[string][]byte
 
 func newCACertificateIndex(xdsIR *ir.Xds) caCertificateIndex {
 	idx := make(caCertificateIndex, len(xdsIR.CACertificates))
 	for _, ca := range xdsIR.CACertificates {
-		idx[ca.Digest] = ca.Certificate
+		idx[ca.Name] = ca.Certificate
 	}
 	return idx
 }
@@ -27,5 +27,5 @@ func resolveCACertificate(ca *ir.TLSCACertificate, idx caCertificateIndex) []byt
 	if len(ca.Certificate) > 0 {
 		return ca.Certificate
 	}
-	return idx[ca.Digest]
+	return idx[ca.Name]
 }

@@ -637,11 +637,11 @@ func BenchmarkXdsIRDeepCopy(b *testing.B) {
 		}
 		for i := 0; i < destinations; i++ {
 			// One policy per destination, all trusting the same CA: the shape a cluster of
-			// backends behind one corporate CA produces.
-			ca := &ir.TLSCACertificate{Name: fmt.Sprintf("policy-%d/default-ca", i)}
-			if central {
-				ca.Digest = "sha256-shared"
-			} else {
+			// backends behind one corporate CA produces. Naming the secret after the source
+			// object is what lets every destination share one entry.
+			ca := &ir.TLSCACertificate{Name: "configmap/default/ca-cmap"}
+			if !central {
+				ca.Name = fmt.Sprintf("policy-%d/default-ca", i)
 				ca.Certificate = caBundle
 			}
 			listener.Routes = append(listener.Routes, &ir.HTTPRoute{
@@ -657,7 +657,7 @@ func BenchmarkXdsIRDeepCopy(b *testing.B) {
 		}
 		xdsIR := &ir.Xds{HTTP: []*ir.HTTPListener{listener}}
 		if central {
-			xdsIR.CACertificates = []*ir.CACertificateEntry{{Digest: "sha256-shared", Certificate: caBundle}}
+			xdsIR.CACertificates = []*ir.CACertificateEntry{{Name: "configmap/default/ca-cmap", Certificate: caBundle}}
 		}
 		return xdsIR
 	}

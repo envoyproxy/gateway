@@ -1,0 +1,1 @@
+Reduced xDS configuration size by emitting one SDS secret per CA source object instead of one per `BackendTLSPolicy` or `Backend`, so policies trusting the same ConfigMap, Secret or ClusterTrustBundle no longer each ship a copy of the same bundle.
