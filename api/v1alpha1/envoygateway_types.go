@@ -170,7 +170,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EndpointFastPath
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EndpointFastPath;EnvoyProxyPatch
 type RuntimeFlag string
 
 const (
@@ -199,6 +199,14 @@ const (
 	// endpoint count crossing zero) still take the full path, and full translations
 	// remain authoritative. Disabled by default.
 	EndpointFastPath RuntimeFlag = "EndpointFastPath"
+
+	// EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on
+	// EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve
+	// pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and
+	// tenant-authored, a patch may grant arbitrary access to resources applied by Envoy
+	// Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters
+	// where tenants can author their own EnvoyProxy resources.
+	EnvoyProxyPatch RuntimeFlag = "EnvoyProxyPatch"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
