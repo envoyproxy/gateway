@@ -130,7 +130,9 @@ func addECDSResource(tCtx *types.ResourceVersionTable, httpFilter *hcmv3.HttpFil
 	// it has processed the listener and would otherwise serve requests through empty slots.
 	//
 	// No default config, so a delivery that fails or is rejected leaves the slot without one
-	// and Envoy answers with a 500.
+	// and Envoy answers with a 500. A slot that has a config but lacks the script a route
+	// names skips it silently instead; OrderedXdsResources sequences publishes so that a route
+	// never names a script its slot does not hold.
 	//
 	// TODO: add a failOpen field to the Lua API to let requests pass through instead.
 	httpFilter.ConfigType = &hcmv3.HttpFilter_ConfigDiscovery{

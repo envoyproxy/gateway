@@ -377,10 +377,20 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 							r.Logger.Error(err, "failed to init snapshot cache")
 							errChan <- err
 						} else {
-							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, traceCtx); err != nil {
-								r.Logger.Error(err, "failed to generate a snapshot")
-								errChan <- err
+							// Routes can reference config inside ECDS resources, and the two are
+							// delivered separately. Publish in steps so nothing is referenced before
+							// it arrives or after it is removed.
+							ordered, err := translator.OrderedXdsResources(r.cache.LastResources(key), result.XdsResources)
+							if err != nil {
+								r.Logger.Error(err, "failed to order the xds resources, publishing them in one step")
+								ordered = []xtypes.XdsResources{result.XdsResources}
+							}
+							for _, resources := range ordered {
+								if err := r.cache.GenerateNewSnapshot(key, resources, traceCtx); err != nil {
+									r.Logger.Error(err, "failed to generate a snapshot")
+									errChan <- err
+									break
+								}
 							}
 						}
 					} else {
