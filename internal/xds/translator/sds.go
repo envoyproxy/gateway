@@ -6,13 +6,10 @@
 package translator
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -23,6 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/naming"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -30,15 +28,13 @@ const defaultConnectionTimeout = 10 * time.Second
 
 func sdsClusterNameFromURL(url string) string {
 	address := strings.TrimPrefix(url, "unix://")
-	hash := sha256.Sum256([]byte(address))
 	const maxReadablePrefixLength = 48
 
-	hashSuffix := hex.EncodeToString(hash[:16])
-	readablePrefix := strings.Trim(strings.ReplaceAll(address, "/", "_"), "_")
-	for len(readablePrefix) > maxReadablePrefixLength {
-		_, size := utf8.DecodeLastRuneInString(readablePrefix)
-		readablePrefix = readablePrefix[:len(readablePrefix)-size]
-	}
+	// The hash is appended unconditionally, not only on truncation: rewriting "/" to "_"
+	// already collapses distinct addresses, so the readable part cannot carry the identity.
+	hashSuffix := naming.HashPrefix(address, 16)
+	readablePrefix := naming.TruncateToBytes(
+		strings.Trim(strings.ReplaceAll(address, "/", "_"), "_"), maxReadablePrefixLength)
 	if readablePrefix != "" {
 		return fmt.Sprintf("sds_%s_%s", readablePrefix, hashSuffix)
 	}
