@@ -32,8 +32,10 @@ type Runner interface {
 	// Start the runner.
 	Start(context.Context) error
 	Name() string
-	// Close closes the runner when the server is shutting down.
-	// This called after all the subscriptions are closed at the very end of the server shutdown.
+	// Close closes the runner when the server is shutting down. Close must
+	// block until every goroutine the runner started has actually exited,
+	// since shared state (xdsIR, infraIR) is only closed after every runner's
+	// Close has returned.
 	Close() error
 }
 
@@ -173,6 +175,14 @@ func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, 
 // This will block until the context is done, and returns after synchronously
 // closing all the runners.
 func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message.RunnerErrors) (err error) {
+	// Derive a locally-cancelable context so that if a runner fails to start partway
+	// through the loop below, the already-started runners can be signaled to shut down
+	// via cancel() before we wait on them in the deferred cleanup. Without this, those
+	// runners would block on the caller's ctx, which isn't canceled until this function
+	// returns -- a deadlock.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	channels := struct {
 		pResources *message.ProviderResources
 		xdsIR      *message.XdsIR
@@ -271,44 +281,63 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		},
 	}
 
+	// Start the global rateLimit if it has been enabled through the config.
+	// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
+	// Appended to runners so it's started last, matching prior behavior, while still being
+	// tracked for shutdown below.
+	if cfg.EnvoyGateway.RateLimit != nil {
+		runners = append(runners, struct{ runner Runner }{
+			runner: ratelimitrunner.New(&ratelimitrunner.Config{
+				Server:       *cfg,
+				XdsIR:        channels.xdsIR,
+				RunnerErrors: runnerErrors,
+			}),
+		})
+	}
+
+	// started tracks the runners that have actually been started, so that if
+	// starting one fails partway through the loop below, the ones already
+	// running are still closed instead of being left as leaked goroutines.
+	var started []Runner
+	defer func() {
+		// Cancel first so already-started runners observe ctx.Done() and can actually
+		// return when we Close() them below -- otherwise a runner that failed to start
+		// partway through the loop leaves the others waiting on a ctx that only this
+		// function's caller would ever cancel, after this function returns.
+		cancel()
+
+		cfg.Logger.Info("runners are shutting down")
+		for _, r := range started {
+			if cerr := r.Close(); cerr != nil {
+				cfg.Logger.Error(cerr, "failed to close runner", "name", r.Name())
+			}
+		}
+
+		// Close shared channels/maps only after all runner goroutines have exited.
+		//
+		// pResources is intentionally not closed: controller-runtime reconcilers may still
+		// write to it after the provider runner has returned, and writes to a closed
+		// watchable.Map panic. Its subscriptions are already closed by ctx cancellation,
+		// and each runner generation creates its own pResources, so the old maps are
+		// garbage-collected once the remaining references are released.
+		channels.xdsIR.Close()
+		channels.infraIR.Close()
+
+		if extMgr != nil {
+			extMgr.CleanupHookConns()
+		}
+	}()
+
 	// Start all runners
 	for _, r := range runners {
 		if err = startRunner(ctx, cfg, r.runner); err != nil {
 			return err
 		}
-	}
-	// Start the global rateLimit if it has been enabled through the config
-	if cfg.EnvoyGateway.RateLimit != nil {
-		// Start the Global RateLimit xDS Server
-		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
-		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
-			Server:       *cfg,
-			XdsIR:        channels.xdsIR,
-			RunnerErrors: runnerErrors,
-		})
-		if err = startRunner(ctx, cfg, rateLimitRunner); err != nil {
-			return err
-		}
+		started = append(started, r.runner)
 	}
 
 	// Wait until done
 	<-ctx.Done()
-
-	// Close xdsIR channel
-	// No need to close infraIR and pResources channels since they are already closed
-	channels.xdsIR.Close()
-
-	cfg.Logger.Info("runners are shutting down")
-	for _, r := range runners {
-		if err := r.runner.Close(); err != nil {
-			cfg.Logger.Error(err, "failed to close runner", "name", r.runner.Name())
-		}
-	}
-
-	if extMgr != nil {
-		extMgr.CleanupHookConns()
-	}
-
 	return nil
 }
 
