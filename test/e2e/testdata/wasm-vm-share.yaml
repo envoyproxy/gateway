@@ -48,7 +48,7 @@ spec:
   wasm:
   - name: wasm-filter-shared-1
     rootID: my_root_id
-    shareVM: true
+    vmSharingScope: Namespace
     config:
       message: shared-1
     code:
@@ -70,7 +70,7 @@ spec:
   wasm:
   - name: wasm-filter-shared-2
     rootID: my_root_id
-    shareVM: true
+    vmSharingScope: Namespace
     config:
       message: shared-2
     code:
