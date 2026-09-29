@@ -2139,8 +2139,9 @@ type RouteDestination struct {
 	// reused
 	Name     string  `json:"name" yaml:"name"`
 	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
-	// Settings holds this destination's own, non-merged backends. Never shared with another
-	// route.
+	// Settings holds this destination's own, non-merged backends. Setting objects may
+	// be shared across matches and listeners of the same rule; consumers must not
+	// mutate them.
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// BackendClusterRefs holds references to backend clusters for this route rule. The
 	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
