@@ -14,8 +14,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/utils/test"
 )
@@ -85,4 +89,84 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
+}
+
+// Extension-managed resources are loaded as unstructured objects into their own category. As in
+// standalone mode, where the offline controller registers them, the kinds are registered in the
+// scheme as Unstructured before loading.
+func TestLoadCustomExtensionKinds(t *testing.T) {
+	for _, gvk := range []schema.GroupVersionKind{
+		{Group: "example.extensions.io", Version: "v1alpha1", Kind: "ListenerContextExample"},
+		{Group: "cert.example.io", Version: "v1alpha1", Kind: "ExampleCertificate"},
+	} {
+		envoygateway.GetScheme().AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+	}
+
+	eg := &egv1a1.EnvoyGateway{
+		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+			ExtensionManager: &egv1a1.ExtensionManager{
+				PolicyResources: []egv1a1.GroupVersionKind{
+					{Group: "example.extensions.io", Version: "v1alpha1", Kind: "ListenerContextExample"},
+				},
+				CertificateResources: []egv1a1.GroupVersionKind{
+					{Group: "cert.example.io", Version: "v1alpha1", Kind: "ExampleCertificate"},
+				},
+			},
+		},
+	}
+
+	in := []byte(`
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: example.extensions.io/v1alpha1
+kind: ListenerContextExample
+metadata:
+  name: some-policy
+  namespace: default
+spec:
+  username: user
+---
+apiVersion: cert.example.io/v1alpha1
+kind: ExampleCertificate
+metadata:
+  name: app-cert
+  namespace: default
+spec:
+  certificateId: example-certificate-1
+status:
+  conditions:
+  - type: Ready
+    status: "True"
+    reason: Ready
+`)
+
+	got, err := LoadResourcesFromYAMLBytes(in, true, eg)
+	require.NoError(t, err)
+
+	require.Len(t, got.ExtensionServerPolicies, 1)
+	require.Equal(t, "ListenerContextExample", got.ExtensionServerPolicies[0].GetKind())
+
+	require.Len(t, got.ExtensionCertificates, 1)
+	cert := got.ExtensionCertificates[0]
+	require.Equal(t, "ExampleCertificate", cert.GetKind())
+	require.Equal(t, "cert.example.io", cert.GroupVersionKind().Group)
+	require.Equal(t, "app-cert", cert.GetName())
+	require.Equal(t, "default", cert.GetNamespace())
+
+	// The spec and status must survive intact -- the identifier comes from the spec and
+	// admission gates on the Ready condition.
+	id, found, err := unstructured.NestedString(cert.Object, "spec", "certificateId")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, "example-certificate-1", id)
+
+	conds, found, err := unstructured.NestedSlice(cert.Object, "status", "conditions")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Len(t, conds, 1)
 }

@@ -283,6 +283,13 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.ExtensionCertificates != nil {
+		in, out := &in.ExtensionCertificates, &out.ExtensionCertificates
+		*out = make([]unstructured.Unstructured, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Backends != nil {
 		in, out := &in.Backends, &out.Backends
 		*out = make([]*v1alpha1.Backend, len(*in))
