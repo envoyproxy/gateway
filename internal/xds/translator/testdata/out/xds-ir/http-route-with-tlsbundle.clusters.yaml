@@ -44,7 +44,7 @@
                   exact: subdomain.secondexample.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: upstream-ca:configmap/policies/ca-cmap
+              name: configmap/policies/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

@@ -710,10 +710,8 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 const maxUpstreamCASecretNameBytes = 128
 
 const (
-	// The colon keeps upstream CA names distinct from namespace-based SDS names.
-	upstreamCASecretNamePrefix = "upstream-ca:"
-	caNameRefSeparator         = ","
-	caNameFieldSeparator       = "/"
+	caNameRefSeparator   = ","
+	caNameFieldSeparator = "/"
 )
 
 // supportedCAKind reports whether a caCertificateRef of this kind contributes CA bytes.
@@ -751,8 +749,7 @@ func upstreamCASecretName(refs []gwapiv1.ObjectReference, defaultNamespace strin
 			segments = append(segments, segment)
 		}
 	}
-	return upstreamCASecretNamePrefix + naming.Bounded(
-		strings.Join(segments, caNameRefSeparator), maxUpstreamCASecretNameBytes-len(upstreamCASecretNamePrefix))
+	return naming.Bounded(strings.Join(segments, caNameRefSeparator), maxUpstreamCASecretNameBytes)
 }
 
 // lookupCACertificateRef returns a name-only reference if the CA bundle is already

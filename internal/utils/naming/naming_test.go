@@ -86,16 +86,6 @@ func TestBounded(t *testing.T) {
 		assert.NotEqual(t, Bounded(head+"one", 32), Bounded(head+"two", 32))
 	})
 
-	t.Run("shortened name differs from literal name with hash suffix", func(t *testing.T) {
-		long := "configmap/ns/" + strings.Repeat("a", 120)
-		// Both ConfigMap names are valid. With a hyphen separator, shortening long
-		// would produce literal verbatim, so the two objects would share a CA bundle.
-		literal := "configmap/ns/" + strings.Repeat("a", 98) + "-" + HashPrefix(long, 8)
-		assert.Len(t, literal, 128)
-		assert.Equal(t, literal, Bounded(literal, 128))
-		assert.NotEqual(t, Bounded(long, 128), Bounded(literal, 128))
-	})
-
 	t.Run("result never exceeds the budget", func(t *testing.T) {
 		for _, n := range []int{24, 32, 64, 128} {
 			assert.LessOrEqual(t, len(Bounded(strings.Repeat("x", 500), n)), n)

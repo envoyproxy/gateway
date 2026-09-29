@@ -41,7 +41,7 @@
                   exact: primary.example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: upstream-ca:configmap/backends/ca-cmap
+              name: configmap/backends/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -98,7 +98,7 @@
                   exact: mirror.example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: upstream-ca:configmap/backends/ca-cmap
+              name: configmap/backends/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

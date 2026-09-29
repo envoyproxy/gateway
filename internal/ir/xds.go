@@ -625,7 +625,7 @@ type TLSCrl struct {
 type TLSCACertificate struct {
 	// Name is the xDS secret name. For upstream validation it is derived from the source
 	// object as "<kind>/<namespace>/<name>", joined by "," for multiple refs in declared
-	// order and prefixed with "upstream-ca:", so one Kubernetes object yields one SDS secret.
+	// order, so one Kubernetes object yields one SDS secret.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content. Empty when the bytes live in Xds.CACertificates under Name, which
 	// happens only for upstream validation with a gateway IR in scope. Downstream validation

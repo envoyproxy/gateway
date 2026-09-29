@@ -107,7 +107,7 @@
                   exact: oauth.foo.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: upstream-ca:configmap/envoy-gateway/ca-cmap
+              name: configmap/envoy-gateway/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

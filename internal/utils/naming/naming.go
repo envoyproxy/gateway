@@ -38,9 +38,7 @@ func HashPrefix(s string, n int) string {
 }
 
 // Bounded returns name unchanged when it fits in maxBytes, and otherwise a truncated head
-// joined to a hash of the full name. Inputs must not contain underscores, so a shortened
-// name cannot match a literal input. Callers whose readable part is lossy on its own must
-// hash unconditionally instead.
+// joined to a hash of the full name.
 func Bounded(name string, maxBytes int) string {
 	if len(name) <= maxBytes {
 		return name
