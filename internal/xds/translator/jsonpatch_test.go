@@ -10,9 +10,11 @@ import (
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -106,4 +108,36 @@ func TestProcessJSONPatchesSpan(t *testing.T) {
 			attribute.Int("json-patches.failed", 1),
 		}, spans[0].Attributes())
 	})
+}
+
+func TestProcessJSONPatchesRejectsFailedBatch(t *testing.T) {
+	resource := &routev3.RouteConfiguration{
+		Name: "test-routes",
+		VirtualHosts: []*routev3.VirtualHost{
+			{Name: "one", Domains: []string{"one.example"}, RetryPolicy: &routev3.RetryPolicy{RetryOn: "5xx"}},
+			{Name: "two", Domains: []string{"two.example"}},
+		},
+	}
+	original := proto.Clone(resource)
+	table := new(types.ResourceVersionTable)
+	require.NoError(t, table.AddXdsResource(resourcev3.RouteType, resource))
+	policy := &ir.EnvoyPatchPolicy{
+		EnvoyPatchPolicyStatus: ir.EnvoyPatchPolicyStatus{
+			Name: "policy", Namespace: "default", Status: &gwapiv1.PolicyStatus{},
+		},
+		JSONPatches: []*ir.JSONPatchConfig{{
+			Type: resourcev3.RouteType,
+			Name: resource.Name,
+			Operation: ir.JSONPatchOperation{
+				Op:       ir.JSONPatchOpRemove,
+				JSONPath: new("$.virtual_hosts[*]"),
+				Path:     new("/retry_policy"),
+			},
+		}},
+	}
+
+	// Removing the first host's retry policy succeeds, but the second host has none.
+	err := processJSONPatches(t.Context(), table, []*ir.EnvoyPatchPolicy{policy})
+	require.Error(t, err)
+	require.True(t, proto.Equal(original, resource), "a failed batch must not change the xDS resource")
 }
