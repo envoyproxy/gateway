@@ -215,3 +215,74 @@ func Test_envoyExtensionPolicyOwnerChoose(t *testing.T) {
 		assert.Same(t, parentPolicy, owners.dynamicModule)
 	})
 }
+
+func Test_buildWasmLocalSource(t *testing.T) {
+	tr := &Translator{}
+
+	policy := &egv1a1.EnvoyExtensionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-policy",
+			Namespace: "default",
+		},
+	}
+
+	wasmConfig := &egv1a1.Wasm{
+		Name: new("my-local-wasm"),
+		Code: egv1a1.WasmCodeSource{
+			Type: egv1a1.LocalWasmCodeSourceType,
+			Local: &egv1a1.LocalWasmCodeSource{
+				Filename: "/etc/wasm/plugins/test.wasm",
+			},
+		},
+		FailOpen: new(false),
+	}
+
+	result, err := tr.buildWasm(
+		"envoyextensionpolicy/default/test-policy/wasm/0",
+		wasmConfig,
+		policy,
+		0,
+		nil,
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, "envoyextensionpolicy/default/test-policy/wasm/0", result.Name)
+	require.Equal(t, "my-local-wasm", result.WasmName)
+	require.False(t, result.FailOpen)
+	require.Nil(t, result.Code, "HTTP code should be nil for local source")
+	require.NotNil(t, result.LocalCode, "LocalCode should be set")
+	require.Equal(t, "/etc/wasm/plugins/test.wasm", result.LocalCode.Filename)
+}
+
+func Test_buildWasmLocalSourceNoCache(t *testing.T) {
+	tr := &Translator{}
+
+	policy := &egv1a1.EnvoyExtensionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-policy",
+			Namespace: "default",
+		},
+		Spec: egv1a1.EnvoyExtensionPolicySpec{
+			Wasm: []egv1a1.Wasm{
+				{
+					Name: new("my-local-wasm"),
+					Code: egv1a1.WasmCodeSource{
+						Type: egv1a1.LocalWasmCodeSourceType,
+						Local: &egv1a1.LocalWasmCodeSource{
+							Filename: "/etc/wasm/plugins/test.wasm",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	owners := &envoyExtensionPolicyOwners{}
+	wasmIRList, errs, failOpen := tr.buildWasms(policy, owners, nil)
+	require.NoError(t, errs)
+	require.False(t, failOpen)
+	require.Len(t, wasmIRList, 1)
+	require.NotNil(t, wasmIRList[0].LocalCode)
+	require.Equal(t, "/etc/wasm/plugins/test.wasm", wasmIRList[0].LocalCode.Filename)
+}
