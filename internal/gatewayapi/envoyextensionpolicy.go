@@ -1763,6 +1763,7 @@ func (t *Translator) buildWasm(
 	wasmIR := &ir.Wasm{
 		Name:     name,
 		RootID:   config.RootID,
+		VMID:     config.VMID,
 		WasmName: wasmName,
 		Config:   config.Config,
 		FailOpen: failOpen,
