@@ -226,7 +226,7 @@ xdsIR:
               alpnProtocols:
               - istio
               caCertificate:
-                name: upstream-ca:secret/default/sds-client-cert-rootca
+                name: secret/default/sds-client-cert-rootca
                 sds:
                   address: /var/run/secrets/workload-spiffe-uds/socket
                   scheme: unix
