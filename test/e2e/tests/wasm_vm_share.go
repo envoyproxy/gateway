@@ -28,7 +28,7 @@ func init() {
 // WasmVMShareTest verifies that opted-in policies reuse Wasm VMs across routes.
 var WasmVMShareTest = suite.ConformanceTest{
 	ShortName:   "WasmVMShare",
-	Description: "Test Wasm VM sharing across policies with identical code and different configurations",
+	Description: "Test namespace-scoped Wasm VM sharing across policies with identical code and different configurations",
 	Manifests:   []string{"testdata/wasm-vm-share.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("first route with shared wasm vm", func(t *testing.T) {
@@ -39,10 +39,10 @@ var WasmVMShareTest = suite.ConformanceTest{
 			testWasmHTTPCodeSource(t, suite, "http-with-http-wasm-source-shared-2", "http-wasm-source-test-shared-2", "/wasm-http-shared-2")
 		})
 
-		// Both policies opt into sharing and use identical code, despite having
-		// different plugin names and configurations. Together they contribute one
-		// VM per worker plus two base VMs to the process-wide gauge. Without
-		// sharing, the count would be twice this value.
+		// Both policies specify the Namespace sharing scope and use identical code,
+		// despite having different plugin names and configurations. Together they
+		// contribute one VM per worker plus two base VMs to the process-wide gauge.
+		// Without sharing, the count would be twice this value.
 		tlog.Logf(t, "concurrency: %d", runtime.NumCPU())
 		t.Run("wasm vm count is shared across policies", func(t *testing.T) {
 			promQL := `sum(envoy_wasm_wasm_vm_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", gateway_envoyproxy_io_owning_gateway_name="same-namespace"})`
