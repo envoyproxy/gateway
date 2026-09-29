@@ -60,4 +60,29 @@ type XDSHookClient interface {
 	// The list of clusters, secrets, listeners, and routes returned by the extension are used as the final list of all these resources
 	// PostTranslateModifyHook is always executed when an extension is loaded
 	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error)
+
+	// PostTLSCertificateResolveHook asks an extension how Envoy should obtain a listener TLS
+	// certificate that was referenced from a kind registered in ExtensionManager.CertificateResources.
+	PostTLSCertificateResolveHook(*TLSCertificateContext) (*TLSCertificateResolution, error)
+}
+
+// TLSCertificateContext identifies the listener certificate reference being resolved.
+type TLSCertificateContext struct {
+	// Certificate is the resource the listener referenced.
+	Certificate *unstructured.Unstructured
+
+	GatewayNamespace string
+	GatewayName      string
+
+	ListenerName string
+}
+
+// TLSCertificateResolution is how Envoy should obtain one listener TLS certificate.
+type TLSCertificateResolution struct {
+	SdsSecretConfig *tls.SdsSecretConfig
+
+	// FailureReason and FailureMessage describe a resolution failure. When FailureReason is
+	// set the certificate is treated as unresolved.
+	FailureReason  string
+	FailureMessage string
 }

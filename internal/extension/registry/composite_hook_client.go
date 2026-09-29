@@ -34,6 +34,7 @@ type hookClientEntry struct {
 	failOpen          bool
 	resourceGKSet     sets.Set[schema.GroupKind] // used for per-extension resource filtering in PostRouteModifyHook, PostClusterModifyHook
 	policyGKSet       sets.Set[schema.GroupKind] // used for per-extension policy filtering in PostRouteModifyHook, PostHTTPListenerModifyHook, PostTranslateModifyHook
+	certGKSet         sets.Set[schema.GroupKind] // used to pick the owning extension in PostTLSCertificateResolveHook
 	translationConfig *egv1a1.TranslationConfig  // used for per-extension resource-type gating in PostTranslateModifyHook
 }
 
@@ -232,4 +233,35 @@ func filterPoliciesByGK(policies []*ir.UnstructuredRef, gkSet sets.Set[schema.Gr
 		}
 	}
 	return filtered
+}
+
+// PostTLSCertificateResolveHook resolves one listener certificate through the extension that
+// registered its group and kind. This hook deliberately does not chain. The owning extension is identified by the referenced
+// resource's group and kind.
+func (c *compositeXDSHookClient) PostTLSCertificateResolveHook(certCtx *types.TLSCertificateContext) (*types.TLSCertificateResolution, error) {
+	if certCtx == nil || certCtx.Certificate == nil {
+		return nil, fmt.Errorf("a certificate resource is required to resolve a TLS certificate")
+	}
+
+	gk := certCtx.Certificate.GroupVersionKind().GroupKind()
+
+	for _, entry := range c.entries {
+		// An entry with no declared certificate kinds is not a certificate provider.
+		if entry.certGKSet == nil || !entry.certGKSet.Has(gk) {
+			continue
+		}
+
+		resolution, err := entry.client.PostTLSCertificateResolveHook(certCtx)
+		if err != nil {
+			// A certificate kind is owned by a single extension, so this loop matches at
+			// most one entry: return immediately rather than continuing like the chaining hooks.
+			if entry.failOpen {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
+		}
+		return resolution, nil
+	}
+
+	return nil, fmt.Errorf("no extension registered certificate kind %s", gk.String())
 }
