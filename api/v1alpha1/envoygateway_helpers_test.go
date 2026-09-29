@@ -448,3 +448,43 @@ func TestDebounceDefaultsToDisabled(t *testing.T) {
 	require.Equal(t, DefaultDebounceAfter, after)
 	require.Equal(t, DefaultDebounceMax, maxHold)
 }
+
+func TestEnvoyProxyPatchRuntimeFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		eg       EnvoyGateway
+		expected bool
+	}{
+		{
+			name:     "enabled by default",
+			eg:       EnvoyGateway{},
+			expected: true,
+		},
+		{
+			name: "explicitly disabled",
+			eg: EnvoyGateway{
+				EnvoyGatewaySpec: EnvoyGatewaySpec{
+					RuntimeFlags: &RuntimeFlags{Disabled: []RuntimeFlag{EnvoyProxyPatch}},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "disabled takes precedence",
+			eg: EnvoyGateway{
+				EnvoyGatewaySpec: EnvoyGatewaySpec{
+					RuntimeFlags: &RuntimeFlags{
+						Enabled:  []RuntimeFlag{EnvoyProxyPatch},
+						Disabled: []RuntimeFlag{EnvoyProxyPatch},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.eg.RuntimeFlags.IsEnabled(EnvoyProxyPatch))
+		})
+	}
+}

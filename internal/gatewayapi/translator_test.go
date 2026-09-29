@@ -57,6 +57,7 @@ func TestTranslate(t *testing.T) {
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
+		EnvoyProxyPatchDisabled         bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -134,6 +135,10 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name:                    "envoyproxy-patch-disabled",
+			EnvoyProxyPatchDisabled: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -160,6 +165,7 @@ func TestTranslate(t *testing.T) {
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
 			perResourceSystemCASecret := false
+			envoyProxyPatchDisabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -170,6 +176,7 @@ func TestTranslate(t *testing.T) {
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
+					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
 				}
 			}
 
@@ -188,6 +195,7 @@ func TestTranslate(t *testing.T) {
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
+				EnvoyProxyPatchDisabled:         envoyProxyPatchDisabled,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
