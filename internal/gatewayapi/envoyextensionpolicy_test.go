@@ -27,7 +27,7 @@ func TestBuildWasmVMSharing(t *testing.T) {
 	)
 	tests := []struct {
 		name         string
-		shareVM      *bool
+		sharingScope *egv1a1.WasmVMSharingScope
 		namespace    string
 		policyName   string
 		moduleSHA    string
@@ -41,27 +41,27 @@ func TestBuildWasmVMSharing(t *testing.T) {
 			hostKeys: []string{"REGION", "API_TOKEN"}, wantHostKeys: []string{"REGION", "API_TOKEN"},
 		},
 		{
-			name: "disabled", shareVM: new(false), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			name: "None scope", sharingScope: new(egv1a1.WasmVMSharingScopeNone), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
 			hostKeys: []string{"REGION", "API_TOKEN"}, wantHostKeys: []string{"REGION", "API_TOKEN"},
 		},
 		{
-			name: "shared with canonical host keys", shareVM: new(true), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			name: "Namespace scope with canonical host keys", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
 			hostKeys: []string{"REGION", "API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: sharedID,
 		},
 		{
-			name: "same module in another policy", shareVM: new(true), namespace: "shop", policyName: "b", moduleSHA: moduleSHA,
+			name: "same module in another policy", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "b", moduleSHA: moduleSHA,
 			hostKeys: []string{"API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: sharedID,
 		},
 		{
-			name: "another namespace", shareVM: new(true), namespace: "other", policyName: "a", moduleSHA: moduleSHA,
+			name: "another namespace", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "other", policyName: "a", moduleSHA: moduleSHA,
 			wantVMID: "envoyextensionpolicy/other/wasm/" + moduleSHA,
 		},
 		{
-			name: "changed module at the same URL", shareVM: new(true), namespace: "shop", policyName: "a", moduleSHA: otherSHA,
+			name: "changed module at the same URL", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: otherSHA,
 			wantVMID: "envoyextensionpolicy/shop/wasm/" + otherSHA,
 		},
 		{
-			name: "OCI uses extracted module checksum", shareVM: new(true), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			name: "OCI uses extracted module checksum", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
 			image: true, wantVMID: sharedID,
 		},
 	}
@@ -69,8 +69,8 @@ func TestBuildWasmVMSharing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			policy := &egv1a1.EnvoyExtensionPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: tt.namespace, Name: tt.policyName}}
 			config := &egv1a1.Wasm{
-				ShareVM: tt.shareVM,
-				Env:     &egv1a1.WasmEnv{HostKeys: tt.hostKeys},
+				VMSharingScope: tt.sharingScope,
+				Env:            &egv1a1.WasmEnv{HostKeys: tt.hostKeys},
 				Code: &egv1a1.WasmCodeSource{
 					Type: egv1a1.HTTPWasmCodeSourceType,
 					HTTP: &egv1a1.HTTPWasmCodeSource{URL: "https://example.com/plugin.wasm"},

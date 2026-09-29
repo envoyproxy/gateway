@@ -36,18 +36,19 @@ type Wasm struct {
 	// +kubebuilder:validation:MaxLength=253
 	Name *string `json:"name,omitempty"`
 
-	// ShareVM allows this extension to share a Wasm VM with other extensions that
-	// enable sharing in the same EnvoyExtensionPolicy namespace. Envoy determines
-	// VM compatibility using the Wasm code and VM configuration, including environment
+	// VMSharingScope defines the scope within which this extension may share a Wasm VM.
+	// If None or unset, each policy's Wasm entry uses its own VM ID.
+	// If Namespace, this extension may share a VM with other extensions that specify
+	// Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM
+	// compatibility using the Wasm code and VM configuration, including environment
 	// variables. Each Envoy worker has its own VM.
 	//
 	// Sharing a VM shares module-level state and VM failures. Plugin names and root
 	// IDs are not changed; matching plugin identities may also share a root context.
-	// If false or unset, each policy's Wasm entry uses its own VM ID.
 	//
 	// +optional
-	// +kubebuilder:default=false
-	ShareVM *bool `json:"shareVM,omitempty"`
+	// +kubebuilder:default=None
+	VMSharingScope *WasmVMSharingScope `json:"vmSharingScope,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
@@ -89,6 +90,19 @@ type Wasm struct {
 	// +optional
 	Env *WasmEnv `json:"env,omitempty"`
 }
+
+// WasmVMSharingScope defines the scope within which Wasm extensions may share a VM.
+// +kubebuilder:validation:Enum=None;Namespace
+type WasmVMSharingScope string
+
+const (
+	// WasmVMSharingScopeNone gives each policy's Wasm entry its own VM ID.
+	WasmVMSharingScopeNone WasmVMSharingScope = "None"
+
+	// WasmVMSharingScopeNamespace allows compatible extensions that specify this
+	// scope in the same EnvoyExtensionPolicy namespace to share a VM.
+	WasmVMSharingScopeNamespace WasmVMSharingScope = "Namespace"
+)
 
 // WasmCodeSource defines the source of the Wasm code.
 // +union
