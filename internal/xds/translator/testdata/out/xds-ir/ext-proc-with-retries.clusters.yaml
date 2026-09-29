@@ -93,7 +93,7 @@
                   exact: grpc-backend
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: configmap/envoy-gateway/ca-cmap
+              name: upstream-ca:configmap/envoy-gateway/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -113,7 +113,7 @@
                   exact: ip-backend
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: configmap/envoy-gateway/ca-cmap
+              name: upstream-ca:configmap/envoy-gateway/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
