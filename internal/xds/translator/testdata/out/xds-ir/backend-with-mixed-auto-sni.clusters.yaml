@@ -58,7 +58,7 @@
           combinedValidationContext:
             defaultValidationContext: {}
             validationContextSdsSecretConfig:
-              name: configmap/backends/ca-cmap-0
+              name: upstream-ca:configmap/backends/ca-cmap-0
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -129,7 +129,7 @@
           combinedValidationContext:
             defaultValidationContext: {}
             validationContextSdsSecretConfig:
-              name: configmap/backends/ca-cmap-1
+              name: upstream-ca:configmap/backends/ca-cmap-1
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

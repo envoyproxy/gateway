@@ -621,7 +621,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 
 		// Share one predicate with caRefNameSegment: a kind that contributes bytes must also
 		// contribute a name segment, or the two desynchronize and a name could name the wrong
-		// bundle. TestCANameSegmentMatchesSupportedKinds pins the pairing.
+		// bundle.
 		if !supportedCAKind(kind) {
 			continue
 		}
@@ -710,8 +710,10 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 const maxUpstreamCASecretNameBytes = 128
 
 const (
-	caNameRefSeparator   = ","
-	caNameFieldSeparator = "/"
+	// The colon keeps upstream CA names distinct from namespace-based SDS names.
+	upstreamCASecretNamePrefix = "upstream-ca:"
+	caNameRefSeparator         = ","
+	caNameFieldSeparator       = "/"
 )
 
 // supportedCAKind reports whether a caCertificateRef of this kind contributes CA bytes.
@@ -749,7 +751,8 @@ func upstreamCASecretName(refs []gwapiv1.ObjectReference, defaultNamespace strin
 			segments = append(segments, segment)
 		}
 	}
-	return naming.Bounded(strings.Join(segments, caNameRefSeparator), maxUpstreamCASecretNameBytes)
+	return upstreamCASecretNamePrefix + naming.Bounded(
+		strings.Join(segments, caNameRefSeparator), maxUpstreamCASecretNameBytes-len(upstreamCASecretNamePrefix))
 }
 
 // lookupCACertificateRef returns a name-only reference if the CA bundle is already

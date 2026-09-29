@@ -41,7 +41,7 @@
                   exact: example.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: configmap/policies/ca-cmap
+              name: upstream-ca:configmap/policies/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
