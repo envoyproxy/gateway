@@ -1813,7 +1813,7 @@ func (t *Translator) buildWasm(
 		wasmIR.HostKeys = config.Env.HostKeys
 	}
 
-	if ptr.Deref(config.ShareVM, false) {
+	if ptr.Deref(config.VMSharingScope, egv1a1.WasmVMSharingScopeNone) == egv1a1.WasmVMSharingScopeNamespace {
 		// Envoy v1.39.1 computes the VM cache key before remote code is fetched on
 		// a cache miss. Include the resolved module checksum so different modules
 		// cannot reuse the first downloaded module's VM, even with remote.sha256 set.
