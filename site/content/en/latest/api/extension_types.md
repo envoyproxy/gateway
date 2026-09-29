@@ -7003,7 +7003,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension.<br />When Code is omitted, Name is required and must match a module registered<br />in EnvoyProxy.spec.wasmModules. |
-| `shareVM` | _boolean_ |  false  | false | ShareVM allows this extension to share a Wasm VM with other extensions that<br />enable sharing in the same EnvoyExtensionPolicy namespace. Envoy determines<br />VM compatibility using the Wasm code and VM configuration, including environment<br />variables. Each Envoy worker has its own VM.<br />Sharing a VM shares module-level state and VM failures. Plugin names and root<br />IDs are not changed; matching plugin identities may also share a root context.<br />If false or unset, each policy's Wasm entry uses its own VM ID. |
+| `vmSharingScope` | _[WasmVMSharingScope](#wasmvmsharingscope)_ |  false  | None | VMSharingScope defines the scope within which this extension may share a Wasm VM.<br />If None or unset, each policy's Wasm entry uses its own VM ID.<br />If Namespace, this extension may share a VM with other extensions that specify<br />Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM<br />compatibility using the Wasm code and VM configuration, including environment<br />variables. Each Envoy worker has its own VM.<br />Sharing a VM shares module-level state and VM failures. Plugin names and root<br />IDs are not changed; matching plugin identities may also share a root context. |
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  false  |  | Code is the Wasm code for the extension.<br />When omitted, Name must match a module in EnvoyProxy.spec.wasmModules. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
@@ -7116,6 +7116,21 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Local` | LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.<br /> | 
+
+
+#### WasmVMSharingScope
+
+_Underlying type:_ _string_
+
+WasmVMSharingScope defines the scope within which Wasm extensions may share a VM.
+
+_Appears in:_
+- [Wasm](#wasm)
+
+| Value | Description |
+| ----- | ----------- |
+| `None` | WasmVMSharingScopeNone gives each policy's Wasm entry its own VM ID.<br /> | 
+| `Namespace` | WasmVMSharingScopeNamespace allows compatible extensions that specify this<br />scope in the same EnvoyExtensionPolicy namespace to share a VM.<br /> | 
 
 
 #### WeightedZoneConfig
