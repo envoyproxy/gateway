@@ -41,7 +41,7 @@
                   exact: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
                 sanType: URI
             validationContextSdsSecretConfig:
-              name: configmap/backends/ca-cmap
+              name: upstream-ca:configmap/backends/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -96,7 +96,7 @@
           combinedValidationContext:
             defaultValidationContext: {}
             validationContextSdsSecretConfig:
-              name: configmap/backends/ca-cmap
+              name: upstream-ca:configmap/backends/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -150,7 +150,7 @@
           combinedValidationContext:
             defaultValidationContext: {}
             validationContextSdsSecretConfig:
-              name: configmap/backends/ca-cmap
+              name: upstream-ca:configmap/backends/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -169,7 +169,7 @@
                   exact: should.not.use.auto
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: configmap/backends/ca-cmap
+              name: upstream-ca:configmap/backends/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
