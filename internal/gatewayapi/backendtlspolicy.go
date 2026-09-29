@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"reflect"
@@ -299,7 +298,7 @@ func (t *Translator) processServerValidationTLSSettings(
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
 			caRefs := getObjectReferences(gwapiv1.Namespace(backend.Namespace), backend.Spec.TLS.CACertificateRefs)
 			caName := upstreamCASecretName(caRefs, backend.Namespace)
-			if shared := t.sharedCACertificate(gwIR, gtwCtx, caName); shared != nil {
+			if shared := t.lookupCACertificateRef(gwIR, gtwCtx, caName); shared != nil {
 				tlsConfig.CACertificate = shared
 				return tlsConfig, nil
 			}
@@ -545,7 +544,7 @@ func (t *Translator) buildBTPServerValidationTLSConfig(backendTLSPolicy *gwapiv1
 	// the current translation. Because the name derives from the source objects, this also
 	// short-circuits other policies reading the same CA, not just repeats of this one.
 	caName := upstreamCASecretName(caRefs, backendTLSPolicy.Namespace)
-	if shared := t.sharedCACertificate(gwIR, gtwCtx, caName); shared != nil {
+	if shared := t.lookupCACertificateRef(gwIR, gtwCtx, caName); shared != nil {
 		validationTLSConfig.CACertificate = shared
 		return validationTLSConfig, nil
 	}
@@ -707,9 +706,8 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 }
 
 // maxUpstreamCASecretNameBytes bounds the SDS secret name built from a policy's
-// caCertificateRefs. Envoy imposes no limit on secret names, so the budget only has to keep a
-// pathological ref list from growing without bound while leaving real names readable.
-const maxUpstreamCASecretNameBytes = 512
+// caCertificateRefs.
+const maxUpstreamCASecretNameBytes = 128
 
 const (
 	caNameRefSeparator   = ","
@@ -739,13 +737,7 @@ func caRefNameSegment(kind, namespace, name string) string {
 	return strings.ToLower(kind) + caNameFieldSeparator + namespace + caNameFieldSeparator + name
 }
 
-// upstreamCASecretName names the SDS secret for a CA bundle assembled from refs, after the
-// source objects rather than the policy reading them, so every policy trusting the same object
-// shares one secret. Refs join in declared order because the bundle is concatenated in that
-// order. Empty when no ref contributes bytes.
-//
-// It is purely syntactic, which is what lets it be computed before the refs are read and used
-// as the per-translation cache key.
+// upstreamCASecretName names the SDS secret for a CA bundle after the source objects.
 func upstreamCASecretName(refs []gwapiv1.ObjectReference, defaultNamespace string) string {
 	segments := make([]string, 0, len(refs))
 	for _, ref := range refs {
@@ -757,18 +749,13 @@ func upstreamCASecretName(refs []gwapiv1.ObjectReference, defaultNamespace strin
 			segments = append(segments, segment)
 		}
 	}
-	if len(segments) == 0 {
-		return ""
-	}
 	return naming.Bounded(strings.Join(segments, caNameRefSeparator), maxUpstreamCASecretNameBytes)
 }
 
-// sharedCACertificate returns the reference to use when name is already registered for this
-// gateway, letting a later policy reading the same source objects skip re-reading them.
-//
-// Dropping SDS here is safe: an SDS-backed ref carries no bytes, so shareCACertificate never
-// registers a name for it and this can never hit for one.
-func (t *Translator) sharedCACertificate(gwIR *ir.Xds, gtwCtx *GatewayContext, name string) *ir.TLSCACertificate {
+// lookupCACertificateRef returns a name-only reference if the CA bundle is already
+// registered for this gateway, or nil otherwise. The bytes stay in gwIR.CACertificates.
+// External SDS certificates have no inline bytes and are never registered here.
+func (t *Translator) lookupCACertificateRef(gwIR *ir.Xds, gtwCtx *GatewayContext, name string) *ir.TLSCACertificate {
 	if gwIR == nil || gtwCtx == nil || name == "" {
 		return nil
 	}
@@ -779,38 +766,32 @@ func (t *Translator) sharedCACertificate(gwIR *ir.Xds, gtwCtx *GatewayContext, n
 	return &ir.TLSCACertificate{Name: name}
 }
 
-// shareCACertificate moves cert's bytes into gwIR.CACertificates, one entry per source, and
-// returns a reference in their place. Without a gateway to share against, cert comes back
-// untouched and stays self-contained — the in-process TLS paths read those inline bytes.
+// shareCACertificate stores cert's bytes in the gateway's shared CA registry and
+// returns a reference without inline bytes. Certificates without bytes or a name
+// are returned unchanged. Without gateway scope, the bytes remain inline for
+// in-process TLS consumers.
 func (t *Translator) shareCACertificate(gwIR *ir.Xds, gtwCtx *GatewayContext, cert *ir.TLSCACertificate) *ir.TLSCACertificate {
 	if gwIR == nil || gtwCtx == nil || cert == nil || len(cert.Certificate) == 0 || cert.Name == "" {
 		return cert
 	}
-	t.caEntryFor(gwIR, t.getIRKey(gtwCtx.Gateway), cert.Name, cert.Certificate)
+	t.registerCACertificate(gwIR, t.getIRKey(gtwCtx.Gateway), cert.Name, cert.Certificate)
 	return &ir.TLSCACertificate{Name: cert.Name, SDS: cert.SDS}
 }
 
-// caEntryFor returns the gwIR entry holding bundle under name, adding it when this is the first
-// sight of that name.
-func (t *Translator) caEntryFor(gwIR *ir.Xds, gwIRKey, name string, bundle []byte) *ir.CACertificateEntry {
+// registerCACertificate stores one bundle per name in the gateway's CA registry.
+// CACertificateMap tracks registered entries during translation; gwIR.CACertificates
+// carries their bytes to the xDS translator. Already registered names are skipped.
+func (t *Translator) registerCACertificate(gwIR *ir.Xds, gwIRKey, name string, bundle []byte) {
 	if t.CACertificateMap == nil {
 		t.CACertificateMap = make(map[CACertificateKey]*ir.CACertificateEntry)
 	}
 	key := CACertificateKey{GatewayIRKey: gwIRKey, Name: name}
-	entry, ok := t.CACertificateMap[key]
-	if !ok {
-		entry = &ir.CACertificateEntry{Name: name, Certificate: bundle}
-		t.CACertificateMap[key] = entry
-		gwIR.CACertificates = append(gwIR.CACertificates, entry)
-		return entry
+	if _, ok := t.CACertificateMap[key]; ok {
+		return
 	}
-	// The name derives from the source objects, so equal names must mean equal bytes. If that
-	// ever stops holding, the first bundle wins and every later consumer silently trusts it.
-	if !bytes.Equal(entry.Certificate, bundle) {
-		t.Logger.Error(nil, "CA bundle mismatch for shared secret name; keeping the first bundle",
-			"name", name)
-	}
-	return entry
+	entry := &ir.CACertificateEntry{Name: name, Certificate: bundle}
+	t.CACertificateMap[key] = entry
+	gwIR.CACertificates = append(gwIR.CACertificates, entry)
 }
 
 func getAncestorRefs(policy *gwapiv1.BackendTLSPolicy) []*gwapiv1.ParentReference {

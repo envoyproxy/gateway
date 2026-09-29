@@ -30,8 +30,6 @@ func sdsClusterNameFromURL(url string) string {
 	address := strings.TrimPrefix(url, "unix://")
 	const maxReadablePrefixLength = 48
 
-	// The hash is appended unconditionally, not only on truncation: rewriting "/" to "_"
-	// already collapses distinct addresses, so the readable part cannot carry the identity.
 	hashSuffix := naming.HashPrefix(address, 16)
 	readablePrefix := naming.TruncateToBytes(
 		strings.Trim(strings.ReplaceAll(address, "/", "_"), "_"), maxReadablePrefixLength)
