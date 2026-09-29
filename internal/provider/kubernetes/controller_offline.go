@@ -52,6 +52,7 @@ func NewOfflineGatewayAPIController(
 		extGVKs                []schema.GroupVersionKind
 		extServerPoliciesGVKs  []schema.GroupVersionKind
 		extBackendPoliciesGVKs []schema.GroupVersionKind
+		extCertGVKs            []schema.GroupVersionKind
 	)
 
 	if cfg.EnvoyGateway.ExtensionManager != nil {
@@ -68,8 +69,12 @@ func NewOfflineGatewayAPIController(
 			gvk := schema.GroupVersionKind(rsrc)
 			extBackendPoliciesGVKs = append(extBackendPoliciesGVKs, gvk)
 		}
+		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.CertificateResources {
+			gvk := schema.GroupVersionKind(rsrc)
+			extCertGVKs = append(extCertGVKs, gvk)
+		}
 	}
-	allExtensions := slices.Concat(extGVKs, extServerPoliciesGVKs, extBackendPoliciesGVKs)
+	allExtensions := slices.Concat(extGVKs, extServerPoliciesGVKs, extBackendPoliciesGVKs, extCertGVKs)
 
 	cli := newOfflineGatewayAPIClient(allExtensions, cfg.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EndpointSliceIndex))
 
@@ -92,6 +97,10 @@ func NewOfflineGatewayAPIController(
 	for _, gvk := range extBackendPoliciesGVKs {
 		extBackendCRDExists[gvk] = true
 	}
+	extCertCRDExists := make(map[schema.GroupVersionKind]bool)
+	for _, gvk := range extCertGVKs {
+		extCertCRDExists[gvk] = true
+	}
 
 	r := &gatewayAPIReconciler{
 		client:            cli,
@@ -109,6 +118,8 @@ func NewOfflineGatewayAPIController(
 		extBackendGVKs:    extBackendPoliciesGVKs,
 		// We assume all CRDs are available in offline mode.
 		extBackendCRDExists:    extBackendCRDExists,
+		extCertGVKs:            extCertGVKs,
+		extCertCRDExists:       extCertCRDExists,
 		btlsCRDExists:          true,
 		btpCRDExists:           true,
 		ctpCRDExists:           true,

@@ -77,6 +77,7 @@ type gatewayAPIReconciler struct {
 	extGVKs              []schema.GroupVersionKind
 	extServerPolicies    []schema.GroupVersionKind
 	extBackendGVKs       []schema.GroupVersionKind
+	extCertGVKs          []schema.GroupVersionKind
 	gatewayNamespaceMode bool
 
 	backendCRDExists       bool
@@ -95,6 +96,7 @@ type gatewayAPIReconciler struct {
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
 	extBackendCRDExists    map[schema.GroupVersionKind]bool
+	extCertCRDExists       map[schema.GroupVersionKind]bool
 
 	clusterTrustBundleExits bool
 
@@ -163,6 +165,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
 	var extBackendGVKs []schema.GroupVersionKind
+	var extCertGVKs []schema.GroupVersionKind
 	for _, em := range cfg.EnvoyGateway.GetExtensionManagers() {
 		for _, rsrc := range em.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
@@ -175,6 +178,10 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		for _, rsrc := range em.BackendResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extBackendGVKs = append(extBackendGVKs, gvk)
+		}
+		for _, rsrc := range em.CertificateResources {
+			gvk := schema.GroupVersionKind(rsrc)
+			extCertGVKs = append(extCertGVKs, gvk)
 		}
 	}
 
@@ -193,6 +200,8 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		extServerPolicies:    extServerPoliciesGVKs,
 		extBackendGVKs:       extBackendGVKs,
 		extBackendCRDExists:  make(map[schema.GroupVersionKind]bool),
+		extCertGVKs:          extCertGVKs,
+		extCertCRDExists:     make(map[schema.GroupVersionKind]bool),
 		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
 	}
 
@@ -552,6 +561,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 				return reconcile.Result{}, err
 			}
 			gcLogger.Error(err, "failed to process policy target ReferenceGrants for GatewayClass")
+		}
+
+		if err = r.processExtensionCertificates(ctx, gwcResource); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing extension certificates")
+				return reconcile.Result{}, err
+			}
+			gcLogger.Error(err, "failed to process extension certificates for GatewayClass")
 		}
 
 		if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
@@ -3069,6 +3086,27 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 		r.log.Info("Watching additional backend resource", "resource", gvk.String())
 	}
+	for _, gvk := range r.extCertGVKs {
+		crdExists, err := checkCRD(gvk.Kind, gvk.GroupVersion().String())
+		if err != nil {
+			return err
+		}
+		if !crdExists {
+			r.log.Info("certificate resource CRD not found, skipping watch", "resource", gvk.String())
+			continue
+		}
+		r.extCertCRDExists[gvk] = true
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		if err := c.Watch(source.Kind(mgr.GetCache(), u,
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *unstructured.Unstructured) []reconcile.Request {
+				return r.enqueueClass(ctx, si)
+			}),
+			r.certificateResourcePredicates()...)); err != nil {
+			return err
+		}
+		r.log.Info("Watching additional certificate resource", "resource", gvk.String())
+	}
 
 	r.hrfCRDExists, err = checkCRD(resource.KindHTTPRouteFilter, egv1a1.GroupVersion.String())
 	if err != nil {
@@ -3568,5 +3606,40 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 			}
 		}
 	}
+	return nil
+}
+
+// certificateResourcePredicates omits the generation-change filter used for other extension
+// resources, so a status-only update from the provider retriggers certificate resolution.
+func (r *gatewayAPIReconciler) certificateResourcePredicates() []predicate.TypedPredicate[*unstructured.Unstructured] {
+	var predicates []predicate.TypedPredicate[*unstructured.Unstructured]
+	if r.namespaceLabel != nil {
+		predicates = append(predicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
+			return r.hasMatchingNamespaceLabels(obj)
+		}))
+	}
+	return predicates
+}
+
+// processExtensionCertificates adds extension certificate resources to the resourceTree.
+func (r *gatewayAPIReconciler) processExtensionCertificates(
+	ctx context.Context, resourceTree *resource.Resources,
+) error {
+	for _, gvk := range r.extCertGVKs {
+		if r.extCertCRDExists != nil && !r.extCertCRDExists[gvk] {
+			continue
+		}
+
+		certList := unstructured.UnstructuredList{}
+		certList.SetAPIVersion(gvk.GroupVersion().String())
+		certList.SetKind(gvk.Kind)
+
+		if err := r.client.List(ctx, &certList); err != nil {
+			return fmt.Errorf("error listing extension certificate %s: %w", gvk, err)
+		}
+
+		resourceTree.ExtensionCertificates = append(resourceTree.ExtensionCertificates, certList.Items...)
+	}
+
 	return nil
 }
