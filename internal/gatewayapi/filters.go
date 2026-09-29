@@ -131,7 +131,7 @@ func (t *Translator) ProcessHTTPFilters(
 		case gwapiv1.HTTPRouteFilterCORS:
 			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
@@ -205,7 +205,7 @@ func (t *Translator) ProcessGRPCFilters(
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
@@ -816,7 +816,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	return nil
 }
 
-func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error {
+func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources, xdsIR resource.XdsIRMap) status.Error {
 	// Make sure the config actually exists.
 	if extFilter == nil {
 		return nil
@@ -1049,9 +1049,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 			group := apiVers[:idx]
 			if group == string(extFilter.Group) {
 				res := res // Capture loop variable
-				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, &ir.UnstructuredRef{
-					Object: &res,
-				})
+				var gwIR *ir.Xds
+				gatewayCtx := filterContext.ParentRef.GetGateway()
+				if gatewayCtx != nil {
+					gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
+				}
+				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gatewayCtx, &res))
 				return nil
 			}
 		}

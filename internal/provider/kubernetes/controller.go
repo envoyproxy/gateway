@@ -139,6 +139,22 @@ type subscriptions struct {
 	envoyProxyStatuses           <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.EnvoyProxyStatus]
 }
 
+type statusSubscriptionRunnable struct {
+	reconciler              *gatewayAPIReconciler
+	extensionManagerEnabled bool
+	leaderElection          bool
+}
+
+func (r *statusSubscriptionRunnable) NeedLeaderElection() bool {
+	return r.leaderElection
+}
+
+func (r *statusSubscriptionRunnable) Start(ctx context.Context) error {
+	r.reconciler.subscribeToResources(ctx)
+	r.reconciler.updateStatusFromSubscriptions(ctx, r.extensionManagerEnabled).Wait()
+	return nil
+}
+
 // newGatewayAPIController
 func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *config.Server, su Updater,
 	resources *message.ProviderResources,
@@ -224,36 +240,14 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 
-	// This is a blocking function that subscribes to the resource updates and updates the status.
-	subscribeUpdateStatusAndCloseResources := func() {
-		// Subscribe to resource updates
-		r.subscribeToResources(ctx)
-		// Update status
-		go r.updateStatusFromSubscriptions(ctx, len(cfg.EnvoyGateway.GetExtensionManagers()) > 0)
-		r.log.Info("started")
-		// Close resources if the context is done.
-		<-ctx.Done()
-		r.resources.Close()
-		r.log.Info("shutting down")
-	}
-
-	// When leader election is enabled, only subscribe to status updates upon acquiring leadership.
-	if cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
-		!ptr.Deref(cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false) {
-		go func() {
-			select {
-			case <-ctx.Done():
-				// As a follower EG instance close resources when the context is done.
-				r.resources.Close()
-				return
-			case <-cfg.Elected:
-				// As a leader EG instance subscribe to resource updates and Close resources when the context is done.
-				subscribeUpdateStatusAndCloseResources()
-			}
-		}()
-	} else {
-		// Since leader election is disabled subscribe to resource updates and Close resources when the context is done.
-		go subscribeUpdateStatusAndCloseResources()
+	leaderElectionEnabled := cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
+		!ptr.Deref(cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false)
+	if err := mgr.Add(&statusSubscriptionRunnable{
+		reconciler:              r,
+		extensionManagerEnabled: len(cfg.EnvoyGateway.GetExtensionManagers()) > 0,
+		leaderElection:          leaderElectionEnabled,
+	}); err != nil {
+		return fmt.Errorf("error adding status subscription runnable: %w", err)
 	}
 	return nil
 }
@@ -332,7 +326,6 @@ func isTransientError(err error) bool {
 
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
 // same reconcile.Request containing the gateway controller name. This allows multiple resource updates to
-// be handled by a single call to Reconcile. The reconcile.Request DOES NOT map to a specific resource.
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	ctx, span := tracer.Start(ctx, "GatewayAPIReconciler.Reconcile")
 	defer span.End()
@@ -3015,9 +3008,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	r.log.Info("Watching gatewayAPI related objects")
 
 	// Watch any additional GVKs from the registered extension.
-	uPredicates := []predicate.TypedPredicate[*unstructured.Unstructured]{
-		predicate.TypedGenerationChangedPredicate[*unstructured.Unstructured]{},
-	}
+	uPredicates := commonPredicates[*unstructured.Unstructured]()
 	if r.namespaceLabel != nil {
 		uPredicates = append(uPredicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
 			return r.hasMatchingNamespaceLabels(obj)
@@ -3064,11 +3055,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		r.extBackendCRDExists[gvk] = true
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
+		extBackendPredicates := commonPredicates[*unstructured.Unstructured]()
+		if r.namespaceLabel != nil {
+			extBackendPredicates = append(extBackendPredicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
+				return r.hasMatchingNamespaceLabels(obj)
+			}))
+		}
 		if err := c.Watch(source.Kind(mgr.GetCache(), u,
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *unstructured.Unstructured) []reconcile.Request {
 				return r.enqueueClass(ctx, si)
 			}),
-			uPredicates...)); err != nil {
+			extBackendPredicates...)); err != nil {
 			return err
 		}
 		r.log.Info("Watching additional backend resource", "resource", gvk.String())
