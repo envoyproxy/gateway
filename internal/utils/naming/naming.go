@@ -38,14 +38,15 @@ func HashPrefix(s string, n int) string {
 }
 
 // Bounded returns name unchanged when it fits in maxBytes, and otherwise a truncated head
-// joined to a hash of the full name, so names sharing a prefix stay distinct. Callers whose
-// readable part is lossy on its own must hash unconditionally instead.
+// joined to a hash of the full name. Inputs must not contain underscores, so a shortened
+// name cannot match a literal input. Callers whose readable part is lossy on its own must
+// hash unconditionally instead.
 func Bounded(name string, maxBytes int) string {
 	if len(name) <= maxBytes {
 		return name
 	}
 	const hashBytes = 8
-	suffix := "-" + HashPrefix(name, hashBytes)
+	suffix := "_" + HashPrefix(name, hashBytes)
 	// Too tight to carry both a readable head and the hash: the hash is what keeps the name
 	// unique, so it is the part that survives, even though it then exceeds the budget.
 	if maxBytes <= len(suffix) {
