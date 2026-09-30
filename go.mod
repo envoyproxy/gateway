@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.26.8
+go 1.27
 
 require (
 	cel.dev/expr v0.25.3
@@ -10,7 +10,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v29.8.0+incompatible
+	github.com/docker/cli v29.8.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.14.1-0.20260729145720-a2d8c7492908
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260729145720-a2d8c7492908
@@ -40,7 +40,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	github.com/tetratelabs/func-e v1.6.0
-	github.com/tsaarni/certyaml v0.12.0
+	github.com/tsaarni/certyaml v0.13.0
 	github.com/yuin/gopher-lua v1.1.2
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.46.0
@@ -58,7 +58,7 @@ require (
 	golang.org/x/sync v0.23.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688
-	google.golang.org/grpc v1.83.2
+	google.golang.org/grpc v1.84.0
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
