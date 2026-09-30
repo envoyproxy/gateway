@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway/test
 
-go 1.26.8
+go 1.27
 
 replace github.com/envoyproxy/gateway => ../
 
@@ -9,6 +9,7 @@ require (
 	fortio.org/log v1.18.3
 	github.com/andybalholm/brotli v1.2.2
 	github.com/envoyproxy/gateway v0.0.0-00010101000000-000000000000
+	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260729145720-a2d8c7492908
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.0
@@ -24,7 +25,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.11.0
 	golang.org/x/net v0.58.0
 	gonum.org/v1/gonum v0.17.0
-	google.golang.org/grpc v1.83.2
+	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 	helm.sh/helm/v3 v3.22.0
 	k8s.io/api v0.37.0
@@ -105,7 +106,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v29.8.0+incompatible // indirect
+	github.com/docker/cli v29.8.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.8 // indirect
 	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -114,7 +115,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.14.1-0.20260729145720-a2d8c7492908 // indirect
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260729145720-a2d8c7492908 // indirect
-	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260729145720-a2d8c7492908 // indirect
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260729145720-a2d8c7492908 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36 // indirect
