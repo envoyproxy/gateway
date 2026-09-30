@@ -614,7 +614,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		gCtx := &GatewayContext{
 			Gateway: gateway,
 		}
-		if err := gCtx.attachEnvoyProxy(resources, envoyproxyMap); err != nil {
+		if err := gCtx.attachEnvoyProxy(resources, envoyproxyMap, t.ControllerNamespace); err != nil {
 			t.Logger.Error(err, "Error attaching EnvoyProxy", logKeysAndValues...)
 			// TODO - Add error to envoy proxy status message.
 		} else if gCtx.envoyProxy != nil {
