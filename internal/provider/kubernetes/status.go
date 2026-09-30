@@ -718,22 +718,14 @@ func mergeRouteParentStatus(ns string, controllerName gwapiv1.GatewayController,
 	// may write their own entries for the same parentRef.
 	//
 	// Range over old status parentRefs in order:
-<<<<<<< HEAD
 	// 1. The entry exists in the new status: append the new one to the final status, once.
 	//    Further old duplicates of it are dropped.
-	// 2. The entry doesn't exist in the new status but its parentRef is still present in the route's
-	//    spec.ParentRefs: keep it, regardless of controller. This is important for routes with
-	//    multiple parent references - not all parents are updated in each reconciliation.
-	// 3. The entry doesn't exist in the new status and its parentRef is no longer present in the
-=======
-	// 1. The parentRef exists in the new status: append the new one to the final status.
-	// 2. The parentRef doesn't exist in the new status and it's not our controller: keep it,
+	// 2. The entry doesn't exist in the new status and it's not our controller: keep it,
 	//    the other controller is responsible for its own entries.
-	// 3. The parentRef doesn't exist in the new status but is still present in the route's
+	// 3. The entry doesn't exist in the new status but its parentRef is still present in the route's
 	//    spec.ParentRefs: keep it. This is important for routes with multiple parent
 	//    references - not all parents are updated in each reconciliation.
-	// 4. The parentRef doesn't exist in the new status and is no longer present in the
->>>>>>> 94ed1ae0 (fix: only drop stale route parent status owned by our controller)
+	// 4. The entry doesn't exist in the new status and its parentRef is no longer present in the
 	//    route's spec.ParentRefs: drop it, it's a stale status left over from a removed parentRef.
 	used := make([]bool, len(new))
 	for _, oldP := range old {
@@ -748,6 +740,11 @@ func mergeRouteParentStatus(ns string, controllerName gwapiv1.GatewayController,
 			if !used[found] {
 				used[found] = true
 				merged = append(merged, new[found])
+				// The incoming status may have been computed before a concurrent spec update
+				// removed this parentRef, so drop it again if it's no longer referenced.
+				if oldP.ControllerName == controllerName && !isReferencedBySpec(ns, oldP.ParentRef, specParentRefs) {
+					merged = merged[:len(merged)-1]
+				}
 			}
 			continue
 		}
@@ -757,11 +754,8 @@ func mergeRouteParentStatus(ns string, controllerName gwapiv1.GatewayController,
 			continue
 		}
 
-		for _, specRef := range specParentRefs {
-			if gatewayapi.IsParentRefEqual(oldP.ParentRef, specRef, ns) {
-				merged = append(merged, oldP)
-				break
-			}
+		if isReferencedBySpec(ns, oldP.ParentRef, specParentRefs) {
+			merged = append(merged, oldP)
 		}
 	}
 
@@ -794,6 +788,16 @@ func mergeRouteParentStatus(ns string, controllerName gwapiv1.GatewayController,
 
 func isRouteParentStatusEqual(ns string, a, b *gwapiv1.RouteParentStatus) bool {
 	return a.ControllerName == b.ControllerName && gatewayapi.IsParentRefEqual(a.ParentRef, b.ParentRef, ns)
+}
+
+// isReferencedBySpec returns true if ref is equal to any of the route's spec.ParentRefs.
+func isReferencedBySpec(ns string, ref gwapiv1.ParentReference, specParentRefs []gwapiv1.ParentReference) bool {
+	for _, specRef := range specParentRefs {
+		if gatewayapi.IsParentRefEqual(ref, specRef, ns) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {
