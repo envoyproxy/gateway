@@ -50,6 +50,15 @@ type Infra struct {
 	// ControllerNamespace is the namespace where Envoy Gateway is deployed.
 	ControllerNamespace string
 
+	// ControllerName is the well-known name of the Envoy Gateway controller's own resources.
+	ControllerName string
+
+	// ControllerFullName is the Helm release fullname used for certgen and other release-scoped resources.
+	ControllerFullName string
+
+	// ControllerServiceAccountName is the service account name of the Envoy Gateway controller pod.
+	ControllerServiceAccountName string
+
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 
@@ -81,13 +90,16 @@ func NewInfra(cli client.Client, cfg *config.Server, errors message.RunnerErrorN
 	return &Infra{
 		// Always set infra namespace to cfg.ControllerNamespace,
 		// Otherwise RateLimit resource provider will failed to create/delete.
-		ControllerNamespace: cfg.ControllerNamespace,
-		DNSDomain:           cfg.DNSDomain,
-		EnvoyGateway:        cfg.EnvoyGateway,
-		Client:              New(cli),
-		apiReader:           apiReader,
-		logger:              cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
-		errors:              errors,
+		ControllerNamespace:          cfg.ControllerNamespace,
+		ControllerName:               cfg.ControllerName,
+		ControllerFullName:           cfg.ControllerFullName,
+		ControllerServiceAccountName: cfg.ControllerServiceAccountName,
+		DNSDomain:                    cfg.DNSDomain,
+		EnvoyGateway:                 cfg.EnvoyGateway,
+		Client:                       New(cli),
+		apiReader:                    apiReader,
+		logger:                       cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
+		errors:                       errors,
 	}
 }
 

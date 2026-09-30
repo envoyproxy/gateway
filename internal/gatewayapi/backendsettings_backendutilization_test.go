@@ -25,10 +25,12 @@ func TestBuildLoadBalancer_BackendUtilization(t *testing.T) {
 		MetricNamesForComputingUtilization: []string{"named_metrics.foo", "cpu_utilization"},
 	}
 
-	policy := &egv1a1.ClusterSettings{
-		LoadBalancer: &egv1a1.LoadBalancer{
-			Type:               egv1a1.BackendUtilizationLoadBalancerType,
-			BackendUtilization: backendUtilization,
+	policy := &egv1a1.BackendSettings{
+		ClusterSettings: egv1a1.ClusterSettings{
+			LoadBalancer: &egv1a1.LoadBalancer{
+				Type:               egv1a1.BackendUtilizationLoadBalancerType,
+				BackendUtilization: backendUtilization,
+			},
 		},
 	}
 

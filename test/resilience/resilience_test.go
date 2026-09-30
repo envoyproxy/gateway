@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	csuite "sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/envoyproxy/gateway/test/resilience/tests"
@@ -39,6 +40,6 @@ func TestResilience(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create the resilience test suite: %v", err)
 	}
-	t.Logf("Running %d resilience tests", len(tests.ResilienceTests))
+	tlog.Logf(t, "Running %d resilience tests", len(tests.ResilienceTests))
 	bSuite.Run(t, tests.ResilienceTests)
 }

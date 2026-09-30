@@ -1,4 +1,4 @@
-FROM golang:1.27.0@sha256:65b6f280bf050ec5af12716857e8ea8439d694dbba8f31ceeb7630670071f2bb AS builder
+FROM golang:1.27.1@sha256:512690a5660563b57d37ecc31129e7f136e831db2aed24a1dbeb8ad7380dc0fa AS builder
 
 ARG GO_LDFLAGS=""
 
@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
     GOARCH=${TARGETARCH} \
     go build -o /bin/sds-test-server -ldflags "${GO_LDFLAGS}" .
 
-FROM gcr.io/distroless/static-debian11
+FROM gcr.io/distroless/static-debian11@sha256:1dbe426d60caed5d19597532a2d74c8056cd7b1674042b88f7328690b5ead8ed
 COPY --from=builder /bin/sds-test-server /
 
 ENTRYPOINT ["/sds-test-server"]

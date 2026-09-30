@@ -1137,6 +1137,59 @@ func TestValidateEnvoyGatewayXDSServer(t *testing.T) {
 	})
 }
 
+func TestValidateEnvoyGatewayDebounce(t *testing.T) {
+	duration := func(s string) *gwapiv1.Duration {
+		d := gwapiv1.Duration(s)
+		return &d
+	}
+
+	t.Run("valid no overrides", func(t *testing.T) {
+		require.NoError(t, validateEnvoyGatewayDebounce(nil))
+		require.NoError(t, validateEnvoyGatewayDebounce(&egv1a1.Debounce{}))
+	})
+
+	t.Run("valid overrides", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("100ms"), Max: duration("10s")}
+		require.NoError(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("valid equal after and max", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("1s"), Max: duration("1s")}
+		require.NoError(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("invalid after duration", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("bad")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("invalid max duration", func(t *testing.T) {
+		d := &egv1a1.Debounce{Max: duration("bad")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("non positive after", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("0s")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("non positive max", func(t *testing.T) {
+		d := &egv1a1.Debounce{Max: duration("-1s")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+
+	t.Run("max shorter than after", func(t *testing.T) {
+		d := &egv1a1.Debounce{After: duration("5s"), Max: duration("1s")}
+		require.ErrorContains(t, validateEnvoyGatewayDebounce(d), "must be greater than or equal to")
+	})
+
+	t.Run("max shorter than defaulted after", func(t *testing.T) {
+		// After falls back to its 100ms default, so a 10ms max is invalid.
+		d := &egv1a1.Debounce{Max: duration("10ms")}
+		require.Error(t, validateEnvoyGatewayDebounce(d))
+	})
+}
+
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 	type args struct {
 		component string
