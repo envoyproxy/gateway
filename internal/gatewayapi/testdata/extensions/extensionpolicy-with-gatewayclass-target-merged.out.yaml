@@ -242,6 +242,9 @@ gateways:
     name: gateway-2
     namespace: envoy-gateway
   spec:
+    allowedListeners:
+      namespaces:
+        from: All
     gatewayClassName: envoy-gateway-class
     listeners:
     - allowedRoutes:
@@ -251,6 +254,7 @@ gateways:
       port: 82
       protocol: HTTP
   status:
+    attachedListenerSets: 1
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -318,6 +322,12 @@ infraIR:
           name: http-82
           protocol: HTTP
           servicePort: 82
+      - name: envoy-gateway/gateway-2/envoy-gateway/ext-listeners/http3
+        ports:
+        - containerPort: 10083
+          name: http-83
+          protocol: HTTP
+          servicePort: 83
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
@@ -326,6 +336,63 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway-class
       namespace: ""
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: ext-listeners
+    namespace: envoy-gateway
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http3
+      port: 83
+      protocol: HTTP
+    parentRef:
+      name: gateway-2
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: http3
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 xdsIR:
   envoy-gateway-class:
     accessLog:
@@ -526,6 +593,24 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10082
+    - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test1
+      - name: foo.example.io/bar/envoy-gateway/test4
+      - name: foo.example.io/bar/envoy-gateway/test6
+      externalPort: 83
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http3
+      name: envoy-gateway/gateway-2/envoy-gateway/ext-listeners/http3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10083
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
