@@ -1106,12 +1106,7 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					},
 				},
 				specParentRefs: []gwapiv1.ParentReference{
-					{
-						Name:        "gateway1",
-						Namespace:   new(gwapiv1.Namespace("default")),
-						SectionName: new(gwapiv1.SectionName("listener1")),
-						Port:        new(gwapiv1.PortNumber(80)),
-					},
+					{Name: "gateway1"},
 					{Name: "gateway2"},
 				},
 			},
@@ -1146,6 +1141,34 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 							Reason: "Accepted",
 						},
 					},
+				},
+			},
+		},
+		{
+			name: "parentRef in both old and new but removed from spec - dropped",
+			args: args{
+				old: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+					},
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway2"},
+					},
+				},
+				new: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+					},
+				},
+				specParentRefs: []gwapiv1.ParentReference{{Name: "gateway2"}},
+			},
+			want: []gwapiv1.RouteParentStatus{
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef:      gwapiv1.ParentReference{Name: "gateway2"},
 				},
 			},
 		},
