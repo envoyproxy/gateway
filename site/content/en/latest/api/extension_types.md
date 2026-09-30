@@ -3258,22 +3258,63 @@ _Appears in:_
 
 
 HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
-request or response. Only one action for a given header name is
-permitted. Filters specifying multiple actions of the same or different
-type for any one header name are invalid. Configuration to set or add
-multiple values for a header must use RFC 7230 header value formatting,
-separating each value with a comma.
+request or response.
+
+The Set, Add, AddIfAbsent, Remove and RemoveOnMatch fields permit only one
+action for a given header name. Specifying multiple actions of the same or
+different type for any one header name via those fields is invalid, and
+configuration to set or add multiple values for a header must use RFC 7230
+header value formatting, separating each value with a comma.
+
+The Mutations field has no such restriction. It is an ordered list, so the
+same header name may appear in any number of operations and each one is
+applied in turn.
 
 _Appears in:_
 - [HeaderSettings](#headersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `mutations` | _[HTTPHeaderMutation](#httpheadermutation) array_ |  false  |  | Mutations is an ordered list of header operations that are applied in<br />exactly the order specified. Use this field when the sequence of<br />operations matters, for example setting a header and then appending to<br />it, or removing a header and then re-adding it.<br />Mutations are always applied FIRST, in list order. The Set, Add,<br />AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after<br />the mutations, preserving their existing ordering (Add, then Set, then<br />AddIfAbsent, then Remove, then RemoveOnMatch). |
 | `set` | _[HTTPHeader](#httpheader) array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
 | `add` | _[HTTPHeader](#httpheader) array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
 | `addIfAbsent` | _[HTTPHeader](#httpheader) array_ |  false  |  | AddIfAbsent adds the given header(s) (name, value) to the request/response<br />only if the header does not already exist. Unlike Add which appends to<br />existing values, this is a no-op if the header is already present.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  addIfAbsent:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
 | `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
+
+
+#### HTTPHeaderMutation
+
+
+
+HTTPHeaderMutation defines a single header mutation operation.
+
+_Appears in:_
+- [HTTPHeaderFilter](#httpheaderfilter)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `write` | _[HTTPHeaderWrite](#httpheaderwrite)_ |  false  |  | Write adds or modifies a header using the specified action. |
+| `remove` | _string_ |  false  |  | Remove removes the named header if it exists. Header names are<br />case-insensitive. |
+| `removeOnMatch` | _[StringMatch](#stringmatch)_ |  false  |  | RemoveOnMatch removes every header whose name matches the specified string<br />matcher. Matching is performed on the header name (case-insensitive). |
+
+
+#### HTTPHeaderWrite
+
+
+
+HTTPHeaderWrite defines a header to write and how it should be applied when a
+header with the same name already exists. It mirrors Envoy's
+core.v3.HeaderValueOption.
+
+_Appears in:_
+- [HTTPHeaderMutation](#httpheadermutation)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. The value may contain<br />Envoy substitution format operators such as "%REQ(x-foo)%", which are<br />evaluated per request.<br />See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators |
+| `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Add | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Add. |
+| `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether the header is still written when its<br />value is empty. This matters for values produced by substitution<br />formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at<br />request time. Envoy drops such headers by default; set this to true to<br />keep them with an empty value.<br />When unset, it defaults to true only if the configured value itself is<br />the empty string, so a literal empty header is always written. |
 
 
 #### HTTPHostnameModifier
@@ -3533,6 +3574,25 @@ _Appears in:_
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
 | `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
 | `maxRequestHeaderLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxRequestHeaderLimit provides configuration for the maximum size of the<br />request headers allowed for incoming connections, mapping to the Envoy<br />`max_request_headers_kb` HTTP connection manager setting. Requests whose<br />headers exceed this limit receive a 431 (Request Header Fields Too Large)<br />response. The value is rounded up to the nearest KiB, must be at least 1Ki,<br />and cannot exceed 8192Ki (the maximum Envoy supports).<br />For example, 60Ki, 96Ki, 128Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 60Ki bytes. |
+
+
+#### HeaderWriteAction
+
+_Underlying type:_ _string_
+
+HeaderWriteAction controls how a header value is written when a header with
+the same name already exists. The names match the Add, Set and AddIfAbsent
+fields of HTTPHeaderFilter.
+
+_Appears in:_
+- [HTTPHeaderWrite](#httpheaderwrite)
+
+| Value | Description |
+| ----- | ----------- |
+| `Add` | HeaderWriteAdd appends the value if the header exists, or adds the<br />header otherwise. (Envoy: APPEND_IF_EXISTS_OR_ADD)<br /> | 
+| `Set` | HeaderWriteSet overwrites the value if the header exists, or adds<br />the header otherwise. (Envoy: OVERWRITE_IF_EXISTS_OR_ADD)<br /> | 
+| `AddIfAbsent` | HeaderWriteAddIfAbsent adds the header only if it is not already present.<br />(Envoy: ADD_IF_ABSENT)<br /> | 
+| `SetIfExists` | HeaderWriteSetIfExists overwrites the value only if the header is<br />already present, and does nothing otherwise. (Envoy: OVERWRITE_IF_EXISTS)<br /> | 
 
 
 #### HealthCheck
@@ -4035,6 +4095,14 @@ _Appears in:_
 KubernetesPatchSpec defines how to perform the patch operation.
 Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
 Note also that, currently, strings containing literal JSON are _rejected_.
+
+Warning: this patch is merged directly onto the fully-computed Kubernetes resource with no
+allowlist on which fields may be set. Whoever can author the EnvoyProxy resource that carries
+this patch can therefore set arbitrary fields — including hostPath volumes, hostNetwork/hostPID,
+privileged containers, or an arbitrary image/command — on a resource that Envoy Gateway's own,
+more privileged, ServiceAccount applies. Because EnvoyProxy is commonly namespace-scoped and
+tenant-authored, treat this field as untrusted input in multi-tenant clusters: restrict who may
+set it via RBAC, or disable EnvoyGateway's `EnvoyProxyPatch` runtime flag.
 
 _Appears in:_
 - [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
@@ -6149,6 +6217,7 @@ _Appears in:_
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
 | `EndpointSliceIndex` | EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.<br />It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.<br />If the additional controller memory usage for the indexes becomes a concern,<br />consider disabling this flag.<br /> | 
 | `PerResourceSystemCASecret` | PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per<br />BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead<br />of sharing a single system_ca_certificates secret across all of them.<br />Disabled by default (i.e. the shared secret is used). Enable this flag to opt out during<br />upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use<br />it, which may cause a brief disruption to new connections on first enable.<br /> | 
+| `EnvoyProxyPatch` | EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on<br />EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve<br />pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and<br />tenant-authored, a patch may grant arbitrary access to resources applied by Envoy<br />Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters<br />where tenants can author their own EnvoyProxy resources.<br /> | 
 
 
 #### RuntimeFlags
@@ -6495,6 +6564,7 @@ that need to match against a string.
 _Appears in:_
 - [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
+- [HTTPHeaderMutation](#httpheadermutation)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)

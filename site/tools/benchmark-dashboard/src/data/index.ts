@@ -68,8 +68,11 @@ import { benchmarkData as v191TestSuite } from './versions/v1.9.1';
 
 import { benchmarkData as v184TestSuite } from './versions/v1.8.4';
 
+import { benchmarkData as v192TestSuite } from './versions/v1.9.2';
+
 // Import all version data
 export const allTestSuites: TestSuite[] = [
+  v192TestSuite,
   v191TestSuite,
   v190TestSuite,
   v184TestSuite,

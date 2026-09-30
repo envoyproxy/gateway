@@ -1,0 +1,37 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8089
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: service/default/service-1/8163/tcp
+        hashPolicy:
+        - sourceIp: {}
+        statPrefix: tcp-8089
+    name: tcproute/default/tcp-app-1
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: default/tcp-gateway/bar
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 8162
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      hashPolicies:
+      - sourceIp: true
+      matcher:
+        onNoMatch:
+          action:
+            name: route
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+              cluster: service/default/service-1/8162/udp
+      statPrefix: service
+  name: default/tcp-gateway/foo
