@@ -1303,7 +1303,7 @@ type fakeUpdater struct {
 	updates chan Update
 }
 
-func (f *fakeUpdater) Send(u Update) {
+func (f *fakeUpdater) Send(_ context.Context, u Update) {
 	f.updates <- u
 }
 
