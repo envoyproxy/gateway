@@ -2228,7 +2228,7 @@ func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, n
 // processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree
 func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
 	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
-	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+	if err := r.client.List(ctx, &envoyPatchPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
 	}
 
@@ -2237,6 +2237,9 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		envoyPatchPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		envoyPatchPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindEnvoyPatchPolicy))
 		if !resourceMap.allAssociatedEnvoyPatchPolicies.Has(utils.NamespacedName(envoyPatchPolicy).String()) {
 			resourceMap.allAssociatedEnvoyPatchPolicies.Insert(utils.NamespacedName(envoyPatchPolicy).String())
 			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, envoyPatchPolicy)
@@ -2250,7 +2253,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
+	if err := r.client.List(ctx, &clientTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
 	}
 
@@ -2259,6 +2262,9 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		clientTrafficPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		clientTrafficPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindClientTrafficPolicy))
 		if !resourceMap.allAssociatedClientTrafficPolicies.Has(utils.NamespacedName(clientTrafficPolicy).String()) {
 			resourceMap.allAssociatedClientTrafficPolicies.Insert(utils.NamespacedName(clientTrafficPolicy).String())
 			resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, clientTrafficPolicy)
@@ -2343,7 +2349,7 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
-	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
+	if err := r.client.List(ctx, &backendTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
 	}
 
@@ -2352,6 +2358,9 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backendTrafficPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		backendTrafficPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindBackendTrafficPolicy))
 		if !resourceMap.allAssociatedBackendTrafficPolicies.Has(utils.NamespacedName(backendTrafficPolicy).String()) {
 			resourceMap.allAssociatedBackendTrafficPolicies.Insert(utils.NamespacedName(backendTrafficPolicy).String())
 			resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, backendTrafficPolicy)
@@ -2365,7 +2374,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	securityPolicies := egv1a1.SecurityPolicyList{}
-	if err := r.client.List(ctx, &securityPolicies); err != nil {
+	if err := r.client.List(ctx, &securityPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing SecurityPolicies: %w", err)
 	}
 
@@ -2374,6 +2383,9 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		securityPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		securityPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindSecurityPolicy))
 		if !resourceMap.allAssociatedSecurityPolicies.Has(utils.NamespacedName(securityPolicy).String()) {
 			resourceMap.allAssociatedSecurityPolicies.Insert(utils.NamespacedName(securityPolicy).String())
 			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, securityPolicy)
@@ -2389,7 +2401,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
+	if err := r.client.List(ctx, &backendTLSPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
 
@@ -2398,6 +2410,9 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backendTLSPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		backendTLSPolicy.SetGroupVersionKind(gwapiv1.SchemeGroupVersion.WithKind(resource.KindBackendTLSPolicy))
 		if !resourceMap.allAssociatedBackendTLSPolicies.Has(utils.NamespacedName(backendTLSPolicy).String()) {
 			resourceMap.allAssociatedBackendTLSPolicies.Insert(utils.NamespacedName(backendTLSPolicy).String())
 			resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, backendTLSPolicy)
@@ -3502,7 +3517,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	envoyExtensionPolicies := egv1a1.EnvoyExtensionPolicyList{}
-	if err := r.client.List(ctx, &envoyExtensionPolicies); err != nil {
+	if err := r.client.List(ctx, &envoyExtensionPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing EnvoyExtensionPolicies: %w", err)
 	}
 
@@ -3511,6 +3526,9 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		envoyExtensionPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		envoyExtensionPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindEnvoyExtensionPolicy))
 		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(envoyExtensionPolicy).String()) {
 			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(envoyExtensionPolicy).String())
 			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, envoyExtensionPolicy)
