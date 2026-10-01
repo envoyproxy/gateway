@@ -719,6 +719,63 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "xForwardedClientCert with all supported certDetailsToAdd values",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						XForwardedClientCert: &egv1a1.XForwardedClientCert{
+							Mode: new(egv1a1.XFCCForwardModeSanitizeSet),
+							CertDetailsToAdd: []egv1a1.XFCCCertData{
+								egv1a1.XFCCCertDataSubject,
+								egv1a1.XFCCCertDataCert,
+								egv1a1.XFCCCertDataChain,
+								egv1a1.XFCCCertDataDNS,
+								egv1a1.XFCCCertDataURI,
+								egv1a1.XFCCCertDataIssuer,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "xForwardedClientCert with unsupported certDetailsToAdd value",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						XForwardedClientCert: &egv1a1.XForwardedClientCert{
+							Mode: new(egv1a1.XFCCForwardModeSanitizeSet),
+							CertDetailsToAdd: []egv1a1.XFCCCertData{
+								egv1a1.XFCCCertData("Serial"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.headers.xForwardedClientCert.certDetailsToAdd[0]: Unsupported value: \"Serial\": supported values: \"Subject\", \"Cert\", \"Chain\", \"DNS\", \"URI\", \"Issuer\"",
+			},
+		},
+		{
 			desc: "both targetref and targetrefs specified",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				d := gwapiv1.Duration("300s")

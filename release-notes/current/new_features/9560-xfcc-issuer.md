@@ -1,0 +1,1 @@
+Added `Issuer` to the supported values of `ClientTrafficPolicy.spec.headers.xForwardedClientCert.certDetailsToAdd`, so the issuer of the client certificate can be forwarded in the `x-forwarded-client-cert` (XFCC) header, matching Envoy's `set_current_client_cert_details.issuer` option.

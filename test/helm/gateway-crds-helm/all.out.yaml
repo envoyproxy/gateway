@@ -29620,8 +29620,9 @@ spec:
                           - Chain
                           - DNS
                           - URI
+                          - Issuer
                           type: string
-                        maxItems: 5
+                        maxItems: 6
                         type: array
                       mode:
                         description: |-
