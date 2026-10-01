@@ -33,11 +33,11 @@ var WasmVMShareTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/wasm-vm-share.yaml", "testdata/wasm-vm-share-local.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("first route with shared wasm vm", func(t *testing.T) {
-			testWasmHTTPCodeSource(t, suite, "http-with-http-wasm-source-shared-1", "http-wasm-source-test-shared-1", "/wasm-http-shared-1")
+			testWasmCodeSource(t, suite, "same-namespace", "http-with-http-wasm-source-shared-1", "http-wasm-source-test-shared-1", "/wasm-http-shared-1", "FOO")
 		})
 
 		t.Run("second route with shared wasm vm", func(t *testing.T) {
-			testWasmHTTPCodeSource(t, suite, "http-with-http-wasm-source-shared-2", "http-wasm-source-test-shared-2", "/wasm-http-shared-2")
+			testWasmCodeSource(t, suite, "same-namespace", "http-with-http-wasm-source-shared-2", "http-wasm-source-test-shared-2", "/wasm-http-shared-2", "FOO")
 		})
 
 		// Both policies specify the Namespace sharing scope and use identical code,
