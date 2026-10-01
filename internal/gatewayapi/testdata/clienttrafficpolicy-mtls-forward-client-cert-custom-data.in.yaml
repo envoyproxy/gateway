@@ -103,6 +103,7 @@ clientTrafficPolicies:
         - Chain
         - Subject
         - DNS
+        - Issuer
     tls:
       clientValidation:
         caCertificateRefs:
