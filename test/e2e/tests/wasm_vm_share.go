@@ -49,24 +49,19 @@ var WasmVMShareTest = suite.ConformanceTest{
 			testWasmVMCount(t, suite, "same-namespace", model.SampleValue(runtime.NumCPU()+2))
 		})
 
-		for _, tc := range []struct {
-			gateway       string
-			secondHeader  string
-			expectedCount model.SampleValue
-		}{
-			{gateway: "wasm-local-shared", secondHeader: "FOO", expectedCount: 3},
-			{gateway: "wasm-local-distinct", secondHeader: "BAR", expectedCount: 6},
-		} {
-			t.Run(tc.gateway, func(t *testing.T) {
-				for i, header := range []string{"FOO", tc.secondHeader} {
-					name := fmt.Sprintf("%s-%d", tc.gateway, i+1)
-					testWasmCodeSource(t, suite, tc.gateway, name, name, "/"+name, header)
-				}
-				// Both Gateways use one worker. With sharing, the gauge counts
-				// one worker VM plus two base VMs; distinct modules double it.
-				testWasmVMCount(t, suite, tc.gateway, tc.expectedCount)
-			})
-		}
+		t.Run("wasm-local-shared", func(t *testing.T) {
+			testWasmCodeSource(t, suite, "wasm-local-shared", "wasm-local-shared-1", "wasm-local-shared-1", "/wasm-local-shared-1", "FOO")
+			testWasmCodeSource(t, suite, "wasm-local-shared", "wasm-local-shared-2", "wasm-local-shared-2", "/wasm-local-shared-2", "FOO")
+			// One worker VM plus two base VMs with sharing enabled.
+			testWasmVMCount(t, suite, "wasm-local-shared", 3)
+		})
+
+		t.Run("wasm-local-distinct", func(t *testing.T) {
+			testWasmCodeSource(t, suite, "wasm-local-distinct", "wasm-local-distinct-1", "wasm-local-distinct-1", "/wasm-local-distinct-1", "FOO")
+			testWasmCodeSource(t, suite, "wasm-local-distinct", "wasm-local-distinct-2", "wasm-local-distinct-2", "/wasm-local-distinct-2", "BAR")
+			// Distinct modules each have one worker VM plus two base VMs.
+			testWasmVMCount(t, suite, "wasm-local-distinct", 6)
+		})
 	},
 }
 
