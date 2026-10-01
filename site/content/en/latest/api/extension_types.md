@@ -7115,7 +7115,7 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Local` | LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.<br /> |
+| `Local` | LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.<br /> | 
 
 
 #### WasmVMSharingScope
@@ -7129,8 +7129,8 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Policy` | WasmVMSharingScopePolicy gives each policy's Wasm entry its own VM ID.<br />The same entry may reuse its VM across routes; different entries do not share a VM.<br /> |
-| `Namespace` | WasmVMSharingScopeNamespace allows compatible extensions that specify this<br />scope in the same EnvoyExtensionPolicy namespace to share a VM.<br /> |
+| `Policy` | WasmVMSharingScopePolicy gives each policy's Wasm entry its own VM ID.<br />The same entry may reuse its VM across routes; different entries do not share a VM.<br /> | 
+| `Namespace` | WasmVMSharingScopeNamespace allows compatible extensions that specify this<br />scope in the same EnvoyExtensionPolicy namespace to share a VM.<br /> | 
 
 
 #### WeightedZoneConfig
