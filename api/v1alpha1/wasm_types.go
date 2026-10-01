@@ -37,7 +37,8 @@ type Wasm struct {
 	Name *string `json:"name,omitempty"`
 
 	// VMSharingScope defines the scope within which this extension may share a Wasm VM.
-	// If None or unset, each policy's Wasm entry uses its own VM ID.
+	// If Policy or unset, each policy's Wasm entry uses its own VM ID. The same
+	// entry may reuse its VM across routes; different entries do not share a VM.
 	// If Namespace, this extension may share a VM with other extensions that specify
 	// Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM
 	// compatibility using the Wasm code and VM configuration, including environment
@@ -47,7 +48,7 @@ type Wasm struct {
 	// IDs are not changed; matching plugin identities may also share a root context.
 	//
 	// +optional
-	// +kubebuilder:default=None
+	// +kubebuilder:default=Policy
 	VMSharingScope *WasmVMSharingScope `json:"vmSharingScope,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
@@ -92,12 +93,13 @@ type Wasm struct {
 }
 
 // WasmVMSharingScope defines the scope within which Wasm extensions may share a VM.
-// +kubebuilder:validation:Enum=None;Namespace
+// +kubebuilder:validation:Enum=Policy;Namespace
 type WasmVMSharingScope string
 
 const (
-	// WasmVMSharingScopeNone gives each policy's Wasm entry its own VM ID.
-	WasmVMSharingScopeNone WasmVMSharingScope = "None"
+	// WasmVMSharingScopePolicy gives each policy's Wasm entry its own VM ID.
+	// The same entry may reuse its VM across routes; different entries do not share a VM.
+	WasmVMSharingScopePolicy WasmVMSharingScope = "Policy"
 
 	// WasmVMSharingScopeNamespace allows compatible extensions that specify this
 	// scope in the same EnvoyExtensionPolicy namespace to share a VM.

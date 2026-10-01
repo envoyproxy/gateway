@@ -41,7 +41,7 @@ func TestBuildWasmVMSharing(t *testing.T) {
 			hostKeys: []string{"REGION", "API_TOKEN"}, wantHostKeys: []string{"REGION", "API_TOKEN"},
 		},
 		{
-			name: "None scope", sharingScope: new(egv1a1.WasmVMSharingScopeNone), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			name: "Policy scope", sharingScope: new(egv1a1.WasmVMSharingScopePolicy), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
 			hostKeys: []string{"REGION", "API_TOKEN"}, wantHostKeys: []string{"REGION", "API_TOKEN"},
 		},
 		{
