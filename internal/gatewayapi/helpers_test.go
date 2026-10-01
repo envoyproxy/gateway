@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -1739,6 +1740,49 @@ func TestIrBackendClusterName(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.want, irBackendClusterName(tc.key))
+		})
+	}
+}
+
+func TestKindOf(t *testing.T) {
+	tests := []struct {
+		name string
+		obj  client.Object
+		want string
+	}{
+		{
+			name: "typed with empty TypeMeta",
+			obj:  &egv1a1.BackendTrafficPolicy{},
+			want: egv1a1.KindBackendTrafficPolicy,
+		},
+		{
+			name: "typed with TypeMeta set",
+			// TypeMeta is ignored: the Kind is resolved from the scheme, not read back off
+			// the object, so a stale/wrong TypeMeta doesn't change the result.
+			obj: &egv1a1.BackendTrafficPolicy{
+				TypeMeta: metav1.TypeMeta{Kind: "SomethingElse", APIVersion: "example.com/v1"},
+			},
+			want: egv1a1.KindBackendTrafficPolicy,
+		},
+		{
+			name: "unstructured with a GVK outside the scheme",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "example.com/v1",
+				"kind":       "Widget",
+			}},
+			want: "Widget",
+		},
+		{
+			name: "PartialObjectMetadata",
+			obj: &metav1.PartialObjectMetadata{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+			},
+			want: "Secret",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, kindOf(tc.obj))
 		})
 	}
 }
