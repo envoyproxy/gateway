@@ -2123,7 +2123,7 @@ func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, n
 // processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree
 func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
 	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
-	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+	if err := r.client.List(ctx, &envoyPatchPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
 	}
 
@@ -2145,7 +2145,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
+	if err := r.client.List(ctx, &clientTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
 	}
 
@@ -2227,7 +2227,7 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
-	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
+	if err := r.client.List(ctx, &backendTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
 	}
 
@@ -2249,7 +2249,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	securityPolicies := egv1a1.SecurityPolicyList{}
-	if err := r.client.List(ctx, &securityPolicies); err != nil {
+	if err := r.client.List(ctx, &securityPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing SecurityPolicies: %w", err)
 	}
 
@@ -2273,7 +2273,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
+	if err := r.client.List(ctx, &backendTLSPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
 
@@ -3365,7 +3365,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	envoyExtensionPolicies := egv1a1.EnvoyExtensionPolicyList{}
-	if err := r.client.List(ctx, &envoyExtensionPolicies); err != nil {
+	if err := r.client.List(ctx, &envoyExtensionPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing EnvoyExtensionPolicies: %w", err)
 	}
 
