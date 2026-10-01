@@ -9441,10 +9441,11 @@ spec:
                         Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
                       type: string
                     vmSharingScope:
-                      default: None
+                      default: Policy
                       description: |-
                         VMSharingScope defines the scope within which this extension may share a Wasm VM.
-                        If None or unset, each policy's Wasm entry uses its own VM ID.
+                        If Policy or unset, each policy's Wasm entry uses its own VM ID. The same
+                        entry may reuse its VM across routes; different entries do not share a VM.
                         If Namespace, this extension may share a VM with other extensions that specify
                         Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM
                         compatibility using the Wasm code and VM configuration, including environment
@@ -9453,7 +9454,7 @@ spec:
                         Sharing a VM shares module-level state and VM failures. Plugin names and root
                         IDs are not changed; matching plugin identities may also share a root context.
                       enum:
-                      - None
+                      - Policy
                       - Namespace
                       type: string
                   type: object
