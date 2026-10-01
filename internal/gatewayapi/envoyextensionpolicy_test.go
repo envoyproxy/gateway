@@ -32,6 +32,7 @@ func TestBuildWasmVMSharing(t *testing.T) {
 		policyName   string
 		moduleSHA    string
 		image        bool
+		localPath    string
 		hostKeys     []string
 		wantVMID     string
 		wantHostKeys []string
@@ -64,6 +65,24 @@ func TestBuildWasmVMSharing(t *testing.T) {
 			name: "OCI uses extracted module checksum", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
 			image: true, wantVMID: sharedID,
 		},
+		{
+			name: "local omitted scope", namespace: "shop", policyName: "a", localPath: "/var/lib/envoy/plugin.wasm",
+		},
+		{
+			name: "local Policy scope", sharingScope: new(egv1a1.WasmVMSharingScopePolicy), namespace: "shop", policyName: "a", localPath: "/var/lib/envoy/plugin.wasm",
+		},
+		{
+			name: "local Namespace scope", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", localPath: "/var/lib/envoy/plugin.wasm",
+			hostKeys: []string{"REGION", "API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: "envoyextensionpolicy/shop/wasm/local",
+		},
+		{
+			name: "local module in another policy", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "b", localPath: "/var/lib/envoy/plugin.wasm",
+			wantVMID: "envoyextensionpolicy/shop/wasm/local",
+		},
+		{
+			name: "local module in another namespace", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "other", policyName: "a", localPath: "/var/lib/envoy/plugin.wasm",
+			wantVMID: "envoyextensionpolicy/other/wasm/local",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -82,15 +101,36 @@ func TestBuildWasmVMSharing(t *testing.T) {
 					Image: &egv1a1.ImageWasmCodeSource{URL: "example.com/plugin:v1", SHA256: new(imageSHA)},
 				}
 			}
+			var envoyProxy *egv1a1.EnvoyProxy
+			if tt.localPath != "" {
+				config.Name = new("registered-plugin")
+				config.Code = nil
+				envoyProxy = &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{{
+						Name: "registered-plugin",
+						Source: egv1a1.WasmModuleSource{
+							Type:  new(egv1a1.LocalWasmModuleSourceType),
+							Local: &egv1a1.LocalWasmModuleSource{Path: tt.localPath},
+						},
+					}},
+				}}
+			}
 			original := config.DeepCopy()
 			cache := &caCapturingMockWasmCache{GetFunc: func(_ string, _ *wasm.GetOptions) (string, string, error) {
 				return "https://envoy-gateway/plugin.wasm", tt.moduleSHA, nil
 			}}
 			translator := &Translator{TranslatorContext: &TranslatorContext{}, WasmCache: cache}
-			got, err := translator.buildWasm(irConfigNameForWasm(policy, 0), config, policy, 0, &resource.Resources{}, nil)
+			if tt.localPath != "" {
+				translator.WasmCache = nil
+			}
+			got, err := translator.buildWasm(irConfigNameForWasm(policy, 0), config, policy, 0, &resource.Resources{}, envoyProxy)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantVMID, got.VMID)
 			assert.Equal(t, tt.wantHostKeys, got.HostKeys)
+			assert.Equal(t, tt.localPath, got.Path)
+			if tt.localPath != "" {
+				assert.Nil(t, got.Code)
+			}
 			assert.Equal(t, original, config, "translation must not mutate the policy")
 		})
 	}
