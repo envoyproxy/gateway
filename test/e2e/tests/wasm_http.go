@@ -38,11 +38,11 @@ var HTTPWasmTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/wasm-http.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with http wasm source", func(t *testing.T) {
-			testWasmHTTPCodeSource(t, suite, "http-with-http-wasm-source", "http-wasm-source-test", "/wasm-http")
+			testWasmCodeSource(t, suite, "same-namespace", "http-with-http-wasm-source", "http-wasm-source-test", "/wasm-http", "FOO")
 		})
 
 		t.Run("http route with http wasm source no sha", func(t *testing.T) {
-			testWasmHTTPCodeSource(t, suite, "http-with-http-wasm-source-no-sha", "http-wasm-source-test-no-sha", "/wasm-http-no-sha")
+			testWasmCodeSource(t, suite, "same-namespace", "http-with-http-wasm-source-no-sha", "http-wasm-source-test-no-sha", "/wasm-http-no-sha", "FOO")
 		})
 
 		t.Run("http route without wasm", func(t *testing.T) {
@@ -109,10 +109,6 @@ var HTTPWasmTest = suite.ConformanceTest{
 			}
 		})
 	},
-}
-
-func testWasmHTTPCodeSource(t *testing.T, suite *suite.ConformanceTestSuite, route, eep, path string) {
-	testWasmCodeSource(t, suite, "same-namespace", route, eep, path, "FOO")
 }
 
 func testWasmCodeSource(t *testing.T, suite *suite.ConformanceTestSuite, gateway, route, eep, path, header string) {
