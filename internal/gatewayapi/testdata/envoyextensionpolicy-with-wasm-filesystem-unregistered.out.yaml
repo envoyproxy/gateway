@@ -1,18 +1,51 @@
-backendTrafficPolicies:
+envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
+  kind: EnvoyExtensionPolicy
   metadata:
-    name: btp-gateway-consistent-hash
+    name: policy-for-http-route
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    wasm:
+    - name: not-registered
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'Wasm: wasm module "not-registered" is not registered in the EnvoyProxy
+          wasmModules allowlist.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: proxy-config
     namespace: envoy-gateway
   spec:
-    loadBalancer:
-      consistentHash:
-        type: SourceIP
-      type: ConsistentHash
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+    logging: {}
+    wasmModules:
+    - name: security-filter
+      source:
+        local:
+          path: /var/lib/envoy/security-filter.wasm
+        type: Local
   status:
     ancestors:
     - ancestorRef:
@@ -22,11 +55,10 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Policy has been accepted.
+        message: EnvoyProxy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -35,6 +67,11 @@ gateways:
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: proxy-config
     listeners:
     - allowedRoutes:
         namespaces:
@@ -71,23 +108,22 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: http-route-1
+    name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - www.example.com
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
       - name: service-1
         port: 8080
-        weight: 60
-      - name: service-2
-        port: 8080
-        weight: 40
       matches:
       - path:
-          value: /split
+          value: /foo
   status:
     parents:
     - conditions:
@@ -105,6 +141,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -112,12 +149,29 @@ infraIR:
         apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
-          name: test
-          namespace: envoy-gateway-system
+          name: proxy-config
+          namespace: envoy-gateway
         spec:
           logging: {}
-          mergeBackends: {}
-        status: {}
+          wasmModules:
+          - name: security-filter
+            source:
+              local:
+                path: /var/lib/envoy/security-filter.wasm
+              type: Local
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -179,9 +233,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: http-route-1
+            name: httproute-1
             namespace: default
-          name: httproute/default/http-route-1/rule/0
+          name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -192,40 +246,22 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/http-route-1/rule/0/backend/0
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
-            weight: 60
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-2
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/http-route-1/rule/0/backend/1
-            protocol: HTTP
-            weight: 40
-        hostname: '*'
+            weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: www.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: http-route-1
+          name: httproute-1
           namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: btp-gateway-consistent-hash
-            namespace: envoy-gateway
-        name: httproute/default/http-route-1/rule/0/match/0/*
+        name: httproute/default/httproute-1/rule/0/match/0/www_example_com
         pathMatch:
           distinct: false
           name: ""
-          prefix: /split
-        traffic:
-          loadBalancer:
-            consistentHash:
-              sourceIP: true
+          prefix: /foo
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
