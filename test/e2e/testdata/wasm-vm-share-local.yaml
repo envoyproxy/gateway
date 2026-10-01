@@ -1,0 +1,207 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: wasm-local-sharing
+  namespace: gateway-conformance-infra
+spec:
+  concurrency: 1
+  ipFamily: IPv4
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          image: envoyproxy/gateway-wasm-module-test:latest
+  wasmModules:
+    - name: example-filter
+      source:
+        type: Local
+        local:
+          path: /var/lib/envoy/envoy_filter_http_wasm_example.wasm
+    - name: example-filter-copy
+      source:
+        type: Local
+        local:
+          path: /var/lib/envoy/example-copy.wasm
+    - name: example-filter-different
+      source:
+        type: Local
+        local:
+          path: /var/lib/envoy/example-different.wasm
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: wasm-local-shared
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: wasm-local-sharing
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wasm-local-shared-1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: wasm-local-shared
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wasm-local-shared-1
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-local-shared-1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: wasm-local-shared-1
+  wasm:
+    - name: example-filter
+      rootID: my_root_id
+      vmSharingScope: Namespace
+      config:
+        message: shared-1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wasm-local-shared-2
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: wasm-local-shared
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wasm-local-shared-2
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-local-shared-2
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: wasm-local-shared-2
+  wasm:
+    - name: example-filter-copy
+      rootID: my_root_id
+      vmSharingScope: Namespace
+      config:
+        message: shared-2
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: wasm-local-distinct
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: wasm-local-sharing
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wasm-local-distinct-1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: wasm-local-distinct
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wasm-local-distinct-1
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-local-distinct-1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: wasm-local-distinct-1
+  wasm:
+    - name: example-filter
+      rootID: my_root_id
+      vmSharingScope: Namespace
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wasm-local-distinct-2
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: wasm-local-distinct
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wasm-local-distinct-2
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-local-distinct-2
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: wasm-local-distinct-2
+  wasm:
+    - name: example-filter-different
+      rootID: my_root_id
+      vmSharingScope: Namespace

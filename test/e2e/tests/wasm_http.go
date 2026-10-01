@@ -112,9 +112,14 @@ var HTTPWasmTest = suite.ConformanceTest{
 }
 
 func testWasmHTTPCodeSource(t *testing.T, suite *suite.ConformanceTestSuite, route, eep, path string) {
+	testWasmCodeSource(t, suite, "same-namespace", route, eep, path, "FOO")
+}
+
+func testWasmCodeSource(t *testing.T, suite *suite.ConformanceTestSuite, gateway, route, eep, path, header string) {
+	t.Helper()
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: route, Namespace: ns}
-	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwNN := types.NamespacedName{Name: gateway, Namespace: ns}
 	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 	ancestorRef := gwapiv1.ParentReference{
@@ -149,7 +154,7 @@ func testWasmHTTPCodeSource(t *testing.T, suite *suite.ConformanceTestSuite, rou
 		Response: http.Response{
 			StatusCodes: []int{200},
 			Headers: map[string]string{
-				"x-wasm-custom": "FOO", // response header added by wasm
+				"x-wasm-custom": header, // response header added by wasm
 			},
 		},
 	}
