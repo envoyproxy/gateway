@@ -70,23 +70,15 @@ func testWasmVMCount(t *testing.T, suite *suite.ConformanceTestSuite, gateway st
 	promQL := fmt.Sprintf(`sum(envoy_wasm_wasm_vm_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", gateway_envoyproxy_io_owning_gateway_name="%s"})`, gateway)
 	tlog.Logf(t, "expected wasm_vm_count: %v", expectedCount)
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-		func(_ context.Context) (done bool, err error) {
+		func(_ context.Context) (bool, error) {
 			v, err := prometheus.QueryPrometheus(suite.Client, promQL)
 			if err != nil {
 				tlog.Logf(t, "failed to query prometheus: %v", err)
 				return false, nil
 			}
-			if v != nil {
-				vectorVal := v.(model.Vector)
-				if len(vectorVal) == 1 && vectorVal[0].Value == expectedCount {
-					tlog.Logf(t, "got expected wasm_vm_count value: %v", vectorVal[0].Value)
-					return true, nil
-				} else {
-					tlog.Logf(t, "got metric: %v", vectorVal)
-				}
-			}
-
-			return false, nil
+			tlog.Logf(t, "got metric: %v; expected: %v", v, expectedCount)
+			samples, ok := v.(model.Vector)
+			return ok && len(samples) == 1 && samples[0].Value == expectedCount, nil
 		}); err != nil {
 		t.Errorf("failed to get expected wasm_vm_count metric: %v", err)
 	}
