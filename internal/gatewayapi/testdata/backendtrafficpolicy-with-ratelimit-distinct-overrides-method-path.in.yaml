@@ -1,0 +1,62 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service
+        port: 8080
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway
+    rateLimit:
+      type: Global
+      global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              type: Distinct
+            methods:
+            - value: POST
+            path:
+              type: PathPrefix
+              value: /admin
+          limit:
+            requests: 10
+            unit: Second
+          overrides:
+          - value: client-a
+            limit:
+              requests: 15
+              unit: Second
