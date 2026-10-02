@@ -1,0 +1,16 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: direct-route
+      route:
+        cluster: direct-route-dest
+        maxStreamDuration:
+          maxStreamDuration: 30s
+        upgradeConfigs:
+        - upgradeType: websocket
