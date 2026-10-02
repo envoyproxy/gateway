@@ -9,6 +9,7 @@ require (
 	fortio.org/log v1.18.3
 	github.com/andybalholm/brotli v1.2.3
 	github.com/envoyproxy/gateway v0.0.0-00010101000000-000000000000
+	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260902172201-0f2cd005953e
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
@@ -27,12 +28,12 @@ require (
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 	helm.sh/helm/v3 v3.22.0
-	k8s.io/api v0.37.0
-	k8s.io/apiextensions-apiserver v0.37.0
-	k8s.io/apimachinery v0.37.0
-	k8s.io/cli-runtime v0.37.0
-	k8s.io/client-go v0.37.0
-	k8s.io/kubectl v0.37.0
+	k8s.io/api v0.37.1
+	k8s.io/apiextensions-apiserver v0.37.1
+	k8s.io/apimachinery v0.37.1
+	k8s.io/cli-runtime v0.37.1
+	k8s.io/client-go v0.37.1
+	k8s.io/kubectl v0.37.1
 	sigs.k8s.io/controller-runtime v0.25.1
 	sigs.k8s.io/gateway-api v1.6.2
 	sigs.k8s.io/gateway-api/conformance v1.6.2
@@ -114,7 +115,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.14.1-0.20260902172201-0f2cd005953e // indirect
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260902172201-0f2cd005953e // indirect
-	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260902172201-0f2cd005953e // indirect
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260902172201-0f2cd005953e // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36 // indirect
@@ -294,12 +294,12 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.37.0 // indirect
-	k8s.io/component-base v0.37.0 // indirect
+	k8s.io/apiserver v0.37.1 // indirect
+	k8s.io/component-base v0.37.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
-	k8s.io/metrics v0.37.0 // indirect
-	k8s.io/streaming v0.37.0 // indirect
+	k8s.io/metrics v0.37.1 // indirect
+	k8s.io/streaming v0.37.1 // indirect
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
 	oras.land/oras-go/v2 v2.6.2 // indirect
 	periph.io/x/host/v3 v3.8.5 // indirect
