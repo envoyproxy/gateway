@@ -20,17 +20,15 @@ import (
 type StatusHandler struct {
 	logger        logr.Logger
 	updateChannel chan kubernetes.Update
-	wg            *sync.WaitGroup
+	ready         chan struct{}
 }
 
 func NewStatusHandler(log logr.Logger) *StatusHandler {
 	u := &StatusHandler{
 		logger:        log,
 		updateChannel: make(chan kubernetes.Update, 1000),
-		wg:            new(sync.WaitGroup),
+		ready:         make(chan struct{}),
 	}
-
-	u.wg.Add(1)
 
 	return u
 }
@@ -41,7 +39,7 @@ func (u *StatusHandler) Start(ctx context.Context, ready *sync.WaitGroup) {
 	defer u.logger.Info("stopped status update handler")
 
 	// Enable Updaters to start sending updates to this handler.
-	u.wg.Done()
+	close(u.ready)
 	ready.Done()
 
 	for {
@@ -91,19 +89,26 @@ func (u *StatusHandler) logStatus(update kubernetes.Update) {
 func (u *StatusHandler) Writer() kubernetes.Updater {
 	return &StatusWriter{
 		updateChannel: u.updateChannel,
-		wg:            u.wg,
+		ready:         u.ready,
 	}
 }
 
 // StatusWriter takes status updates and sends these to the StatusHandler via a channel.
 type StatusWriter struct {
 	updateChannel chan<- kubernetes.Update
-	wg            *sync.WaitGroup
+	ready         <-chan struct{}
 }
 
 // Send sends the given Update off to the update channel for writing by the StatusHandler.
-func (u *StatusWriter) Send(update kubernetes.Update) {
-	// Wait until updater is ready
-	u.wg.Wait()
-	u.updateChannel <- update
+func (u *StatusWriter) Send(ctx context.Context, update kubernetes.Update) {
+	select {
+	case <-ctx.Done():
+		return
+	case <-u.ready:
+	}
+
+	select {
+	case <-ctx.Done():
+	case u.updateChannel <- update:
+	}
 }

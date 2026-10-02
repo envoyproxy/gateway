@@ -1291,6 +1291,138 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "jwt with claim path to headers",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										ClaimPath: []string{"https://example.com/claims/tenant_name"},
+										Header:    "x-tenant-name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "jwt with both claim and claimPath set",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										Claim:     "name",
+										ClaimPath: []string{"https://example.com/claims/tenant_name"},
+										Header:    "x-tenant-name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"exactly one of claim or claimpath must be specified"},
+		},
+		{
+			desc: "jwt with neither claim nor claimPath set",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										Header: "x-tenant-name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"exactly one of claim or claimpath must be specified"},
+		},
+		{
+			desc: "jwt with empty claimPath segment",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+								ClaimToHeaders: []egv1a1.ClaimToHeader{
+									{
+										ClaimPath: []string{""},
+										Header:    "x-tenant-name",
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
+		},
+		{
 			desc: "jwt with recomputeRoute",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -1733,6 +1865,46 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{"if authorization.rules.principal.jwt is used, jwt must be defined"},
 		},
 		{
+			desc: "authorization-jwt-claims-without-jwt-authn-but-merging",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					// The jwt providers are inherited from the parent policy this one
+					// merges into, so they are not required here.
+					MergeType: new(egv1a1.StrategicMerge),
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: &egv1a1.Principal{
+									JWT: &egv1a1.JWTPrincipal{
+										Provider: "example",
+										Claims: []egv1a1.JWTClaim{
+											{
+												Name:   "iss",
+												Values: []string{"https://example.com"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "authorization-jwt-empty-principal",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -1779,7 +1951,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					OIDC: &egv1a1.OIDC{
 						Provider: egv1a1.OIDCProvider{
 							BackendCluster: egv1a1.BackendCluster{
-								BackendSettings: &egv1a1.ClusterSettings{
+								BackendSettings: &egv1a1.BackendSettings{
 									Retry: &egv1a1.Retry{
 										NumRetries: new(int32(3)),
 										PerRetry: &egv1a1.PerRetryPolicy{
@@ -1827,7 +1999,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					OIDC: &egv1a1.OIDC{
 						Provider: egv1a1.OIDCProvider{
 							BackendCluster: egv1a1.BackendCluster{
-								BackendSettings: &egv1a1.ClusterSettings{
+								BackendSettings: &egv1a1.BackendSettings{
 									Retry: &egv1a1.Retry{
 										NumRetries: new(int32(3)),
 										PerRetry: &egv1a1.PerRetryPolicy{
@@ -2258,6 +2430,80 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				err = c.Status().Update(ctx, sp)
 			}
 
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}
+
+func TestSecurityPolicyCORSOriginRegexes(t *testing.T) {
+	ctx := context.Background()
+	baseSP := egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sp",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("Gateway"),
+						Name:  gwapiv1.ObjectName("eg"),
+					},
+				},
+			},
+			CORS: &egv1a1.CORS{},
+		},
+	}
+
+	cases := []struct {
+		desc               string
+		allowOriginRegexes []egv1a1.CORSOriginRegex
+		wantErrors         []string
+	}{
+		{
+			desc: "valid regular expression",
+			allowOriginRegexes: []egv1a1.CORSOriginRegex{
+				`https://preview-[0-9]+\.example\.com`,
+			},
+		},
+		{
+			desc: "empty regular expression",
+			allowOriginRegexes: []egv1a1.CORSOriginRegex{
+				"",
+			},
+			wantErrors: []string{"spec.cors.allowOriginRegexes[0]", "should be at least 1 chars long"},
+		},
+		{
+			desc: "regular expression too long",
+			allowOriginRegexes: []egv1a1.CORSOriginRegex{
+				egv1a1.CORSOriginRegex(strings.Repeat("a", 1025)),
+			},
+			// The exact wording after "Too long" varies across apiserver versions,
+			// so only assert on the stable prefix.
+			wantErrors: []string{"spec.cors.allowOriginRegexes[0]", "Too long"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := baseSP.DeepCopy()
+			sp.Name = fmt.Sprintf("sp-cors-origin-regexes-%v", time.Now().UnixNano())
+			sp.Spec.CORS.AllowOriginRegexes = tc.allowOriginRegexes
+
+			err := c.Create(ctx, sp)
 			if (len(tc.wantErrors) != 0) != (err != nil) {
 				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
 			}

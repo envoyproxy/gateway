@@ -26,6 +26,8 @@ const (
 	DefaultDNSDomain = "cluster.local"
 	// EnvoyGatewayServiceName is the name of the Envoy Gateway service.
 	EnvoyGatewayServiceName = "envoy-gateway"
+	// EnvoyGatewayServiceAccountName is the well-known name of the Envoy Gateway service account.
+	EnvoyGatewayServiceAccountName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
 	EnvoyPrefix = "envoy"
 )
@@ -37,6 +39,14 @@ type Server struct {
 	EnvoyGateway *egv1a1.EnvoyGateway
 	// ControllerNamespace is the namespace that Envoy Gateway runs in.
 	ControllerNamespace string
+	// ControllerName is the well-known name of the Envoy Gateway controller's own resources
+	// (Deployment, Service, ServiceAccount). Used to detect naming collision attacks.
+	ControllerName string
+	// ControllerFullName is the Helm release fullname (eg.fullname) used for certgen and other
+	// release-scoped resources. Defaults to EnvoyGatewayServiceName.
+	ControllerFullName string
+	// ControllerServiceAccountName is the service account name of the Envoy Gateway controller pod.
+	ControllerServiceAccountName string
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
@@ -78,15 +88,18 @@ func (h *KubernetesClientHolder) Get() client.Client {
 // New returns a Server with default parameters.
 func New(stdout, stderr io.Writer) (*Server, error) {
 	return &Server{
-		EnvoyGateway:        egv1a1.DefaultEnvoyGateway(),
-		ControllerNamespace: env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
-		DNSDomain:           env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
-		Logger:              logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
-		Stdout:              stdout,
-		Stderr:              stderr,
-		Elected:             make(chan struct{}),
-		ProviderReady:       make(chan struct{}),
-		KubernetesClient:    NewKubernetesClientHolder(),
+		EnvoyGateway:                 egv1a1.DefaultEnvoyGateway(),
+		ControllerNamespace:          env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
+		ControllerName:               EnvoyGatewayServiceName,
+		ControllerFullName:           env.Lookup("ENVOY_GATEWAY_FULLNAME", EnvoyGatewayServiceName),
+		ControllerServiceAccountName: env.Lookup("ENVOY_GATEWAY_SERVICE_ACCOUNT", EnvoyGatewayServiceAccountName),
+		DNSDomain:                    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
+		Logger:                       logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:                       stdout,
+		Stderr:                       stderr,
+		Elected:                      make(chan struct{}),
+		ProviderReady:                make(chan struct{}),
+		KubernetesClient:             NewKubernetesClientHolder(),
 	}, nil
 }
 
