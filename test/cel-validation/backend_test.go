@@ -269,7 +269,7 @@ func TestBackend(t *testing.T) {
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{Type: new(egv1a1.BackendType("FOO"))}
 			},
-			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver"`},
+			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver", "KubernetesService"`},
 		},
 		{
 			desc: "dynamic resolver ok",
