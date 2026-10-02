@@ -236,6 +236,28 @@ func (x *Xds) Validate() error {
 	return errs
 }
 
+// ResolveDestinationSettings returns the settings a destination actually routes to. A merged
+// destination carries BackendClusterRefs instead of Settings, so callers that inspect
+// per-backend facts (TLS, protocol) must look through the refs to the clusters' settings.
+func (x *Xds) ResolveDestinationSettings(rd *RouteDestination) []*DestinationSetting {
+	if rd == nil {
+		return nil
+	}
+	if len(rd.Settings) > 0 || x == nil {
+		return rd.Settings
+	}
+	settings := make([]*DestinationSetting, 0, len(rd.BackendClusterRefs))
+	for _, ref := range rd.BackendClusterRefs {
+		for _, bc := range x.BackendClusters {
+			if bc != nil && bc.Name == ref.Name && bc.Setting != nil {
+				settings = append(settings, bc.Setting)
+				break
+			}
+		}
+	}
+	return settings
+}
+
 func (x *Xds) validateBackendClusterRefs() error {
 	names := make(map[string]struct{}, len(x.BackendClusters))
 	for _, bc := range x.BackendClusters {
@@ -842,6 +864,13 @@ type HTTP2KeepaliveSettings struct {
 	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
 }
 
+// BackendHTTP3Settings provides HTTP/3 configuration for clusters.
+// +k8s:deepcopy-gen=true
+type BackendHTTP3Settings struct {
+	// Mode determines when HTTP/3 is used to reach the backend: "Auto" or "Always".
+	Mode string `json:"mode" yaml:"mode"`
+}
+
 // GRPCSettings provides gRPC configuration on the listener.
 // +k8s:deepcopy-gen=true
 type GRPCSettings struct {
@@ -1224,6 +1253,9 @@ type ClusterTrafficFeatures struct {
 	// HTTP2 provides HTTP/2 configuration for clusters
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
+	// HTTP3 provides HTTP/3 configuration for clusters
+	// +optional
+	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty" yaml:"http3,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
@@ -2258,6 +2290,25 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	}
 
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
+}
+
+// AllSettingsHaveTLS returns true if every destination setting is configured with TLS.
+// HTTP/3 to the backend requires it, because QUIC always runs over TLS.
+func AllSettingsHaveTLS(settings []*DestinationSetting) bool {
+	if len(settings) == 0 {
+		return false
+	}
+	for _, s := range settings {
+		if s == nil || s.TLS == nil {
+			return false
+		}
+	}
+	return true
+}
+
+// AllSettingsHaveTLS returns true if every setting of this destination is configured with TLS.
+func (r *RouteDestination) AllSettingsHaveTLS() bool {
+	return AllSettingsHaveTLS(r.Settings)
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {

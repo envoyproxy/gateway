@@ -1,0 +1,81 @@
+- clusterName: httproute/default/http3-auto/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.11
+            portValue: 8080
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/http3-auto/rule/0/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/http3-auto/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: h3-backend
+            namespace: default
+- clusterName: httproute/default/http3-auto-2/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.11
+            portValue: 8080
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/http3-auto-2/rule/0/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/http3-auto-2/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: h3-backend
+            namespace: default
+- clusterName: httproute/default/http3-always/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.11
+            portValue: 8080
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/http3-always/rule/0/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/http3-always/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: h3-backend
+            namespace: default
+- clusterName: httproute/default/http3-no-tls/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.11
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/http3-no-tls/rule/0/backend/0

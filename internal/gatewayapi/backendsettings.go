@@ -74,6 +74,8 @@ func translateTrafficFeatures(policy *egv1a1.BackendSettings) (*ir.TrafficFeatur
 		ret.HTTP2 = h2
 	}
 
+	ret.HTTP3 = buildIRBackendHTTP3Settings(policy.HTTP3)
+
 	var err error
 	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
 		return nil, err

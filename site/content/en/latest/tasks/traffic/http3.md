@@ -142,6 +142,50 @@ Hence we need external loadbalancer to test this feature out.
 {{% /tab %}}
 {{< /tabpane >}}
 
+## HTTP/3 to the Backend
+
+Everything above configures HTTP/3 between the client and the Gateway. HTTP/3 to the backend is
+configured separately, with the `http3` field of a [BackendTrafficPolicy][].
+
+QUIC always runs over TLS, so the backend must already be configured with TLS through a
+[BackendTLSPolicy][] or a [Backend][] resource's `spec.tls`. A BackendTrafficPolicy that enables
+`http3` for a plaintext backend is rejected with an `Accepted=False` condition; where the same
+setting is reachable outside a BackendTrafficPolicy, HTTP/3 is left off instead. For a backend with
+a self-signed certificate, set `insecureSkipVerify: true` on the [Backend][] resource: the QUIC
+handshake still happens, but the certificate is not verified.
+
+There are two modes:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: backend-http3
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  http3:
+    mode: Auto
+```
+
+`Auto` is the default. Envoy uses HTTP/3 only for backends that advertise support for it through an
+`alt-svc` response header. It caches that advertisement, then races a QUIC connection against a TCP
+one and uses whichever is established first, so it falls back to HTTP/1.1 or HTTP/2 whenever QUIC is
+unavailable. This is the safe choice for backends reached over a network where UDP may be blocked.
+
+`Always` sends every request over HTTP/3 and never falls back to TCP. Use it only where the backend
+is known to speak HTTP/3 and UDP is known to work, since there is no recovery if QUIC fails.
+
+Note that `http3` cannot be combined with `useClientProtocol` or `proxyProtocol`: the first would
+have Envoy pick the upstream protocol from the downstream request, and PROXY protocol is a TCP
+preamble with no QUIC equivalent. It is also rejected for backends that declare an HTTP/2 or gRPC
+`appProtocol`, since those ask for a protocol HTTP/3 cannot provide.
+
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[Backend]: ../../../api/extension_types#backend
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [Secret]: https://kubernetes.io/docs/concepts/configuration/secret/
