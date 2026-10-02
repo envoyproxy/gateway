@@ -57,14 +57,39 @@ The `example-route` matches any traffic for "grpc-example.com" and forwards it t
 
 Before testing GRPC routing to the `yages` backend, get the Gateway's address.
 
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
 ```shell
-export GATEWAY_HOST=$(kubectl get gateway/example-gateway -o jsonpath='{.status.addresses[0].value}')
+export GATEWAY_HOST=$(kubectl get gateway/example-gateway -o jsonpath='{.status.addresses[0].value}'):80
 ```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
+Get the name of the Envoy service created by the example Gateway:
+
+```shell
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=example-gateway -o jsonpath='{.items[0].metadata.name}')
+```
+
+Port forward to the Envoy service:
+
+```shell
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
+```
+
+```shell
+export GATEWAY_HOST=localhost:8888
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Test GRPC routing to the `yages` backend using the [grpcurl][] command.
 
 ```shell
-grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
+grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST} yages.Echo/Ping
 ```
 
 You should see the below response
@@ -80,7 +105,7 @@ Envoy Gateway also supports [gRPC-Web][] requests for this configuration. The be
 The data in the body `AAAAAAA=` is a base64 encoded representation of an empty message (data length 0) that the Ping RPC accepts.
 
 ```shell
-curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grpc-example.com'   -H 'Content-Type: application/grpc-web-text'   -H 'Accept: application/grpc-web-text' -XPOST -d'AAAAAAA=' | base64 -d
+curl --http2-prior-knowledge -s ${GATEWAY_HOST}/yages.Echo/Ping -H 'Host: grpc-example.com'   -H 'Content-Type: application/grpc-web-text'   -H 'Accept: application/grpc-web-text' -XPOST -d'AAAAAAA=' | base64 -d
 ```
 
 ## GRPCRoute Match
@@ -171,7 +196,7 @@ kubectl get grpcroutes --selector=example=grpc-routing -o yaml
 Test GRPC routing to the `yages` backend using the [grpcurl][] command.
 
 ```shell
-grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
+grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST} yages.Echo/Ping
 ```
 
 ### RegularExpression
@@ -260,7 +285,7 @@ kubectl get grpcroutes --selector=example=grpc-routing -o yaml
 Test GRPC routing to the `yages` backend using the [grpcurl][] command.
 
 ```shell
-grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
+grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST} yages.Echo/Ping
 ```
 
 ## Configuring or disabling timeouts with `BackendTrafficPolicy`
