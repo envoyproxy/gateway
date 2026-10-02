@@ -205,3 +205,93 @@ spec:
     - name: example-filter-different
       rootID: my_root_id
       vmSharingScope: Namespace
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: wasm-local-policy
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: wasm-local-sharing
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wasm-local-policy-1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: wasm-local-policy
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wasm-local-policy-1
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-local-policy-1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: wasm-local-policy-1
+  wasm:
+    - name: example-filter
+      rootID: my_root_id
+      vmSharingScope: Policy
+      config:
+        message: policy-1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wasm-local-policy-2
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: wasm-local-policy
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wasm-local-policy-2
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: wasm-local-policy-2
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: wasm-local-policy-2
+  wasm:
+    - name: example-filter-copy
+      rootID: my_root_id
+      vmSharingScope: Policy
+      config:
+        message: policy-2
