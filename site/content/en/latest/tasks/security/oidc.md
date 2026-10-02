@@ -642,6 +642,9 @@ spec:
             - "azure-access-token"
 ```
 
+When using `oidc.passThroughAuthHeader: true` with default JWT extraction, the Bearer
+scheme in the `Authorization` header is case-insensitive. JWT validation is unchanged.
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
