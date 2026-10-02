@@ -705,7 +705,8 @@ func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
-	if err := t.translateEnvoyExtensionPolicyForListenerSet(policy, currTarget, gateway.GatewayContext, targeted, xdsIR, resources); err != nil {
+	hasApplicableRoute, err := t.translateEnvoyExtensionPolicyForListenerSet(policy, currTarget, gateway.GatewayContext, targeted, xdsIR, resources)
+	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -716,6 +717,13 @@ func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// The policy attached to its target, but none of the targeted listeners has a route it can be
+	// applied to, so it never reaches the generated configuration.
+	// Warn instead of silently reporting Accepted only.
+	if err == nil && !hasApplicableRoute {
+		status.SetNoAttachedRoutesWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+	}
 
 	// Check for deprecated fields and set warning if any are found
 	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
@@ -805,7 +813,8 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources); err != nil {
+	hasApplicableRoute, err := t.translateEnvoyExtensionPolicyForGateway(policy, currTarget, targetedGateway, xdsIR, resources)
+	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -816,6 +825,13 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+	// The policy attached to its target, but none of the targeted listeners has a route it can be
+	// applied to, so it never reaches the generated configuration.
+	// Warn instead of silently reporting Accepted only.
+	if err == nil && !hasApplicableRoute {
+		status.SetNoAttachedRoutesWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+	}
 
 	// Check for deprecated fields and set warning if any are found
 	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
@@ -1192,7 +1208,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	gateway *GatewayContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
-) error {
+) (bool, error) {
 	return t.translateEnvoyExtensionPolicyForListeners(
 		policy,
 		gateway,
@@ -1209,7 +1225,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListenerSet(
 	listenerSet *gwapiv1.ListenerSet,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
-) error {
+) (bool, error) {
 	return t.translateEnvoyExtensionPolicyForListeners(
 		policy,
 		gateway,
@@ -1219,13 +1235,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForListenerSet(
 	)
 }
 
+// translateEnvoyExtensionPolicyForListeners applies the policy to every route of the target
+// listeners. It reports whether any of those listeners has a route the policy can be applied to.
 func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	gateway *GatewayContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 	targetListeners []*ListenerContext,
-) error {
+) (bool, error) {
 	var (
 		extProcs                                              []ir.ExtProc
 		wasms                                                 []ir.Wasm
@@ -1262,10 +1280,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 		listenerNames.Insert(irListenerName(listener))
 	}
 
+	hasApplicableRoute := false
 	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
 		if !listenerNames.Has(http.Name) {
 			continue
+		}
+
+		if len(http.Routes) > 0 {
+			hasApplicableRoute = true
 		}
 
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway
@@ -1315,7 +1338,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 		)
 	}
 
-	return errs
+	return hasApplicableRoute, errs
 }
 
 func (t *Translator) buildLuas(

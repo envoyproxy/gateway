@@ -5,8 +5,8 @@ backendTrafficPolicies:
     name: btp-udp-1-circuit-breaker
     namespace: envoy-gateway
   spec:
-    circuitBreaker:
-      maxConnections: 1024
+    loadBalancer:
+      type: RoundRobin
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -244,6 +244,8 @@ xdsIR:
             name: udproute/default/udproute-1/rule/-1/backend/0
             protocol: UDP
             weight: 1
+        loadBalancer:
+          roundRobin: {}
         name: udproute/default/udproute-1
     - address: 0.0.0.0
       externalPort: 8081

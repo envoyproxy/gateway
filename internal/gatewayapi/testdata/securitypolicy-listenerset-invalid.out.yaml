@@ -42,6 +42,46 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-on-ext-http
+    namespace: default
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+      namespace: envoy-gateway
+      sectionName: ext-http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: ext-listeners
+        namespace: envoy-gateway
+        sectionName: ext-http
 infraIR:
   envoy-gateway/composite-gateway:
     proxy:
@@ -77,7 +117,7 @@ listenerSets:
     listeners:
     - allowedRoutes:
         namespaces:
-          from: Same
+          from: All
       name: ext-http
       port: 8081
       protocol: HTTP
@@ -96,7 +136,7 @@ listenerSets:
       status: "True"
       type: Programmed
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -329,6 +369,43 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8081
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-on-ext-http
+            namespace: default
+          name: httproute/default/httproute-on-ext-http/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-on-ext-http/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-on-ext-http
+          namespace: default
+        name: httproute/default/httproute-on-ext-http/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        security:
+          cors:
+            allowOrigins:
+            - distinct: false
+              exact: https://ls-section.example.com
+              name: ""
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

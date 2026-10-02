@@ -109,6 +109,13 @@ func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicySta
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
 }
 
+// SetNoAttachedRoutesWarningForPolicyAncestor sets a warning condition for a specific ancestor reference when the policy attached to its target,
+// but none of the listeners it targets has a route the policy can be applied to, so the policy never reaches the generated configuration.
+func SetNoAttachedRoutesWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64) {
+	message := "This policy is not reflected in the generated configuration because none of the listeners it targets has a route that this policy can be applied to."
+	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonNoAttachedRoutes, message, generation)
+}
+
 // SetWarningForPolicyAncestor sets or appends a warning condition for a specific ancestor reference.
 func SetWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, reason gwapiv1.PolicyConditionReason, message string, generation int64) {
 	if message == "" {
