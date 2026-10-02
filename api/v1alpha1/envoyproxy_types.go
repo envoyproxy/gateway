@@ -231,7 +231,7 @@ type EnvoyProxySpec struct {
 
 	// WasmModules defines the set of Wasm modules that are allowed to be used by
 	// EnvoyExtensionPolicy resources. Each entry registers a module by a logical
-	// name and a source (currently Local path).
+	// name and a source: a Local path, an HTTP URL, or an OCI Image.
 	//
 	// When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up
 	// in this list.
@@ -239,6 +239,8 @@ type EnvoyProxySpec struct {
 	// The EnvoyProxy owner is responsible for ensuring Local modules are available
 	// on the proxy container's filesystem (e.g., via init containers, custom images,
 	// or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path.
+	//
+	// HTTP and Image modules are fetched by Envoy Gateway and served to the proxy.
 	// +kubebuilder:validation:MaxItems=16
 	// +listType=map
 	// +listMapKey=name

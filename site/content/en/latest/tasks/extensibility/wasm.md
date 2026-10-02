@@ -21,6 +21,13 @@ Envoy Gateway supports three types of Wasm extensions:
 * Image Wasm Extension: The Wasm extension is packaged as an OCI image and fetched from an image registry.
 * Registered Wasm module: The Wasm extension is loaded from a module registered on [EnvoyProxy][] (`spec.wasmModules`). Today only a Local filesystem path is supported. Omit `code` and set `wasm[].name` to the registered module name.
 
+{{% alert title="Note" color="warning" %}}
+Inline `wasm[].code` on an EnvoyExtensionPolicy is deprecated and will be removed in a future release.
+Register the module in `EnvoyProxy.spec.wasmModules` and reference it by `wasm[].name` instead.
+The `wasmModules` API accepts HTTP and Image sources as well as Local, but only Local modules are loaded today.
+Keep HTTP and Image modules on `wasm[].code` until registry support for them is implemented.
+{{% /alert %}}
+
 The following example demonstrates how to configure an [EnvoyExtensionPolicy][] to attach a Wasm extension to an [EnvoyExtensionPolicy][] .
 This Wasm extension adds a custom header `x-wasm-custom: FOO` to the response.
 

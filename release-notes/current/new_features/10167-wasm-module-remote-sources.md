@@ -1,0 +1,1 @@
+EnvoyProxy.spec.wasmModules now accepts HTTP and Image (OCI) sources in addition to Local, with the same url, sha256, pullSecretRef, tls and pullPolicy fields as EnvoyExtensionPolicy.wasm[].code. This is the API only; Envoy Gateway does not load HTTP or Image modules from the registry yet.
