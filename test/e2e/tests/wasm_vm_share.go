@@ -29,7 +29,7 @@ func init() {
 // WasmVMShareTest verifies that opted-in policies reuse Wasm VMs across routes.
 var WasmVMShareTest = suite.ConformanceTest{
 	ShortName:   "WasmVMShare",
-	Description: "Test namespace-scoped Wasm VM sharing with HTTP and local modules",
+	Description: "Test Wasm VM sharing and isolation with HTTP and local modules",
 	Manifests:   []string{"testdata/wasm-vm-share.yaml", "testdata/wasm-vm-share-local.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("first route with shared wasm vm", func(t *testing.T) {
@@ -54,6 +54,14 @@ var WasmVMShareTest = suite.ConformanceTest{
 			testWasmCodeSource(t, suite, "wasm-local-shared", "wasm-local-shared-2", "wasm-local-shared-2", "/wasm-local-shared-2", "FOO")
 			// One worker VM plus two base VMs with sharing enabled.
 			testWasmVMCount(t, suite, "wasm-local-shared", 3)
+		})
+
+		t.Run("wasm-local-policy", func(t *testing.T) {
+			testWasmCodeSource(t, suite, "wasm-local-policy", "wasm-local-policy-1", "wasm-local-policy-1", "/wasm-local-policy-1", "FOO")
+			testWasmCodeSource(t, suite, "wasm-local-policy", "wasm-local-policy-2", "wasm-local-policy-2", "/wasm-local-policy-2", "FOO")
+			// Policy scope keeps identical local modules in separate VMs.
+			// Each policy has one worker VM plus two base VMs.
+			testWasmVMCount(t, suite, "wasm-local-policy", 6)
 		})
 
 		t.Run("wasm-local-distinct", func(t *testing.T) {
