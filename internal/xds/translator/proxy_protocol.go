@@ -8,6 +8,7 @@ package translator
 import (
 	"slices"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/proxy_protocol/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -21,6 +22,11 @@ import (
 func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, proxyProtocolSettings *ir.ProxyProtocolSettings) {
 	// Early return if listener is nil
 	if xdsListener == nil {
+		return
+	}
+
+	// The proxy protocol listener filter is not supported on UDP/QUIC listeners.
+	if xdsListener.Address.GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP {
 		return
 	}
 
