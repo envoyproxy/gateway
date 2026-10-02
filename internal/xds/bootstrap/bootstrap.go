@@ -365,7 +365,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			case egv1a1.IPv6:
 				cfg.parameters.AdminServer.Address = EnvoyAdminAddressV6
 				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
-			case egv1a1.DualStack:
+			case egv1a1.DualStack, egv1a1.PreferDualStack:
 				cfg.parameters.StatsServer.Address = netutils.IPv6ListenerAddress
 			}
 		}

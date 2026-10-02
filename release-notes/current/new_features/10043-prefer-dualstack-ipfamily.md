@@ -1,0 +1,1 @@
+Added `PreferDualStack` to `EnvoyProxy`'s `ipFamily`. It sets the proxy Service to the `PreferDualStack` IP family policy and leaves `ipFamilies` unset, so the same EnvoyProxy applies to both dual-stack and single-stack clusters. `DualStack` keeps requiring both families.

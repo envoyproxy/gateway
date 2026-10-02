@@ -1136,6 +1136,60 @@ func TestGetServiceIPFamily(t *testing.T) {
 	}
 }
 
+func TestGetEnvoyIPFamily(t *testing.T) {
+	testCases := []struct {
+		name       string
+		envoyProxy *egv1a1.EnvoyProxy
+		expected   *egv1a1.IPFamily
+	}{
+		{
+			name:       "nil envoy proxy",
+			envoyProxy: nil,
+			expected:   nil,
+		},
+		{
+			name:       "no ip family specified",
+			envoyProxy: &egv1a1.EnvoyProxy{},
+			expected:   nil,
+		},
+		{
+			name: "ipv4",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.IPv4)},
+			},
+			expected: new(egv1a1.IPv4),
+		},
+		{
+			name: "ipv6",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.IPv6)},
+			},
+			expected: new(egv1a1.IPv6),
+		},
+		{
+			name: "dual stack",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.DualStack)},
+			},
+			expected: new(egv1a1.DualStack),
+		},
+		{
+			name: "prefer dual stack",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.PreferDualStack)},
+			},
+			expected: new(egv1a1.DualStack),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getEnvoyIPFamily(tc.envoyProxy)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestGetCaCertFromConfigMap(t *testing.T) {
 	cases := []struct {
 		name          string
