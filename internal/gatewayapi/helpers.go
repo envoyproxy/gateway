@@ -764,6 +764,18 @@ func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *
 	}
 }
 
+// getAncestorRefForGatewayClassPolicy returns a GatewayClass as an ancestor reference for policy.
+// Used when a policy directly targets a GatewayClass, which is only meaningful when the Gateways
+// under that class are merged into a single xDS IR.
+func getAncestorRefForGatewayClassPolicy(name gwapiv1.ObjectName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(resource.KindGatewayClass),
+		Name:        name,
+		SectionName: sectionName,
+	}
+}
+
 type policyTargetRouteKey struct {
 	Kind      string
 	Namespace string
@@ -1123,13 +1135,13 @@ type policyTargetReferenceWithSectionName struct {
 }
 
 func isRouteRule(target policyTargetReferenceWithSectionName) bool {
-	// If the target is not a gateway and the section name is not nil, then it's a route rule.
-	return target.Kind != resource.KindGateway && target.SectionName != nil
+	// If the target is not a gateway, gatewayclass, or listenerset and the section name is not nil, then it's a route rule.
+	return target.Kind != resource.KindGateway && target.Kind != resource.KindGatewayClass && target.Kind != resource.KindListenerSet && target.SectionName != nil
 }
 
 func isRoute(target policyTargetReferenceWithSectionName) bool {
-	// If the target is not a gateway and the section name is nil, then it's a route.
-	return target.Kind != resource.KindGateway && target.SectionName == nil
+	// If the target is not a gateway, gatewayclass, or listenerset and the section name is nil, then it's a route.
+	return target.Kind != resource.KindGateway && target.Kind != resource.KindGatewayClass && target.Kind != resource.KindListenerSet && target.SectionName == nil
 }
 
 func isGateway(target policyTargetReferenceWithSectionName) bool {
@@ -1140,6 +1152,17 @@ func isGateway(target policyTargetReferenceWithSectionName) bool {
 func isListener(target policyTargetReferenceWithSectionName) bool {
 	// If the target is a gateway and the section name is not nil, then it's a listener.
 	return target.Kind == resource.KindGateway && target.SectionName != nil
+}
+
+func isGatewayClass(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a gatewayclass and the section name is nil, then it targets the whole GatewayClass.
+	return target.Kind == resource.KindGatewayClass && target.SectionName == nil
+}
+
+func isGatewayClassListener(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a gatewayclass and the section name is not nil, then it targets a listener by name
+	// across all Gateways merged under that GatewayClass.
+	return target.Kind == resource.KindGatewayClass && target.SectionName != nil
 }
 
 func isListenerSet(target policyTargetReferenceWithSectionName) bool {

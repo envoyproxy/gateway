@@ -1,0 +1,67 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    mergeGateways: true
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http1
+      protocol: HTTP
+      port: 81
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http2
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http3
+      protocol: HTTP
+      port: 82
+      allowedRoutes:
+        namespaces:
+          from: All
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: gateway-1
+    data: "should be rejected because targeting a Gateway is not allowed while mergeGateways is enabled"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: gateway-2
+      sectionName: http3
+    data: "listener-scoped Gateway targets are rejected too while mergeGateways is enabled"
