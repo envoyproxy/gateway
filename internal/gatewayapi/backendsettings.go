@@ -425,6 +425,7 @@ func buildLoadBalancer(policy *egv1a1.BackendSettings) (*ir.LoadBalancer, error)
 		lb.PreferLocal = &ir.PreferLocalZone{
 			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
 			PercentageEnabled:     preferLocal.PercentageEnabled,
+			FailTrafficOnPanic:    preferLocal.FailTrafficOnPanic,
 		}
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{
