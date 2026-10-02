@@ -1,0 +1,1 @@
+Added `clientHttp1` field to `ClientTrafficPolicy` for configuring downstream (listener) HTTP/1 settings, and `backendHttp1` field to `BackendTrafficPolicy` for configuring upstream (backend) HTTP/1 settings. HTTP/1 settings for non-xRoute backends (ext-auth, ext-proc, OIDC, JWT) are not yet supported via `backendHttp1`.

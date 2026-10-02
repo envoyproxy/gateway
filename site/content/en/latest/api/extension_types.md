@@ -413,6 +413,24 @@ _Appears in:_
 | `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
+#### BackendHTTP1Settings
+
+
+
+BackendHTTP1Settings provides HTTP/1 configuration for upstream backend connections.
+
+_Appears in:_
+- [BackendSettings](#backendsettings)
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
+| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
+| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
+
+
 #### BackendMetrics
 
 
@@ -488,6 +506,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | BackendHTTP1 provides HTTP/1 configuration for backend connections. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 
 
@@ -619,6 +638,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | BackendHTTP1 provides HTTP/1 configuration for backend connections. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
@@ -965,6 +985,25 @@ _Appears in:_
 | `maxAcceptPerSocketEvent` | _integer_ |  false  | 1 | MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel<br />per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over<br />this threshold will be accepted in later event loop iterations.<br />Defaults to 1 and can be disabled by setting to 0 for allowing unlimited accepted connections. |
 
 
+#### ClientHTTP1Settings
+
+
+
+ClientHTTP1Settings provides HTTP/1 configuration on the downstream listener.
+It supersedes the deprecated HTTP1Settings field on ClientTrafficPolicy.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
+| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
+| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
+| `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
+| `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |
+
+
 #### ClientIPDetectionSettings
 
 
@@ -1080,7 +1119,8 @@ _Appears in:_
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  |  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  |  | Timeout settings for the client connections. |
 | `connection` | _[ClientConnection](#clientconnection)_ |  false  |  | Connection includes client connection settings. |
-| `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener. |
+| `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener.<br />Deprecated: Use ClientHTTP1 for downstream (listener) settings and<br />BackendTrafficPolicy.HTTP1 for upstream (backend) settings instead.<br />Previously this field also affected upstream HTTP/1 protocol configuration;<br />that behaviour is no longer supported — set HTTP1 on a<br />BackendTrafficPolicy to configure upstream HTTP/1 protocol options. |
+| `clientHttp1` | _[ClientHTTP1Settings](#clienthttp1settings)_ |  false  |  | ClientHTTP1 provides HTTP/1 configuration on the downstream listener.<br />When set, this field takes precedence over the deprecated HTTP1 field for downstream<br />settings — the HTTP1 field is ignored entirely, even if set. To configure upstream<br />HTTP/1 protocol options (e.g. header case preservation for backend connections),<br />use HTTP1 on a BackendTrafficPolicy instead. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `grpc` | _[GRPCSettings](#grpcsettings)_ |  false  |  | GRPC provides gRPC configuration on the listener. |
@@ -1149,6 +1189,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | BackendHTTP1 provides HTTP/1 configuration for backend connections. |
 
 
 #### ClusterTranslationConfig
@@ -1163,6 +1204,24 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all clusters should be included in the translation hook.<br />Default is true for backward compatibility. |
+
+
+#### CommonHTTP1Settings
+
+
+
+CommonHTTP1Settings provides HTTP/1 configuration shared between client and backend connections.
+It is the common base embedded by ClientHTTP1Settings and BackendHTTP1Settings.
+
+_Appears in:_
+- [BackendHTTP1Settings](#backendhttp1settings)
+- [ClientHTTP1Settings](#clienthttp1settings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
+| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
+| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 
 
 #### Compression
@@ -3087,6 +3146,9 @@ _Appears in:_
 HTTP10Settings provides HTTP/1.0 configuration on the listener.
 
 _Appears in:_
+- [BackendHTTP1Settings](#backendhttp1settings)
+- [ClientHTTP1Settings](#clienthttp1settings)
+- [CommonHTTP1Settings](#commonhttp1settings)
 - [HTTP1Settings](#http1settings)
 
 | Field | Type | Required | Default | Description |
@@ -3099,6 +3161,8 @@ _Appears in:_
 
 
 HTTP1Settings provides HTTP/1 configuration on the listener.
+
+Deprecated: Use ClientHTTP1Settings instead.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
@@ -6595,6 +6659,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [ClientHTTP1Settings](#clienthttp1settings)
 - [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
 - [HTTPHeaderMutation](#httpheadermutation)

@@ -700,6 +700,50 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+
+	// BackendHTTP1 provides HTTP/1 configuration for backend connections.
+	//
+	// +optional
+	HTTP1 *BackendHTTP1Settings `json:"http1,omitempty"`
+}
+
+// BackendHTTP1Settings provides HTTP/1 configuration for upstream backend connections.
+type BackendHTTP1Settings struct {
+	CommonHTTP1Settings `json:",inline"`
+}
+
+// CommonHTTP1Settings provides HTTP/1 configuration shared between client and backend connections.
+// It is the common base embedded by ClientHTTP1Settings and BackendHTTP1Settings.
+type CommonHTTP1Settings struct {
+	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+	// +optional
+	EnableTrailers *bool `json:"enableTrailers,omitempty"`
+	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+	// By default, Envoy will lowercase all the headers.
+	// +optional
+	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
+	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+	// +optional
+	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
+}
+
+// HTTP10Settings provides HTTP/1.0 configuration on the listener.
+type HTTP10Settings struct {
+	// UseDefaultHost specifies whether a default Host header should be injected
+	// into HTTP/1.0 requests that do not include one.
+	//
+	// When set to true, Envoy Gateway injects the hostname associated with the
+	// listener or route into the request, in the following order:
+	//
+	//   1. If the targeted listener has a non-wildcard hostname, use that hostname.
+	//   2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+	//      the targeted listener, use that hostname.
+	//
+	//  Note: Setting this field to true without a non-wildcard hostname makes the
+	// ClientTrafficPolicy invalid.
+	//
+	// +optional
+	UseDefaultHost *bool `json:"useDefaultHost,omitempty"`
 }
 
 // BackendSettings provides the various knobs that can be set to control how traffic to a given

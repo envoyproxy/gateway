@@ -785,8 +785,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
 
-		// Translate HTTP1 Settings
-		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {
+		// Translate HTTP1 Settings — prefer ClientHTTP1, fall back to deprecated HTTP1.
+		effectiveHTTP1 := resolveClientHTTP1Settings(policy)
+		if err = translateHTTP1Settings(effectiveHTTP1, connection, httpIR); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
 			errs = errors.Join(errs, err)
 		}
@@ -1088,7 +1089,26 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	return errs
 }
 
-func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
+// resolveClientHTTP1Settings returns the effective ClientHTTP1Settings for a policy,
+// preferring the new ClientHTTP1 field over the deprecated HTTP1 field.
+func resolveClientHTTP1Settings(policy *egv1a1.ClientTrafficPolicy) *egv1a1.ClientHTTP1Settings {
+	if policy.Spec.ClientHTTP1 != nil {
+		return policy.Spec.ClientHTTP1
+	}
+	if policy.Spec.HTTP1 != nil {
+		// Migrate deprecated HTTP1 to ClientHTTP1Settings shape.
+		return &egv1a1.ClientHTTP1Settings{
+			EnableTrailers:                   policy.Spec.HTTP1.EnableTrailers,
+			PreserveHeaderCase:               policy.Spec.HTTP1.PreserveHeaderCase,
+			HTTP10:                           policy.Spec.HTTP1.HTTP10,
+			DisableSafeMaxConnectionDuration: policy.Spec.HTTP1.DisableSafeMaxConnectionDuration,
+			IgnoredUpgradeTypes:              policy.Spec.HTTP1.IgnoredUpgradeTypes,
+		}
+	}
+	return nil
+}
+
+func translateHTTP1Settings(http1Settings *egv1a1.ClientHTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
 	if http1Settings == nil {
 		return nil
 	}
