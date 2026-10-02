@@ -25,63 +25,52 @@ func TestBuildWasmVMSharing(t *testing.T) {
 		imageSHA  = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 		sharedID  = "envoyextensionpolicy/shop/wasm/" + moduleSHA
 	)
+	httpCode := &egv1a1.WasmCodeSource{
+		Type: egv1a1.HTTPWasmCodeSourceType,
+		HTTP: &egv1a1.HTTPWasmCodeSource{URL: "https://example.com/plugin.wasm"},
+	}
 	tests := []struct {
 		name         string
 		sharingScope *egv1a1.WasmVMSharingScope
 		namespace    string
 		policyName   string
 		moduleSHA    string
-		image        bool
-		localPath    string
+		code         *egv1a1.WasmCodeSource
 		hostKeys     []string
 		wantVMID     string
 		wantHostKeys []string
 	}{
 		{
-			name: "omitted", namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			name: "omitted", namespace: "shop", policyName: "a", moduleSHA: moduleSHA, code: httpCode,
 			hostKeys: []string{"REGION", "API_TOKEN"}, wantHostKeys: []string{"REGION", "API_TOKEN"},
 		},
 		{
-			name: "Policy scope", sharingScope: new(egv1a1.WasmVMSharingScopePolicy), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			name: "Policy scope", sharingScope: new(egv1a1.WasmVMSharingScopePolicy), namespace: "shop", policyName: "a", moduleSHA: moduleSHA, code: httpCode,
 			hostKeys: []string{"REGION", "API_TOKEN"}, wantHostKeys: []string{"REGION", "API_TOKEN"},
 		},
 		{
-			name: "Namespace scope with canonical host keys", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
+			name: "Namespace scope with canonical host keys", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: moduleSHA, code: httpCode,
 			hostKeys: []string{"REGION", "API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: sharedID,
 		},
 		{
-			name: "same module in another policy", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "b", moduleSHA: moduleSHA,
+			name: "same module in another policy", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "b", moduleSHA: moduleSHA, code: httpCode,
 			hostKeys: []string{"API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: sharedID,
 		},
 		{
-			name: "another namespace", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "other", policyName: "a", moduleSHA: moduleSHA,
+			name: "another namespace", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "other", policyName: "a", moduleSHA: moduleSHA, code: httpCode,
 			wantVMID: "envoyextensionpolicy/other/wasm/" + moduleSHA,
 		},
 		{
-			name: "changed module at the same URL", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: otherSHA,
+			name: "changed module at the same URL", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: otherSHA, code: httpCode,
 			wantVMID: "envoyextensionpolicy/shop/wasm/" + otherSHA,
 		},
 		{
 			name: "OCI uses extracted module checksum", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", moduleSHA: moduleSHA,
-			image: true, wantVMID: sharedID,
-		},
-		{
-			name: "local omitted scope", namespace: "shop", policyName: "a", localPath: "/var/lib/envoy/plugin.wasm",
-		},
-		{
-			name: "local Policy scope", sharingScope: new(egv1a1.WasmVMSharingScopePolicy), namespace: "shop", policyName: "a", localPath: "/var/lib/envoy/plugin.wasm",
-		},
-		{
-			name: "local Namespace scope", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a", localPath: "/var/lib/envoy/plugin.wasm",
-			hostKeys: []string{"REGION", "API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: "envoyextensionpolicy/shop/wasm/local",
-		},
-		{
-			name: "local module in another policy", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "b", localPath: "/var/lib/envoy/plugin.wasm",
-			wantVMID: "envoyextensionpolicy/shop/wasm/local",
-		},
-		{
-			name: "local module in another namespace", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "other", policyName: "a", localPath: "/var/lib/envoy/plugin.wasm",
-			wantVMID: "envoyextensionpolicy/other/wasm/local",
+			code: &egv1a1.WasmCodeSource{
+				Type:  egv1a1.ImageWasmCodeSourceType,
+				Image: &egv1a1.ImageWasmCodeSource{URL: "example.com/plugin:v1", SHA256: new(imageSHA)},
+			},
+			wantVMID: sharedID,
 		},
 	}
 	for _, tt := range tests {
@@ -90,47 +79,78 @@ func TestBuildWasmVMSharing(t *testing.T) {
 			config := &egv1a1.Wasm{
 				VMSharingScope: tt.sharingScope,
 				Env:            &egv1a1.WasmEnv{HostKeys: tt.hostKeys},
-				Code: &egv1a1.WasmCodeSource{
-					Type: egv1a1.HTTPWasmCodeSourceType,
-					HTTP: &egv1a1.HTTPWasmCodeSource{URL: "https://example.com/plugin.wasm"},
-				},
-			}
-			if tt.image {
-				config.Code = &egv1a1.WasmCodeSource{
-					Type:  egv1a1.ImageWasmCodeSourceType,
-					Image: &egv1a1.ImageWasmCodeSource{URL: "example.com/plugin:v1", SHA256: new(imageSHA)},
-				}
-			}
-			var envoyProxy *egv1a1.EnvoyProxy
-			if tt.localPath != "" {
-				config.Name = new("registered-plugin")
-				config.Code = nil
-				envoyProxy = &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
-					WasmModules: []egv1a1.WasmModuleEntry{{
-						Name: "registered-plugin",
-						Source: egv1a1.WasmModuleSource{
-							Type:  new(egv1a1.LocalWasmModuleSourceType),
-							Local: &egv1a1.LocalWasmModuleSource{Path: tt.localPath},
-						},
-					}},
-				}}
+				Code:           tt.code,
 			}
 			original := config.DeepCopy()
 			cache := &caCapturingMockWasmCache{GetFunc: func(_ string, _ *wasm.GetOptions) (string, string, error) {
 				return "https://envoy-gateway/plugin.wasm", tt.moduleSHA, nil
 			}}
 			translator := &Translator{TranslatorContext: &TranslatorContext{}, WasmCache: cache}
-			if tt.localPath != "" {
-				translator.WasmCache = nil
+			got, err := translator.buildWasm(irConfigNameForWasm(policy, 0), config, policy, 0, &resource.Resources{}, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantVMID, got.VMID)
+			assert.Equal(t, tt.wantHostKeys, got.HostKeys)
+			assert.Empty(t, got.Path)
+			assert.Equal(t, original, config, "translation must not mutate the policy")
+		})
+	}
+}
+
+func TestBuildLocalWasmVMSharing(t *testing.T) {
+	const localPath = "/var/lib/envoy/plugin.wasm"
+	tests := []struct {
+		name         string
+		sharingScope *egv1a1.WasmVMSharingScope
+		namespace    string
+		policyName   string
+		hostKeys     []string
+		wantVMID     string
+		wantHostKeys []string
+	}{
+		{
+			name: "local omitted scope", namespace: "shop", policyName: "a",
+		},
+		{
+			name: "local Policy scope", sharingScope: new(egv1a1.WasmVMSharingScopePolicy), namespace: "shop", policyName: "a",
+		},
+		{
+			name: "local Namespace scope", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a",
+			hostKeys: []string{"REGION", "API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: "envoyextensionpolicy/shop/wasm/local",
+		},
+		{
+			name: "local module in another policy", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "b",
+			wantVMID: "envoyextensionpolicy/shop/wasm/local",
+		},
+		{
+			name: "local module in another namespace", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "other", policyName: "a",
+			wantVMID: "envoyextensionpolicy/other/wasm/local",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policy := &egv1a1.EnvoyExtensionPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: tt.namespace, Name: tt.policyName}}
+			config := &egv1a1.Wasm{
+				Name:           new("registered-plugin"),
+				VMSharingScope: tt.sharingScope,
+				Env:            &egv1a1.WasmEnv{HostKeys: tt.hostKeys},
 			}
+			envoyProxy := &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				WasmModules: []egv1a1.WasmModuleEntry{{
+					Name: "registered-plugin",
+					Source: egv1a1.WasmModuleSource{
+						Type:  new(egv1a1.LocalWasmModuleSourceType),
+						Local: &egv1a1.LocalWasmModuleSource{Path: localPath},
+					},
+				}},
+			}}
+			original := config.DeepCopy()
+			translator := &Translator{TranslatorContext: &TranslatorContext{}}
 			got, err := translator.buildWasm(irConfigNameForWasm(policy, 0), config, policy, 0, &resource.Resources{}, envoyProxy)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantVMID, got.VMID)
 			assert.Equal(t, tt.wantHostKeys, got.HostKeys)
-			assert.Equal(t, tt.localPath, got.Path)
-			if tt.localPath != "" {
-				assert.Nil(t, got.Code)
-			}
+			assert.Equal(t, localPath, got.Path)
+			assert.Nil(t, got.Code)
 			assert.Equal(t, original, config, "translation must not mutate the policy")
 		})
 	}
