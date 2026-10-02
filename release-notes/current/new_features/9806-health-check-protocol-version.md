@@ -1,0 +1,1 @@
+Added `healthCheck.active.http.version` to BackendTrafficPolicy, to select the HTTP protocol version used to send active health check requests to a backend whose health check endpoint doesn't serve the protocol of its application endpoint.
