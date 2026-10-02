@@ -39,6 +39,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
@@ -354,6 +355,7 @@ func (t *Translator) addHCMToXDSListener(
 	tracing *ir.Tracing,
 	http3Listener bool,
 	connection *ir.ClientConnection,
+	certResolutions map[string]*tlsv3.SdsSecretConfig,
 ) error {
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
 	if err != nil {
@@ -530,7 +532,7 @@ func (t *Translator) addHCMToXDSListener(
 		var tSocket *corev3.TransportSocket
 
 		if http3Listener {
-			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS)
+			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS, certResolutions)
 		} else {
 			config := irListener.TLS.DeepCopy()
 			// If the listener has overlapping TLS config with other listeners, we need to disable HTTP/2
@@ -539,7 +541,7 @@ func (t *Translator) addHCMToXDSListener(
 			if irListener.TLSOverlaps && config.ALPNProtocols == nil {
 				config.ALPNProtocols = []string{"http/1.1"}
 			}
-			tSocket, err = buildXdsDownstreamTLSSocket(config)
+			tSocket, err = buildXdsDownstreamTLSSocket(config, certResolutions)
 		}
 		if err != nil {
 			return err
@@ -693,6 +695,7 @@ func hasHCMInDefaultFilterChain(xdsListener *listenerv3.Listener) bool {
 func (t *Translator) addXdsTCPFilterChain(
 	xdsListener *listenerv3.Listener, tcpListener *ir.TCPListener, irRoute *ir.TCPRoute,
 	clusterName string, accesslog *ir.AccessLog,
+	certResolutions map[string]*tlsv3.SdsSecretConfig,
 ) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
@@ -758,7 +761,8 @@ func (t *Translator) addXdsTCPFilterChain(
 	}
 
 	if isTLSTerminate {
-		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
+
+		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate, certResolutions)
 		if err != nil {
 			return err
 		}
@@ -896,7 +900,32 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []i
 	return nil
 }
 
-func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSocket, error) {
+// allExtensionCertificatesUnresolved reports whether tlsConfig references only
+// extension-resolved certificates and none of them resolved, leaving nothing to serve with.
+//
+// It is always false for a TLS config holding any Secret or SDS certificate, so listeners that
+// do not use an extension server for certificates are never affected. A certificate that did not
+// resolve is omitted while another remains; only when none remain is the listener or route left
+// out, since a filter chain without a certificate is rejected by Envoy together with every other
+// filter chain on the same listener.
+func allExtensionCertificatesUnresolved(tlsConfig *ir.TLSConfig, certResolutions map[string]*tlsv3.SdsSecretConfig) bool {
+	if tlsConfig == nil || len(tlsConfig.Certificates) == 0 {
+		return false
+	}
+	for i := range tlsConfig.Certificates {
+		cert := &tlsConfig.Certificates[i]
+		if cert.ExtensionRef == nil {
+			// Secret-backed certificates are always servable: Envoy Gateway emits them itself.
+			return false
+		}
+		if resolved := certResolutions[cert.Name]; resolved != nil && resolved.GetName() != "" {
+			return false
+		}
+	}
+	return true
+}
+
+func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig, certResolutions map[string]*tlsv3.SdsSecretConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &quicv3.QuicDownstreamTransport{
 		DownstreamTlsContext: &tlsv3.DownstreamTlsContext{
 			CommonTlsContext: &tlsv3.CommonTlsContext{
@@ -907,6 +936,15 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 	}
 
 	for _, cert := range tlsConfig.Certificates {
+		if cert.ExtensionRef != nil {
+			// Resolved by an extension server
+			if resolved := certResolutions[cert.Name]; resolved != nil {
+				tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
+					tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+					resolved)
+			}
+			continue
+		}
 		sdsConfig := &tlsv3.SdsSecretConfig{
 			Name:      cert.Name,
 			SdsConfig: makeConfigSource(),
@@ -940,7 +978,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 	}, nil
 }
 
-func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSocket, error) {
+func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig, certResolutions map[string]*tlsv3.SdsSecretConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsParams:                      buildTLSParams(tlsConfig),
@@ -950,6 +988,15 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 	}
 
 	for _, cert := range tlsConfig.Certificates {
+		if cert.ExtensionRef != nil {
+			// Resolved by an extension server
+			if resolved := certResolutions[cert.Name]; resolved != nil {
+				tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
+					tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+					resolved)
+			}
+			continue
+		}
 		sdsConfig := &tlsv3.SdsSecretConfig{
 			Name:      cert.Name,
 			SdsConfig: makeConfigSource(),
@@ -1139,6 +1186,11 @@ func buildXdsTLSCertSecret(tlsConfig *ir.TLSCertificate) *tlsv3.Secret {
 
 	// For SDS based CA certificate, the secret will be generated by SDS server, so we can skip adding the secret here
 	if tlsConfig.SDS != nil {
+		return nil
+	}
+
+	// For an extension-resolved certificate, skip adding the secret here
+	if tlsConfig.ExtensionRef != nil {
 		return nil
 	}
 
@@ -1427,4 +1479,72 @@ func buildRequestIDExtension(requestID *ir.RequestIDExtensionAction) *hcmv3.Requ
 	return &hcmv3.RequestIDExtension{
 		TypedConfig: requestIDConfig,
 	}
+}
+
+// resolveExtensionCertificates asks the owning extension server how Envoy should obtain each
+// certificate in tlsConfig that was resolved from an extension-registered kind, returning the
+// results keyed by IR certificate name. Certificates that are not extension-resolved are skipped,
+// so a listener without any returns an empty result and no extension is called.
+func (t *Translator) resolveExtensionCertificates(
+	tlsConfig *ir.TLSConfig,
+	listenerMeta *ir.ResourceMetadata,
+) (map[string]*tlsv3.SdsSecretConfig, error) {
+	if tlsConfig == nil {
+		return nil, nil
+	}
+
+	var resolutions map[string]*tlsv3.SdsSecretConfig
+	for i := range tlsConfig.Certificates {
+		cert := &tlsConfig.Certificates[i]
+		if cert.ExtensionRef == nil {
+			continue
+		}
+
+		if t.ExtensionManager == nil {
+			return nil, fmt.Errorf("certificate %q requires an extension server but none is configured", cert.Name)
+		}
+		hookClient, err := (*t.ExtensionManager).GetPostXDSHookClient(egv1a1.XDSTLSCertificate)
+		if err != nil {
+			return nil, err
+		}
+		if hookClient == nil {
+			return nil, fmt.Errorf("certificate %q requires the %s hook but no extension registered it",
+				cert.Name, egv1a1.XDSTLSCertificate)
+		}
+
+		certCtx := &extensionTypes.TLSCertificateContext{Certificate: cert.ExtensionRef.Object}
+		if listenerMeta != nil {
+			certCtx.GatewayNamespace = listenerMeta.Namespace
+			certCtx.GatewayName = listenerMeta.Name
+			certCtx.ListenerName = listenerMeta.SectionName
+		}
+
+		resolution, err := hookClient.PostTLSCertificateResolveHook(certCtx)
+		if err != nil {
+			if !(*t.ExtensionManager).FailOpen() {
+				return nil, fmt.Errorf("failed to resolve certificate %q: %w", cert.Name, err)
+			}
+			t.Logger.Error(err, "Extension Manager PostTLSCertificateResolve failure", "certificate", cert.Name)
+			continue
+		}
+		if resolution == nil {
+			continue
+		}
+		// If the extension could not resolve the certificate, omit it.
+		if resolution.FailureReason != "" {
+			t.Logger.Info("extension did not resolve certificate", "certificate", cert.Name,
+				"reason", resolution.FailureReason, "message", resolution.FailureMessage)
+			continue
+		}
+		if resolution.SdsSecretConfig == nil || resolution.SdsSecretConfig.GetName() == "" {
+			continue
+		}
+
+		if resolutions == nil {
+			resolutions = make(map[string]*tlsv3.SdsSecretConfig, len(tlsConfig.Certificates))
+		}
+		resolutions[cert.Name] = resolution.SdsSecretConfig
+	}
+
+	return resolutions, nil
 }

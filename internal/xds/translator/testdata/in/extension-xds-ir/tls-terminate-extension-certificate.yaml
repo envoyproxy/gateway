@@ -1,0 +1,109 @@
+# TLS listeners in Terminate mode whose certificates are resolved by the extension server.
+tcp:
+# Resolved once for the listener and placed on every route's filter chain.
+- name: "team-a/db/tls"
+  address: "::"
+  port: 10432
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: db
+    sectionName: tls
+  tls:
+    certificates:
+    - name: db-cert
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: db-cert
+  routes:
+  - name: "tlsroute/team-a/primary"
+    tls:
+      inspector:
+        snis:
+        - "primary.example.com"
+      terminate:
+        certificates:
+        - name: db-cert
+          extensionRef:
+            object:
+              apiVersion: cert.example.io/v1alpha1
+              kind: ExampleCertificate
+              metadata:
+                namespace: team-a
+                name: db-cert
+    destination:
+      name: "tlsroute/team-a/primary"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 5432
+        name: "tlsroute/team-a/primary/backend/0"
+  - name: "tlsroute/team-a/replica"
+    tls:
+      inspector:
+        snis:
+        - "replica.example.com"
+      terminate:
+        certificates:
+        - name: db-cert
+          extensionRef:
+            object:
+              apiVersion: cert.example.io/v1alpha1
+              kind: ExampleCertificate
+              metadata:
+                namespace: team-a
+                name: db-cert
+    destination:
+      name: "tlsroute/team-a/replica"
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 5432
+        name: "tlsroute/team-a/replica/backend/0"
+# Certificate refused: no listener is emitted for the port.
+- name: "team-a/db/tls-refused"
+  address: "::"
+  port: 10433
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: db
+    sectionName: tls-refused
+  tls:
+    certificates:
+    - name: refuse-db
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: refuse-db
+  routes:
+  - name: "tlsroute/team-a/refused"
+    tls:
+      terminate:
+        certificates:
+        - name: refuse-db
+          extensionRef:
+            object:
+              apiVersion: cert.example.io/v1alpha1
+              kind: ExampleCertificate
+              metadata:
+                namespace: team-a
+                name: refuse-db
+    destination:
+      name: "tlsroute/team-a/refused"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 5432
+        name: "tlsroute/team-a/refused/backend/0"
+# A plain TCP listener without routes is unaffected and still emitted.
+- name: "team-a/db/tcp"
+  address: "::"
+  port: 10900

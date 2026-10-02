@@ -67,6 +67,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 		extFilter
 		extPolicy
 		extBackend
+		extCertificate
 	)
 	extGVKMap := map[string]extCategory{}
 	if envoyGateway != nil {
@@ -78,6 +79,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 			for _, gvk := range em.PolicyResources {
 				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
 				extGVKMap[key] = extPolicy
+			}
+			for _, gvk := range em.CertificateResources {
+				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+				extGVKMap[key] = extCertificate
 			}
 			for _, gvk := range em.BackendResources {
 				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
@@ -151,6 +156,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 					resources.ExtensionRefFilters = append(resources.ExtensionRefFilters, *un)
 				case extPolicy:
 					resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+				case extCertificate:
+					resources.ExtensionCertificates = append(resources.ExtensionCertificates, *un)
 				}
 				return nil
 			}

@@ -166,6 +166,11 @@ type Translator struct {
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
 
+	// ExtensionCertificateGroupKinds stores the group/kind for resources registered in
+	// ExtensionManager.CertificateResources. A listener's tls.certificateRefs may
+	// reference these kinds.
+	ExtensionCertificateGroupKinds []schema.GroupKind
+
 	// ControllerNamespace is the namespace that Envoy Gateway controller runs in.
 	ControllerNamespace string
 

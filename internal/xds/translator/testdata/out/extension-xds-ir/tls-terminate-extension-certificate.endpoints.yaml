@@ -1,0 +1,24 @@
+- clusterName: tlsroute/team-a/primary
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 5432
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tlsroute/team-a/primary/backend/0
+- clusterName: tlsroute/team-a/replica
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.6.7.8
+            portValue: 5432
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tlsroute/team-a/replica/backend/0

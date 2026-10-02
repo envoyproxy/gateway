@@ -1,0 +1,163 @@
+# HTTPS listeners whose certificates are resolved by the extension server.
+http:
+# Resolved to a name only: the name on the filter chain is exactly what the extension returned,
+# with no sds_config, and no Secret is emitted for it.
+- name: "team-a/web/https"
+  address: "::"
+  port: 10443
+  hostnames:
+  - "app.example.com"
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: web
+    sectionName: https
+  tls:
+    certificates:
+    - name: app-cert
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: app-cert
+  routes:
+  - name: "app-route"
+    hostname: "app.example.com"
+    destination:
+      name: "app-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "app-route-dest/backend/0"
+# A Secret certificate next to an extension certificate resolved over SDS: the Secret is emitted
+# as before, and the extension certificate keeps the sds_config the extension returned.
+- name: "team-a/web/mixed"
+  address: "::"
+  port: 10444
+  hostnames:
+  - "mixed.example.com"
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: web
+    sectionName: mixed
+  tls:
+    certificates:
+    - name: secret-1
+      # byte slice representation of "cert-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    - name: sds-cert
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: sds-cert
+  routes:
+  - name: "mixed-route"
+    hostname: "mixed.example.com"
+    destination:
+      name: "mixed-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "mixed-route-dest/backend/0"
+# Two listeners sharing a port. The refused one is left out, and the other keeps serving.
+- name: "team-a/web/shared-ok"
+  address: "::"
+  port: 10445
+  hostnames:
+  - "ok.example.com"
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: web
+    sectionName: shared-ok
+  tls:
+    certificates:
+    - name: ok-cert
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: ok-cert
+  routes:
+  - name: "ok-route"
+    hostname: "ok.example.com"
+    destination:
+      name: "ok-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "ok-route-dest/backend/0"
+- name: "team-a/web/shared-refused"
+  address: "::"
+  port: 10445
+  hostnames:
+  - "refused.example.com"
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: web
+    sectionName: shared-refused
+  tls:
+    certificates:
+    - name: refuse-shared
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: refuse-shared
+  routes:
+  - name: "refused-route"
+    hostname: "refused.example.com"
+    destination:
+      name: "refused-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "refused-route-dest/backend/0"
+# The only listener on its port, with its certificate refused: no listener is emitted for the port.
+- name: "team-a/web/alone-refused"
+  address: "::"
+  port: 10446
+  hostnames:
+  - "alone.example.com"
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: web
+    sectionName: alone-refused
+  tls:
+    certificates:
+    - name: refuse-alone
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: refuse-alone
+  routes:
+  - name: "alone-route"
+    hostname: "alone.example.com"
+    destination:
+      name: "alone-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "alone-route-dest/backend/0"

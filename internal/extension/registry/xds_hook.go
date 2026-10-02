@@ -7,6 +7,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -178,4 +179,39 @@ func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets [
 	}
 
 	return resp.Clusters, resp.Secrets, resp.Listeners, resp.Routes, nil
+}
+
+func (h *XDSHook) PostTLSCertificateResolveHook(certCtx *types.TLSCertificateContext) (*types.TLSCertificateResolution, error) {
+	if certCtx == nil || certCtx.Certificate == nil {
+		return nil, fmt.Errorf("a certificate resource is required to resolve a TLS certificate")
+	}
+
+	certBytes, err := translateUnstructuredToUnstructuredBytes([]*unstructured.Unstructured{certCtx.Certificate})
+	if err != nil {
+		return nil, err
+	}
+	if len(certBytes) != 1 {
+		return nil, fmt.Errorf("failed to marshal certificate resource %s/%s",
+			certCtx.Certificate.GetNamespace(), certCtx.Certificate.GetName())
+	}
+
+	ctx := context.Background()
+	resp, err := h.grpcClient.PostTLSCertificateResolve(ctx,
+		&extension.PostTLSCertificateResolveRequest{
+			PostTlsCertificateContext: &extension.PostTLSCertificateExtensionContext{
+				CertificateResource: certBytes[0],
+				GatewayNamespace:    certCtx.GatewayNamespace,
+				GatewayName:         certCtx.GatewayName,
+				ListenerName:        certCtx.ListenerName,
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.TLSCertificateResolution{
+		SdsSecretConfig: resp.SdsSecretConfig,
+		FailureReason:   resp.FailureReason,
+		FailureMessage:  resp.FailureMessage,
+	}, nil
 }

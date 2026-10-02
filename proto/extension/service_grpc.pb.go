@@ -24,12 +24,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EnvoyGatewayExtension_PostRouteModify_FullMethodName        = "/envoygateway.extension.EnvoyGatewayExtension/PostRouteModify"
-	EnvoyGatewayExtension_PostVirtualHostModify_FullMethodName  = "/envoygateway.extension.EnvoyGatewayExtension/PostVirtualHostModify"
-	EnvoyGatewayExtension_PostHTTPListenerModify_FullMethodName = "/envoygateway.extension.EnvoyGatewayExtension/PostHTTPListenerModify"
-	EnvoyGatewayExtension_PostClusterModify_FullMethodName      = "/envoygateway.extension.EnvoyGatewayExtension/PostClusterModify"
-	EnvoyGatewayExtension_PostEndpointsModify_FullMethodName    = "/envoygateway.extension.EnvoyGatewayExtension/PostEndpointsModify"
-	EnvoyGatewayExtension_PostTranslateModify_FullMethodName    = "/envoygateway.extension.EnvoyGatewayExtension/PostTranslateModify"
+	EnvoyGatewayExtension_PostRouteModify_FullMethodName           = "/envoygateway.extension.EnvoyGatewayExtension/PostRouteModify"
+	EnvoyGatewayExtension_PostVirtualHostModify_FullMethodName     = "/envoygateway.extension.EnvoyGatewayExtension/PostVirtualHostModify"
+	EnvoyGatewayExtension_PostHTTPListenerModify_FullMethodName    = "/envoygateway.extension.EnvoyGatewayExtension/PostHTTPListenerModify"
+	EnvoyGatewayExtension_PostClusterModify_FullMethodName         = "/envoygateway.extension.EnvoyGatewayExtension/PostClusterModify"
+	EnvoyGatewayExtension_PostEndpointsModify_FullMethodName       = "/envoygateway.extension.EnvoyGatewayExtension/PostEndpointsModify"
+	EnvoyGatewayExtension_PostTranslateModify_FullMethodName       = "/envoygateway.extension.EnvoyGatewayExtension/PostTranslateModify"
+	EnvoyGatewayExtension_PostTLSCertificateResolve_FullMethodName = "/envoygateway.extension.EnvoyGatewayExtension/PostTLSCertificateResolve"
 )
 
 // EnvoyGatewayExtensionClient is the client API for EnvoyGatewayExtension service.
@@ -68,6 +69,14 @@ type EnvoyGatewayExtensionClient interface {
 	// The lists returned by the extension are used as the final lists of clusters, secrets, listeners, and routes.
 	// This hook is executed when an extension is loaded and has subscribed to the post-translation hook.
 	PostTranslateModify(ctx context.Context, in *PostTranslateModifyRequest, opts ...grpc.CallOption) (*PostTranslateModifyResponse, error)
+	// PostTLSCertificateResolve asks an extension how Envoy should obtain a listener TLS
+	// certificate that was referenced from a kind registered in
+	// ExtensionManager.CertificateResources.
+	//
+	// It is invoked once per such certificate and returns the SdsSecretConfig to place on the
+	// filter chain. Unlike the other hooks, resolution is not chained: only the extension that
+	// registered the referenced group and kind is consulted.
+	PostTLSCertificateResolve(ctx context.Context, in *PostTLSCertificateResolveRequest, opts ...grpc.CallOption) (*PostTLSCertificateResolveResponse, error)
 }
 
 type envoyGatewayExtensionClient struct {
@@ -138,6 +147,16 @@ func (c *envoyGatewayExtensionClient) PostTranslateModify(ctx context.Context, i
 	return out, nil
 }
 
+func (c *envoyGatewayExtensionClient) PostTLSCertificateResolve(ctx context.Context, in *PostTLSCertificateResolveRequest, opts ...grpc.CallOption) (*PostTLSCertificateResolveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PostTLSCertificateResolveResponse)
+	err := c.cc.Invoke(ctx, EnvoyGatewayExtension_PostTLSCertificateResolve_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EnvoyGatewayExtensionServer is the server API for EnvoyGatewayExtension service.
 // All implementations must embed UnimplementedEnvoyGatewayExtensionServer
 // for forward compatibility.
@@ -174,6 +193,14 @@ type EnvoyGatewayExtensionServer interface {
 	// The lists returned by the extension are used as the final lists of clusters, secrets, listeners, and routes.
 	// This hook is executed when an extension is loaded and has subscribed to the post-translation hook.
 	PostTranslateModify(context.Context, *PostTranslateModifyRequest) (*PostTranslateModifyResponse, error)
+	// PostTLSCertificateResolve asks an extension how Envoy should obtain a listener TLS
+	// certificate that was referenced from a kind registered in
+	// ExtensionManager.CertificateResources.
+	//
+	// It is invoked once per such certificate and returns the SdsSecretConfig to place on the
+	// filter chain. Unlike the other hooks, resolution is not chained: only the extension that
+	// registered the referenced group and kind is consulted.
+	PostTLSCertificateResolve(context.Context, *PostTLSCertificateResolveRequest) (*PostTLSCertificateResolveResponse, error)
 	mustEmbedUnimplementedEnvoyGatewayExtensionServer()
 }
 
@@ -201,6 +228,9 @@ func (UnimplementedEnvoyGatewayExtensionServer) PostEndpointsModify(context.Cont
 }
 func (UnimplementedEnvoyGatewayExtensionServer) PostTranslateModify(context.Context, *PostTranslateModifyRequest) (*PostTranslateModifyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostTranslateModify not implemented")
+}
+func (UnimplementedEnvoyGatewayExtensionServer) PostTLSCertificateResolve(context.Context, *PostTLSCertificateResolveRequest) (*PostTLSCertificateResolveResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PostTLSCertificateResolve not implemented")
 }
 func (UnimplementedEnvoyGatewayExtensionServer) mustEmbedUnimplementedEnvoyGatewayExtensionServer() {}
 func (UnimplementedEnvoyGatewayExtensionServer) testEmbeddedByValue()                               {}
@@ -331,6 +361,24 @@ func _EnvoyGatewayExtension_PostTranslateModify_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EnvoyGatewayExtension_PostTLSCertificateResolve_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PostTLSCertificateResolveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EnvoyGatewayExtensionServer).PostTLSCertificateResolve(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EnvoyGatewayExtension_PostTLSCertificateResolve_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EnvoyGatewayExtensionServer).PostTLSCertificateResolve(ctx, req.(*PostTLSCertificateResolveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EnvoyGatewayExtension_ServiceDesc is the grpc.ServiceDesc for EnvoyGatewayExtension service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -361,6 +409,10 @@ var EnvoyGatewayExtension_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PostTranslateModify",
 			Handler:    _EnvoyGatewayExtension_PostTranslateModify_Handler,
+		},
+		{
+			MethodName: "PostTLSCertificateResolve",
+			Handler:    _EnvoyGatewayExtension_PostTLSCertificateResolve_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

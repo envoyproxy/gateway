@@ -70,6 +70,7 @@ type Resources struct {
 	BackendTLSPolicies      []*gwapiv1.BackendTLSPolicy    `json:"backendTLSPolicies,omitempty" yaml:"backendTLSPolicies,omitempty"`
 	EnvoyExtensionPolicies  []*egv1a1.EnvoyExtensionPolicy `json:"envoyExtensionPolicies,omitempty" yaml:"envoyExtensionPolicies,omitempty"`
 	ExtensionServerPolicies []unstructured.Unstructured    `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
+	ExtensionCertificates   []unstructured.Unstructured    `json:"extensionCertificates,omitempty" yaml:"extensionCertificates,omitempty"`
 	Backends                []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
 	HTTPRouteFilters        []*egv1a1.HTTPRouteFilter      `json:"httpFilters,omitempty" yaml:"httpFilters,omitempty"`
 
@@ -97,6 +98,7 @@ func NewResources() *Resources {
 		BackendTLSPolicies:      []*gwapiv1.BackendTLSPolicy{},
 		EnvoyExtensionPolicies:  []*egv1a1.EnvoyExtensionPolicy{},
 		ExtensionServerPolicies: []unstructured.Unstructured{},
+		ExtensionCertificates:   []unstructured.Unstructured{},
 		Backends:                []*egv1a1.Backend{},
 		HTTPRouteFilters:        []*egv1a1.HTTPRouteFilter{},
 	}
@@ -121,6 +123,20 @@ func (r *Resources) GetServiceByLabels(labels map[string]string, namespace strin
 		match, _ := labelsutil.Matches(labels, svc.Labels)
 		if match {
 			return svc
+		}
+	}
+	return nil
+}
+
+// GetExtensionCertificate returns the extension certificate resource with the given group, kind,
+// namespace and name, or nil if absent.
+func (r *Resources) GetExtensionCertificate(group, kind, namespace, name string) *unstructured.Unstructured {
+	for i := range r.ExtensionCertificates {
+		obj := &r.ExtensionCertificates[i]
+		gvk := obj.GroupVersionKind()
+		if gvk.Group == group && gvk.Kind == kind &&
+			obj.GetNamespace() == namespace && obj.GetName() == name {
+			return obj
 		}
 	}
 	return nil
