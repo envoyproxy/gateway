@@ -214,13 +214,16 @@ xdsIR:
           prefix: /
         traffic:
           compression:
-          - chooseFirst: true
+          - brotli: {}
+            chooseFirst: true
             minContentLength: 100
             type: Brotli
-          - minContentLength: 200
+          - gzip: {}
+            minContentLength: 200
             type: Gzip
           - minContentLength: 300
             type: Zstd
+            zstd: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

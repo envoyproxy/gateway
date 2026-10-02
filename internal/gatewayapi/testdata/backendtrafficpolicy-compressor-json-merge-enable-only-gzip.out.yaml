@@ -249,6 +249,7 @@ xdsIR:
         traffic:
           compression:
           - chooseFirst: true
+            gzip: {}
             type: Gzip
     readyListener:
       address: 0.0.0.0

@@ -30,15 +30,15 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.compressor.brotli/e26d3c81:
+        envoy.filters.http.compressor.brotli/1bfd081b:
           '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
           overrides:
             responseDirectionConfig: {}
-        envoy.filters.http.compressor.gzip/7a4115a:
+        envoy.filters.http.compressor.gzip/3c99d23c:
           '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
           overrides:
             responseDirectionConfig: {}
-        envoy.filters.http.compressor.zstd/8fc9f56:
+        envoy.filters.http.compressor.zstd/a5a075d9:
           '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
           overrides:
             responseDirectionConfig: {}
