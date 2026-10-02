@@ -363,6 +363,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		})
 	}
 
+	store := newProviderStore()
 	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
@@ -375,6 +376,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 				APIReader: mgr.GetAPIReader(),
 				Logger:    svrCfg.Logger.WithName("proxy-topology-injector"),
 				Decoder:   admission.NewDecoder(mgr.GetScheme()),
+				platform:  &store.platform,
 			},
 		})
 	}
@@ -384,7 +386,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayAPIController(ctx, mgr, svrCfg, updateHandler.Writer(), resources); err != nil {
+	if err := newGatewayAPIController(ctx, mgr, svrCfg, updateHandler.Writer(), resources, store); err != nil {
 		return nil, fmt.Errorf("failed to create gatewayapi controller: %w", err)
 	}
 

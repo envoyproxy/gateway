@@ -33,9 +33,15 @@ The `zoneAware` field supports two modes: `preferLocal` (prefer same-zone endpoi
 `preferLocal` and `weightedZones` are mutually exclusive and cannot be set together for any policy.
 
 ## Prerequisites
-* The Kubernetes cluster's nodes must indicate topology information via the `topology.kubernetes.io/zone` [well-known label][Kubernetes well-known metadata].
+* Nodes must use the `topology.kubernetes.io/zone` [well-known label][Kubernetes well-known metadata], or the more accurate `topology.k8s.aws/zone-id` on AWS (see below).
 * There must be at least two valid topology zones for scheduling.
 * {{< boilerplate prerequisites >}}
+
+## AWS zone IDs
+
+The controller detects AWS from Node provider IDs or nonempty AWS zone-ID labels. Proxy and endpoint locality use the same platform selection.
+
+When the `topology.k8s.aws/zone-id` node label is nonempty, Envoy Gateway prefers it for proxy locality. It also uses the label for local endpoints managed by Kubernetes EndpointSlice controllers. Imported and custom EndpointSlices retain their supplied zones. For routing across AWS accounts, their producers must supply physical AZ IDs in `endpoints[].zone`.
 
 ## Configuration
 
