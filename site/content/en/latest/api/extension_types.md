@@ -629,8 +629,8 @@ _Appears in:_
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
-| `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration (websocket) will be used.<br />However, if requestBuffer is configured, the default upgrade configuration<br />will be ignored. |
-| `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings.<br />Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option<br />on routes that need those protocols, because requests can hang instead of being forwarded upstream. |
+| `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration (websocket) will be used.<br />However, if requestBuffer is configured with mode BufferAndLimit, the default<br />upgrade configuration will be ignored. |
+| `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer configures how much of a request body Envoy is allowed to buffer for a route,<br />and whether the gateway fully buffers each request before forwarding it upstream.<br />A request whose buffered body exceeds the configured limit is rejected with HTTP 413 Content Too<br />Large. How much of a request is buffered, and therefore whether the limit acts as a maximum request<br />body size, depends on the mode: see the mode field.<br />Buffering increases memory usage for Envoy that should be accounted for in your deployment settings. |
 | `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
 | `routingType` | _[RoutingType](#routingtype)_ |  false  |  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing.<br />When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.<br />If not specified, the EnvoyProxy-level setting is used. |
 
@@ -868,11 +868,29 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `allowOrigins` | _[Origin](#origin) array_ |  false  |  | AllowOrigins defines the origins that are allowed to make requests.<br />It specifies the allowed origins in the Access-Control-Allow-Origin CORS response header.<br />The value "*" allows any origin to make requests. |
+| `allowOriginRegexes` | _[CORSOriginRegex](#corsoriginregex) array_ |  false  |  | AllowOriginRegexes defines regular expressions that are matched against the Origin header.<br />It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.<br />An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes. |
 | `allowMethods` | _string array_ |  false  |  | AllowMethods defines the methods that are allowed to make requests.<br />It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..<br />The value "*" allows any method to be used. |
 | `allowHeaders` | _string array_ |  false  |  | AllowHeaders defines the headers that are allowed to be sent with requests.<br />It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..<br />The value "*" allows any header to be sent. |
 | `exposeHeaders` | _string array_ |  false  |  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
 | `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
+
+
+#### CORSOriginRegex
+
+_Underlying type:_ _string_
+
+CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+including the scheme and the port if present.
+The regex string must adhere to the syntax documented in
+https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+which is not supported.
+A regular expression that matches the literal string "*" is rejected.
+The value "*" in AllowOrigins allows any origin.
+
+_Appears in:_
+- [CORS](#cors)
+
 
 
 #### CSRF
@@ -927,7 +945,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `header` | _string_ |  true  |  | Header defines the name of the HTTP request header that the JWT Claim will be saved into. |
-| `claim` | _string_ |  true  |  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path. |
+| `claim` | _string_ |  false  |  | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type<br />(eg. "claim.nested.key", "sub"). The nested claim name must use dot "."<br />to separate the JSON name path.<br />Because the name is always split on ".", a claim whose own name contains a dot -- a<br />URI-namespaced claim such as "https://example.com/claims/tenant_name" commonly emitted by<br />OIDC providers -- cannot be addressed this way. Use ClaimPath for those claims instead.<br />Exactly one of Claim or ClaimPath must be specified. |
+| `claimPath` | _string array_ |  false  |  | ClaimPath is the path to the claim to copy, given as an explicit list of segments. Each<br />segment is matched in full against a key of the enclosing JSON object, so claim names<br />containing dots are addressable. For example, a top-level claim named<br />"https://example.com/claims/tenant_name" is selected with:<br />	claimPath:<br />	- "https://example.com/claims/tenant_name"<br />and a nested claim `\{"nested": \{"claim": \{"key": "value"\}\}\}` is selected with:<br />	claimPath:<br />	- nested<br />	- claim<br />	- key<br />Exactly one of Claim or ClaimPath must be specified. |
 
 
 #### ClientConnection
@@ -2415,6 +2434,7 @@ _Appears in:_
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict<br />Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release. |
 | `lua` | _[LuaValidationConfig](#luavalidationconfig)_ |  false  |  | Lua configures how Lua scripts from EnvoyExtensionPolicy resources are<br />validated in the gateway controller. It selects the validation mode and, for the Strict<br />mode, defines the filesystem paths and environment variables the scripts are permitted to<br />access during validation. |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `wasmModules` | _[WasmModuleEntry](#wasmmoduleentry) array_ |  false  |  | WasmModules defines the set of Wasm modules that are allowed to be used by<br />EnvoyExtensionPolicy resources. Each entry registers a module by a logical<br />name and a source (currently Local path).<br />When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up<br />in this list.<br />The EnvoyProxy owner is responsible for ensuring Local modules are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path. |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
 
@@ -3257,22 +3277,63 @@ _Appears in:_
 
 
 HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
-request or response. Only one action for a given header name is
-permitted. Filters specifying multiple actions of the same or different
-type for any one header name are invalid. Configuration to set or add
-multiple values for a header must use RFC 7230 header value formatting,
-separating each value with a comma.
+request or response.
+
+The Set, Add, AddIfAbsent, Remove and RemoveOnMatch fields permit only one
+action for a given header name. Specifying multiple actions of the same or
+different type for any one header name via those fields is invalid, and
+configuration to set or add multiple values for a header must use RFC 7230
+header value formatting, separating each value with a comma.
+
+The Mutations field has no such restriction. It is an ordered list, so the
+same header name may appear in any number of operations and each one is
+applied in turn.
 
 _Appears in:_
 - [HeaderSettings](#headersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `mutations` | _[HTTPHeaderMutation](#httpheadermutation) array_ |  false  |  | Mutations is an ordered list of header operations that are applied in<br />exactly the order specified. Use this field when the sequence of<br />operations matters, for example setting a header and then appending to<br />it, or removing a header and then re-adding it.<br />Mutations are always applied FIRST, in list order. The Set, Add,<br />AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after<br />the mutations, preserving their existing ordering (Add, then Set, then<br />AddIfAbsent, then Remove, then RemoveOnMatch). |
 | `set` | _[HTTPHeader](#httpheader) array_ |  false  |  | Set overwrites the request with the given header (name, value)<br />before the action.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  set:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: bar |
 | `add` | _[HTTPHeader](#httpheader) array_ |  false  |  | Add adds the given header(s) (name, value) to the request<br />before the action. It appends to any existing values associated<br />with the header name.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  add:<br />  - name: "my-header"<br />    value: "bar,baz"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo,bar,baz |
 | `addIfAbsent` | _[HTTPHeader](#httpheader) array_ |  false  |  | AddIfAbsent adds the given header(s) (name, value) to the request/response<br />only if the header does not already exist. Unlike Add which appends to<br />existing values, this is a no-op if the header is already present.<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header: foo<br />Config:<br />  addIfAbsent:<br />  - name: "my-header"<br />    value: "bar"<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header: foo |
 | `remove` | _string array_ |  false  |  | Remove the given header(s) from the HTTP request before the action. The<br />value of Remove is a list of HTTP header names. Note that the header<br />names are case-insensitive (see<br />https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).<br />Input:<br />  GET /foo HTTP/1.1<br />  my-header1: foo<br />  my-header2: bar<br />  my-header3: baz<br />Config:<br />  remove: ["my-header1", "my-header3"]<br />Output:<br />  GET /foo HTTP/1.1<br />  my-header2: bar |
 | `removeOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | RemoveOnMatch removes headers whose names match the specified string matchers.<br />Matching is performed on the header name (case-insensitive). |
+
+
+#### HTTPHeaderMutation
+
+
+
+HTTPHeaderMutation defines a single header mutation operation.
+
+_Appears in:_
+- [HTTPHeaderFilter](#httpheaderfilter)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `write` | _[HTTPHeaderWrite](#httpheaderwrite)_ |  false  |  | Write adds or modifies a header using the specified action. |
+| `remove` | _string_ |  false  |  | Remove removes the named header if it exists. Header names are<br />case-insensitive. |
+| `removeOnMatch` | _[StringMatch](#stringmatch)_ |  false  |  | RemoveOnMatch removes every header whose name matches the specified string<br />matcher. Matching is performed on the header name (case-insensitive). |
+
+
+#### HTTPHeaderWrite
+
+
+
+HTTPHeaderWrite defines a header to write and how it should be applied when a
+header with the same name already exists. It mirrors Envoy's
+core.v3.HeaderValueOption.
+
+_Appears in:_
+- [HTTPHeaderMutation](#httpheadermutation)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. The value may contain<br />Envoy substitution format operators such as "%REQ(x-foo)%", which are<br />evaluated per request.<br />See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators |
+| `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Add | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Add. |
+| `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether the header is still written when its<br />value is empty. This matters for values produced by substitution<br />formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at<br />request time. Envoy drops such headers by default; set this to true to<br />keep them with an empty value.<br />When unset, it defaults to true only if the configured value itself is<br />the empty string, so a literal empty header is always written. |
 
 
 #### HTTPHostnameModifier
@@ -3532,6 +3593,25 @@ _Appears in:_
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
 | `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
 | `maxRequestHeaderLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxRequestHeaderLimit provides configuration for the maximum size of the<br />request headers allowed for incoming connections, mapping to the Envoy<br />`max_request_headers_kb` HTTP connection manager setting. Requests whose<br />headers exceed this limit receive a 431 (Request Header Fields Too Large)<br />response. The value is rounded up to the nearest KiB, must be at least 1Ki,<br />and cannot exceed 8192Ki (the maximum Envoy supports).<br />For example, 60Ki, 96Ki, 128Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 60Ki bytes. |
+
+
+#### HeaderWriteAction
+
+_Underlying type:_ _string_
+
+HeaderWriteAction controls how a header value is written when a header with
+the same name already exists. The names match the Add, Set and AddIfAbsent
+fields of HTTPHeaderFilter.
+
+_Appears in:_
+- [HTTPHeaderWrite](#httpheaderwrite)
+
+| Value | Description |
+| ----- | ----------- |
+| `Add` | HeaderWriteAdd appends the value if the header exists, or adds the<br />header otherwise. (Envoy: APPEND_IF_EXISTS_OR_ADD)<br /> | 
+| `Set` | HeaderWriteSet overwrites the value if the header exists, or adds<br />the header otherwise. (Envoy: OVERWRITE_IF_EXISTS_OR_ADD)<br /> | 
+| `AddIfAbsent` | HeaderWriteAddIfAbsent adds the header only if it is not already present.<br />(Envoy: ADD_IF_ABSENT)<br /> | 
+| `SetIfExists` | HeaderWriteSetIfExists overwrites the value only if the header is<br />already present, and does nothing otherwise. (Envoy: OVERWRITE_IF_EXISTS)<br /> | 
 
 
 #### HealthCheck
@@ -3844,7 +3924,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `provider` | _string_ |  true  |  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`. |
+| `provider` | _string_ |  true  |  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`, or,<br />when `mergeType` is set, in the parent `SecurityPolicy` this policy is<br />merged into. |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  |  | Claims are the claims in a JWT token.<br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
 | `scopes` | _[JWTScope](#jwtscope) array_ |  false  |  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br />The value of the scopes field should be a space delimited string that is expected in the<br />scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
@@ -4034,6 +4114,14 @@ _Appears in:_
 KubernetesPatchSpec defines how to perform the patch operation.
 Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
 Note also that, currently, strings containing literal JSON are _rejected_.
+
+Warning: this patch is merged directly onto the fully-computed Kubernetes resource with no
+allowlist on which fields may be set. Whoever can author the EnvoyProxy resource that carries
+this patch can therefore set arbitrary fields — including hostPath volumes, hostNetwork/hostPID,
+privileged containers, or an arbitrary image/command — on a resource that Envoy Gateway's own,
+more privileged, ServiceAccount applies. Because EnvoyProxy is commonly namespace-scoped and
+tenant-authored, treat this field as untrusted input in multi-tenant clusters: restrict who may
+set it via RBAC, or disable EnvoyGateway's `EnvoyProxyPatch` runtime flag.
 
 _Appears in:_
 - [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
@@ -4332,6 +4420,20 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `rules` | _[RateLimitRule](#ratelimitrule) array_ |  false  |  | Rules are a list of RateLimit selectors and limits. If a request matches<br />multiple rules, the strictest limit is applied. For example, if a request<br />matches two rules, one with 10rps and one with 20rps, the final limit will<br />be based on the rule with 10rps. |
+
+
+#### LocalWasmModuleSource
+
+
+
+LocalWasmModuleSource defines a Wasm module loaded from the local filesystem.
+
+_Appears in:_
+- [WasmModuleSource](#wasmmodulesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path is the absolute filesystem path to the Wasm module on the Envoy proxy. |
 
 
 #### LogLevel
@@ -5880,7 +5982,23 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Limit specifies the maximum allowed size in bytes for each incoming request buffer.<br />If exceeded, the request will be rejected with HTTP 413 Content Too Large.<br />Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki"). |
+| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Limit specifies the maximum size in bytes that Envoy may buffer for an incoming request body.<br />If a request's buffered body exceeds this limit, the request is rejected with HTTP 413 Content<br />Too Large.<br />In BufferAndLimit mode the entire body is always buffered, so this acts as a maximum request body size.<br />In LimitOnly mode only what a filter later in the chain actually buffers counts against the limit,<br />so a streamed request that nothing buffers can exceed it and still be forwarded upstream.<br />Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki"). |
+| `mode` | _[RequestBufferMode](#requestbuffermode)_ |  false  | BufferAndLimit | Mode determines how Limit is enforced. Defaults to BufferAndLimit.<br />Limit applies in both modes: it is always set as the request body buffer limit for the route. Mode<br />only controls whether the gateway additionally buffers the whole request body itself, which is what<br />makes Limit a guaranteed maximum request body size.<br />BufferAndLimit makes the gateway receive each request from the client in full before it starts sending<br />the request upstream to the backends. This can be helpful to shield your backend servers from slow<br />clients, and Limit acts as a maximum request body size for the route.<br />Buffering whole request bodies costs memory and adds latency, so this mode should only be used when<br />necessary. It is also incompatible with streaming APIs and protocol upgrades such as gRPC streaming<br />and WebSocket: HTTP upgrades are disabled on routes using this mode, and a request whose body is<br />never completed is never forwarded upstream. Do not use this mode on routes that need those<br />protocols.<br />LimitOnly only raises how much of a request body the gateway is allowed to buffer, without buffering<br />requests itself. Use this mode when something later in the request path (ext_proc, Lua, Wasm, ...)<br />buffers the request body and the default limit is too small. Unlike BufferAndLimit, this mode is<br />compatible with streaming APIs and protocol upgrades, because the gateway does not wait for the whole<br />request body before forwarding it upstream.<br />In both modes, Limit applies to an individual request body and is separate from the connection buffer<br />limits configured by ClientTrafficPolicy and BackendTrafficPolicy, which control per-connection<br />read/write buffering and back pressure. There is no need to raise the connection buffer limits for<br />Limit to take effect. |
+
+
+#### RequestBufferMode
+
+_Underlying type:_ _string_
+
+RequestBufferMode determines how RequestBuffer.Limit is applied.
+
+_Appears in:_
+- [RequestBuffer](#requestbuffer)
+
+| Value | Description |
+| ----- | ----------- |
+| `BufferAndLimit` | RequestBufferModeBufferAndLimit buffers the entire request body in the gateway before forwarding the<br />request upstream, so Limit acts as a maximum request body size. It is incompatible with streaming<br />APIs and protocol upgrades.<br /> | 
+| `LimitOnly` | RequestBufferModeLimitOnly only raises the request body buffer limit for the route, without<br />enabling full request buffering.<br /> | 
 
 
 #### RequestHeaderCustomTag
@@ -6132,6 +6250,7 @@ _Appears in:_
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
 | `EndpointSliceIndex` | EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.<br />It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.<br />If the additional controller memory usage for the indexes becomes a concern,<br />consider disabling this flag.<br /> | 
 | `PerResourceSystemCASecret` | PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per<br />BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead<br />of sharing a single system_ca_certificates secret across all of them.<br />Disabled by default (i.e. the shared secret is used). Enable this flag to opt out during<br />upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use<br />it, which may cause a brief disruption to new connections on first enable.<br /> | 
+| `EnvoyProxyPatch` | EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on<br />EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve<br />pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and<br />tenant-authored, a patch may grant arbitrary access to resources applied by Envoy<br />Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters<br />where tenants can author their own EnvoyProxy resources.<br /> | 
 
 
 #### RuntimeFlags
@@ -6478,6 +6597,7 @@ that need to match against a string.
 _Appears in:_
 - [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
+- [HTTPHeaderMutation](#httpheadermutation)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
@@ -6882,9 +7002,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension. |
+| `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension.<br />When Code is omitted, Name is required and must match a module registered<br />in EnvoyProxy.spec.wasmModules. |
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
-| `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  |  | Code is the Wasm code for the extension. |
+| `code` | _[WasmCodeSource](#wasmcodesource)_ |  false  |  | Code is the Wasm code for the extension.<br />When omitted, Name must match a module in EnvoyProxy.spec.wasmModules. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the Wasm extension will also be bypassed if the configuration is invalid. |
 | `env` | _[WasmEnv](#wasmenv)_ |  false  |  | Env configures the environment for the Wasm extension |
@@ -6949,6 +7069,52 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `hostKeys` | _string array_ |  false  |  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
+
+
+#### WasmModuleEntry
+
+
+
+WasmModuleEntry defines a Wasm module that is registered and allowed for use
+by EnvoyExtensionPolicy resources.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name when wasm[].code is omitted. |
+| `source` | _[WasmModuleSource](#wasmmodulesource)_ |  true  |  | Source defines where the Wasm module code is loaded from. |
+
+
+#### WasmModuleSource
+
+
+
+WasmModuleSource defines where a registered Wasm module is loaded from.
+Mirrors DynamicModuleSource so additional source types can be added later.
+
+_Appears in:_
+- [WasmModuleEntry](#wasmmoduleentry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[WasmModuleSourceType](#wasmmodulesourcetype)_ |  false  | Local | Type is the type of the source of the Wasm module.<br />Defaults to Local. |
+| `local` | _[LocalWasmModuleSource](#localwasmmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
+
+
+#### WasmModuleSourceType
+
+_Underlying type:_ _string_
+
+WasmModuleSourceType specifies the types of sources for registered Wasm modules.
+
+_Appears in:_
+- [WasmModuleSource](#wasmmodulesource)
+
+| Value | Description |
+| ----- | ----------- |
+| `Local` | LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.<br /> | 
 
 
 #### WeightedZoneConfig
