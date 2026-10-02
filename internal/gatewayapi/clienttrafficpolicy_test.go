@@ -20,6 +20,41 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func TestTranslateOverlappingTLSHandling(t *testing.T) {
+	tests := []struct {
+		name string
+		tls  *egv1a1.ClientTLSSettings
+		want ir.OverlappingTLSHandling
+	}{
+		{name: "nil TLS settings", want: ""},
+		{
+			name: "unset",
+			tls:  &egv1a1.ClientTLSSettings{},
+			want: "",
+		},
+		{
+			name: "downgrade to HTTP/1",
+			tls:  &egv1a1.ClientTLSSettings{OverlappingTLSHandling: egv1a1.OverlappingTLSHandlingDowngradeToHTTP1},
+			want: ir.OverlappingTLSHandlingDowngradeToHTTP1,
+		},
+		{
+			name: "misdirected request",
+			tls:  &egv1a1.ClientTLSSettings{OverlappingTLSHandling: egv1a1.OverlappingTLSHandlingMisdirectedRequest},
+			want: ir.OverlappingTLSHandlingMisdirectedRequest,
+		},
+		{
+			name: "future value",
+			tls:  &egv1a1.ClientTLSSettings{OverlappingTLSHandling: "FutureValue"},
+			want: ir.OverlappingTLSHandling("FutureValue"),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, translateOverlappingTLSHandling(tc.tls))
+		})
+	}
+}
+
 func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 	tests := []struct {
 		name string

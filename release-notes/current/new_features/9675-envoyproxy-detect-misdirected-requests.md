@@ -1,0 +1,1 @@
+Added the `spec.tls.overlappingTLSHandling` ClientTrafficPolicy API field for GEP-3567. It accepts `DowngradeToHTTP1` and `Reject`, defaults to the existing downgrade behavior, and has no runtime effect yet.

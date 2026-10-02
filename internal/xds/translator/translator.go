@@ -863,6 +863,10 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 
+	if detectMisdirectedRequests(httpListener) {
+		vHostList = t.addMisdirectedRequestRoutes(vHostList, httpListener)
+	}
+
 	for _, vHost := range vHostList {
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.

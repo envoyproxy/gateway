@@ -9,6 +9,18 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+// OverlappingTLSHandling controls how overlapping TLS listeners handle HTTP/2 requests.
+// +kubebuilder:validation:Enum=DowngradeToHTTP1;MisdirectedRequest
+type OverlappingTLSHandling string
+
+const (
+	// OverlappingTLSHandlingDowngradeToHTTP1 preserves the default ALPN downgrade.
+	OverlappingTLSHandlingDowngradeToHTTP1 OverlappingTLSHandling = "DowngradeToHTTP1"
+	// OverlappingTLSHandlingMisdirectedRequest keeps HTTP/2 enabled and returns 421 when the
+	// request authority does not match the SNI used for the connection.
+	OverlappingTLSHandlingMisdirectedRequest OverlappingTLSHandling = "MisdirectedRequest"
+)
+
 // TLSOCSPKey is the key for the OCSP stapled response in a Secret.
 const TLSOCSPKey = "tls.ocsp-staple"
 
@@ -18,6 +30,16 @@ type ClientTLSSettings struct {
 	// +optional
 	ClientValidation *ClientValidationContext `json:"clientValidation,omitempty"`
 	TLSSettings      `json:",inline"`
+
+	// OverlappingTLSHandling controls how overlapping TLS listeners handle HTTP/2
+	// requests. MisdirectedRequest keeps HTTP/2 enabled and returns 421 Misdirected Request
+	// when the request authority does not match the connection's SNI, as described
+	// in [GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).
+	// When unset or set to DowngradeToHTTP1, the existing ALPN downgrade is preserved
+	// unless alpnProtocols is explicitly configured.
+	//
+	// +optional
+	OverlappingTLSHandling OverlappingTLSHandling `json:"overlappingTLSHandling,omitempty"`
 
 	// Session defines settings related to TLS session management.
 	// +optional
