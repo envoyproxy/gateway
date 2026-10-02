@@ -38,6 +38,52 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 	}
 }
 
+func TestResolveClientHTTP1Settings(t *testing.T) {
+	trueVal := new(bool)
+	*trueVal = true
+	falseVal := new(bool)
+	*falseVal = false
+
+	tests := []struct {
+		name   string
+		policy *egv1a1.ClientTrafficPolicy
+		want   *egv1a1.ClientHTTP1Settings
+	}{
+		{
+			name:   "neither set",
+			policy: &egv1a1.ClientTrafficPolicy{},
+			want:   nil,
+		},
+		{
+			name: "deprecated HTTP1 only — migrated",
+			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: trueVal},
+			}},
+			want: &egv1a1.ClientHTTP1Settings{PreserveHeaderCase: trueVal},
+		},
+		{
+			name: "new ClientHTTP1 only — returned as-is",
+			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
+				ClientHTTP1: &egv1a1.ClientHTTP1Settings{EnableTrailers: trueVal},
+			}},
+			want: &egv1a1.ClientHTTP1Settings{EnableTrailers: trueVal},
+		},
+		{
+			name: "both set — ClientHTTP1 wins, HTTP1 ignored",
+			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
+				HTTP1:       &egv1a1.HTTP1Settings{PreserveHeaderCase: trueVal},
+				ClientHTTP1: &egv1a1.ClientHTTP1Settings{EnableTrailers: falseVal},
+			}},
+			want: &egv1a1.ClientHTTP1Settings{EnableTrailers: falseVal},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, resolveClientHTTP1Settings(tc.policy))
+		})
+	}
+}
+
 func TestCTPClusterSettingsIndex(t *testing.T) {
 	gateway1 := &GatewayContext{
 		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway-1"}},
@@ -259,6 +305,7 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Timeout":             false,
 		"Connection":          false,
 		"HTTP1":               true,
+		"ClientHTTP1":         false,
 		"HTTP2":               false,
 		"HTTP3":               false,
 		"GRPC":                false,

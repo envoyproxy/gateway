@@ -214,6 +214,9 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.ClusterTrafficFeatures) {
 	args.backendConnection = traffic.BackendConnection
 	args.dns = traffic.DNS
 	args.http2Settings = traffic.HTTP2
+	if traffic.HTTP1 != nil {
+		args.http1Settings = traffic.HTTP1
+	}
 	args.admissionControl = traffic.AdmissionControl
 }
 

@@ -97,7 +97,8 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.HTTP2 != nil ||
 		spec.DNS != nil ||
 		spec.AdmissionControl != nil ||
-		spec.UseClientProtocol != nil
+		spec.UseClientProtocol != nil ||
+		spec.HTTP1 != nil
 }
 
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
@@ -1457,6 +1458,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		rbbl        *uint64
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
+		h1          *ir.HTTP1Settings
 		err, errs   error
 	)
 
@@ -1538,6 +1540,8 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 
 	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
 
+	h1 = translateBackendHTTP1Settings(policy.Spec.HTTP1)
+
 	return &ir.TrafficFeatures{
 		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
 			LoadBalancer:      lb,
@@ -1549,6 +1553,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 			TCPKeepalive:      ka,
 			BackendConnection: bc,
 			HTTP2:             h2,
+			HTTP1:             h1,
 			DNS:               ds,
 		},
 		RateLimit:              rl,
@@ -1794,6 +1799,22 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeat
 		bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
 		bc.UseClientProtocol = useClientProtocol
 	}
+}
+
+// translateBackendHTTP1Settings converts BTP BackendHTTP1Settings to the IR representation.
+// Only cluster-relevant fields are populated; listener-only fields have no upstream equivalent.
+func translateBackendHTTP1Settings(s *egv1a1.BackendHTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	out := &ir.HTTP1Settings{
+		EnableTrailers:     ptr.Deref(s.EnableTrailers, false),
+		PreserveHeaderCase: ptr.Deref(s.PreserveHeaderCase, false),
+	}
+	if s.HTTP10 != nil {
+		out.HTTP10 = &ir.HTTP10Settings{}
+	}
+	return out
 }
 
 func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {
