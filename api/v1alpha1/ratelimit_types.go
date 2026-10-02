@@ -69,6 +69,7 @@ type LocalRateLimit struct {
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.detailedMetric))", message="detailedMetric is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -137,6 +138,15 @@ type RateLimitRule struct {
 	//
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty"`
+	// DetailedMetric indicates whether the rate limit service should emit detailed
+	// metrics for this rule, including the resolved descriptor value for each request.
+	// This makes the near-limit and over-limit metrics more granular, at the cost of
+	// potentially high metric cardinality if the descriptor has many distinct values.
+	//
+	// Only supported for Global Rate Limits.
+	//
+	// +optional
+	DetailedMetric *bool `json:"detailedMetric,omitempty"`
 	// XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
 	// When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
 	// If not set, the rule inherits the listener-level setting (default behavior).

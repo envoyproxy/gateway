@@ -197,3 +197,4 @@ backendTrafficPolicies:
             requests: 30
             unit: Hour
           shadowMode: true
+          detailedMetric: true
