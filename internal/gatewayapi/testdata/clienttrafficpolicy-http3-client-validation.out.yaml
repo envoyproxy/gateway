@@ -28,12 +28,6 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: HTTP/3 was disabled for listener "https" because Envoy does not support
-          downstream client TLS validation over QUIC
-        reason: UnsupportedHTTP3ClientValidation
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -120,7 +114,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - name: envoy-gateway/gateway-1/https
+      - http3: {}
+        name: envoy-gateway/gateway-1/https
         ports:
         - containerPort: 10443
           name: https-443
@@ -166,6 +161,7 @@ xdsIR:
       externalPort: 443
       hostnames:
       - www.example.com
+      http3: {}
       metadata:
         kind: Gateway
         name: gateway-1
