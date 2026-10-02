@@ -1,0 +1,100 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-1
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: wildcard-example-com
+          port: 80
+          protocol: HTTP
+          hostname: "*.example.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: wildcard-dev-example-com
+          port: 80
+          protocol: HTTP
+          hostname: "*.dev.example.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  # Attaches by hostname alone, with no sectionName, which is the shape that
+  # reproduces the bug. test.dev.example.com is matched by both listeners, but
+  # wildcard-dev-example-com matches it more specifically and therefore owns it,
+  # so the route must appear only there and not on wildcard-example-com.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-nested
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-1
+          namespace: envoy-gateway
+      hostnames:
+        - "test.dev.example.com"
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /nested
+          backendRefs:
+            - name: service-1
+              port: 8080
+  # Control. other.example.com is matched only by the broader listener, so it must
+  # still attach there - this is what fails if the isolation over-deletes.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-apex
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-1
+          namespace: envoy-gateway
+      hostnames:
+        - "other.example.com"
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /apex
+          backendRefs:
+            - name: service-1
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: envoy-gateway
+      name: service-1
+    spec:
+      selector:
+        app: service-1
+      ports:
+        - name: http
+          protocol: TCP
+          port: 8080
+
+endpointslices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: envoy-gateway
+      name: service-1
+      labels:
+        kubernetes.io/service-name: service-1
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - 7.7.7.7
+        conditions:
+          ready: true

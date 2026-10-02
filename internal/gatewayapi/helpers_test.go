@@ -1844,3 +1844,114 @@ func structWithFieldSet[T any](fieldName string) *T {
 	}
 	return specPtr
 }
+
+// A route hostname that is more specifically matched by a sibling listener's nested
+// wildcard still attaches to the broader apex listener.
+//
+// The filter loop at the end of computeHosts does
+//
+//	hostnamesSet.Delete(string(*listener.Hostname))
+//
+// (helpers.go:380), which removes the sibling's hostname as a literal string. The set
+// holds whatever the match phase resolved the route hostname to, so the delete only
+// lands when those two strings happen to be equal. A concrete route hostname under a
+// wildcard sibling never matches, and the apex listener keeps a host it does not own.
+//
+// The first two cases below share identical listeners and differ only in the route
+// hostname, which is what makes the route hostname - not the listener topology - the
+// discriminator for whether isolation happens at all.
+func TestComputeHostsNestedWildcardIsolation(t *testing.T) {
+	newListener := func(gateway *GatewayContext, name, listenerHostname string) *ListenerContext {
+		hostname := gwapiv1.Hostname(listenerHostname)
+		return &ListenerContext{
+			Listener: &gwapiv1.Listener{
+				Name:     gwapiv1.SectionName(name),
+				Port:     80,
+				Protocol: gwapiv1.HTTPProtocolType,
+				Hostname: &hostname,
+			},
+			gateway: gateway,
+		}
+	}
+
+	tests := []struct {
+		name string
+		// hostname of the listener we are computing hosts FOR
+		subject string
+		// hostname of the other listener on the same port
+		sibling string
+		// siblingProtocolConflicted marks the sibling as having lost a protocol conflict
+		siblingProtocolConflicted bool
+		// the HTTPRoute's hostname
+		route string
+		want  []string
+	}{
+		{
+			// test.dev.example.com is more specifically matched by the sibling
+			// *.dev.example.com, so the apex listener should not claim it. The match
+			// phase resolves the set to the concrete "test.dev.example.com" while the
+			// filter deletes the literal "*.dev.example.com", so nothing is removed.
+			name:    "concrete route under a nested wildcard sibling is not isolated",
+			subject: "*.example.com",
+			sibling: "*.dev.example.com",
+			route:   "test.dev.example.com",
+			want:    []string{},
+		},
+		{
+			// Same two listeners as above. Here the match phase resolves the set to
+			// "*.dev.example.com", which is exactly the string the filter deletes, so
+			// isolation works. This case passes today.
+			name:    "wildcard route matching the sibling exactly is isolated",
+			subject: "*.example.com",
+			sibling: "*.dev.example.com",
+			route:   "*.dev.example.com",
+			want:    []string{},
+		},
+		{
+			// The mirror of the first case: the nested listener legitimately owns it.
+			name:    "nested wildcard listener claims its own concrete host",
+			subject: "*.dev.example.com",
+			sibling: "*.example.com",
+			route:   "test.dev.example.com",
+			want:    []string{"test.dev.example.com"},
+		},
+		{
+			// Control: a non-overlapping exact sibling must not cost the apex listener
+			// its route. Guards against a fix that over-deletes.
+			name:    "apex wildcard keeps its host when the sibling does not overlap",
+			subject: "*.example.com",
+			sibling: "other.example.com",
+			route:   "test.dev.example.com",
+			want:    []string{"test.dev.example.com"},
+		},
+		{
+			// A sibling that lost a protocol conflict is never programmed, so it cannot own
+			// a hostname. Deleting the route from the valid listener would leave it attached
+			// to nothing at all.
+			name:                      "protocol-conflicted sibling does not own a hostname",
+			subject:                   "*.example.com",
+			sibling:                   "*.dev.example.com",
+			siblingProtocolConflicted: true,
+			route:                     "test.dev.example.com",
+			want:                      []string{"test.dev.example.com"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+			subject := newListener(gateway, "subject", tc.subject)
+			sibling := newListener(gateway, "sibling", tc.sibling)
+			sibling.protocolConflicted = tc.siblingProtocolConflicted
+			gateway.listeners = []*ListenerContext{subject, sibling}
+			gateway.Status.Listeners = []gwapiv1.ListenerStatus{
+				{Name: subject.Name},
+				{Name: sibling.Name},
+			}
+			subject.listenerStatusIdx = 0
+			sibling.listenerStatusIdx = 1
+
+			require.ElementsMatch(t, tc.want, computeHosts([]string{tc.route}, subject))
+		})
+	}
+}
