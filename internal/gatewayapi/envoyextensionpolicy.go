@@ -1814,19 +1814,14 @@ func (t *Translator) buildWasm(
 	}
 
 	if ptr.Deref(config.VMSharingScope, egv1a1.WasmVMSharingScopePolicy) == egv1a1.WasmVMSharingScopeNamespace {
+		// Local module bytes distinguish VMs; remote modules need their
+		// resolved checksum because Envoy computes the key before fetching code.
+		moduleID := "local"
 		if wasmIR.Code != nil {
-			// Envoy v1.39.1 computes the VM cache key before remote code is fetched on
-			// a cache miss. Include the resolved module checksum so different modules
-			// cannot reuse the first downloaded module's VM, even with remote.sha256 set.
-			// Use the cache-computed module checksum, not the optional user checksum
-			// (which identifies the image rather than the module for OCI sources).
-			wasmIR.VMID = fmt.Sprintf("envoyextensionpolicy/%s/wasm/%s", policy.Namespace, wasmIR.Code.SHA256)
-		} else {
-			// Envoy reads local code before computing its VM cache key, so the module
-			// bytes distinguish local VMs without a control-plane checksum. Keep the
-			// local ID separate from remote IDs, whose keys may use empty code.
-			wasmIR.VMID = fmt.Sprintf("envoyextensionpolicy/%s/wasm/local", policy.Namespace)
+			moduleID = wasmIR.Code.SHA256
 		}
+		wasmIR.VMID = fmt.Sprintf("envoyextensionpolicy/%s/wasm/%s", policy.Namespace, moduleID)
+
 		// Envoy includes the environment configuration in its VM identity. Emit
 		// equivalent host-key sets in the same order without modifying the policy.
 		wasmIR.HostKeys = slices.Clone(wasmIR.HostKeys)
