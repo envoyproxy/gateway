@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -28,6 +29,10 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -107,50 +112,108 @@ func casePreservingRoundTrip(request *roundtripper.Request, transport nethttp.Ro
 	return cReq, nil
 }
 
+// checkHeaderCasePreserved polls until "SpEcIaL" appears in the echoed response body,
+// returning true once observed or false if the poll times out.
+func checkHeaderCasePreserved(t *testing.T, s *suite.ConformanceTestSuite, gwAddr, path, ns string) bool {
+	t.Helper()
+	var preserved bool
+	_ = wait.PollUntilContextTimeout(t.Context(), time.Second, s.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path:    path + "?headers=ReSpOnSeHeAdEr",
+				Headers: map[string]string{"SpEcIaL": "Header"},
+			},
+			Namespace: ns,
+		}
+		var rt nethttp.RoundTripper
+		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+		respBody, err := casePreservingRoundTrip(&req, rt, s)
+		if err != nil {
+			tlog.Logf(t, "request failed: %v", err)
+			return false, nil
+		}
+		if _, found := respBody["SpEcIaL"]; found {
+			preserved = true
+			return true, nil
+		}
+		return false, nil
+	})
+	return preserved
+}
+
+// checkHeaderCaseNotPreserved polls until "SpEcIaL" is absent from the echoed response body,
+// returning true once confirmed or false if preservation persists until the poll times out.
+func checkHeaderCaseNotPreserved(t *testing.T, s *suite.ConformanceTestSuite, gwAddr, path, ns string) bool {
+	t.Helper()
+	var notPreserved bool
+	_ = wait.PollUntilContextTimeout(t.Context(), time.Second, s.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path:    path + "?headers=ReSpOnSeHeAdEr",
+				Headers: map[string]string{"SpEcIaL": "Header"},
+			},
+			Namespace: ns,
+		}
+		var rt nethttp.RoundTripper
+		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+		respBody, err := casePreservingRoundTrip(&req, rt, s)
+		if err != nil {
+			tlog.Logf(t, "request failed: %v", err)
+			return false, nil
+		}
+		if _, found := respBody["SpEcIaL"]; !found {
+			notPreserved = true
+			return true, nil
+		}
+		return false, nil
+	})
+	return notPreserved
+}
+
 var PreserveCase = suite.ConformanceTest{
 	ShortName:   "PreserveCase",
-	Description: "Preserve header cases",
+	Description: "Preserve header cases using the deprecated http1 field, then clientHttp1/backendHttp1",
 	Manifests:   []string{"testdata/preserve-case.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("should preserve header cases in both directions", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "preserve-case", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+	Test: func(t *testing.T, s *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "preserve-case", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, s.Client, s.TimeoutConfig, s.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "preserve-case"}, corev1.PodRunning, &PodReady)
+		WaitForPods(t, s.Client, ns, map[string]string{"app": "preserve-case"}, corev1.PodRunning, &PodReady)
 
-			err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
-				// Can't use the standard method for checking the response, since the remote side isn't the
-				// conformance echo server and it returns a differently formatted response.
-				expectedResponse := http.ExpectedResponse{
-					Request: http.Request{
-						Path: "/preserve?headers=ReSpOnSeHeAdEr",
-						Headers: map[string]string{
-							"SpEcIaL": "Header",
-						},
-					},
-					Namespace: ns,
-				}
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(ns),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
 
-				var rt nethttp.RoundTripper
-				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-				respBody, err := casePreservingRoundTrip(&req, rt, suite)
-				if err != nil {
-					tlog.Logf(t, "failed to get expected response: %v", err)
-					return false, nil
-				}
+		// Phase 1: deprecated http1 field on CTP — case should be preserved.
+		t.Run("deprecated http1 field preserves header case", func(t *testing.T) {
+			ClientTrafficPolicyMustBeAccepted(t, s.Client, types.NamespacedName{Name: "preserve-case", Namespace: ns}, s.ControllerName, ancestorRef)
+			require.True(t, checkHeaderCasePreserved(t, s, gwAddr, "/preserve", ns), "expected header case to be preserved with deprecated http1 field")
+		})
 
-				if _, found := respBody["SpEcIaL"]; !found {
-					tlog.Logf(t, "case was not preserved for test header: %+v", respBody)
-					return false, nil
-				}
+		// Phase 2: delete the deprecated CTP — case should no longer be preserved.
+		t.Run("without CTP header case is not preserved", func(t *testing.T) {
+			ctpNN := types.NamespacedName{Name: "preserve-case", Namespace: ns}
+			existing := &egv1a1.ClientTrafficPolicy{}
+			require.NoError(t, s.Client.Get(t.Context(), ctpNN, existing))
+			require.NoError(t, s.Client.Delete(t.Context(), existing))
+			ClientTrafficPolicyMustNotExist(t, s.Client, ctpNN)
 
-				return true, nil
-			})
-			if err != nil {
-				tlog.Fatalf(t, "failed to get expected response: %v", err)
-			}
+			require.True(t, checkHeaderCaseNotPreserved(t, s, gwAddr, "/preserve", ns), "expected header case to NOT be preserved after CTP deletion")
+		})
+
+		// Phase 3: apply clientHttp1 on CTP and backendHttp1 on BTP — case should be preserved again.
+		t.Run("clientHttp1 and backendHttp1 fields preserve header case", func(t *testing.T) {
+			s.Applier.MustApplyWithCleanup(t, s.Client, s.TimeoutConfig, "testdata/preserve-case-new-http1-fields.yaml", true)
+
+			ClientTrafficPolicyMustBeAccepted(t, s.Client, types.NamespacedName{Name: "preserve-case-new", Namespace: ns}, s.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, s.Client, types.NamespacedName{Name: "preserve-case-new", Namespace: ns}, s.ControllerName, ancestorRef)
+
+			require.True(t, checkHeaderCasePreserved(t, s, gwAddr, "/preserve", ns), "expected header case to be preserved with clientHttp1 and backendHttp1 fields")
 		})
 	},
 }
