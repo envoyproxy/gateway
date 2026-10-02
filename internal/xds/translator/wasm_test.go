@@ -15,49 +15,60 @@ import (
 )
 
 func TestWasmConfigVMSharing(t *testing.T) {
-	for _, local := range []bool{false, true} {
-		source := "remote"
-		if local {
-			source = "local"
-		}
-		for _, shared := range []bool{false, true} {
-			scope := "Policy"
-			if shared {
-				scope = "Namespace"
+	const (
+		policyVMID       = "envoyextensionpolicy/shop/a/wasm/0"
+		sharedRemoteVMID = "envoyextensionpolicy/shop/wasm/module-sha"
+		sharedLocalVMID  = "envoyextensionpolicy/shop/wasm/local"
+		localPath        = "/var/lib/envoy/plugin.wasm"
+	)
+	remoteCode := &ir.HTTPWasmCode{ServingURL: "https://envoy-gateway/plugin.wasm", SHA256: "module-sha"}
+	tests := []struct {
+		name         string
+		code         *ir.HTTPWasmCode
+		path         string
+		vmID         string
+		wantVMID     string
+		wantFilename string
+		wantURI      string
+		wantSHA256   string
+	}{
+		{
+			name: "remote/Policy", code: remoteCode,
+			wantVMID: policyVMID, wantURI: remoteCode.ServingURL, wantSHA256: remoteCode.SHA256,
+		},
+		{
+			name: "remote/Namespace", code: remoteCode, vmID: sharedRemoteVMID,
+			wantVMID: sharedRemoteVMID, wantURI: remoteCode.ServingURL, wantSHA256: remoteCode.SHA256,
+		},
+		{
+			name: "local/Policy", path: localPath,
+			wantVMID: policyVMID, wantFilename: localPath,
+		},
+		{
+			name: "local/Namespace", path: localPath, vmID: sharedLocalVMID,
+			wantVMID: sharedLocalVMID, wantFilename: localPath,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wasm := &ir.Wasm{
+				Name:     policyVMID,
+				WasmName: "my-plugin",
+				RootID:   new("my-root"),
+				Code:     tt.code,
+				Path:     tt.path,
+				VMID:     tt.vmID,
 			}
-			t.Run(source+"/"+scope, func(t *testing.T) {
-				wasm := &ir.Wasm{
-					Name:     "envoyextensionpolicy/shop/a/wasm/0",
-					WasmName: "my-plugin",
-					RootID:   new("my-root"),
-				}
-				if local {
-					wasm.Path = "/var/lib/envoy/plugin.wasm"
-				} else {
-					wasm.Code = &ir.HTTPWasmCode{ServingURL: "https://envoy-gateway/plugin.wasm", SHA256: "module-sha"}
-				}
-				wantVMID := wasm.Name
-				if shared {
-					wasm.VMID = "envoyextensionpolicy/shop/wasm/module-sha"
-					if local {
-						wasm.VMID = "envoyextensionpolicy/shop/wasm/local"
-					}
-					wantVMID = wasm.VMID
-				}
-
-				got, err := wasmConfig(wasm)
-				require.NoError(t, err)
-				require.Equal(t, wantVMID, got.Config.GetVmConfig().VmId)
-				require.Equal(t, wasm.WasmName, got.Config.Name)
-				require.Equal(t, *wasm.RootID, got.Config.RootId)
-				if local {
-					require.Equal(t, wasm.Path, got.Config.GetVmConfig().Code.GetLocal().GetFilename())
-				} else {
-					require.Equal(t, wasm.Code.ServingURL, got.Config.GetVmConfig().Code.GetRemote().HttpUri.Uri)
-					require.Equal(t, wasm.Code.SHA256, got.Config.GetVmConfig().Code.GetRemote().Sha256)
-				}
-			})
-		}
+			got, err := wasmConfig(wasm)
+			require.NoError(t, err)
+			vm := got.Config.GetVmConfig()
+			require.Equal(t, tt.wantVMID, vm.GetVmId())
+			require.Equal(t, wasm.WasmName, got.Config.Name)
+			require.Equal(t, *wasm.RootID, got.Config.RootId)
+			require.Equal(t, tt.wantFilename, vm.GetCode().GetLocal().GetFilename())
+			require.Equal(t, tt.wantURI, vm.GetCode().GetRemote().GetHttpUri().GetUri())
+			require.Equal(t, tt.wantSHA256, vm.GetCode().GetRemote().GetSha256())
+		})
 	}
 }
 
