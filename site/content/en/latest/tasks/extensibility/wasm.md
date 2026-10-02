@@ -19,13 +19,12 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 Envoy Gateway supports three types of Wasm extensions:
 * HTTP Wasm Extension: The Wasm extension is fetched from a remote URL.
 * Image Wasm Extension: The Wasm extension is packaged as an OCI image and fetched from an image registry.
-* Registered Wasm module: The Wasm extension is loaded from a module registered on [EnvoyProxy][] (`spec.wasmModules`). Today only a Local filesystem path is supported. Omit `code` and set `wasm[].name` to the registered module name.
+* Registered Wasm module: The Wasm extension is loaded from a module registered on [EnvoyProxy][] (`spec.wasmModules`) from a Local filesystem path, an HTTP URL, or an OCI image. Omit `code` and set `wasm[].name` to the registered module name.
 
 {{% alert title="Note" color="warning" %}}
 Inline `wasm[].code` on an EnvoyExtensionPolicy is deprecated and will be removed in a future release.
 Register the module in `EnvoyProxy.spec.wasmModules` and reference it by `wasm[].name` instead.
-The `wasmModules` API accepts HTTP and Image sources as well as Local, but only Local modules are loaded today.
-Keep HTTP and Image modules on `wasm[].code` until registry support for them is implemented.
+Policies that still use `code` get a `DeprecatedField` warning in their status.
 {{% /alert %}}
 
 The following example demonstrates how to configure an [EnvoyExtensionPolicy][] to attach a Wasm extension to an [EnvoyExtensionPolicy][] .
@@ -151,7 +150,10 @@ spec:
 
 ### Registered Wasm module
 
-Register the module on the [EnvoyProxy][] attached to the Gateway, then omit `code` and set `wasm[].name` to that module name on the [EnvoyExtensionPolicy][]. Envoy Gateway does not place Local modules on the proxy; provision them with a custom Envoy image or a volume mount. Local modules skip the control-plane download path, which avoids a fail-closed load window when the file is already on the proxy.
+Register the module on the [EnvoyProxy][] attached to the Gateway, then omit `code` and set `wasm[].name` to that module name on the [EnvoyExtensionPolicy][].
+
+* Local modules are loaded from the proxy's filesystem. Envoy Gateway does not place them on the proxy; provision them with a custom Envoy image or a volume mount. They skip the control-plane download path, which avoids a fail-closed load window when the file is already on the proxy.
+* HTTP and Image modules are fetched by Envoy Gateway and served to the proxy, the same way as the inline `code` sources above. Their pull secret and CA certificate must be in the EnvoyProxy's namespace.
 
 Update the EnvoyProxy used by the Gateway:
 
@@ -168,6 +170,17 @@ spec:
       type: Local
       local:
         path: /var/lib/envoy/example-filter.wasm
+  - name: example-http-filter
+    source:
+      type: HTTP
+      http:
+        url: https://raw.githubusercontent.com/envoyproxy/examples/main/wasm-cc/lib/envoy_filter_http_wasm_example.wasm
+        sha256: 79c9f85128bb0177b6511afa85d587224efded376ac0ef76df56595f1e6315c0
+  - name: example-image-filter
+    source:
+      type: Image
+      image:
+        url: zhaohuabing/testwasm:v0.0.1
 ```
 
 Then apply the EnvoyExtensionPolicy:

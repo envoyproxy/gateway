@@ -1,0 +1,179 @@
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: registry-pull-secret
+  data:
+    .dockerconfigjson: VGhpc0lzTm90QVJlYWxEb2NrZXJDb25maWdKc29u
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: other-pull-secret
+  data:
+    .dockerconfigjson: VGhpc0lzTm90QVJlYWxEb2NrZXJDb25maWdKc29u
+configMaps:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    namespace: envoy-gateway
+    name: wasm-ca
+  data:
+    ca.crt: fake-ca-bundle
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: proxy-config
+    resourceVersion: "42"
+  spec:
+    wasmModules:
+    - name: http-filter
+      source:
+        type: HTTP
+        http:
+          url: https://www.example.com/wasm-filter-1.wasm
+    - name: http-filter-with-ca
+      source:
+        type: HTTP
+        http:
+          url: https://www.example.com/wasm-filter-2.wasm
+          tls:
+            caCertificateRef:
+              kind: ConfigMap
+              name: wasm-ca
+    - name: image-filter
+      source:
+        type: Image
+        image:
+          url: www.example.com/wasm-filter-3:v1.0.0
+          pullSecretRef:
+            name: registry-pull-secret
+        pullPolicy: Always
+    - name: image-filter-cross-namespace-secret
+      source:
+        type: Image
+        image:
+          url: www.example.com/wasm-filter-4:v1.0.0
+          pullSecretRef:
+            namespace: default
+            name: other-pull-secret
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: proxy-config
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyextensionpolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    wasm:
+    - name: http-filter
+    - name: image-filter
+      rootID: my-root-id
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route-1
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    wasm:
+    - name: http-filter-with-ca
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route-2
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    wasm:
+    - name: image-filter-cross-namespace-secret

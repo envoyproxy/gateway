@@ -3142,6 +3142,9 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 	// It will be recomputed by the gateway-api layer
 	ep.Status = egv1a1.EnvoyProxyStatus{}
 	r.processEnvoyProxy(ep, resourceMap)
+	if err := r.processEnvoyProxyWasmModuleRefs(ctx, ep, resourceMap, resourceTree); err != nil {
+		return err
+	}
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
@@ -3181,7 +3184,38 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 	// It will be recomputed by the gateway-api layer
 	ep.Status = egv1a1.EnvoyProxyStatus{}
 	r.processEnvoyProxy(ep, resourceMap)
+	if err := r.processEnvoyProxyWasmModuleRefs(ctx, ep, resourceMap, resourceTree); err != nil {
+		return err
+	}
 	resourceTree.EnvoyProxyForGatewayClass = ep
+	return nil
+}
+
+// processEnvoyProxyWasmModuleRefs adds the pull secrets and CA certificates of
+// the EnvoyProxy's remote Wasm modules to the resourceTree. Only refs in the
+// EnvoyProxy's namespace are fetched, since the translator rejects the rest.
+// Only transient errors are returned; the translator reports missing objects.
+func (r *gatewayAPIReconciler) processEnvoyProxyWasmModuleRefs(
+	ctx context.Context,
+	ep *egv1a1.EnvoyProxy,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+) error {
+	for _, ref := range wasmModuleObjectRefs(ep) {
+		kind := gatewayapi.KindDerefOr(ref.Kind, resource.KindSecret)
+		if kind != resource.KindClusterTrustBundle &&
+			gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace) != ep.Namespace {
+			continue
+		}
+		if err := r.processSecretObjectRef(ctx, resourceMap, resourceTree,
+			egv1a1.KindEnvoyProxy, ep.Namespace, ep.Name, ref, kind); err != nil {
+			if isTransientError(err) {
+				return err
+			}
+			r.log.Error(err, "failed to process Wasm module ref for EnvoyProxy",
+				"namespace", ep.Namespace, "name", ep.Name, "ref", ref.Name)
+		}
+	}
 	return nil
 }
 

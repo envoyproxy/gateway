@@ -1,1 +1,1 @@
-EnvoyExtensionPolicy.wasm[].code is deprecated. Register the module in EnvoyProxy.spec.wasmModules and reference it by wasm[].name instead.
+EnvoyExtensionPolicy.wasm[].code is deprecated. Register the module in EnvoyProxy.spec.wasmModules and reference it by wasm[].name instead. Policies that still use wasm[].code get a DeprecatedField warning in their status.
