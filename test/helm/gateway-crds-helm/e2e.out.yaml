@@ -6060,6 +6060,21 @@ spec:
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
                 type: array
+              tcp:
+                description: |-
+                  TCP provides TCP proxy configuration on the listener.
+                  It only applies to listeners with TCPRoute or TLSRoute attached.
+                properties:
+                  enableActiveDrain:
+                    description: |-
+                      EnableActiveDrain configures Envoy to close client connections when the listener
+                      is draining, e.g. during a graceful shutdown of the proxy or when the listener
+                      is updated or removed.
+                      The drain state is checked after each read or write on the connection, so idle
+                      connections are not closed until they see traffic or reach the TCP idle timeout.
+                      Default: false.
+                    type: boolean
+                type: object
               tcpKeepalive:
                 description: |-
                   TcpKeepalive settings associated with the downstream client connection.

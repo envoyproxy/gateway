@@ -1080,6 +1080,7 @@ _Appears in:_
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  |  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  |  | Timeout settings for the client connections. |
 | `connection` | _[ClientConnection](#clientconnection)_ |  false  |  | Connection includes client connection settings. |
+| `tcp` | _[TCPSettings](#tcpsettings)_ |  false  |  | TCP provides TCP proxy configuration on the listener.<br />It only applies to listeners with TCPRoute or TLSRoute attached. |
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
@@ -6696,6 +6697,22 @@ _Appears in:_
 | `probes` | _integer_ |  false  |  | The total number of unacknowledged probes to send before deciding<br />the connection is dead.<br />Defaults to 9. |
 | `idleTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | The duration a connection needs to be idle before keep-alive<br />probes start being sent.<br />The duration format is<br />Defaults to `7200s`. |
 | `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | The duration between keep-alive probes.<br />Defaults to `75s`. |
+
+
+#### TCPSettings
+
+
+
+TCPSettings provides TCP proxy configuration on the listener.
+These settings only apply to listeners that proxy TCP traffic, i.e. listeners
+with TCPRoute or TLSRoute attached, and have no effect on HTTP listeners.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enableActiveDrain` | _boolean_ |  false  |  | EnableActiveDrain configures Envoy to close client connections when the listener<br />is draining, e.g. during a graceful shutdown of the proxy or when the listener<br />is updated or removed.<br />The drain state is checked after each read or write on the connection, so idle<br />connections are not closed until they see traffic or reach the TCP idle timeout.<br />Default: false. |
 
 
 #### TCPTimeout

@@ -92,6 +92,11 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Connection *ClientConnection `json:"connection,omitempty"`
+	// TCP provides TCP proxy configuration on the listener.
+	// It only applies to listeners with TCPRoute or TLSRoute attached.
+	//
+	// +optional
+	TCP *TCPSettings `json:"tcp,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener.
 	//
 	// +optional
@@ -405,6 +410,21 @@ type HTTP3Settings struct {
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self >= 1 && self <= 65535",message="advertisedPort must be between 1 and 65535"
 	AdvertisedPort *gwapiv1.PortNumber `json:"advertisedPort,omitempty"`
+}
+
+// TCPSettings provides TCP proxy configuration on the listener.
+// These settings only apply to listeners that proxy TCP traffic, i.e. listeners
+// with TCPRoute or TLSRoute attached, and have no effect on HTTP listeners.
+type TCPSettings struct {
+	// EnableActiveDrain configures Envoy to close client connections when the listener
+	// is draining, e.g. during a graceful shutdown of the proxy or when the listener
+	// is updated or removed.
+	// The drain state is checked after each read or write on the connection, so idle
+	// connections are not closed until they see traffic or reach the TCP idle timeout.
+	// Default: false.
+	//
+	// +optional
+	EnableActiveDrain *bool `json:"enableActiveDrain,omitempty"`
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
