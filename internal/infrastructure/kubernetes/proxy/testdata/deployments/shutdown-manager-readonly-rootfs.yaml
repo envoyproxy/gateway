@@ -16,7 +16,6 @@ metadata:
     uid: test-owner-reference-uid-for-gatewayclass
 spec:
   progressDeadlineSeconds: 600
-  replicas: 2
   revisionHistoryLimit: 10
   selector:
     matchLabels:
@@ -215,21 +214,6 @@ spec:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
                 max_active_downstream_connections: 50000
-            - name: "envoy.resource_monitors.fixed_heap"
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.resource_monitors.fixed_heap.v3.FixedHeapConfig
-                max_heap_size_bytes: 1717986918
-            actions:
-            - name: "envoy.overload_actions.shrink_heap"
-              triggers:
-              - name: "envoy.resource_monitors.fixed_heap"
-                threshold:
-                  value: 0.95
-            - name: "envoy.overload_actions.stop_accepting_requests"
-              triggers:
-              - name: "envoy.resource_monitors.fixed_heap"
-                threshold:
-                  value: 0.98
         - --log-level
         - warn
         - --cpuset-threads
@@ -257,11 +241,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
-        - name: env_a
-          value: env_a_value
-        - name: env_b
-          value: env_b_value
-        image: envoyproxy/envoy:v1.2.3
+        image: docker.io/envoyproxy/envoy:distroless-v1.39.1@sha256:eb2c01c13125d1629637cb4e4cce7207009fb7cc2c8027f9742758549d15b6f4
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -296,18 +276,16 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         resources:
-          limits:
-            cpu: 400m
-            memory: 2Gi
           requests:
-            cpu: 200m
-            memory: 1Gi
+            cpu: 100m
+            memory: 512Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
-          privileged: true
+          privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -388,7 +366,8 @@ spec:
           capabilities:
             drop:
             - ALL
-          privileged: true
+          privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -411,15 +390,13 @@ spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
-      securityContext:
-        runAsUser: 1000
       serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 360
       volumes:
       - name: certs
         secret:
           defaultMode: 420
-          secretName: custom-envoy-cert
+          secretName: envoy
       - configMap:
           defaultMode: 420
           items:
