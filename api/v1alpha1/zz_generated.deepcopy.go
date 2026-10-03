@@ -9244,6 +9244,11 @@ func (in *Wasm) DeepCopyInto(out *Wasm) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.VMSharingScope != nil {
+		in, out := &in.VMSharingScope, &out.VMSharingScope
+		*out = new(WasmVMSharingScope)
+		**out = **in
+	}
 	if in.RootID != nil {
 		in, out := &in.RootID, &out.RootID
 		*out = new(string)

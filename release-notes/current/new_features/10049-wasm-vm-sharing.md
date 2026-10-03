@@ -1,0 +1,1 @@
+Added the per-entry `vmSharingScope` option to EnvoyExtensionPolicy. Setting it to `Namespace` allows compatible Wasm extensions in the same policy namespace to reuse a VM on each Envoy worker. It defaults to `Policy`, preserving a separate VM ID for each policy's Wasm entry. The same entry may reuse its VM across routes; different entries do not share a VM.
