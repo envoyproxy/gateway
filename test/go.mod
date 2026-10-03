@@ -9,6 +9,7 @@ require (
 	fortio.org/log v1.18.3
 	github.com/andybalholm/brotli v1.2.3
 	github.com/envoyproxy/gateway v0.0.0-00010101000000-000000000000
+	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260927022543-fc8912c55e30
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
@@ -17,7 +18,7 @@ require (
 	github.com/moby/go-archive v0.3.0
 	github.com/moby/moby/client v0.5.1
 	github.com/prometheus/client_golang v1.24.1
-	github.com/prometheus/client_model v0.6.2
+	github.com/prometheus/client_model v0.6.3
 	github.com/prometheus/common v0.70.1
 	github.com/quic-go/quic-go v0.59.1
 	github.com/stretchr/testify v1.12.1
@@ -112,10 +113,9 @@ require (
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/ebitengine/purego v0.11.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
-	github.com/envoyproxy/go-control-plane v0.14.1-0.20260902172201-0f2cd005953e // indirect
-	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260902172201-0f2cd005953e // indirect
-	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260902172201-0f2cd005953e // indirect
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260902172201-0f2cd005953e // indirect
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260927022543-fc8912c55e30 // indirect
+	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260927022543-fc8912c55e30 // indirect
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260927022543-fc8912c55e30 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
