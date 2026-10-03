@@ -142,7 +142,25 @@ type ZipkinTracingProvider struct {
 	// client and server spans sharing the same span context should be disabled.
 	// +optional
 	DisableSharedSpanContext *bool `json:"disableSharedSpanContext,omitempty"`
+	// TraceContextOption determines which trace context headers are used to extract
+	// the trace context from downstream requests and to inject it into upstream requests.
+	// Defaults to UseB3.
+	// +optional
+	TraceContextOption *ZipkinTraceContextOption `json:"traceContextOption,omitempty"`
 }
+
+// ZipkinTraceContextOption defines the trace context headers used by the Zipkin tracer.
+// +kubebuilder:validation:Enum=UseB3;UseB3WithW3CPropagation
+type ZipkinTraceContextOption string
+
+const (
+	// ZipkinTraceContextOptionUseB3 uses B3 headers only, for both extraction and injection.
+	ZipkinTraceContextOptionUseB3 ZipkinTraceContextOption = "UseB3"
+	// ZipkinTraceContextOptionUseB3WithW3CPropagation extracts the trace context from B3 headers,
+	// falling back to the W3C traceparent header if B3 headers are absent, and injects both
+	// B3 and W3C traceparent headers.
+	ZipkinTraceContextOptionUseB3WithW3CPropagation ZipkinTraceContextOption = "UseB3WithW3CPropagation"
+)
 
 // OpenTelemetryTracingProvider defines the OpenTelemetry tracing provider configuration.
 type OpenTelemetryTracingProvider struct {

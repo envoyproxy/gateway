@@ -52,6 +52,7 @@
               collectorEndpoint: /api/v2/spans
               collectorEndpointVersion: HTTP_JSON
               sharedSpanContext: false
+              traceContextOption: USE_B3_WITH_W3C_PROPAGATION
               traceId128bit: true
           randomSampling:
             value: 90
