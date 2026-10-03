@@ -1,0 +1,35 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  # ConsistentHash combined with a PreferLocal (topology-aware/zone-aware) backend,
+  # e.g. via a Service's trafficDistribution: PreferSameZone. A single destination
+  # setting split across zones like this doesn't need locality-weighted lb honored
+  # (there's no explicit per-zone weight to preserve), so the Maglev policy should
+  # leave LocalityWeightedLbConfig unset here and fall back to plain host hashing.
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          headers:
+          - name: x-user-id
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1b
+        name: "first-route-dest/backend/0"
+        weight: 30
+        preferLocal:
+          force:
+            minEndpointsInZoneThreshold: 1
+          minEndpointsThreshold: 1
