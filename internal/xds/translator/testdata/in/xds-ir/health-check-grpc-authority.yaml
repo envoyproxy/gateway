@@ -1,0 +1,66 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "route-default-authority"
+    hostname: "grpc.example.com"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "1s"
+          interval: "5s"
+          unhealthyThreshold: 3
+          healthyThreshold: 3
+          grpc:
+            service: my-service
+    destination:
+      name: "route-default-authority-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        protocol: GRPC
+        name: "route-default-authority-dest/backend/0"
+  - name: "route-explicit-authority"
+    hostname: "grpc.example.com"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "1s"
+          interval: "5s"
+          unhealthyThreshold: 3
+          healthyThreshold: 3
+          grpc:
+            service: my-service
+            authority: health.example.com
+    destination:
+      name: "route-explicit-authority-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          hostname: endpoint.example.com
+          port: 50000
+        protocol: GRPC
+        name: "route-explicit-authority-dest/backend/0"
+  - name: "route-wildcard-hostname"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "1s"
+          interval: "5s"
+          unhealthyThreshold: 3
+          healthyThreshold: 3
+          grpc:
+            service: my-service
+    destination:
+      name: "route-wildcard-hostname-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        protocol: GRPC
+        name: "route-wildcard-hostname-dest/backend/0"

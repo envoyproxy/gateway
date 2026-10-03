@@ -687,3 +687,87 @@ func TestBackendClusterTranslatorAsClusterArgsAppliesTraffic(t *testing.T) {
 
 	require.Equal(t, circuitBreaker, args.circuitBreaker)
 }
+
+func TestGRPCHealthCheckAuthority(t *testing.T) {
+	tests := []struct {
+		name          string
+		healthCheck   *ir.GRPCHealthChecker
+		routeHostname string
+		expected      string
+	}{
+		{
+			name:          "explicit authority wins over the route hostname",
+			healthCheck:   &ir.GRPCHealthChecker{Authority: "health.example.com"},
+			routeHostname: "grpc.example.com",
+			expected:      "health.example.com",
+		},
+		{
+			name:          "route hostname is used as the default",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "grpc.example.com",
+			expected:      "grpc.example.com",
+		},
+		{
+			name:          "wildcard route hostname is not a valid authority",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "*.example.com",
+			expected:      "",
+		},
+		{
+			name:          "empty route hostname",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "",
+			expected:      "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, grpcHealthCheckAuthority(tc.healthCheck, tc.routeHostname))
+		})
+	}
+}
+
+func TestGetHealthCheckOverridesHostnameWithGRPCAuthority(t *testing.T) {
+	tests := []struct {
+		name        string
+		healthCheck *ir.HealthCheck
+		endpoint    *ir.DestinationEndpoint
+		expected    string
+	}{
+		{
+			name: "GRPC health checker with an explicit authority keeps the cluster-level authority",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					GRPC: &ir.GRPCHealthChecker{Authority: "health.example.com"},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: new("backend.example.com"),
+			},
+			expected: "",
+		},
+		{
+			name: "GRPC health checker without an authority defers to the endpoint hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					GRPC: &ir.GRPCHealthChecker{},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: new("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, getHealthCheckOverridesHostname(tc.healthCheck, tc.endpoint))
+		})
+	}
+}

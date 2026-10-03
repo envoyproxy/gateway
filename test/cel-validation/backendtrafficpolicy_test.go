@@ -1969,6 +1969,187 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				`The grpc field can only be set if the Health Checker type is GRPC.`,
 			},
 		},
+		{
+			desc: "grpc health checker without hostname",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeGRPC,
+									GRPC: &egv1a1.GRPCActiveHealthChecker{},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "grpc health checker with valid hostname",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeGRPC,
+									GRPC: &egv1a1.GRPCActiveHealthChecker{
+										Hostname: new("grpc.example.com"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "grpc health checker with empty hostname",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeGRPC,
+									GRPC: &egv1a1.GRPCActiveHealthChecker{
+										Hostname: new(""),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.HealthCheck.active.grpc.hostname: Invalid value: "": spec.HealthCheck.active.grpc.hostname in body should be at least 1 chars long`,
+			},
+		},
+		{
+			desc: "grpc health checker with wildcard hostname",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeGRPC,
+									GRPC: &egv1a1.GRPCActiveHealthChecker{
+										Hostname: new("*.example.com"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.HealthCheck.active.grpc.hostname: Invalid value: "*.example.com": spec.HealthCheck.active.grpc.hostname in body should match`,
+			},
+		},
+		{
+			desc: "grpc health checker with hostname containing a slash",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeGRPC,
+									GRPC: &egv1a1.GRPCActiveHealthChecker{
+										Hostname: new("grpcroute/default/grpc-route/rule/0"),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.HealthCheck.active.grpc.hostname: Invalid value: "grpcroute/default/grpc-route/rule/0": spec.HealthCheck.active.grpc.hostname in body should match`,
+			},
+		},
+		{
+			desc: "grpc health checker with hostname longer than 253 characters",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeGRPC,
+									GRPC: &egv1a1.GRPCActiveHealthChecker{
+										// 4 labels of 63 characters: 255 characters in total.
+										Hostname: new(strings.TrimSuffix(strings.Repeat(strings.Repeat("a", 63)+".", 4), ".")),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.HealthCheck.active.grpc.hostname: Too long`,
+			},
+		},
 
 		{
 			desc: "invalid http expected statuses",

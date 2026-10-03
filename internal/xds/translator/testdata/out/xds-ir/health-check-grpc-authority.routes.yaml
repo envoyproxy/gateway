@@ -1,0 +1,32 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - grpc.example.com
+    name: first-listener/grpc_example_com
+    routes:
+    - match:
+        prefix: /
+      name: route-default-authority
+      route:
+        cluster: route-default-authority-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: route-explicit-authority
+      route:
+        cluster: route-explicit-authority-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: route-wildcard-hostname
+      route:
+        cluster: route-wildcard-hostname-dest
+        upgradeConfigs:
+        - upgradeType: websocket
