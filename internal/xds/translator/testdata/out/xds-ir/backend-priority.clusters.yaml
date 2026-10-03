@@ -82,7 +82,7 @@
                   exact: grpc-backend
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: policy-btls-grpc/envoy-gateway-ca
+              name: configmap/envoy-gateway/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
@@ -102,7 +102,7 @@
                   exact: ip-backend
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: policy-btls-backend-ip/envoy-gateway-ca
+              name: configmap/envoy-gateway/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
