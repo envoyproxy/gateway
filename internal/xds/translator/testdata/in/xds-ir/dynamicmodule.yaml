@@ -29,6 +29,25 @@ http:
       dynamicModules:
       - config:
           maxTokensPerMinute: 10000
+        backends:
+        - name: resolver
+          settings:
+          - name: resolver/backend/0
+            protocol: HTTP
+            addressType: IP
+            weight: 1
+            endpoints:
+            - host: 7.7.7.8
+              port: 443
+            tls:
+              sni: resolver.example.com
+              CACertificate:
+                name: system_ca_certificates
+              useSystemTrustStore: true
+              clientCertificates:
+              - name: resolver-client
+                certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+                privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
         doNotClose: true
         filterName: token-ratelimit
         loadGlobally: true
@@ -64,6 +83,21 @@ http:
         terminalFilter: false
       - config:
           authEndpoint: https://remote-auth.example.com
+        backends:
+        - name: resolver
+          settings:
+          - name: resolver/backend/0
+            protocol: HTTP
+            addressType: IP
+            weight: 1
+            endpoints:
+            - host: 7.7.7.8
+              port: 443
+            tls:
+              sni: resolver.example.com
+              CACertificate:
+                name: system_ca_certificates
+              useSystemTrustStore: true
         doNotClose: false
         filterName: remote-auth-check
         loadGlobally: false
