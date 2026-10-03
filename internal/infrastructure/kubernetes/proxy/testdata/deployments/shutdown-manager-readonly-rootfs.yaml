@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/component: proxy
@@ -15,6 +15,8 @@ metadata:
     name: envoy-gateway-class
     uid: test-owner-reference-uid-for-gatewayclass
 spec:
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app.kubernetes.io/component: proxy
@@ -22,6 +24,8 @@ spec:
       app.kubernetes.io/name: envoy
       gateway.envoyproxy.io/owning-gateway-name: default
       gateway.envoyproxy.io/owning-gateway-namespace: default
+  strategy:
+    type: RollingUpdate
   template:
     metadata:
       annotations:
@@ -218,10 +222,6 @@ spec:
         - misc:error
         - --drain-time-s
         - "60"
-        - --key1
-        - val1
-        - --key2
-        - val2
         command:
         - envoy
         env:
@@ -284,6 +284,7 @@ spec:
             drop:
             - ALL
           privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -365,6 +366,7 @@ spec:
             drop:
             - ALL
           privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -406,10 +408,4 @@ spec:
         name: sds
       - emptyDir: {}
         name: shutdown-manager-tmp
-  updateStrategy:
-    type: RollingUpdate
-status:
-  currentNumberScheduled: 0
-  desiredNumberScheduled: 0
-  numberMisscheduled: 0
-  numberReady: 0
+status: {}
