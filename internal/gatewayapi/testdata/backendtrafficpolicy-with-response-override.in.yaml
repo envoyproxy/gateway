@@ -230,6 +230,37 @@ backendTrafficPolicies:
             contentType: application/json
             body:
               inline: '{"error":"combined match"}'
+        - match:
+            requestHeaders:
+              - name: X-Client-Type
+                value:
+                  type: Exact
+                  value: browser
+          response:
+            contentType: text/plain
+            body:
+              inline: "matched request header"
+        - match:
+            statusCodes:
+              - value: 502
+            requestHeaders:
+              - name: X-Client-Type
+                value:
+                  type: Prefix
+                  value: "mobile-"
+              - name: X-Tenant
+                value:
+                  type: RegularExpression
+                  value: "^acme-.*$"
+            responseHeaders:
+              - name: X-Error-Type
+                value:
+                  type: Exact
+                  value: upstream-timeout
+          response:
+            contentType: application/json
+            body:
+              inline: '{"error":"combined request and response match"}'
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
