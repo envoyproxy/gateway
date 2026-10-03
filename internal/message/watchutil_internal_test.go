@@ -6,8 +6,12 @@
 package message
 
 import (
+	"fmt"
+	"io"
 	"os"
+	"runtime"
 	"testing"
+	"weak"
 
 	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
@@ -68,5 +72,48 @@ func TestCoalesceUpdates(t *testing.T) {
 			actual := coalesceUpdates(logger, tc.input)
 			require.Equal(t, tc.expected, actual)
 		})
+	}
+}
+
+func TestCoalesceUpdatesReleasesDiscardedValues(t *testing.T) {
+	t.Parallel()
+	logger := logging.DefaultLogger(io.Discard, egv1a1.LogLevelError)
+	updates, discarded := func() ([]watchable.Update[string, *[1024]byte], weak.Pointer[[1024]byte]) {
+		old, latest := new([1024]byte), new([1024]byte)
+		latest[0] = 1
+		ref := weak.Make(old)
+		return coalesceUpdates(logger, []watchable.Update[string, *[1024]byte]{
+			{Key: "gateway", Value: old},
+			{Key: "gateway", Value: latest},
+		}), ref
+	}()
+
+	runtime.GC()
+	require.Nil(t, discarded.Value())
+	require.Len(t, updates, 1)
+	require.Equal(t, byte(1), updates[0].Value[0])
+	runtime.KeepAlive(updates)
+}
+
+func BenchmarkCoalesceUpdates(b *testing.B) {
+	logger := logging.DefaultLogger(io.Discard, egv1a1.LogLevelError)
+	for _, count := range []int{1, 8, 32, 128} {
+		keyCounts := []int{1}
+		if count > 1 {
+			keyCounts = append(keyCounts, count)
+		}
+		for _, keys := range keyCounts {
+			b.Run(fmt.Sprintf("updates=%d/keys=%d", count, keys), func(b *testing.B) {
+				input := make([]watchable.Update[int, *int], count)
+				for i := range input {
+					input[i] = watchable.Update[int, *int]{Key: i % keys, Value: new(i)}
+				}
+				b.ReportAllocs()
+				for b.Loop() {
+					updates := append([]watchable.Update[int, *int](nil), input...)
+					runtime.KeepAlive(coalesceUpdates(logger, updates))
+				}
+			})
+		}
 	}
 }
