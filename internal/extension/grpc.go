@@ -36,7 +36,7 @@ import (
 const grpcServiceConfigTemplate = `{
 "methodConfig": [{
 	"name": [{"service": "%s"}],
-	"waitForReady": true,
+	"waitForReady": true,%s
 	"retryPolicy": {
 		"MaxAttempts": %d,
 		"InitialBackoff": "%fs",
@@ -286,6 +286,17 @@ func buildServiceConfig(svcName string, ext *egv1a1.ExtensionService) (string, e
 		return "", fmt.Errorf("invalid Extension Manager GRPC Retry Max Backoff %s", maxBackoff)
 	}
 
-	return fmt.Sprintf(grpcServiceConfigTemplate, svcName, maxAttempts, initialBackoffDuration.Seconds(), maxBackoffDuration.Seconds(),
+	// The method config timeout bounds the whole call, including waitForReady
+	// queueing, so an unreachable extension service fails instead of hanging.
+	timeout := ""
+	if ext.Timeout != nil {
+		timeoutDuration, err := time.ParseDuration(string(*ext.Timeout))
+		if err != nil || timeoutDuration <= 0 {
+			return "", fmt.Errorf("invalid Extension Manager GRPC Timeout %s", *ext.Timeout)
+		}
+		timeout = fmt.Sprintf("\n\t\"timeout\": \"%fs\",", timeoutDuration.Seconds())
+	}
+
+	return fmt.Sprintf(grpcServiceConfigTemplate, svcName, timeout, maxAttempts, initialBackoffDuration.Seconds(), maxBackoffDuration.Seconds(),
 		backoffMultiplier, grpcRetryableStatusCodes), nil
 }
