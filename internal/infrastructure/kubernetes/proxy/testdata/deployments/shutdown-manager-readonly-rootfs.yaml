@@ -80,7 +80,6 @@ spec:
             layers:
             - name: global_config
               static_layer:
-                envoy.restart_features.use_eds_cache_for_ads: true
                 envoy.reloadable_features.oauth2_legacy_cbc_decrypt_compat: false
                 envoy.reloadable_features.oauth2_use_gcm_encryption: true
                 re2.max_program_size.error_level: 4294967295
@@ -217,7 +216,6 @@ spec:
                 max_active_downstream_connections: 50000
         - --log-level
         - warn
-        - --cpuset-threads
         - --drain-strategy
         - immediate
         - --component-log-level
@@ -242,7 +240,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
-        image: docker.io/envoyproxy/envoy:distroless-v1.38.4@sha256:b28fbee81528c5b6e8857412e5e0f48ea5baa0199cf73ab611aa7f88a808eba7
+        image: docker.io/envoyproxy/envoy:distroless-dev
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
@@ -286,6 +284,7 @@ spec:
             drop:
             - ALL
           privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -367,6 +366,7 @@ spec:
             drop:
             - ALL
           privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -386,8 +386,7 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: shutdown-manager-tmp
-      dnsPolicy: ClusterFirstWithHostNet
-      hostNetwork: true
+      dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
