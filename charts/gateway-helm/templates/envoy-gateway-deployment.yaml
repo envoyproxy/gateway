@@ -18,6 +18,12 @@ spec:
   strategy:
     {{- toYaml . | nindent 4 }}
 {{- end }}
+{{- with .Values.deployment.minReadySeconds }}
+  minReadySeconds: {{ . }}
+{{- end }}
+{{- with .Values.deployment.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ . }}
+{{- end }}
   selector:
     matchLabels:
       control-plane: envoy-gateway
