@@ -129,6 +129,7 @@ type ClientTrafficPolicySpec struct {
 // HeaderSettings provides configuration options for headers on the listener.
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.preserveXRequestID) && has(self.requestID))",message="preserveXRequestID and requestID cannot both be set."
+// +kubebuilder:validation:XValidation:rule="has(self.serverName) ? (has(self.serverHeaderTransformation) && self.serverHeaderTransformation in ['Overwrite', 'AppendIfAbsent']) : true",message="serverName can only be set when serverHeaderTransformation is Overwrite or AppendIfAbsent."
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
 	// and responses.
@@ -204,7 +205,40 @@ type HeaderSettings struct {
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	MaxRequestHeaderLimit *resource.Quantity `json:"maxRequestHeaderLimit,omitempty"`
+
+	// ServerHeaderTransformation determines how the Server response header is handled,
+	// mapping to the Envoy `server_header_transformation` HTTP connection manager setting.
+	// Defaults to PassThrough, which hides Envoy from the Server header.
+	//
+	// +optional
+	ServerHeaderTransformation *ServerHeaderTransformation `json:"serverHeaderTransformation,omitempty"`
+
+	// ServerName is the value written to the Server response header, mapping to the Envoy
+	// `server_name` HTTP connection manager setting. It only takes effect when
+	// ServerHeaderTransformation is set to Overwrite or AppendIfAbsent.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern="^[!-~]([ \t!-~]*[!-~])?$"
+	// +optional
+	ServerName *string `json:"serverName,omitempty"`
 }
+
+// ServerHeaderTransformation determines how the Server response header is handled.
+// +kubebuilder:validation:Enum=Overwrite;AppendIfAbsent;PassThrough
+type ServerHeaderTransformation string
+
+const (
+	// ServerHeaderTransformationOverwrite overwrites any Server header with the configured
+	// ServerName.
+	ServerHeaderTransformationOverwrite ServerHeaderTransformation = "Overwrite"
+	// ServerHeaderTransformationAppendIfAbsent sets the Server header to the configured
+	// ServerName if the response does not already carry one.
+	ServerHeaderTransformationAppendIfAbsent ServerHeaderTransformation = "AppendIfAbsent"
+	// ServerHeaderTransformationPassThrough leaves the Server header untouched. This is the
+	// default.
+	ServerHeaderTransformationPassThrough ServerHeaderTransformation = "PassThrough"
+)
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
 // is encountered.
