@@ -1,0 +1,24 @@
+date: October 3, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Bumped Envoy to `1.38.5` to address [CVE-2026-35189](https://github.com/google/boringssl/blob/main/docs/advisories/2026-09-29.md), a BoringSSL excessive memory allocation when parsing certificates with `nameRelativeToCRLIssuer` CRL Distribution Points that could be exploited for remote denial of service during TLS handshakes. Refer to the [Envoy v1.38.5 release notes](https://www.envoyproxy.io/docs/envoy/v1.38.5/version_history/v1.38/v1.38.5) for details.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed the shutdown-manager failing to create /tmp/shutdown-ready (breaking graceful shutdown and delaying proxy pod termination by the full grace period) when the Envoy container's securityContext sets readOnlyRootFilesystem: true, by mounting a writable emptyDir at /tmp on the shutdown-manager.
+  Fixed obsolete resource snapshots being retained by the backing array of coalesced subscription updates.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
