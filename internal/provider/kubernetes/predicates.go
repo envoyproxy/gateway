@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
@@ -27,6 +28,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -313,7 +315,25 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingClusterTrustBundle(ctb) {
+			return true
+		}
+	}
+
 	return false
+}
+
+func (r *gatewayAPIReconciler) isEnvoyProxyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+	epList := &egv1a1.EnvoyProxyList{}
+	if err := r.client.List(context.Background(), epList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleEnvoyProxyIndex, ctb.Name),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyProxy")
+		return false
+	}
+
+	return len(epList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
@@ -415,6 +435,9 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.Names
 
 	for i := range epList.Items {
 		ep := &epList.Items[i]
+		if slices.Contains(wasmModuleRefsOfKind(ep, resource.KindSecret), nsName.String()) {
+			return true
+		}
 		if ep.Spec.BackendTLS != nil {
 			if ep.Spec.BackendTLS.ClientCertificateRef != nil {
 				certRef := ep.Spec.BackendTLS.ClientCertificateRef
@@ -1024,6 +1047,20 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 
 		if len(btpList.Items) > 0 {
+			return true
+		}
+	}
+
+	if r.epCRDExists {
+		epList := &egv1a1.EnvoyProxyList{}
+		if err := r.client.List(context.Background(), epList, &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(configMapEnvoyProxyIndex, utils.NamespacedName(configMap).String()),
+		}); err != nil {
+			r.log.Error(err, "unable to find associated EnvoyProxy")
+			return false
+		}
+
+		if len(epList.Items) > 0 {
 			return true
 		}
 	}

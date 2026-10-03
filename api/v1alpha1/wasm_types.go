@@ -29,8 +29,9 @@ type Wasm struct {
 	// It's also used for logging/debugging.
 	// If not specified, EG will generate a unique name for the Wasm extension.
 	//
-	// When Code is omitted, Name is required and must match a module registered
-	// in EnvoyProxy.spec.wasmModules.
+	// To use a module registered in EnvoyProxy.spec.wasmModules, omit Code and
+	// set Name to the registered module name. This is the recommended way to
+	// configure a Wasm extension.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
@@ -45,6 +46,10 @@ type Wasm struct {
 
 	// Code is the Wasm code for the extension.
 	// When omitted, Name must match a module in EnvoyProxy.spec.wasmModules.
+	//
+	// Deprecated: Register the module in EnvoyProxy.spec.wasmModules and
+	// reference it by wasm[].name instead. This field will be removed in a
+	// future release.
 	//
 	// +optional
 	Code *WasmCodeSource `json:"code,omitempty"`
@@ -128,22 +133,31 @@ const (
 )
 
 // WasmModuleSourceType specifies the types of sources for registered Wasm modules.
-// +kubebuilder:validation:Enum=Local
+// +kubebuilder:validation:Enum=Local;HTTP;Image
 type WasmModuleSourceType string
 
 const (
 	// LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.
 	LocalWasmModuleSourceType WasmModuleSourceType = "Local"
+
+	// HTTPWasmModuleSourceType fetches the module from an HTTP URL.
+	HTTPWasmModuleSourceType WasmModuleSourceType = "HTTP"
+
+	// ImageWasmModuleSourceType fetches the module from an OCI image.
+	ImageWasmModuleSourceType WasmModuleSourceType = "Image"
 )
 
 // WasmModuleSource defines where a registered Wasm module is loaded from.
-// Mirrors DynamicModuleSource so additional source types can be added later.
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type != 'Local' || has(self.local)",message="If type is Local, local field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Local' || !has(self.local)",message="If type is not Local, local field must not be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If type is HTTP, http field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'Image' ? has(self.image) : !has(self.image)",message="If type is Image, image field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type != 'Local' || !has(self.pullPolicy)",message="pullPolicy is only supported for HTTP and Image sources."
 type WasmModuleSource struct {
 	// Type is the type of the source of the Wasm module.
-	// Defaults to Local.
+	// Valid values are "Local", "HTTP" and "Image". Defaults to Local.
 	//
 	// +kubebuilder:default=Local
 	// +unionDiscriminator
@@ -155,6 +169,27 @@ type WasmModuleSource struct {
 	//
 	// +optional
 	Local *LocalWasmModuleSource `json:"local,omitempty"`
+
+	// HTTP is the HTTP URL containing the Wasm module.
+	// The module is fetched by Envoy Gateway and served to the Envoy proxy,
+	// so the HTTP server must be accessible from Envoy Gateway.
+	//
+	// +optional
+	HTTP *HTTPWasmCodeSource `json:"http,omitempty"`
+
+	// Image is the OCI image containing the Wasm module.
+	// The module is fetched by Envoy Gateway and served to the Envoy proxy,
+	// so the image must be accessible from Envoy Gateway.
+	//
+	// +optional
+	Image *ImageWasmCodeSource `json:"image,omitempty"`
+
+	// PullPolicy is the policy to use when pulling the Wasm module by either
+	// the HTTP or Image source. It has the same semantics as the pullPolicy
+	// field of EnvoyExtensionPolicy.wasm[].code and is not allowed for Local.
+	//
+	// +optional
+	PullPolicy *ImagePullPolicy `json:"pullPolicy,omitempty"`
 }
 
 // LocalWasmModuleSource defines a Wasm module loaded from the local filesystem.
@@ -171,7 +206,7 @@ type LocalWasmModuleSource struct {
 // by EnvoyExtensionPolicy resources.
 type WasmModuleEntry struct {
 	// Name is the logical name for this module. EnvoyExtensionPolicy resources
-	// reference modules by this name when wasm[].code is omitted.
+	// reference modules by this name in wasm[].name, with wasm[].code omitted.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
