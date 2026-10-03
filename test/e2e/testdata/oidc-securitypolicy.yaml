@@ -96,6 +96,8 @@ spec:
       name: "oidctest-foo-secret"
     redirectURL: "http://www.example.com/foo/oauth2/callback"
     logoutPath: "/foo/logout"
+    postLogoutRedirect:
+      uri: "http://www.example.com/foo/loggedout"   # sent as post_logout_redirect_uri on the logout redirect
     forwardAccessToken: true
     passThroughAuthHeader: true
   jwt:
@@ -138,6 +140,8 @@ spec:
       name: "oidctest-bar-secret"
     redirectURL: "http://www.example.com/bar/oauth2/callback"
     logoutPath: "/bar/logout"
+    postLogoutRedirect:
+      disabled: true   # omit post_logout_redirect_uri from the logout redirect
     forwardAccessToken: true
     passThroughAuthHeader: true
     forwardIDToken:
