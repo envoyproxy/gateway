@@ -1055,6 +1055,75 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 	}
 }
 
+func TestBuildRateLimitRuleSourceCIDR(t *testing.T) {
+	testCases := []struct {
+		name        string
+		rule        egv1a1.RateLimitRule
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "single sourceCIDR selector",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Type:  new(egv1a1.SourceMatchDistinct),
+							Value: "10.0.0.0/24",
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 5,
+					Unit:     egv1a1.RateLimitUnitMinute,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "multiple sourceCIDR selectors across clientSelectors",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Type:   new(egv1a1.SourceMatchDistinct),
+							Value:  "10.0.0.0/24",
+							Invert: new(true),
+						},
+					},
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Type:   new(egv1a1.SourceMatchDistinct),
+							Value:  "10.1.0.0/24",
+							Invert: new(true),
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 5,
+					Unit:     egv1a1.RateLimitUnitMinute,
+				},
+			},
+			expectError: true,
+			errorMsg:    "only one sourceCIDR selector is supported per rule",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := buildRateLimitRule(&tc.rule)
+			if tc.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.errorMsg)
+				require.Nil(t, got)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, got)
+			}
+		})
+	}
+}
+
 func TestBTPRoutingTypeIndex(t *testing.T) {
 	serviceRouting := egv1a1.ServiceRoutingType
 	endpointRouting := egv1a1.EndpointRoutingType
