@@ -21,6 +21,7 @@
       method: GET
       path: /healthz
     interval: 5s
+    reuseConnection: false
     timeout: 2s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
