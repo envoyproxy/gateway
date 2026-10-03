@@ -286,6 +286,7 @@ spec:
             drop:
             - ALL
           privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -367,6 +368,7 @@ spec:
             drop:
             - ALL
           privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 65532
           runAsNonRoot: true
           runAsUser: 65532
@@ -386,8 +388,7 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: shutdown-manager-tmp
-      dnsPolicy: ClusterFirstWithHostNet
-      hostNetwork: true
+      dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-default-37a8eec1
