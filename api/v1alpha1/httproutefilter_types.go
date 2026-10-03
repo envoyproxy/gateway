@@ -53,6 +53,16 @@ type HTTPRouteFilterSpec struct {
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
 	// +optional
 	CredentialInjection *HTTPCredentialInjectionFilter `json:"credentialInjection,omitempty"`
+	// GRPCJSONTranscoder transcodes a JSON/HTTP request into a gRPC call, and the gRPC
+	// response back into JSON.
+	//
+	// This filter is only supported at the rule level of an HTTPRoute. Referencing it
+	// from a GRPCRoute, or from a backendRef, makes the route unresolvable: the incoming
+	// request must be JSON/HTTP for there to be anything to transcode, and a backendRef
+	// filter has no route table on which to enable the transcoder.
+	//
+	// +optional
+	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty"`
 	// Matches defines additional matching criteria for the HTTPRoute rule.
 	// As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
 	// When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the

@@ -1362,6 +1362,9 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.CredentialInjection != nil {
 		irRoute.CredentialInjection = httpFiltersContext.CredentialInjection
 	}
+	if httpFiltersContext.GRPCJSONTranscoder != nil {
+		irRoute.GRPCJSONTranscoder = httpFiltersContext.GRPCJSONTranscoder
+	}
 	if len(httpFiltersContext.AddRequestHeaders) > 0 {
 		irRoute.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
 	}
@@ -3213,6 +3216,14 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 		}
 		return nil, err
 	}
+	// applyHTTPFiltersContextToDestinationFilters copies a whitelist of fields, so anything
+	// that cannot work per-backend has to be rejected here rather than silently dropped.
+	// The per-cluster HCM has no route table to enable the transcoder on.
+	if httpFiltersContext.GRPCJSONTranscoder != nil {
+		return nil, errors.New(
+			"grpcJSONTranscoder is not supported on a backendRef filter, attach it to the route rule instead")
+	}
+
 	applyHTTPFiltersContextToDestinationFilters(httpFiltersContext, &destFilters)
 
 	return &destFilters, nil

@@ -1,0 +1,1 @@
+Fixed `egctl x translate` dropping a ConfigMap's `binaryData`, which made policies referencing a ConfigMap written by `kubectl create configmap --from-file` translate differently offline than they do in-cluster.

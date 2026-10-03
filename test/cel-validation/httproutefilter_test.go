@@ -393,3 +393,94 @@ func TestHTTPRouteFilter(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPRouteFilterGRPCJSONTranscoder(t *testing.T) {
+	ctx := context.Background()
+	baseHTTPRouteFilter := egv1a1.HTTPRouteFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "hrf",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.HTTPRouteFilterSpec{},
+	}
+
+	transcoder := func(ref gwapiv1.LocalObjectReference) *egv1a1.GRPCJSONTranscoder {
+		return &egv1a1.GRPCJSONTranscoder{
+			ProtoDescriptor: egv1a1.ProtoDescriptor{ValueRef: ref},
+			Services:        []string{"grpcecho.GrpcEcho"},
+		}
+	}
+
+	cases := []struct {
+		desc       string
+		mutate     func(hrf *egv1a1.HTTPRouteFilter)
+		wantErrors []string
+	}{
+		{
+			desc: "core ConfigMap is accepted",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "explicit empty group is accepted",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Group: "",
+					Kind:  "ConfigMap",
+					Name:  "descriptor",
+				})
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "non-core group is rejected",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Group: "apps",
+					Kind:  "ConfigMap",
+					Name:  "descriptor",
+				})
+			},
+			wantErrors: []string{"valueRef must refer to a core ConfigMap"},
+		},
+		{
+			desc: "non-ConfigMap kind is rejected",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "Secret",
+					Name: "descriptor",
+				})
+			},
+			wantErrors: []string{"valueRef must refer to a core ConfigMap"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			hrf := baseHTTPRouteFilter.DeepCopy()
+			hrf.Name = fmt.Sprintf("hrf-%v", time.Now().UnixNano())
+
+			tc.mutate(hrf)
+			err := c.Create(ctx, hrf)
+
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating HTTPRouteFilter; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating HTTPRouteFilter; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}
