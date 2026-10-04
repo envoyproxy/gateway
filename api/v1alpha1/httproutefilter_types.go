@@ -53,6 +53,12 @@ type HTTPRouteFilterSpec struct {
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
 	// +optional
 	CredentialInjection *HTTPCredentialInjectionFilter `json:"credentialInjection,omitempty"`
+	// RequestMirror defines configuration for request mirroring modifiers.
+	// This configuration works together with the Gateway API RequestMirror filter
+	// on the attached HTTPRoute rule.
+	//
+	// +optional
+	RequestMirror *HTTPRequestMirrorFilter `json:"requestMirror,omitempty"`
 	// Matches defines additional matching criteria for the HTTPRoute rule.
 	// As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
 	// When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
@@ -237,6 +243,43 @@ type HTTPHostnameModifier struct {
 	//
 	// +optional
 	PathRegex *HostnamePathRegexRewrite `json:"pathRegex,omitempty"`
+}
+
+// HTTPRequestMirrorFilter defines configuration for request mirroring modifiers.
+type HTTPRequestMirrorFilter struct {
+	// Hostname defines the configuration to rewrite the Host header for mirrored requests.
+	//
+	// +optional
+	Hostname *RequestMirrorHostnameModifier `json:"hostname,omitempty"`
+}
+
+// RequestMirrorHostnameModifierType defines the type of hostname rewrite for mirrored requests.
+type RequestMirrorHostnameModifierType string
+
+const (
+	// RequestMirrorHostnameModifierBackend indicates that the Host header value
+	// will be replaced by the FQDN of the mirror backend.
+	RequestMirrorHostnameModifierBackend RequestMirrorHostnameModifierType = "Backend"
+
+	// RequestMirrorHostnameModifierLiteral indicates that the Host header value
+	// will be replaced by a fixed literal string.
+	RequestMirrorHostnameModifierLiteral RequestMirrorHostnameModifierType = "Literal"
+)
+
+// +kubebuilder:validation:XValidation:message="literal must be nil if the type is not Literal",rule="!(has(self.literal) && self.type != 'Literal')"
+// +kubebuilder:validation:XValidation:message="literal must be specified for Literal type",rule="!(!has(self.literal) && self.type == 'Literal')"
+type RequestMirrorHostnameModifier struct {
+	// Type defines the type of hostname rewrite.
+	// +kubebuilder:validation:Enum=Backend;Literal
+	// +kubebuilder:validation:Required
+	Type RequestMirrorHostnameModifierType `json:"type"`
+
+	// Literal specifies a fixed hostname to rewrite the Host header to.
+	// Required when Type is "Literal". Must be empty when Type is "Backend".
+	// Note: gwapiv1.PreciseHostname already carries MinLength=1, MaxLength=253,
+	// and RFC 1123 pattern validation, which automatically flow into the generated CRD.
+	// +optional
+	Literal *gwapiv1.PreciseHostname `json:"literal,omitempty"`
 }
 
 // HTTPCredentialInjectionFilter defines the configuration to inject credentials into the request.

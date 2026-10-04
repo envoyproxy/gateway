@@ -2013,6 +2013,9 @@ type MirrorPolicy struct {
 	// When absent, all the traffic (100%) will be mirrored.
 	// Values are in the range of [0.0, 100.0].
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+	// HostRewrite defines the host/authority header override for the mirrored traffic.
+	// When set, the Host header of the mirrored request is rewritten to this value.
+	HostRewrite *string `json:"hostRewrite,omitempty" yaml:"hostRewrite,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
