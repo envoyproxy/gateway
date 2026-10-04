@@ -514,11 +514,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "SourceIP",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								ConsistentHash: &egv1a1.ConsistentHash{
+									Type: "SourceIP",
+								},
 							},
 						},
 					},
@@ -539,9 +541,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+							},
 						},
 					},
 				}
@@ -564,13 +568,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "Header",
-								Header: &egv1a1.Header{
-									Name: "name",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								ConsistentHash: &egv1a1.ConsistentHash{
+									Type: "Header",
+									Header: &egv1a1.Header{
+										Name: "name",
+									},
 								},
 							},
 						},
@@ -592,11 +598,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "Header",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								ConsistentHash: &egv1a1.ConsistentHash{
+									Type: "Header",
+								},
 							},
 						},
 					},
@@ -620,13 +628,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "Cookie",
-								Cookie: &egv1a1.Cookie{
-									Name: "name",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								ConsistentHash: &egv1a1.ConsistentHash{
+									Type: "Cookie",
+									Cookie: &egv1a1.Cookie{
+										Name: "name",
+									},
 								},
 							},
 						},
@@ -648,11 +658,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "Cookie",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								ConsistentHash: &egv1a1.ConsistentHash{
+									Type: "Cookie",
+								},
 							},
 						},
 					},
@@ -676,13 +688,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "SourceIP",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								ConsistentHash: &egv1a1.ConsistentHash{
+									Type: "SourceIP",
+								},
+								ZoneAware: &egv1a1.ZoneAware{},
 							},
-							ZoneAware: &egv1a1.ZoneAware{},
 						},
 					},
 				}
@@ -702,14 +716,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "SourceIP",
-							},
-							ZoneAware: &egv1a1.ZoneAware{
-								PreferLocal: &egv1a1.PreferLocalZone{},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								ConsistentHash: &egv1a1.ConsistentHash{
+									Type: "SourceIP",
+								},
+								ZoneAware: &egv1a1.ZoneAware{
+									PreferLocal: &egv1a1.PreferLocalZone{},
+								},
 							},
 						},
 					},
@@ -733,17 +749,19 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							ConsistentHash: &egv1a1.ConsistentHash{
-								Type: "SourceIP",
-							},
-							ZoneAware: &egv1a1.ZoneAware{
-								WeightedZones: []egv1a1.WeightedZoneConfig{{
-									Zone:   "us-east-1a",
-									Weight: uint32(70),
-								}},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								ConsistentHash: &egv1a1.ConsistentHash{
+									Type: "SourceIP",
+								},
+								ZoneAware: &egv1a1.ZoneAware{
+									WeightedZones: []egv1a1.WeightedZoneConfig{{
+										Zone:   "us-east-1a",
+										Weight: uint32(70),
+									}},
+								},
 							},
 						},
 					},
@@ -764,9 +782,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.LeastRequestLoadBalancerType,
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.LeastRequestLoadBalancerType,
+							},
 						},
 					},
 				}
@@ -786,10 +806,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type:      egv1a1.LeastRequestLoadBalancerType,
-							ZoneAware: &egv1a1.ZoneAware{},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type:      egv1a1.LeastRequestLoadBalancerType,
+								ZoneAware: &egv1a1.ZoneAware{},
+							},
 						},
 					},
 				}
@@ -809,15 +831,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.LeastRequestLoadBalancerType,
-							ZoneAware: &egv1a1.ZoneAware{
-								PreferLocal: &egv1a1.PreferLocalZone{},
-								WeightedZones: []egv1a1.WeightedZoneConfig{{
-									Zone:   "zone1",
-									Weight: uint32(10),
-								}},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.LeastRequestLoadBalancerType,
+								ZoneAware: &egv1a1.ZoneAware{
+									PreferLocal: &egv1a1.PreferLocalZone{},
+									WeightedZones: []egv1a1.WeightedZoneConfig{{
+										Zone:   "zone1",
+										Weight: uint32(10),
+									}},
+								},
 							},
 						},
 					},
@@ -841,13 +865,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RoundRobinLoadBalancerType,
-							ZoneAware: &egv1a1.ZoneAware{
-								WeightedZones: []egv1a1.WeightedZoneConfig{
-									{Zone: "us-east-1a", Weight: 70},
-									{Zone: "us-east-1a", Weight: 30},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.RoundRobinLoadBalancerType,
+								ZoneAware: &egv1a1.ZoneAware{
+									WeightedZones: []egv1a1.WeightedZoneConfig{
+										{Zone: "us-east-1a", Weight: 70},
+										{Zone: "us-east-1a", Weight: 30},
+									},
 								},
 							},
 						},
@@ -871,11 +897,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.LeastRequestLoadBalancerType,
-							SlowStart: &egv1a1.SlowStart{
-								Window: new(gwapiv1.Duration("10ms")),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.LeastRequestLoadBalancerType,
+								SlowStart: &egv1a1.SlowStart{
+									Window: new(gwapiv1.Duration("10ms")),
+								},
 							},
 						},
 					},
@@ -896,11 +924,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RoundRobinLoadBalancerType,
-							SlowStart: &egv1a1.SlowStart{
-								Window: new(gwapiv1.Duration("10ms")),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.RoundRobinLoadBalancerType,
+								SlowStart: &egv1a1.SlowStart{
+									Window: new(gwapiv1.Duration("10ms")),
+								},
 							},
 						},
 					},
@@ -921,11 +951,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RandomLoadBalancerType,
-							SlowStart: &egv1a1.SlowStart{
-								Window: new(gwapiv1.Duration("10ms")),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.RandomLoadBalancerType,
+								SlowStart: &egv1a1.SlowStart{
+									Window: new(gwapiv1.Duration("10ms")),
+								},
 							},
 						},
 					},
@@ -949,11 +981,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.ConsistentHashLoadBalancerType,
-							SlowStart: &egv1a1.SlowStart{
-								Window: new(gwapiv1.Duration("10ms")),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.ConsistentHashLoadBalancerType,
+								SlowStart: &egv1a1.SlowStart{
+									Window: new(gwapiv1.Duration("10ms")),
+								},
 							},
 						},
 					},
@@ -977,15 +1011,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								BlackoutPeriod:                     new(gwapiv1.Duration("10s")),
-								WeightUpdatePeriod:                 new(gwapiv1.Duration("10s")),
-								WeightExpirationPeriod:             new(gwapiv1.Duration("10s")),
-								ErrorUtilizationPenaltyPercent:     new(uint32(50)),
-								MetricNamesForComputingUtilization: []string{"metric1", "metric2"},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									BlackoutPeriod:                     new(gwapiv1.Duration("10s")),
+									WeightUpdatePeriod:                 new(gwapiv1.Duration("10s")),
+									WeightExpirationPeriod:             new(gwapiv1.Duration("10s")),
+									ErrorUtilizationPenaltyPercent:     new(uint32(50)),
+									MetricNamesForComputingUtilization: []string{"metric1", "metric2"},
+								},
 							},
 						},
 					},
@@ -1006,14 +1042,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{
-									ReportingPeriod: new(gwapiv1.Duration("5s")),
-									Port:            new(int32(9001)),
-									Authority:       new("orca.local"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{
+										ReportingPeriod: new(gwapiv1.Duration("5s")),
+										Port:            new(int32(9001)),
+										Authority:       new("orca.local"),
+									},
 								},
 							},
 						},
@@ -1035,11 +1073,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(0))},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(0))},
+								},
 							},
 						},
 					},
@@ -1063,11 +1103,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(70000))},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{Port: new(int32(70000))},
+								},
 							},
 						},
 					},
@@ -1091,11 +1133,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{ReportingPeriod: new(gwapiv1.Duration("0s"))},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{ReportingPeriod: new(gwapiv1.Duration("0s"))},
+								},
 							},
 						},
 					},
@@ -1119,11 +1163,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("")},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("")},
+								},
 							},
 						},
 					},
@@ -1147,11 +1193,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{
-								OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("foo\nbar")},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{
+									OutOfBand: &egv1a1.OutOfBandReporting{Authority: new("foo\nbar")},
+								},
 							},
 						},
 					},
@@ -1175,9 +1223,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.BackendUtilizationLoadBalancerType,
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.BackendUtilizationLoadBalancerType,
+							},
 						},
 					},
 				}
@@ -1200,11 +1250,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type:               egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{},
-							SlowStart:          &egv1a1.SlowStart{Window: new(gwapiv1.Duration("10ms"))},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type:               egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{},
+								SlowStart:          &egv1a1.SlowStart{Window: new(gwapiv1.Duration("10ms"))},
+							},
 						},
 					},
 				}
@@ -1224,11 +1276,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type:               egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{},
-							ZoneAware:          &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type:               egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{},
+								ZoneAware:          &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
+							},
 						},
 					},
 				}
@@ -1251,14 +1305,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type:               egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{},
-							ZoneAware: &egv1a1.ZoneAware{
-								WeightedZones: []egv1a1.WeightedZoneConfig{
-									{Zone: "us-east-1a", Weight: 80},
-									{Zone: "us-east-1b", Weight: 20},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type:               egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{},
+								ZoneAware: &egv1a1.ZoneAware{
+									WeightedZones: []egv1a1.WeightedZoneConfig{
+										{Zone: "us-east-1a", Weight: 80},
+										{Zone: "us-east-1b", Weight: 20},
+									},
 								},
 							},
 						},
@@ -1280,10 +1336,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type:               egv1a1.BackendUtilizationLoadBalancerType,
-							BackendUtilization: &egv1a1.BackendUtilization{ErrorUtilizationPenaltyPercent: new(uint32(0))},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type:               egv1a1.BackendUtilizationLoadBalancerType,
+								BackendUtilization: &egv1a1.BackendUtilization{ErrorUtilizationPenaltyPercent: new(uint32(0))},
+							},
 						},
 					},
 				}
@@ -1303,13 +1361,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.DynamicModuleLoadBalancerType,
-							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
-								Config:       &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.DynamicModuleLoadBalancerType,
+								DynamicModule: &egv1a1.DynamicModuleLBPolicy{
+									Name:         "my-module",
+									LBPolicyName: "round-robin-v2",
+									Config:       &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
+								},
 							},
 						},
 					},
@@ -1330,12 +1390,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.DynamicModuleLoadBalancerType,
-							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.DynamicModuleLoadBalancerType,
+								DynamicModule: &egv1a1.DynamicModuleLBPolicy{
+									Name:         "my-module",
+									LBPolicyName: "round-robin-v2",
+								},
 							},
 						},
 					},
@@ -1356,9 +1418,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.DynamicModuleLoadBalancerType,
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.DynamicModuleLoadBalancerType,
+							},
 						},
 					},
 				}
@@ -1381,12 +1445,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RoundRobinLoadBalancerType,
-							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.RoundRobinLoadBalancerType,
+								DynamicModule: &egv1a1.DynamicModuleLBPolicy{
+									Name:         "my-module",
+									LBPolicyName: "round-robin-v2",
+								},
 							},
 						},
 					},
@@ -1410,14 +1476,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.DynamicModuleLoadBalancerType,
-							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.DynamicModuleLoadBalancerType,
+								DynamicModule: &egv1a1.DynamicModuleLBPolicy{
+									Name:         "my-module",
+									LBPolicyName: "round-robin-v2",
+								},
+								SlowStart: &egv1a1.SlowStart{Window: new(gwapiv1.Duration("10ms"))},
 							},
-							SlowStart: &egv1a1.SlowStart{Window: new(gwapiv1.Duration("10ms"))},
 						},
 					},
 				}
@@ -1440,14 +1508,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.DynamicModuleLoadBalancerType,
-							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.DynamicModuleLoadBalancerType,
+								DynamicModule: &egv1a1.DynamicModuleLBPolicy{
+									Name:         "my-module",
+									LBPolicyName: "round-robin-v2",
+								},
+								ZoneAware: &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
 							},
-							ZoneAware: &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
 						},
 					},
 				}
@@ -1470,17 +1540,19 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.DynamicModuleLoadBalancerType,
-							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
-							},
-							EndpointOverride: &egv1a1.EndpointOverride{
-								ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{
-									{
-										Header: new("x-custom-host"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.DynamicModuleLoadBalancerType,
+								DynamicModule: &egv1a1.DynamicModuleLBPolicy{
+									Name:         "my-module",
+									LBPolicyName: "round-robin-v2",
+								},
+								EndpointOverride: &egv1a1.EndpointOverride{
+									ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{
+										{
+											Header: new("x-custom-host"),
+										},
 									},
 								},
 							},
@@ -1697,12 +1769,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						CircuitBreaker: &egv1a1.CircuitBreaker{
-							MaxConnections:      valMax,
-							MaxPendingRequests:  valMin,
-							MaxParallelRequests: nil,
-							MaxParallelRetries:  nil,
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							CircuitBreaker: &egv1a1.CircuitBreaker{
+								MaxConnections:      valMax,
+								MaxPendingRequests:  valMin,
+								MaxParallelRequests: nil,
+								MaxParallelRetries:  nil,
+							},
 						},
 					},
 				}
@@ -1724,13 +1798,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						CircuitBreaker: &egv1a1.CircuitBreaker{
-							MaxConnections:           valOverMax,
-							MaxPendingRequests:       valUnderMin,
-							MaxParallelRequests:      valOverMax,
-							MaxRequestsPerConnection: valUnderMin,
-							MaxParallelRetries:       valOverMax,
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							CircuitBreaker: &egv1a1.CircuitBreaker{
+								MaxConnections:           valOverMax,
+								MaxPendingRequests:       valUnderMin,
+								MaxParallelRequests:      valOverMax,
+								MaxRequestsPerConnection: valUnderMin,
+								MaxParallelRetries:       valOverMax,
+							},
 						},
 					},
 				}
@@ -1756,12 +1832,14 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path: "",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "",
+									},
 								},
 							},
 						},
@@ -1785,13 +1863,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								UnhealthyThreshold: new(uint32(0)),
-								Type:               egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path: "/healthz",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									UnhealthyThreshold: new(uint32(0)),
+									Type:               egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "/healthz",
+									},
 								},
 							},
 						},
@@ -1815,13 +1895,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								HealthyThreshold: new(uint32(0)),
-								Type:             egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path: "/healthz",
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									HealthyThreshold: new(uint32(0)),
+									Type:             egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "/healthz",
+									},
 								},
 							},
 						},
@@ -1845,11 +1927,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								TCP:  &egv1a1.TCPActiveHealthChecker{},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									TCP:  &egv1a1.TCPActiveHealthChecker{},
+								},
 							},
 						},
 					},
@@ -1875,11 +1959,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								GRPC: &egv1a1.GRPCActiveHealthChecker{},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									GRPC: &egv1a1.GRPCActiveHealthChecker{},
+								},
 							},
 						},
 					},
@@ -1904,13 +1990,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path:             "/healthz",
-									ExpectedStatuses: []egv1a1.HTTPStatus{99, 200},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path:             "/healthz",
+										ExpectedStatuses: []egv1a1.HTTPStatus{99, 200},
+									},
 								},
 							},
 						},
@@ -1934,13 +2022,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path:             "/healthz",
-									ExpectedStatuses: []egv1a1.HTTPStatus{100, 200, 201},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path:             "/healthz",
+										ExpectedStatuses: []egv1a1.HTTPStatus{100, 200, 201},
+									},
 								},
 							},
 						},
@@ -1962,13 +2052,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path:             "/healthz",
-									ExpectedStatuses: []egv1a1.HTTPStatus{200, 300, 601},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path:             "/healthz",
+										ExpectedStatuses: []egv1a1.HTTPStatus{200, 300, 601},
+									},
 								},
 							},
 						},
@@ -1992,15 +2084,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path: "/healthz",
-									ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
-										Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
-										Binary: []byte{'f', 'o', 'o'},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "/healthz",
+										ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
+											Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
+											Binary: []byte{'f', 'o', 'o'},
+										},
 									},
 								},
 							},
@@ -2028,15 +2122,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path: "/healthz",
-									ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
-										Type: egv1a1.ActiveHealthCheckPayloadTypeBinary,
-										Text: new("foo"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "/healthz",
+										ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
+											Type: egv1a1.ActiveHealthCheckPayloadTypeBinary,
+											Text: new("foo"),
+										},
 									},
 								},
 							},
@@ -2064,18 +2160,20 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeTCP,
-								TCP: &egv1a1.TCPActiveHealthChecker{
-									Send: &egv1a1.ActiveHealthCheckPayload{
-										Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
-										Binary: []byte{'f', 'o', 'o'},
-									},
-									Receive: &egv1a1.ActiveHealthCheckPayload{
-										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
-										Text: new("foo"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeTCP,
+									TCP: &egv1a1.TCPActiveHealthChecker{
+										Send: &egv1a1.ActiveHealthCheckPayload{
+											Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
+											Binary: []byte{'f', 'o', 'o'},
+										},
+										Receive: &egv1a1.ActiveHealthCheckPayload{
+											Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+											Text: new("foo"),
+										},
 									},
 								},
 							},
@@ -2103,18 +2201,20 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeTCP,
-								TCP: &egv1a1.TCPActiveHealthChecker{
-									Send: &egv1a1.ActiveHealthCheckPayload{
-										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
-										Text: new("foo"),
-									},
-									Receive: &egv1a1.ActiveHealthCheckPayload{
-										Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
-										Binary: []byte{'f', 'o', 'o'},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeTCP,
+									TCP: &egv1a1.TCPActiveHealthChecker{
+										Send: &egv1a1.ActiveHealthCheckPayload{
+											Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+											Text: new("foo"),
+										},
+										Receive: &egv1a1.ActiveHealthCheckPayload{
+											Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
+											Binary: []byte{'f', 'o', 'o'},
+										},
 									},
 								},
 							},
@@ -2143,14 +2243,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Timeout: &egv1a1.Timeout{
-							TCP: &egv1a1.TCPTimeout{
-								ConnectTimeout: &d,
-							},
-							HTTP: &egv1a1.HTTPTimeout{
-								ConnectionIdleTimeout: &d,
-								MaxConnectionDuration: &d,
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Timeout: &egv1a1.Timeout{
+								TCP: &egv1a1.TCPTimeout{
+									ConnectTimeout: &d,
+								},
+								HTTP: &egv1a1.HTTPTimeout{
+									ConnectionIdleTimeout: &d,
+									MaxConnectionDuration: &d,
+								},
 							},
 						},
 					},
@@ -2415,9 +2517,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Connection: &egv1a1.BackendConnection{
-							BufferLimit: new(resource.MustParse("1Mi")),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Connection: &egv1a1.BackendConnection{
+								BufferLimit: new(resource.MustParse("1Mi")),
+							},
 						},
 					},
 				}
@@ -2436,9 +2540,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Connection: &egv1a1.BackendConnection{
-							BufferLimit: new(resource.MustParse("12345678")),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Connection: &egv1a1.BackendConnection{
+								BufferLimit: new(resource.MustParse("12345678")),
+							},
 						},
 					},
 				}
@@ -2458,9 +2564,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Connection: &egv1a1.BackendConnection{
-							BufferLimit: new(resource.MustParse("1m")),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Connection: &egv1a1.BackendConnection{
+								BufferLimit: new(resource.MustParse("1m")),
+							},
 						},
 					},
 				}
@@ -2482,14 +2590,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Connection: &egv1a1.BackendConnection{
-							Preconnect: &egv1a1.PreconnectPolicy{
-								PerEndpointPercent: new(uint32(100)),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Connection: &egv1a1.BackendConnection{
+								Preconnect: &egv1a1.PreconnectPolicy{
+									PerEndpointPercent: new(uint32(100)),
+								},
 							},
-						},
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.LeastRequestLoadBalancerType,
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.LeastRequestLoadBalancerType,
+							},
 						},
 					},
 				}
@@ -2509,10 +2619,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Connection: &egv1a1.BackendConnection{
-							Preconnect: &egv1a1.PreconnectPolicy{
-								PerEndpointPercent: new(uint32(100)),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Connection: &egv1a1.BackendConnection{
+								Preconnect: &egv1a1.PreconnectPolicy{
+									PerEndpointPercent: new(uint32(100)),
+								},
 							},
 						},
 					},
@@ -2533,15 +2645,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Connection: &egv1a1.BackendConnection{
-							Preconnect: &egv1a1.PreconnectPolicy{
-								PredictivePercent:  new(uint32(110)),
-								PerEndpointPercent: new(uint32(133)),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Connection: &egv1a1.BackendConnection{
+								Preconnect: &egv1a1.PreconnectPolicy{
+									PredictivePercent:  new(uint32(110)),
+									PerEndpointPercent: new(uint32(133)),
+								},
 							},
-						},
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RoundRobinLoadBalancerType,
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.RoundRobinLoadBalancerType,
+							},
 						},
 					},
 				}
@@ -2561,15 +2675,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Connection: &egv1a1.BackendConnection{
-							Preconnect: &egv1a1.PreconnectPolicy{
-								PredictivePercent:  new(uint32(133)),
-								PerEndpointPercent: new(uint32(150)),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Connection: &egv1a1.BackendConnection{
+								Preconnect: &egv1a1.PreconnectPolicy{
+									PredictivePercent:  new(uint32(133)),
+									PerEndpointPercent: new(uint32(150)),
+								},
 							},
-						},
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.LeastRequestLoadBalancerType,
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.LeastRequestLoadBalancerType,
+							},
 						},
 					},
 				}
@@ -2592,14 +2708,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						Connection: &egv1a1.BackendConnection{
-							Preconnect: &egv1a1.PreconnectPolicy{
-								PerEndpointPercent: new(uint32(305)),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							Connection: &egv1a1.BackendConnection{
+								Preconnect: &egv1a1.PreconnectPolicy{
+									PerEndpointPercent: new(uint32(305)),
+								},
 							},
-						},
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RandomLoadBalancerType,
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.RandomLoadBalancerType,
+							},
 						},
 					},
 				}
@@ -2989,6 +3107,115 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"end must be greater than start",
 			},
+		},
+		{
+			desc: "response status code invalid in response override",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: new(500),
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								StatusCode: new(-1),
+								Body: &egv1a1.CustomResponseBody{
+									Type:   new(egv1a1.ResponseValueTypeInline),
+									Inline: new("error"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.responseOverride[0].response.statusCode: Invalid value: -1: spec.responseOverride[0].response.statusCode in body should be greater than or equal to 200",
+			},
+		},
+		{
+			desc: "response status code below 200 invalid in response override",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: new(500),
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								StatusCode: new(100),
+								Body: &egv1a1.CustomResponseBody{
+									Type:   new(egv1a1.ResponseValueTypeInline),
+									Inline: new("error"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.responseOverride[0].response.statusCode: Invalid value: 100: spec.responseOverride[0].response.statusCode in body should be greater than or equal to 200",
+			},
+		},
+		{
+			desc: "response status code 200 valid in response override",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								StatusCodes: []egv1a1.StatusCodeMatch{
+									{
+										Value: new(500),
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								StatusCode: new(200),
+								Body: &egv1a1.CustomResponseBody{
+									Type:   new(egv1a1.ResponseValueTypeInline),
+									Inline: new("error"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "default require inline response body in response override",
@@ -3415,9 +3642,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							PanicThreshold: new(uint32(80)),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								PanicThreshold: new(uint32(80)),
+							},
 						},
 					},
 				}
@@ -3437,9 +3666,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							PanicThreshold: new(uint32(200)),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								PanicThreshold: new(uint32(200)),
+							},
 						},
 					},
 				}
@@ -3543,7 +3774,113 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "request buffer with mode LimitOnly and http upgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+						Mode:  new(egv1a1.RequestBufferModeLimitOnly),
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "websocket",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid request buffer limit format",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1m"),
+						Mode:  new(egv1a1.RequestBufferModeLimitOnly),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestBuffer.limit: Invalid value: \"1m\": spec.requestBuffer.limit in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'",
+			},
+		},
+		{
+			desc: "invalid request buffer mode",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+						Mode:  new(egv1a1.RequestBufferMode("Foo")),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestBuffer.mode: Unsupported value: \"Foo\": supported values: \"BufferAndLimit\", \"LimitOnly\"",
+			},
+		},
+		{
 			desc: "request buffer with websocket upgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+						Mode:  new(egv1a1.RequestBufferModeBufferAndLimit),
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "websocket",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
+		},
+		{
+			desc: "request buffer with defaulted mode and websocket upgrade",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -3567,7 +3904,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"requestBuffer cannot be used together with httpUpgrade"},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
 		},
 		{
 			desc: "request buffer with connect upgrade",
@@ -3594,7 +3931,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"requestBuffer cannot be used together with httpUpgrade"},
+			wantErrors: []string{"requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"},
 		},
 		{
 			desc: "http with connect config",
@@ -3633,13 +3970,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RoundRobinLoadBalancerType,
-							EndpointOverride: &egv1a1.EndpointOverride{
-								ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{
-									{
-										Header: new("x-custom-host"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.RoundRobinLoadBalancerType,
+								EndpointOverride: &egv1a1.EndpointOverride{
+									ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{
+										{
+											Header: new("x-custom-host"),
+										},
 									},
 								},
 							},
@@ -3741,13 +4080,15 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RoundRobinLoadBalancerType,
-							EndpointOverride: &egv1a1.EndpointOverride{
-								ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{
-									{
-										Header: new("x-custom-host"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							LoadBalancer: &egv1a1.LoadBalancer{
+								Type: egv1a1.RoundRobinLoadBalancerType,
+								EndpointOverride: &egv1a1.EndpointOverride{
+									ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{
+										{
+											Header: new("x-custom-host"),
+										},
 									},
 								},
 							},
@@ -4063,16 +4404,18 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path:   "/healthz",
-									Method: new("post"),
-									RequestBody: &egv1a1.ActiveHealthCheckPayload{
-										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
-										Text: new("ping"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path:   "/healthz",
+										Method: new("post"),
+										RequestBody: &egv1a1.ActiveHealthCheckPayload{
+											Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+											Text: new("ping"),
+										},
 									},
 								},
 							},
@@ -4095,15 +4438,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path: "/healthz",
-									RequestBody: &egv1a1.ActiveHealthCheckPayload{
-										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
-										Text: new("ping"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "/healthz",
+										RequestBody: &egv1a1.ActiveHealthCheckPayload{
+											Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+											Text: new("ping"),
+										},
 									},
 								},
 							},
@@ -4126,16 +4471,18 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path:   "/healthz",
-									Method: new("get"),
-									RequestBody: &egv1a1.ActiveHealthCheckPayload{
-										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
-										Text: new("ping"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path:   "/healthz",
+										Method: new("get"),
+										RequestBody: &egv1a1.ActiveHealthCheckPayload{
+											Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+											Text: new("ping"),
+										},
 									},
 								},
 							},
@@ -4158,16 +4505,18 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path:   "/healthz",
-									Method: new(""),
-									RequestBody: &egv1a1.ActiveHealthCheckPayload{
-										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
-										Text: new("ping"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path:   "/healthz",
+										Method: new(""),
+										RequestBody: &egv1a1.ActiveHealthCheckPayload{
+											Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+											Text: new("ping"),
+										},
 									},
 								},
 							},
@@ -4190,15 +4539,17 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						HealthCheck: &egv1a1.HealthCheck{
-							Active: &egv1a1.ActiveHealthCheck{
-								Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-								HTTP: &egv1a1.HTTPActiveHealthChecker{
-									Path: "/healthz",
-									ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
-										Type: egv1a1.ActiveHealthCheckPayloadTypeText,
-										Text: new("ok"),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "/healthz",
+										ExpectedResponse: &egv1a1.ActiveHealthCheckPayload{
+											Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+											Text: new("ok"),
+										},
 									},
 								},
 							},

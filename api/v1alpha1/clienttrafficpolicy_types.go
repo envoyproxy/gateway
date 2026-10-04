@@ -397,7 +397,15 @@ type CustomHeaderExtensionSettings struct {
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
-type HTTP3Settings struct{}
+type HTTP3Settings struct {
+	// AdvertisedPort specifies the port advertised to clients in the HTTP/3
+	// `alt-svc` response header. It does not change the listener or Service port.
+	// If unset, the Gateway listener port is advertised.
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self >= 1 && self <= 65535",message="advertisedPort must be between 1 and 65535"
+	AdvertisedPort *gwapiv1.PortNumber `json:"advertisedPort,omitempty"`
+}
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {

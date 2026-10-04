@@ -11,6 +11,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -45,6 +47,54 @@ func setupFakeEnvoyStats(t *testing.T, content string) *http.Server {
 	}()
 
 	return s
+}
+
+func TestClearShutdownReadyFile(t *testing.T) {
+	cases := []struct {
+		name    string
+		setup   func(t *testing.T) string
+		cleared bool
+	}{
+		{
+			name: "file does not exist",
+			setup: func(t *testing.T) string {
+				return filepath.Join(t.TempDir(), "shutdown-ready")
+			},
+			cleared: true,
+		},
+		{
+			name: "stale file exists",
+			setup: func(t *testing.T) string {
+				path := filepath.Join(t.TempDir(), "shutdown-ready")
+				require.NoError(t, os.WriteFile(path, []byte("stale"), 0o600))
+				return path
+			},
+			cleared: true,
+		},
+		{
+			name: "removal failure is logged, not fatal",
+			setup: func(t *testing.T) string {
+				path := filepath.Join(t.TempDir(), "shutdown-ready")
+				require.NoError(t, os.Mkdir(path, 0o700))
+				require.NoError(t, os.WriteFile(filepath.Join(path, "child"), []byte("x"), 0o600))
+				return path
+			},
+			cleared: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := tc.setup(t)
+			clearShutdownReadyFile(path)
+			_, err := os.Stat(path)
+			if tc.cleared {
+				require.True(t, os.IsNotExist(err))
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestGetTotalConnections(t *testing.T) {
@@ -204,9 +254,32 @@ func TestGetTotalConnections(t *testing.T) {
 			expectedCount: new(1),
 		},
 		{
+			name: "udp_downstream_sess_active",
+			input: `{
+    "stats": [
+        {"name": "listener.0.0.0.0_5300.downstream_cx_active", "value": 0},
+        {"name": "listener.0.0.0.0_5300.worker_0.downstream_cx_active", "value": 0},
+        {"name": "udp.service.downstream_sess_active", "value": 3}
+    ]
+}`,
+			expectedCount: new(3),
+		},
+		{
+			name: "tcp_and_udp",
+			input: `{
+    "stats": [
+        {"name": "listener.0.0.0.0_8000.downstream_cx_active", "value": 1},
+        {"name": "listener.0.0.0.0_8000.worker_0.downstream_cx_active", "value": 1},
+        {"name": "listener.0.0.0.0_19001.downstream_cx_active", "value": 2},
+        {"name": "udp.service.downstream_sess_active", "value": 2}
+    ]
+}`,
+			expectedCount: new(3),
+		},
+		{
 			name:          "invalid",
 			input:         `{"stats":[{"name":"listener.0.0.0.0_8000.downstream_cx_active","value":1]}`,
-			expectedError: errors.New("error getting listener downstream_cx_active stat"),
+			expectedError: errors.New("error getting active connection and UDP session stats"),
 		},
 	}
 
