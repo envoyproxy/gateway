@@ -783,15 +783,17 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 	}
 
 	if translationResult != nil && translationResult.tcpDenyError != nil {
-		status.SetTranslationErrorForPolicyAncestor(
-			&policy.Status,
+		err = errors.Join(err, translationResult.tcpDenyError)
+	}
+
+	if err != nil {
+		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
 			policy.Generation,
-			translationResult.tcpDenyError.Error(),
+			status.Error2ConditionMsg(err),
 		)
 	}
-
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 
@@ -908,12 +910,15 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	if translationResult != nil && translationResult.tcpDenyError != nil {
-		status.SetTranslationErrorForPolicyAncestor(
-			&policy.Status,
+		err = errors.Join(err, translationResult.tcpDenyError)
+	}
+
+	if err != nil {
+		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
 			policy.Generation,
-			translationResult.tcpDenyError.Error(),
+			status.Error2ConditionMsg(err),
 		)
 	}
 
@@ -1695,7 +1700,8 @@ func (t *Translator) translateSecurityPolicyForListeners(
 
 	for _, listener := range targetListeners {
 		listenerNames.Insert(irListenerName(listener))
-		if listener.Protocol == gwapiv1.TCPProtocolType {
+		if listener.Protocol == gwapiv1.TCPProtocolType ||
+			listener.Protocol == gwapiv1.TLSProtocolType {
 			hasTCPListener = true
 		}
 	}
@@ -1772,6 +1778,8 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	}
 
 	// Pre-create a TCP-only authorization object to avoid re-allocation
+	var skippedTCPAllowRules []string
+	var tcpDenyError error
 	var tcpAuthorization *ir.Authorization
 	if authorization != nil && hasTCPListener {
 		authCopy := *authorization
@@ -1786,11 +1794,11 @@ func (t *Translator) translateSecurityPolicyForListeners(
 				len(rule.Principal.ClientIPGeoLocations) > 0 ||
 				len(rule.Principal.ClientCIDRs) == 0 {
 				if rule.Action == egv1a1.AuthorizationActionAllow {
-					result.skippedTCPAllowRules = append(result.skippedTCPAllowRules, rule.Name)
+					skippedTCPAllowRules = append(skippedTCPAllowRules, rule.Name)
 					continue
 				}
 
-				result.tcpDenyError = fmt.Errorf(
+				tcpDenyError = fmt.Errorf(
 					"authorization deny rule %q cannot be enforced on TCP listeners",
 					rule.Name,
 				)
@@ -1801,7 +1809,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 			compatibleRules = append(compatibleRules, rule)
 		}
 
-		if result.tcpDenyError != nil {
+		if tcpDenyError != nil {
 			tcpAuthorization = &ir.Authorization{
 				DefaultAction: egv1a1.AuthorizationActionDeny,
 			}
@@ -1812,6 +1820,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 
 	// Apply to TCP listeners (Authorization only).
 	if tcpAuthorization != nil {
+		tcpPolicyApplied := false
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
@@ -1827,7 +1836,13 @@ func (t *Translator) translateSecurityPolicyForListeners(
 					continue
 				}
 				r.Authorization = tcpAuthorization
+				tcpPolicyApplied = true
 			}
+		}
+
+		if tcpPolicyApplied {
+			result.skippedTCPAllowRules = skippedTCPAllowRules
+			result.tcpDenyError = tcpDenyError
 		}
 	}
 

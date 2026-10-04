@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -2625,7 +2624,7 @@ func TestTranslateSecurityPolicyForListeners_HTTPOnlyDoesNotFailForTCPIncompatib
 	policy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
 			{
-				Name:   ptr.To("deny-with-headers"),
+				Name:   new("deny-with-headers"),
 				Action: egv1a1.AuthorizationActionDeny,
 				Principal: &egv1a1.Principal{
 					Headers: []egv1a1.AuthorizationHeaderMatch{
@@ -2695,7 +2694,7 @@ func TestTranslateSecurityPolicyForListeners_TCPSkipsIncompatibleAllow(t *testin
 	policy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
 			{
-				Name:   ptr.To("allow-with-headers"),
+				Name:   new("allow-with-headers"),
 				Action: egv1a1.AuthorizationActionAllow,
 				Principal: &egv1a1.Principal{
 					Headers: []egv1a1.AuthorizationHeaderMatch{
@@ -2761,10 +2760,10 @@ func TestTranslateSecurityPolicyForListeners_TCPFailsClosedForIncompatibleDeny(t
 
 	policy := sp("default", "test-policy")
 	policy.Spec.Authorization = &egv1a1.Authorization{
-		DefaultAction: ptr.To(egv1a1.AuthorizationActionAllow),
+		DefaultAction: new(egv1a1.AuthorizationActionAllow),
 		Rules: []egv1a1.AuthorizationRule{
 			{
-				Name:   ptr.To("deny-with-headers"),
+				Name:   new("deny-with-headers"),
 				Action: egv1a1.AuthorizationActionDeny,
 				Principal: &egv1a1.Principal{
 					Headers: []egv1a1.AuthorizationHeaderMatch{
@@ -2840,7 +2839,7 @@ func TestTranslateSecurityPolicyForListeners_MixedListenersSkipsOnlyTCPAllow(t *
 	policy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
 			{
-				Name:   ptr.To("allow-with-headers"),
+				Name:   new("allow-with-headers"),
 				Action: egv1a1.AuthorizationActionAllow,
 				Principal: &egv1a1.Principal{
 					Headers: []egv1a1.AuthorizationHeaderMatch{
@@ -2937,10 +2936,10 @@ func TestTranslateSecurityPolicyForListeners_MixedListenersFailsClosedForDeny(t 
 
 	policy := sp("default", "test-policy")
 	policy.Spec.Authorization = &egv1a1.Authorization{
-		DefaultAction: ptr.To(egv1a1.AuthorizationActionAllow),
+		DefaultAction: new(egv1a1.AuthorizationActionAllow),
 		Rules: []egv1a1.AuthorizationRule{
 			{
-				Name:   ptr.To("deny-with-headers"),
+				Name:   new("deny-with-headers"),
 				Action: egv1a1.AuthorizationActionDeny,
 				Principal: &egv1a1.Principal{
 					Headers: []egv1a1.AuthorizationHeaderMatch{
@@ -3043,7 +3042,7 @@ func TestTranslateSecurityPolicyForListeners_TCPKeepsCompatibleAllow(t *testing.
 	policy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
 			{
-				Name:   ptr.To("allow-cidr"),
+				Name:   new("allow-cidr"),
 				Action: egv1a1.AuthorizationActionAllow,
 				Principal: &egv1a1.Principal{
 					ClientCIDRs: []egv1a1.CIDR{
@@ -3126,7 +3125,7 @@ func TestSecurityPolicyForGateway_TCPIncompatibleAllowSetsWarning(t *testing.T) 
 	policy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
 			{
-				Name:   ptr.To("allow-with-headers"),
+				Name:   new("allow-with-headers"),
 				Action: egv1a1.AuthorizationActionAllow,
 				Principal: &egv1a1.Principal{
 					Headers: []egv1a1.AuthorizationHeaderMatch{
@@ -3223,7 +3222,7 @@ func TestSecurityPolicyForGateway_TCPIncompatibleDenySetsAcceptedFalse(t *testin
 	policy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
 			{
-				Name:   ptr.To("deny-with-headers"),
+				Name:   new("deny-with-headers"),
 				Action: egv1a1.AuthorizationActionDeny,
 				Principal: &egv1a1.Principal{
 					Headers: []egv1a1.AuthorizationHeaderMatch{
