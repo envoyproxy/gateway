@@ -2586,10 +2586,8 @@ func buildCompression(compression, compressor []*egv1a1.Compression) ([]*ir.Comp
 	return result, nil
 }
 
-// minContentLengthToUint32 converts the CRD quantity to the uint32 Envoy expects. The
-// CRD pattern allows suffixes up to Ei, so a value above MaxUint32 is accepted by the
-// API server; casting it straight to uint32 wraps (e.g. 4Gi becomes 0), turning a
-// large threshold into "compress everything". Reject out-of-range values instead.
+// minContentLengthToUint32 converts the CRD quantity to the uint32 Envoy expects.
+// It rejects out-of-range values.
 func minContentLengthToUint32(q *apiresource.Quantity) (*uint32, error) {
 	if q == nil {
 		return nil, nil
