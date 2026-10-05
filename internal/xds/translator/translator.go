@@ -787,7 +787,8 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			ea := &ExtraArgs{
-				metrics:          metrics,
+				metrics: metrics,
+				// Seeded from the listener's CTP HTTP1; applyTraffic overwrites if BTP sets traffic.HTTP1.
 				http1Settings:    httpListener.HTTP1,
 				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
 				statName:         httpRoute.Destination.StatName,

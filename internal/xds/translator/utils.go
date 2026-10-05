@@ -201,6 +201,8 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 }
 
 // applyTraffic copies the cluster-scoped traffic features onto the cluster args.
+// HTTP1 is nil-guarded: args.http1Settings may be pre-seeded from the listener's CTP HTTP1,
+// and BTP's traffic.HTTP1 only overrides it when explicitly set.
 func applyTraffic(args *xdsClusterArgs, traffic *ir.ClusterTrafficFeatures) {
 	if traffic == nil {
 		return

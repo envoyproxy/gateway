@@ -8,8 +8,9 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: same-namespace
-  clientHttp1:
-    preserveHeaderCase: true
+  http1:
+    client:
+      preserveHeaderCase: true
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
