@@ -1,0 +1,1 @@
+Fixed the shutdown manager failing to deliver the /shutdown/ready response when a drain outlasts its 10s write timeout, which made the kubelet report FailedPreStopHook on every proxy pod termination even though the drain completed.
