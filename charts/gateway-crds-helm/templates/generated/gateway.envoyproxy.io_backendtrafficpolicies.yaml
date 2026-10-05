@@ -3670,6 +3670,13 @@ spec:
                 ''Service'', ''ServiceImport'', ''Backend''])) && (!has(self.targetSelectors)
                 || self.targetSelectors.all(sel, sel.kind in [''Gateway'', ''ListenerSet'',
                 ''HTTPRoute'', ''GRPCRoute'', ''Service'', ''ServiceImport'', ''Backend''])))'
+            - message: timeout.http.requestTimeout and timeout.http.streamIdleTimeout
+                are not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.timeout)
+                || !has(self.timeout.http) || (!has(self.timeout.http.requestTimeout)
+                && !has(self.timeout.http.streamIdleTimeout))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&

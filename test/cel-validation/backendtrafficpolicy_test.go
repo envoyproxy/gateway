@@ -295,6 +295,56 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"ConsistentHash load balancing is not allowed when targeting a backend"},
 		},
 		{
+			desc: "Backend targetRef with timeout.http.requestTimeout is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.envoyproxy.io"),
+								Kind:  gwapiv1.Kind("Backend"),
+								Name:  gwapiv1.ObjectName("backend-1"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+					ClusterSettings: egv1a1.ClusterSettings{
+						Timeout: &egv1a1.Timeout{
+							HTTP: &egv1a1.HTTPTimeout{
+								RequestTimeout: new(gwapiv1.Duration("10s")),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"timeout.http.requestTimeout and timeout.http.streamIdleTimeout are not allowed when targeting a backend"},
+		},
+		{
+			desc: "Backend targetRef with timeout.http.streamIdleTimeout is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.envoyproxy.io"),
+								Kind:  gwapiv1.Kind("Backend"),
+								Name:  gwapiv1.ObjectName("backend-1"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+					ClusterSettings: egv1a1.ClusterSettings{
+						Timeout: &egv1a1.Timeout{
+							HTTP: &egv1a1.HTTPTimeout{
+								StreamIdleTimeout: new(gwapiv1.Duration("30s")),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"timeout.http.requestTimeout and timeout.http.streamIdleTimeout are not allowed when targeting a backend"},
+		},
+		{
 			desc: "ServiceImport targetRef with sectionName is rejected",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

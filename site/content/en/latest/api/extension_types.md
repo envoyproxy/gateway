@@ -602,6 +602,13 @@ between the Envoy Proxy listener and the backend service.
 
 BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 
+Backend-targeted BackendTrafficPolicy (Service/ServiceImport/Backend targets) only applies to
+a backend that resolves into a merged Envoy cluster (requires the MergeBackends EnvoyProxy
+feature). A backend that never merges for any reason does not get the policy applied.
+A weighted route could reference backends requesting different hash inputs, such as a header
+versus source IP, while Envoy configures the hash policy at route scope. Rejecting
+ConsistentHash avoids ambiguity in choosing the route-level hash policy.
+
 _Appears in:_
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 
