@@ -28,7 +28,13 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 	}{
 		{name: "nil spec", spec: nil, want: false},
 		{name: "empty spec", spec: &egv1a1.ClientTrafficPolicySpec{}, want: false},
-		{name: "HTTP1 set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{}}, want: true},
+		{name: "HTTP1 set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{}}, want: false},
+		{name: "HTTP1.EnableTrailers set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{EnableTrailers: new(bool)}}, want: true},
+		{name: "HTTP1.PreserveHeaderCase set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)}}, want: true},
+		{name: "HTTP1.HTTP10 set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{HTTP10: &egv1a1.HTTP10Settings{}}}, want: true},
+		{name: "HTTP1.DisableSafeMaxConnectionDuration set (listener-only)", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{DisableSafeMaxConnectionDuration: new(bool)}}, want: false},
+		{name: "HTTP1.Client set (listener-only)", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{Client: &egv1a1.ClientHTTP1Settings{}}}, want: false},
+		{name: "HTTP1.Client.PreserveHeaderCase set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{Client: &egv1a1.ClientHTTP1Settings{CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{PreserveHeaderCase: new(bool)}}}}, want: true},
 		{name: "HTTP2 set, no HTTP1", spec: &egv1a1.ClientTrafficPolicySpec{HTTP2: &egv1a1.HTTP2Settings{}}, want: false},
 	}
 	for _, tc := range tests {
@@ -123,7 +129,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 						},
 					},
 				},
-				HTTP1: &egv1a1.HTTP1Settings{},
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)},
 			},
 		},
 		{
@@ -140,7 +146,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 						},
 					},
 				},
-				HTTP1: &egv1a1.HTTP1Settings{},
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)},
 			},
 		},
 		{
@@ -158,7 +164,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 						},
 					},
 				},
-				HTTP1: &egv1a1.HTTP1Settings{},
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)},
 			},
 		},
 		{
@@ -175,7 +181,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 						},
 					},
 				},
-				HTTP1: &egv1a1.HTTP1Settings{},
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)},
 			},
 		},
 		{
@@ -306,7 +312,7 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Headers":             false,
 		"Timeout":             false,
 		"Connection":          false,
-		"HTTP1":               true,
+		"HTTP1":               false, // empty HTTP1Settings{} has no cluster-scoped fields set; EnableTrailers/PreserveHeaderCase/HTTP10 trigger demerging when set
 		"HTTP2":               false,
 		"HTTP3":               false,
 		"GRPC":                false,

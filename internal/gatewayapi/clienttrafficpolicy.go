@@ -42,9 +42,24 @@ const (
 	scopeEntireListenerSet ctpAttachScope = iota
 )
 
-// ctpSpecHasClusterScopedFields reports whether spec sets a listener-level HTTP1 field.
+// ctpSpecHasClusterScopedFields reports whether spec sets any field that affects upstream
+// cluster (CDS) configuration. The fields EnableTrailers, PreserveHeaderCase, and HTTP10 —
+// whether set via the deprecated flat http1 fields or the new http1.client sub-struct —
+// flow to the upstream cluster codec and can cause divergence between listeners sharing
+// a merged backend cluster.
 func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
-	return spec != nil && spec.HTTP1 != nil
+	if spec == nil {
+		return false
+	}
+	h := spec.HTTP1
+	if h == nil {
+		return false
+	}
+	if h.EnableTrailers != nil || h.PreserveHeaderCase != nil || h.HTTP10 != nil {
+		return true
+	}
+	c := h.Client
+	return c != nil && (c.EnableTrailers != nil || c.PreserveHeaderCase != nil || c.HTTP10 != nil)
 }
 
 // CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy

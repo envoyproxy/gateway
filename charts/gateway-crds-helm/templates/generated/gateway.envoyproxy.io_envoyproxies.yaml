@@ -12702,8 +12702,10 @@ spec:
                                                 type: object
                                             type: object
                                           http1:
-                                            description: BackendHTTP1 provides HTTP/1
-                                              configuration for backend connections.
+                                            description: |-
+                                              HTTP1 provides HTTP/1 configuration for backend connections.
+                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                              this field takes precedence for backend (upstream) traffic.
                                             properties:
                                               enableTrailers:
                                                 description: EnableTrailers defines
@@ -14431,8 +14433,10 @@ spec:
                                                 type: object
                                             type: object
                                           http1:
-                                            description: BackendHTTP1 provides HTTP/1
-                                              configuration for backend connections.
+                                            description: |-
+                                              HTTP1 provides HTTP/1 configuration for backend connections.
+                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                              this field takes precedence for backend (upstream) traffic.
                                             properties:
                                               enableTrailers:
                                                 description: EnableTrailers defines
@@ -16393,8 +16397,10 @@ spec:
                                           type: object
                                       type: object
                                     http1:
-                                      description: BackendHTTP1 provides HTTP/1 configuration
-                                        for backend connections.
+                                      description: |-
+                                        HTTP1 provides HTTP/1 configuration for backend connections.
+                                        When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                        this field takes precedence for backend (upstream) traffic.
                                       properties:
                                         enableTrailers:
                                           description: EnableTrailers defines if HTTP/1
@@ -18237,8 +18243,10 @@ spec:
                                     type: object
                                 type: object
                               http1:
-                                description: BackendHTTP1 provides HTTP/1 configuration
-                                  for backend connections.
+                                description: |-
+                                  HTTP1 provides HTTP/1 configuration for backend connections.
+                                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                  this field takes precedence for backend (upstream) traffic.
                                 properties:
                                   enableTrailers:
                                     description: EnableTrailers defines if HTTP/1

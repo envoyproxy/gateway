@@ -506,7 +506,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | BackendHTTP1 provides HTTP/1 configuration for backend connections. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 
 
@@ -638,7 +638,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | BackendHTTP1 provides HTTP/1 configuration for backend connections. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
@@ -1170,7 +1170,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | BackendHTTP1 provides HTTP/1 configuration for backend connections. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic. |
 
 
 #### ClusterTranslationConfig
