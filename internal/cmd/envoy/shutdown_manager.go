@@ -37,7 +37,15 @@ const (
 	ShutdownManagerReadyPath = "/shutdown/ready"
 	// ShutdownReadyFile is the file used to indicate shutdown readiness.
 	ShutdownReadyFile = "/tmp/shutdown-ready"
+	// shutdownReadyResponseMargin is added to the ready timeout when extending
+	// the write deadline of a shutdown ready response, to cover the final poll
+	// interval and the write itself.
+	shutdownReadyResponseMargin = 5 * time.Second
 )
+
+// shutdownManagerWriteTimeout is the shutdown manager server's write timeout.
+// It is a variable so tests can shorten it.
+var shutdownManagerWriteTimeout = 10 * time.Second
 
 // ShutdownManager serves shutdown manager process for Envoy proxies.
 func ShutdownManager(readyTimeout time.Duration) error {
@@ -46,22 +54,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 	// backing /tmp persists for the pod's lifetime.
 	clearShutdownReadyFile(ShutdownReadyFile)
 
-	// Setup HTTP handler
-	handler := http.NewServeMux()
-	handler.HandleFunc(ShutdownManagerHealthCheckPath, func(_ http.ResponseWriter, _ *http.Request) {})
-	handler.HandleFunc(ShutdownManagerReadyPath, func(w http.ResponseWriter, _ *http.Request) {
-		shutdownReadyHandler(w, readyTimeout, ShutdownReadyFile)
-	})
-
-	// Setup HTTP server
-	srv := http.Server{
-		Handler:           handler,
-		Addr:              fmt.Sprintf(":%d", ShutdownManagerPort),
-		ReadTimeout:       5 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       15 * time.Second,
-	}
+	srv := newShutdownManagerServer(fmt.Sprintf(":%d", ShutdownManagerPort), readyTimeout, ShutdownReadyFile)
 
 	// Setup signal handling
 	c := make(chan struct{})
@@ -90,6 +83,24 @@ func ShutdownManager(readyTimeout time.Duration) error {
 	return nil
 }
 
+// newShutdownManagerServer returns the shutdown manager HTTP server.
+func newShutdownManagerServer(addr string, readyTimeout time.Duration, readyFile string) *http.Server {
+	handler := http.NewServeMux()
+	handler.HandleFunc(ShutdownManagerHealthCheckPath, func(_ http.ResponseWriter, _ *http.Request) {})
+	handler.HandleFunc(ShutdownManagerReadyPath, func(w http.ResponseWriter, _ *http.Request) {
+		shutdownReadyHandler(w, readyTimeout, readyFile)
+	})
+
+	return &http.Server{
+		Handler:           handler,
+		Addr:              addr,
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      shutdownManagerWriteTimeout,
+		IdleTimeout:       15 * time.Second,
+	}
+}
+
 // clearShutdownReadyFile removes a stale shutdown ready file if one exists,
 // ensuring a fresh drain sequence is required after each (re)start.
 func clearShutdownReadyFile(readyFile string) {
@@ -115,6 +126,14 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 	startTime := time.Now()
 
 	logger.Info("received shutdown ready request")
+
+	// This request blocks for the whole drain, which normally outlasts the
+	// server's write timeout. Extend the deadline for this response only, or the
+	// response is never delivered and the kubelet reports the Envoy preStop hook
+	// as failed even though the drain completed.
+	if err := http.NewResponseController(w).SetWriteDeadline(startTime.Add(readyTimeout + shutdownReadyResponseMargin)); err != nil {
+		logger.Error(err, "error extending shutdown ready response write deadline")
+	}
 
 	// Poll for shutdown readiness
 	for {

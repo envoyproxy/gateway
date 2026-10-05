@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -93,6 +94,57 @@ func TestClearShutdownReadyFile(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+// TestShutdownReadyResponseOutlivesWriteTimeout verifies that the shutdown ready
+// response is still delivered when the drain outlasts the server's write timeout.
+func TestShutdownReadyResponseOutlivesWriteTimeout(t *testing.T) {
+	origWriteTimeout := shutdownManagerWriteTimeout
+	shutdownManagerWriteTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { shutdownManagerWriteTimeout = origWriteTimeout })
+
+	cases := []struct {
+		name         string
+		readyTimeout time.Duration
+		readyAfter   time.Duration // 0 means the ready file is never written
+		expectedCode int
+	}{
+		{
+			name:         "drain completes",
+			readyTimeout: 30 * time.Second,
+			readyAfter:   time.Second,
+			expectedCode: http.StatusOK,
+		},
+		{
+			name:         "ready timeout exceeded",
+			readyTimeout: 500 * time.Millisecond,
+			expectedCode: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			readyFile := filepath.Join(t.TempDir(), "shutdown-ready")
+			ts := httptest.NewUnstartedServer(nil)
+			ts.Config = newShutdownManagerServer("", tc.readyTimeout, readyFile)
+			ts.Start()
+			defer ts.Close()
+
+			if tc.readyAfter > 0 {
+				timer := time.AfterFunc(tc.readyAfter, func() {
+					_ = os.WriteFile(readyFile, nil, 0o600)
+				})
+				defer timer.Stop()
+			}
+
+			resp, err := ts.Client().Get(ts.URL + ShutdownManagerReadyPath)
+			require.NoError(t, err)
+			defer func() {
+				_ = resp.Body.Close()
+			}()
+			require.Equal(t, tc.expectedCode, resp.StatusCode)
 		})
 	}
 }
