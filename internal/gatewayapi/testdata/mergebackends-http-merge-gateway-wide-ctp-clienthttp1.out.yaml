@@ -5,8 +5,9 @@ clientTrafficPolicies:
     name: ctp-gateway-wide-clienthttp1
     namespace: envoy-gateway
   spec:
-    clientHttp1:
-      preserveHeaderCase: true
+    http1:
+      client:
+        preserveHeaderCase: true
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway

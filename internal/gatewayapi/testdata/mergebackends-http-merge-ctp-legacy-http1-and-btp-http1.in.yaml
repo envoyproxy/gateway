@@ -26,24 +26,49 @@ clientTrafficPolicies:
     kind: ClientTrafficPolicy
     metadata:
       namespace: envoy-gateway
-      name: ctp-both-http1-fields
+      name: ctp-legacy-http1
     spec:
       targetRefs:
         - group: gateway.networking.k8s.io
           kind: Gateway
           name: gateway-1
-      # deprecated flat field: enableTrailers - should be ignored when http1.client is also set
+      # legacy flat http1 field on CTP — applies to the listener
+      http1:
+        preserveHeaderCase: true
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: btp-gateway-wide-http1
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+      # BTP http1 — applies to the upstream cluster and wins over CTP for cluster settings
       http1:
         enableTrailers: true
-        # new field: http1.client - this wins
-        client:
-          preserveHeaderCase: true
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
       namespace: default
       name: http-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-2
     spec:
       parentRefs:
         - namespace: envoy-gateway

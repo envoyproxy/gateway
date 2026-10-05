@@ -972,10 +972,10 @@ _Appears in:_
 
 
 ClientHTTP1Settings provides HTTP/1 configuration on the downstream listener.
-It supersedes the deprecated HTTP1Settings field on ClientTrafficPolicy.
+It is the canonical replacement for the deprecated flat fields on HTTP1Settings.
 
 _Appears in:_
-- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+- [HTTP1Settings](#http1settings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1102,7 +1102,6 @@ _Appears in:_
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  |  | Timeout settings for the client connections. |
 | `connection` | _[ClientConnection](#clientconnection)_ |  false  |  | Connection includes client connection settings. |
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener.<br />Deprecated: Use ClientHTTP1 for downstream (listener) settings and<br />BackendTrafficPolicy.HTTP1 for upstream (backend) settings instead.<br />Previously this field also affected upstream HTTP/1 protocol configuration;<br />that behaviour is no longer supported — set HTTP1 on a<br />BackendTrafficPolicy to configure upstream HTTP/1 protocol options. |
-| `clientHttp1` | _[ClientHTTP1Settings](#clienthttp1settings)_ |  false  |  | ClientHTTP1 provides HTTP/1 configuration on the downstream listener.<br />When set, this field takes precedence over the deprecated HTTP1 field for downstream<br />settings — the HTTP1 field is ignored entirely, even if set. To configure upstream<br />HTTP/1 protocol options (e.g. header case preservation for backend connections),<br />use HTTP1 on a BackendTrafficPolicy instead. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `grpc` | _[GRPCSettings](#grpcsettings)_ |  false  |  | GRPC provides gRPC configuration on the listener. |
@@ -3144,18 +3143,17 @@ _Appears in:_
 
 HTTP1Settings provides HTTP/1 configuration on the listener.
 
-Deprecated: Use ClientHTTP1Settings instead.
-
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
-| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
-| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
-| `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
-| `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |
+| `client` | _[ClientHTTP1Settings](#clienthttp1settings)_ |  false  |  | Client configures HTTP/1.1 settings for downstream (client) connections.<br />When set, Client takes precedence over the deprecated flat fields below —<br />all flat fields are ignored entirely, even if set. |
+| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.<br />Deprecated: Use client.enableTrailers instead. |
+| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers.<br />Deprecated: Use client.preserveHeaderCase instead. |
+| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.<br />Deprecated: Use client.http10 instead. |
+| `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set.<br />Deprecated: Use client.disableSafeMaxConnectionDuration instead. |
+| `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".<br />Deprecated: Use client.ignoredUpgradeTypes instead. |
 
 
 #### HTTP2KeepaliveSettings

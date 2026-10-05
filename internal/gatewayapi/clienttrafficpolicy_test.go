@@ -59,22 +59,24 @@ func TestResolveClientHTTP1Settings(t *testing.T) {
 			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
 				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: trueVal},
 			}},
-			want: &egv1a1.ClientHTTP1Settings{PreserveHeaderCase: trueVal},
+			want: &egv1a1.ClientHTTP1Settings{CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{PreserveHeaderCase: trueVal}},
 		},
 		{
-			name: "new ClientHTTP1 only — returned as-is",
+			name: "http1.client only — returned as-is",
 			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
-				ClientHTTP1: &egv1a1.ClientHTTP1Settings{EnableTrailers: trueVal},
+				HTTP1: &egv1a1.HTTP1Settings{Client: &egv1a1.ClientHTTP1Settings{CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{EnableTrailers: trueVal}}},
 			}},
-			want: &egv1a1.ClientHTTP1Settings{EnableTrailers: trueVal},
+			want: &egv1a1.ClientHTTP1Settings{CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{EnableTrailers: trueVal}},
 		},
 		{
-			name: "both set — ClientHTTP1 wins, HTTP1 ignored",
+			name: "both set — http1.client wins, flat fields ignored",
 			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
-				HTTP1:       &egv1a1.HTTP1Settings{PreserveHeaderCase: trueVal},
-				ClientHTTP1: &egv1a1.ClientHTTP1Settings{EnableTrailers: falseVal},
+				HTTP1: &egv1a1.HTTP1Settings{
+					PreserveHeaderCase: trueVal,
+					Client:             &egv1a1.ClientHTTP1Settings{CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{EnableTrailers: falseVal}},
+				},
 			}},
-			want: &egv1a1.ClientHTTP1Settings{EnableTrailers: falseVal},
+			want: &egv1a1.ClientHTTP1Settings{CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{EnableTrailers: falseVal}},
 		},
 	}
 	for _, tc := range tests {
@@ -305,7 +307,6 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Timeout":             false,
 		"Connection":          false,
 		"HTTP1":               true,
-		"ClientHTTP1":         false,
 		"HTTP2":               false,
 		"HTTP3":               false,
 		"GRPC":                false,

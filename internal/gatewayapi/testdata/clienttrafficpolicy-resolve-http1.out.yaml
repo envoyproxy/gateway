@@ -5,10 +5,10 @@ clientTrafficPolicies:
     name: policy-with-both-http1-fields
     namespace: envoy-gateway
   spec:
-    clientHttp1:
-      enableTrailers: false
-      preserveHeaderCase: false
     http1:
+      client:
+        enableTrailers: false
+        preserveHeaderCase: false
       enableTrailers: true
       preserveHeaderCase: true
     targetRef:

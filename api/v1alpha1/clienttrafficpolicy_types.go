@@ -102,14 +102,6 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
-	// ClientHTTP1 provides HTTP/1 configuration on the downstream listener.
-	// When set, this field takes precedence over the deprecated HTTP1 field for downstream
-	// settings — the HTTP1 field is ignored entirely, even if set. To configure upstream
-	// HTTP/1 protocol options (e.g. header case preservation for backend connections),
-	// use HTTP1 on a BackendTrafficPolicy instead.
-	//
-	// +optional
-	ClientHTTP1 *ClientHTTP1Settings `json:"clientHttp1,omitempty"` // TODO: rename json tag to "http1" once HTTP1 field is removed
 	// HTTP2 provides HTTP/2 configuration on the listener.
 	//
 	// +optional
@@ -422,17 +414,30 @@ type HTTP3Settings struct {
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
-//
-// Deprecated: Use ClientHTTP1Settings instead.
 type HTTP1Settings struct {
+	// Client configures HTTP/1.1 settings for downstream (client) connections.
+	// When set, Client takes precedence over the deprecated flat fields below —
+	// all flat fields are ignored entirely, even if set.
+	//
+	// +optional
+	Client *ClientHTTP1Settings `json:"client,omitempty"`
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+	//
+	// Deprecated: Use client.enableTrailers instead.
+	//
 	// +optional
 	EnableTrailers *bool `json:"enableTrailers,omitempty"`
 	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
 	// By default, Envoy will lowercase all the headers.
+	//
+	// Deprecated: Use client.preserveHeaderCase instead.
+	//
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+	//
+	// Deprecated: Use client.http10 instead.
+	//
 	// +optional
 	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
 	// DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
@@ -440,6 +445,8 @@ type HTTP1Settings struct {
 	// It then adds a Connection: close header and gracefully closes the connection after the response completes.
 	// When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
 	// Has no effect unless maxConnectionDuration is set.
+	//
+	// Deprecated: Use client.disableSafeMaxConnectionDuration instead.
 	//
 	// +optional
 	DisableSafeMaxConnectionDuration *bool `json:"disableSafeMaxConnectionDuration,omitempty"`
@@ -452,12 +459,14 @@ type HTTP1Settings struct {
 	//
 	// Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".
 	//
+	// Deprecated: Use client.ignoredUpgradeTypes instead.
+	//
 	// +optional
 	IgnoredUpgradeTypes []StringMatch `json:"ignoredUpgradeTypes,omitempty"`
 }
 
 // ClientHTTP1Settings provides HTTP/1 configuration on the downstream listener.
-// It supersedes the deprecated HTTP1Settings field on ClientTrafficPolicy.
+// It is the canonical replacement for the deprecated flat fields on HTTP1Settings.
 type ClientHTTP1Settings struct {
 	// CommonHTTP1Settings contains the HTTP/1 fields shared with BackendTrafficPolicy.
 	CommonHTTP1Settings `json:",inline"`

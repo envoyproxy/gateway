@@ -42,6 +42,6 @@ clientTrafficPolicies:
       http1:
         preserveHeaderCase: true
         enableTrailers: true
-      clientHttp1:
-        preserveHeaderCase: false
-        enableTrailers: false
+        client:
+          preserveHeaderCase: false
+          enableTrailers: false

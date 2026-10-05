@@ -701,7 +701,9 @@ type ClusterSettings struct {
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
 
-	// BackendHTTP1 provides HTTP/1 configuration for backend connections.
+	// HTTP1 provides HTTP/1 configuration for backend connections.
+	// When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+	// this field takes precedence for backend (upstream) traffic.
 	//
 	// +optional
 	HTTP1 *BackendHTTP1Settings `json:"http1,omitempty"`

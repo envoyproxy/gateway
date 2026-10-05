@@ -1,1 +1,0 @@
-The `http1` field on `ClientTrafficPolicy` is deprecated. Use the new `clientHttp1` field on `ClientTrafficPolicy` for downstream (listener) HTTP/1 settings, and the new `backendHttp1` field on `BackendTrafficPolicy` `ClusterSettings` for upstream (backend) HTTP/1 settings.

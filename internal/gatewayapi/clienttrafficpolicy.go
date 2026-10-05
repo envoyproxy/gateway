@@ -1090,22 +1090,24 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 }
 
 // resolveClientHTTP1Settings returns the effective ClientHTTP1Settings for a policy,
-// preferring the new ClientHTTP1 field over the deprecated HTTP1 field.
+// preferring http1.client over the deprecated flat http1 fields.
 func resolveClientHTTP1Settings(policy *egv1a1.ClientTrafficPolicy) *egv1a1.ClientHTTP1Settings {
-	if policy.Spec.ClientHTTP1 != nil {
-		return policy.Spec.ClientHTTP1
+	if policy.Spec.HTTP1 == nil {
+		return nil
 	}
-	if policy.Spec.HTTP1 != nil {
-		// Migrate deprecated HTTP1 to ClientHTTP1Settings shape.
-		return &egv1a1.ClientHTTP1Settings{
-			EnableTrailers:                   policy.Spec.HTTP1.EnableTrailers,
-			PreserveHeaderCase:               policy.Spec.HTTP1.PreserveHeaderCase,
-			HTTP10:                           policy.Spec.HTTP1.HTTP10,
-			DisableSafeMaxConnectionDuration: policy.Spec.HTTP1.DisableSafeMaxConnectionDuration,
-			IgnoredUpgradeTypes:              policy.Spec.HTTP1.IgnoredUpgradeTypes,
-		}
+	if policy.Spec.HTTP1.Client != nil {
+		return policy.Spec.HTTP1.Client
 	}
-	return nil
+	// Migrate deprecated flat HTTP1 fields to ClientHTTP1Settings shape.
+	return &egv1a1.ClientHTTP1Settings{
+		CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{
+			EnableTrailers:     policy.Spec.HTTP1.EnableTrailers,
+			PreserveHeaderCase: policy.Spec.HTTP1.PreserveHeaderCase,
+			HTTP10:             policy.Spec.HTTP1.HTTP10,
+		},
+		DisableSafeMaxConnectionDuration: policy.Spec.HTTP1.DisableSafeMaxConnectionDuration,
+		IgnoredUpgradeTypes:              policy.Spec.HTTP1.IgnoredUpgradeTypes,
+	}
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.ClientHTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
