@@ -519,7 +519,9 @@ spec:
                                   description: |-
                                     Provider is the name of the JWT provider that used to verify the JWT token.
                                     In order to use JWT claims for authorization, you must configure the JWT
-                                    authentication with the same provider in the same `SecurityPolicy`.
+                                    authentication with the same provider in the same `SecurityPolicy`, or,
+                                    when `mergeType` is set, in the parent `SecurityPolicy` this policy is
+                                    merged into.
                                   maxLength: 253
                                   minLength: 1
                                   type: string
@@ -648,6 +650,24 @@ spec:
                       It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..
                       The value "*" allows any method to be used.
                     items:
+                      type: string
+                    type: array
+                  allowOriginRegexes:
+                    description: |-
+                      AllowOriginRegexes defines regular expressions that are matched against the Origin header.
+                      It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.
+                      An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes.
+                    items:
+                      description: |-
+                        CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+                        including the scheme and the port if present.
+                        The regex string must adhere to the syntax documented in
+                        https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+                        which is not supported.
+                        A regular expression that matches the literal string "*" is rejected.
+                        The value "*" in AllowOrigins allows any origin.
+                      maxLength: 1024
+                      minLength: 1
                       type: string
                     type: array
                   allowOrigins:
@@ -8302,9 +8322,11 @@ spec:
                 || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
                 ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
                 sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''])))'
-            - message: if authorization.rules.principal.jwt is used, jwt must be defined
-              rule: '(has(self.authorization) && has(self.authorization.rules) &&
-                self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
+            - message: if authorization.rules.principal.jwt is used, jwt must be defined,
+                unless mergeType is set and the jwt providers are inherited from the
+                parent policy
+              rule: '(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules)
+                && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
                 : false)) ? has(self.jwt) : true'
           status:
             description: Status defines the current status of SecurityPolicy.

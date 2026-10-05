@@ -185,6 +185,8 @@ func coalesceUpdates[K comparable, V any](logger logging.Logger, updates []watch
 		write--
 	}
 
+	// The result shares this backing array; release the discarded payloads.
+	clear(updates[:write+1])
 	result := updates[write+1:]
 	if len(result) != len(updates) {
 		logger.Info(
