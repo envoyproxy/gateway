@@ -1478,15 +1478,14 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 	clusterArgs := &xdsClusterArgs{
 		name:         name,
 		settings:     settings,
+		loadBalancer: route.LoadBalancer,
 		endpointType: buildEndpointType(settings),
 		metrics:      extra.metrics,
+		dns:          route.DNS,
 		ipFamily:     extra.ipFamily,
 		metadata:     metadata,
 		isRoute:      true,
 	}
-
-	clusterArgs.loadBalancer = route.LoadBalancer
-	clusterArgs.dns = route.DNS
 
 	return clusterArgs
 }
@@ -1501,24 +1500,23 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	clusterArgs := &xdsClusterArgs{
-		name:           name,
-		settings:       settings,
-		endpointType:   buildEndpointType(settings),
-		metrics:        extra.metrics,
-		ipFamily:       extra.ipFamily,
-		metadata:       metadata,
-		healthCheckLog: extra.healthCheckLog,
-		isRoute:        true,
+		name:              name,
+		settings:          settings,
+		loadBalancer:      route.LoadBalancer,
+		proxyProtocol:     route.ProxyProtocol,
+		circuitBreaker:    route.CircuitBreaker,
+		tcpkeepalive:      route.TCPKeepalive,
+		healthCheck:       route.HealthCheck,
+		timeout:           route.Timeout.ClusterOnly(),
+		endpointType:      buildEndpointType(settings),
+		metrics:           extra.metrics,
+		backendConnection: route.BackendConnection,
+		dns:               route.DNS,
+		ipFamily:          extra.ipFamily,
+		metadata:          metadata,
+		healthCheckLog:    extra.healthCheckLog,
+		isRoute:           true,
 	}
-
-	clusterArgs.loadBalancer = route.LoadBalancer
-	clusterArgs.proxyProtocol = route.ProxyProtocol
-	clusterArgs.circuitBreaker = route.CircuitBreaker
-	clusterArgs.tcpkeepalive = route.TCPKeepalive
-	clusterArgs.healthCheck = route.HealthCheck
-	clusterArgs.timeout = route.Timeout.ClusterOnly()
-	clusterArgs.backendConnection = route.BackendConnection
-	clusterArgs.dns = route.DNS
 
 	return clusterArgs
 }
