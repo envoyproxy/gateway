@@ -1141,6 +1141,11 @@ func (in *CORS) DeepCopyInto(out *CORS) {
 		*out = make([]Origin, len(*in))
 		copy(*out, *in)
 	}
+	if in.AllowOriginRegexes != nil {
+		in, out := &in.AllowOriginRegexes, &out.AllowOriginRegexes
+		*out = make([]CORSOriginRegex, len(*in))
+		copy(*out, *in)
+	}
 	if in.AllowMethods != nil {
 		in, out := &in.AllowMethods, &out.AllowMethods
 		*out = make([]string, len(*in))
@@ -4927,6 +4932,11 @@ func (in *HTTPRouteFilterSpec) DeepCopyInto(out *HTTPRouteFilterSpec) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if in.BackendPriority != nil {
+		in, out := &in.BackendPriority, &out.BackendPriority
+		*out = new(int32)
+		**out = **in
 	}
 }
 

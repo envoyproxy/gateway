@@ -3489,6 +3489,8 @@ spec:
                           description: |-
                             Status Code of the Custom Response
                             If unset, does not override the status of response.
+                          maximum: 599
+                          minimum: 200
                           type: integer
                       type: object
                     source:
@@ -29732,6 +29734,28 @@ spec:
           spec:
             description: Spec defines the desired state of HTTPRouteFilter.
             properties:
+              backendPriority:
+                description: |-
+                  BackendPriority sets the Envoy locality priority of the endpoints belonging to the
+                  backendRef this filter is attached to, enabling priority-based failover between the
+                  backendRefs of a single route rule. 0 is the highest priority.
+
+                  Envoy sends traffic to the lowest priority value that has enough healthy endpoints,
+                  and only spills over to the next value as that health degrades. It is highly
+                  recommended to configure active or passive health checks so that failover can be
+                  detected when the higher priority backends become unhealthy.
+
+                  This overrides the priority derived from the referenced Backend's fallback field.
+                  For additional details, see
+                  https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/priority
+
+                  This filter is only valid when referenced from a backendRef's filters. Referencing it
+                  from a route rule's filters is rejected: a rule-level filter applies uniformly to every
+                  backendRef of the rule, and a uniform priority carries no failover meaning.
+                format: int32
+                maximum: 128
+                minimum: 0
+                type: integer
               credentialInjection:
                 description: |-
                   HTTPCredentialInjectionFilter defines the configuration to inject credentials into the request.
@@ -30744,7 +30768,9 @@ spec:
                                   description: |-
                                     Provider is the name of the JWT provider that used to verify the JWT token.
                                     In order to use JWT claims for authorization, you must configure the JWT
-                                    authentication with the same provider in the same `SecurityPolicy`.
+                                    authentication with the same provider in the same `SecurityPolicy`, or,
+                                    when `mergeType` is set, in the parent `SecurityPolicy` this policy is
+                                    merged into.
                                   maxLength: 253
                                   minLength: 1
                                   type: string
@@ -30873,6 +30899,24 @@ spec:
                       It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..
                       The value "*" allows any method to be used.
                     items:
+                      type: string
+                    type: array
+                  allowOriginRegexes:
+                    description: |-
+                      AllowOriginRegexes defines regular expressions that are matched against the Origin header.
+                      It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.
+                      An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes.
+                    items:
+                      description: |-
+                        CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+                        including the scheme and the port if present.
+                        The regex string must adhere to the syntax documented in
+                        https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+                        which is not supported.
+                        A regular expression that matches the literal string "*" is rejected.
+                        The value "*" in AllowOrigins allows any origin.
+                      maxLength: 1024
+                      minLength: 1
                       type: string
                     type: array
                   allowOrigins:
@@ -38383,9 +38427,11 @@ spec:
                 || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
                 ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
                 sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''])))'
-            - message: if authorization.rules.principal.jwt is used, jwt must be defined
-              rule: '(has(self.authorization) && has(self.authorization.rules) &&
-                self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
+            - message: if authorization.rules.principal.jwt is used, jwt must be defined,
+                unless mergeType is set and the jwt providers are inherited from the
+                parent policy
+              rule: '(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules)
+                && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
                 : false)) ? has(self.jwt) : true'
           status:
             description: Status defines the current status of SecurityPolicy.
