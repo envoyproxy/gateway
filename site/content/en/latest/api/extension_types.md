@@ -1118,6 +1118,7 @@ ClusterSettings contains CDS-only fields that configure the upstream Envoy Clust
 _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ExtensionBackend](#extensionbackend)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -2576,8 +2577,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  true  |  | Name is the Envoy cluster name. Dynamic module configuration must use<br />the same name. Configurations in one proxy deployment must use the same<br />backend for this name. |
+| `name` | _string_ |  true  |  | Name is the Envoy cluster name. Dynamic module configuration must use<br />the same name. Configurations in one proxy deployment must use the same<br />backend reference and settings for this name. |
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendobjectreference)_ |  true  |  | BackendRef references the one backend for this cluster. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings configures traffic to this backend cluster.<br />Timeout.HTTP.RequestTimeout and Timeout.HTTP.StreamIdleTimeout are ignored.<br />Request timeouts and retries are controlled by the dynamic module. |
 
 
 #### ExtensionHooks

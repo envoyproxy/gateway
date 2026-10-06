@@ -92,9 +92,10 @@
   type: EDS
 - circuitBreakers:
     thresholds:
-    - maxRetries: 1024
+    - maxConnections: 17
+      maxRetries: 1024
   commonLbConfig: {}
-  connectTimeout: 10s
+  connectTimeout: 2s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
     edsConfig:
@@ -105,9 +106,9 @@
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
+        name: envoy.load_balancing_policies.random
         typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.random.v3.Random
           localityLbConfig:
             localityWeightedLbConfig: {}
   name: resolver
@@ -152,6 +153,8 @@
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
         httpProtocolOptions: {}
+      commonHttpProtocolOptions:
+        idleTimeout: 30s
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024

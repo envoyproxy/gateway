@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"cmp"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -26,7 +27,7 @@ import (
 
 func (t *Translator) buildExtensionBackend(policy *egv1a1.EnvoyExtensionPolicy, backend egv1a1.ExtensionBackend,
 	resources *resource.Resources, gateway *GatewayContext, moduleIndex, backendIndex int,
-) (*ir.RouteDestination, error) {
+) (*ir.ExtensionBackend, error) {
 	if problems := validation.IsDNS1123Subdomain(backend.Name); len(problems) > 0 {
 		return nil, fmt.Errorf("cluster name %q is invalid: %s", backend.Name, strings.Join(problems, ", "))
 	}
@@ -44,7 +45,29 @@ func (t *Translator) buildExtensionBackend(policy *egv1a1.EnvoyExtensionPolicy, 
 		return nil, err
 	}
 	destination.Name = backend.Name
-	return destination, nil
+	var traffic *ir.TrafficFeatures
+	if backend.BackendSettings != nil {
+		traffic, err = translateTrafficFeatures(&egv1a1.BackendSettings{ClusterSettings: *backend.BackendSettings})
+		if err != nil {
+			return nil, err
+		}
+		if traffic != nil {
+			// Compare only effective cluster settings when sharing a cluster name.
+			traffic.Timeout = traffic.Timeout.ClusterOnly().AsTimeout()
+			if timeout := traffic.Timeout; timeout != nil {
+				if timeout.HTTP != nil && timeout.HTTP.ClusterHTTPTimeout == (ir.ClusterHTTPTimeout{}) {
+					timeout.HTTP = nil
+				}
+				if timeout.TCP == nil && timeout.HTTP == nil {
+					traffic.Timeout = nil
+				}
+			}
+			if reflect.DeepEqual(*traffic, ir.TrafficFeatures{}) {
+				traffic = nil
+			}
+		}
+	}
+	return &ir.ExtensionBackend{Destination: *destination, Traffic: traffic}, nil
 }
 
 type extensionBackendRoute struct {
@@ -91,7 +114,11 @@ type extensionBackendClaim struct {
 	owner       *egv1a1.EnvoyExtensionPolicy
 	location    string
 	ref         extensionBackendRef
-	destination *ir.RouteDestination
+	destination *ir.ExtensionBackend
+}
+
+func (claim extensionBackendClaim) matches(other extensionBackendClaim) bool {
+	return claim.ref == other.ref && reflect.DeepEqual(claim.destination.Traffic, other.destination.Traffic)
 }
 
 func (t *Translator) resolveExtensionBackendConflicts(policies []*egv1a1.EnvoyExtensionPolicy) {
@@ -144,18 +171,19 @@ func (t *Translator) resolveExtensionBackendConflicts(policies []*egv1a1.EnvoyEx
 						owner: policy, location: fmt.Sprintf("dynamicModule[%d].backends[%d]", moduleIndex, backendIndex),
 						ref: normalizeExtensionBackendRef(backend.BackendRef, policy.Namespace), destination: destination,
 					}
-					previous, exists := pending[destination.Name]
-					if exists && previous.ref != claim.ref {
+					name := destination.Destination.Name
+					previous, exists := pending[name]
+					if exists && !previous.matches(claim) {
 						reason = gwapiv1.PolicyReasonInvalid
 					} else {
-						previous, exists = claimed[destination.Name]
+						previous, exists = claimed[name]
 					}
-					if exists && previous.ref != claim.ref {
-						message = fmt.Sprintf("%s: cluster %q references %s, but EnvoyExtensionPolicy %s/%s %s already declares it for %s. Choose another cluster name and update the module configuration to match, or use the same backend reference.",
-							claim.location, destination.Name, claim.ref, previous.owner.Namespace, previous.owner.Name, previous.location, previous.ref)
+					if exists && !previous.matches(claim) {
+						message = fmt.Sprintf("%s: cluster %q references %s, but EnvoyExtensionPolicy %s/%s %s already declares it for %s with a different backend reference or settings. Choose another cluster name and update the module configuration to match, or use the same backend reference and settings.",
+							claim.location, name, claim.ref, previous.owner.Namespace, previous.owner.Name, previous.location, previous.ref)
 						break
 					}
-					pending[destination.Name] = claim
+					pending[name] = claim
 				}
 				if message != "" {
 					break
@@ -182,7 +210,7 @@ func (t *Translator) resolveExtensionBackendConflicts(policies []*egv1a1.EnvoyEx
 			for _, route := range routes {
 				for _, dm := range route.EnvoyExtensions.DynamicModules {
 					for index, destination := range dm.Backends {
-						dm.Backends[index] = claimed[destination.Name].destination
+						dm.Backends[index] = claimed[destination.Destination.Name].destination
 					}
 				}
 			}

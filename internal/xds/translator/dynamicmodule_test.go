@@ -155,7 +155,7 @@ func TestRouteBackendPrecedesDynamicModuleBackend(t *testing.T) {
 					Name:       "policy/module/0",
 					Path:       "/module.so",
 					FilterName: "test",
-					Backends:   []*ir.RouteDestination{destination("shared", "10.0.0.2")},
+					Backends:   []*ir.ExtensionBackend{{Destination: *destination("shared", "10.0.0.2")}},
 				}}},
 			}},
 		},

@@ -159,7 +159,7 @@ type DynamicModule struct {
 type ExtensionBackend struct {
 	// Name is the Envoy cluster name. Dynamic module configuration must use
 	// the same name. Configurations in one proxy deployment must use the same
-	// backend for this name.
+	// backend reference and settings for this name.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
@@ -168,4 +168,11 @@ type ExtensionBackend struct {
 
 	// BackendRef references the one backend for this cluster.
 	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
+
+	// BackendSettings configures traffic to this backend cluster.
+	// Timeout.HTTP.RequestTimeout and Timeout.HTTP.StreamIdleTimeout are ignored.
+	// Request timeouts and retries are controlled by the dynamic module.
+	//
+	// +optional
+	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
 }

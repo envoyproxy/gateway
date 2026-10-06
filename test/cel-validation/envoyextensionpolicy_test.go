@@ -43,6 +43,19 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 		}
 	}
+	dynamicModuleBackendSettings := func(settings *egv1a1.ClusterSettings) egv1a1.EnvoyExtensionPolicySpec {
+		return egv1a1.EnvoyExtensionPolicySpec{
+			DynamicModule: []egv1a1.DynamicModule{{
+				Name: "module",
+				Backends: []egv1a1.ExtensionBackend{{
+					Name:            "backend",
+					BackendRef:      gwapiv1.BackendObjectReference{Name: "service", Port: new(gwapiv1.PortNumber(8080))},
+					BackendSettings: settings,
+				}},
+			}},
+			PolicyTargetReferences: dynamicModuleTarget(),
+		}
+	}
 
 	cases := []struct {
 		desc         string
@@ -1238,6 +1251,31 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"spec.dynamicModule[0].backends[1]: Duplicate value:"},
+		},
+		{
+			desc: "DynamicModule with valid backend settings",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = dynamicModuleBackendSettings(&egv1a1.ClusterSettings{
+					LoadBalancer: &egv1a1.LoadBalancer{Type: egv1a1.RandomLoadBalancerType},
+					Timeout:      &egv1a1.Timeout{TCP: &egv1a1.TCPTimeout{ConnectTimeout: new(gwapiv1.Duration("2s"))}},
+				})
+			},
+		},
+		{
+			desc: "DynamicModule with backend request timeout",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = dynamicModuleBackendSettings(&egv1a1.ClusterSettings{
+					Timeout: &egv1a1.Timeout{HTTP: &egv1a1.HTTPTimeout{RequestTimeout: new(gwapiv1.Duration("2s"))}},
+				})
+			},
+		},
+		{
+			desc: "DynamicModule with backend stream idle timeout",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = dynamicModuleBackendSettings(&egv1a1.ClusterSettings{
+					Timeout: &egv1a1.Timeout{HTTP: &egv1a1.HTTPTimeout{StreamIdleTimeout: new(gwapiv1.Duration("2s"))}},
+				})
+			},
 		},
 		{
 			desc: "DynamicModule with too many backends",

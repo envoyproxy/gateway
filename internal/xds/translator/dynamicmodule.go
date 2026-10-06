@@ -186,10 +186,10 @@ func patchDynamicModuleResources(tCtx *types.ResourceVersionTable, listeners []*
 			}
 			for _, dm := range route.EnvoyExtensions.DynamicModules {
 				for _, backend := range dm.Backends {
-					if err := createExtServiceXDSCluster(backend, nil, tCtx); err != nil {
+					if err := createExtServiceXDSCluster(&backend.Destination, backend.Traffic, tCtx); err != nil {
 						errs = errors.Join(errs, err)
 					}
-					if err := processClientCertificates(tCtx, backend.Settings); err != nil {
+					if err := processClientCertificates(tCtx, backend.Destination.Settings); err != nil {
 						errs = errors.Join(errs, err)
 					}
 				}

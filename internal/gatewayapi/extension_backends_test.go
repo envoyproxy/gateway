@@ -125,8 +125,8 @@ func TestExtensionBackendConflictAndRecovery(t *testing.T) {
 	first := routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Backends[0]
 	second := routes["httproute-2"].EnvoyExtensions.DynamicModules[0].Backends[0]
 	require.Same(t, first, second)
-	require.Equal(t, "resolver", first.Name)
-	require.Equal(t, "10.0.0.1", first.Settings[0].Endpoints[0].Host)
+	require.Equal(t, "resolver", first.Destination.Name)
+	require.Equal(t, "10.0.0.1", first.Destination.Settings[0].Endpoints[0].Host)
 	for _, route := range routes {
 		require.Nil(t, route.DirectResponse)
 	}
@@ -177,15 +177,117 @@ func TestExtensionBackendDeploymentScope(t *testing.T) {
 	require.EqualValues(t, 500, *routes["httproute-1"].DirectResponse.StatusCode)
 }
 
+func TestExtensionBackendSettings(t *testing.T) {
+	settings := func(timeout string) *egv1a1.ClusterSettings {
+		return &egv1a1.ClusterSettings{
+			LoadBalancer: &egv1a1.LoadBalancer{Type: egv1a1.RandomLoadBalancerType},
+			Timeout: &egv1a1.Timeout{TCP: &egv1a1.TCPTimeout{
+				ConnectTimeout: new(gwapiv1.Duration(timeout)),
+			}},
+		}
+	}
+	requestTimeouts := &egv1a1.HTTPTimeout{
+		RequestTimeout: new(gwapiv1.Duration("3s")), StreamIdleTimeout: new(gwapiv1.Duration("4s")),
+	}
+	settingsWithRequestTimeouts := settings("2s")
+	settingsWithRequestTimeouts.Timeout.HTTP = requestTimeouts.DeepCopy()
+	for _, tc := range []struct {
+		name         string
+		parent       *egv1a1.ClusterSettings
+		child        *egv1a1.ClusterSettings
+		withinPolicy bool
+		wantReason   gwapiv1.PolicyConditionReason
+	}{
+		{name: "omitted and empty settings share", child: &egv1a1.ClusterSettings{}},
+		{name: "equivalent settings share", parent: settings("2s"), child: settings("2000ms")},
+		{name: "request timeouts do not affect cluster sharing", parent: settings("2s"), child: settingsWithRequestTimeouts},
+		{name: "request timeouts alone share with omitted settings", child: &egv1a1.ClusterSettings{
+			Timeout: &egv1a1.Timeout{HTTP: requestTimeouts.DeepCopy()},
+		}},
+		{name: "different settings conflict", parent: settings("2s"), child: settings("3s"), wantReason: gwapiv1.PolicyReasonConflicted},
+		{name: "configured and omitted settings conflict", parent: settings("2s"), wantReason: gwapiv1.PolicyReasonConflicted},
+		{name: "different settings within policy are invalid", parent: settings("2s"), child: settings("3s"), withinPolicy: true, wantReason: gwapiv1.PolicyReasonInvalid},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resources := extensionBackendResources(t)
+			parent, child := resources.EnvoyExtensionPolicies[0], resources.EnvoyExtensionPolicies[1]
+			parent.Spec.DynamicModule[0].Backends[0].BackendRef.Namespace = new(gwapiv1.Namespace("default"))
+			resources.ReferenceGrants = []*gwapiv1b1.ReferenceGrant{{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "allow-module"},
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{{Group: egv1a1.GroupName, Kind: egv1a1.KindEnvoyExtensionPolicy, Namespace: "envoy-gateway"}},
+					To:   []gwapiv1b1.ReferenceGrantTo{{Group: "", Kind: "Service"}},
+				},
+			}}
+			parent.Spec.DynamicModule[0].Backends[0].BackendSettings = tc.parent
+			child.Spec.DynamicModule[0].Backends[0].BackendSettings = tc.child
+			rejectedPolicy, rejectedRoute := child.Name, "httproute-1"
+			if tc.withinPolicy {
+				backend := parent.Spec.DynamicModule[0].Backends[0].DeepCopy()
+				backend.BackendSettings = tc.child
+				parent.Spec.DynamicModule[1].Backends = []egv1a1.ExtensionBackend{*backend}
+				child.Spec.DynamicModule[0].Backends[0].Name = "child-resolver"
+				rejectedPolicy, rejectedRoute = parent.Name, "httproute-2"
+			}
+			result, routes := translateExtensionBackends(t, resources)
+			if tc.wantReason != "" {
+				condition := extensionPolicyCondition(t, result, rejectedPolicy)
+				require.Equal(t, metav1.ConditionFalse, condition.Status)
+				require.Equal(t, string(tc.wantReason), condition.Reason)
+				require.Contains(t, condition.Message, "settings")
+				require.EqualValues(t, 500, *routes[rejectedRoute].DirectResponse.StatusCode)
+				return
+			}
+			for _, policy := range result.EnvoyExtensionPolicies {
+				require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, policy.Name).Status)
+			}
+			first := routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Backends[0]
+			second := routes["httproute-2"].EnvoyExtensions.DynamicModules[0].Backends[0]
+			require.Same(t, first, second)
+			if tc.parent == nil {
+				require.Nil(t, first.Traffic)
+			} else {
+				require.NotNil(t, first.Traffic.LoadBalancer.Random)
+				require.Equal(t, 2*time.Second, first.Traffic.Timeout.TCP.ConnectTimeout.Duration)
+				require.Nil(t, first.Traffic.Timeout.HTTP)
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		name     string
+		settings *egv1a1.ClusterSettings
+		message  string
+	}{
+		{name: "invalid settings reject the policy", settings: settings("invalid"), message: "invalid ConnectTimeout"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resources := extensionBackendResources(t)
+			child := resources.EnvoyExtensionPolicies[1]
+			child.Spec.DynamicModule[0].Backends[0].BackendSettings = tc.settings
+			result, routes := translateExtensionBackends(t, resources)
+			condition := extensionPolicyCondition(t, result, child.Name)
+			require.Equal(t, metav1.ConditionFalse, condition.Status)
+			require.Equal(t, string(gwapiv1.PolicyReasonInvalid), condition.Reason)
+			require.Contains(t, condition.Message, tc.message)
+			require.EqualValues(t, 500, *routes["httproute-1"].DirectResponse.StatusCode)
+		})
+	}
+}
+
 func TestExtensionBackendInheritanceAndAuthorization(t *testing.T) {
 	resources := extensionBackendResources(t)
 	parent, child := resources.EnvoyExtensionPolicies[0], resources.EnvoyExtensionPolicies[1]
+	parent.Spec.DynamicModule[0].Backends[0].BackendSettings = &egv1a1.ClusterSettings{
+		LoadBalancer: &egv1a1.LoadBalancer{Type: egv1a1.RandomLoadBalancerType},
+	}
 	child.Spec.MergeType = new(egv1a1.JSONMerge)
 	child.Spec.DynamicModule = nil
 	result, routes := translateExtensionBackends(t, resources)
 	require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
 	backend := routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Backends[0]
-	require.Equal(t, "envoy-gateway", backend.Settings[0].Metadata.Namespace)
+	require.Equal(t, "envoy-gateway", backend.Destination.Settings[0].Metadata.Namespace)
+	require.NotNil(t, backend.Traffic.LoadBalancer.Random)
 
 	parent.Spec.DynamicModule[0].Backends[0].BackendRef.Namespace = new(gwapiv1.Namespace("default"))
 	result, routes = translateExtensionBackends(t, resources)
@@ -211,9 +313,9 @@ func TestExtensionBackendInheritanceAndAuthorization(t *testing.T) {
 		require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, policy.Name).Status)
 	}
 	backend = routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Backends[0]
-	require.Equal(t, "default", backend.Settings[0].Metadata.Namespace)
-	require.NotNil(t, backend.Settings[0].TLS)
-	require.True(t, backend.Settings[0].TLS.UseSystemTrustStore)
-	require.Equal(t, "resolver.example.com", *backend.Settings[0].TLS.SNI)
+	require.Equal(t, "default", backend.Destination.Settings[0].Metadata.Namespace)
+	require.NotNil(t, backend.Destination.Settings[0].TLS)
+	require.True(t, backend.Destination.Settings[0].TLS.UseSystemTrustStore)
+	require.Equal(t, "resolver.example.com", *backend.Destination.Settings[0].TLS.SNI)
 	require.Contains(t, routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Name, parent.Name)
 }

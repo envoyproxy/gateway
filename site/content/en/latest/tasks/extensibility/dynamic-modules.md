@@ -263,6 +263,12 @@ spec:
           backendRef:
             name: web-bot-auth-resolver
             port: 8081
+          backendSettings:
+            timeout:
+              tcp:
+                connectTimeout: 2s
+            loadBalancer:
+              type: RoundRobin
       config:
         resolver:
           cluster: web-bot-auth-key-resolver
@@ -271,15 +277,18 @@ spec:
 Each entry references one Service, ServiceImport, or Envoy Gateway Backend. References
 to another namespace require a ReferenceGrant.
 
+`backendSettings` configures each backend cluster. Request timeouts and retries
+are controlled by the dynamic module.
+
 ### Resolving conflicts
 
 Cluster names are shared throughout an Envoy deployment, including Gateways combined
-with `mergeGateways`. Policies that declare the same name and the same backend reference
-share one cluster. Different backend references conflict, even if their endpoints match.
+with `mergeGateways`. Policies that declare the same name, backend reference, and settings
+share one cluster. Different backend references or settings conflict, even if their endpoints match.
 
 The oldest policy keeps the name. A conflicting policy receives `Accepted=False` with
 reason `Conflicted`, and its affected routes return HTTP 500. Use the same backend
-reference or choose another cluster name and update the module configuration to match.
+reference and settings or choose another cluster name and update the module configuration to match.
 
 ## Clean-Up
 

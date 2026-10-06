@@ -4168,7 +4168,7 @@ type DynamicModule struct {
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// Backends use the cluster names referenced by the opaque module configuration.
-	Backends []*RouteDestination `json:"backends,omitempty"`
+	Backends []*ExtensionBackend `json:"backends,omitempty"`
 
 	// DoNotClose prevents the module from being unloaded.
 	DoNotClose bool `json:"doNotClose"`
@@ -4178,6 +4178,16 @@ type DynamicModule struct {
 
 	// TerminalFilter indicates the module handles requests without upstream.
 	TerminalFilter bool `json:"terminalFilter"`
+}
+
+// ExtensionBackend defines a destination and traffic settings for an extension cluster.
+// +k8s:deepcopy-gen=true
+type ExtensionBackend struct {
+	// Destination defines the backend cluster's endpoints and transport settings.
+	Destination RouteDestination `json:"destination" yaml:"destination"`
+
+	// Traffic configures the backend cluster.
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // RemoteDynamicModuleSource holds the remote source information for a dynamic module.
