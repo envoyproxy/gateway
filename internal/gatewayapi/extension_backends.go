@@ -117,7 +117,7 @@ type extensionBackendClaim struct {
 	destination *ir.ExtensionBackend
 }
 
-func (claim extensionBackendClaim) matches(other extensionBackendClaim) bool {
+func (claim *extensionBackendClaim) matches(other *extensionBackendClaim) bool {
 	return claim.ref == other.ref && reflect.DeepEqual(claim.destination.Traffic, other.destination.Traffic)
 }
 
@@ -173,12 +173,12 @@ func (t *Translator) resolveExtensionBackendConflicts(policies []*egv1a1.EnvoyEx
 					}
 					name := destination.Destination.Name
 					previous, exists := pending[name]
-					if exists && !previous.matches(claim) {
+					if exists && !previous.matches(&claim) {
 						reason = gwapiv1.PolicyReasonInvalid
 					} else {
 						previous, exists = claimed[name]
 					}
-					if exists && !previous.matches(claim) {
+					if exists && !previous.matches(&claim) {
 						message = fmt.Sprintf("%s: cluster %q references %s, but EnvoyExtensionPolicy %s/%s %s already declares it for %s with a different backend reference or settings. Choose another cluster name and update the module configuration to match, or use the same backend reference and settings.",
 							claim.location, name, claim.ref, previous.owner.Namespace, previous.owner.Name, previous.location, previous.ref)
 						break
