@@ -36,7 +36,8 @@ import (
 const grpcServiceConfigTemplate = `{
 "methodConfig": [{
 	"name": [{"service": "%s"}],
-	"waitForReady": true,%s
+	"waitForReady": true,
+	"timeout": %s,
 	"retryPolicy": {
 		"MaxAttempts": %d,
 		"InitialBackoff": "%fs",
@@ -288,13 +289,14 @@ func buildServiceConfig(svcName string, ext *egv1a1.ExtensionService) (string, e
 
 	// The method config timeout bounds the whole call, including waitForReady
 	// queueing, so an unreachable extension service fails instead of hanging.
-	timeout := ""
+	// A null timeout means no deadline.
+	timeout := "null"
 	if ext.Timeout != nil {
 		timeoutDuration, err := time.ParseDuration(string(*ext.Timeout))
 		if err != nil || timeoutDuration <= 0 {
 			return "", fmt.Errorf("invalid Extension Manager GRPC Timeout %s", *ext.Timeout)
 		}
-		timeout = fmt.Sprintf("\n\t\"timeout\": \"%fs\",", timeoutDuration.Seconds())
+		timeout = fmt.Sprintf("\"%fs\"", timeoutDuration.Seconds())
 	}
 
 	return fmt.Sprintf(grpcServiceConfigTemplate, svcName, timeout, maxAttempts, initialBackoffDuration.Seconds(), maxBackoffDuration.Seconds(),

@@ -145,6 +145,7 @@ func Test_buildServiceConfig(t *testing.T) {
 "methodConfig": [{
 	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
 	"waitForReady": true,
+	"timeout": null,
 	"retryPolicy": {
 		"MaxAttempts": 4,
 		"InitialBackoff": "0.100000s",
@@ -196,6 +197,7 @@ func Test_buildServiceConfig(t *testing.T) {
 "methodConfig": [{
 	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
 	"waitForReady": true,
+	"timeout": null,
 	"retryPolicy": {
 		"MaxAttempts": 20,
 		"InitialBackoff": "0.500000s",
@@ -221,6 +223,7 @@ func Test_buildServiceConfig(t *testing.T) {
 "methodConfig": [{
 	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
 	"waitForReady": true,
+	"timeout": null,
 	"retryPolicy": {
 		"MaxAttempts": 4,
 		"InitialBackoff": "0.100000s",
