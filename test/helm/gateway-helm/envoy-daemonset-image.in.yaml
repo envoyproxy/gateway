@@ -1,0 +1,16 @@
+global:
+  images:
+    envoyProxy:
+      image: "private-hub/envoyproxy/envoy:dev"
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+
+config:
+  envoyGateway:
+    envoyProxy:
+      provider:
+        type: Kubernetes
+        kubernetes:
+          envoyDaemonSet:
+            name: test-daemonset

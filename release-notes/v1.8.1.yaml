@@ -30,7 +30,7 @@ bug fixes: |
   Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
   Fixed HPA maxReplicas required message typo in gateway-helm chart.
   Fixed invalid listeners blocking valid ones during conflict detection by validating each listener's spec independently before running conflict resolution.
-
+  Fixed the gateway-helm chart to render the default EnvoyProxy image in the generated EnvoyGateway configuration while preserving existing `envoyDeployment` and `envoyDaemonSet` provider configurations.
 # Enhancements that improve performance.
 performance improvements: |
 
