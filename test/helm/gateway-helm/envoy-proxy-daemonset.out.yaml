@@ -35,9 +35,12 @@ data:
     envoyProxy:
       provider:
         kubernetes:
-          envoyDeployment:
+          envoyDaemonSet:
             container:
-              image: docker.io/envoyproxy/envoy:distroless-dev
+              image: private-hub/envoyproxy/envoy:dev
+            pod:
+              nodeSelector:
+                node-role: edge
         type: Kubernetes
     extensionApis: {}
     gateway:
@@ -468,13 +471,6 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        - name: ENVOY_GATEWAY_SERVICE_ACCOUNT
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: spec.serviceAccountName
-        - name: ENVOY_GATEWAY_FULLNAME
-          value: gateway-helm
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: docker.io/envoyproxy/gateway-dev:latest
