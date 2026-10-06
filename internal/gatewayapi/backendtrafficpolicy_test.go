@@ -3436,10 +3436,22 @@ func TestProcessBackendTrafficPolicyForBackendUseClientProtocol(t *testing.T) {
 		protocol ir.AppProtocol
 		want     *bool
 	}{
-		{protocol: ir.HTTP, want: new(true)},
-		{protocol: ir.GRPC, want: new(true)},
-		{protocol: ir.UDP, want: nil},
-		{protocol: ir.TCP, want: nil},
+		{
+			protocol: ir.HTTP,
+			want:     new(true),
+		},
+		{
+			protocol: ir.GRPC,
+			want:     new(true),
+		},
+		{
+			protocol: ir.UDP,
+			want:     nil,
+		},
+		{
+			protocol: ir.TCP,
+			want:     nil,
+		},
 	}
 
 	for _, test := range tests {

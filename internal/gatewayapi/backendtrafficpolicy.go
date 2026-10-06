@@ -609,11 +609,13 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			}
 			bc.Traffic = tf.ClusterFeatures()
 			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
+
 			// UseClientProtocol only ever reaches a cluster through ir.HTTPRoute, matching
 			// applyGatewayPolicyToMergedCluster's gating for the whole-gateway BTP path.
 			if bc.Protocol() != ir.UDP && bc.Protocol() != ir.TCP {
 				bc.UseClientProtocol = mergedPolicy.Spec.UseClientProtocol
 			}
+
 			matchedGWs.Insert(gwNN)
 			if gwPolicy != nil {
 				mergedGWs[gwNN] = gwPolicy
