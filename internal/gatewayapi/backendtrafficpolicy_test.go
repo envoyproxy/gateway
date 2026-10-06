@@ -3410,3 +3410,54 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessBackendTrafficPolicyForBackendUseClientProtocol(t *testing.T) {
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	target := policyTargetReferenceWithSectionName{Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"), Namespace: gwapiv1.Namespace("default")}
+
+	newPolicy := func() *egv1a1.BackendTrafficPolicy {
+		return &egv1a1.BackendTrafficPolicy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"),
+						}},
+					},
+				},
+				MergeType:         new(egv1a1.StrategicMerge),
+				UseClientProtocol: new(true),
+			},
+		}
+	}
+
+	tests := []struct {
+		protocol ir.AppProtocol
+		want     *bool
+	}{
+		{protocol: ir.HTTP, want: new(true)},
+		{protocol: ir.GRPC, want: new(true)},
+		{protocol: ir.UDP, want: nil},
+		{protocol: ir.TCP, want: nil},
+	}
+
+	for _, test := range tests {
+		t.Run(string(test.protocol), func(t *testing.T) {
+			bc := mergedClusterForProtocol(test.protocol)
+			bc.Metadata = matchMD
+
+			tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}}
+			gw := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-1"}}}
+			xdsIR := gwapiresource.XdsIRMap{}
+			xdsIR[tr.getIRKey(gw.Gateway)] = &ir.Xds{BackendClusters: []*ir.BackendCluster{bc}}
+
+			policy := newPolicy()
+			tr.processBackendTrafficPolicyForBackend(xdsIR, []*GatewayContext{gw},
+				map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy{}, policy, target,
+				map[backendPolicyKey]*egv1a1.BackendTrafficPolicy{})
+
+			require.Equal(t, test.want, bc.UseClientProtocol)
+		})
+	}
+}

@@ -528,10 +528,10 @@ func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 
 // processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
 // Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for conflict
-// detection, then applies it to the Traffic of every matching merged BackendCluster. A gateway
-// with mergeBackends disabled only gets a Disabled ancestor if it actually references the
-// backend; otherwise it's skipped entirely. A backend that never merges or doesn't resolve for
-// other reasons gets no policy applied and no error.
+// detection, then applies it to the Traffic (and, for an HTTP/GRPC cluster, UseClientProtocol) of
+// every matching merged BackendCluster. A gateway with mergeBackends disabled only gets a Disabled
+// ancestor if it actually references the backend; otherwise it's skipped entirely. A backend that
+// never merges or doesn't resolve for other reasons gets no policy applied and no error.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
@@ -609,6 +609,11 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			}
 			bc.Traffic = tf.ClusterFeatures()
 			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
+			// UseClientProtocol only ever reaches a cluster through ir.HTTPRoute, matching
+			// applyGatewayPolicyToMergedCluster's gating for the whole-gateway BTP path.
+			if bc.Protocol() != ir.UDP && bc.Protocol() != ir.TCP {
+				bc.UseClientProtocol = mergedPolicy.Spec.UseClientProtocol
+			}
 			matchedGWs.Insert(gwNN)
 			if gwPolicy != nil {
 				mergedGWs[gwNN] = gwPolicy
