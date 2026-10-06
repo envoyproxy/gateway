@@ -3644,7 +3644,7 @@ spec:
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.bandwidthLimit)'
             - message: ConsistentHash load balancing is not allowed when targeting
-                a backend
+                a backend (ambiguous hash input across a weighted route's backends)
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.loadBalancer)
@@ -3662,7 +3662,9 @@ spec:
               rule: '!has(self.requestBuffer) || self.requestBuffer.mode == ''LimitOnly''
                 || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0'
             - message: admissionControl can only be used with HTTPRoute, GRPCRoute,
-                Gateway, ListenerSet, Service, ServiceImport, or Backend targets
+                Gateway, or ListenerSet targets, or with Service, ServiceImport, or
+                Backend targets via targetRef/targetRefs (targetSelectors is not supported
+                for those kinds)
               rule: '!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind
                 in [''Gateway'', ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''Service'',
                 ''ServiceImport'', ''Backend'']) && (!has(self.targetRefs) || self.targetRefs.all(ref,

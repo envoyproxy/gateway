@@ -12,9 +12,13 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -75,6 +79,16 @@ var MergeBackendsTest = suite.ConformanceTest{
 		})
 
 		t.Run("merged Cluster carries the backend-targeted BackendTrafficPolicy's settings", func(t *testing.T) {
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+				types.NamespacedName{Name: "merge-backends-service-btp", Namespace: ConformanceInfraNamespace},
+				suite.ControllerName, ancestorRef)
+
 			body, err := fetchEnvoyClustersOutput(t, suite,
 				"app.kubernetes.io/name=envoy",
 				"gateway.envoyproxy.io/owning-gateway-name="+gwNN.Name,
