@@ -104,8 +104,8 @@ var MergeBackendsTest = suite.ConformanceTest{
 			if got := maxConnections[mergedCluster]; got != "512" {
 				t.Errorf("expected merged Cluster %q to have max_connections 512 from the backend-targeted BackendTrafficPolicy, got %q (all max_connections: %v)", mergedCluster, got, maxConnections)
 			}
-			if got := maxConnections[demergedCluster]; got != "1024" {
-				t.Errorf("expected route C's demerged Cluster %q to keep its own max_connections 1024, got %q (all max_connections: %v)", demergedCluster, got, maxConnections)
+			if got := maxConnections[demergedCluster]; got != "2048" {
+				t.Errorf("expected route C's demerged Cluster %q to keep its own max_connections 2048, got %q (all max_connections: %v)", demergedCluster, got, maxConnections)
 			}
 		})
 	},

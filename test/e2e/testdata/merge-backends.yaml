@@ -94,7 +94,7 @@ spec:
       kind: HTTPRoute
       name: merge-backends-route-c
   circuitBreaker:
-    maxConnections: 1024
+    maxConnections: 2048
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
