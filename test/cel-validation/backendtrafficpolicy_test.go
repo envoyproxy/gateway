@@ -345,6 +345,25 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"timeout.http.requestTimeout and timeout.http.streamIdleTimeout are not allowed when targeting a backend"},
 		},
 		{
+			desc: "Backend targetRef with useClientProtocol is allowed",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.envoyproxy.io"),
+								Kind:  gwapiv1.Kind("Backend"),
+								Name:  gwapiv1.ObjectName("backend-1"),
+							},
+						},
+					},
+					MergeType:         new(egv1a1.StrategicMerge),
+					UseClientProtocol: new(true),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "ServiceImport targetRef with sectionName is rejected",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -479,7 +498,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "service targetRef rejects all RDS fields",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				val := true
 				rt := egv1a1.ServiceRoutingType
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -491,12 +509,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					MergeType:         new(egv1a1.StrategicMerge),
-					Retry:             &egv1a1.Retry{},
-					RateLimit:         &egv1a1.RateLimitSpec{},
-					FaultInjection:    &egv1a1.FaultInjection{},
-					UseClientProtocol: &val,
-					Compression:       []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType}},
+					MergeType:      new(egv1a1.StrategicMerge),
+					Retry:          &egv1a1.Retry{},
+					RateLimit:      &egv1a1.RateLimitSpec{},
+					FaultInjection: &egv1a1.FaultInjection{},
+					Compression:    []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType}},
 					ResponseOverride: []*egv1a1.ResponseOverride{{
 						Match: egv1a1.CustomResponseMatch{
 							StatusCodes: []egv1a1.StatusCodeMatch{
@@ -514,7 +531,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"rateLimit is not allowed when targeting a backend",
 				"faultInjection is not allowed when targeting a backend",
-				"useClientProtocol is not allowed when targeting a backend",
 				"compression is not allowed when targeting a backend",
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
@@ -528,7 +544,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "serviceimport targetRef rejects all RDS fields",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				val := true
 				rt := egv1a1.ServiceRoutingType
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -540,12 +555,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					MergeType:         new(egv1a1.StrategicMerge),
-					Retry:             &egv1a1.Retry{},
-					RateLimit:         &egv1a1.RateLimitSpec{},
-					FaultInjection:    &egv1a1.FaultInjection{},
-					UseClientProtocol: &val,
-					Compressor:        []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{}}},
+					MergeType:      new(egv1a1.StrategicMerge),
+					Retry:          &egv1a1.Retry{},
+					RateLimit:      &egv1a1.RateLimitSpec{},
+					FaultInjection: &egv1a1.FaultInjection{},
+					Compressor:     []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{}}},
 					ResponseOverride: []*egv1a1.ResponseOverride{{
 						Match: egv1a1.CustomResponseMatch{
 							StatusCodes: []egv1a1.StatusCodeMatch{
@@ -563,7 +577,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"rateLimit is not allowed when targeting a backend",
 				"faultInjection is not allowed when targeting a backend",
-				"useClientProtocol is not allowed when targeting a backend",
 				"compressor is not allowed when targeting a backend",
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
@@ -577,7 +590,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "backend targetRefs rejects all RDS fields",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				val := true
 				rt := egv1a1.ServiceRoutingType
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -591,12 +603,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					},
-					MergeType:         new(egv1a1.StrategicMerge),
-					Retry:             &egv1a1.Retry{},
-					RateLimit:         &egv1a1.RateLimitSpec{},
-					FaultInjection:    &egv1a1.FaultInjection{},
-					UseClientProtocol: &val,
-					Compression:       []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType}},
+					MergeType:      new(egv1a1.StrategicMerge),
+					Retry:          &egv1a1.Retry{},
+					RateLimit:      &egv1a1.RateLimitSpec{},
+					FaultInjection: &egv1a1.FaultInjection{},
+					Compression:    []*egv1a1.Compression{{Type: egv1a1.GzipCompressorType}},
 					ResponseOverride: []*egv1a1.ResponseOverride{{
 						Match: egv1a1.CustomResponseMatch{
 							StatusCodes: []egv1a1.StatusCodeMatch{
@@ -614,7 +625,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"rateLimit is not allowed when targeting a backend",
 				"faultInjection is not allowed when targeting a backend",
-				"useClientProtocol is not allowed when targeting a backend",
 				"compression is not allowed when targeting a backend",
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",

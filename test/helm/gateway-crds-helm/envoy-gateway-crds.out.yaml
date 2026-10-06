@@ -4162,10 +4162,6 @@ spec:
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.faultInjection)'
-            - message: useClientProtocol is not allowed when targeting a backend
-              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
-                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
-                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.useClientProtocol)'
             - message: compression is not allowed when targeting a backend
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
