@@ -380,12 +380,43 @@ A few nuances apply when multiple extension managers are configured:
 * **`failOpen` is per server.** Setting `failOpen: true` on a server causes
   Envoy Gateway to skip that server in the chain when its hook returns an
   error (or when its gRPC connection cannot be established), while still
-  invoking the remaining servers.
+  invoking the remaining servers. Set `service.timeout` so that calls to an
+  unreachable server return an error instead of blocking translation (see
+  [Call timeout](#call-timeout)).
 * **Unique `name` required.** Every entry in `extensionManagers` must have a
   distinct `name`. Names surface in error messages as
   `extension "<name>": <error>`.
 * **Mutually exclusive with the singular form.** `extensionManager` and
   `extensionManagers` cannot both be set.
+
+### Call timeout
+
+By default, hook calls have no deadline. If the extension server is
+unreachable, a call waits for the connection to become ready, which blocks
+xDS translation until the server comes back. Because no error is returned,
+`failOpen` never takes effect.
+
+Set `service.timeout` to bound each hook call. The timeout covers the time
+spent waiting for the connection and any retries. When it is exceeded, the
+call fails with `DEADLINE_EXCEEDED`, and Envoy Gateway either skips the server
+(`failOpen: true`) or fails translation (`failOpen: false`).
+
+```yaml
+extensionManager:
+  failOpen: true
+  hooks:
+    xdsTranslator:
+      post:
+      - HTTPListener
+  service:
+    fqdn:
+      hostname: extension-server.envoy-gateway-system.svc.cluster.local
+      port: 5005
+    timeout: 5s
+```
+
+Choose a timeout longer than your extension server's slowest expected
+response, including retries.
 
 ## Testing
 
