@@ -682,14 +682,16 @@ func BuildRateLimitServiceConfig(irListeners []*ir.HTTPListener) []*rlsconfv3.Ra
 				continue
 			}
 
-			// For each rule, add to the correct domain only
+			// For each rule, add every sibling descriptor (Distinct default + overrides)
+			// to the correct domain. getDomainRuleIndex stays keyed off the IR rule index.
 			for rIdx, rule := range route.Traffic.RateLimit.Global.Rules {
-				descriptor := descriptors[rIdx]
 				domain := irListener.Name
 				if isRuleShared(rule) {
 					domain = stripRuleIndexSuffix(rule.Name)
 				}
-				addRateLimitDescriptor(route, rule, descriptor, domain, domainDesc)
+				for _, descriptor := range descriptors[rIdx] {
+					addRateLimitDescriptor(route, rule, descriptor, domain, domainDesc)
+				}
 			}
 		}
 	}
@@ -820,14 +822,16 @@ func getDomainRuleIndex(rules []*ir.RateLimitRule, globalRuleIdx int, ruleIsShar
 }
 
 // buildRateLimitServiceDescriptors creates the rate limit service pb descriptors based on the global rate limit IR config.
-func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimitDescriptor {
+// The return value is one slice of sibling descriptor heads per IR rule. A Distinct rule
+// with overrides emits the default (unvalued) head plus one valued sibling per override.
+func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) [][]*rlsconfv3.RateLimitDescriptor {
 	// Safely check that we have a GlobalRateLimit config
 	if route == nil || route.Traffic == nil || route.Traffic.RateLimit == nil || route.Traffic.RateLimit.Global == nil {
 		return nil
 	}
 	global := route.Traffic.RateLimit.Global
 
-	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, len(global.Rules))
+	pbDescriptors := make([][]*rlsconfv3.RateLimitDescriptor, 0, len(global.Rules))
 
 	// The order in which matching descriptors are built is consistent with
 	// the order in which ratelimit actions are built:
@@ -839,14 +843,10 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 	//  6) No Match
 
 	for rIdx, rule := range global.Rules {
-		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
-			RequestsPerUnit: rule.Limit.Requests,
-			Unit: rlsconfv3.RateLimitUnit(
-				rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
-		}
+		rateLimitPolicy := buildRateLimitPolicy(rule.Limit)
 
 		// We use a chain structure to describe the matching descriptors for one rule.
-		var head, cur *rlsconfv3.RateLimitDescriptor
+		var head, cur, distinct *rlsconfv3.RateLimitDescriptor
 
 		// Calculate the domain-specific rule index (0-based for each domain)
 		ruleIsShared := isRuleShared(rule)
@@ -860,6 +860,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			if match.Distinct {
 				// RequestHeader case
 				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, mIdx)
+				distinct = pbDesc
 			} else {
 				// HeaderValueMatch case
 				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, mIdx)
@@ -961,6 +962,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 				pbDesc.Key = descriptorKeyRemoteAddress
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 				cur = pbDesc
+				distinct = pbDesc
 			}
 		}
 
@@ -974,6 +976,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			// For distinct matches, only set the key; for non-distinct, set both key and value.
 			if queryParam.Distinct {
 				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
+				distinct = pbDesc
 			} else {
 				pbDesc.Key = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
 				pbDesc.Value = getRouteRuleDescriptor(domainRuleIdx, queryParamOffset+mIdx)
@@ -1003,10 +1006,106 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 
 		// Finalize rate-limit policy on the last descriptor in the chain
 		cur.RateLimit = rateLimitPolicy
-		pbDescriptors = append(pbDescriptors, head)
+		pbDescriptors = append(pbDescriptors, attachOverrideSiblings(head, distinct, rule))
 	}
 
 	return pbDescriptors
+}
+
+func buildRateLimitPolicy(limit ir.RateLimitValue) *rlsconfv3.RateLimitPolicy {
+	return &rlsconfv3.RateLimitPolicy{
+		RequestsPerUnit: limit.Requests,
+		Unit: rlsconfv3.RateLimitUnit(
+			rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(limit.Unit))]),
+	}
+}
+
+// attachOverrideSiblings returns the default descriptor head plus valued Distinct
+// siblings. When method/path (or anything else) follows Distinct, each sibling
+// clones that suffix and hangs the override limit on the cloned leaf. Putting
+// the limit on the Distinct node itself would leave leftover request descriptors
+// unmatched and the VIP unlimited.
+func attachOverrideSiblings(head, distinct *rlsconfv3.RateLimitDescriptor, rule *ir.RateLimitRule) []*rlsconfv3.RateLimitDescriptor {
+	if head == nil {
+		return nil
+	}
+	if len(rule.Overrides) == 0 || distinct == nil {
+		return []*rlsconfv3.RateLimitDescriptor{head}
+	}
+
+	overrides := make([]*rlsconfv3.RateLimitDescriptor, 0, len(rule.Overrides))
+	for i := range rule.Overrides {
+		override := rule.Overrides[i]
+		sibling := &rlsconfv3.RateLimitDescriptor{
+			Key:        distinct.Key,
+			Value:      override.Value,
+			ShadowMode: isRuleShadowMode(rule),
+		}
+		if len(distinct.Descriptors) == 0 {
+			sibling.RateLimit = buildRateLimitPolicy(override.Limit)
+		} else {
+			sibling.Descriptors = cloneDescriptorBranch(distinct.Descriptors)
+			applyLimitToLeaf(sibling, buildRateLimitPolicy(override.Limit))
+		}
+		overrides = append(overrides, sibling)
+	}
+
+	if distinct == head {
+		return append([]*rlsconfv3.RateLimitDescriptor{head}, overrides...)
+	}
+
+	if parent := findDescriptorParent(head, distinct); parent != nil {
+		parent.Descriptors = append(parent.Descriptors, overrides...)
+	}
+	return []*rlsconfv3.RateLimitDescriptor{head}
+}
+
+func cloneDescriptorBranch(in []*rlsconfv3.RateLimitDescriptor) []*rlsconfv3.RateLimitDescriptor {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]*rlsconfv3.RateLimitDescriptor, len(in))
+	for i, d := range in {
+		if d == nil {
+			continue
+		}
+		// Copy identity and shadow flags only. The default branch already owns
+		// the default RateLimit on its leaf; the clone gets the override limit.
+		c := &rlsconfv3.RateLimitDescriptor{
+			Key:        d.Key,
+			Value:      d.Value,
+			ShadowMode: d.ShadowMode,
+		}
+		c.Descriptors = cloneDescriptorBranch(d.Descriptors)
+		out[i] = c
+	}
+	return out
+}
+
+func applyLimitToLeaf(n *rlsconfv3.RateLimitDescriptor, limit *rlsconfv3.RateLimitPolicy) {
+	if n == nil {
+		return
+	}
+	if len(n.Descriptors) == 0 {
+		n.RateLimit = limit
+		return
+	}
+	applyLimitToLeaf(n.Descriptors[len(n.Descriptors)-1], limit)
+}
+
+func findDescriptorParent(head, target *rlsconfv3.RateLimitDescriptor) *rlsconfv3.RateLimitDescriptor {
+	if head == nil || target == nil {
+		return nil
+	}
+	for _, child := range head.Descriptors {
+		if child == target {
+			return head
+		}
+		if parent := findDescriptorParent(child, target); parent != nil {
+			return parent
+		}
+	}
+	return nil
 }
 
 func getRouteRuleDescriptor(ruleIndex, matchIndex int) string {
