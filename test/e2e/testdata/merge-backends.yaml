@@ -95,3 +95,17 @@ spec:
       name: merge-backends-route-c
   circuitBreaker:
     maxConnections: 1024
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: merge-backends-service-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: infra-backend-v1
+  mergeType: StrategicMerge
+  circuitBreaker:
+    maxConnections: 777

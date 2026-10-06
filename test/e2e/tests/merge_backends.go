@@ -73,6 +73,41 @@ var MergeBackendsTest = suite.ConformanceTest{
 				t.Errorf("expected route C to keep its own demerged Cluster %q, not found (all clusters: %v)", demergedCluster, names)
 			}
 		})
+
+		t.Run("merged Cluster carries the backend-targeted BackendTrafficPolicy's settings", func(t *testing.T) {
+			body, err := fetchEnvoyClustersOutput(t, suite,
+				"app.kubernetes.io/name=envoy",
+				"gateway.envoyproxy.io/owning-gateway-name="+gwNN.Name,
+				"gateway.envoyproxy.io/owning-gateway-namespace="+gwNN.Namespace,
+			)
+			if err != nil {
+				t.Fatalf("failed to fetch Envoy cluster stats: %v", err)
+			}
+
+			const (
+				mergedCluster   = "service/gateway-conformance-infra/infra-backend-v1/8080/http"
+				demergedCluster = "httproute/gateway-conformance-infra/merge-backends-route-c/rule/0"
+			)
+			maxConnections := map[string]string{}
+			for _, line := range strings.Split(body, "\n") {
+				name, rest, ok := strings.Cut(line, "::")
+				if !ok {
+					continue
+				}
+				_, value, ok := strings.Cut(rest, "default_priority::max_connections::")
+				if !ok {
+					continue
+				}
+				maxConnections[name] = value
+			}
+
+			if got := maxConnections[mergedCluster]; got != "777" {
+				t.Errorf("expected merged Cluster %q to have max_connections 777 from the backend-targeted BackendTrafficPolicy, got %q (all max_connections: %v)", mergedCluster, got, maxConnections)
+			}
+			if got := maxConnections[demergedCluster]; got != "1024" {
+				t.Errorf("expected route C's demerged Cluster %q to keep its own max_connections 1024, got %q (all max_connections: %v)", demergedCluster, got, maxConnections)
+			}
+		})
 	},
 }
 
