@@ -958,7 +958,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "admissionControl allowed on Backend target via targetSelectors",
+			desc: "admissionControl rejected on Backend target via targetSelectors",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -975,7 +975,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{},
+			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, ListenerSet, Service, ServiceImport, or Backend targets"},
 		},
 		{
 			desc: "no targetRef",

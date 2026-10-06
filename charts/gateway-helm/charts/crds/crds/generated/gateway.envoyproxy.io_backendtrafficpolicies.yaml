@@ -3668,7 +3668,7 @@ spec:
                 ref.kind in [''Gateway'', ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'',
                 ''Service'', ''ServiceImport'', ''Backend''])) && (!has(self.targetSelectors)
                 || self.targetSelectors.all(sel, sel.kind in [''Gateway'', ''ListenerSet'',
-                ''HTTPRoute'', ''GRPCRoute'', ''Service'', ''ServiceImport'', ''Backend''])))'
+                ''HTTPRoute'', ''GRPCRoute''])))'
             - message: timeout.http.requestTimeout and timeout.http.streamIdleTimeout
                 are not allowed when targeting a backend
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
