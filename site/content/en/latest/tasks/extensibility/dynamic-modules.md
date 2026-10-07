@@ -283,12 +283,18 @@ are controlled by the dynamic module.
 ### Resolving conflicts
 
 Cluster names are shared throughout an Envoy deployment, including Gateways combined
-with `mergeGateways`. Policies that declare the same name, backend reference, and settings
-share one cluster. Different backend references or settings conflict, even if their endpoints match.
+with `mergeGateways`. Policies that declare the same name, backend reference, settings,
+and resolved transport configuration share one cluster. Different references, settings,
+or transport configurations conflict, even if their endpoints match. This includes
+different backend client certificates configured on the Gateways.
 
 The oldest policy keeps the name. A conflicting policy receives `Accepted=False` with
 reason `Conflicted`, and its affected routes return HTTP 500. Use the same backend
-reference and settings or choose another cluster name and update the module configuration to match.
+reference, settings, and transport configuration or choose another cluster name and
+update the module configuration to match.
+
+If one policy resolves the same cluster name to incompatible configurations across
+Gateways, it receives reason `Invalid` and its affected routes return HTTP 500.
 
 ## Clean-Up
 

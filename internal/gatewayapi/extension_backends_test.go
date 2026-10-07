@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -318,4 +319,153 @@ func TestExtensionBackendInheritanceAndAuthorization(t *testing.T) {
 	require.True(t, backend.Destination.Settings[0].TLS.UseSystemTrustStore)
 	require.Equal(t, "resolver.example.com", *backend.Destination.Settings[0].TLS.SNI)
 	require.Contains(t, routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Name, parent.Name)
+}
+
+func extensionBackendTLSResources(t *testing.T) *resource.Resources {
+	t.Helper()
+	resources := extensionBackendResources(t)
+	data, err := os.ReadFile("testdata/gateway-tls-frontend-backend.in.yaml")
+	require.NoError(t, err)
+	fixture := &resource.Resources{}
+	mustUnmarshal(t, data, fixture)
+	require.GreaterOrEqual(t, len(fixture.Secrets), 2)
+	for index, name := range []string{"client-a", "client-b"} {
+		secret := fixture.Secrets[index].DeepCopy()
+		secret.Name, secret.Namespace = name, "envoy-gateway"
+		resources.Secrets = append(resources.Secrets, secret)
+	}
+	resources.EnvoyProxyForGatewayClass = resources.EnvoyProxiesForGateways[0].DeepCopy()
+	gateway := resources.Gateways[0]
+	gateway.Spec.Infrastructure = nil
+	gateway.Spec.TLS = &gwapiv1.GatewayTLSConfig{Backend: &gwapiv1.GatewayBackendTLS{
+		ClientCertificateRef: &gwapiv1.SecretObjectReference{Name: "client-a"},
+	}}
+	second := gateway.DeepCopy()
+	second.Name = "gateway-2"
+	second.Spec.Listeners[0].Port = 81
+	second.Spec.TLS.Backend.ClientCertificateRef.Name = "client-b"
+	resources.Gateways = append(resources.Gateways, second)
+	resources.HTTPRoutes[0].Spec.ParentRefs[0].Name = "gateway-2"
+	resources.EnvoyExtensionPolicies[0].Spec.DynamicModule[0].Backends[0].BackendRef.Namespace = new(gwapiv1.Namespace("default"))
+	resources.ReferenceGrants = []*gwapiv1b1.ReferenceGrant{{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "allow-module"},
+		Spec: gwapiv1b1.ReferenceGrantSpec{
+			From: []gwapiv1b1.ReferenceGrantFrom{{Group: egv1a1.GroupName, Kind: egv1a1.KindEnvoyExtensionPolicy, Namespace: "envoy-gateway"}},
+			To:   []gwapiv1b1.ReferenceGrantTo{{Group: "", Kind: "Service"}},
+		},
+	}}
+	resources.BackendTLSPolicies = []*gwapiv1.BackendTLSPolicy{{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "resolver-tls"},
+		Spec: gwapiv1.BackendTLSPolicySpec{
+			TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "", Kind: "Service", Name: "service-2"}}},
+			Validation: gwapiv1.BackendTLSPolicyValidation{Hostname: "resolver.example.com", WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesType("System"))},
+		},
+	}}
+	return resources
+}
+
+func TestExtensionBackendTLSConflict(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		merge       bool
+		certificate string
+		conflict    bool
+	}{
+		{name: "separate deployments preserve different certificates", certificate: "client-b"},
+		{name: "merged deployments reject different certificates", merge: true, certificate: "client-b", conflict: true},
+		{name: "merged deployments reject a missing certificate", merge: true, conflict: true},
+		{name: "merged deployments share the same certificate", merge: true, certificate: "client-a"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resources := extensionBackendTLSResources(t)
+			resources.EnvoyProxyForGatewayClass.Spec.MergeGateways = new(tc.merge)
+			if tc.certificate == "" {
+				resources.Gateways[1].Spec.TLS = nil
+			} else {
+				resources.Gateways[1].Spec.TLS.Backend.ClientCertificateRef.Name = gwapiv1.ObjectName(tc.certificate)
+			}
+			parent, child := resources.EnvoyExtensionPolicies[0], resources.EnvoyExtensionPolicies[1]
+			result, routes := translateExtensionBackends(t, resources)
+			require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, parent.Name).Status)
+			parentBackend := routes["httproute-2"].EnvoyExtensions.DynamicModules[0].Backends[0]
+			require.Equal(t, "envoy-gateway/client-a", parentBackend.Destination.Settings[0].TLS.ClientCertificates[0].Name)
+			condition := extensionPolicyCondition(t, result, child.Name)
+			if tc.conflict {
+				require.Equal(t, metav1.ConditionFalse, condition.Status)
+				require.Equal(t, string(gwapiv1.PolicyReasonConflicted), condition.Reason)
+				for _, detail := range []string{"resolved transport configuration", "Gateway envoy-gateway/gateway-1", "Gateway envoy-gateway/gateway-2"} {
+					require.Contains(t, condition.Message, detail)
+				}
+				require.Nil(t, routes["httproute-1"].EnvoyExtensions)
+				require.EqualValues(t, 500, *routes["httproute-1"].DirectResponse.StatusCode)
+				// Aligning the certificates clears the conflict on the next translation.
+				resources.Gateways[1].Spec.TLS = resources.Gateways[0].Spec.TLS.DeepCopy()
+				result, routes = translateExtensionBackends(t, resources)
+				require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
+				require.Nil(t, routes["httproute-1"].DirectResponse)
+				require.Same(t, routes["httproute-2"].EnvoyExtensions.DynamicModules[0].Backends[0],
+					routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Backends[0])
+				return
+			}
+			require.Equal(t, metav1.ConditionTrue, condition.Status)
+			childBackend := routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Backends[0]
+			require.Equal(t, "envoy-gateway/"+tc.certificate, childBackend.Destination.Settings[0].TLS.ClientCertificates[0].Name)
+			if tc.merge {
+				require.Same(t, parentBackend, childBackend)
+			}
+			for _, route := range routes {
+				require.Nil(t, route.DirectResponse)
+			}
+		})
+	}
+}
+
+func TestExtensionBackendTLSConflictAcrossPolicyGateways(t *testing.T) {
+	for _, inherited := range []bool{false, true} {
+		for _, certificate := range []string{"client-a", "client-b"} {
+			t.Run(fmt.Sprintf("inherited=%t/certificate=%s", inherited, certificate), func(t *testing.T) {
+				resources := extensionBackendTLSResources(t)
+				resources.EnvoyProxyForGatewayClass.Spec.MergeGateways = new(true)
+				resources.Gateways[1].Spec.TLS.Backend.ClientCertificateRef.Name = gwapiv1.ObjectName(certificate)
+				parent, child := resources.EnvoyExtensionPolicies[0], resources.EnvoyExtensionPolicies[1]
+				parent.Spec.TargetRef = nil
+				parent.Spec.TargetRefs = []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.GroupName, Kind: "Gateway", Name: "gateway-1"}},
+					{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.GroupName, Kind: "Gateway", Name: "gateway-2"}},
+				}
+				if inherited {
+					child.Spec.MergeType = new(egv1a1.JSONMerge)
+					child.Spec.DynamicModule = nil
+				} else {
+					resources.EnvoyExtensionPolicies = resources.EnvoyExtensionPolicies[:1]
+				}
+				result, routes := translateExtensionBackends(t, resources)
+				for _, policy := range result.EnvoyExtensionPolicies {
+					for _, ancestor := range policy.Status.Ancestors {
+						condition := meta.FindStatusCondition(ancestor.Conditions, string(gwapiv1.PolicyConditionAccepted))
+						require.NotNil(t, condition)
+						if certificate == "client-b" {
+							require.Equal(t, metav1.ConditionFalse, condition.Status)
+							require.Equal(t, string(gwapiv1.PolicyReasonInvalid), condition.Reason)
+							require.Contains(t, condition.Message, "resolved transport configuration")
+						} else {
+							require.Equal(t, metav1.ConditionTrue, condition.Status)
+						}
+					}
+				}
+				if certificate == "client-b" {
+					for _, route := range routes {
+						require.Nil(t, route.EnvoyExtensions)
+						require.EqualValues(t, 500, *route.DirectResponse.StatusCode)
+					}
+				} else {
+					first := routes["httproute-1"].EnvoyExtensions.DynamicModules[0].Backends[0]
+					second := routes["httproute-2"].EnvoyExtensions.DynamicModules[0].Backends[0]
+					require.Same(t, first, second)
+					require.Len(t, first.Destination.Settings[0].TLS.ClientCertificates, 1)
+					require.Equal(t, "envoy-gateway/client-a", first.Destination.Settings[0].TLS.ClientCertificates[0].Name)
+				}
+			})
+		}
+	}
 }

@@ -113,12 +113,78 @@ func (ref extensionBackendRef) String() string {
 type extensionBackendClaim struct {
 	owner       *egv1a1.EnvoyExtensionPolicy
 	location    string
+	gateway     types.NamespacedName
 	ref         extensionBackendRef
 	destination *ir.ExtensionBackend
 }
 
 func (claim *extensionBackendClaim) matches(other *extensionBackendClaim) bool {
-	return claim.ref == other.ref && reflect.DeepEqual(claim.destination.Traffic, other.destination.Traffic)
+	if claim.ref != other.ref || !reflect.DeepEqual(claim.destination.Traffic, other.destination.Traffic) {
+		return false
+	}
+	return slices.EqualFunc(claim.destination.Destination.Settings, other.destination.Destination.Settings,
+		func(a, b *ir.DestinationSetting) bool {
+			if a == b {
+				return true
+			}
+			if a == nil || b == nil {
+				return false
+			}
+			// These fields describe the declaration's origin, not the cluster configuration.
+			left, right := *a, *b
+			left.Name, right.Name = "", ""
+			left.Metadata, right.Metadata = nil, nil
+			return reflect.DeepEqual(left, right)
+		})
+}
+
+type extensionBackendConflict struct {
+	reason  gwapiv1.PolicyConditionReason
+	message string
+}
+
+// resolveExtensionBackendConflicts builds routes from extensionBackendRoutes
+// keys, so every route has a registered attachment.
+func (t *Translator) checkExtensionBackendClaims(policy *egv1a1.EnvoyExtensionPolicy, routes []*ir.HTTPRoute,
+	claimed map[string]*extensionBackendClaim,
+) (map[string]*extensionBackendClaim, *extensionBackendConflict) {
+	slices.SortFunc(routes, func(a, b *ir.HTTPRoute) int {
+		if order := cmp.Compare(irListenerName(t.extensionBackendRoutes[a].listener), irListenerName(t.extensionBackendRoutes[b].listener)); order != 0 {
+			return order
+		}
+		return cmp.Compare(a.Name, b.Name)
+	})
+	pending := make(map[string]*extensionBackendClaim)
+	// Gateway-specific TLS configuration can differ even for one policy and backend reference.
+	for _, route := range routes {
+		gateway := t.extensionBackendRoutes[route].listener.gateway.Gateway
+		for moduleIndex, dm := range route.EnvoyExtensions.DynamicModules {
+			for backendIndex, destination := range dm.Backends {
+				backend := policy.Spec.DynamicModule[moduleIndex].Backends[backendIndex]
+				claim := &extensionBackendClaim{
+					owner: policy, location: fmt.Sprintf("dynamicModule[%d].backends[%d]", moduleIndex, backendIndex),
+					gateway: utils.NamespacedName(gateway),
+					ref:     normalizeExtensionBackendRef(backend.BackendRef, policy.Namespace), destination: destination,
+				}
+				name := destination.Destination.Name
+				previous, exists := pending[name]
+				reason := gwapiv1.PolicyReasonInvalid
+				if !exists || previous.matches(claim) {
+					previous, exists = claimed[name]
+					reason = gwapiv1.PolicyReasonConflicted
+				}
+				if exists && !previous.matches(claim) {
+					return nil, &extensionBackendConflict{
+						reason: reason,
+						message: fmt.Sprintf("%s: cluster %q references %s on Gateway %s, but EnvoyExtensionPolicy %s/%s %s on Gateway %s already declares it for %s with a different backend reference, settings, or resolved transport configuration. Choose another cluster name and update the module configuration to match, or use the same backend reference, settings, and transport configuration.",
+							claim.location, name, claim.ref, claim.gateway, previous.owner.Namespace, previous.owner.Name, previous.location, previous.gateway, previous.ref),
+					}
+				}
+				pending[name] = claim
+			}
+		}
+	}
+	return pending, nil
 }
 
 func (t *Translator) resolveExtensionBackendConflicts(policies []*egv1a1.EnvoyExtensionPolicy) {
@@ -148,55 +214,22 @@ func (t *Translator) resolveExtensionBackendConflicts(policies []*egv1a1.EnvoyEx
 		}
 		return cmp.Compare(a.Name, b.Name)
 	})
-	for _, owners := range byDeployment {
-		claimed := make(map[string]extensionBackendClaim)
+	for _, routesByPolicy := range byDeployment {
+		claimed := make(map[string]*extensionBackendClaim)
 		for _, policy := range policies {
-			routes := owners[utils.NamespacedName(policy)]
+			routes := routesByPolicy[utils.NamespacedName(policy)]
 			if len(routes) == 0 {
 				continue
 			}
-			slices.SortFunc(routes, func(a, b *ir.HTTPRoute) int {
-				if order := cmp.Compare(irListenerName(t.extensionBackendRoutes[a].listener), irListenerName(t.extensionBackendRoutes[b].listener)); order != 0 {
-					return order
-				}
-				return cmp.Compare(a.Name, b.Name)
-			})
-			pending := make(map[string]extensionBackendClaim)
-			var message string
-			reason := gwapiv1.PolicyReasonConflicted
-			for moduleIndex, dm := range routes[0].EnvoyExtensions.DynamicModules {
-				for backendIndex, destination := range dm.Backends {
-					backend := policy.Spec.DynamicModule[moduleIndex].Backends[backendIndex]
-					claim := extensionBackendClaim{
-						owner: policy, location: fmt.Sprintf("dynamicModule[%d].backends[%d]", moduleIndex, backendIndex),
-						ref: normalizeExtensionBackendRef(backend.BackendRef, policy.Namespace), destination: destination,
-					}
-					name := destination.Destination.Name
-					previous, exists := pending[name]
-					if exists && !previous.matches(&claim) {
-						reason = gwapiv1.PolicyReasonInvalid
-					} else {
-						previous, exists = claimed[name]
-					}
-					if exists && !previous.matches(&claim) {
-						message = fmt.Sprintf("%s: cluster %q references %s, but EnvoyExtensionPolicy %s/%s %s already declares it for %s with a different backend reference or settings. Choose another cluster name and update the module configuration to match, or use the same backend reference and settings.",
-							claim.location, name, claim.ref, previous.owner.Namespace, previous.owner.Name, previous.location, previous.ref)
-						break
-					}
-					pending[name] = claim
-				}
-				if message != "" {
-					break
-				}
-			}
-			if message != "" {
+			pending, conflict := t.checkExtensionBackendClaims(policy, routes, claimed)
+			if conflict != nil {
 				for _, route := range routes {
 					attachment := t.extensionBackendRoutes[route]
 					route.EnvoyExtensions = nil
 					route.DirectResponse = &ir.CustomResponse{StatusCode: new(uint32(500))}
-					t.setExtensionBackendConflict(policy, attachment.listener, reason, message)
+					t.setExtensionBackendConflict(policy, attachment.listener, conflict.reason, conflict.message)
 					if attachment.consumer != attachment.owner {
-						t.setExtensionBackendConflict(byName[attachment.consumer], attachment.listener, reason, message)
+						t.setExtensionBackendConflict(byName[attachment.consumer], attachment.listener, conflict.reason, conflict.message)
 					}
 				}
 				continue
