@@ -941,7 +941,7 @@ opentelemetry-collector:
   mode: deployment
   image:
     repository: "otel/opentelemetry-collector-contrib"
-    tag: "0.161.0"
+    tag: "0.161.0.386"
   config:
     exporters:
       prometheus:
