@@ -51,6 +51,21 @@
                 clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
               timeout: 10s
             transportApiVersion: V3
+            withRequestBody:
+              maxRequestBytes: 32768
+              packAsBytes: true
+        - disabled: true
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-3
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            grpcService:
+              envoyGrpc:
+                authority: primary.foo.com
+                clusterName: securitypolicy/default/policy-for-http-route-3/default/grpc-backend
+              timeout: 10s
+            transportApiVersion: V3
+            withRequestBody:
+              maxRequestBytes: 16384
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

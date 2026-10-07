@@ -166,6 +166,7 @@ securityPolicies:
     extAuth:
       bodyToExtAuth:
         maxRequestBytes: 32768
+        packAsBytes: true
       failOpen: true
       grpc:
         backendRefs:
@@ -180,6 +181,45 @@ securityPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-for-http-route-2
+    namespace: default
+  spec:
+    extAuth:
+      bodyToExtAuth:
+        maxRequestBytes: 16384
+      grpc:
+        backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+          port: 3000
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
   status:
     ancestors:
     - ancestorRef:
@@ -276,6 +316,7 @@ xdsIR:
           extAuth:
             bodyToExtAuth:
               maxRequestBytes: 32768
+              packAsBytes: true
             failOpen: true
             grpc:
               authority: primary.foo.com:3000
@@ -335,6 +376,7 @@ xdsIR:
           extAuth:
             bodyToExtAuth:
               maxRequestBytes: 32768
+              packAsBytes: true
             failOpen: true
             grpc:
               authority: primary.foo.com:3000
@@ -390,6 +432,31 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+        security:
+          extAuth:
+            bodyToExtAuth:
+              maxRequestBytes: 16384
+            grpc:
+              authority: primary.foo.com:3000
+              destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-2
+                  namespace: default
+                name: securitypolicy/default/policy-for-http-route-2/extauth/0
+                settings:
+                - addressType: FQDN
+                  endpoints:
+                  - host: primary.foo.com
+                    port: 3000
+                  metadata:
+                    kind: Backend
+                    name: backend-fqdn
+                    namespace: default
+                  name: securitypolicy/default/policy-for-http-route-2/extauth/0/backend/0
+                  protocol: GRPC
+                  weight: 1
+            name: securitypolicy/default/policy-for-http-route-2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

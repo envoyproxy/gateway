@@ -1785,6 +1785,10 @@ type BodyToExtAuth struct {
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+
+	// PackAsBytes sends the request body to the external authorization service as raw bytes.
+	// Only supported for gRPC external authorization services.
+	PackAsBytes bool `json:"packAsBytes,omitempty"`
 }
 
 // ContextExtension is analogous to http_request.headers, however these

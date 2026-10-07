@@ -11,6 +11,7 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) || has(self.http))",message="one of grpc or http must be specified"
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) && !has(self.http)) || (!has(self.grpc) && has(self.http))",message="only one of grpc or http can be specified"
+// +kubebuilder:validation:XValidation:rule="!has(self.bodyToExtAuth) || !has(self.bodyToExtAuth.packAsBytes) || !self.bodyToExtAuth.packAsBytes || has(self.grpc)",message="packAsBytes can only be enabled when grpc is specified"
 type ExtAuth struct {
 	// GRPC defines the gRPC External Authorization service.
 	// Either GRPCService or HTTPService must be specified,
@@ -215,4 +216,13 @@ type BodyToExtAuth struct {
 	//
 	// +kubebuilder:validation:Minimum=1
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+
+	// PackAsBytes, when true, sends the request body to the external authorization
+	// service as raw bytes, populating the raw_body field of the HTTP request
+	// attribute context. Otherwise, the body is sent as a UTF-8 string in the body field.
+	// This field is only supported for gRPC external authorization services.
+	// Defaults to false.
+	//
+	// +optional
+	PackAsBytes *bool `json:"packAsBytes,omitempty"`
 }

@@ -797,6 +797,14 @@ spec:
                         format: int32
                         minimum: 1
                         type: integer
+                      packAsBytes:
+                        description: |-
+                          PackAsBytes, when true, sends the request body to the external authorization
+                          service as raw bytes, populating the raw_body field of the HTTP request
+                          attribute context. Otherwise, the body is sent as a UTF-8 string in the body field.
+                          This field is only supported for gRPC external authorization services.
+                          Defaults to false.
+                        type: boolean
                     required:
                     - maxRequestBytes
                     type: object
@@ -4102,6 +4110,9 @@ spec:
                 - message: only one of grpc or http can be specified
                   rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
                     has(self.http))
+                - message: packAsBytes can only be enabled when grpc is specified
+                  rule: '!has(self.bodyToExtAuth) || !has(self.bodyToExtAuth.packAsBytes)
+                    || !self.bodyToExtAuth.packAsBytes || has(self.grpc)'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
