@@ -27,7 +27,7 @@ const (
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
 	// pin to sha256 to avoid issues with image tags being mutable and changing over time.
-	DefaultEnvoyProxyImage = "docker.io/envoyproxy/envoy:distroless-v1.39.1@sha256:eb2c01c13125d1629637cb4e4cce7207009fb7cc2c8027f9742758549d15b6f4"
+	DefaultEnvoyProxyImage = "docker.io/envoyproxy/envoy:distroless-v1.39.3@sha256:7369b033550a14997e5d698677b7b51f0210a80754f5d084c5caa1a78268267b"
 	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
 	DefaultShutdownManagerCPUResourceRequests = "10m"
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
