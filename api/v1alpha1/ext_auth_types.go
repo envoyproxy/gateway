@@ -213,9 +213,11 @@ type BodyToExtAuth struct {
 	// Envoy will return HTTP 413 and will not initiate the authorization process when buffer
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
+	// Defaults to 32768 bytes (32KiB), which matches the default per-connection buffer limit.
 	//
+	// +optional
 	// +kubebuilder:validation:Minimum=1
-	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+	MaxRequestBytes *uint32 `json:"maxRequestBytes,omitempty"`
 
 	// PackAsBytes, when true, sends the request body to the external authorization
 	// service as raw bytes, populating the raw_body field of the HTTP request

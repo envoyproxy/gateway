@@ -804,7 +804,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `maxRequestBytes` | _integer_ |  true  |  | MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.<br />Envoy will return HTTP 413 and will not initiate the authorization process when buffer<br />reaches the number set in this field.<br />Note that this setting will have precedence over failOpen mode. |
+| `maxRequestBytes` | _integer_ |  false  |  | MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.<br />Envoy will return HTTP 413 and will not initiate the authorization process when buffer<br />reaches the number set in this field.<br />Note that this setting will have precedence over failOpen mode.<br />Defaults to 32768 bytes (32KiB), which matches the default per-connection buffer limit. |
 | `packAsBytes` | _boolean_ |  false  |  | PackAsBytes, when true, sends the request body to the external authorization<br />service as raw bytes, populating the raw_body field of the HTTP request<br />attribute context. Otherwise, the body is sent as a UTF-8 string in the body field.<br />This field is only supported for gRPC external authorization services.<br />Defaults to false. |
 
 

@@ -1,1 +1,1 @@
-Added `packAsBytes` to SecurityPolicy `extAuth.bodyToExtAuth` to send the request body to gRPC external authorization services as raw bytes.
+Added `packAsBytes` to SecurityPolicy `extAuth.bodyToExtAuth` to send the request body to gRPC external authorization services as raw bytes. `maxRequestBytes` is now optional and defaults to 32768 bytes (32KiB).

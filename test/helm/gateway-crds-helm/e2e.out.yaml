@@ -31119,6 +31119,7 @@ spec:
                           Envoy will return HTTP 413 and will not initiate the authorization process when buffer
                           reaches the number set in this field.
                           Note that this setting will have precedence over failOpen mode.
+                          Defaults to 32768 bytes (32KiB), which matches the default per-connection buffer limit.
                         format: int32
                         minimum: 1
                         type: integer
@@ -31130,8 +31131,6 @@ spec:
                           This field is only supported for gRPC external authorization services.
                           Defaults to false.
                         type: boolean
-                    required:
-                    - maxRequestBytes
                     type: object
                   contextExtensions:
                     description: |-
