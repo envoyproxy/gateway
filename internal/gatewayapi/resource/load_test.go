@@ -86,3 +86,26 @@ func TestLoadAllSupportedResourcesFromYAMLBytes(t *testing.T) {
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
+
+// `kubectl create configmap --from-file` writes a binary descriptor into binaryData, so
+// dropping it here made the same YAML translate differently offline than in-cluster.
+func TestLoadConfigMapCarriesBinaryData(t *testing.T) {
+	in := `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: descriptor
+  namespace: default
+binaryData:
+  proto-descriptor: AAECAw==
+data:
+  note: hello
+`
+	resources, err := loadKubernetesYAMLToResources([]byte(in), false, nil)
+	require.NoError(t, err)
+	require.Len(t, resources.ConfigMaps, 1)
+
+	cm := resources.ConfigMaps[0]
+	require.Equal(t, []byte{0x00, 0x01, 0x02, 0x03}, cm.BinaryData["proto-descriptor"])
+	require.Equal(t, "hello", cm.Data["note"])
+}

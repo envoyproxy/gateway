@@ -28,11 +28,12 @@ const (
 
 // cachedConfigMapKeys defines the keys to keep in ConfigMap data cache
 var cachedConfigMapKeys = map[string]bool{
-	gatewayapi.JWKSConfigMapKey:         true,
-	gatewayapi.LuaConfigMapKey:          true,
-	gatewayapi.ResponseBodyConfigMapKey: true,
-	gatewayapi.CACertKey:                true,
-	gatewayapi.CRLKey:                   true,
+	gatewayapi.JWKSConfigMapKey:            true,
+	gatewayapi.LuaConfigMapKey:             true,
+	gatewayapi.ResponseBodyConfigMapKey:    true,
+	gatewayapi.CACertKey:                   true,
+	gatewayapi.CRLKey:                      true,
+	gatewayapi.ProtoDescriptorConfigMapKey: true,
 }
 
 type ObjectKindNamespacedName struct {

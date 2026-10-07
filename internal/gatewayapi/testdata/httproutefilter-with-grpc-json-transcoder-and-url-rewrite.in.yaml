@@ -1,0 +1,168 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  # Rejected: the path rewrite would apply to the transcoded gRPC method path.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-path-rewrite
+    spec:
+      hostnames:
+        - path.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/v1"
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: /v2
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: transcode
+          backendRefs:
+            - name: service-1
+              port: 8080
+  # Rejected: a PathRegex hostname is computed from the transcoded path.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-path-regex-host
+    spec:
+      hostnames:
+        - path-regex.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/v1"
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: host-from-path
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: transcode
+          backendRefs:
+            - name: service-1
+              port: 8080
+  # Rejected: the redirect Location is built from the transcoded path.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-redirect
+    spec:
+      hostnames:
+        - redirect.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/v1"
+          filters:
+            - type: RequestRedirect
+              requestRedirect:
+                hostname: elsewhere.envoyproxy.io
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: transcode
+  # Accepted: a literal host rewrite leaves :path alone.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-host-rewrite
+    spec:
+      hostnames:
+        - host.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/v1"
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                hostname: upstream.envoyproxy.io
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: transcode
+          backendRefs:
+            - name: service-1
+              port: 8080
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      namespace: default
+      name: proto-descriptor
+    binaryData:
+      proto-descriptor: CnkKCmVjaG8ucHJvdG8SB3Rlc3QudjEiDQoLUGluZ1JlcXVlc3QiDgoMUGluZ1Jlc3BvbnNlMjsKBEVjaG8SMwoEUGluZxIULnRlc3QudjEuUGluZ1JlcXVlc3QaFS50ZXN0LnYxLlBpbmdSZXNwb25zZWIGcHJvdG8z
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: host-from-path
+    spec:
+      urlRewrite:
+        hostname:
+          type: PathRegex
+          pathRegex:
+            pattern: "^/v1/([^/]+)/.*$"
+            substitution: "\\1.svc"
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: transcode
+    spec:
+      grpcJSONTranscoder:
+        services:
+          - test.v1.Echo
+        protoDescriptor:
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: proto-descriptor

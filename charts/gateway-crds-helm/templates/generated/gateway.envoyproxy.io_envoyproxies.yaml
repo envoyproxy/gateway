@@ -490,6 +490,8 @@ spec:
 
                   - envoy.filters.http.grpc_web
 
+                  - envoy.filters.http.grpc_json_transcoder
+
                   - envoy.filters.http.grpc_stats
 
                   - envoy.filters.http.credential_injector
@@ -533,6 +535,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
@@ -566,6 +569,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
@@ -597,6 +601,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
