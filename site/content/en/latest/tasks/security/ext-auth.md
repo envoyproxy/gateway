@@ -431,7 +431,8 @@ curl -v -H "Host: www.example.com" -H "Authorization: Bearer token1" "http://${G
 ### Sending the Request Body
 
 Use `bodyToExtAuth` to buffer the request body and send it to the external authorization service.
-`maxRequestBytes` is required: requests with a larger body are rejected with HTTP 413.
+`maxRequestBytes` sets the largest body that will be buffered; requests with a larger body are rejected with HTTP 413.
+It defaults to 32768 bytes (32KiB).
 
 By default, the body is sent to a gRPC external authorization service as a UTF-8 string in the `body` field.
 Set `packAsBytes: true` to send it as raw bytes in the `raw_body` field instead. Use this for binary or

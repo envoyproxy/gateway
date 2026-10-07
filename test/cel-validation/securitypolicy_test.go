@@ -867,7 +867,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							},
 						},
 						BodyToExtAuth: &egv1a1.BodyToExtAuth{
-							MaxRequestBytes: 32768,
+							MaxRequestBytes: new(uint32(32768)),
 							PackAsBytes:     new(true),
 						},
 					},
@@ -916,6 +916,104 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "GRPC external auth service with empty bodyToExtAuth",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "HTTP external auth service with empty bodyToExtAuth",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "http-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "GRPC external auth service with zero maxRequestBytes",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							MaxRequestBytes: new(uint32(0)),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
 			wantErrors: []string{
 				"spec.extAuth.bodyToExtAuth.maxRequestBytes: Invalid value: 0: spec.extAuth.bodyToExtAuth.maxRequestBytes in body should be greater than or equal to 1",
 			},
@@ -938,7 +1036,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							},
 						},
 						BodyToExtAuth: &egv1a1.BodyToExtAuth{
-							MaxRequestBytes: 32768,
+							MaxRequestBytes: new(uint32(32768)),
 							PackAsBytes:     new(true),
 						},
 					},
@@ -975,7 +1073,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							},
 						},
 						BodyToExtAuth: &egv1a1.BodyToExtAuth{
-							MaxRequestBytes: 32768,
+							MaxRequestBytes: new(uint32(32768)),
 							PackAsBytes:     new(false),
 						},
 					},
@@ -1010,7 +1108,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							},
 						},
 						BodyToExtAuth: &egv1a1.BodyToExtAuth{
-							MaxRequestBytes: 32768,
+							MaxRequestBytes: new(uint32(32768)),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1044,7 +1142,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							},
 						},
 						BodyToExtAuth: &egv1a1.BodyToExtAuth{
-							MaxRequestBytes: 32768,
+							MaxRequestBytes: new(uint32(32768)),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1078,7 +1176,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							},
 						},
 						BodyToExtAuth: &egv1a1.BodyToExtAuth{
-							MaxRequestBytes: 32768,
+							MaxRequestBytes: new(uint32(32768)),
 							PackAsBytes:     new(false),
 						},
 					},
