@@ -45,7 +45,7 @@ httpRoutes:
       rules:
         - matches:
             - path:
-                value: "/"
+                value: "/route-2"
           backendRefs:
             - group: gateway.envoyproxy.io
               kind: Backend

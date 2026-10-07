@@ -7,12 +7,17 @@ package runner
 
 import (
 	"context"
+	"io"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -232,4 +237,88 @@ func TestRunnerDataRaceImmediate(t *testing.T) {
 	_ = runner.Close()
 
 	// Race window is maximized here
+}
+
+func TestSubscribeAndTranslateEndsGatewayClassSpansOnPanic(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	oldProvider := otel.GetTracerProvider()
+	otel.SetTracerProvider(tp)
+	t.Cleanup(func() {
+		otel.SetTracerProvider(oldProvider)
+	})
+	tracer = otel.Tracer("envoy-gateway/gateway-api")
+
+	serverCfg := &config.Server{
+		EnvoyGateway: &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				Gateway: &egv1a1.Gateway{ControllerName: "test-controller"},
+			},
+		},
+		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+	}
+
+	providerResources := new(message.ProviderResources)
+	providerResources.GatewayAPIResources = watchable.Map[string, *resource.ControllerResourcesContext]{}
+
+	cfg := &Config{
+		Server:            *serverCfg,
+		ProviderResources: providerResources,
+		XdsIR:             new(message.XdsIR),
+		InfraIR:           new(message.InfraIR),
+		RunnerErrors:      new(message.RunnerErrors),
+	}
+
+	runner := New(cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sub := providerResources.GatewayAPIResources.Subscribe(ctx)
+	done := make(chan struct{})
+	go func() {
+		runner.subscribeAndTranslate(sub)
+		close(done)
+	}()
+
+	providerResources.GatewayAPIResources.Store("test-controller", &resource.ControllerResourcesContext{
+		Context: ctx,
+		Resources: &resource.ControllerResources{
+			&resource.Resources{
+				GatewayClass: &gwapiv1.GatewayClass{},
+				Gateways:     []*gwapiv1.Gateway{nil},
+			},
+		},
+	})
+
+	require.Eventually(t, func() bool {
+		for _, span := range sr.Ended() {
+			if span.Name() == "GatewayApiRunner.ResoureTranslationCycle.TranslateGatewayClass" || span.Name() == "GatewayApiRunner.ResoureTranslationCycle" {
+				return true
+			}
+		}
+		return false
+	}, time.Second, 10*time.Millisecond)
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for subscription handler to exit")
+	}
+
+	ended := sr.Ended()
+	require.NotEmpty(t, ended)
+
+	var gcSpanEnded, rtcSpanEnded bool
+	for _, span := range ended {
+		switch span.Name() {
+		case "GatewayApiRunner.ResoureTranslationCycle.TranslateGatewayClass":
+			gcSpanEnded = true
+		case "GatewayApiRunner.ResoureTranslationCycle":
+			rtcSpanEnded = true
+		}
+	}
+
+	require.True(t, gcSpanEnded, "expected GatewayClass translation span to be ended")
+	require.True(t, rtcSpanEnded, "expected translation-cycle span to be ended")
 }

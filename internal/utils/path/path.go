@@ -29,7 +29,7 @@ func ValidateOutputPath(outputPath string) (string, error) {
 func ListDirsAndFiles(paths []string) (sets.Set[string], sets.Set[string]) {
 	dirs, files := sets.New[string](), sets.New[string]()
 	// Separate paths by whether is a directory or not.
-	paths = sets.NewString(paths...).UnsortedList()
+	paths = sets.New[string](paths...).UnsortedList()
 	for _, path := range paths {
 		var p os.FileInfo
 		p, err := os.Lstat(path)

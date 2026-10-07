@@ -11,6 +11,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -80,4 +83,24 @@ func TestXdsWithContextEqual(t *testing.T) {
 
 	assert.True(t, x1.Equal(x2))
 	assert.True(t, x2.Equal(x1))
+}
+
+func TestParentContextPreservesFallbackLifecycle(t *testing.T) {
+	tracer := sdktrace.NewTracerProvider().Tracer("test")
+	producerCtx, producerSpan := tracer.Start(t.Context(), "producer")
+	defer producerSpan.End()
+	fallback, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	for _, value := range []interface {
+		ParentContext(context.Context) context.Context
+	}{
+		&message.XdsIRWithContext{Context: producerCtx},
+		&message.InfraIRWithContext{Context: producerCtx},
+	} {
+		consumerCtx := value.ParentContext(fallback)
+		require.Equal(t, trace.SpanContextFromContext(producerCtx), trace.SpanContextFromContext(consumerCtx))
+		cancel()
+		require.ErrorIs(t, consumerCtx.Err(), context.Canceled)
+	}
 }

@@ -1,0 +1,13 @@
+# Runs the suite with reconcile debouncing enabled, to confirm that holding a
+# burst of resource changes before reconciling does not change the outcome of
+# any conformance or e2e case.
+#
+# after is deliberately set well above the 100ms default so that batching
+# actually happens during the suites, and so the cases are shown to tolerate the
+# added propagation and status delay. max is the shipped default.
+config:
+  envoyGateway:
+    debounce:
+      enable: true
+      after: 1s
+      max: 10s

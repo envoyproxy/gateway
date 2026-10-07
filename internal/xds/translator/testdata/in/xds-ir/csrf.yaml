@@ -1,0 +1,46 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+    security:
+      csrf:
+        additionalOrigins:
+        - exact: www.example.com
+        - exact: www.example.com:8080
+        - safeRegex: .*\.trusted\.com
+  - name: "second-route"
+    hostname: "*"
+    pathMatch:
+      exact: "bar/baz"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50001
+        name: "second-route-dest/backend/0"
+    security:
+      csrf:
+        shadowFraction:
+          numerator: 25
+          denominator: 1000
+        additionalOrigins:
+        - exact: staging.example.com
+

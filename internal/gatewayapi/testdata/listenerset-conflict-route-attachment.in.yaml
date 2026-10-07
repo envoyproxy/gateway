@@ -1,0 +1,104 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-with-conflicting-listenersets
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: Same
+    listeners:
+    - name: gateway-winner
+      port: 80
+      protocol: HTTP
+      hostname: gateway-winner.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    creationTimestamp: "2026-05-21T10:27:11Z"
+    name: listenerset-winner
+    namespace: envoy-gateway
+  spec:
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-conflicting-listenersets
+      namespace: envoy-gateway
+    listeners:
+    - name: gateway-conflict
+      port: 80
+      protocol: HTTP
+      hostname: gateway-winner.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: listenerset-winner
+      port: 80
+      protocol: HTTP
+      hostname: listenerset-winner.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    creationTimestamp: "2026-08-17T08:09:23Z"
+    name: listenerset-loser
+    namespace: envoy-gateway
+  spec:
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-conflicting-listenersets
+      namespace: envoy-gateway
+    listeners:
+    - name: listenerset-conflict
+      port: 80
+      protocol: HTTP
+      hostname: listenerset-winner.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: route-attached-to-gateway-winner
+    namespace: default
+  spec:
+    hostnames:
+    - gateway-winner.example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-conflicting-listenersets
+      namespace: envoy-gateway
+      sectionName: gateway-winner
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: route-attached-to-listenerset-winner
+    namespace: default
+  spec:
+    hostnames:
+    - listenerset-winner.example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: listenerset-winner
+      namespace: envoy-gateway
+      sectionName: listenerset-winner
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080

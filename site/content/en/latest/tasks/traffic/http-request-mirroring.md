@@ -59,7 +59,7 @@ spec:
     spec:
       serviceAccountName: backend-2
       containers:
-        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        - image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           imagePullPolicy: IfNotPresent
           name: backend-2
           ports:
@@ -120,7 +120,7 @@ spec:
     spec:
       serviceAccountName: backend-2
       containers:
-        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+        - image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           imagePullPolicy: IfNotPresent
           name: backend-2
           ports:

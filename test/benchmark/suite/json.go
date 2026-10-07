@@ -105,14 +105,15 @@ func getResourceMetrics(samples []BenchmarkMetricSample) (ResourceMetrics, Resou
 		dpMem = append(dpMem, sample.DataPlaneMem)
 		dpCPU = append(dpCPU, sample.DataPlaneCPU)
 	}
-
-	return ResourceMetrics{
-			CPU:    getResourceUsage(cpCPU),
-			Memory: getResourceUsage(cpcMem),
-		}, ResourceMetrics{
-			CPU:    getResourceUsage(dpCPU),
-			Memory: getResourceUsage(dpMem),
-		}
+	cp := ResourceMetrics{
+		CPU:    getResourceUsage(cpCPU),
+		Memory: getResourceUsage(cpcMem),
+	}
+	dp := ResourceMetrics{
+		CPU:    getResourceUsage(dpCPU),
+		Memory: getResourceUsage(dpMem),
+	}
+	return cp, dp
 }
 
 func getResourceUsage(metrics []float64) *ResourceUsage {

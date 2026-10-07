@@ -1,0 +1,92 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    rateLimit:
+      type: Global
+      global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: one
+          limit:
+            requests: 10
+            unit: Hour
+# The envoy-ratelimit Service and its EndpointSlice represent the in-cluster rate limit
+# service deployed by Envoy Gateway. When present, the translator should discover its
+# endpoints directly instead of falling back to the DNS-resolved cluster address.
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: envoy-ratelimit
+    namespace: envoy-gateway-system
+  spec:
+    clusterIP: 10.99.99.99
+    ports:
+    - name: http
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: envoy-ratelimit-abcde
+    namespace: envoy-gateway-system
+    labels:
+      kubernetes.io/service-name: envoy-ratelimit
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8081
+  endpoints:
+  - addresses:
+    - "10.10.0.1"
+    conditions:
+      ready: true
+  - addresses:
+    - "10.10.0.2"
+    conditions:
+      ready: true

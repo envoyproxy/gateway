@@ -1,0 +1,1 @@
+EnvoyProxy `KubernetesServiceSpec.loadBalancerSourceRanges` now accepts at most 64 entries and validates each value as a CIDR at CRD admission using the Kubernetes `cidr` format; `loadBalancerIP` validation now uses CEL IP parsing while preserving IPv4-only behavior.

@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +26,60 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+func TestBuildCORSOriginRegexes(t *testing.T) {
+	tr := &Translator{}
+
+	tests := []struct {
+		name        string
+		originRegex string
+		wantError   string
+	}{
+		{
+			name:        "regex is preserved",
+			originRegex: `https://preview-[0-9]+\.example\.com(:8443)?`,
+		},
+		{
+			name:        "broad regex that does not match the wildcard is preserved",
+			originRegex: "https?://.*",
+		},
+		{
+			name:        "invalid regex",
+			originRegex: "[",
+			wantError:   `regex "[" is invalid`,
+		},
+		{
+			name:        "regex matching any host allows all origins",
+			originRegex: `[^/]+`,
+			wantError:   `origin regular expression "[^/]+" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+		{
+			name:        "regex matching anything allows all origins",
+			originRegex: ".*",
+			wantError:   `origin regular expression ".*" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+		{
+			name:        "escaped wildcard allows all origins",
+			originRegex: `\*`,
+			wantError:   `origin regular expression "\\*" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tr.buildCORS(&egv1a1.CORS{
+				AllowOriginRegexes: []egv1a1.CORSOriginRegex{egv1a1.CORSOriginRegex(tt.originRegex)},
+			})
+			if tt.wantError != "" {
+				require.ErrorContains(t, err, tt.wantError)
+				require.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, []*ir.StringMatch{{SafeRegex: &tt.originRegex}}, got.AllowOrigins)
+		})
+	}
+}
 
 func Test_wildcard2regex(t *testing.T) {
 	tests := []struct {
@@ -391,6 +447,65 @@ func Test_JWTProvider(t *testing.T) {
 						{
 							Header: "test",
 							Claim:  "",
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "valid security policy with jwtClaimToHeader claimPath",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header:    "X-Tenant-Name",
+							ClaimPath: []string{"https://auth.sitecorecloud.io/claims/tenant_name"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "jwtClaimToHeader with both claim and claimPath set",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header:    "test",
+							Claim:     "test",
+							ClaimPath: []string{"test"},
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "jwtClaimToHeader with neither claim nor claimPath set",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header: "test",
 						},
 					},
 				},
@@ -776,6 +891,87 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 	}
 }
 
+func TestBuildAuthorizationJWTProvider(t *testing.T) {
+	jwtWith := func(names ...string) *egv1a1.JWT {
+		providers := make([]egv1a1.JWTProvider, 0, len(names))
+		for _, name := range names {
+			providers = append(providers, egv1a1.JWTProvider{Name: name})
+		}
+		return &egv1a1.JWT{Providers: providers}
+	}
+	authorizationWith := func(providers ...string) *egv1a1.Authorization {
+		rules := make([]egv1a1.AuthorizationRule, 0, len(providers))
+		for _, provider := range providers {
+			rules = append(rules, egv1a1.AuthorizationRule{
+				Action:    egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{JWT: &egv1a1.JWTPrincipal{Provider: provider}},
+			})
+		}
+		return &egv1a1.Authorization{Rules: rules}
+	}
+
+	tests := []struct {
+		name          string
+		jwt           *egv1a1.JWT
+		authorization *egv1a1.Authorization
+		wantError     bool
+	}{
+		{
+			name:          "provider defined in the same policy",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("example"),
+		},
+		{
+			name:          "no authorization rules",
+			jwt:           jwtWith("example"),
+			authorization: &egv1a1.Authorization{},
+		},
+		{
+			name: "principal without a jwt is ignored",
+			authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action:    egv1a1.AuthorizationActionAllow,
+						Principal: &egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
+					},
+				},
+			},
+		},
+		{
+			name:          "unknown provider",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("does-not-exist"),
+			wantError:     true,
+		},
+		{
+			name:          "no jwt providers at all",
+			authorization: authorizationWith("example"),
+			wantError:     true,
+		},
+		{
+			name:          "one known and one unknown provider",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("example", "does-not-exist"),
+			wantError:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policy := &egv1a1.SecurityPolicy{
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT:           tt.jwt,
+					Authorization: tt.authorization,
+				},
+			}
+
+			translator := &Translator{}
+			_, err := translator.buildAuthorization(policy, &securityPolicyOwners{})
+			require.Equal(t, tt.wantError, err != nil, "buildAuthorization() error = %v", err)
+		})
+	}
+}
+
 func ToPointer[T any](v T) *T {
 	return &v
 }
@@ -947,13 +1143,158 @@ func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {
 	}
 }
 
+func TestValidateOIDCIssuerURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		issuer  string
+		wantErr string
+	}{
+		{
+			name:   "valid host",
+			issuer: "https://accounts.google.com",
+		},
+		{
+			name:   "valid path",
+			issuer: "https://example.com/issuer",
+		},
+		{
+			name:    "http scheme",
+			issuer:  "http://internal-address/#",
+			wantErr: "issuer URL must use https scheme",
+		},
+		{
+			name:    "fragment",
+			issuer:  "https://example.com/#",
+			wantErr: "issuer URL must not include a fragment",
+		},
+		{
+			name:    "query",
+			issuer:  "https://example.com/?foo=bar",
+			wantErr: "issuer URL must not include a query",
+		},
+		{
+			name:    "missing host",
+			issuer:  "https:///issuer",
+			wantErr: "issuer URL must include a host",
+		},
+		{
+			name:    "userinfo",
+			issuer:  "https://user@example.com",
+			wantErr: "issuer URL must not include userinfo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := validateOIDCIssuerURL(tt.issuer)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestBuildOIDCDiscoveryURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		issuer string
+		want   string
+	}{
+		{
+			name:   "root issuer",
+			issuer: "https://example.com",
+			want:   "https://example.com/.well-known/openid-configuration",
+		},
+		{
+			name:   "path issuer",
+			issuer: "https://example.com/realms/master",
+			want:   "https://example.com/realms/master/.well-known/openid-configuration",
+		},
+		{
+			name:   "trailing slash",
+			issuer: "https://example.com/realms/master/",
+			want:   "https://example.com/realms/master/.well-known/openid-configuration",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			issuer, err := validateOIDCIssuerURL(tt.issuer)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, buildOIDCDiscoveryURL(issuer))
+		})
+	}
+}
+
+func TestValidateOIDCDiscoveryHostBlocksUnsafeAddresses(t *testing.T) {
+	tests := []string{
+		"127.0.0.1",              // IPv4 loopback.
+		"::1",                    // IPv6 loopback.
+		"::ffff:127.0.0.1",       // IPv4-mapped IPv6 loopback.
+		"169.254.169.254",        // IPv4 link-local cloud metadata address.
+		"::ffff:169.254.169.254", // IPv4-mapped IPv6 link-local cloud metadata address.
+		"localhost",              // DNS name that resolves to loopback.
+	}
+
+	for _, host := range tests {
+		t.Run(host, func(t *testing.T) {
+			_, err := validateOIDCDiscoveryHost(context.Background(), host)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestValidateOIDCDiscoveryHostAllowsPrivateAddresses(t *testing.T) {
+	tests := []string{
+		"10.0.0.1",
+		"172.16.0.1",
+		"192.168.0.1",
+		"fc00::1",
+	}
+
+	for _, host := range tests {
+		t.Run(host, func(t *testing.T) {
+			_, err := validateOIDCDiscoveryHost(context.Background(), host)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestOIDCDiscoveryRedirectBlocksUnsafeTargets(t *testing.T) {
+	client, err := newGuardedOIDCDiscoveryHTTPClient(nil)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "https://127.0.0.1/.well-known/openid-configuration", nil)
+	require.ErrorContains(t, client.CheckRedirect(req, nil), "blocked address")
+}
+
+func useInsecureOIDCDiscoveryHTTPClient(t *testing.T) {
+	t.Helper()
+
+	original := newOIDCDiscoveryHTTPClient
+	newOIDCDiscoveryHTTPClient = func(_ *ir.TLSUpstreamConfig) (*http.Client, error) {
+		return &http.Client{
+			Timeout: defaultOIDCHTTPTimeout,
+			Transport: &http.Transport{
+				//nolint:gosec // Tests use httptest.NewTLSServer with a self-signed certificate.
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}, nil
+	}
+	t.Cleanup(func() {
+		newOIDCDiscoveryHTTPClient = original
+	})
+}
+
 func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
 	var (
 		callCount atomic.Int32
 		server    *httptest.Server
 	)
 
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/.well-known/openid-configuration" {
 			http.NotFound(w, r)
 			return
@@ -964,6 +1305,7 @@ func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
 		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, server.URL+"/token", server.URL+"/authorize")
 	}))
 	defer server.Close()
+	useInsecureOIDCDiscoveryHTTPClient(t)
 
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
@@ -990,7 +1332,7 @@ func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
 		server    *httptest.Server
 	)
 
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/.well-known/openid-configuration" {
 			http.NotFound(w, r)
 			return
@@ -1000,6 +1342,7 @@ func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
 		http.NotFound(w, r)
 	}))
 	defer server.Close()
+	useInsecureOIDCDiscoveryHTTPClient(t)
 
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()

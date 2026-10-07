@@ -33,6 +33,25 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - www.bar.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /bar
+      backendRefs:
+      - name: service-1
+        port: 8080
 referenceGrants:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: ReferenceGrant
@@ -50,11 +69,12 @@ referenceGrants:
     - group: gateway.envoyproxy.io
       kind: Backend
 envoyExtensionPolicies:
+# This policy uses an IP+FQDN mix which is invalid.
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
     namespace: default
-    name: policy-for-http-route
+    name: policy-ip-fqdn-mix
   spec:
     targetRef:
       group: gateway.networking.k8s.io
@@ -69,6 +89,22 @@ envoyExtensionPolicies:
         Namespace: envoy-gateway
         Kind: Backend
         Group: gateway.envoyproxy.io
+# This policy uses an IP+UDS mix which is valid (both static types).
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-ip-uds-mix
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    extProc:
+    - backendRefs:
+      - Name: backend-ip-uds-mixed
+        Kind: Backend
+        Group: gateway.envoyproxy.io
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
@@ -80,6 +116,18 @@ backends:
     - ip:
         address: 1.1.1.1
         port: 3001
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-ip-uds-mixed
+    namespace: default
+  spec:
+    endpoints:
+    - ip:
+        address: 2.2.2.2
+        port: 3002
+    - unix:
+        path: /var/run/grpc.sock
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:

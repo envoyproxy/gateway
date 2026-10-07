@@ -20,6 +20,30 @@ http:
     timeout:
       http:
         requestReceivedTimeout: "5s"
+        requestHeadersReceivedTimeout: "15s"
+        idleTimeout: "10s"
+  - name: "third-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "third-route"
+        hostname: "*"
+        destination:
+          name: "third-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "third-route-dest/backend/0"
+    timeout:
+      http:
+        requestReceivedTimeout: "10s"
+        requestHeadersReceivedTimeout: "30s"
         idleTimeout: "10s"
 tcp:
   - name: "second-listener"

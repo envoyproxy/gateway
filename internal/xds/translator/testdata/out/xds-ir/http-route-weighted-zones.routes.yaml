@@ -30,6 +30,7 @@
           clusters:
           - name: route-with-weighted-zones-maglev-dest/backend/0
             weight: 1
+          useHashPolicy: true
     - match:
         prefix: /
       name: route-with-weighted-zones-backend-utilization

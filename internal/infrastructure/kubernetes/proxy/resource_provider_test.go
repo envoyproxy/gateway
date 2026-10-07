@@ -44,21 +44,39 @@ const (
 )
 
 type fakeKubernetesInfraProvider struct {
-	ControllerNamespace string
-	DNSDomain           string
-	EnvoyGateway        *egv1a1.EnvoyGateway
+	ControllerNamespace          string
+	ControllerName               string
+	ControllerFullName           string
+	ControllerServiceAccountName string
+	DNSDomain                    string
+	EnvoyGateway                 *egv1a1.EnvoyGateway
 }
 
 func newFakeKubernetesInfraProvider(cfg *config.Server) KubernetesInfraProvider {
 	return &fakeKubernetesInfraProvider{
-		ControllerNamespace: cfg.ControllerNamespace,
-		DNSDomain:           cfg.DNSDomain,
-		EnvoyGateway:        cfg.EnvoyGateway,
+		ControllerNamespace:          cfg.ControllerNamespace,
+		ControllerName:               cfg.ControllerName,
+		ControllerFullName:           cfg.ControllerFullName,
+		ControllerServiceAccountName: cfg.ControllerServiceAccountName,
+		DNSDomain:                    cfg.DNSDomain,
+		EnvoyGateway:                 cfg.EnvoyGateway,
 	}
 }
 
 func (f *fakeKubernetesInfraProvider) GetControllerNamespace() string {
 	return f.ControllerNamespace
+}
+
+func (f *fakeKubernetesInfraProvider) GetControllerName() string {
+	return f.ControllerName
+}
+
+func (f *fakeKubernetesInfraProvider) GetControllerFullName() string {
+	return f.ControllerFullName
+}
+
+func (f *fakeKubernetesInfraProvider) GetControllerServiceAccountName() string {
+	return f.ControllerServiceAccountName
 }
 
 func (f *fakeKubernetesInfraProvider) GetDNSDomain() string {
@@ -195,6 +213,7 @@ func newTestInfraWithAnnotationsAndLabels(annotations, labels map[string]string)
 func TestDeployment(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	cases := []struct {
 		caseName             string
@@ -246,6 +265,11 @@ func TestDeployment(t *testing.T) {
 					},
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: new(true),
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{
+								"NET_ADMIN",
+							},
+						},
 					},
 				},
 			},
@@ -298,6 +322,17 @@ func TestDeployment(t *testing.T) {
 			},
 			shutdownManager: &egv1a1.ShutdownManager{
 				Image: new("privaterepo/envoyproxy/gateway-dev:v1.2.3"),
+			},
+		},
+		{
+			caseName: "shutdown-manager-readonly-rootfs",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Container: &egv1a1.KubernetesContainerSpec{
+					SecurityContext: &corev1.SecurityContext{
+						ReadOnlyRootFilesystem: new(true),
+					},
+				},
 			},
 		},
 		{
@@ -805,6 +840,7 @@ func loadDeployment(caseName string) (*appsv1.Deployment, error) {
 func TestDaemonSet(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	cases := []struct {
 		caseName             string
@@ -1286,6 +1322,7 @@ func loadDaemonSet(caseName string) (*appsv1.DaemonSet, error) {
 func TestService(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	svcType := egv1a1.ServiceTypeClusterIP
 	cases := []struct {
@@ -1609,6 +1646,7 @@ func loadServiceAccount(tc string) (*corev1.ServiceAccount, error) {
 func TestPDB(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	cases := []struct {
 		caseName             string
@@ -1753,6 +1791,7 @@ func TestPDB(t *testing.T) {
 func TestHorizontalPodAutoscaler(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
 
 	cases := []struct {
 		caseName             string
@@ -2156,6 +2195,178 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	}
 }
 
+// TestEnvoyProxyPatchDisabled verifies that when EnvoyGateway disables
+// EnvoyProxy resource patches, the Kubernetes resource `patch` fields
+// configured on EnvoyProxy's Kubernetes provider settings are ignored when
+// rendering Deployment, DaemonSet, Service, HorizontalPodAutoscaler, and
+// PodDisruptionBudget resources, rather than being merged onto the rendered
+// object.
+func TestEnvoyProxyPatchDisabled(t *testing.T) {
+	newRender := func(t *testing.T, disablePatch bool, configure func(kube *egv1a1.EnvoyProxyKubernetesProvider)) *ResourceRender {
+		t.Helper()
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+		if disablePatch {
+			cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Disabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
+		}
+
+		infra := newTestInfra()
+		provider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+		provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+		configure(provider.Kubernetes)
+
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+		require.NoError(t, err)
+		return r
+	}
+
+	t.Run("deployment", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}`),
+			},
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyDeployment.Patch = patch
+		}
+
+		unpatched, err := newRender(t, true, func(*egv1a1.EnvoyProxyKubernetesProvider) {}).Deployment()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).Deployment()
+		require.NoError(t, err)
+		assert.True(t, enabled.Spec.Template.Spec.HostNetwork)
+
+		disabled, err := newRender(t, true, configure).Deployment()
+		require.NoError(t, err)
+		assert.False(t, disabled.Spec.Template.Spec.HostNetwork)
+		assert.Equal(t, unpatched, disabled)
+	})
+
+	t.Run("daemonset", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}`),
+			},
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyDaemonSet = &egv1a1.KubernetesDaemonSetSpec{Patch: patch}
+		}
+		baseline := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyDaemonSet = &egv1a1.KubernetesDaemonSetSpec{}
+		}
+
+		unpatched, err := newRender(t, true, baseline).DaemonSet()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).DaemonSet()
+		require.NoError(t, err)
+		assert.True(t, enabled.Spec.Template.Spec.HostNetwork)
+
+		disabled, err := newRender(t, true, configure).DaemonSet()
+		require.NoError(t, err)
+		assert.False(t, disabled.Spec.Template.Spec.HostNetwork)
+		assert.Equal(t, unpatched, disabled)
+	})
+
+	t.Run("service", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"metadata":{"annotations":{"tenant-injected":"true"}}}`),
+			},
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyService.Patch = patch
+		}
+
+		unpatched, err := newRender(t, true, func(*egv1a1.EnvoyProxyKubernetesProvider) {}).Service()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).Service()
+		require.NoError(t, err)
+		assert.Equal(t, "true", enabled.Annotations["tenant-injected"])
+
+		disabled, err := newRender(t, true, configure).Service()
+		require.NoError(t, err)
+		assert.NotContains(t, disabled.Annotations, "tenant-injected")
+		assert.Equal(t, unpatched, disabled)
+	})
+
+	t.Run("horizontalpodautoscaler", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"spec":{"minReplicas":9}}`),
+			},
+		}
+		hpaBase := func() *egv1a1.KubernetesHorizontalPodAutoscalerSpec {
+			return &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MinReplicas: new(int32(1)),
+				MaxReplicas: new(int32(10)),
+			}
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			hpa := hpaBase()
+			hpa.Patch = patch
+			kube.EnvoyHpa = hpa
+		}
+		baseline := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyHpa = hpaBase()
+		}
+
+		unpatched, err := newRender(t, true, baseline).HorizontalPodAutoscaler()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).HorizontalPodAutoscaler()
+		require.NoError(t, err)
+		require.NotNil(t, enabled.Spec.MinReplicas)
+		assert.EqualValues(t, 9, *enabled.Spec.MinReplicas)
+
+		disabled, err := newRender(t, true, configure).HorizontalPodAutoscaler()
+		require.NoError(t, err)
+		require.NotNil(t, disabled.Spec.MinReplicas)
+		assert.EqualValues(t, 1, *disabled.Spec.MinReplicas)
+		assert.Equal(t, unpatched, disabled)
+	})
+
+	t.Run("poddisruptionbudget", func(t *testing.T) {
+		patch := &egv1a1.KubernetesPatchSpec{
+			Type: new(egv1a1.StrategicMerge),
+			Value: apiextensionsv1.JSON{
+				Raw: []byte(`{"metadata":{"annotations":{"tenant-injected":"true"}}}`),
+			},
+		}
+		pdbBase := func() *egv1a1.KubernetesPodDisruptionBudgetSpec {
+			return &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: new(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+			}
+		}
+		configure := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			pdb := pdbBase()
+			pdb.Patch = patch
+			kube.EnvoyPDB = pdb
+		}
+		baseline := func(kube *egv1a1.EnvoyProxyKubernetesProvider) {
+			kube.EnvoyPDB = pdbBase()
+		}
+
+		unpatched, err := newRender(t, true, baseline).PodDisruptionBudget()
+		require.NoError(t, err)
+
+		enabled, err := newRender(t, false, configure).PodDisruptionBudget()
+		require.NoError(t, err)
+		assert.Equal(t, "true", enabled.Annotations["tenant-injected"])
+
+		disabled, err := newRender(t, true, configure).PodDisruptionBudget()
+		require.NoError(t, err)
+		assert.NotContains(t, disabled.Annotations, "tenant-injected")
+		assert.Equal(t, unpatched, disabled)
+	})
+}
+
 func writeTestDataToFile(filename string, resources []any) error {
 	var combinedYAML []byte
 	for i, res := range resources {
@@ -2170,4 +2381,418 @@ func writeTestDataToFile(filename string, resources []any) error {
 	}
 
 	return os.WriteFile(filename, combinedYAML, 0o600)
+}
+
+// TestSanitizeControllerServiceAccount verifies that a tenant cannot cause the controller's
+// own service account to be used in a gateway Deployment or DaemonSet.
+func TestSanitizeControllerServiceAccount(t *testing.T) {
+	const controllerSA = "envoy-gateway"
+
+	newInfraWithSA := func(saName string) *ir.Infra {
+		i := newTestInfra()
+		i.Proxy.Config = new(egv1a1.EnvoyProxy)
+		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+			EnvoyServiceAccount: &egv1a1.KubernetesServiceAccountSpec{
+				Name: &saName,
+			},
+		}
+		return i
+	}
+
+	newInfraWithSAPatch := func(saName string) *ir.Infra {
+		i := newTestInfra()
+		i.Proxy.Config = new(egv1a1.EnvoyProxy)
+		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		patch := []byte(`{"spec":{"template":{"spec":{"serviceAccountName":"` + saName + `"}}}}`)
+		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+			EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type:  (*egv1a1.MergeType)(func() *string { s := string(egv1a1.StrategicMerge); return &s }()),
+					Value: apiextensionsv1.JSON{Raw: patch},
+				},
+			},
+			EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type:  (*egv1a1.MergeType)(func() *string { s := string(egv1a1.StrategicMerge); return &s }()),
+					Value: apiextensionsv1.JSON{Raw: patch},
+				},
+			},
+		}
+		return i
+	}
+
+	newCfgWithSA := func(saName string, gwNamespaceMode bool) *config.Server {
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+		cfg.ControllerServiceAccountName = saName
+		cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
+		if gwNamespaceMode {
+			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						},
+					},
+				},
+			}
+		}
+		return cfg
+	}
+
+	t.Run("deployment/explicit-sa-sanitized", func(t *testing.T) {
+		cfg := newCfgWithSA(controllerSA, false)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithSA(controllerSA))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "controller SA must be rejected")
+		assert.Contains(t, err.Error(), controllerSA)
+	})
+
+	t.Run("deployment/patch-sa-sanitized", func(t *testing.T) {
+		cfg := newCfgWithSA(controllerSA, false)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithSAPatch(controllerSA))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "controller SA set via patch must be rejected")
+		assert.Contains(t, err.Error(), controllerSA)
+	})
+
+	t.Run("deployment/non-controller-sa-allowed", func(t *testing.T) {
+		cfg := newCfgWithSA(controllerSA, false)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithSA("other-sa"))
+		require.NoError(t, err)
+		deploy, err := r.Deployment()
+		require.NoError(t, err)
+		assert.Equal(t, "other-sa", deploy.Spec.Template.Spec.ServiceAccountName,
+			"non-controller SA must pass through unchanged")
+	})
+
+	t.Run("deployment/gateway-namespace-mode-not-sanitized", func(t *testing.T) {
+		cfg := newCfgWithSA(controllerSA, true)
+		infra := newInfraWithSA(controllerSA)
+		infra.Proxy.Namespace = "tenant-ns"
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+		require.NoError(t, err)
+		deploy, err := r.Deployment()
+		require.NoError(t, err)
+		assert.Equal(t, controllerSA, deploy.Spec.Template.Spec.ServiceAccountName,
+			"in GatewayNamespaceMode the SA is not restricted since deployment lands in tenant namespace")
+	})
+
+	t.Run("daemonset/explicit-sa-sanitized", func(t *testing.T) {
+		cfg := newCfgWithSA(controllerSA, false)
+		i := newTestInfra()
+		i.Proxy.Config = new(egv1a1.EnvoyProxy)
+		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		saName := controllerSA
+		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+			EnvoyServiceAccount: &egv1a1.KubernetesServiceAccountSpec{Name: &saName},
+			EnvoyDaemonSet:      egv1a1.DefaultKubernetesDaemonSet(""),
+		}
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), i)
+		require.NoError(t, err)
+		_, err = r.DaemonSet()
+		require.Error(t, err, "controller SA must be rejected in daemonset")
+		assert.Contains(t, err.Error(), controllerSA)
+	})
+}
+
+// TestCheckResourceName verifies that a tenant cannot overwrite EG-owned resources by setting
+// a deployment/daemonset/service name that collides with the controller's own resource names.
+func TestCheckResourceName(t *testing.T) {
+	const controllerName = "envoy-gateway"
+
+	newCfgWithName := func(name string, gwNamespaceMode bool) *config.Server {
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+		cfg.ControllerName = name
+		cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
+		if gwNamespaceMode {
+			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						},
+					},
+				},
+			}
+		}
+		return cfg
+	}
+
+	newInfraWithDeploymentName := func(name string) *ir.Infra {
+		i := newTestInfra()
+		i.Proxy.Config = new(egv1a1.EnvoyProxy)
+		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+			EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Name: &name,
+			},
+		}
+		return i
+	}
+
+	newInfraWithDeploymentNamePatch := func(name string) *ir.Infra {
+		i := newTestInfra()
+		i.Proxy.Config = new(egv1a1.EnvoyProxy)
+		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		patch := []byte(`{"metadata":{"name":"` + name + `"}}`)
+		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+			EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type:  (*egv1a1.MergeType)(func() *string { s := string(egv1a1.StrategicMerge); return &s }()),
+					Value: apiextensionsv1.JSON{Raw: patch},
+				},
+			},
+		}
+		return i
+	}
+
+	newInfraWithServiceName := func(name string) *ir.Infra {
+		i := newTestInfra()
+		i.Proxy.Config = new(egv1a1.EnvoyProxy)
+		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+			EnvoyService: &egv1a1.KubernetesServiceSpec{
+				Name: &name,
+			},
+		}
+		return i
+	}
+
+	t.Run("deployment/explicit-name-collision", func(t *testing.T) {
+		cfg := newCfgWithName(controllerName, false)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithDeploymentName(controllerName))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "controller deployment name must be rejected")
+		assert.Contains(t, err.Error(), controllerName)
+	})
+
+	t.Run("deployment/patch-name-collision", func(t *testing.T) {
+		cfg := newCfgWithName(controllerName, false)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithDeploymentNamePatch(controllerName))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "controller deployment name set via patch must be rejected")
+		assert.Contains(t, err.Error(), controllerName)
+	})
+
+	t.Run("deployment/config-suffix-collision", func(t *testing.T) {
+		cfg := newCfgWithName(controllerName, false)
+		configName := controllerName + "-config"
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithDeploymentName(configName))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "envoy-gateway-config name must be rejected")
+		assert.Contains(t, err.Error(), configName)
+	})
+
+	t.Run("deployment/non-controller-name-allowed", func(t *testing.T) {
+		cfg := newCfgWithName(controllerName, false)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithDeploymentName("my-gateway"))
+		require.NoError(t, err)
+		deploy, err := r.Deployment()
+		require.NoError(t, err)
+		assert.Equal(t, "my-gateway", deploy.Name)
+	})
+
+	t.Run("deployment/gateway-namespace-mode-not-restricted", func(t *testing.T) {
+		cfg := newCfgWithName(controllerName, true)
+		infra := newInfraWithDeploymentName(controllerName)
+		infra.Proxy.Namespace = "tenant-ns"
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+		require.NoError(t, err)
+		deploy, err := r.Deployment()
+		require.NoError(t, err)
+		assert.Equal(t, controllerName, deploy.Name,
+			"in GatewayNamespaceMode the name is not restricted since deployment lands in tenant namespace")
+	})
+
+	t.Run("service/explicit-name-collision", func(t *testing.T) {
+		cfg := newCfgWithName(controllerName, false)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithServiceName(controllerName))
+		require.NoError(t, err)
+		_, err = r.Service()
+		require.Error(t, err, "controller service name must be rejected")
+		assert.Contains(t, err.Error(), controllerName)
+	})
+}
+
+// TestCheckPodSpecVolumes verifies that a tenant cannot mount the controller's own Secret
+// into a gateway pod to exfiltrate the xDS TLS private key.
+func TestCheckPodSpecVolumes(t *testing.T) {
+	const controllerName = "envoy-gateway"
+
+	newCfgWithName := func(gwNamespaceMode bool) *config.Server {
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+		cfg.ControllerName = controllerName
+		cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
+		if gwNamespaceMode {
+			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+						},
+					},
+				},
+			}
+		}
+		return cfg
+	}
+
+	newInfraWithVolumePatch := func(patch []byte) *ir.Infra {
+		i := newTestInfra()
+		i.Proxy.Config = new(egv1a1.EnvoyProxy)
+		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+			EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+				Patch: &egv1a1.KubernetesPatchSpec{
+					Type:  (*egv1a1.MergeType)(func() *string { s := string(egv1a1.StrategicMerge); return &s }()),
+					Value: apiextensionsv1.JSON{Raw: patch},
+				},
+			},
+		}
+		return i
+	}
+
+	t.Run("deployment/secret-volume-blocked", func(t *testing.T) {
+		cfg := newCfgWithName(false)
+		patch := []byte(`{"spec":{"template":{"spec":{"volumes":[{"name":"stolen","secret":{"secretName":"envoy-gateway"}}]}}}}`)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithVolumePatch(patch))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "mounting controller secret must be rejected")
+		assert.Contains(t, err.Error(), controllerName)
+	})
+
+	t.Run("deployment/projected-secret-volume-blocked", func(t *testing.T) {
+		cfg := newCfgWithName(false)
+		patch := []byte(`{"spec":{"template":{"spec":{"volumes":[{"name":"stolen","projected":{"sources":[{"secret":{"name":"envoy-gateway"}}]}}]}}}}`)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithVolumePatch(patch))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "mounting controller secret via projected volume must be rejected")
+		assert.Contains(t, err.Error(), controllerName)
+	})
+
+	t.Run("deployment/other-secret-allowed", func(t *testing.T) {
+		cfg := newCfgWithName(false)
+		patch := []byte(`{"spec":{"template":{"spec":{"volumes":[{"name":"my-secret","secret":{"secretName":"my-own-secret"}}]}}}}`)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithVolumePatch(patch))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.NoError(t, err, "mounting a non-controller secret must be allowed")
+	})
+
+	t.Run("deployment/gateway-namespace-mode-not-restricted", func(t *testing.T) {
+		cfg := newCfgWithName(true)
+		patch := []byte(`{"spec":{"template":{"spec":{"volumes":[{"name":"stolen","secret":{"secretName":"envoy-gateway"}}]}}}}`)
+		i := newInfraWithVolumePatch(patch)
+		i.Proxy.Namespace = "tenant-ns"
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), i)
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.NoError(t, err, "in GatewayNamespaceMode secret volume is not restricted")
+	})
+
+	t.Run("deployment/secret-env-var-blocked", func(t *testing.T) {
+		cfg := newCfgWithName(false)
+		patch := []byte(`{"spec":{"template":{"spec":{"containers":[{"name":"envoy","env":[{"name":"STOLEN","valueFrom":{"secretKeyRef":{"name":"envoy-gateway","key":"tls.key"}}}]}]}}}}`)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithVolumePatch(patch))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "referencing controller secret via env secretKeyRef must be rejected")
+		assert.Contains(t, err.Error(), controllerName)
+	})
+
+	t.Run("deployment/configmap-volume-blocked", func(t *testing.T) {
+		cfg := newCfgWithName(false)
+		patch := []byte(`{"spec":{"template":{"spec":{"volumes":[{"name":"stolen","configMap":{"name":"envoy-gateway-config"}}]}}}}`)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithVolumePatch(patch))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "mounting controller configmap as volume must be rejected")
+		assert.Contains(t, err.Error(), controllerName+"-config")
+	})
+
+	t.Run("deployment/configmap-env-var-blocked", func(t *testing.T) {
+		cfg := newCfgWithName(false)
+		patch := []byte(`{"spec":{"template":{"spec":{"containers":[{"name":"envoy","env":[{"name":"EG_CONFIG","valueFrom":{"configMapKeyRef":{"name":"envoy-gateway-config","key":"envoy-gateway.yaml"}}}]}]}}}}`)
+		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), newInfraWithVolumePatch(patch))
+		require.NoError(t, err)
+		_, err = r.Deployment()
+		require.Error(t, err, "referencing controller configmap via env configMapKeyRef must be rejected")
+		assert.Contains(t, err.Error(), controllerName+"-config")
+	})
+}
+
+// TestNearMissNames verifies that names that are similar to but not equal to reserved names
+// are all allowed through — e.g. "envoy-gateway-foo" is not "envoy-gateway".
+func TestNearMissNames(t *testing.T) {
+	const (
+		controllerName = "envoy-gateway"
+		controllerSA   = "envoy-gateway"
+		nearMissName   = "envoy-gateway-foo"
+	)
+
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	cfg.ControllerName = controllerName
+	cfg.ControllerServiceAccountName = controllerSA
+
+	patch := []byte(`{
+		"spec": {"template": {"spec": {
+			"volumes": [
+				{"name": "secret-vol",    "secret":    {"secretName": "envoy-gateway-bar"}},
+				{"name": "cm-vol",        "configMap": {"name": "envoy-gateway-bar"}},
+				{"name": "proj-vol",      "projected": {"sources": [
+					{"secret":    {"name": "envoy-gateway-bar"}},
+					{"configMap": {"name": "envoy-gateway-bar"}}
+				]}}
+			],
+			"containers": [{"name": "envoy", "env": [
+				{"name": "FROM_SECRET",    "valueFrom": {"secretKeyRef":   {"name": "envoy-gateway-bar", "key": "k"}}},
+				{"name": "FROM_CONFIGMAP", "valueFrom": {"configMapKeyRef": {"name": "envoy-gateway-bar", "key": "k"}}}
+			]}]
+		}}}
+	}`)
+
+	i := newTestInfra()
+	i.Proxy.Config = new(egv1a1.EnvoyProxy)
+	i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+	saName := nearMissName
+	deployName := nearMissName
+	svcName := nearMissName
+	i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
+		EnvoyServiceAccount: &egv1a1.KubernetesServiceAccountSpec{Name: &saName},
+		EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+			Name: &deployName,
+			Patch: &egv1a1.KubernetesPatchSpec{
+				Type:  (*egv1a1.MergeType)(func() *string { s := string(egv1a1.StrategicMerge); return &s }()),
+				Value: apiextensionsv1.JSON{Raw: patch},
+			},
+		},
+		EnvoyService: &egv1a1.KubernetesServiceSpec{Name: &svcName},
+	}
+
+	r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), i)
+	require.NoError(t, err)
+
+	deploy, err := r.Deployment()
+	require.NoError(t, err, "near-miss names must all be allowed")
+	assert.Equal(t, nearMissName, deploy.Name)
+	assert.Equal(t, nearMissName, deploy.Spec.Template.Spec.ServiceAccountName)
+
+	svc, err := r.Service()
+	require.NoError(t, err, "near-miss service name must be allowed")
+	assert.Equal(t, nearMissName, svc.Name)
 }

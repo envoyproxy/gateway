@@ -28,6 +28,7 @@ func GetEnvoyCommand() *cobra.Command {
 
 // getShutdownCommand returns the shutdown cobra command to be executed.
 func getShutdownCommand() *cobra.Command {
+	var healthCheckFailureDelay time.Duration
 	var drainTimeout time.Duration
 	var minDrainDuration time.Duration
 	var exitAtConnections int
@@ -36,9 +37,12 @@ func getShutdownCommand() *cobra.Command {
 		Use:   "shutdown",
 		Short: "Gracefully drain open connections prior to pod shutdown.",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return envoy.Shutdown(drainTimeout, minDrainDuration, exitAtConnections)
+			return envoy.Shutdown(healthCheckFailureDelay, drainTimeout, minDrainDuration, exitAtConnections)
 		},
 	}
+
+	cmd.PersistentFlags().DurationVar(&healthCheckFailureDelay, "health-check-failure-delay", 0*time.Second,
+		"Delay before failing health checks during the graceful drain process.")
 
 	cmd.PersistentFlags().DurationVar(&drainTimeout, "drain-timeout", 60*time.Second,
 		"Graceful shutdown timeout. This should be less than the pod's terminationGracePeriodSeconds.")
@@ -47,7 +51,7 @@ func getShutdownCommand() *cobra.Command {
 		"Minimum drain duration allowing time for endpoint deprogramming to complete.")
 
 	cmd.PersistentFlags().IntVar(&exitAtConnections, "exit-at-connections", 0,
-		"Number of connections to wait for when monitoring Envoy listener drain process.")
+		"Number of connections, including UDP proxy sessions, to wait for when monitoring Envoy listener drain process.")
 
 	return cmd
 }

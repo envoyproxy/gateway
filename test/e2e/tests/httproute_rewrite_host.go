@@ -62,6 +62,19 @@ var HTTPRouteRewriteHostHeader = suite.ConformanceTest{
 				Backend:   "infra-backend-v1",
 				Namespace: ns,
 			},
+			{
+				Request: http.Request{
+					Path: "/path-regex/custom-host",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/path-regex/custom-host",
+						Host: "custom-host.example.internal",
+					},
+				},
+				Backend:   "infra-backend-v1",
+				Namespace: ns,
+			},
 		}
 		for i := range testCases {
 			// Declare tc here to avoid loop variable

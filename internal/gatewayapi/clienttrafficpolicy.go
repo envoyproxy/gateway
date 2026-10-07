@@ -47,44 +47,37 @@ func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
 	return spec != nil && spec.HTTP1 != nil
 }
 
-// ctpClusterSettingsKey identifies a ClientTrafficPolicy's target: a listener's own name, scoped
-// to its owner's identity - the Gateway's own NamespacedName for a Gateway-direct listener, or the
-// ListenerSet's own NamespacedName for a listener contributed by a ListenerSet.
-type ctpClusterSettingsKey struct {
-	Namespace, Name, SectionName string
-}
-
 // CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
 // sets a cluster-affecting field. Gateway-wide settings (no SectionName) aren't tracked, since a
 // merged cluster never spans gateways and so can never see them diverge.
 type CTPClusterSettingsIndex struct {
-	listenerLevel    map[ctpClusterSettingsKey]bool
-	listenerSetLevel map[types.NamespacedName]bool
+	*policyIndex[bool]
 }
 
-// HasListenerLevelClusterSettings reports whether any of listeners - the route's actual resolved
-// attachment(s) under gatewayNN - has a ClientTrafficPolicy-sourced HTTP1 override, checking each
-// listener against its own owner (the Gateway, or the ListenerSet it came from).
-func (idx *CTPClusterSettingsIndex) HasListenerLevelClusterSettings(gatewayNN types.NamespacedName, listeners []*ListenerContext) bool {
+// newCTPClusterSettingsIndex allocates a CTPClusterSettingsIndex.
+func newCTPClusterSettingsIndex() *CTPClusterSettingsIndex {
+	return &CTPClusterSettingsIndex{policyIndex: newPolicyIndex[bool]()}
+}
+
+// HasClusterSettingsBelowGateway reports whether listener (which belongs to gatewayNN, either
+// directly or via a ListenerSet) has a ClientTrafficPolicy-sourced cluster-scoped setting,
+// checked against its own owner (the Gateway, or the ListenerSet it came from).
+func (idx *CTPClusterSettingsIndex) HasClusterSettingsBelowGateway(gatewayNN types.NamespacedName, listener *ListenerContext) bool {
 	if idx == nil {
 		return false
 	}
-	for _, l := range listeners {
-		if l.isFromListenerSet() {
-			lsNN := types.NamespacedName{Namespace: l.listenerSet.Namespace, Name: l.listenerSet.Name}
-			if idx.listenerSetLevel[lsNN] {
-				return true
-			}
-			key := ctpClusterSettingsKey{Namespace: lsNN.Namespace, Name: lsNN.Name, SectionName: string(l.Name)}
-			if idx.listenerLevel[key] {
-				return true
-			}
-			continue
-		}
-		key := ctpClusterSettingsKey{Namespace: gatewayNN.Namespace, Name: gatewayNN.Name, SectionName: string(l.Name)}
-		if idx.listenerLevel[key] {
+	if listener.isFromListenerSet() {
+		lsNN := types.NamespacedName{Namespace: listener.listenerSet.Namespace, Name: listener.listenerSet.Name}
+		if hasClusterSettings, found := idx.LookupExact(listenerSetScope(lsNN)); found && hasClusterSettings {
 			return true
 		}
+		if hasClusterSettings, found := idx.LookupExact(listenerSetListenerScope(lsNN, listener.Name)); found && hasClusterSettings {
+			return true
+		}
+		return false
+	}
+	if hasClusterSettings, found := idx.LookupExact(gatewayListenerScope(gatewayNN, listener.Name)); found && hasClusterSettings {
+		return true
 	}
 	return false
 }
@@ -98,19 +91,14 @@ func BuildCTPClusterSettingsIndex(
 	namespaceLookup func(string) *corev1.Namespace,
 	mergeBackendsEnabled bool,
 ) *CTPClusterSettingsIndex {
-	idx := &CTPClusterSettingsIndex{
-		listenerLevel:    make(map[ctpClusterSettingsKey]bool),
-		listenerSetLevel: make(map[types.NamespacedName]bool),
-	}
+	idx := newCTPClusterSettingsIndex()
 	// Moot when no accepted gateway can enable merging.
 	if !mergeBackendsEnabled {
 		return idx
 	}
 
 	for _, ctp := range ctps {
-		if !ctpSpecHasClusterScopedFields(&ctp.Spec) {
-			continue
-		}
+		hasClusterScoped := ctpSpecHasClusterScopedFields(&ctp.Spec)
 
 		refs := resolvePolicyTargetsForGatewayAndListenerSet(
 			ctp.Spec.PolicyTargetReferences,
@@ -124,19 +112,17 @@ func BuildCTPClusterSettingsIndex(
 		)
 
 		for _, ref := range refs {
-			switch ref.Kind {
-			case resource.KindGateway:
-				if ref.SectionName != nil {
-					key := ctpClusterSettingsKey{Namespace: string(ref.Namespace), Name: string(ref.Name), SectionName: string(*ref.SectionName)}
-					idx.listenerLevel[key] = true
-				}
-			case resource.KindListenerSet:
-				if ref.SectionName != nil {
-					key := ctpClusterSettingsKey{Namespace: string(ref.Namespace), Name: string(ref.Name), SectionName: string(*ref.SectionName)}
-					idx.listenerLevel[key] = true
-				} else {
-					idx.listenerSetLevel[types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}] = true
-				}
+			nn := types.NamespacedName{Namespace: string(ref.Namespace), Name: string(ref.Name)}
+			switch {
+			case ref.Kind == resource.KindGateway && ref.SectionName != nil:
+				idx.setGatewayListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+			case ref.Kind == resource.KindGateway:
+				// Gateway-wide settings apply uniformly to every route sharing a merged cluster,
+				// so they don't disqualify merging - no entry needed.
+			case ref.Kind == resource.KindListenerSet && ref.SectionName != nil:
+				idx.setListenerSetListenerLevel(nn, *ref.SectionName, hasClusterScoped, true)
+			case ref.Kind == resource.KindListenerSet:
+				idx.setListenerSetLevel(nn, hasClusterScoped, true)
 			}
 		}
 	}
@@ -247,7 +233,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Check if another policy targeting the same section exists
-				section := string(*(targetRef.SectionName))
+				section := string(*targetRef.SectionName)
 				sectionKey := section
 				if targetRef.Kind == resource.KindListenerSet {
 					sectionKey = fmt.Sprintf("%s%s", lsPrefix(ls), section)
@@ -816,6 +802,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil && !shouldDisableHTTP3ForClientValidation(policy, httpIR) {
 			http3 := &ir.HTTP3Settings{}
+			if policy.Spec.HTTP3.AdvertisedPort != nil {
+				http3.AdvertisedPort = new(uint32(*policy.Spec.HTTP3.AdvertisedPort))
+			}
 			httpIR.HTTP3 = http3
 			var proxyListenerIR *ir.ProxyListener
 			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
@@ -958,6 +947,20 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			}
 			irTCPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
 		}
+		if clientTimeout.TCP.TLSHandshakeTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.TCP.TLSHandshakeTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid TCP TLSHandshakeTimeout value %s", *clientTimeout.TCP.TLSHandshakeTimeout)
+			}
+			irTCPTimeout.TLSHandshakeTimeout = ir.MetaV1DurationPtr(d)
+		}
+		if clientTimeout.TCP.ConnectionInspectionTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.TCP.ConnectionInspectionTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid TCP ConnectionInspectionTimeout value %s", *clientTimeout.TCP.ConnectionInspectionTimeout)
+			}
+			irTCPTimeout.ConnectionInspectionTimeout = ir.MetaV1DurationPtr(d)
+		}
 		irClientTimeout.TCP = irTCPTimeout
 	}
 
@@ -986,6 +989,14 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 			}
 			irHTTPTimeout.StreamIdleTimeout = ir.MetaV1DurationPtr(d)
 		}
+
+		if clientTimeout.HTTP.RequestHeadersReceivedTimeout != nil {
+			d, err := time.ParseDuration(string(*clientTimeout.HTTP.RequestHeadersReceivedTimeout))
+			if err != nil {
+				return nil, fmt.Errorf("invalid HTTP RequestHeadersReceivedTimeout value %s", *clientTimeout.HTTP.RequestHeadersReceivedTimeout)
+			}
+			irHTTPTimeout.RequestHeadersReceivedTimeout = ir.MetaV1DurationPtr(d)
+		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
@@ -1000,6 +1011,10 @@ func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSetti
 
 	httpIR.ClientIPDetection = (*ir.ClientIPDetectionSettings)(clientIPDetection)
 }
+
+// maxRequestHeaderLimitKB is the maximum value (in KiB) that Envoy supports for
+// the HTTP connection manager max_request_headers_kb setting.
+const maxRequestHeaderLimitKB = 8192
 
 func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, httpIR *ir.HTTPListener) error {
 	if headerSettings == nil {
@@ -1035,24 +1050,39 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 
 	var errs error
 
+	if headerSettings.MaxRequestHeaderLimit != nil {
+		// Envoy's max_request_headers_kb is expressed in KiB, so convert the
+		// byte quantity and round up to the nearest KiB.
+		bytes, ok := headerSettings.MaxRequestHeaderLimit.AsInt64()
+		switch {
+		case !ok || bytes < 1024:
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s must be at least 1Ki", headerSettings.MaxRequestHeaderLimit.String()))
+		// Compare against the byte-equivalent of the max before rounding up, so a
+		// bytes value close to math.MaxInt64 can't overflow the "bytes + 1023"
+		// addition below and slip past the maximum check.
+		case bytes > maxRequestHeaderLimitKB*1024:
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderLimit value %s exceeds the maximum of %dKi", headerSettings.MaxRequestHeaderLimit.String(), maxRequestHeaderLimitKB))
+		default:
+			kb := (bytes + 1023) / 1024
+			httpIR.Headers.MaxRequestHeadersKB = new(uint32)
+			*httpIR.Headers.MaxRequestHeadersKB = uint32(kb)
+		}
+	}
+
 	if headerSettings.EarlyRequestHeaders != nil {
-		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
+		mutations, err := translateHeaderModifier(headerSettings.EarlyRequestHeaders, "EarlyRequestHeaders")
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
-		httpIR.Headers.EarlyAddRequestHeaders = headersToAdd
-		httpIR.Headers.EarlyRemoveRequestHeaders = headersToRemove
-		httpIR.Headers.EarlyRemoveRequestHeadersOnMatch = removeOnMatch
+		httpIR.Headers.EarlyRequestHeaderMutations = mutations
 	}
 
 	if headerSettings.LateResponseHeaders != nil {
-		headersToAdd, headersToRemove, removeOnMatch, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
+		mutations, err := translateHeaderModifier(headerSettings.LateResponseHeaders, "LateResponseHeaders")
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
-		httpIR.Headers.LateAddResponseHeaders = headersToAdd
-		httpIR.Headers.LateRemoveResponseHeaders = headersToRemove
-		httpIR.Headers.LateRemoveResponseHeadersOnMatch = removeOnMatch
+		httpIR.Headers.LateResponseHeaderMutations = mutations
 	}
 
 	return errs
@@ -1207,7 +1237,7 @@ func (t *Translator) buildListenerTLSParameters(
 	if tlsParams.Fingerprints != nil {
 		irTLSConfig.Fingerprints = make([]ir.TLSFingerprintType, len(tlsParams.Fingerprints))
 		for i := range tlsParams.Fingerprints {
-			irTLSConfig.Fingerprints[i] = (ir.TLSFingerprintType)(tlsParams.Fingerprints[i])
+			irTLSConfig.Fingerprints[i] = ir.TLSFingerprintType(tlsParams.Fingerprints[i])
 		}
 	}
 
@@ -1236,7 +1266,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		seenCACerts := make(map[[sha256.Size]byte]struct{})
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, resources, from, CACertKey)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
@@ -1275,7 +1305,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, resources, from, CRLKey)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}
@@ -1308,10 +1338,13 @@ func (t *Translator) buildListenerTLSParameters(
 // validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
 func (t *Translator) validateAndGetDataAtKeyInRef(
 	ref gwapiv1.SecretObjectReference,
-	key string,
 	resources *resource.Resources,
 	from crossNamespaceFrom,
+	keys ...string,
 ) ([]byte, error) {
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("unsupported call with no key")
+	}
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
@@ -1320,9 +1353,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		secretCertBytes, ok := getOrFirstFromData(secret.Data, key)
+		secretCertBytes, ok := getFirstMatchOrFirstFromData(secret.Data, keys...)
 		if !ok || len(secretCertBytes) == 0 {
-			return nil, fmt.Errorf("ref secret [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref secret [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
@@ -1331,9 +1364,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		configMapData, ok := getOrFirstFromData(configMap.Data, key)
+		configMapData, ok := getFirstMatchOrFirstFromData(configMap.Data, keys...)
 		if !ok || len(configMapData) == 0 {
-			return nil, fmt.Errorf("ref configmap [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref configmap [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:
@@ -1440,16 +1473,72 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	return irConnection, nil
 }
 
-func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.AddHeader, []string, []*ir.StringMatch, error) {
+// translateHeaderModifier converts an HTTPHeaderFilter into a single, ordered
+// list of header mutations. The explicit Mutations field is emitted first and
+// verbatim, then the legacy Set/Add/AddIfAbsent/Remove/RemoveOnMatch fields are
+// converted into mutations and appended, preserving their historical ordering
+// (Add, then Set, then AddIfAbsent, then Remove, then RemoveOnMatch).
+func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType string) ([]ir.HeaderMutation, error) {
 	// Make sure the header modifier config actually exists
 	if headerModifier == nil {
-		return nil, nil, nil, nil
+		return nil, nil
 	}
 	var errs error
+	var mutations []ir.HeaderMutation
 
-	var addRequestHeaders []ir.AddHeader
-	var removeRequestHeaders []string
-	var removeRequestHeadersOnMatch []*ir.StringMatch
+	// 1. Ordered mutations are applied first and verbatim (no de-duplication),
+	// mirroring Envoy's header mutation semantics.
+	for _, m := range headerModifier.Mutations {
+		switch {
+		case m.Write != nil:
+			name := string(m.Write.Header.Name)
+			value := m.Write.Header.Value
+			if name == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot write a header with an empty name", modType))
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(name, "/:") {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot write a header with a '/' or ':' character in them. Header: %q", modType, name))
+				continue
+			}
+			if !HeaderValueRegexp.MatchString(value) {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot write a header with an invalid value. Header: %q", modType, name))
+				continue
+			}
+			action := ir.HeaderWriteAdd
+			if m.Write.Action != "" {
+				action = ir.HeaderWriteAction(m.Write.Action)
+			}
+			mutations = append(mutations, ir.HeaderMutation{
+				Write: &ir.HeaderWrite{
+					Name:           name,
+					Value:          value,
+					Action:         action,
+					KeepEmptyValue: ptr.Deref(m.Write.KeepEmptyValue, value == ""),
+				},
+			})
+		case m.Remove != nil:
+			if *m.Remove == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty name", modType))
+				continue
+			}
+			removeName := *m.Remove
+			mutations = append(mutations, ir.HeaderMutation{Remove: &removeName})
+		case m.RemoveOnMatch != nil:
+			if m.RemoveOnMatch.Value == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty matcher value", modType))
+				continue
+			}
+			mutations = append(mutations, ir.HeaderMutation{RemoveOnMatch: irStringMatch("", *m.RemoveOnMatch)})
+		default:
+			errs = errors.Join(errs, fmt.Errorf("%s mutation must set one of write, remove or removeOnMatch", modType))
+		}
+	}
+
+	// 2. The legacy Set/Add/AddIfAbsent/Remove/RemoveOnMatch fields are converted
+	// into mutations and appended after the explicit Mutations above, preserving
+	// their historical iteration order and de-duplication (first wins by name).
 
 	// Add request headers
 	if headersToAdd := headerModifier.Add; headersToAdd != nil {
@@ -1472,8 +1561,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
-			for _, h := range addRequestHeaders {
-				if strings.EqualFold(h.Name, headerKey) {
+			for _, m := range mutations {
+				if m.Write != nil && strings.EqualFold(m.Write.Name, headerKey) {
 					canAddHeader = false
 					break
 				}
@@ -1483,13 +1572,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			newHeader := ir.AddHeader{
-				Name:   headerKey,
-				Append: true,
-				Value:  []string{addHeader.Value},
-			}
-
-			addRequestHeaders = append(addRequestHeaders, newHeader)
+			mutations = append(mutations, ir.HeaderMutation{
+				Write: &ir.HeaderWrite{
+					Name:           headerKey,
+					Value:          addHeader.Value,
+					Action:         ir.HeaderWriteAdd,
+					KeepEmptyValue: addHeader.Value == "",
+				},
+			})
 		}
 	}
 
@@ -1515,8 +1605,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header to be set has already been configured
 			headerKey := string(setHeader.Name)
 			canAddHeader := true
-			for _, h := range addRequestHeaders {
-				if strings.EqualFold(h.Name, headerKey) {
+			for _, m := range mutations {
+				if m.Write != nil && strings.EqualFold(m.Write.Name, headerKey) {
 					canAddHeader = false
 					break
 				}
@@ -1524,13 +1614,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			if !canAddHeader {
 				continue
 			}
-			newHeader := ir.AddHeader{
-				Name:   string(setHeader.Name),
-				Append: false,
-				Value:  []string{setHeader.Value},
-			}
-
-			addRequestHeaders = append(addRequestHeaders, newHeader)
+			mutations = append(mutations, ir.HeaderMutation{
+				Write: &ir.HeaderWrite{
+					Name:           headerKey,
+					Value:          setHeader.Value,
+					Action:         ir.HeaderWriteSet,
+					KeepEmptyValue: setHeader.Value == "",
+				},
+			})
 		}
 	}
 
@@ -1554,8 +1645,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			// Check if the header is a duplicate
 			headerKey := string(addHeader.Name)
 			canAddHeader := true
-			for _, h := range addRequestHeaders {
-				if strings.EqualFold(h.Name, headerKey) {
+			for _, m := range mutations {
+				if m.Write != nil && strings.EqualFold(m.Write.Name, headerKey) {
 					canAddHeader = false
 					break
 				}
@@ -1565,13 +1656,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			newHeader := ir.AddHeader{
-				Name:        headerKey,
-				AddIfAbsent: true,
-				Value:       []string{addHeader.Value},
-			}
-
-			addRequestHeaders = append(addRequestHeaders, newHeader)
+			mutations = append(mutations, ir.HeaderMutation{
+				Write: &ir.HeaderWrite{
+					Name:           headerKey,
+					Value:          addHeader.Value,
+					Action:         ir.HeaderWriteAddIfAbsent,
+					KeepEmptyValue: addHeader.Value == "",
+				},
+			})
 		}
 	}
 
@@ -1586,8 +1678,8 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 			}
 
 			canRemHeader := true
-			for _, h := range removeRequestHeaders {
-				if strings.EqualFold(h, removedHeader) {
+			for _, m := range mutations {
+				if m.Remove != nil && strings.EqualFold(*m.Remove, removedHeader) {
 					canRemHeader = false
 					break
 				}
@@ -1596,7 +1688,7 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				continue
 			}
 
-			removeRequestHeaders = append(removeRequestHeaders, removedHeader)
+			mutations = append(mutations, ir.HeaderMutation{Remove: &removedHeader})
 		}
 	}
 
@@ -1607,14 +1699,14 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				errs = errors.Join(errs, fmt.Errorf("%s cannot remove a header with an empty matcher value", modType))
 				continue
 			}
-			removeRequestHeadersOnMatch = append(removeRequestHeadersOnMatch, irStringMatch("", match))
+			mutations = append(mutations, ir.HeaderMutation{RemoveOnMatch: irStringMatch("", match)})
 		}
 	}
 
-	// Update the status if the filter failed to configure any valid headers to add/remove
-	if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 && len(removeRequestHeadersOnMatch) == 0 {
+	// Update the status if the filter failed to configure any valid header mutation
+	if len(mutations) == 0 {
 		errs = errors.Join(errs, fmt.Errorf("%s did not provide valid configuration to add/set/remove any headers", modType))
 	}
 
-	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
+	return mutations, errs
 }

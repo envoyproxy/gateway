@@ -13,6 +13,7 @@ import (
 	"net"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cachetype "github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -22,6 +23,7 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -62,10 +64,18 @@ type Config struct {
 
 type Runner struct {
 	Config
+
+	// done tracks goroutines started by Start so that Close can block until
+	// they have all exited, ensuring shared state they write to is not
+	// closed out from under them during shutdown.
+	done sync.WaitGroup
 }
 
 // Close implements Runner interface.
-func (r *Runner) Close() error { return nil }
+func (r *Runner) Close() error {
+	r.done.Wait()
+	return nil
+}
 
 // Name implements Runner interface.
 func (r *Runner) Name() string {
@@ -97,13 +107,17 @@ func (r *Runner) Start(ctx context.Context) error {
 	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, serverv3.CallbackFuncs{}))
 
 	// Start and listen xDS gRPC config Server.
-	go r.serveXdsConfigServer(ctx)
+	r.done.Go(func() {
+		r.serveXdsConfigServer(ctx)
+	})
 
 	// Start message subscription.
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	c := r.XdsIR.Subscribe(ctx)
-	go r.translateFromSubscription(ctx, c)
+	r.done.Go(func() {
+		r.translateFromSubscription(ctx, c)
+	})
 
 	r.Logger.Info("started")
 	return err
@@ -147,12 +161,13 @@ func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchab
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-			parentCtx := ctx
-			if update.Value != nil && update.Value.Context != nil {
-				parentCtx = update.Value.Context
+			parentCtx := update.Value.ParentContext(ctx)
+			var startOpts []trace.SpanStartOption
+			if !update.Delete && !update.Initial {
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 			}
 
-			traceCtx, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription")
+			traceCtx, span := tracer.Start(parentCtx, "GlobalRateLimitRunner.translateFromSubscription", startOpts...)
 			defer span.End()
 
 			traceLogger := r.Logger.WithTrace(traceCtx)

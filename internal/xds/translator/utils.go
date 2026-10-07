@@ -138,10 +138,6 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 		tSocket      *corev3.TransportSocket
 	)
 
-	// Make sure that there are safe defaults for the traffic
-	if traffic == nil {
-		traffic = &ir.TrafficFeatures{}
-	}
 	// Get the address type from the first setting.
 	// This is safe because no mixed address types in the settings.
 	addrTypeState := rd.Settings[0].AddressType
@@ -159,7 +155,7 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 		metadata:     rd.Metadata,
 	}
 
-	applyTraffic(args, traffic)
+	applyTraffic(args, traffic.ClusterFeatures())
 
 	return addXdsCluster(tCtx, args)
 }
@@ -199,12 +195,13 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 		clusterArgs.tSocket = tSocket
 	}
 
-	applyTraffic(clusterArgs, traffic)
+	applyTraffic(clusterArgs, traffic.ClusterFeatures())
 
 	return addXdsCluster(tCtx, clusterArgs)
 }
 
-func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
+// applyTraffic copies the cluster-scoped traffic features onto the cluster args.
+func applyTraffic(args *xdsClusterArgs, traffic *ir.ClusterTrafficFeatures) {
 	if traffic == nil {
 		return
 	}
@@ -212,7 +209,7 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	args.proxyProtocol = traffic.ProxyProtocol
 	args.circuitBreaker = traffic.CircuitBreaker
 	args.healthCheck = traffic.HealthCheck
-	args.timeout = traffic.Timeout
+	args.timeout = traffic.Timeout.ClusterOnly()
 	args.tcpkeepalive = traffic.TCPKeepalive
 	args.backendConnection = traffic.BackendConnection
 	args.dns = traffic.DNS

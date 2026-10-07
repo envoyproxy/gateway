@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: udp-lb-coredns
+  namespace: gateway-conformance-infra
+  labels:
+    app: udp-lb
+spec:
+  ports:
+    - name: udp-dns
+      port: 53
+      protocol: UDP
+      targetPort: 53
+  selector:
+    app: udp-lb
+---
+# Two coredns backends behind the same Service, each answering the same query
+# with a different A record, so that the responses identify which backend
+# handled the request.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udp-lb-coredns-v1
+  namespace: gateway-conformance-infra
+data:
+  Corefile: |
+    lb.example.com:53 {
+      hosts {
+        10.0.0.1 lb.example.com
+        ttl 1
+      }
+      log
+      errors
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: udp-lb-coredns-v2
+  namespace: gateway-conformance-infra
+data:
+  Corefile: |
+    lb.example.com:53 {
+      hosts {
+        10.0.0.2 lb.example.com
+        ttl 1
+      }
+      log
+      errors
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udp-lb-coredns-v1
+  namespace: gateway-conformance-infra
+  labels:
+    app: udp-lb
+    version: v1
+spec:
+  selector:
+    matchLabels:
+      app: udp-lb
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: udp-lb
+        version: v1
+    spec:
+      containers:
+        - args:
+            - -conf
+            - /root/Corefile
+          image: coredns/coredns
+          name: coredns
+          volumeMounts:
+            - mountPath: /root
+              name: conf
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: udp-lb-coredns-v1
+          name: conf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udp-lb-coredns-v2
+  namespace: gateway-conformance-infra
+  labels:
+    app: udp-lb
+    version: v2
+spec:
+  selector:
+    matchLabels:
+      app: udp-lb
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: udp-lb
+        version: v2
+    spec:
+      containers:
+        - args:
+            - -conf
+            - /root/Corefile
+          image: coredns/coredns
+          name: coredns
+          volumeMounts:
+            - mountPath: /root
+              name: conf
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: udp-lb-coredns-v2
+          name: conf
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: udp-lb-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: coredns
+      protocol: UDP
+      port: 5300
+      allowedRoutes:
+        kinds:
+          - kind: UDPRoute
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: udp-lb-coredns
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: udp-lb-gateway
+      sectionName: coredns
+  rules:
+    - backendRefs:
+        - name: udp-lb-coredns
+          port: 53
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: udp-lb-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udp-lb-coredns
+  loadBalancer:
+    type: ConsistentHash
+    consistentHash:
+      type: SourceIP

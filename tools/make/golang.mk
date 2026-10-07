@@ -96,7 +96,7 @@ go.test.cel: manifests # Run the CEL validation tests
 .PHONY: go.test.benchmark
 go.test.benchmark: ## Run benchmark tests for translation performance
 	@$(LOG_TARGET)
-	cd test && go test -timeout=15m -run='^$$' -bench=. -benchmem -benchtime=1x -count=6 ./gobench
+	cd test && go test -timeout=15m -bench=. -benchmem -benchtime=1x -count=6 ./gobench
 
 .PHONY: go.test.standalone
 go.test.standalone: ## Run standalone-mode integration tests
@@ -142,6 +142,13 @@ go.mod.lint: go.mod.tidy go.mod.tidy.examples ## Check if go.mod is clean
 go.lint.fmt:
 	@$(LOG_TARGET)
 	$(GO_TOOL) golangci-lint fmt --config=tools/linter/golangci-lint/.golangci.yml
+
+.PHONY: go.fix
+go.fix: go.fix.examples ## Run go fix across all modules
+	@$(LOG_TARGET)
+	go fix ./...
+	cd test && go fix ./...
+	cd tools && go fix ./...
 
 .PHONY: go.generate
 go.generate: ## Generate code from templates

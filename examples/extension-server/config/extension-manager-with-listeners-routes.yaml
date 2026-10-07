@@ -18,10 +18,14 @@ data:
       - group: example.extensions.io
         version: v1alpha1
         kind: ListenerContextExample
+      - group: example.extensions.io
+        version: v1alpha1
+        kind: RouteContextExample
       hooks:
         # The type of hooks that should be invoked
         xdsTranslator:
           post:
+          - Route
           - HTTPListener
           - Translation
           # Enable listeners and routes in PostTranslateModifyHook

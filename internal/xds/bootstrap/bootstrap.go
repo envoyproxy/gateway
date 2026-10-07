@@ -136,6 +136,9 @@ type MetricSink struct {
 	ReportCountersAsDeltas bool
 	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
 	ReportHistogramsAsDeltas bool
+	// Prefix is prepended to emitted stat names, the full stat name will be `<prefix>.<stat_name>`.
+	// If empty, no prefix is added.
+	Prefix string
 	// Headers is a list of headers to send with OTLP export requests.
 	Headers []gwapiv1.HTTPHeader
 	// ResourceAttributes is a map of resource attributes for the metrics sink.
@@ -238,7 +241,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			metricSinks = opts.ResolvedMetricSinks
 		} else {
 			// Fall back to resolving from ProxyMetrics (legacy path for Service-type backends)
-			addresses := sets.NewString()
+			addresses := sets.New[string]()
 			for _, sink := range proxyMetrics.Sinks {
 				if sink.OpenTelemetry == nil {
 					continue
@@ -269,6 +272,7 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 					Port:                     port,
 					ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
 					ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+					Prefix:                   ptr.Deref(sink.OpenTelemetry.Prefix, ""),
 					Headers:                  sink.OpenTelemetry.Headers,
 				})
 			}

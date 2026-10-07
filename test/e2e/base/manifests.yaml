@@ -89,7 +89,7 @@ spec:
       containers:
         - name: infra-backend-v1
           # From https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/echo-basic/echo-basic.go
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
               valueFrom:
@@ -137,7 +137,7 @@ spec:
     spec:
       containers:
         - name: infra-backend-v2
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
               valueFrom:
@@ -185,7 +185,7 @@ spec:
     spec:
       containers:
         - name: infra-backend-v3
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
               valueFrom:
@@ -233,7 +233,7 @@ spec:
     spec:
       containers:
         - name: tls-backend
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           volumeMounts:
             - name: secret-volume
               mountPath: /etc/secret-volume
@@ -311,7 +311,7 @@ spec:
     spec:
       containers:
         - name: web-backend
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
               valueFrom:
@@ -408,7 +408,7 @@ spec:
     spec:
       containers:
         - name: tls-backend
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           volumeMounts:
             - name: secret-volume
               mountPath: /etc/secret-volume
@@ -528,7 +528,7 @@ spec:
     spec:
       containers:
         - name: app-backend-v1
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
               valueFrom:
@@ -574,7 +574,7 @@ spec:
     spec:
       containers:
         - name: web-backend
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
               valueFrom:

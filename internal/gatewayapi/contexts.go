@@ -157,6 +157,10 @@ type ListenerContext struct {
 	// slot from a valid same-hostname listener that uses the winner protocol.
 	protocolConflicted bool
 
+	// hostnameConflictLoser is set when another listener wins hostname conflict
+	// precedence. Losing listeners must not suppress routes on the winner.
+	hostnameConflictLoser bool
+
 	tls ListenerTLSConfig
 
 	httpIR *ir.HTTPListener
@@ -762,13 +766,10 @@ func IsParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
 	}
 
 	// Compare SectionName (optional field)
-	if ref1.SectionName == nil && ref2.SectionName == nil {
-		return true
-	}
-	if ref1.SectionName == nil || ref2.SectionName == nil {
+	if (ref1.SectionName == nil) != (ref2.SectionName == nil) {
 		return false
 	}
-	if *ref1.SectionName != *ref2.SectionName {
+	if ref1.SectionName != nil && *ref1.SectionName != *ref2.SectionName {
 		return false
 	}
 
@@ -878,6 +879,32 @@ type BackendClusterKey struct {
 	Protocol     ir.AppProtocol
 }
 
+// ExtensionResourceKey identifies a unique extension-introduced resource per gateway for dedup.
+type ExtensionResourceKey struct {
+	GatewayIRKey string
+	Group        string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
+// CACertificateKey identifies a shared upstream CA bundle within a gateway's IR by a digest
+// of its content.
+type CACertificateKey struct {
+	GatewayIRKey string
+	Digest       string
+}
+
+// ResolvedCAKey identifies a resource whose CA was already resolved. It keys on the resource
+// rather than the CA's secret name, which a Backend and a BackendTLSPolicy of the same name
+// and namespace mint identically.
+type ResolvedCAKey struct {
+	GatewayIRKey string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -888,9 +915,11 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
+	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
+	ResolvedCAMap           map[ResolvedCAKey]string
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
-	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 }
 

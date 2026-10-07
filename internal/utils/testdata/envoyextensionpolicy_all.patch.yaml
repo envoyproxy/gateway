@@ -1,0 +1,23 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: patched
+spec:
+  mergeType: StrategicMerge
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: route-1
+  extProc:
+  - backendRefs:
+    - name: ext-proc-route
+      kind: Service
+      port: 9002
+    messageTimeout: 10s
+    failOpen: true
+  lua:
+  - type: ValueRef
+    valueRef:
+      group: v1
+      kind: ConfigMap
+      name: route-lua

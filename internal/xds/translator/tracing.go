@@ -157,21 +157,22 @@ func buildTracingOperation(span *egv1a1.TracingSpanName) (string, string) {
 	return span.Client, span.Server
 }
 
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics) error {
+func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing, metrics *ir.Metrics, healthCheckLog *ir.ProxyHealthCheckLog) error {
 	if tracing == nil {
 		return nil
 	}
 
 	args := &xdsClusterArgs{
-		name:         tracing.Destination.Name,
-		settings:     tracing.Destination.Settings,
-		tSocket:      nil,
-		endpointType: buildEndpointType(tracing.Destination.Settings),
-		metrics:      metrics,
-		metadata:     tracing.Destination.Metadata,
+		name:           tracing.Destination.Name,
+		settings:       tracing.Destination.Settings,
+		tSocket:        nil,
+		endpointType:   buildEndpointType(tracing.Destination.Settings),
+		metrics:        metrics,
+		metadata:       tracing.Destination.Metadata,
+		healthCheckLog: healthCheckLog,
 	}
 
-	applyTraffic(args, tracing.Traffic)
+	applyTraffic(args, tracing.Traffic.ClusterFeatures())
 
 	return addXdsCluster(tCtx, args)
 }

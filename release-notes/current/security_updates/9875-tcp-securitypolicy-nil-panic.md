@@ -1,0 +1,1 @@
+Fixed a nil pointer dereference in SecurityPolicy translation for TCPRoutes: a listener with no corresponding xDS IR entry (for example, a Gateway listener marked `Conflicted` for sharing a port with another listener) could panic the control plane during translation, silently dropping that reconcile's IR and status publication.

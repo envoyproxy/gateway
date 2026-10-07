@@ -658,6 +658,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			// Process the test case httproutes.
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
+			require.NoError(t, r.populateExtensionResources(ctx, resourceMap))
 			err := r.processHTTPRoutes(ctx, gwNsName, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)
@@ -1476,6 +1477,7 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 			resourceTree.GatewayClass = gatewayClass
 
 			// Call the function under test
+			require.NoError(t, r.populateExtensionResources(t.Context(), resourceMap))
 			err := r.processHTTPRoutes(t.Context(), "default/test-gateway", resourceMap, resourceTree)
 
 			// Verify results

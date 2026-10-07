@@ -34,6 +34,12 @@ const (
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// envoyZoneEnvVar is the Envoy pod locality zone name
 	envoyZoneEnvVar = "ENVOY_SERVICE_ZONE"
+	// shutdownManagerTmpVolumeName is the name of the emptyDir volume mounted at /tmp
+	// on the shutdown-manager container. The shutdown-manager signals drain completion
+	// by creating /tmp/shutdown-ready, which must keep working even when the
+	// securityContext replicated from the Envoy container enforces
+	// readOnlyRootFilesystem: true.
+	shutdownManagerTmpVolumeName = "shutdown-manager-tmp"
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -205,6 +211,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      shutdownManagerTmpVolumeName,
+					MountPath: "/tmp",
+				},
+			},
 			StartupProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
@@ -282,6 +294,14 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 
 	if cfg == nil {
 		return command
+	}
+
+	if cfg.HealthCheckFailureDelay != nil {
+		d, err := time.ParseDuration(string(*cfg.HealthCheckFailureDelay))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--health-check-failure-delay=%s", d.String()))
 	}
 
 	if cfg.DrainTimeout != nil {
@@ -396,7 +416,16 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 		},
 	}
 
-	volumes = append(volumes, sdsVolume)
+	// Writable /tmp for the shutdown-manager so it can create /tmp/shutdown-ready
+	// even when its securityContext (replicated from the Envoy container) sets
+	// readOnlyRootFilesystem: true.
+	volumes = append(volumes, sdsVolume, corev1.Volume{
+		Name: shutdownManagerTmpVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	})
+
 	return resource.ExpectedVolumes(pod, volumes)
 }
 
@@ -481,10 +510,12 @@ func calculateMaxHeapSizeBytes(envoyResourceRequirements *corev1.ResourceRequire
 }
 
 func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
-	if containerSpec != nil && containerSpec.SecurityContext != nil {
-		return containerSpec.SecurityContext
-	}
-
+	// Always start from the secure default and selectively apply safe overrides.
+	// Never return a user-supplied context verbatim: a tenant-namespace EnvoyProxy
+	// referenced via Gateway.spec.infrastructure.parametersRef is materialized in the
+	// controller namespace, which may have less restrictive PSA than the tenant namespace.
+	// Returning the context verbatim would let a tenant inject privileged/root containers
+	// into the controller namespace (confused-deputy / PSA escape).
 	sc := resource.DefaultSecurityContext()
 
 	// run as non-root user
@@ -493,14 +524,17 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 
 	// Envoy container needs to write to the log file/UDS socket.
 	sc.ReadOnlyRootFilesystem = nil
+
+	if containerSpec == nil || containerSpec.SecurityContext == nil {
+		return sc
+	}
+
+	applySecurityContextOverrides(sc, containerSpec.SecurityContext)
 	return sc
 }
 
 func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesContainerSpec) *corev1.SecurityContext {
-	if containerSpec != nil && containerSpec.SecurityContext != nil {
-		return containerSpec.SecurityContext
-	}
-
+	// Same invariant as expectedEnvoySecurityContext: always enforce the secure baseline.
 	sc := resource.DefaultSecurityContext()
 
 	// run as non-root user
@@ -510,7 +544,25 @@ func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesCont
 	// ShutdownManger creates a file to indicate the connection drain process is completed,
 	// so it needs file write permission.
 	sc.ReadOnlyRootFilesystem = nil
+
+	if containerSpec == nil || containerSpec.SecurityContext == nil {
+		return sc
+	}
+
+	applySecurityContextOverrides(sc, containerSpec.SecurityContext)
 	return sc
+}
+
+// applySecurityContextOverrides merges user-supplied fields over dst using
+// Kubernetes strategic-merge-patch semantics: only fields explicitly set in src
+// override the hardened defaults in dst; unset fields in src are left unchanged.
+// Privilege enforcement (e.g. blocking privileged:true) is the responsibility
+// of external policy tools such as Kyverno or Pod Security Admission.
+func applySecurityContextOverrides(dst, src *corev1.SecurityContext) {
+	merged, err := utils.Merge(*dst, *src, egv1a1.StrategicMerge)
+	if err == nil {
+		*dst = merged
+	}
 }
 
 func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, error) {

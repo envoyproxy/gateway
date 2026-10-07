@@ -94,7 +94,10 @@ httpRoutes:
           name: gateway-with-two-attached-routes
           namespace: envoy-gateway
       rules:
-        - backendRefs:
+        - matches:
+            - path:
+                value: /route-3
+          backendRefs:
             - name: infra-backend-v1
               port: 8080
   - apiVersion: gateway.networking.k8s.io/v1

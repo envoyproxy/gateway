@@ -237,35 +237,37 @@ type BackendUtilization struct {
 	// carried in response headers/trailers.
 	//
 	// The backend must implement OpenRcaService for this to take effect.
+	//
 	// +optional
-	// +notImplementedHide
 	OutOfBand *OutOfBandReporting `json:"outOfBand,omitempty"`
 }
 
 // OutOfBandReporting configures out-of-band ORCA load reporting for the
 // BackendUtilization load balancer.
-//
-// +notImplementedHide
 type OutOfBandReporting struct {
 	// ReportingPeriod is how often Envoy requests load reports from the server.
-	// If omitted, uses Envoy's default of 10s.
+	// Must be greater than 0. Defaults to 10s.
+	//
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="reportingPeriod must be greater than 0"
 	// +optional
-	// +notImplementedHide
 	ReportingPeriod *gwapiv1.Duration `json:"reportingPeriod,omitempty"`
 
 	// Port overrides the port used for the OutOfBand reporting connection, e.g. to
 	// reach a separate reporting sidecar. Defaults to the endpoint's port.
+	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +optional
-	// +notImplementedHide
 	Port *int32 `json:"port,omitempty"`
 
 	// Authority overrides the :authority header on the OutOfBand gRPC stream.
+	// If unset, Envoy uses the endpoint hostname, then the dialed address, then
+	// the cluster name.
 	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=259
 	// +kubebuilder:validation:Pattern=`^[^\x00\n\r]*$`
 	// +optional
-	// +notImplementedHide
 	Authority *string `json:"authority,omitempty"`
 }
 

@@ -85,7 +85,7 @@ httpRoutes:
         - matches:
             - path:
                 type: PathPrefix
-                value: /valid
+                value: /valid-redirect
           backendRefs:
             - name: service-2
               port: 8080

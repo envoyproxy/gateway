@@ -7,8 +7,12 @@ package runner
 
 import (
 	"context"
+	"sync"
 
 	"github.com/telepresenceio/watchable"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -17,6 +21,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 )
+
+var tracer = otel.Tracer("envoy-gateway/infrastructure")
 
 type Config struct {
 	config.Server
@@ -27,10 +33,15 @@ type Config struct {
 type Runner struct {
 	Config
 	mgr infrastructure.Manager
+
+	// done tracks goroutines started by Start so that Close can wait for
+	// them to exit before closing mgr, which they call into.
+	done sync.WaitGroup
 }
 
 // Close implements Runner interface.
 func (r *Runner) Close() error {
+	r.done.Wait()
 	return r.mgr.Close()
 }
 
@@ -59,17 +70,20 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 
 	// This is a blocking function that subscribes to the infraIR and initializes the infrastructure.
-	subscribeInitInfraAndCloseInfraIRMessage := func() {
-		// Subscribe and Close in same goroutine to avoid race condition.
+	subscribeInitInfra := func() {
+		// Subscribe to InfraIR updates.
 		sub := r.InfraIR.Subscribe(ctx)
-		go r.updateProxyInfraFromSubscription(ctx, sub)
+		r.done.Go(func() {
+			r.updateProxyInfraFromSubscription(ctx, sub)
+		})
 
 		// Create the shared ratelimit infra during startup.
-		go r.initializeRateLimitInfra(ctx)
+		r.done.Go(func() {
+			r.initializeRateLimitInfra(ctx)
+		})
 
 		r.Logger.Info("started")
 		<-ctx.Done()
-		r.InfraIR.Close()
 		r.Logger.Info("shutting down")
 	}
 
@@ -77,47 +91,64 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	// to avoid multiple EG instances processing envoy proxy infra resources.
 	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
 		!ptr.Deref(r.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false) {
-		go func() {
+		r.done.Go(func() {
 			select {
 			case <-ctx.Done():
-				// As a follower EG instance close infraIR when the context is done.
-				r.InfraIR.Close()
 				return
 			case <-r.Elected:
-				// As a leader EG instance subscribe to infraIR to initialize the infrastructure and Close when the context is done.
-				subscribeInitInfraAndCloseInfraIRMessage()
+				// As a leader EG instance subscribe to infraIR to initialize the infrastructure.
+				subscribeInitInfra()
 			}
-		}()
+		})
 	} else {
-		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure and Close when the context is done.
-		go subscribeInitInfraAndCloseInfraIRMessage()
+		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure.
+		r.done.Go(subscribeInitInfra)
 	}
 	return err
 }
 
-func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
+func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *message.InfraIRWithContext]) {
 	// Subscribe to resources
 	message.HandleSubscription(
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
-		func(update message.Update[string, *ir.Infra], errChan chan error) {
+		func(update message.Update[string, *message.InfraIRWithContext], errChan chan error) {
 			// Check if context is done before logging to avoid writing to test output after test completes
 			select {
 			case <-ctx.Done():
 				return
 			default:
 			}
-			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
+
+			parentCtx := update.Value.ParentContext(ctx)
+			var startOpts []trace.SpanStartOption
+			if !update.Delete && !update.Initial {
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
+			}
+
+			traceCtx, span := tracer.Start(parentCtx, "InfrastructureRunner.updateProxyInfraFromSubscription", startOpts...)
+			defer span.End()
+			traceLogger := r.Logger.WithTrace(traceCtx)
+
+			traceLogger.Info("received an update", "key", update.Key, "delete", update.Delete)
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
-			val := update.Value
+			span.SetAttributes(
+				attribute.String("infra-ir.key", update.Key),
+				attribute.Bool("update.delete", update.Delete),
+			)
+
+			var val *ir.Infra
+			if update.Value != nil {
+				val = update.Value.Infra
+			}
 
 			if update.Delete {
-				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
+				if err := r.mgr.DeleteProxyInfra(traceCtx, val); err != nil {
 					select {
 					case <-ctx.Done():
 						return
 					default:
-						r.Logger.Error(err, "failed to delete infra")
+						traceLogger.Error(err, "failed to delete infra")
 					}
 					errChan <- err
 				}
@@ -131,17 +162,17 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 					case <-ctx.Done():
 						return
 					default:
-						r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+						traceLogger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
 					}
 					return
 				}
 
-				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
+				if err := r.mgr.CreateOrUpdateProxyInfra(traceCtx, val); err != nil {
 					select {
 					case <-ctx.Done():
 						return
 					default:
-						r.Logger.Error(err, "failed to create new infra")
+						traceLogger.Error(err, "failed to create new infra")
 					}
 					errChan <- err
 				}

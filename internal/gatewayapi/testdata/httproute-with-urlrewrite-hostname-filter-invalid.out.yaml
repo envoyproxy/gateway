@@ -1,3 +1,18 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-dynamic-resolver
+    namespace: default
+  spec:
+    type: DynamicResolver
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -16,7 +31,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 6
+    - attachedRoutes: 10
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -319,6 +334,186 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-header-and-pathregex-host-rewrites
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-header
+        type: ExtensionRef
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-path-regex
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /header-and-pathregex
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Cannot configure multiple urlRewrite filters for a single HTTPRouteRule.
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-invalid-path-regex
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: invalid-path-regex
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /invalid-path-regex
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: PathRegex must be a valid RE2 regular expression.
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-missing-path-regex
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: missing-path-regex
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /missing-path-regex
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: PathRegex Pattern and Substitution must be set when rewrite hostname
+          type is "PathRegex".
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-dynamic-resolver-path-regex
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-dynamic-resolver
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: valid-path-regex
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /dynamic-resolver-path-regex
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Failed to process route rule 0: host rewrite from path (PathRegex)
+          is not supported with a dynamic resolver backend.'
+        reason: UnsupportedValue
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -386,6 +581,40 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
+          name: httproute-dynamic-resolver-path-regex
+          namespace: default
+        name: httproute/default/httproute-dynamic-resolver-path-regex/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /dynamic-resolver-path-regex
+        urlRewrite:
+          host:
+            pathRegex:
+              pattern: ^/[^/]+/([^/]+).*
+              substitution: \1
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-header-and-pathregex-host-rewrites
+          namespace: default
+        name: httproute/default/httproute-header-and-pathregex-host-rewrites/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /header-and-pathregex
+        urlRewrite:
+          host:
+            header: my-host
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
           name: httproute-header-and-backend-host-rewrites
           namespace: default
         name: httproute/default/httproute-header-and-backend-host-rewrites/rule/0/match/0/gateway_envoyproxy_io
@@ -396,6 +625,32 @@ xdsIR:
         urlRewrite:
           host:
             header: my-host
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-invalid-path-regex
+          namespace: default
+        name: httproute/default/httproute-invalid-path-regex/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /invalid-path-regex
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-missing-path-regex
+          namespace: default
+        name: httproute/default/httproute-missing-path-regex/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /missing-path-regex
       - directResponse:
           statusCode: 500
         hostname: gateway.envoyproxy.io

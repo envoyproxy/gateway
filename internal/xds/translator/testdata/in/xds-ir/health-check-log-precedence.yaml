@@ -1,0 +1,63 @@
+healthCheckLog:
+  fileSinks:
+  - path: "/var/log/hc-gateway.log"
+  alwaysLogHealthCheckFailures: true
+  alwaysLogHealthCheckSuccess: true
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "route-with-backend-override"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "500ms"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          tcp: {}
+          backendHealthCheckLog:
+            fileSinks:
+            - path: "/var/log/hc-backend.log"
+            alwaysLogHealthCheckFailures: true
+            alwaysLogHealthCheckSuccess: false
+    destination:
+      name: "route-override-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "route-override-dest/backend/0"
+  - name: "route-uses-gateway-level"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "500ms"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          tcp: {}
+    destination:
+      name: "route-gateway-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.5"
+          port: 50001
+        name: "route-gateway-dest/backend/0"
+  - name: "route-no-hc"
+    hostname: "*"
+    destination:
+      name: "route-no-hc-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.6"
+          port: 50002
+        name: "route-no-hc-dest/backend/0"

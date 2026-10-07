@@ -1,0 +1,36 @@
+- clusterName: route-override-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: route-override-dest/backend/0
+- clusterName: route-gateway-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.5
+            portValue: 50001
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: route-gateway-dest/backend/0
+- clusterName: route-no-hc-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.6
+            portValue: 50002
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: route-no-hc-dest/backend/0

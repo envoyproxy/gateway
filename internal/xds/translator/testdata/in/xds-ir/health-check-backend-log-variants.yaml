@@ -1,0 +1,88 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "route-1"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "500ms"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          http:
+            host: "*"
+            path: "/healthz"
+            expectedStatuses:
+            - 200
+          backendHealthCheckLog:
+            fileSinks:
+            - path: "/dev/stdout"
+            alwaysLogHealthCheckFailures: true
+            alwaysLogHealthCheckSuccess: true
+    destination:
+      name: "route-1-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "route-1-dest/backend/0"
+  - name: "route-2"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "1s"
+          interval: "5s"
+          unhealthyThreshold: 3
+          healthyThreshold: 3
+          tcp:
+            send:
+              text: "ping"
+            receive:
+              text: "pong"
+          backendHealthCheckLog:
+            fileSinks:
+            - path: "/dev/stdout"
+            alwaysLogHealthCheckFailures: true
+            alwaysLogHealthCheckSuccess: true
+    destination:
+      name: "route-2-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50001
+        name: "route-2-dest/backend/0"
+  - name: "route-3"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "500ms"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          http:
+            host: "*"
+            path: "/healthz"
+            expectedStatuses:
+            - 200
+          backendHealthCheckLog:
+            fileSinks:
+            - path: "/dev/stdout"
+            alwaysLogHealthCheckFailures: false
+            alwaysLogHealthCheckSuccess: false
+    destination:
+      name: "route-3-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50002
+        name: "route-3-dest/backend/0"

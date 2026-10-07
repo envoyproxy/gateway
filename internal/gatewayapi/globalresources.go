@@ -47,9 +47,12 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 	}
 
 	for _, xdsIR := range xdsIRs {
-		if containsGlobalRateLimit(xdsIR.HTTP) || containsWasm(xdsIR.HTTP) {
+		if containsGlobalRateLimit(xdsIR.HTTP) || containsRemoteWasms(xdsIR.HTTP) {
 			if xdsIR.GlobalResources == nil {
 				xdsIR.GlobalResources = &ir.GlobalResources{}
+			}
+			if containsGlobalRateLimit(xdsIR.HTTP) {
+				xdsIR.GlobalResources.RateLimitServiceCluster = t.processRateLimitServiceCluster(resources)
 			}
 			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
 				Name:        irGlobalConfigName(envoyTLSSecret),
@@ -60,6 +63,47 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 	}
 
 	return nil
+}
+
+func (t *Translator) processRateLimitServiceCluster(resources *resource.Resources) *ir.RouteDestination {
+	const rateLimitServiceName = "envoy-ratelimit"
+
+	var service *corev1.Service
+	for _, candidate := range resources.Services {
+		if candidate.Namespace == t.ControllerNamespace && candidate.Name == rateLimitServiceName {
+			service = candidate
+			break
+		}
+	}
+	if service == nil {
+		return nil
+	}
+
+	var servicePort *corev1.ServicePort
+	for i := range service.Spec.Ports {
+		if service.Spec.Ports[i].Name == "http" {
+			servicePort = &service.Spec.Ports[i]
+			break
+		}
+	}
+	if servicePort == nil {
+		return nil
+	}
+
+	endpointSlices := resources.GetEndpointSlicesForBackend(
+		t.ControllerNamespace, rateLimitServiceName, resource.KindService)
+	endpoints, addressType := getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+	setting := &ir.DestinationSetting{
+		Name:        "ratelimit_cluster/backend/-1",
+		Protocol:    ir.GRPC,
+		Endpoints:   endpoints,
+		AddressType: addressType,
+		Metadata:    nil,
+	}
+	return &ir.RouteDestination{
+		Name:     "ratelimit_cluster",
+		Settings: []*ir.DestinationSetting{setting},
+	}
 }
 
 // processServiceClusterForGateway returns the matching IR key for a gateway and builds a RouteDestination to represent the ProxyServiceCluster
@@ -114,12 +158,19 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 	return false
 }
 
-func containsWasm(httpListeners []*ir.HTTPListener) bool {
+// containsRemoteWasms reports whether any route uses a remote Wasm code source
+// (HTTP/Image). Name-only Wasm (path from EnvoyProxy.spec.wasmModules)
+// does not use the control-plane wasm HTTP service or its client certificate.
+func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
 	for _, httpListener := range httpListeners {
 		for _, route := range httpListener.Routes {
-			if route.EnvoyExtensions != nil &&
-				len(route.EnvoyExtensions.Wasms) > 0 {
-				return true
+			if route.EnvoyExtensions == nil {
+				continue
+			}
+			for _, w := range route.EnvoyExtensions.Wasms {
+				if w.Code != nil {
+					return true
+				}
 			}
 		}
 	}

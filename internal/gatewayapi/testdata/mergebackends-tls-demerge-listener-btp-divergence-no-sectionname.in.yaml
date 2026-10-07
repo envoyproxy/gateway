@@ -1,0 +1,81 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends: {}
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls-1
+          protocol: TLS
+          port: 91
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: tls-2
+          protocol: TLS
+          port: 92
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: btp-tls-1-circuit-breaker
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+          sectionName: tls-1
+      circuitBreaker:
+        maxConnections: 1024
+tlsRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
+    metadata:
+      namespace: default
+      name: tlsroute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      hostnames:
+        - "foo.com"
+      rules:
+        - backendRefs:
+            - name: service-3
+              port: 8163
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-3
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-3
+    addressType: IPv4
+    ports:
+      - name: tcp
+        protocol: TCP
+        port: 8163
+    endpoints:
+      - addresses:
+          - "7.7.7.8"
+        conditions:
+          ready: true

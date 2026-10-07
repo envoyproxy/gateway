@@ -1,1 +1,0 @@
-Shared-only global rate limit rules are now written into `typedPerFilterConfig` instead of `route.rateLimits` in the generated xDS configuration. EnvoyPatchPolicies or extension servers that target `route.rateLimits` for shared-only global rate limit rules will stop matching after upgrade and must be updated to target the new location.

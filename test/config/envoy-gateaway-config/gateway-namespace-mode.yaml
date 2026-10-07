@@ -12,12 +12,17 @@ data:
       kubernetes:
         deploy:
           type: GatewayNamespace
+        # increase the replicas of the rate limit deployment to 2,
+        # this is to test the rate limit service discovery with multiple replicas.
+        rateLimitDeployment:
+          replicas: 2
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     extensionApis:
       enableEnvoyPatchPolicy: true
       enableBackend: true
       enableLua: true
+      enableSDSSecretRef: true
     gatewayAPI:
       enabled: [XListenerSet]
     rateLimit:
@@ -25,6 +30,13 @@ data:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
+      # Bumped from the 20ms default (unset field) - that default is tuned for a colocated,
+      # low-latency ratelimit service, but this gRPC call also has to cover the ratelimit
+      # service's own Redis round trip, which can exceed 20ms under CI load. failClosed
+      # defaults to false, so a timed-out check fails open (request passed through unlimited)
+      # instead of erroring - which shows up as flaky "expected 429, got 200" e2e failures
+      # rather than a hard, easily-diagnosed error.
+      timeout: 1s
     telemetry:
       traces:
         sink:

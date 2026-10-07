@@ -70,6 +70,21 @@ spec:
     - name: grpc-ext-proc
       namespace: gateway-conformance-infra
       port: 9002
+    backendSettings:
+      healthCheck:
+        active:
+          type: GRPC
+          grpc:
+            service: envoy.service.ext_proc.v3.ExternalProcessor
+          interval: 5s
+          timeout: 1s
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          healthCheckLog:
+            sinks:
+            - type: File
+              file:
+                path: /dev/stdout
     processingMode:
       request:
         attributes:

@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -114,7 +113,12 @@ func buildStatefulSessionFilterConfig(route *ir.HTTPRoute) (*statefulsessionv3.S
 		cookieCfg := &cookiev3.CookieBasedSessionState{
 			Cookie: &httpv3.Cookie{
 				Name: sp.Cookie.Name,
-				Path: routePathToCookiePath(route.PathMatch),
+				// GEP-1619 defaults the cookie Path to "/" so that session
+				// persistence keeps working when the client-visible path differs
+				// from the matched route path, e.g. an edge proxy rewrites "/" to
+				// "/foo/bar" before the request reaches Envoy Gateway.
+				// https://gateway-api.sigs.k8s.io/geps/gep-1619/#path
+				Path: "/",
 			},
 		}
 
@@ -153,40 +157,6 @@ func buildStatefulSessionFilterPerRouteConfig(route *ir.HTTPRoute) (*statefulses
 			StatefulSession: statefulSession,
 		},
 	}, nil
-}
-
-func routePathToCookiePath(path *ir.StringMatch) string {
-	if path == nil {
-		return "/"
-	}
-	switch {
-	case path.Exact != nil:
-		return *path.Exact
-	case path.Prefix != nil:
-		return *path.Prefix
-	case path.SafeRegex != nil:
-		return getLongestNonRegexPrefix(*path.SafeRegex)
-	}
-
-	// Shouldn't reach here because the path should be either of the above three kinds.
-	return "/"
-}
-
-// getLongestNonRegexPrefix takes a regex path and returns the longest non-regex prefix.
-// > 3. For an xRoute using a path that is a regex, the Path should be set to the longest non-regex prefix
-// (.e.g. if the path is /p1/p2/*/p3 and the request path was /p1/p2/foo/p3, then the cookie path would be /p1/p2).
-// https://gateway-api.sigs.k8s.io/geps/gep-1619/#path
-func getLongestNonRegexPrefix(path string) string {
-	parts := strings.Split(path, "/")
-	longestNonRegexPrefix := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if part == "*" || strings.Contains(part, "*") {
-			break
-		}
-		longestNonRegexPrefix = append(longestNonRegexPrefix, part)
-	}
-
-	return strings.Join(longestNonRegexPrefix, "/")
 }
 
 // patchRoute patches the provide Route with a filter's Route level configuration.

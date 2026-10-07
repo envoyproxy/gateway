@@ -57,6 +57,7 @@ func TestTranslate(t *testing.T) {
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
+		EnvoyProxyPatchDisabled         bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -124,6 +125,20 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled:            true,
 			PerResourceSystemCASecret: true,
 		},
+		{
+			name:           "sds-listener",
+			BackendEnabled: true,
+			SDSEnabled:     true,
+		},
+		{
+			name:           "sds-listener-invalid",
+			BackendEnabled: true,
+			SDSEnabled:     true,
+		},
+		{
+			name:                    "envoyproxy-patch-disabled",
+			EnvoyProxyPatchDisabled: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -150,6 +165,7 @@ func TestTranslate(t *testing.T) {
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
 			perResourceSystemCASecret := false
+			envoyProxyPatchDisabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -160,6 +176,7 @@ func TestTranslate(t *testing.T) {
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
+					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
 				}
 			}
 
@@ -173,11 +190,12 @@ func TestTranslate(t *testing.T) {
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
-				MergeBackends:                   IsMergeBackendsEnabled(resources),
+				MergeBackends:                   ResolveMergeBackendsConfig(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
+				EnvoyProxyPatchDisabled:         envoyProxyPatchDisabled,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
@@ -517,7 +535,7 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
-			got, _ := translator.Translate(resources)
+			got, _ := translator.Translate(t.Context(), resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
@@ -825,7 +843,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				},
 			})
 
-			got, _ := translator.Translate(resources)
+			got, _ := translator.Translate(t.Context(), resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 			// Also fix lastTransitionTime in unstructured members
 			for i := range got.ExtensionServerPolicies {
@@ -1201,6 +1219,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		AccessLog               *ir.AccessLog
 		Tracing                 *ir.Tracing
 		Metrics                 *ir.Metrics
+		HealthCheckLog          *ir.ProxyHealthCheckLog
 		HTTP                    []*ir.HTTPListener
 		TCP                     []*ir.TCPListener
 		UDP                     []*ir.UDPListener
@@ -1208,12 +1227,15 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
+		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
+		CACertificates          []*ir.CACertificateEntry
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,
 		Tracing:                 a.Tracing,
 		Metrics:                 a.Metrics,
+		HealthCheckLog:          a.HealthCheckLog,
 		HTTP:                    a.HTTP,
 		TCP:                     a.TCP,
 		UDP:                     a.UDP,
@@ -1221,7 +1243,9 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
+		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
+		CACertificates:          a.CACertificates,
 	}
 
 	// Ensure we didn't drop an exported field.

@@ -15,7 +15,7 @@ This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute]
 
 {{< boilerplate prerequisites >}}
 
-EG OIDC authentication requires the redirect URL to be HTTPS. Follow the [Secure Gateways](../secure-gateways) guide
+EG OIDC authentication requires the redirect URL to be HTTPS. Follow the [Secure Gateways](../secure-gateways/) guide
 to generate the TLS certificates and update the Gateway configuration to add an HTTPS listener.
 
 Verify the Gateway status:

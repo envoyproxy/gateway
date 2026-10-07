@@ -214,6 +214,7 @@ func (t *Translator) buildXdsTCPListener(
 	listenerDetails *ir.CoreListenerDetails,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
+	timeout *ir.ClientTimeout,
 	accesslog *ir.AccessLog,
 ) (*listenerv3.Listener, error) {
 	socketOptions := buildTCPSocketOptions(keepalive)
@@ -247,6 +248,10 @@ func (t *Translator) buildXdsTCPListener(
 	if listenerDetails.IPFamily != nil && *listenerDetails.IPFamily == egv1a1.DualStack {
 		socketAddress := listener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
+	}
+
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.ConnectionInspectionTimeout != nil {
+		listener.ListenerFiltersTimeout = durationpb.New(timeout.TCP.ConnectionInspectionTimeout.Duration)
 	}
 
 	return listener, nil
@@ -406,6 +411,11 @@ func (t *Translator) addHCMToXDSListener(
 		mgr.StripTrailingHostDot = irListener.Host.StripTrailingHostDot
 	}
 
+	// Set the maximum request headers size if configured.
+	if h := irListener.Headers; h != nil && h.MaxRequestHeadersKB != nil {
+		mgr.MaxRequestHeadersKb = wrapperspb.UInt32(*h.MaxRequestHeadersKB)
+	}
+
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
 	// This ensures the correct scheme is sent to backends using TLS when enabled.
 	if irListener.MatchBackendScheme {
@@ -438,6 +448,10 @@ func (t *Translator) addHCMToXDSListener(
 	if irListener.Timeout != nil && irListener.Timeout.HTTP != nil {
 		if irListener.Timeout.HTTP.RequestReceivedTimeout != nil {
 			mgr.RequestTimeout = durationpb.New(irListener.Timeout.HTTP.RequestReceivedTimeout.Duration)
+		}
+
+		if irListener.Timeout.HTTP.RequestHeadersReceivedTimeout != nil {
+			mgr.RequestHeadersTimeout = durationpb.New(irListener.Timeout.HTTP.RequestHeadersReceivedTimeout.Duration)
 		}
 
 		if irListener.Timeout.HTTP.IdleTimeout != nil {
@@ -506,6 +520,10 @@ func (t *Translator) addHCMToXDSListener(
 	filterChain := &listenerv3.FilterChain{
 		Name:    httpsListenerFilterChainName(irListener),
 		Filters: filters,
+	}
+
+	if irListener.Timeout != nil && irListener.Timeout.TCP != nil && irListener.Timeout.TCP.TLSHandshakeTimeout != nil {
+		filterChain.TransportSocketConnectTimeout = durationpb.New(irListener.Timeout.TCP.TLSHandshakeTimeout.Duration)
 	}
 
 	if irListener.TLS != nil {
@@ -587,12 +605,17 @@ func tlsListenerFilterChainName(irRoute *ir.TCPRoute) string {
 }
 
 func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensionConfig {
-	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeadersOnMatch) == 0) {
+	if headers == nil {
+		return nil
+	}
+
+	mutations := buildHeaderMutationRules(headers.EarlyRequestHeaderMutations)
+	if len(mutations) == 0 {
 		return nil
 	}
 
 	earlyHeaderMutationAny, _ := proto.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
-		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders, headers.EarlyRemoveRequestHeadersOnMatch),
+		Mutations: mutations,
 	})
 
 	return []*corev3.TypedExtensionConfig{
@@ -668,15 +691,27 @@ func hasHCMInDefaultFilterChain(xdsListener *listenerv3.Listener) bool {
 }
 
 func (t *Translator) addXdsTCPFilterChain(
-	xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string,
-	accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection,
-	tlsConfig *ir.TLSConfig,
+	xdsListener *listenerv3.Listener, tcpListener *ir.TCPListener, irRoute *ir.TCPRoute,
+	clusterName string, accesslog *ir.AccessLog,
 ) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
 
-	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
+	var snis []string
+	if irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil {
+		snis = irRoute.TLS.TLSInspectorConfig.SNIs
+	}
+	if len(snis) == 0 {
+		// Fall back to the Gateway listener hostname. Multiple listeners can share one xDS
+		// listener (an HTTPS and a TLS listener on the same port, for example), and Envoy NACKs
+		// a listener whose filter chains do not all have a distinct match. The hostnames are
+		// already unique here: the Gateway API layer marks a listener Conflicted when another
+		// listener on the same port resolves to the same SNI, so it never reaches the IR.
+		snis = tcpListener.Hostnames
+	}
+
+	isTLSPassthrough := len(snis) > 0 || (irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil)
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := ptr.Deref(irRoute.StatName, "")
 	if statPrefix == "" {
@@ -698,21 +733,16 @@ func (t *Translator) addXdsTCPFilterChain(
 		clusterName,
 		statPrefix,
 		accesslog,
-		timeout,
-		connection,
+		tcpListener.Timeout,
+		tcpListener.Connection,
 	)
 	if err != nil {
 		return err
 	}
 
-	var snis []string
-	if irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil {
-		snis = irRoute.TLS.TLSInspectorConfig.SNIs
-	}
-
 	var fingerprints []ir.TLSFingerprintType
-	if tlsConfig != nil {
-		fingerprints = tlsConfig.Fingerprints
+	if tcpListener.TLS != nil {
+		fingerprints = tcpListener.TLS.Fingerprints
 	}
 
 	if err := addServerNamesMatch(xdsListener, filterChain, snis, fingerprints); err != nil {
@@ -805,10 +835,16 @@ func buildTCPFilterChain(
 		return nil, err
 	}
 
-	return &listenerv3.FilterChain{
+	filterChain := &listenerv3.FilterChain{
 		Filters: filters,
 		Name:    tlsListenerFilterChainName(irRoute),
-	}, nil
+	}
+
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.TLSHandshakeTimeout != nil {
+		filterChain.TransportSocketConnectTimeout = durationpb.New(timeout.TCP.TLSHandshakeTimeout.Duration)
+	}
+
+	return filterChain, nil
 }
 
 func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnection) *connection_limitv3.ConnectionLimit {
@@ -1163,9 +1199,15 @@ func buildXdsUDPListener(
 	if error != nil {
 		return nil, error
 	}
+
+	var udpProxyHashPolicies []*udpv3.UdpProxyConfig_HashPolicy
+	if udpListener.Route != nil {
+		udpProxyHashPolicies = buildUDPProxyHashPolicy(udpListener.Route.LoadBalancer)
+	}
 	udpProxy := &udpv3.UdpProxyConfig{
-		StatPrefix: statPrefix,
-		AccessLog:  al,
+		StatPrefix:   statPrefix,
+		AccessLog:    al,
+		HashPolicies: udpProxyHashPolicies,
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
@@ -1252,6 +1294,28 @@ func toNetworkFilter(filterName string, filterProto protobuf.Message) (*listener
 			TypedConfig: filterAny,
 		},
 	}, nil
+}
+
+// buildUDPProxyHashPolicy builds the hash policies for the UDP proxy listener filter.
+// Only source IP based hashing is supported for UDP, since the other consistent hash
+// types (header, cookie, query param) are not applicable to UDP datagrams.
+func buildUDPProxyHashPolicy(lb *ir.LoadBalancer) []*udpv3.UdpProxyConfig_HashPolicy {
+	// Return early
+	if lb == nil || lb.ConsistentHash == nil {
+		return nil
+	}
+
+	if lb.ConsistentHash.SourceIP != nil && *lb.ConsistentHash.SourceIP {
+		hashPolicy := &udpv3.UdpProxyConfig_HashPolicy{
+			PolicySpecifier: &udpv3.UdpProxyConfig_HashPolicy_SourceIp{
+				SourceIp: true,
+			},
+		}
+
+		return []*udpv3.UdpProxyConfig_HashPolicy{hashPolicy}
+	}
+
+	return nil
 }
 
 func buildTCPProxyHashPolicy(lb *ir.LoadBalancer) []*typev3.HashPolicy {

@@ -131,7 +131,7 @@ func (t *Translator) ProcessHTTPFilters(
 		case gwapiv1.HTTPRouteFilterCORS:
 			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
@@ -205,7 +205,7 @@ func (t *Translator) ProcessGRPCFilters(
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
@@ -252,7 +252,8 @@ func hasMultipleCoreRewrites(rewrite *gwapiv1.HTTPURLRewriteFilter, contextRewri
 // Checks if the context and the rewrite both contain a envoy-gateway extended HTTP URL rewrite
 func hasMultipleExtensionRewrites(rewrite *egv1a1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
 	contextHasExtensionRewrites := (contextRewrite.Path != nil && contextRewrite.Path.RegexMatchReplace != nil) ||
-		(contextRewrite.Host != nil && (contextRewrite.Host.Header != nil || contextRewrite.Host.Backend != nil))
+		(contextRewrite.Host != nil && (contextRewrite.Host.Header != nil || contextRewrite.Host.Backend != nil ||
+			contextRewrite.Host.PathRegex != nil))
 
 	return contextHasExtensionRewrites && (rewrite.Hostname != nil || rewrite.Path != nil)
 }
@@ -261,7 +262,7 @@ func hasMultipleExtensionRewrites(rewrite *egv1a1.HTTPURLRewriteFilter, contextR
 func hasConflictingCoreAndExtensionRewrites(rewrite *gwapiv1.HTTPURLRewriteFilter, contextRewrite *ir.URLRewrite) bool {
 	contextHasExtensionPathRewrites := contextRewrite.Path != nil && contextRewrite.Path.RegexMatchReplace != nil
 	contextHasExtensionHostRewrites := contextRewrite.Host != nil && (contextRewrite.Host.Header != nil ||
-		contextRewrite.Host.Backend != nil)
+		contextRewrite.Host.Backend != nil || contextRewrite.Host.PathRegex != nil)
 	return (rewrite.Hostname != nil && contextHasExtensionHostRewrites) || (rewrite.Path != nil && contextHasExtensionPathRewrites)
 }
 
@@ -815,7 +816,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	return nil
 }
 
-func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error {
+func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources, xdsIR resource.XdsIRMap) status.Error {
 	// Make sure the config actually exists.
 	if extFilter == nil {
 		return nil
@@ -903,6 +904,28 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						case egv1a1.BackendHTTPHostnameModifier:
 							hm = &ir.HTTPHostModifier{
 								Backend: new(true),
+							}
+						case egv1a1.PathRegexHTTPHostnameModifier:
+							if hrf.Spec.URLRewrite.Hostname.PathRegex == nil ||
+								hrf.Spec.URLRewrite.Hostname.PathRegex.Pattern == "" ||
+								hrf.Spec.URLRewrite.Hostname.PathRegex.Substitution == "" {
+								return status.NewRouteStatusError(
+									errors.New("PathRegex Pattern and Substitution must be set when rewrite hostname type is \"PathRegex\""),
+									gwapiv1.RouteReasonUnsupportedValue,
+								).WithType(gwapiv1.RouteConditionAccepted)
+							} else if _, err := regexp.Compile(hrf.Spec.URLRewrite.Hostname.PathRegex.Pattern); err != nil {
+								// Avoid envoy NACKs due to invalid regex.
+								// Go's regexp syntax is RE2: https://pkg.go.dev/regexp/syntax
+								return status.NewRouteStatusError(
+									errors.New("PathRegex must be a valid RE2 regular expression"),
+									gwapiv1.RouteReasonUnsupportedValue,
+								).WithType(gwapiv1.RouteConditionAccepted)
+							}
+							hm = &ir.HTTPHostModifier{
+								PathRegex: &ir.RegexMatchReplace{
+									Pattern:      hrf.Spec.URLRewrite.Hostname.PathRegex.Pattern,
+									Substitution: hrf.Spec.URLRewrite.Hostname.PathRegex.Substitution,
+								},
 							}
 						}
 
@@ -1026,9 +1049,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 			group := apiVers[:idx]
 			if group == string(extFilter.Group) {
 				res := res // Capture loop variable
-				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, &ir.UnstructuredRef{
-					Object: &res,
-				})
+				var gwIR *ir.Xds
+				gatewayCtx := filterContext.ParentRef.GetGateway()
+				if gatewayCtx != nil {
+					gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
+				}
+				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gatewayCtx, &res))
 				return nil
 			}
 		}
