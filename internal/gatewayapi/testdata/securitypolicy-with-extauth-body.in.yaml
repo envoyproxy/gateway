@@ -101,6 +101,26 @@ securityPolicies:
           - header2
         bodyToExtAuth:
           maxRequestBytes: 32768
+          packAsBytes: true
+        grpc:
+          backendRefs:
+            - name: backend-fqdn
+              kind: Backend
+              group: gateway.envoyproxy.io
+              port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-http-route-2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-2
+      extAuth:
+        bodyToExtAuth:
+          maxRequestBytes: 16384
         grpc:
           backendRefs:
             - name: backend-fqdn
