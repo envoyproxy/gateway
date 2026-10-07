@@ -39,6 +39,7 @@ updates:
       - dependency-name: "github.com/google/go-containerregistry"
       # Ignore k8s.io/apimachinery, since it should be updated alongside k8s.io/api
       - dependency-name: "k8s.io/apimachinery"
+      - dependency-name: "github.com/tsaarni/certyaml"
     groups:
       gomod:
         patterns:
