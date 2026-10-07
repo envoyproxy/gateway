@@ -1,3 +1,4 @@
+# Envoy supports consistent hashing with weighted clusters, so these backends can be merged.
 envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy

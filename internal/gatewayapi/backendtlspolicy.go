@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"reflect"
@@ -86,6 +88,7 @@ func (t *Translator) applyBackendTLSSetting(
 	parent gwapiv1.ParentReference,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
+	gwIR *ir.Xds,
 ) (*ir.TLSUpstreamConfig, error) {
 	var (
 		backendValidationTLSConfig *ir.TLSUpstreamConfig // the TLS config to validate the server cert from Backend TLS settings
@@ -105,7 +108,7 @@ func (t *Translator) applyBackendTLSSetting(
 		}
 		if backend.Spec.TLS != nil {
 			// Get the server certificate validation settings from Backend resource.
-			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(backend); err != nil {
+			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(backend, gwIR, gtwCtx); err != nil {
 				return nil, err
 			}
 
@@ -124,7 +127,7 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the backend certificate validation settings from BackendTLSPolicy.
-	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources); err != nil {
+	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources, gwIR, gtwCtx); err != nil {
 		return nil, err
 	}
 
@@ -166,6 +169,8 @@ func (t *Translator) applyBackendTLSSetting(
 	if mergedTLSConfig.MaxVersion == nil {
 		mergedTLSConfig.MaxVersion = new(ir.TLSv13)
 	}
+
+	mergedTLSConfig.CACertificate = t.shareCACertificate(gwIR, gtwCtx, mergedTLSConfig.CACertificate)
 
 	return mergedTLSConfig, nil
 }
@@ -268,6 +273,8 @@ func mergeClientTLSConfigs(
 
 func (t *Translator) processServerValidationTLSSettings(
 	backend *egv1a1.Backend,
+	gwIR *ir.Xds,
+	gtwCtx *GatewayContext,
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
 		InsecureSkipVerify:          ptr.Deref(backend.Spec.TLS.InsecureSkipVerify, false),
@@ -289,6 +296,13 @@ func (t *Translator) processServerValidationTLSSettings(
 				Name: name,
 			}
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
+			caName := fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace)
+			if digest := t.resolvedCADigest(gwIR, gtwCtx, egv1a1.KindBackend,
+				backend.Namespace, backend.Name); digest != "" {
+				tlsConfig.CACertificate = &ir.TLSCACertificate{Name: caName, Digest: digest}
+				return tlsConfig, nil
+			}
+
 			caRefs := getObjectReferences(gwapiv1.Namespace(backend.Namespace), backend.Spec.TLS.CACertificateRefs)
 			// Backend doesn't allow cross-namespace reference, so pass nil resources here.
 			caCert, sds, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
@@ -300,9 +314,13 @@ func (t *Translator) processServerValidationTLSSettings(
 			if err != nil {
 				return nil, err
 			}
+			if len(caCert) > 0 {
+				t.recordResolvedCA(gwIR, gtwCtx, egv1a1.KindBackend,
+					backend.Namespace, backend.Name, caDigest(caCert))
+			}
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
 				Certificate: caCert,
-				Name:        fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
+				Name:        caName,
 				SDS:         sds,
 			}
 		}
@@ -315,13 +333,15 @@ func (t *Translator) processBackendTLSPolicy(
 	backendNamespace string,
 	parent gwapiv1.ParentReference,
 	resources *resource.Resources,
+	gwIR *ir.Xds,
+	gtwCtx *GatewayContext,
 ) (*ir.TLSUpstreamConfig, error) {
 	policy := t.getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
 	if policy == nil {
 		return nil, nil
 	}
 
-	tlsBundle, err := t.getBackendTLSBundle(policy)
+	validationTLSConfig, err := t.buildBTPServerValidationTLSConfig(policy, gwIR, gtwCtx)
 	ancestorRefs := getAncestorRefs(policy)
 	ancestorRefs = append(ancestorRefs, &parent)
 
@@ -369,7 +389,7 @@ func (t *Translator) processBackendTLSPolicy(
 		policy.Generation,
 	)
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
-	return tlsBundle, nil
+	return validationTLSConfig, nil
 }
 
 func (t *Translator) processClientTLSSettings(
@@ -491,7 +511,7 @@ func (t *Translator) getBackendTLSPolicy(
 	return nil
 }
 
-func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPolicy) (*ir.TLSUpstreamConfig, error) {
+func (t *Translator) buildBTPServerValidationTLSConfig(backendTLSPolicy *gwapiv1.BackendTLSPolicy, gwIR *ir.Xds, gtwCtx *GatewayContext) (*ir.TLSUpstreamConfig, error) {
 	// Translate SubjectAltNames from gwapiv1a3 to ir
 	subjectAltNames := make([]ir.SubjectAltName, 0, len(backendTLSPolicy.Spec.Validation.SubjectAltNames))
 	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
@@ -507,20 +527,30 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 		subjectAltNames = append(subjectAltNames, subjectAltName)
 	}
 
-	tlsBundle := &ir.TLSUpstreamConfig{
+	validationTLSConfig := &ir.TLSUpstreamConfig{
 		SNI:                 new(string(backendTLSPolicy.Spec.Validation.Hostname)),
 		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem,
 		SubjectAltNames:     subjectAltNames,
 	}
-	if tlsBundle.UseSystemTrustStore {
+	if validationTLSConfig.UseSystemTrustStore {
 		name := fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
 		if !t.PerResourceSystemCASecret {
 			name = ir.SystemTrustStoreSecretName
 		}
-		tlsBundle.CACertificate = &ir.TLSCACertificate{
+		validationTLSConfig.CACertificate = &ir.TLSCACertificate{
 			Name: name,
 		}
-		return tlsBundle, nil
+		return validationTLSConfig, nil
+	}
+
+	// Skip re-reading and re-concatenating the refs for a policy already resolved during this
+	// translation. This only short-circuits repeats of the same policy; bundles shared with
+	// other policies are collapsed later, by digest, in shareCACertificate.
+	caName := fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
+	if digest := t.resolvedCADigest(gwIR, gtwCtx, resource.KindBackendTLSPolicy,
+		backendTLSPolicy.Namespace, backendTLSPolicy.Name); digest != "" {
+		validationTLSConfig.CACertificate = &ir.TLSCACertificate{Name: caName, Digest: digest}
+		return validationTLSConfig, nil
 	}
 
 	caRefs := getObjectReferences(gwapiv1.Namespace(backendTLSPolicy.Namespace), backendTLSPolicy.Spec.Validation.CACertificateRefs)
@@ -536,13 +566,18 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 		return nil, err
 	}
 
-	tlsBundle.CACertificate = &ir.TLSCACertificate{
+	if len(caCert) > 0 {
+		t.recordResolvedCA(gwIR, gtwCtx, resource.KindBackendTLSPolicy,
+			backendTLSPolicy.Namespace, backendTLSPolicy.Name, caDigest(caCert))
+	}
+
+	validationTLSConfig.CACertificate = &ir.TLSCACertificate{
 		Certificate: caCert,
-		Name:        fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
+		Name:        caName,
 		SDS:         sds,
 	}
 
-	return tlsBundle, nil
+	return validationTLSConfig, nil
 }
 
 func getObjectReferences(ns gwapiv1.Namespace, refs []gwapiv1.LocalObjectReference) []gwapiv1.ObjectReference {
@@ -673,6 +708,80 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 		return nil, nil, ErrNoValidCACertificate
 	}
 	return []byte(ca), nil, nil
+}
+
+// caDigest content-addresses a CA bundle, so that policies trusting the same CA share one
+// entry regardless of which Secret or ConfigMap they read it from.
+func caDigest(bundle []byte) string {
+	sum := sha256.Sum256(bundle)
+	return "sha256-" + hex.EncodeToString(sum[:])
+}
+
+// resolvedCAKeyFor identifies a resource whose CA has been resolved during this translation.
+func (t *Translator) resolvedCAKeyFor(gtwCtx *GatewayContext, kind, namespace, name string) ResolvedCAKey {
+	return ResolvedCAKey{
+		GatewayIRKey: t.getIRKey(gtwCtx.Gateway),
+		Kind:         kind,
+		Namespace:    namespace,
+		Name:         name,
+	}
+}
+
+// resolvedCADigest returns the digest a resource's CA resolved to earlier in this translation,
+// but only once that bundle has been registered — a destination rejected before registration
+// leaves nothing to reuse.
+func (t *Translator) resolvedCADigest(gwIR *ir.Xds, gtwCtx *GatewayContext, kind, namespace, name string) string {
+	if gwIR == nil || gtwCtx == nil {
+		return ""
+	}
+	digest := t.ResolvedCAMap[t.resolvedCAKeyFor(gtwCtx, kind, namespace, name)]
+	if digest == "" {
+		return ""
+	}
+	if _, ok := t.CACertificateMap[CACertificateKey{GatewayIRKey: t.getIRKey(gtwCtx.Gateway), Digest: digest}]; !ok {
+		return ""
+	}
+	return digest
+}
+
+// recordResolvedCA remembers the bundle a resource's CA resolved to, so its other destinations
+// can skip re-reading the refs.
+func (t *Translator) recordResolvedCA(gwIR *ir.Xds, gtwCtx *GatewayContext, kind, namespace, name, digest string) {
+	if gwIR == nil || gtwCtx == nil {
+		return
+	}
+	if t.ResolvedCAMap == nil {
+		t.ResolvedCAMap = make(map[ResolvedCAKey]string)
+	}
+	t.ResolvedCAMap[t.resolvedCAKeyFor(gtwCtx, kind, namespace, name)] = digest
+}
+
+// shareCACertificate moves cert's bytes into gwIR.CACertificates, one entry per distinct
+// bundle, and returns a reference in their place. The reference keeps cert's own Name, so the
+// xDS secret name is unchanged. Without a gateway to share against, cert comes back untouched
+// and stays self-contained.
+func (t *Translator) shareCACertificate(gwIR *ir.Xds, gtwCtx *GatewayContext, cert *ir.TLSCACertificate) *ir.TLSCACertificate {
+	if gwIR == nil || gtwCtx == nil || cert == nil || len(cert.Certificate) == 0 {
+		return cert
+	}
+	entry := t.caEntryFor(gwIR, t.getIRKey(gtwCtx.Gateway), cert.Certificate)
+	return &ir.TLSCACertificate{Name: cert.Name, Digest: entry.Digest, SDS: cert.SDS}
+}
+
+// caEntryFor returns the gwIR entry holding bundle, adding it when this is the first sight of
+// that content.
+func (t *Translator) caEntryFor(gwIR *ir.Xds, gwIRKey string, bundle []byte) *ir.CACertificateEntry {
+	if t.CACertificateMap == nil {
+		t.CACertificateMap = make(map[CACertificateKey]*ir.CACertificateEntry)
+	}
+	key := CACertificateKey{GatewayIRKey: gwIRKey, Digest: caDigest(bundle)}
+	entry, ok := t.CACertificateMap[key]
+	if !ok {
+		entry = &ir.CACertificateEntry{Digest: key.Digest, Certificate: bundle}
+		t.CACertificateMap[key] = entry
+		gwIR.CACertificates = append(gwIR.CACertificates, entry)
+	}
+	return entry
 }
 
 func getAncestorRefs(policy *gwapiv1.BackendTLSPolicy) []*gwapiv1.ParentReference {

@@ -559,7 +559,14 @@ func (c *customResponse) buildRedirectAction(r *ir.ResponseOverrideRule) (*anypb
 }
 
 func (c *customResponse) buildResponseAction(r *ir.ResponseOverrideRule) (*anypb.Any, error) {
-	response := &policyv3.LocalResponsePolicy{}
+	response := &policyv3.LocalResponsePolicy{
+		// Envoy clears response_code_details when it sends the local reply, which would
+		// drop the reason the request actually failed (e.g. csrf_origin_mismatch) from
+		// the access log. Keep the original reason instead.
+		ResponseCodeDetailsAction: &policyv3.LocalResponsePolicy_PreserveResponseCodeDetails{
+			PreserveResponseCodeDetails: true,
+		},
+	}
 
 	if len(r.Response.Body) > 0 {
 		response.BodyFormat = &corev3.SubstitutionFormatString{
