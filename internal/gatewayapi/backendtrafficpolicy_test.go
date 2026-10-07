@@ -497,6 +497,28 @@ func TestBuildCompression(t *testing.T) {
 			},
 		},
 		{
+			name: "compressor with tuning options",
+			compressor: []*egv1a1.Compression{
+				{
+					Type: egv1a1.BrotliCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{
+						Quality:    new(uint32(9)),
+						WindowBits: new(uint32(20)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.BrotliCompressorType,
+					ChooseFirst: true,
+					Brotli: &egv1a1.BrotliCompressor{
+						Quality:    new(uint32(9)),
+						WindowBits: new(uint32(20)),
+					},
+				},
+			},
+		},
+		{
 			name: "multiple compressors with different minContentLength",
 			compressor: []*egv1a1.Compression{
 				{

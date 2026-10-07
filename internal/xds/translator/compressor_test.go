@@ -66,6 +66,65 @@ func TestBuildCompressorFilter(t *testing.T) {
 			},
 		},
 		{
+			name: "gzip with tuning options",
+			compression: &ir.Compression{
+				Type: egv1a1.GzipCompressorType,
+				Gzip: &egv1a1.GzipCompressor{
+					MemoryLevel:      new(uint32(8)),
+					CompressionLevel: new(uint32(9)),
+					WindowBits:       new(uint32(15)),
+				},
+			},
+			expectedName:    "envoy.filters.http.compressor.gzip",
+			expectedExtName: "envoy.compression.gzip.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				gzip := &gzipv3.Gzip{}
+				require.NoError(t, c.CompressorLibrary.TypedConfig.UnmarshalTo(gzip))
+				require.NotNil(t, gzip.MemoryLevel)
+				assert.Equal(t, uint32(8), gzip.MemoryLevel.Value)
+				assert.Equal(t, gzipv3.Gzip_COMPRESSION_LEVEL_9, gzip.CompressionLevel)
+				require.NotNil(t, gzip.WindowBits)
+				assert.Equal(t, uint32(15), gzip.WindowBits.Value)
+			},
+		},
+		{
+			name: "brotli with tuning options",
+			compression: &ir.Compression{
+				Type: egv1a1.BrotliCompressorType,
+				Brotli: &egv1a1.BrotliCompressor{
+					Quality:    new(uint32(7)),
+					WindowBits: new(uint32(22)),
+				},
+			},
+			expectedName:    "envoy.filters.http.compressor.brotli",
+			expectedExtName: "envoy.compression.brotli.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				brotli := &brotliv3.Brotli{}
+				require.NoError(t, c.CompressorLibrary.TypedConfig.UnmarshalTo(brotli))
+				require.NotNil(t, brotli.Quality)
+				assert.Equal(t, uint32(7), brotli.Quality.Value)
+				require.NotNil(t, brotli.WindowBits)
+				assert.Equal(t, uint32(22), brotli.WindowBits.Value)
+			},
+		},
+		{
+			name: "zstd with tuning options",
+			compression: &ir.Compression{
+				Type: egv1a1.ZstdCompressorType,
+				Zstd: &egv1a1.ZstdCompressor{
+					CompressionLevel: new(uint32(10)),
+				},
+			},
+			expectedName:    "envoy.filters.http.compressor.zstd",
+			expectedExtName: "envoy.compression.zstd.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				zstd := &zstdv3.Zstd{}
+				require.NoError(t, c.CompressorLibrary.TypedConfig.UnmarshalTo(zstd))
+				require.NotNil(t, zstd.CompressionLevel)
+				assert.Equal(t, uint32(10), zstd.CompressionLevel.Value)
+			},
+		},
+		{
 			name: "with choose first",
 			compression: &ir.Compression{
 				Type:        egv1a1.GzipCompressorType,

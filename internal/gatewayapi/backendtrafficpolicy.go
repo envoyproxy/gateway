@@ -2564,6 +2564,19 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		strconv.Itoa(index))
 }
 
+// applyCompressorTuning copies the per-compressor tuning options to the IR compression when set.
+func applyCompressorTuning(c *egv1a1.Compression, irCompression *ir.Compression) {
+	if c.Brotli != nil && (c.Brotli.Quality != nil || c.Brotli.WindowBits != nil) {
+		irCompression.Brotli = c.Brotli
+	}
+	if c.Gzip != nil && (c.Gzip.MemoryLevel != nil || c.Gzip.CompressionLevel != nil || c.Gzip.WindowBits != nil) {
+		irCompression.Gzip = c.Gzip
+	}
+	if c.Zstd != nil && c.Zstd.CompressionLevel != nil {
+		irCompression.Zstd = c.Zstd
+	}
+}
+
 func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compression {
 	// Handle the Compressor field first (higher priority)
 	if len(compressor) > 0 {
@@ -2577,6 +2590,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 					Type:        c.Type,
 					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 				}
+				applyCompressorTuning(c, &irCompression)
 				if c.MinContentLength != nil {
 					minContentLength, ok := c.MinContentLength.AsInt64()
 					if ok {
@@ -2599,6 +2613,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 			Type:        c.Type,
 			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 		}
+		applyCompressorTuning(c, &irCompression)
 		if c.MinContentLength != nil {
 			minContentLength, ok := c.MinContentLength.AsInt64()
 			if ok {

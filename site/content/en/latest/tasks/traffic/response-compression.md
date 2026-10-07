@@ -98,6 +98,40 @@ spec:
       minContentLength: 1024
 ```
 
+### Tuning the Compressor
+
+Each compressor exposes optional tuning parameters that map directly to the underlying Envoy compressor configuration. All of them are optional; when unset, Envoy's defaults are used.
+
+| Compressor | Field | Range | Description |
+|------------|-------|-------|-------------|
+| Gzip | `memoryLevel` | 1-9 | Amount of internal memory used by zlib. Higher values are faster and produce better results. |
+| Gzip | `compressionLevel` | 1-9 | zlib compression level. Higher levels provide better compression at the cost of latency and CPU. |
+| Gzip | `windowBits` | 9-15 | Base-2 log of the compressor window size. |
+| Brotli | `quality` | 0-11 | Compression speed-density lever. Higher values are slower and denser. |
+| Brotli | `windowBits` | 10-24 | Base-2 log of the compressor window size. |
+| Zstd | `compressionLevel` | 0-22 | Zstd compression level. Value `0` means the default level. |
+
+For example, to use Brotli with a higher quality for text content:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-compression
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  compressor:
+    - type: Brotli
+      brotli:
+        quality: 5
+        windowBits: 22
+```
+
+Note that higher compression levels increase CPU usage and latency on the Envoy data plane.
+
 ### Deprecated Configuration
 
 The following configuration uses the deprecated `compression` field. While still supported, it's recommended to migrate to the `compressor` field:

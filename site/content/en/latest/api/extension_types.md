@@ -830,6 +830,10 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `quality` | _integer_ |  false  |  | Quality controls the main compression speed-density lever. The higher the quality, the slower<br />the compression and the denser the output. Value must be in the range [0, 11]. |
+| `windowBits` | _integer_ |  false  |  | WindowBits is the base two logarithmic of the compressor's window size. Larger window results<br />in better compression at the expense of memory usage. Value must be in the range [10, 24]. |
 
 
 #### CELExpression
@@ -3078,6 +3082,11 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/c
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `memoryLevel` | _integer_ |  false  |  | MemoryLevel controls the amount of internal memory used by zlib. Higher values use more<br />memory, but are faster and produce better compression results. Value must be in the range [1, 9]. |
+| `compressionLevel` | _integer_ |  false  |  | CompressionLevel selects the zlib compression level. Higher levels provide better compression<br />at the cost of increased latency and CPU usage. Value must be in the range [1, 9]. |
+| `windowBits` | _integer_ |  false  |  | WindowBits is the base two logarithmic of the compressor's window size. Larger window results<br />in better compression at the expense of memory usage. Value must be in the range [9, 15]. |
 
 
 #### HTTP10Settings
@@ -7329,5 +7338,8 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/c
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `compressionLevel` | _integer_ |  false  |  | CompressionLevel sets the compression parameters according to a pre-defined compression level<br />table. Higher levels provide better compression at the cost of increased latency and CPU usage.<br />Value 0 means the default level. Value must be in the range [0, 22]. |
 
 

@@ -86,13 +86,40 @@ func buildCompressorFilter(compression *ir.Compression) (*hcmv3.HttpFilter, erro
 	switch compression.Type {
 	case egv1a1.BrotliCompressorType:
 		extensionName = "envoy.compression.brotli.compressor"
-		extensionMsg = &brotliv3.Brotli{}
+		brotli := &brotliv3.Brotli{}
+		if compression.Brotli != nil {
+			if compression.Brotli.Quality != nil {
+				brotli.Quality = wrapperspb.UInt32(*compression.Brotli.Quality)
+			}
+			if compression.Brotli.WindowBits != nil {
+				brotli.WindowBits = wrapperspb.UInt32(*compression.Brotli.WindowBits)
+			}
+		}
+		extensionMsg = brotli
 	case egv1a1.GzipCompressorType:
 		extensionName = "envoy.compression.gzip.compressor"
-		extensionMsg = &gzipv3.Gzip{}
+		gzip := &gzipv3.Gzip{}
+		if compression.Gzip != nil {
+			if compression.Gzip.MemoryLevel != nil {
+				gzip.MemoryLevel = wrapperspb.UInt32(*compression.Gzip.MemoryLevel)
+			}
+			if compression.Gzip.CompressionLevel != nil {
+				gzip.CompressionLevel = gzipv3.Gzip_CompressionLevel(*compression.Gzip.CompressionLevel)
+			}
+			if compression.Gzip.WindowBits != nil {
+				gzip.WindowBits = wrapperspb.UInt32(*compression.Gzip.WindowBits)
+			}
+		}
+		extensionMsg = gzip
 	case egv1a1.ZstdCompressorType:
 		extensionName = "envoy.compression.zstd.compressor"
-		extensionMsg = &zstdv3.Zstd{}
+		zstd := &zstdv3.Zstd{}
+		if compression.Zstd != nil {
+			if compression.Zstd.CompressionLevel != nil {
+				zstd.CompressionLevel = wrapperspb.UInt32(*compression.Zstd.CompressionLevel)
+			}
+		}
+		extensionMsg = zstd
 	}
 
 	if extensionAny, err = proto.ToAnyWithValidation(extensionMsg); err != nil {

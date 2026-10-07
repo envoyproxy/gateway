@@ -15418,9 +15418,51 @@ spec:
                             properties:
                               brotli:
                                 description: The configuration for Brotli compressor.
+                                properties:
+                                  quality:
+                                    description: |-
+                                      Quality controls the main compression speed-density lever. The higher the quality, the slower
+                                      the compression and the denser the output. Value must be in the range [0, 11].
+                                    format: int32
+                                    maximum: 11
+                                    minimum: 0
+                                    type: integer
+                                  windowBits:
+                                    description: |-
+                                      WindowBits is the base two logarithmic of the compressor's window size. Larger window results
+                                      in better compression at the expense of memory usage. Value must be in the range [10, 24].
+                                    format: int32
+                                    maximum: 24
+                                    minimum: 10
+                                    type: integer
                                 type: object
                               gzip:
                                 description: The configuration for GZIP compressor.
+                                properties:
+                                  compressionLevel:
+                                    description: |-
+                                      CompressionLevel selects the zlib compression level. Higher levels provide better compression
+                                      at the cost of increased latency and CPU usage. Value must be in the range [1, 9].
+                                    format: int32
+                                    maximum: 9
+                                    minimum: 1
+                                    type: integer
+                                  memoryLevel:
+                                    description: |-
+                                      MemoryLevel controls the amount of internal memory used by zlib. Higher values use more
+                                      memory, but are faster and produce better compression results. Value must be in the range [1, 9].
+                                    format: int32
+                                    maximum: 9
+                                    minimum: 1
+                                    type: integer
+                                  windowBits:
+                                    description: |-
+                                      WindowBits is the base two logarithmic of the compressor's window size. Larger window results
+                                      in better compression at the expense of memory usage. Value must be in the range [9, 15].
+                                    format: int32
+                                    maximum: 15
+                                    minimum: 9
+                                    type: integer
                                 type: object
                               minContentLength:
                                 allOf:
@@ -15446,6 +15488,16 @@ spec:
                                 type: string
                               zstd:
                                 description: The configuration for Zstd compressor.
+                                properties:
+                                  compressionLevel:
+                                    description: |-
+                                      CompressionLevel sets the compression parameters according to a pre-defined compression level
+                                      table. Higher levels provide better compression at the cost of increased latency and CPU usage.
+                                      Value 0 means the default level. Value must be in the range [0, 22].
+                                    format: int32
+                                    maximum: 22
+                                    minimum: 0
+                                    type: integer
                                 type: object
                             required:
                             - type
