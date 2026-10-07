@@ -10934,7 +10934,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.161.0"
+          image: "otel/opentelemetry-collector-contrib:0.161.0.386"
           imagePullPolicy: IfNotPresent
           ports:
             
