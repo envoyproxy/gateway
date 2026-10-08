@@ -57,6 +57,7 @@ const (
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
+	configMapEnvoyProxyIndex         = "configMapEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	httpRouteFilterGRPCRouteIndex    = "httpRouteFilterGRPCRouteIndex"
@@ -65,10 +66,11 @@ const (
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 	// ClusterTrustBundle related indexers
-	clusterTrustBundleEepIndex     = "clusterTrustBundleEepIndex"
-	clusterTrustBundleBackendIndex = "clusterTrustBundleBackendIndex"
-	clusterTrustBundleBtlsIndex    = "clusterTrustBundleBtlsIndex"
-	clusterTrustBundleCtpIndex     = "clusterTrustBundleCtpIndex"
+	clusterTrustBundleEepIndex        = "clusterTrustBundleEepIndex"
+	clusterTrustBundleEnvoyProxyIndex = "clusterTrustBundleEnvoyProxyIndex"
+	clusterTrustBundleBackendIndex    = "clusterTrustBundleBackendIndex"
+	clusterTrustBundleBtlsIndex       = "clusterTrustBundleBtlsIndex"
+	clusterTrustBundleCtpIndex        = "clusterTrustBundleCtpIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -292,6 +294,14 @@ func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, configMapEnvoyProxyIndex, configMapEnvoyProxyIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, clusterTrustBundleEnvoyProxyIndex, clusterTrustBundleEnvoyProxyIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -320,7 +330,60 @@ func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
+	secretReferences = append(secretReferences, wasmModuleRefsOfKind(&ep.Spec, ep.Namespace, resource.KindSecret)...)
 	return secretReferences
+}
+
+func configMapEnvoyProxyIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*egv1a1.EnvoyProxy)
+	return wasmModuleRefsOfKind(&ep.Spec, ep.Namespace, resource.KindConfigMap)
+}
+
+func clusterTrustBundleEnvoyProxyIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*egv1a1.EnvoyProxy)
+	return wasmModuleRefsOfKind(&ep.Spec, ep.Namespace, resource.KindClusterTrustBundle)
+}
+
+// wasmModuleObjectRefs returns the pull secret and CA certificate refs of the
+// remote Wasm modules registered on the EnvoyProxy spec.
+func wasmModuleObjectRefs(spec *egv1a1.EnvoyProxySpec) []gwapiv1.SecretObjectReference {
+	var refs []gwapiv1.SecretObjectReference
+	for i := range spec.WasmModules {
+		src := &spec.WasmModules[i].Source
+		if src.HTTP != nil && src.HTTP.TLS != nil {
+			refs = append(refs, src.HTTP.TLS.CACertificateRef)
+		}
+		if src.Image != nil {
+			if src.Image.TLS != nil {
+				refs = append(refs, src.Image.TLS.CACertificateRef)
+			}
+			if src.Image.PullSecretRef != nil {
+				refs = append(refs, *src.Image.PullSecretRef)
+			}
+		}
+	}
+	return refs
+}
+
+// wasmModuleRefsOfKind returns the index keys of the spec's Wasm module refs of
+// the given kind: namespace/name, or just name for ClusterTrustBundles. Refs
+// without a namespace default to ns, the namespace the spec belongs to.
+func wasmModuleRefsOfKind(spec *egv1a1.EnvoyProxySpec, ns, kind string) []string {
+	var keys []string
+	for _, ref := range wasmModuleObjectRefs(spec) {
+		if gatewayapi.KindDerefOr(ref.Kind, resource.KindSecret) != kind {
+			continue
+		}
+		if kind == resource.KindClusterTrustBundle {
+			keys = append(keys, string(ref.Name))
+			continue
+		}
+		keys = append(keys, types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ns),
+			Name:      string(ref.Name),
+		}.String())
+	}
+	return keys
 }
 
 func accessLogRefs(ep *egv1a1.EnvoyProxy) []string {
