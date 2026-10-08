@@ -455,7 +455,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	}
 
 	// Process the policies targeting Backends (Service/ServiceImport/Backend)
-	res = t.processBackendTargetedPolicies(backendTrafficPolicies, xdsIR, gateways, gatewayPolicyMap, backendPolicyMap, handledPolicies, res)
+	res = t.processBackendTargetedPolicies(backendTrafficPolicies, xdsIR, gateways, resources, gatewayPolicyMap, backendPolicyMap, handledPolicies, res)
 
 	for _, policy := range res {
 		// Truncate Ancestor list of longer than 16
@@ -641,6 +641,7 @@ func (t *Translator) processBackendTargetedPolicies(
 	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
+	resources *resource.Resources,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
 	handledPolicies map[types.NamespacedName]*egv1a1.BackendTrafficPolicy,
@@ -657,7 +658,8 @@ func (t *Translator) processBackendTargetedPolicies(
 				backendTargets = append(backendTargets, currTarget)
 			}
 		}
-		if len(backendTargets) == 0 {
+		hasBackendSelectors := policyHasBackendTargetSelectors(currPolicy)
+		if len(backendTargets) == 0 && !hasBackendSelectors {
 			continue
 		}
 
@@ -678,6 +680,9 @@ func (t *Translator) processBackendTargetedPolicies(
 				merged[gwNN] = gwPolicy
 			}
 			failures = append(failures, outcome.failures...)
+		}
+		if hasBackendSelectors {
+			failures = append(failures, t.rejectBackendTargetSelectors(xdsIR, gateways, resources, policy)...)
 		}
 
 		// Later failures for the same ancestor win, matching the pre-aggregation behavior of
@@ -710,6 +715,71 @@ func (t *Translator) processBackendTargetedPolicies(
 		}
 	}
 	return res
+}
+
+// policyHasBackendTargetSelectors reports whether policy has a targetSelectors entry naming a
+// Service, ServiceImport, or Backend kind - a combination translation never resolves, since
+// backend targeting only looks at targetRef/targetRefs (resolvePolicyTargetsFromReferences).
+func policyHasBackendTargetSelectors(policy *egv1a1.BackendTrafficPolicy) bool {
+	for _, sel := range policy.Spec.TargetSelectors {
+		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
+			return true
+		}
+	}
+	return false
+}
+
+// rejectBackendTargetSelectors reports a resolve error for every ancestor Gateway that would
+// otherwise have silently seen no effect from policy's unsupported targetSelectors. It resolves
+// the selectors against live Service/ServiceImport/Backend objects purely to find which ancestors
+// to report to - the match is never applied.
+func (t *Translator) rejectBackendTargetSelectors(
+	xdsIR resource.XdsIRMap,
+	gateways []*GatewayContext,
+	resources *resource.Resources,
+	policy *egv1a1.BackendTrafficPolicy,
+) []backendTargetFailure {
+	var backendSelectors []egv1a1.TargetSelector
+	for _, sel := range policy.Spec.TargetSelectors {
+		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
+			backendSelectors = append(backendSelectors, sel)
+		}
+	}
+
+	var matched []targetRefWithTimestamp
+	matched = append(matched, resolvePolicyTargetsFromSelectors(
+		backendSelectors, resources.Services, resources.ReferenceGrants,
+		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)...)
+	matched = append(matched, resolvePolicyTargetsFromSelectors(
+		backendSelectors, resources.ServiceImports, resources.ReferenceGrants,
+		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)...)
+	matched = append(matched, resolvePolicyTargetsFromSelectors(
+		backendSelectors, resources.Backends, resources.ReferenceGrants,
+		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)...)
+
+	resolveErr := &status.PolicyResolveError{
+		Reason:  egv1a1.PolicyReasonInvalid,
+		Message: "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead",
+	}
+
+	seen := sets.New[types.NamespacedName]()
+	var failures []backendTargetFailure
+	for _, target := range matched {
+		key := backendPolicyKeyFromTarget(target.policyTargetReferenceWithSectionName)
+		for _, gw := range gateways {
+			x, ok := xdsIR[t.getIRKey(gw.Gateway)]
+			if !ok || !gatewayReferencesBackend(x, key) {
+				continue
+			}
+			gwNN := utils.NamespacedName(gw)
+			if seen.Has(gwNN) {
+				continue
+			}
+			seen.Insert(gwNN)
+			failures = append(failures, backendTargetFailure{gwNN: gwNN, err: resolveErr})
+		}
+	}
+	return failures
 }
 
 func (t *Translator) buildGatewayPolicyMap(

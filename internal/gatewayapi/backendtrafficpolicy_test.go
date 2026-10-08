@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -3472,4 +3473,111 @@ func TestProcessBackendTrafficPolicyForBackendUseClientProtocol(t *testing.T) {
 			require.Equal(t, test.want, bc.UseClientProtocol)
 		})
 	}
+}
+
+func TestPolicyHasBackendTargetSelectors(t *testing.T) {
+	tests := []struct {
+		name   string
+		policy *egv1a1.BackendTrafficPolicy
+		want   bool
+	}{
+		{
+			name:   "no target selectors",
+			policy: &egv1a1.BackendTrafficPolicy{},
+			want:   false,
+		},
+		{
+			name: "selector targets Gateway only",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Gateway")}},
+				},
+			}},
+			want: false,
+		},
+		{
+			name: "selector targets Service",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Service")}},
+				},
+			}},
+			want: true,
+		},
+		{
+			name: "selector targets ServiceImport",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("ServiceImport")}},
+				},
+			}},
+			want: true,
+		},
+		{
+			name: "selector targets Backend",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Backend")}},
+				},
+			}},
+			want: true,
+		},
+		{
+			name: "mixed selectors, one is a backend kind",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{
+						{Kind: gwapiv1.Kind("HTTPRoute")},
+						{Kind: gwapiv1.Kind("Backend")},
+					},
+				},
+			}},
+			want: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.want, policyHasBackendTargetSelectors(test.policy))
+		})
+	}
+}
+
+func TestRejectBackendTargetSelectors(t *testing.T) {
+	matchingService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "svc-1", Namespace: "default", Labels: map[string]string{"pick": "me"},
+		},
+		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
+	}
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+
+	newPolicy := func() *egv1a1.BackendTrafficPolicy {
+		return &egv1a1.BackendTrafficPolicy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-selector"},
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{
+						{Kind: gwapiv1.Kind("Service"), Group: new(gwapiv1.Group("")), MatchLabels: map[string]string{"pick": "me"}},
+					},
+				},
+				MergeType: new(egv1a1.StrategicMerge),
+			},
+		}
+	}
+
+	tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}, TranslatorContext: &TranslatorContext{}}
+	gwReferencing := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-referencing"}}}
+	gwUnrelated := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-unrelated"}}}
+
+	xdsIR := gwapiresource.XdsIRMap{}
+	xdsIR[tr.getIRKey(gwReferencing.Gateway)] = &ir.Xds{BackendClusters: []*ir.BackendCluster{{Metadata: matchMD}}}
+	xdsIR[tr.getIRKey(gwUnrelated.Gateway)] = &ir.Xds{}
+
+	resources := &gwapiresource.Resources{Services: []*corev1.Service{matchingService}}
+
+	failures := tr.rejectBackendTargetSelectors(xdsIR, []*GatewayContext{gwReferencing, gwUnrelated}, resources, newPolicy())
+
+	require.Len(t, failures, 1)
+	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "gw-referencing"}, failures[0].gwNN)
+	require.Equal(t, gwapiv1.PolicyReasonInvalid, failures[0].err.Reason)
 }
