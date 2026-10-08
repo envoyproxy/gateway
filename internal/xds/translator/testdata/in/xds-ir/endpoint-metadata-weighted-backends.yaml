@@ -1,0 +1,34 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "10.1.2.3"
+          port: 8080
+        weight: 60
+        metadata:
+          kind: Service
+          name: svc-backend
+          namespace: default
+          sectionName: "8080"
+        name: "first-route-dest/backend/0"
+      - endpoints:
+        - host: "1.1.1.1"
+          port: 443
+        weight: 40
+        metadata:
+          kind: Backend
+          name: fqdn-backend
+          namespace: default
+        name: "first-route-dest/backend/1"
