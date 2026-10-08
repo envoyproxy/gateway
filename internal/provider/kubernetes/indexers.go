@@ -1177,6 +1177,9 @@ func configMapEepIndexFunc(rawObj client.Object) []string {
 	}
 
 	for _, wasm := range eep.Spec.Wasm {
+		if wasm.Code == nil {
+			continue
+		}
 		var caCertRef *gwapiv1.SecretObjectReference
 		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
 			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
@@ -1372,6 +1375,9 @@ func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 	var ret []string
 
 	for _, wasm := range envoyExtensionPolicy.Spec.Wasm {
+		if wasm.Code == nil {
+			continue
+		}
 		if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
 			secretRef := wasm.Code.Image.PullSecretRef
 			ret = append(ret,
@@ -1404,6 +1410,9 @@ func clusterTrustBundleEepIndexFunc(rawObj client.Object) []string {
 	eep := rawObj.(*egv1a1.EnvoyExtensionPolicy)
 	var refs []string
 	for _, wasm := range eep.Spec.Wasm {
+		if wasm.Code == nil {
+			continue
+		}
 		var caCertRef *gwapiv1.SecretObjectReference
 		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
 			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef

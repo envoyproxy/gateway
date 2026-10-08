@@ -27551,6 +27551,8 @@ spec:
                           description: |-
                             Status Code of the Custom Response
                             If unset, does not override the status of response.
+                          maximum: 599
+                          minimum: 200
                           type: integer
                       type: object
                     source:
@@ -28943,6 +28945,122 @@ spec:
                         x-kubernetes-list-map-keys:
                         - name
                         x-kubernetes-list-type: map
+                      mutations:
+                        description: |-
+                          Mutations is an ordered list of header operations that are applied in
+                          exactly the order specified. Use this field when the sequence of
+                          operations matters, for example setting a header and then appending to
+                          it, or removing a header and then re-adding it.
+
+                          Mutations are always applied FIRST, in list order. The Set, Add,
+                          AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after
+                          the mutations, preserving their existing ordering (Add, then Set, then
+                          AddIfAbsent, then Remove, then RemoveOnMatch).
+                        items:
+                          description: HTTPHeaderMutation defines a single header
+                            mutation operation.
+                          maxProperties: 1
+                          minProperties: 1
+                          properties:
+                            remove:
+                              description: |-
+                                Remove removes the named header if it exists. Header names are
+                                case-insensitive.
+                              minLength: 1
+                              type: string
+                            removeOnMatch:
+                              description: |-
+                                RemoveOnMatch removes every header whose name matches the specified string
+                                matcher. Matching is performed on the header name (case-insensitive).
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            write:
+                              description: Write adds or modifies a header using the
+                                specified action.
+                              properties:
+                                action:
+                                  default: Add
+                                  description: |-
+                                    Action controls how the header value is written when a header with the
+                                    same name already exists. Defaults to Add.
+                                  enum:
+                                  - Add
+                                  - Set
+                                  - AddIfAbsent
+                                  - SetIfExists
+                                  type: string
+                                header:
+                                  description: |-
+                                    Header is the header name and value to write. The value may contain
+                                    Envoy substitution format operators such as "%REQ(x-foo)%", which are
+                                    evaluated per request.
+                                    See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                        case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                        If multiple entries specify equivalent header names, the first entry with
+                                        an equivalent name MUST be considered for a match. Subsequent entries
+                                        with an equivalent header name MUST be ignored. Due to the
+                                        case-insensitivity of header names, "foo" and "Foo" are considered
+                                        equivalent.
+                                      maxLength: 256
+                                      minLength: 1
+                                      pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                      type: string
+                                    value:
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+                                        <gateway:experimental:description>
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                        </gateway:experimental:description>
+
+                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                                      maxLength: 4096
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - value
+                                  type: object
+                                keepEmptyValue:
+                                  description: |-
+                                    KeepEmptyValue controls whether the header is still written when its
+                                    value is empty. This matters for values produced by substitution
+                                    formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+                                    request time. Envoy drops such headers by default; set this to true to
+                                    keep them with an empty value.
+
+                                    When unset, it defaults to true only if the configured value itself is
+                                    the empty string, so a literal empty header is always written.
+                                  type: boolean
+                              required:
+                              - header
+                              type: object
+                          type: object
+                        maxItems: 64
+                        type: array
                       remove:
                         description: |-
                           Remove the given header(s) from the HTTP request before the action. The
@@ -29197,6 +29315,122 @@ spec:
                         x-kubernetes-list-map-keys:
                         - name
                         x-kubernetes-list-type: map
+                      mutations:
+                        description: |-
+                          Mutations is an ordered list of header operations that are applied in
+                          exactly the order specified. Use this field when the sequence of
+                          operations matters, for example setting a header and then appending to
+                          it, or removing a header and then re-adding it.
+
+                          Mutations are always applied FIRST, in list order. The Set, Add,
+                          AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after
+                          the mutations, preserving their existing ordering (Add, then Set, then
+                          AddIfAbsent, then Remove, then RemoveOnMatch).
+                        items:
+                          description: HTTPHeaderMutation defines a single header
+                            mutation operation.
+                          maxProperties: 1
+                          minProperties: 1
+                          properties:
+                            remove:
+                              description: |-
+                                Remove removes the named header if it exists. Header names are
+                                case-insensitive.
+                              minLength: 1
+                              type: string
+                            removeOnMatch:
+                              description: |-
+                                RemoveOnMatch removes every header whose name matches the specified string
+                                matcher. Matching is performed on the header name (case-insensitive).
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            write:
+                              description: Write adds or modifies a header using the
+                                specified action.
+                              properties:
+                                action:
+                                  default: Add
+                                  description: |-
+                                    Action controls how the header value is written when a header with the
+                                    same name already exists. Defaults to Add.
+                                  enum:
+                                  - Add
+                                  - Set
+                                  - AddIfAbsent
+                                  - SetIfExists
+                                  type: string
+                                header:
+                                  description: |-
+                                    Header is the header name and value to write. The value may contain
+                                    Envoy substitution format operators such as "%REQ(x-foo)%", which are
+                                    evaluated per request.
+                                    See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                        case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                        If multiple entries specify equivalent header names, the first entry with
+                                        an equivalent name MUST be considered for a match. Subsequent entries
+                                        with an equivalent header name MUST be ignored. Due to the
+                                        case-insensitivity of header names, "foo" and "Foo" are considered
+                                        equivalent.
+                                      maxLength: 256
+                                      minLength: 1
+                                      pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                      type: string
+                                    value:
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+                                        <gateway:experimental:description>
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                        </gateway:experimental:description>
+
+                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                                      maxLength: 4096
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - value
+                                  type: object
+                                keepEmptyValue:
+                                  description: |-
+                                    KeepEmptyValue controls whether the header is still written when its
+                                    value is empty. This matters for values produced by substitution
+                                    formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+                                    request time. Envoy drops such headers by default; set this to true to
+                                    keep them with an empty value.
+
+                                    When unset, it defaults to true only if the configured value itself is
+                                    the empty string, so a literal empty header is always written.
+                                  type: boolean
+                              required:
+                              - header
+                              type: object
+                          type: object
+                        maxItems: 64
+                        type: array
                       remove:
                         description: |-
                           Remove the given header(s) from the HTTP request before the action. The
@@ -29388,8 +29622,9 @@ spec:
                           - Chain
                           - DNS
                           - URI
+                          - Issuer
                           type: string
-                        maxItems: 5
+                        maxItems: 6
                         type: array
                       mode:
                         description: |-
@@ -32983,7 +33218,9 @@ spec:
                     v8 is used as the VM runtime for the Wasm extensions.
                   properties:
                     code:
-                      description: Code is the Wasm code for the extension.
+                      description: |-
+                        Code is the Wasm code for the extension.
+                        When omitted, Name must match a module in EnvoyProxy.spec.wasmModules.
                       properties:
                         http:
                           description: |-
@@ -33208,7 +33445,6 @@ spec:
                           - enum:
                             - HTTP
                             - Image
-                            - ConfigMap
                           description: |-
                             Type is the type of the source of the Wasm code.
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
@@ -33256,6 +33492,10 @@ spec:
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
                         If not specified, EG will generate a unique name for the Wasm extension.
+
+                        When Code is omitted, Name is required and must match a module registered
+                        in EnvoyProxy.spec.wasmModules.
+                      maxLength: 253
                       type: string
                     rootID:
                       description: |-
@@ -33265,9 +33505,11 @@ spec:
 
                         Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
                       type: string
-                  required:
-                  - code
                   type: object
+                  x-kubernetes-validations:
+                  - message: either code must be set, or name must be set and match
+                      the wasmModules name pattern
+                    rule: has(self.code) || (has(self.name) && self.name.matches('^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$'))
                 maxItems: 16
                 type: array
             type: object
@@ -53220,6 +53462,71 @@ spec:
                         specified
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
+              wasmModules:
+                description: |-
+                  WasmModules defines the set of Wasm modules that are allowed to be used by
+                  EnvoyExtensionPolicy resources. Each entry registers a module by a logical
+                  name and a source (currently Local path).
+
+                  When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up
+                  in this list.
+
+                  The EnvoyProxy owner is responsible for ensuring Local modules are available
+                  on the proxy container's filesystem (e.g., via init containers, custom images,
+                  or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path.
+                items:
+                  description: |-
+                    WasmModuleEntry defines a Wasm module that is registered and allowed for use
+                    by EnvoyExtensionPolicy resources.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the logical name for this module. EnvoyExtensionPolicy resources
+                        reference modules by this name when wasm[].code is omitted.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                    source:
+                      description: Source defines where the Wasm module code is loaded
+                        from.
+                      properties:
+                        local:
+                          description: |-
+                            Local specifies a module loaded from the proxy's local filesystem
+                            by absolute path.
+                          properties:
+                            path:
+                              description: Path is the absolute filesystem path to
+                                the Wasm module on the Envoy proxy.
+                              maxLength: 4096
+                              minLength: 1
+                              pattern: ^/.*
+                              type: string
+                          required:
+                          - path
+                          type: object
+                        type:
+                          default: Local
+                          description: |-
+                            Type is the type of the source of the Wasm module.
+                            Defaults to Local.
+                          enum:
+                          - Local
+                          type: string
+                      type: object
+                      x-kubernetes-validations:
+                      - message: If type is Local, local field needs to be set.
+                        rule: self.type != 'Local' || has(self.local)
+                  required:
+                  - name
+                  - source
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
             type: object
             x-kubernetes-validations:
             - message: only one of luaValidation or lua may be set
@@ -53497,6 +53804,28 @@ spec:
           spec:
             description: Spec defines the desired state of HTTPRouteFilter.
             properties:
+              backendPriority:
+                description: |-
+                  BackendPriority sets the Envoy locality priority of the endpoints belonging to the
+                  backendRef this filter is attached to, enabling priority-based failover between the
+                  backendRefs of a single route rule. 0 is the highest priority.
+
+                  Envoy sends traffic to the lowest priority value that has enough healthy endpoints,
+                  and only spills over to the next value as that health degrades. It is highly
+                  recommended to configure active or passive health checks so that failover can be
+                  detected when the higher priority backends become unhealthy.
+
+                  This overrides the priority derived from the referenced Backend's fallback field.
+                  For additional details, see
+                  https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/priority
+
+                  This filter is only valid when referenced from a backendRef's filters. Referencing it
+                  from a route rule's filters is rejected: a rule-level filter applies uniformly to every
+                  backendRef of the rule, and a uniform priority carries no failover meaning.
+                format: int32
+                maximum: 128
+                minimum: 0
+                type: integer
               credentialInjection:
                 description: |-
                   HTTPCredentialInjectionFilter defines the configuration to inject credentials into the request.
@@ -54509,7 +54838,9 @@ spec:
                                   description: |-
                                     Provider is the name of the JWT provider that used to verify the JWT token.
                                     In order to use JWT claims for authorization, you must configure the JWT
-                                    authentication with the same provider in the same `SecurityPolicy`.
+                                    authentication with the same provider in the same `SecurityPolicy`, or,
+                                    when `mergeType` is set, in the parent `SecurityPolicy` this policy is
+                                    merged into.
                                   maxLength: 253
                                   minLength: 1
                                   type: string
@@ -54638,6 +54969,24 @@ spec:
                       It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..
                       The value "*" allows any method to be used.
                     items:
+                      type: string
+                    type: array
+                  allowOriginRegexes:
+                    description: |-
+                      AllowOriginRegexes defines regular expressions that are matched against the Origin header.
+                      It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.
+                      An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes.
+                    items:
+                      description: |-
+                        CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+                        including the scheme and the port if present.
+                        The regex string must adhere to the syntax documented in
+                        https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+                        which is not supported.
+                        A regular expression that matches the literal string "*" is rejected.
+                        The value "*" in AllowOrigins allows any origin.
+                      maxLength: 1024
+                      minLength: 1
                       type: string
                     type: array
                   allowOrigins:
@@ -62148,9 +62497,11 @@ spec:
                 || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
                 ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
                 sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''])))'
-            - message: if authorization.rules.principal.jwt is used, jwt must be defined
-              rule: '(has(self.authorization) && has(self.authorization.rules) &&
-                self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
+            - message: if authorization.rules.principal.jwt is used, jwt must be defined,
+                unless mergeType is set and the jwt providers are inherited from the
+                parent policy
+              rule: '(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules)
+                && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
                 : false)) ? has(self.jwt) : true'
           status:
             description: Status defines the current status of SecurityPolicy.

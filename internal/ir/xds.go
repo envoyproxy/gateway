@@ -193,6 +193,18 @@ type Xds struct {
 	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
 	// source of truth for a cluster's Settings/Metadata.
 	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
+	// ExtensionResources holds extension-introduced resources deduplicated into a single shared
+	// entry, keyed by their Name. Other IR fields reference these via UnstructuredRef.Name instead
+	// of embedding Object.
+	//
+	// +optional
+	ExtensionResources []*UnstructuredRef `json:"extensionResources,omitempty" yaml:"extensionResources,omitempty"`
+
+	// CACertificates holds upstream CA bundles deduplicated by content, so policies trusting
+	// the same CA share one entry whichever Secret or ConfigMap they read it from.
+	//
+	// +optional
+	CACertificates []*CACertificateEntry `json:"caCertificates,omitempty" yaml:"caCertificates,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -613,10 +625,24 @@ type TLSCrl struct {
 type TLSCACertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-	// Certificate content.
+	// Digest names the Xds.CACertificates entry holding this reference's bytes. Empty when
+	// Certificate is carried inline instead, which happens where no gateway IR is in scope
+	// to register against.
+	Digest string `json:"digest,omitempty" yaml:"digest,omitempty"`
+	// Certificate content. Empty when the bytes live in Xds.CACertificates under Digest.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
+}
+
+// CACertificateEntry is one CA bundle in Xds.CACertificates, shared by every
+// TLSCACertificate whose Digest matches.
+// +k8s:deepcopy-gen=true
+type CACertificateEntry struct {
+	// Digest content-addresses Certificate, and is what references join on.
+	Digest string `json:"digest" yaml:"digest"`
+	// Certificate content.
+	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate
@@ -962,23 +988,13 @@ type HeaderSettings struct {
 	// (An "edge request" refers to a request from an external client to the Envoy entrypoint.)
 	RequestID *RequestIDAction `json:"requestID,omitempty" yaml:"requestID,omitempty"`
 
-	// EarlyAddRequestHeaders defines headers that would be added before envoy request processing.
-	EarlyAddRequestHeaders []AddHeader `json:"earlyAddRequestHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
+	// EarlyRequestHeaderMutations defines an ordered list of header mutations applied before envoy
+	// request processing (routing, tracing and built-in header manipulation).
+	EarlyRequestHeaderMutations []HeaderMutation `json:"earlyRequestHeaderMutations,omitempty" yaml:"earlyRequestHeaderMutations,omitempty"`
 
-	// EarlyRemoveRequestHeaders defines headers that would be removed before envoy request processing.
-	EarlyRemoveRequestHeaders []string `json:"earlyRemoveRequestHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
-
-	// EarlyRemoveRequestHeadersOnMatch defines header name matchers that would remove headers before envoy request processing.
-	EarlyRemoveRequestHeadersOnMatch []*StringMatch `json:"earlyRemoveRequestHeadersOnMatch,omitempty" yaml:"earlyRemoveRequestHeadersOnMatch,omitempty"`
-
-	// LateAddResponseHeaders defines headers that would be added after envoy response processing.
-	LateAddResponseHeaders []AddHeader `json:"lateAddResponseHeaders,omitempty" yaml:"earlyAddRequestHeaders,omitempty"`
-
-	// LateRemoveResponseHeaders defines headers that would be removed after envoy response processing.
-	LateRemoveResponseHeaders []string `json:"lateRemoveResponseHeaders,omitempty" yaml:"earlyRemoveRequestHeaders,omitempty"`
-
-	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
-	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
+	// LateResponseHeaderMutations defines an ordered list of header mutations applied after envoy
+	// response processing.
+	LateResponseHeaderMutations []HeaderMutation `json:"lateResponseHeaderMutations,omitempty" yaml:"lateResponseHeaderMutations,omitempty"`
 
 	// MaxRequestHeadersKB defines the maximum request headers size in KiB allowed for incoming connections.
 	// Maps to the Envoy `max_request_headers_kb` HTTP connection manager setting.
@@ -1358,6 +1374,16 @@ type EnvoyExtensionFeatures struct {
 //
 // +k8s:deepcopy-gen=true
 type UnstructuredRef struct {
+	// Name uniquely identifies this resource within a single Xds.ExtensionResources registry, in
+	// which case Object is nil here and must be looked up by Name. It is derived from the
+	// resource's GroupVersionKind and namespaced name as "<group>/<kind>/<namespace>/<name>",
+	// lowercasing only the group and kind, e.g. "foo.example.io/bar/default/my-bar". When Group
+	// is empty, the leading segment is omitted: "<kind>/<namespace>/<name>". Empty when Object is
+	// embedded directly instead (no gateway scope was available to dedup against).
+	//
+	// +optional
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
 }
 
@@ -2262,6 +2288,14 @@ type BackendCluster struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty" yaml:"useClientProtocol,omitempty"`
 }
 
+// Protocol reports the upstream protocol this cluster serves.
+func (b *BackendCluster) Protocol() AppProtocol {
+	if b == nil || b.Setting == nil {
+		return ""
+	}
+	return b.Setting.Protocol
+}
+
 func (b *BackendCluster) Validate() error {
 	var errs error
 	if len(b.Name) == 0 {
@@ -2434,6 +2468,43 @@ func (h AddHeader) Validate() error {
 
 	return errs
 }
+
+// HeaderMutation configures a single, ordered header mutation. Exactly one of
+// its fields is set. It maps directly to Envoy's mutation_rules HeaderMutation.
+// +k8s:deepcopy-gen=true
+type HeaderMutation struct {
+	// Write adds or modifies a header using the specified action.
+	Write *HeaderWrite `json:"write,omitempty" yaml:"write,omitempty"`
+	// Remove removes the named header if it exists.
+	Remove *string `json:"remove,omitempty" yaml:"remove,omitempty"`
+	// RemoveOnMatch removes headers whose name matches the matcher.
+	RemoveOnMatch *StringMatch `json:"removeOnMatch,omitempty" yaml:"removeOnMatch,omitempty"`
+}
+
+// HeaderWrite configures a header to be written and the action used when a
+// header with the same name already exists.
+// +k8s:deepcopy-gen=true
+type HeaderWrite struct {
+	Name           string            `json:"name" yaml:"name"`
+	Value          string            `json:"value,omitempty" yaml:"value,omitempty"`
+	Action         HeaderWriteAction `json:"action" yaml:"action"`
+	KeepEmptyValue bool              `json:"keepEmptyValue,omitempty" yaml:"keepEmptyValue,omitempty"`
+}
+
+// HeaderWriteAction controls how a header value is written when a header with
+// the same name already exists.
+type HeaderWriteAction string
+
+const (
+	// HeaderWriteAdd maps to Envoy APPEND_IF_EXISTS_OR_ADD.
+	HeaderWriteAdd HeaderWriteAction = "Add"
+	// HeaderWriteSet maps to Envoy OVERWRITE_IF_EXISTS_OR_ADD.
+	HeaderWriteSet HeaderWriteAction = "Set"
+	// HeaderWriteAddIfAbsent maps to Envoy ADD_IF_ABSENT.
+	HeaderWriteAddIfAbsent HeaderWriteAction = "AddIfAbsent"
+	// HeaderWriteSetIfExists maps to Envoy OVERWRITE_IF_EXISTS.
+	HeaderWriteSetIfExists HeaderWriteAction = "SetIfExists"
+)
 
 // URLRewrite holds the details for how to rewrite a request
 // +k8s:deepcopy-gen=true
@@ -2659,6 +2730,9 @@ func (s StringMatch) Validate() error {
 // +k8s:deepcopy-gen=true
 type TCPListener struct {
 	CoreListenerDetails `json:",inline" yaml:",inline"`
+	// Hostnames from the Gateway listener, matched against the SNI of an incoming
+	// connection. Only set for TLS listeners; TCP listeners have no hostname.
+	Hostnames []string `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener
@@ -4125,11 +4199,14 @@ type Wasm struct {
 	// during the initialization or the execution of the Wasm extension.
 	FailOpen bool `json:"failOpen"`
 
-	// Code is the HTTP Wasm code source.
-	// Envoy only supports HTTP Wasm code source. EG downloads the Wasm code from the
-	// original URL(either an HTTP URL or an OCI image) and serves it through the
-	// local HTTP server.
+	// Code is the HTTP Wasm code source when the module is served by the EG HTTP
+	// server (HTTP/Image sources downloaded by the control plane).
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+
+	// Path is the absolute filesystem path to the Wasm module on the Envoy proxy
+	// when policy code is omitted and name matches EnvoyProxy.spec.wasmModules.
+	// Mutually exclusive with Code.
+	Path string `json:"path,omitempty"`
 
 	// HostKeys is a list of keys for environment variables from the host envoy process
 	// that should be passed into the Wasm VM.
