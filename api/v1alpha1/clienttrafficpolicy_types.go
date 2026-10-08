@@ -94,11 +94,12 @@ type ClientTrafficPolicySpec struct {
 	Connection *ClientConnection `json:"connection,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener.
 	//
-	// Deprecated: Use ClientHTTP1 for downstream (listener) settings and
-	// BackendTrafficPolicy.HTTP1 for upstream (backend) settings instead.
-	// Previously this field also affected upstream HTTP/1 protocol configuration;
-	// that behaviour is no longer supported — set HTTP1 on a
-	// BackendTrafficPolicy to configure upstream HTTP/1 protocol options.
+	// Note: The individual fields within this struct that configure both client and backend
+	// HTTP/1 behaviour are deprecated and will be removed in a future release.
+	// Use ClientTrafficPolicy.HTTP1.Client for client settings and
+	// BackendTrafficPolicy.HTTP1 for backend settings instead.
+	// When set, ClientTrafficPolicy.HTTP1.Client and BackendTrafficPolicy.HTTP1 take
+	// precedence over the deprecated fields in this struct.
 	//
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
@@ -415,8 +416,8 @@ type HTTP3Settings struct {
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {
-	// Client configures HTTP/1.1 settings for downstream (client) connections.
-	// When set, Client takes precedence over the deprecated flat fields below —
+	// Client configures HTTP/1 settings for client connections.
+	// When set, Client takes precedence over the deprecated flat fields below,
 	// all flat fields are ignored entirely, even if set.
 	//
 	// +optional

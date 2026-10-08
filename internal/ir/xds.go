@@ -804,6 +804,10 @@ type HTTP1Settings struct {
 	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
 	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
 	IgnoredUpgradeTypes              []*StringMatch  `json:"ignoredUpgradeTypes,omitempty" yaml:"ignoredUpgradeTypes,omitempty"`
+	// ClientOnly indicates that EnableTrailers, PreserveHeaderCase, and HTTP10 were sourced
+	// from spec.http1.client and must not flow to the upstream cluster codec. When false (the
+	// default, i.e. sourced from the deprecated flat fields), they seed the cluster as before.
+	ClientOnly bool `json:"clientOnly,omitempty" yaml:"clientOnly,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.

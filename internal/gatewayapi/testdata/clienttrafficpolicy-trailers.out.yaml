@@ -25,7 +25,9 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.http1.enableTrailers is deprecated, and may be overridden by
+          BackendTrafficPolicy.http1; use spec.http1.client.enableTrailers and BackendTrafficPolicy.http1.enableTrailers
+          instead; spec.targetRef is deprecated, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning

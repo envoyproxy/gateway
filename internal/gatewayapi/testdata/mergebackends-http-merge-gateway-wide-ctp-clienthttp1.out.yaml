@@ -246,6 +246,7 @@ xdsIR:
       hostnames:
       - '*'
       http1:
+        clientOnly: true
         preserveHeaderCase: true
       metadata:
         kind: Gateway
@@ -279,6 +280,7 @@ xdsIR:
       hostnames:
       - '*'
       http1:
+        clientOnly: true
         preserveHeaderCase: true
       metadata:
         kind: Gateway

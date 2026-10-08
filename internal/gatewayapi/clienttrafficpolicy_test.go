@@ -34,7 +34,8 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 		{name: "HTTP1.HTTP10 set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{HTTP10: &egv1a1.HTTP10Settings{}}}, want: true},
 		{name: "HTTP1.DisableSafeMaxConnectionDuration set (listener-only)", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{DisableSafeMaxConnectionDuration: new(bool)}}, want: false},
 		{name: "HTTP1.Client set (listener-only)", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{Client: &egv1a1.ClientHTTP1Settings{}}}, want: false},
-		{name: "HTTP1.Client.PreserveHeaderCase set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{Client: &egv1a1.ClientHTTP1Settings{CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{PreserveHeaderCase: new(bool)}}}}, want: true},
+		{name: "HTTP1.Client.PreserveHeaderCase set (listener-only, no cluster scope)", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{Client: &egv1a1.ClientHTTP1Settings{CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{PreserveHeaderCase: new(bool)}}}}, want: false},
+		{name: "HTTP1.Client set (no cluster fields) with flat cluster field — flat ignored", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool), Client: &egv1a1.ClientHTTP1Settings{}}}, want: false},
 		{name: "HTTP2 set, no HTTP1", spec: &egv1a1.ClientTrafficPolicySpec{HTTP2: &egv1a1.HTTP2Settings{}}, want: false},
 	}
 	for _, tc := range tests {
@@ -88,6 +89,63 @@ func TestResolveClientHTTP1Settings(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.want, resolveClientHTTP1Settings(tc.policy))
+		})
+	}
+}
+
+func TestDeprecatedFieldsUsedInClientTrafficPolicy(t *testing.T) {
+	trueVal := new(bool)
+	*trueVal = true
+
+	tests := []struct {
+		name         string
+		policy       *egv1a1.ClientTrafficPolicy
+		wantKeys     []string
+		wantContains map[string]string // substring checks on values
+	}{
+		{
+			name:     "no deprecated fields",
+			policy:   &egv1a1.ClientTrafficPolicy{},
+			wantKeys: nil,
+		},
+		{
+			name: "flat http1 fields only — deprecated alternative",
+			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
+				HTTP1: &egv1a1.HTTP1Settings{
+					EnableTrailers:     trueVal,
+					PreserveHeaderCase: trueVal,
+				},
+			}},
+			wantKeys: []string{"spec.http1.enableTrailers", "spec.http1.preserveHeaderCase"},
+			wantContains: map[string]string{
+				"spec.http1.enableTrailers":     "use spec.http1.client.enableTrailers and BackendTrafficPolicy.http1.enableTrailers instead",
+				"spec.http1.preserveHeaderCase": "use spec.http1.client.preserveHeaderCase and BackendTrafficPolicy.http1.preserveHeaderCase instead",
+			},
+		},
+		{
+			name: "flat http1 fields alongside http1.client — ignored warning, no BTP note",
+			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
+				HTTP1: &egv1a1.HTTP1Settings{
+					PreserveHeaderCase: trueVal,
+					Client:             &egv1a1.ClientHTTP1Settings{},
+				},
+			}},
+			wantKeys: []string{"spec.http1.preserveHeaderCase"},
+			wantContains: map[string]string{
+				"spec.http1.preserveHeaderCase": "use spec.http1.client.preserveHeaderCase and BackendTrafficPolicy.http1.preserveHeaderCase instead",
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := deprecatedFieldsUsedInClientTrafficPolicy(tc.policy)
+			require.Len(t, got, len(tc.wantKeys))
+			for _, k := range tc.wantKeys {
+				require.Contains(t, got, k)
+			}
+			for k, substr := range tc.wantContains {
+				require.Contains(t, got[k], substr)
+			}
 		})
 	}
 }

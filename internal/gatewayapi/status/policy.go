@@ -209,7 +209,10 @@ func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 	policyStatus.Ancestors = append(policyStatus.Ancestors[:worst], policyStatus.Ancestors[worst+1:]...)
 }
 
-// buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
+// buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to
+// their alternatives. Values that contain a space are treated as free-form suffixes and emitted
+// as "<key> is deprecated, <value>"; plain field-path values (no spaces) use the standard form
+// "<key> is deprecated, use <value> instead".
 func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
 	if len(deprecatedFields) == 0 {
 		return ""
@@ -227,10 +230,16 @@ func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
 		if i > 0 {
 			builder.WriteString("; ")
 		}
+		alt := deprecatedFields[deprecated]
 		builder.WriteString(deprecated)
-		builder.WriteString(" is deprecated, use ")
-		builder.WriteString(deprecatedFields[deprecated])
-		builder.WriteString(" instead")
+		if strings.ContainsRune(alt, ' ') {
+			builder.WriteString(" is deprecated, ")
+			builder.WriteString(alt)
+		} else {
+			builder.WriteString(" is deprecated, use ")
+			builder.WriteString(alt)
+			builder.WriteString(" instead")
+		}
 	}
 	return builder.String()
 }

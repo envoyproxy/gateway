@@ -43,10 +43,12 @@ const (
 )
 
 // ctpSpecHasClusterScopedFields reports whether spec sets any field that affects upstream
-// cluster (CDS) configuration. The fields EnableTrailers, PreserveHeaderCase, and HTTP10 —
-// whether set via the deprecated flat http1 fields or the new http1.client sub-struct —
-// flow to the upstream cluster codec and can cause divergence between listeners sharing
-// a merged backend cluster.
+// cluster (CDS) configuration. The deprecated flat HTTP1 fields EnableTrailers,
+// PreserveHeaderCase, and HTTP10 flow to the upstream cluster codec and can cause divergence
+// between listeners sharing a merged backend cluster.
+//
+// When h.Client is set it is the sole effective source for all HTTP/1 settings; the flat
+// fields are ignored entirely and carry no cluster-scoped effect, so no demerging is needed.
 func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
 	if spec == nil {
 		return false
@@ -55,11 +57,13 @@ func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
 	if h == nil {
 		return false
 	}
-	if h.EnableTrailers != nil || h.PreserveHeaderCase != nil || h.HTTP10 != nil {
-		return true
+	// h.Client takes full precedence — flat fields are inert, no cluster-scoped effect.
+	if h.Client != nil {
+		return false
 	}
-	c := h.Client
-	return c != nil && (c.EnableTrailers != nil || c.PreserveHeaderCase != nil || c.HTTP10 != nil)
+	// Of the flat fields, only these three flow to the upstream cluster codec; the rest
+	// (DisableSafeMaxConnectionDuration, IgnoredUpgradeTypes) are listener-scoped only.
+	return h.EnableTrailers != nil || h.PreserveHeaderCase != nil || h.HTTP10 != nil
 }
 
 // CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
@@ -166,6 +170,44 @@ func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolic
 		policy.Spec.TLS.ClientValidation != nil &&
 		policy.Spec.TLS.ClientValidation.Optional {
 		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
+	}
+	if policy.Spec.HTTP1 != nil {
+		h := policy.Spec.HTTP1
+		// When http1.client is also set the flat fields are ignored entirely, not just
+		// deprecated — make the alternative message reflect that so users get an explicit
+		// signal rather than silently losing the setting.
+		clientSet := h.Client != nil
+		// altCluster builds the deprecation alternative for cluster-scoped flat fields.
+		// Both CTP and BTP replacements are always named since the flat field covered both
+		// client and backend HTTP/1 behaviour.
+		altCluster := func(clientField, btpField string) string {
+			suffix := "use " + clientField + " and BackendTrafficPolicy." + btpField + " instead"
+			if clientSet {
+				return "and is being ignored since spec.http1.client is set; " + suffix
+			}
+			return "and may be overridden by BackendTrafficPolicy.http1; " + suffix
+		}
+		alt := func(newField string) string {
+			if clientSet {
+				return "and is being ignored since spec.http1.client is set; use " + newField + " instead"
+			}
+			return newField
+		}
+		if h.EnableTrailers != nil {
+			deprecatedFields["spec.http1.enableTrailers"] = altCluster("spec.http1.client.enableTrailers", "http1.enableTrailers")
+		}
+		if h.PreserveHeaderCase != nil {
+			deprecatedFields["spec.http1.preserveHeaderCase"] = altCluster("spec.http1.client.preserveHeaderCase", "http1.preserveHeaderCase")
+		}
+		if h.HTTP10 != nil {
+			deprecatedFields["spec.http1.http10"] = altCluster("spec.http1.client.http10", "http1.http10")
+		}
+		if h.DisableSafeMaxConnectionDuration != nil {
+			deprecatedFields["spec.http1.disableSafeMaxConnectionDuration"] = alt("spec.http1.client.disableSafeMaxConnectionDuration")
+		}
+		if len(h.IgnoredUpgradeTypes) > 0 {
+			deprecatedFields["spec.http1.ignoredUpgradeTypes"] = alt("spec.http1.client.ignoredUpgradeTypes")
+		}
 	}
 	return deprecatedFields
 }
@@ -802,7 +844,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 
 		// Translate HTTP1 Settings — prefer ClientHTTP1, fall back to deprecated HTTP1.
 		effectiveHTTP1 := resolveClientHTTP1Settings(policy)
-		if err = translateHTTP1Settings(effectiveHTTP1, connection, httpIR); err != nil {
+		clientOnly := policy.Spec.HTTP1 != nil && policy.Spec.HTTP1.Client != nil
+		if err = translateHTTP1Settings(effectiveHTTP1, connection, httpIR, clientOnly); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
 			errs = errors.Join(errs, err)
 		}
@@ -1104,8 +1147,10 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	return errs
 }
 
-// resolveClientHTTP1Settings returns the effective ClientHTTP1Settings for a policy,
-// preferring http1.client over the deprecated flat http1 fields.
+// resolveClientHTTP1Settings returns the effective ClientHTTP1Settings for a policy.
+// If http1.client is set it is returned as-is; the deprecated flat fields are ignored
+// entirely and there is no merging. If only flat fields are set they are promoted into a
+// ClientHTTP1Settings value so the rest of the translation path is uniform.
 func resolveClientHTTP1Settings(policy *egv1a1.ClientTrafficPolicy) *egv1a1.ClientHTTP1Settings {
 	if policy.Spec.HTTP1 == nil {
 		return nil
@@ -1125,7 +1170,7 @@ func resolveClientHTTP1Settings(policy *egv1a1.ClientTrafficPolicy) *egv1a1.Clie
 	}
 }
 
-func translateHTTP1Settings(http1Settings *egv1a1.ClientHTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
+func translateHTTP1Settings(http1Settings *egv1a1.ClientHTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener, clientOnly bool) error {
 	if http1Settings == nil {
 		return nil
 	}
@@ -1137,6 +1182,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.ClientHTTP1Settings, connectio
 		EnableTrailers:      ptr.Deref(http1Settings.EnableTrailers, false),
 		PreserveHeaderCase:  ptr.Deref(http1Settings.PreserveHeaderCase, false),
 		IgnoredUpgradeTypes: ignoreUpgrade,
+		ClientOnly:          clientOnly,
 	}
 	if connection != nil {
 		if connection.ConnectionLimit != nil {

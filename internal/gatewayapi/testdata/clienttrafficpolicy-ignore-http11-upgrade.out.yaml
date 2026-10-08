@@ -27,7 +27,8 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.http1.ignoredUpgradeTypes is deprecated, use spec.http1.client.ignoredUpgradeTypes
+          instead; spec.targetRef is deprecated, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning

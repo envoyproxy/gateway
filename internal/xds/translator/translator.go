@@ -788,8 +788,10 @@ func (t *Translator) addRouteToRouteConfig(
 
 			ea := &ExtraArgs{
 				metrics: metrics,
-				// Seeded from the listener's CTP HTTP1; applyTraffic overwrites if BTP sets traffic.HTTP1.
-				http1Settings:    httpListener.HTTP1,
+				// Seed cluster with CTP HTTP1 only when sourced from the deprecated flat fields.
+				// When ClientOnly=true (sourced from h.Client), those fields are listener-scoped
+				// and must not flow to the upstream cluster codec.
+				http1Settings:    listenerHTTP1ForCluster(httpListener.HTTP1),
 				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
 				statName:         httpRoute.Destination.StatName,
 				unstructuredRefs: extensionResources,

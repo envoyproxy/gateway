@@ -27,7 +27,9 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.http1.http10 is deprecated, and may be overridden by BackendTrafficPolicy.http1;
+          use spec.http1.client.http10 and BackendTrafficPolicy.http1.http10 instead;
+          spec.targetRef is deprecated, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -61,7 +63,9 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.http1.http10 is deprecated, and may be overridden by BackendTrafficPolicy.http1;
+          use spec.http1.client.http10 and BackendTrafficPolicy.http1.http10 instead;
+          spec.targetRef is deprecated, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -96,7 +100,9 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.http1.http10 is deprecated, and may be overridden by BackendTrafficPolicy.http1;
+          use spec.http1.client.http10 and BackendTrafficPolicy.http1.http10 instead;
+          spec.targetRef is deprecated, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -130,7 +136,9 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.http1.http10 is deprecated, and may be overridden by BackendTrafficPolicy.http1;
+          use spec.http1.client.http10 and BackendTrafficPolicy.http1.http10 instead;
+          spec.targetRef is deprecated, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -165,7 +173,9 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.http1.http10 is deprecated, and may be overridden by BackendTrafficPolicy.http1;
+          use spec.http1.client.http10 and BackendTrafficPolicy.http1.http10 instead;
+          spec.targetRef is deprecated, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning

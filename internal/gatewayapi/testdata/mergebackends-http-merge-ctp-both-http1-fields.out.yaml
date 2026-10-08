@@ -26,6 +26,13 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.http1.enableTrailers is deprecated, and is being ignored since
+          spec.http1.client is set; use spec.http1.client.enableTrailers and BackendTrafficPolicy.http1.enableTrailers
+          instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -180,6 +187,7 @@ xdsIR:
       hostnames:
       - '*'
       http1:
+        clientOnly: true
         preserveHeaderCase: true
       metadata:
         kind: Gateway

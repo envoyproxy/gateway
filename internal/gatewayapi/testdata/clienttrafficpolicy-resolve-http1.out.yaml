@@ -8,9 +8,9 @@ clientTrafficPolicies:
     http1:
       client:
         enableTrailers: false
-        preserveHeaderCase: false
+        preserveHeaderCase: true
       enableTrailers: true
-      preserveHeaderCase: true
+      preserveHeaderCase: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -29,7 +29,12 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.http1.enableTrailers is deprecated, and is being ignored since
+          spec.http1.client is set; use spec.http1.client.enableTrailers and BackendTrafficPolicy.http1.enableTrailers
+          instead; spec.http1.preserveHeaderCase is deprecated, and is being ignored
+          since spec.http1.client is set; use spec.http1.client.preserveHeaderCase
+          and BackendTrafficPolicy.http1.preserveHeaderCase instead; spec.targetRef
+          is deprecated, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -157,7 +162,9 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      http1: {}
+      http1:
+        clientOnly: true
+        preserveHeaderCase: true
       metadata:
         kind: Gateway
         name: gateway-1

@@ -1119,7 +1119,7 @@ _Appears in:_
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  |  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  |  | Timeout settings for the client connections. |
 | `connection` | _[ClientConnection](#clientconnection)_ |  false  |  | Connection includes client connection settings. |
-| `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener.<br />Deprecated: Use ClientHTTP1 for downstream (listener) settings and<br />BackendTrafficPolicy.HTTP1 for upstream (backend) settings instead.<br />Previously this field also affected upstream HTTP/1 protocol configuration;<br />that behaviour is no longer supported — set HTTP1 on a<br />BackendTrafficPolicy to configure upstream HTTP/1 protocol options. |
+| `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener.<br />Note: The individual fields within this struct that configure both client and backend<br />HTTP/1 behaviour are deprecated and will be removed in a future release.<br />Use ClientTrafficPolicy.HTTP1.Client for client settings and<br />BackendTrafficPolicy.HTTP1 for backend settings instead.<br />When set, ClientTrafficPolicy.HTTP1.Client and BackendTrafficPolicy.HTTP1 take<br />precedence over the deprecated fields in this struct. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `grpc` | _[GRPCSettings](#grpcsettings)_ |  false  |  | GRPC provides gRPC configuration on the listener. |
@@ -3166,7 +3166,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `client` | _[ClientHTTP1Settings](#clienthttp1settings)_ |  false  |  | Client configures HTTP/1.1 settings for downstream (client) connections.<br />When set, Client takes precedence over the deprecated flat fields below —<br />all flat fields are ignored entirely, even if set. |
+| `client` | _[ClientHTTP1Settings](#clienthttp1settings)_ |  false  |  | Client configures HTTP/1 settings for client connections.<br />When set, Client takes precedence over the deprecated flat fields below,<br />all flat fields are ignored entirely, even if set. |
 | `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.<br />Deprecated: Use client.enableTrailers instead. |
 | `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers.<br />Deprecated: Use client.preserveHeaderCase instead. |
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.<br />Deprecated: Use client.http10 instead. |
