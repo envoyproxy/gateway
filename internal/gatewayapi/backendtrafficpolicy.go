@@ -455,22 +455,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	}
 
 	// Process the policies targeting Backends (Service/ServiceImport/Backend)
-	for i, currPolicy := range backendTrafficPolicies {
-		policyName := utils.NamespacedName(currPolicy)
-		// Same-namespace only - backend targeting does not support cross-namespace ReferenceGrants.
-		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
-		for _, currTarget := range targetRefs {
-			if isBackendTargetKind(currTarget) {
-				policy, found := handledPolicies[policyName]
-				if !found {
-					policy = backendTrafficPolicies[i]
-					handledPolicies[policyName] = policy
-					res = append(res, policy)
-				}
-				t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, policy, currTarget, backendPolicyMap)
-			}
-		}
-	}
+	res = t.processBackendTargetedPolicies(backendTrafficPolicies, xdsIR, gateways, gatewayPolicyMap, backendPolicyMap, handledPolicies, res)
 
 	for _, policy := range res {
 		// Truncate Ancestor list of longer than 16
@@ -526,12 +511,31 @@ func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 	return false
 }
 
+// backendTargetFailure is one ancestor's resolve error for one target of a backend-targeted
+// BackendTrafficPolicy, kept un-applied until processBackendTargetedPolicies has seen every
+// target's outcome for the same policy.
+type backendTargetFailure struct {
+	gwNN types.NamespacedName
+	err  *status.PolicyResolveError
+}
+
+// backendTargetOutcome is what processBackendTrafficPolicyForBackend decided for one target of a
+// (possibly multi-targetRefs) backend-targeted BackendTrafficPolicy. processBackendTargetedPolicies
+// aggregates this across all of a policy's targets before writing any status, so a Conflicted
+// result for one target can't clobber an Accepted result for another target sharing an ancestor.
+type backendTargetOutcome struct {
+	accepted []types.NamespacedName
+	merged   map[types.NamespacedName]*egv1a1.BackendTrafficPolicy
+	failures []backendTargetFailure
+}
+
 // processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
 // Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for conflict
 // detection, then applies it to the Traffic (and, for an HTTP/GRPC cluster, UseClientProtocol) of
 // every matching merged BackendCluster. A gateway with mergeBackends disabled only gets a Disabled
 // ancestor if it actually references the backend; otherwise it's skipped entirely. A backend that
-// never merges or doesn't resolve for other reasons gets no policy applied and no error.
+// never merges or doesn't resolve for other reasons gets no policy applied and no error. It reports
+// its outcome via the return value rather than writing status directly - see backendTargetOutcome.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
@@ -539,8 +543,9 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	policy *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
-) {
+) *backendTargetOutcome {
 	key := backendPolicyKeyFromTarget(target)
+	outcome := &backendTargetOutcome{merged: map[types.NamespacedName]*egv1a1.BackendTrafficPolicy{}}
 
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(gateways))
 	for _, gw := range gateways {
@@ -552,17 +557,20 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	}
 
 	if winner, ok := backendPolicyMap[key]; ok && utils.NamespacedName(winner) != utils.NamespacedName(policy) {
-		status.SetResolveErrorForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation,
-			&status.PolicyResolveError{
-				Reason:  gwapiv1.PolicyReasonConflicted,
-				Message: fmt.Sprintf("Unable to target %s %s, another BackendTrafficPolicy has already attached to it", string(target.Kind), string(target.Name)),
-			})
-		return
+		conflictErr := &status.PolicyResolveError{
+			Reason:  gwapiv1.PolicyReasonConflicted,
+			Message: fmt.Sprintf("Unable to target %s %s, another BackendTrafficPolicy has already attached to it", string(target.Kind), string(target.Name)),
+		}
+		for _, gw := range gateways {
+			if x, ok := xdsIR[t.getIRKey(gw.Gateway)]; ok && gatewayReferencesBackend(x, key) {
+				outcome.failures = append(outcome.failures, backendTargetFailure{gwNN: utils.NamespacedName(gw), err: conflictErr})
+			}
+		}
+		return outcome
 	}
 	backendPolicyMap[key] = policy
 
 	matchedGWs := make(sets.Set[types.NamespacedName])
-	mergedGWs := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy)
 	for _, gw := range gateways {
 		x, ok := xdsIR[t.getIRKey(gw.Gateway)]
 		if !ok {
@@ -574,12 +582,10 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			if !gatewayReferencesBackend(x, key) {
 				continue
 			}
-			ref := getAncestorRefForPolicy(gwNN, nil)
-			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
-				&status.PolicyResolveError{
-					Reason:  egv1a1.PolicyReasonDisabled,
-					Message: "Backend targeting in BackendTrafficPolicy requires mergeBackends to be enabled on the EnvoyProxy for this Gateway",
-				})
+			outcome.failures = append(outcome.failures, backendTargetFailure{gwNN: gwNN, err: &status.PolicyResolveError{
+				Reason:  egv1a1.PolicyReasonDisabled,
+				Message: "Backend targeting in BackendTrafficPolicy requires mergeBackends to be enabled on the EnvoyProxy for this Gateway",
+			}})
 			continue
 		}
 
@@ -593,17 +599,17 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			}
 			mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
 			if err != nil {
-				ref := getAncestorRefForPolicy(gwNN, nil)
-				status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
-					&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
+				outcome.failures = append(outcome.failures, backendTargetFailure{gwNN: gwNN, err: &status.PolicyResolveError{
+					Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err),
+				}})
 				continue
 			}
 			tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
 			if err != nil || tf == nil {
 				if err != nil {
-					ref := getAncestorRefForPolicy(gwNN, nil)
-					status.SetTranslationErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
-						status.Error2ConditionMsg(err))
+					outcome.failures = append(outcome.failures, backendTargetFailure{gwNN: gwNN, err: &status.PolicyResolveError{
+						Reason: gwapiv1.PolicyReasonInvalid, Message: status.Error2ConditionMsg(err),
+					}})
 				}
 				continue
 			}
@@ -612,30 +618,98 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 
 			matchedGWs.Insert(gwNN)
 			if gwPolicy != nil {
-				mergedGWs[gwNN] = gwPolicy
+				outcome.merged[gwNN] = gwPolicy
 			}
 		}
 	}
 
-	matchedRefs := make([]*gwapiv1.ParentReference, 0, matchedGWs.Len())
-	for gwNN := range matchedGWs {
-		ref := getAncestorRefForPolicy(gwNN, nil)
-		matchedRefs = append(matchedRefs, &ref)
-	}
-
-	status.SetAcceptedForPolicyAncestors(&policy.Status, matchedRefs, t.GatewayControllerName, policy.Generation)
-	if policy.Spec.MergeType != nil {
-		for gwNN, gwPolicy := range mergedGWs {
-			ancestorRef := getAncestorRefForPolicy(gwNN, nil)
-			status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
-				egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
-				status.MergedConditionMessage(gwPolicy), policy.Generation)
-		}
-	}
+	outcome.accepted = matchedGWs.UnsortedList()
 
 	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
+
+	return outcome
+}
+
+// processBackendTargetedPolicies processes every BackendTrafficPolicy targeting a Backend
+// (Service/ServiceImport/Backend). A policy with multiple targetRefs gets each target resolved
+// independently, then all of them aggregated into one status commit per ancestor - so a target
+// that conflicts can't clobber a different target's Accepted result for a shared ancestor, and
+// vice versa.
+func (t *Translator) processBackendTargetedPolicies(
+	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
+	xdsIR resource.XdsIRMap,
+	gateways []*GatewayContext,
+	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
+	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
+	handledPolicies map[types.NamespacedName]*egv1a1.BackendTrafficPolicy,
+	res []*egv1a1.BackendTrafficPolicy,
+) []*egv1a1.BackendTrafficPolicy {
+	for i, currPolicy := range backendTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		// Same-namespace only - backend targeting does not support cross-namespace ReferenceGrants.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+
+		var backendTargets []policyTargetReferenceWithSectionName
+		for _, currTarget := range targetRefs {
+			if isBackendTargetKind(currTarget) {
+				backendTargets = append(backendTargets, currTarget)
+			}
+		}
+		if len(backendTargets) == 0 {
+			continue
+		}
+
+		policy, found := handledPolicies[policyName]
+		if !found {
+			policy = backendTrafficPolicies[i]
+			handledPolicies[policyName] = policy
+			res = append(res, policy)
+		}
+
+		accepted := sets.New[types.NamespacedName]()
+		merged := map[types.NamespacedName]*egv1a1.BackendTrafficPolicy{}
+		var failures []backendTargetFailure
+		for _, target := range backendTargets {
+			outcome := t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, policy, target, backendPolicyMap)
+			accepted.Insert(outcome.accepted...)
+			for gwNN, gwPolicy := range outcome.merged {
+				merged[gwNN] = gwPolicy
+			}
+			failures = append(failures, outcome.failures...)
+		}
+
+		// Later failures for the same ancestor win, matching the pre-aggregation behavior of
+		// calling the status setters in encounter order.
+		failureByGW := map[types.NamespacedName]*status.PolicyResolveError{}
+		for _, f := range failures {
+			failureByGW[f.gwNN] = f.err
+		}
+
+		// Walk gateways in their given order so the resulting Ancestors slice has a stable,
+		// deterministic order instead of depending on Go's randomized map iteration.
+		for _, gw := range gateways {
+			gwNN := utils.NamespacedName(gw)
+			ref := getAncestorRefForPolicy(gwNN, nil)
+			switch {
+			case accepted.Has(gwNN):
+				status.SetAcceptedForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation)
+			case failureByGW[gwNN] != nil:
+				status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation, failureByGW[gwNN])
+			}
+		}
+
+		if policy.Spec.MergeType != nil {
+			for gwNN, gwPolicy := range merged {
+				ancestorRef := getAncestorRefForPolicy(gwNN, nil)
+				status.SetConditionForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+					egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
+					status.MergedConditionMessage(gwPolicy), policy.Generation)
+			}
+		}
+	}
+	return res
 }
 
 func (t *Translator) buildGatewayPolicyMap(
