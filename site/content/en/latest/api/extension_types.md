@@ -7218,6 +7218,7 @@ _Appears in:_
 | `Chain` | XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.<br /> | 
 | `DNS` | XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.<br /> | 
 | `URI` | XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.<br /> | 
+| `Issuer` | XFCCCertDataIssuer is the Issuer field of the current client certificate.<br /> | 
 
 
 #### XFCCForwardMode
