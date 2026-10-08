@@ -1475,7 +1475,7 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 	extra *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
-	clusterArgs := &xdsClusterArgs{
+	return &xdsClusterArgs{
 		name:         name,
 		settings:     settings,
 		loadBalancer: route.LoadBalancer,
@@ -1486,8 +1486,6 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 		metadata:     metadata,
 		isRoute:      true,
 	}
-
-	return clusterArgs
 }
 
 type TCPRouteTranslator struct {
@@ -1499,7 +1497,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 	extra *ExtraArgs,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
-	clusterArgs := &xdsClusterArgs{
+	return &xdsClusterArgs{
 		name:              name,
 		settings:          settings,
 		loadBalancer:      route.LoadBalancer,
@@ -1517,8 +1515,6 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		healthCheckLog:    extra.healthCheckLog,
 		isRoute:           true,
 	}
-
-	return clusterArgs
 }
 
 type HTTPRouteTranslator struct {
