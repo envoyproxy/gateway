@@ -3575,9 +3575,12 @@ func TestRejectBackendTargetSelectors(t *testing.T) {
 
 	resources := &gwapiresource.Resources{Services: []*corev1.Service{matchingService}}
 
-	failures := tr.rejectBackendTargetSelectors(xdsIR, []*GatewayContext{gwReferencing, gwUnrelated}, resources, newPolicy())
+	policy := newPolicy()
+	tr.rejectBackendTargetSelectors(xdsIR, []*GatewayContext{gwReferencing, gwUnrelated}, resources, policy)
 
-	require.Len(t, failures, 1)
-	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "gw-referencing"}, failures[0].gwNN)
-	require.Equal(t, gwapiv1.PolicyReasonInvalid, failures[0].err.Reason)
+	require.Len(t, policy.Status.Ancestors, 1)
+	ancestor := policy.Status.Ancestors[0]
+	require.Equal(t, "gw-referencing", string(ancestor.AncestorRef.Name))
+	require.Len(t, ancestor.Conditions, 1)
+	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
 }
