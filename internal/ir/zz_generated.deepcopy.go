@@ -5208,6 +5208,11 @@ func (in *TLSCertificate) DeepCopyInto(out *TLSCertificate) {
 		*out = new(SDSConfig)
 		**out = **in
 	}
+	if in.ExtensionRef != nil {
+		in, out := &in.ExtensionRef, &out.ExtensionRef
+		*out = new(UnstructuredRef)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Certificate != nil {
 		in, out := &in.Certificate, &out.Certificate
 		*out = make([]byte, len(*in))

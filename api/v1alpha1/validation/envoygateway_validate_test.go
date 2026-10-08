@@ -375,6 +375,66 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
+			name: "extension certificate resources with the TLSCertificate hook",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						CertificateResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "cert.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleCertificate",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSTLSCertificate,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							Host: "foo.extension",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "extension certificate resources without the TLSCertificate hook",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						CertificateResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "cert.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleCertificate",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSHTTPListener,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							Host: "foo.extension",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "happy extension settings tls",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{

@@ -672,6 +672,117 @@ func (x *PostTranslateModifyResponse) GetRoutes() []*v3.RouteConfiguration {
 	return nil
 }
 
+// PostTLSCertificateResolveRequest asks an extension how Envoy should obtain one listener
+// TLS certificate referenced from an extension-registered kind.
+type PostTLSCertificateResolveRequest struct {
+	state                     protoimpl.MessageState              `protogen:"open.v1"`
+	PostTlsCertificateContext *PostTLSCertificateExtensionContext `protobuf:"bytes,1,opt,name=post_tls_certificate_context,json=postTlsCertificateContext,proto3" json:"post_tls_certificate_context,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *PostTLSCertificateResolveRequest) Reset() {
+	*x = PostTLSCertificateResolveRequest{}
+	mi := &file_proto_extension_service_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PostTLSCertificateResolveRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PostTLSCertificateResolveRequest) ProtoMessage() {}
+
+func (x *PostTLSCertificateResolveRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_extension_service_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PostTLSCertificateResolveRequest.ProtoReflect.Descriptor instead.
+func (*PostTLSCertificateResolveRequest) Descriptor() ([]byte, []int) {
+	return file_proto_extension_service_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PostTLSCertificateResolveRequest) GetPostTlsCertificateContext() *PostTLSCertificateExtensionContext {
+	if x != nil {
+		return x.PostTlsCertificateContext
+	}
+	return nil
+}
+
+// PostTLSCertificateResolveResponse tells Envoy Gateway how to reference the certificate.
+type PostTLSCertificateResolveResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// How Envoy obtains the certificate. Required on a successful resolution, with at least a
+	// name. The nested sds_config is optional.
+	SdsSecretConfig *v34.SdsSecretConfig `protobuf:"bytes,1,opt,name=sds_secret_config,json=sdsSecretConfig,proto3" json:"sds_secret_config,omitempty"`
+	// Set on a resolution failure; the certificate is then treated as unresolved. A response
+	// with neither sds_secret_config nor failure_reason is also treated as unresolved.
+	FailureReason  string `protobuf:"bytes,2,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
+	FailureMessage string `protobuf:"bytes,3,opt,name=failure_message,json=failureMessage,proto3" json:"failure_message,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PostTLSCertificateResolveResponse) Reset() {
+	*x = PostTLSCertificateResolveResponse{}
+	mi := &file_proto_extension_service_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PostTLSCertificateResolveResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PostTLSCertificateResolveResponse) ProtoMessage() {}
+
+func (x *PostTLSCertificateResolveResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_extension_service_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PostTLSCertificateResolveResponse.ProtoReflect.Descriptor instead.
+func (*PostTLSCertificateResolveResponse) Descriptor() ([]byte, []int) {
+	return file_proto_extension_service_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *PostTLSCertificateResolveResponse) GetSdsSecretConfig() *v34.SdsSecretConfig {
+	if x != nil {
+		return x.SdsSecretConfig
+	}
+	return nil
+}
+
+func (x *PostTLSCertificateResolveResponse) GetFailureReason() string {
+	if x != nil {
+		return x.FailureReason
+	}
+	return ""
+}
+
+func (x *PostTLSCertificateResolveResponse) GetFailureMessage() string {
+	if x != nil {
+		return x.FailureMessage
+	}
+	return ""
+}
+
 var File_proto_extension_service_proto protoreflect.FileDescriptor
 
 var file_proto_extension_service_proto_rawDesc = string([]byte{
@@ -836,7 +947,31 @@ var file_proto_extension_service_proto_rawDesc = string([]byte{
 	0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x2e, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x2e, 0x72, 0x6f,
 	0x75, 0x74, 0x65, 0x2e, 0x76, 0x33, 0x2e, 0x52, 0x6f, 0x75, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x66,
 	0x69, 0x67, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x06, 0x72, 0x6f, 0x75, 0x74, 0x65,
-	0x73, 0x32, 0xa4, 0x06, 0x0a, 0x15, 0x45, 0x6e, 0x76, 0x6f, 0x79, 0x47, 0x61, 0x74, 0x65, 0x77,
+	0x73, 0x22, 0x9f, 0x01, 0x0a, 0x20, 0x50, 0x6f, 0x73, 0x74, 0x54, 0x4c, 0x53, 0x43, 0x65, 0x72,
+	0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x7b, 0x0a, 0x1c, 0x70, 0x6f, 0x73, 0x74, 0x5f, 0x74,
+	0x6c, 0x73, 0x5f, 0x63, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x5f, 0x63,
+	0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x3a, 0x2e, 0x65,
+	0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61, 0x74, 0x65, 0x77, 0x61, 0x79, 0x2e, 0x65, 0x78, 0x74, 0x65,
+	0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x2e, 0x50, 0x6f, 0x73, 0x74, 0x54, 0x4c, 0x53, 0x43, 0x65, 0x72,
+	0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f,
+	0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x52, 0x19, 0x70, 0x6f, 0x73, 0x74, 0x54, 0x6c,
+	0x73, 0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x43, 0x6f, 0x6e, 0x74,
+	0x65, 0x78, 0x74, 0x22, 0xdb, 0x01, 0x0a, 0x21, 0x50, 0x6f, 0x73, 0x74, 0x54, 0x4c, 0x53, 0x43,
+	0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76,
+	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x66, 0x0a, 0x11, 0x73, 0x64, 0x73,
+	0x5f, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x3a, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x2e, 0x65, 0x78, 0x74,
+	0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x2e, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x70, 0x6f, 0x72,
+	0x74, 0x5f, 0x73, 0x6f, 0x63, 0x6b, 0x65, 0x74, 0x73, 0x2e, 0x74, 0x6c, 0x73, 0x2e, 0x76, 0x33,
+	0x2e, 0x53, 0x64, 0x73, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x52, 0x0f, 0x73, 0x64, 0x73, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x12, 0x25, 0x0a, 0x0e, 0x66, 0x61, 0x69, 0x6c, 0x75, 0x72, 0x65, 0x5f, 0x72, 0x65, 0x61,
+	0x73, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x66, 0x61, 0x69, 0x6c, 0x75,
+	0x72, 0x65, 0x52, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x12, 0x27, 0x0a, 0x0f, 0x66, 0x61, 0x69, 0x6c,
+	0x75, 0x72, 0x65, 0x5f, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x0e, 0x66, 0x61, 0x69, 0x6c, 0x75, 0x72, 0x65, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x32, 0xb9, 0x07, 0x0a, 0x15, 0x45, 0x6e, 0x76, 0x6f, 0x79, 0x47, 0x61, 0x74, 0x65, 0x77,
 	0x61, 0x79, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x74, 0x0a, 0x0f, 0x50,
 	0x6f, 0x73, 0x74, 0x52, 0x6f, 0x75, 0x74, 0x65, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x12, 0x2e,
 	0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61, 0x74, 0x65, 0x77, 0x61, 0x79, 0x2e, 0x65, 0x78,
@@ -886,9 +1021,18 @@ var file_proto_extension_service_proto_rawDesc = string([]byte{
 	0x74, 0x1a, 0x33, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61, 0x74, 0x65, 0x77, 0x61, 0x79,
 	0x2e, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x2e, 0x50, 0x6f, 0x73, 0x74, 0x54,
 	0x72, 0x61, 0x6e, 0x73, 0x6c, 0x61, 0x74, 0x65, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x11, 0x5a, 0x0f, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x2f, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x92, 0x01, 0x0a, 0x19, 0x50, 0x6f, 0x73,
+	0x74, 0x54, 0x4c, 0x53, 0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x52,
+	0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x12, 0x38, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61,
+	0x74, 0x65, 0x77, 0x61, 0x79, 0x2e, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x2e,
+	0x50, 0x6f, 0x73, 0x74, 0x54, 0x4c, 0x53, 0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61,
+	0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x39, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61, 0x74, 0x65, 0x77, 0x61, 0x79, 0x2e,
+	0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x2e, 0x50, 0x6f, 0x73, 0x74, 0x54, 0x4c,
+	0x53, 0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f,
+	0x6c, 0x76, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x11, 0x5a,
+	0x0f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -903,76 +1047,84 @@ func file_proto_extension_service_proto_rawDescGZIP() []byte {
 	return file_proto_extension_service_proto_rawDescData
 }
 
-var file_proto_extension_service_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_proto_extension_service_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_proto_extension_service_proto_goTypes = []any{
-	(*PostRouteModifyRequest)(nil),           // 0: envoygateway.extension.PostRouteModifyRequest
-	(*PostRouteModifyResponse)(nil),          // 1: envoygateway.extension.PostRouteModifyResponse
-	(*PostClusterModifyRequest)(nil),         // 2: envoygateway.extension.PostClusterModifyRequest
-	(*PostClusterModifyResponse)(nil),        // 3: envoygateway.extension.PostClusterModifyResponse
-	(*PostEndpointsModifyRequest)(nil),       // 4: envoygateway.extension.PostEndpointsModifyRequest
-	(*PostEndpointsModifyResponse)(nil),      // 5: envoygateway.extension.PostEndpointsModifyResponse
-	(*PostVirtualHostModifyRequest)(nil),     // 6: envoygateway.extension.PostVirtualHostModifyRequest
-	(*PostVirtualHostModifyResponse)(nil),    // 7: envoygateway.extension.PostVirtualHostModifyResponse
-	(*PostHTTPListenerModifyRequest)(nil),    // 8: envoygateway.extension.PostHTTPListenerModifyRequest
-	(*PostHTTPListenerModifyResponse)(nil),   // 9: envoygateway.extension.PostHTTPListenerModifyResponse
-	(*PostTranslateModifyRequest)(nil),       // 10: envoygateway.extension.PostTranslateModifyRequest
-	(*PostTranslateModifyResponse)(nil),      // 11: envoygateway.extension.PostTranslateModifyResponse
-	(*v3.Route)(nil),                         // 12: envoy.config.route.v3.Route
-	(*PostRouteExtensionContext)(nil),        // 13: envoygateway.extension.PostRouteExtensionContext
-	(*v31.Cluster)(nil),                      // 14: envoy.config.cluster.v3.Cluster
-	(*PostClusterExtensionContext)(nil),      // 15: envoygateway.extension.PostClusterExtensionContext
-	(*v32.ClusterLoadAssignment)(nil),        // 16: envoy.config.endpoint.v3.ClusterLoadAssignment
-	(*PostEndpointsExtensionContext)(nil),    // 17: envoygateway.extension.PostEndpointsExtensionContext
-	(*v3.VirtualHost)(nil),                   // 18: envoy.config.route.v3.VirtualHost
-	(*PostVirtualHostExtensionContext)(nil),  // 19: envoygateway.extension.PostVirtualHostExtensionContext
-	(*v33.Listener)(nil),                     // 20: envoy.config.listener.v3.Listener
-	(*PostHTTPListenerExtensionContext)(nil), // 21: envoygateway.extension.PostHTTPListenerExtensionContext
-	(*PostTranslateExtensionContext)(nil),    // 22: envoygateway.extension.PostTranslateExtensionContext
-	(*v34.Secret)(nil),                       // 23: envoy.extensions.transport_sockets.tls.v3.Secret
-	(*v3.RouteConfiguration)(nil),            // 24: envoy.config.route.v3.RouteConfiguration
+	(*PostRouteModifyRequest)(nil),             // 0: envoygateway.extension.PostRouteModifyRequest
+	(*PostRouteModifyResponse)(nil),            // 1: envoygateway.extension.PostRouteModifyResponse
+	(*PostClusterModifyRequest)(nil),           // 2: envoygateway.extension.PostClusterModifyRequest
+	(*PostClusterModifyResponse)(nil),          // 3: envoygateway.extension.PostClusterModifyResponse
+	(*PostEndpointsModifyRequest)(nil),         // 4: envoygateway.extension.PostEndpointsModifyRequest
+	(*PostEndpointsModifyResponse)(nil),        // 5: envoygateway.extension.PostEndpointsModifyResponse
+	(*PostVirtualHostModifyRequest)(nil),       // 6: envoygateway.extension.PostVirtualHostModifyRequest
+	(*PostVirtualHostModifyResponse)(nil),      // 7: envoygateway.extension.PostVirtualHostModifyResponse
+	(*PostHTTPListenerModifyRequest)(nil),      // 8: envoygateway.extension.PostHTTPListenerModifyRequest
+	(*PostHTTPListenerModifyResponse)(nil),     // 9: envoygateway.extension.PostHTTPListenerModifyResponse
+	(*PostTranslateModifyRequest)(nil),         // 10: envoygateway.extension.PostTranslateModifyRequest
+	(*PostTranslateModifyResponse)(nil),        // 11: envoygateway.extension.PostTranslateModifyResponse
+	(*PostTLSCertificateResolveRequest)(nil),   // 12: envoygateway.extension.PostTLSCertificateResolveRequest
+	(*PostTLSCertificateResolveResponse)(nil),  // 13: envoygateway.extension.PostTLSCertificateResolveResponse
+	(*v3.Route)(nil),                           // 14: envoy.config.route.v3.Route
+	(*PostRouteExtensionContext)(nil),          // 15: envoygateway.extension.PostRouteExtensionContext
+	(*v31.Cluster)(nil),                        // 16: envoy.config.cluster.v3.Cluster
+	(*PostClusterExtensionContext)(nil),        // 17: envoygateway.extension.PostClusterExtensionContext
+	(*v32.ClusterLoadAssignment)(nil),          // 18: envoy.config.endpoint.v3.ClusterLoadAssignment
+	(*PostEndpointsExtensionContext)(nil),      // 19: envoygateway.extension.PostEndpointsExtensionContext
+	(*v3.VirtualHost)(nil),                     // 20: envoy.config.route.v3.VirtualHost
+	(*PostVirtualHostExtensionContext)(nil),    // 21: envoygateway.extension.PostVirtualHostExtensionContext
+	(*v33.Listener)(nil),                       // 22: envoy.config.listener.v3.Listener
+	(*PostHTTPListenerExtensionContext)(nil),   // 23: envoygateway.extension.PostHTTPListenerExtensionContext
+	(*PostTranslateExtensionContext)(nil),      // 24: envoygateway.extension.PostTranslateExtensionContext
+	(*v34.Secret)(nil),                         // 25: envoy.extensions.transport_sockets.tls.v3.Secret
+	(*v3.RouteConfiguration)(nil),              // 26: envoy.config.route.v3.RouteConfiguration
+	(*PostTLSCertificateExtensionContext)(nil), // 27: envoygateway.extension.PostTLSCertificateExtensionContext
+	(*v34.SdsSecretConfig)(nil),                // 28: envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig
 }
 var file_proto_extension_service_proto_depIdxs = []int32{
-	12, // 0: envoygateway.extension.PostRouteModifyRequest.route:type_name -> envoy.config.route.v3.Route
-	13, // 1: envoygateway.extension.PostRouteModifyRequest.post_route_context:type_name -> envoygateway.extension.PostRouteExtensionContext
-	12, // 2: envoygateway.extension.PostRouteModifyResponse.route:type_name -> envoy.config.route.v3.Route
-	14, // 3: envoygateway.extension.PostClusterModifyRequest.cluster:type_name -> envoy.config.cluster.v3.Cluster
-	15, // 4: envoygateway.extension.PostClusterModifyRequest.post_cluster_context:type_name -> envoygateway.extension.PostClusterExtensionContext
-	14, // 5: envoygateway.extension.PostClusterModifyResponse.cluster:type_name -> envoy.config.cluster.v3.Cluster
-	16, // 6: envoygateway.extension.PostEndpointsModifyRequest.load_assignment:type_name -> envoy.config.endpoint.v3.ClusterLoadAssignment
-	17, // 7: envoygateway.extension.PostEndpointsModifyRequest.post_endpoints_context:type_name -> envoygateway.extension.PostEndpointsExtensionContext
-	16, // 8: envoygateway.extension.PostEndpointsModifyResponse.load_assignment:type_name -> envoy.config.endpoint.v3.ClusterLoadAssignment
-	18, // 9: envoygateway.extension.PostVirtualHostModifyRequest.virtual_host:type_name -> envoy.config.route.v3.VirtualHost
-	19, // 10: envoygateway.extension.PostVirtualHostModifyRequest.post_virtual_host_context:type_name -> envoygateway.extension.PostVirtualHostExtensionContext
-	18, // 11: envoygateway.extension.PostVirtualHostModifyResponse.virtual_host:type_name -> envoy.config.route.v3.VirtualHost
-	20, // 12: envoygateway.extension.PostHTTPListenerModifyRequest.listener:type_name -> envoy.config.listener.v3.Listener
-	21, // 13: envoygateway.extension.PostHTTPListenerModifyRequest.post_listener_context:type_name -> envoygateway.extension.PostHTTPListenerExtensionContext
-	20, // 14: envoygateway.extension.PostHTTPListenerModifyResponse.listener:type_name -> envoy.config.listener.v3.Listener
-	22, // 15: envoygateway.extension.PostTranslateModifyRequest.post_translate_context:type_name -> envoygateway.extension.PostTranslateExtensionContext
-	14, // 16: envoygateway.extension.PostTranslateModifyRequest.clusters:type_name -> envoy.config.cluster.v3.Cluster
-	23, // 17: envoygateway.extension.PostTranslateModifyRequest.secrets:type_name -> envoy.extensions.transport_sockets.tls.v3.Secret
-	20, // 18: envoygateway.extension.PostTranslateModifyRequest.listeners:type_name -> envoy.config.listener.v3.Listener
-	24, // 19: envoygateway.extension.PostTranslateModifyRequest.routes:type_name -> envoy.config.route.v3.RouteConfiguration
-	14, // 20: envoygateway.extension.PostTranslateModifyResponse.clusters:type_name -> envoy.config.cluster.v3.Cluster
-	23, // 21: envoygateway.extension.PostTranslateModifyResponse.secrets:type_name -> envoy.extensions.transport_sockets.tls.v3.Secret
-	20, // 22: envoygateway.extension.PostTranslateModifyResponse.listeners:type_name -> envoy.config.listener.v3.Listener
-	24, // 23: envoygateway.extension.PostTranslateModifyResponse.routes:type_name -> envoy.config.route.v3.RouteConfiguration
-	0,  // 24: envoygateway.extension.EnvoyGatewayExtension.PostRouteModify:input_type -> envoygateway.extension.PostRouteModifyRequest
-	6,  // 25: envoygateway.extension.EnvoyGatewayExtension.PostVirtualHostModify:input_type -> envoygateway.extension.PostVirtualHostModifyRequest
-	8,  // 26: envoygateway.extension.EnvoyGatewayExtension.PostHTTPListenerModify:input_type -> envoygateway.extension.PostHTTPListenerModifyRequest
-	2,  // 27: envoygateway.extension.EnvoyGatewayExtension.PostClusterModify:input_type -> envoygateway.extension.PostClusterModifyRequest
-	4,  // 28: envoygateway.extension.EnvoyGatewayExtension.PostEndpointsModify:input_type -> envoygateway.extension.PostEndpointsModifyRequest
-	10, // 29: envoygateway.extension.EnvoyGatewayExtension.PostTranslateModify:input_type -> envoygateway.extension.PostTranslateModifyRequest
-	1,  // 30: envoygateway.extension.EnvoyGatewayExtension.PostRouteModify:output_type -> envoygateway.extension.PostRouteModifyResponse
-	7,  // 31: envoygateway.extension.EnvoyGatewayExtension.PostVirtualHostModify:output_type -> envoygateway.extension.PostVirtualHostModifyResponse
-	9,  // 32: envoygateway.extension.EnvoyGatewayExtension.PostHTTPListenerModify:output_type -> envoygateway.extension.PostHTTPListenerModifyResponse
-	3,  // 33: envoygateway.extension.EnvoyGatewayExtension.PostClusterModify:output_type -> envoygateway.extension.PostClusterModifyResponse
-	5,  // 34: envoygateway.extension.EnvoyGatewayExtension.PostEndpointsModify:output_type -> envoygateway.extension.PostEndpointsModifyResponse
-	11, // 35: envoygateway.extension.EnvoyGatewayExtension.PostTranslateModify:output_type -> envoygateway.extension.PostTranslateModifyResponse
-	30, // [30:36] is the sub-list for method output_type
-	24, // [24:30] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	14, // 0: envoygateway.extension.PostRouteModifyRequest.route:type_name -> envoy.config.route.v3.Route
+	15, // 1: envoygateway.extension.PostRouteModifyRequest.post_route_context:type_name -> envoygateway.extension.PostRouteExtensionContext
+	14, // 2: envoygateway.extension.PostRouteModifyResponse.route:type_name -> envoy.config.route.v3.Route
+	16, // 3: envoygateway.extension.PostClusterModifyRequest.cluster:type_name -> envoy.config.cluster.v3.Cluster
+	17, // 4: envoygateway.extension.PostClusterModifyRequest.post_cluster_context:type_name -> envoygateway.extension.PostClusterExtensionContext
+	16, // 5: envoygateway.extension.PostClusterModifyResponse.cluster:type_name -> envoy.config.cluster.v3.Cluster
+	18, // 6: envoygateway.extension.PostEndpointsModifyRequest.load_assignment:type_name -> envoy.config.endpoint.v3.ClusterLoadAssignment
+	19, // 7: envoygateway.extension.PostEndpointsModifyRequest.post_endpoints_context:type_name -> envoygateway.extension.PostEndpointsExtensionContext
+	18, // 8: envoygateway.extension.PostEndpointsModifyResponse.load_assignment:type_name -> envoy.config.endpoint.v3.ClusterLoadAssignment
+	20, // 9: envoygateway.extension.PostVirtualHostModifyRequest.virtual_host:type_name -> envoy.config.route.v3.VirtualHost
+	21, // 10: envoygateway.extension.PostVirtualHostModifyRequest.post_virtual_host_context:type_name -> envoygateway.extension.PostVirtualHostExtensionContext
+	20, // 11: envoygateway.extension.PostVirtualHostModifyResponse.virtual_host:type_name -> envoy.config.route.v3.VirtualHost
+	22, // 12: envoygateway.extension.PostHTTPListenerModifyRequest.listener:type_name -> envoy.config.listener.v3.Listener
+	23, // 13: envoygateway.extension.PostHTTPListenerModifyRequest.post_listener_context:type_name -> envoygateway.extension.PostHTTPListenerExtensionContext
+	22, // 14: envoygateway.extension.PostHTTPListenerModifyResponse.listener:type_name -> envoy.config.listener.v3.Listener
+	24, // 15: envoygateway.extension.PostTranslateModifyRequest.post_translate_context:type_name -> envoygateway.extension.PostTranslateExtensionContext
+	16, // 16: envoygateway.extension.PostTranslateModifyRequest.clusters:type_name -> envoy.config.cluster.v3.Cluster
+	25, // 17: envoygateway.extension.PostTranslateModifyRequest.secrets:type_name -> envoy.extensions.transport_sockets.tls.v3.Secret
+	22, // 18: envoygateway.extension.PostTranslateModifyRequest.listeners:type_name -> envoy.config.listener.v3.Listener
+	26, // 19: envoygateway.extension.PostTranslateModifyRequest.routes:type_name -> envoy.config.route.v3.RouteConfiguration
+	16, // 20: envoygateway.extension.PostTranslateModifyResponse.clusters:type_name -> envoy.config.cluster.v3.Cluster
+	25, // 21: envoygateway.extension.PostTranslateModifyResponse.secrets:type_name -> envoy.extensions.transport_sockets.tls.v3.Secret
+	22, // 22: envoygateway.extension.PostTranslateModifyResponse.listeners:type_name -> envoy.config.listener.v3.Listener
+	26, // 23: envoygateway.extension.PostTranslateModifyResponse.routes:type_name -> envoy.config.route.v3.RouteConfiguration
+	27, // 24: envoygateway.extension.PostTLSCertificateResolveRequest.post_tls_certificate_context:type_name -> envoygateway.extension.PostTLSCertificateExtensionContext
+	28, // 25: envoygateway.extension.PostTLSCertificateResolveResponse.sds_secret_config:type_name -> envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig
+	0,  // 26: envoygateway.extension.EnvoyGatewayExtension.PostRouteModify:input_type -> envoygateway.extension.PostRouteModifyRequest
+	6,  // 27: envoygateway.extension.EnvoyGatewayExtension.PostVirtualHostModify:input_type -> envoygateway.extension.PostVirtualHostModifyRequest
+	8,  // 28: envoygateway.extension.EnvoyGatewayExtension.PostHTTPListenerModify:input_type -> envoygateway.extension.PostHTTPListenerModifyRequest
+	2,  // 29: envoygateway.extension.EnvoyGatewayExtension.PostClusterModify:input_type -> envoygateway.extension.PostClusterModifyRequest
+	4,  // 30: envoygateway.extension.EnvoyGatewayExtension.PostEndpointsModify:input_type -> envoygateway.extension.PostEndpointsModifyRequest
+	10, // 31: envoygateway.extension.EnvoyGatewayExtension.PostTranslateModify:input_type -> envoygateway.extension.PostTranslateModifyRequest
+	12, // 32: envoygateway.extension.EnvoyGatewayExtension.PostTLSCertificateResolve:input_type -> envoygateway.extension.PostTLSCertificateResolveRequest
+	1,  // 33: envoygateway.extension.EnvoyGatewayExtension.PostRouteModify:output_type -> envoygateway.extension.PostRouteModifyResponse
+	7,  // 34: envoygateway.extension.EnvoyGatewayExtension.PostVirtualHostModify:output_type -> envoygateway.extension.PostVirtualHostModifyResponse
+	9,  // 35: envoygateway.extension.EnvoyGatewayExtension.PostHTTPListenerModify:output_type -> envoygateway.extension.PostHTTPListenerModifyResponse
+	3,  // 36: envoygateway.extension.EnvoyGatewayExtension.PostClusterModify:output_type -> envoygateway.extension.PostClusterModifyResponse
+	5,  // 37: envoygateway.extension.EnvoyGatewayExtension.PostEndpointsModify:output_type -> envoygateway.extension.PostEndpointsModifyResponse
+	11, // 38: envoygateway.extension.EnvoyGatewayExtension.PostTranslateModify:output_type -> envoygateway.extension.PostTranslateModifyResponse
+	13, // 39: envoygateway.extension.EnvoyGatewayExtension.PostTLSCertificateResolve:output_type -> envoygateway.extension.PostTLSCertificateResolveResponse
+	33, // [33:40] is the sub-list for method output_type
+	26, // [26:33] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_proto_extension_service_proto_init() }
@@ -987,7 +1139,7 @@ func file_proto_extension_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_extension_service_proto_rawDesc), len(file_proto_extension_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

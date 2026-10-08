@@ -15,6 +15,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -592,15 +593,19 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 
 // irTLSConfigs produces a defaulted IR TLSConfig
 func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
-	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
+	if len(config.secrets) == 0 && len(config.extensionCertificates) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
-		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
+		Certificates: make([]ir.TLSCertificate, len(config.secrets), len(config.secrets)+len(config.extensionCertificates)),
 	}
 	for i, tlsSecret := range config.secrets {
 		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(tlsSecret)
+	}
+	for i := range config.extensionCertificates {
+		tlsListenerConfigs.Certificates = append(tlsListenerConfigs.Certificates,
+			getTLSCertificateFromExtensionRef(&config.extensionCertificates[i]))
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
@@ -654,6 +659,25 @@ func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
 		cert.OCSPStaple = ocspStaple
 	}
 	return cert
+}
+
+// getTLSCertificateFromExtensionRef builds the IR certificate for a listener certificate
+// resolved from an extension-registered kind. No key material is carried: how Envoy obtains
+// the certificate is decided by the extension server via the TLSCertificate hook.
+func getTLSCertificateFromExtensionRef(obj *unstructured.Unstructured) ir.TLSCertificate {
+	return ir.TLSCertificate{
+		Name:         irTLSExtensionCertificateName(obj),
+		ExtensionRef: &ir.UnstructuredRef{Object: obj},
+	}
+}
+
+// irTLSExtensionCertificateName is the IR-level identifier for an extension-resolved
+// certificate. It is scoped by group and kind as well as namespace and name, so two
+// providers may use the same resource name without colliding. This is not the xDS secret
+// name -- that is chosen by the extension server.
+func irTLSExtensionCertificateName(obj *unstructured.Unstructured) string {
+	gvk := obj.GroupVersionKind()
+	return fmt.Sprintf("%s/%s/%s/%s", gvk.Group, gvk.Kind, obj.GetNamespace(), obj.GetName())
 }
 
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
@@ -1599,4 +1623,16 @@ func getOverriddenTargetsMessageForRoute(
 		return fmt.Sprintf("these route rules: %v", routes)
 	}
 	return ""
+}
+
+// isExtensionCertificateRef reports whether a listener certificate ref points at a kind
+// registered in ExtensionManager.CertificateResources. Gateway API certificate refs carry
+// no version, so only group and kind are compared.
+func (t *Translator) isExtensionCertificateRef(group, kind string) bool {
+	for _, gk := range t.ExtensionCertificateGroupKinds {
+		if gk.Group == group && gk.Kind == kind {
+			return true
+		}
+	}
+	return false
 }

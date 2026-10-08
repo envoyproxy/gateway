@@ -75,12 +75,13 @@ func NewInMemoryCompositeManager(
 			extension:          *ext,
 			extensionConnCache: conn,
 		}
-		resourceGKSet, policyGKSet := buildManagerGKSets(ext)
+		resourceGKSet, policyGKSet, certGKSet := buildManagerGKSets(ext)
 		named = append(named, namedManager{
 			name:            ext.Name,
 			manager:         mgr,
 			resourceGKSet:   resourceGKSet,
 			policyGKSet:     policyGKSet,
+			certGKSet:       certGKSet,
 			cleanupHookConn: cleanup,
 		})
 	}
