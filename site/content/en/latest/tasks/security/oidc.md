@@ -621,8 +621,12 @@ the logout request otherwise. If the default value is not registered, set an exp
   oidc:
     logoutPath: "/myapp/logout"
     postLogoutRedirect:
-      uri: "https://www.example.com/myapp/loggedout"
+      uri: "https://www.example.com/loggedout"
 ```
+
+Point the URI at a page that the OIDC policy does not protect. If it falls under a protected route,
+Envoy Gateway starts a new login as soon as the provider redirects the user there, and the provider
+may sign the user straight back in with its own session.
 
 The URI may contain the Envoy `%REQ(header)%` [command operator][command-operators], which is useful
 when the same policy serves more than one host:
@@ -630,7 +634,7 @@ when the same policy serves more than one host:
 ```yaml
   oidc:
     postLogoutRedirect:
-      uri: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/myapp/loggedout"
+      uri: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout"
 ```
 
 Only `%REQ(header)%` is accepted here, since it is the only operator meaningful in a URI derived from
@@ -656,7 +660,7 @@ The logout itself still completes — Envoy Gateway clears its cookies and the p
 session — but because the provider is not told where to send the user, the browser is left on a page
 controlled by the provider rather than returning to your application.
 
-Exactly one of `uri` or `disabled` must be set. `postLogoutRedirect` has no effect when no end
+`uri` cannot be set together with `disabled: true`. `postLogoutRedirect` has no effect when no end
 session endpoint is configured or discovered, because in that case Envoy Gateway does not redirect to
 the provider at all.
 

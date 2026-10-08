@@ -272,9 +272,10 @@ type OIDCDenyRedirectHeader struct {
 // OIDCPostLogoutRedirect configures the `post_logout_redirect_uri` parameter used in OIDC
 // [RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) requests.
 //
-// Exactly one of uri or disabled must be set.
+// At least one of uri or disabled must be set, and uri cannot be set when disabled is true.
 //
-// +kubebuilder:validation:XValidation:rule="has(self.uri) != has(self.disabled)",message="exactly one of uri or disabled must be set"
+// +kubebuilder:validation:XValidation:rule="has(self.uri) || has(self.disabled)",message="one of uri or disabled must be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.uri) || !has(self.disabled) || !self.disabled",message="uri cannot be set when disabled is true"
 type OIDCPostLogoutRedirect struct {
 	// URI is sent as the `post_logout_redirect_uri` parameter to the OIDC Provider's end session
 	// endpoint. The provider redirects the user to this URI after the logout completes, so it
@@ -301,7 +302,7 @@ type OIDCPostLogoutRedirect struct {
 	// not need the user redirected back after the logout completes. In that case the user is left
 	// on a page controlled by the provider.
 	//
-	// Setting this to false is equivalent to leaving postLogoutRedirect unset.
+	// Setting this to false is equivalent to leaving disabled unset.
 	//
 	// +optional
 	Disabled *bool `json:"disabled,omitempty"`

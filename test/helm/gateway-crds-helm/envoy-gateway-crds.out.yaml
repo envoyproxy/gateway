@@ -36576,7 +36576,7 @@ spec:
                           not need the user redirected back after the logout completes. In that case the user is left
                           on a page controlled by the provider.
 
-                          Setting this to false is equivalent to leaving postLogoutRedirect unset.
+                          Setting this to false is equivalent to leaving disabled unset.
                         type: boolean
                       uri:
                         description: |-
@@ -36599,8 +36599,10 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-validations:
-                    - message: exactly one of uri or disabled must be set
-                      rule: has(self.uri) != has(self.disabled)
+                    - message: one of uri or disabled must be set
+                      rule: has(self.uri) || has(self.disabled)
+                    - message: uri cannot be set when disabled is true
+                      rule: '!has(self.uri) || !has(self.disabled) || !self.disabled'
                   provider:
                     description: The OIDC Provider configuration.
                     properties:

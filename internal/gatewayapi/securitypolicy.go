@@ -962,10 +962,12 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
+	// CEL covers these on Kubernetes, but not for the file provider or for a merged policy, which
+	// can combine a parent's uri with a route's disabled: true.
 	if oidc != nil && oidc.PostLogoutRedirect != nil {
 		switch plr := oidc.PostLogoutRedirect; {
-		case plr.URI != nil && plr.Disabled != nil:
-			return errors.New("only one of OIDC.PostLogoutRedirect.uri or OIDC.PostLogoutRedirect.disabled must be set")
+		case plr.URI != nil && ptr.Deref(plr.Disabled, false):
+			return errors.New("OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
 		case plr.URI == nil && plr.Disabled == nil:
 			return errors.New("one of OIDC.PostLogoutRedirect.uri or OIDC.PostLogoutRedirect.disabled must be set")
 		}
@@ -2449,14 +2451,9 @@ func validatePostLogoutRedirectURI(uri string) error {
 	return nil
 }
 
-// validateURICommandOperators checks every command operator in a URI that Envoy evaluates as a
-// formatter string. Envoy fails to build the filter, and therefore rejects the whole
-// configuration, when the string contains an unknown or malformed command operator. Catching that
-// here surfaces the mistake on the SecurityPolicy status instead of NACKing the xDS update.
-//
-// Only %REQ(header)% is accepted: a URI is built from the inbound request, so the request header
-// operator is the only one that is meaningful, and it is stable across Envoy versions. A literal
-// percent is written as "%%", the same as in any Envoy format string.
+// validateURICommandOperators accepts only the %REQ(header)% command operator and "%%" escapes.
+// Envoy rejects the whole configuration on an unknown or malformed operator, so catching it here
+// reports the mistake on the SecurityPolicy status instead of NACKing the xDS update.
 func validateURICommandOperators(uri string) error {
 	for i := 0; i < len(uri); {
 		if uri[i] != '%' {

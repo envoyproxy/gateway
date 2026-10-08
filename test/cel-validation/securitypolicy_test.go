@@ -2562,7 +2562,37 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"exactly one of uri or disabled must be set"},
+			wantErrors: []string{"uri cannot be set when disabled is true"},
+		},
+		{
+			desc: "oidc-post-logout-redirect-uri-and-disabled-false",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{
+							URI:      new("https://www.example.com/loggedout"),
+							Disabled: new(false),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "oidc-post-logout-redirect-empty",
@@ -2589,7 +2619,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"exactly one of uri or disabled must be set"},
+			wantErrors: []string{"one of uri or disabled must be set"},
 		},
 		{
 			desc: "oidc-post-logout-redirect-empty-uri",

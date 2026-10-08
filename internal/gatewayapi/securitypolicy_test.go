@@ -1139,7 +1139,7 @@ func TestBuildAuthorizationJWTProvider(t *testing.T) {
 // Test_OIDC_PostLogoutRedirect_Merge covers the invariant that the CRD's CEL rule cannot: CEL is
 // evaluated by the apiserver on an individual policy, but a merged policy only ever exists in
 // memory inside the translator. Merging a parent that sets uri with a route that sets disabled
-// therefore yields a policy that violates the exactly-one rule without any admission error, and
+// therefore yields a policy that sets uri with disabled: true without any admission error, and
 // the translator would resolve it toward uri, silently dropping the route's intent.
 func Test_OIDC_PostLogoutRedirect_Merge(t *testing.T) {
 	oidcWith := func(plr *egv1a1.OIDCPostLogoutRedirect) *egv1a1.OIDC {
@@ -1163,7 +1163,7 @@ func Test_OIDC_PostLogoutRedirect_Merge(t *testing.T) {
 		}
 	}
 
-	// Each policy on its own satisfies the exactly-one rule, which is why admission lets both
+	// Each policy on its own passes the CEL rules, which is why admission lets both
 	// through.
 	require.NoError(t, validateSecurityPolicy(parentPolicy()))
 	require.NoError(t, validateSecurityPolicy(routePolicy(nil)))
@@ -1178,7 +1178,15 @@ func Test_OIDC_PostLogoutRedirect_Merge(t *testing.T) {
 	require.NotNil(t, plr.URI, "expected the parent's uri to survive the merge")
 	require.NotNil(t, plr.Disabled, "expected the route's disabled to survive the merge")
 	require.ErrorContains(t, validateSecurityPolicy(merged),
-		"only one of OIDC.PostLogoutRedirect.uri or OIDC.PostLogoutRedirect.disabled must be set")
+		"OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+
+	// disabled: false means the same as leaving it unset, so the route inherits the parent's uri.
+	routeNotDisabled := routePolicy(&strategicMerge)
+	routeNotDisabled.Spec.OIDC.PostLogoutRedirect.Disabled = ToPointer(false)
+	merged, _, err = mergeSecurityPolicy(routeNotDisabled, parentPolicy())
+	require.NoError(t, err)
+	require.Equal(t, "https://www.example.com/loggedout", *merged.Spec.OIDC.PostLogoutRedirect.URI)
+	require.NoError(t, validateSecurityPolicy(merged))
 }
 
 func ToPointer[T any](v T) *T {

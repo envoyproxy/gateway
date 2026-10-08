@@ -4705,7 +4705,7 @@ _Appears in:_
 OIDCPostLogoutRedirect configures the `post_logout_redirect_uri` parameter used in OIDC
 [RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) requests.
 
-Exactly one of uri or disabled must be set.
+At least one of uri or disabled must be set, and uri cannot be set when disabled is true.
 
 _Appears in:_
 - [OIDC](#oidc)
@@ -4713,7 +4713,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `uri` | _string_ |  false  |  | URI is sent as the `post_logout_redirect_uri` parameter to the OIDC Provider's end session<br />endpoint. The provider redirects the user to this URI after the logout completes, so it<br />usually must be pre-registered for the client with the provider.<br />The URI may contain the Envoy "%REQ(header)%"<br />[command operator](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />to build the URI from the request, for example<br />"%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout". Envoy Gateway accepts only that<br />operator here, since it is the only one meaningful in a URI derived from the request, and<br />rejects any other so that a typo surfaces on this policy instead of being rejected by Envoy<br />as an invalid configuration. A literal percent is written as "%%".<br />The scheme must be http, https, or a "%REQ(header)%" command operator. The URI is<br />percent-encoded automatically when the logout URL is built, so do not pre-encode it. |
-| `disabled` | _boolean_ |  false  |  | Disabled omits the `post_logout_redirect_uri` parameter from the logout request entirely.<br />Use this when the OIDC Provider rejects unregistered post logout redirect URIs and you do<br />not need the user redirected back after the logout completes. In that case the user is left<br />on a page controlled by the provider.<br />Setting this to false is equivalent to leaving postLogoutRedirect unset. |
+| `disabled` | _boolean_ |  false  |  | Disabled omits the `post_logout_redirect_uri` parameter from the logout request entirely.<br />Use this when the OIDC Provider rejects unregistered post logout redirect URIs and you do<br />not need the user redirected back after the logout completes. In that case the user is left<br />on a page controlled by the provider.<br />Setting this to false is equivalent to leaving disabled unset. |
 
 
 #### OIDCProvider
