@@ -9,6 +9,7 @@ require (
 	fortio.org/log v1.18.3
 	github.com/andybalholm/brotli v1.2.3
 	github.com/envoyproxy/gateway v0.0.0-00010101000000-000000000000
+	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260902172201-0f2cd005953e
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
@@ -33,7 +34,7 @@ require (
 	k8s.io/cli-runtime v0.37.0
 	k8s.io/client-go v0.37.0
 	k8s.io/kubectl v0.37.0
-	sigs.k8s.io/controller-runtime v0.25.1
+	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/gateway-api v1.6.2
 	sigs.k8s.io/gateway-api/conformance v1.6.2
 	sigs.k8s.io/yaml v1.6.0
@@ -114,7 +115,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.14.1-0.20260902172201-0f2cd005953e // indirect
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260902172201-0f2cd005953e // indirect
-	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260902172201-0f2cd005953e // indirect
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260902172201-0f2cd005953e // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36 // indirect
