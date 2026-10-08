@@ -263,7 +263,7 @@ type XForwardedClientCert struct {
 	//
 	// This field is only applicable when the mode is set to `AppendForward` or
 	// `SanitizeSet` and the client connection is mTLS.
-	// +kubebuilder:validation:MaxItems=5
+	// +kubebuilder:validation:MaxItems=6
 	// +optional
 	CertDetailsToAdd []XFCCCertData `json:"certDetailsToAdd,omitempty"`
 }
@@ -291,7 +291,7 @@ const (
 )
 
 // XFCCCertData specifies the fields in the client certificate to be forwarded in the XFCC header.
-// +kubebuilder:validation:Enum=Subject;Cert;Chain;DNS;URI
+// +kubebuilder:validation:Enum=Subject;Cert;Chain;DNS;URI;Issuer
 type XFCCCertData string
 
 const (
@@ -305,6 +305,8 @@ const (
 	XFCCCertDataDNS XFCCCertData = "DNS"
 	// XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.
 	XFCCCertDataURI XFCCCertData = "URI"
+	// XFCCCertDataIssuer is the Issuer field of the current client certificate.
+	XFCCCertDataIssuer XFCCCertData = "Issuer"
 )
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.

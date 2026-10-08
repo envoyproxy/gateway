@@ -611,7 +611,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		//
 		// For example, the route config name is named after the ir Listener name "default/eg/http1", but the current
 		// ir Listener is "default/eg/http2".
-		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
+		//
+		// This only applies to non-TLS listeners, which share the default filter chain. A TLS listener
+		// has its own filter chain whose HCM always references the route config named after the listener.
+		if !tlsEnabled {
+			routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
+		}
 		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
 		if routeCfgName == "" {
 			routeCfgName = routeConfigName(httpListener, t.xdsNameSchemeV2())
