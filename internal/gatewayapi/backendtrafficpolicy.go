@@ -607,14 +607,8 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				}
 				continue
 			}
-			bc.Traffic = tf.ClusterFeatures()
-			bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
-
-			// UseClientProtocol only ever reaches a cluster through ir.HTTPRoute, matching
-			// applyGatewayPolicyToMergedCluster's gating for the whole-gateway BTP path.
-			if bc.Protocol() != ir.UDP && bc.Protocol() != ir.TCP {
-				bc.UseClientProtocol = mergedPolicy.Spec.UseClientProtocol
-			}
+			// Reuse the gateway-BTP path's protocol subsetting to keep HTTP-only fields off UDP/TCP clusters.
+			applyGatewayPolicyToMergedCluster(bc, tf, mergedPolicy.Spec.UseClientProtocol)
 
 			matchedGWs.Insert(gwNN)
 			if gwPolicy != nil {
