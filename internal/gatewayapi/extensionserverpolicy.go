@@ -378,40 +378,46 @@ func ExtServerPolicyStatusAsPolicyStatus(policy *unstructured.Unstructured) gwap
 	return status
 }
 
+// translateExtServerPolicyForGateway attaches the policy to the IR listeners of
+// the targeted Gateway: all of them, or only the one named by the target's
+// sectionName. The listeners are taken from the Gateway rather than from the IR,
+// because with mergeGateways enabled the IR holds the listeners of every Gateway
+// in the GatewayClass, including listeners of other Gateways with the same name.
 func (t *Translator) translateExtServerPolicyForGateway(
 	policy *unstructured.Unstructured,
 	gateway *GatewayContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 ) bool {
-	irKey := t.getIRKey(gateway.Gateway)
-	gwIR := xdsIR[irKey]
+	gwIR := xdsIR[t.getIRKey(gateway.Gateway)]
 	found := false
-	for _, currListener := range gwIR.HTTP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+	for _, listener := range gateway.listeners {
+		if target.SectionName != nil && *target.SectionName != listener.Name {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
-		found = true
-	}
-	for _, currListener := range gwIR.TCP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+		irListener := getIRCoreListener(gwIR, irListenerName(listener))
+		if irListener == nil {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
-		found = true
-	}
-	for _, currListener := range gwIR.UDP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
-			continue
-		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
+		irListener.ExtensionRefs = append(irListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
 		found = true
 	}
 	return found
+}
+
+// getIRCoreListener returns the common details of the HTTP, TCP or UDP IR
+// listener with the given name, or nil if the IR has no such listener.
+func getIRCoreListener(xdsIR *ir.Xds, name string) *ir.CoreListenerDetails {
+	if l := xdsIR.GetHTTPListener(name); l != nil {
+		return &l.CoreListenerDetails
+	}
+	if l := xdsIR.GetTCPListener(name); l != nil {
+		return &l.CoreListenerDetails
+	}
+	if l := xdsIR.GetUDPListener(name); l != nil {
+		return &l.CoreListenerDetails
+	}
+	return nil
 }
 
 // appendUnstructuredRefIfAbsent appends a ref to obj to refs, unless refs already carries a ref
