@@ -672,16 +672,20 @@ func (t *Translator) rejectBackendTargetSelectors(
 		}
 	}
 
-	var matched []targetRefWithTimestamp
-	matched = append(matched, resolvePolicyTargetsFromSelectors(
+	svcMatches := resolvePolicyTargetsFromSelectors(
 		backendSelectors, resources.Services, resources.ReferenceGrants,
-		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)...)
-	matched = append(matched, resolvePolicyTargetsFromSelectors(
+		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)
+	siMatches := resolvePolicyTargetsFromSelectors(
 		backendSelectors, resources.ServiceImports, resources.ReferenceGrants,
-		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)...)
-	matched = append(matched, resolvePolicyTargetsFromSelectors(
+		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)
+	beMatches := resolvePolicyTargetsFromSelectors(
 		backendSelectors, resources.Backends, resources.ReferenceGrants,
-		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)...)
+		egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)
+
+	matched := make([]targetRefWithTimestamp, 0, len(svcMatches)+len(siMatches)+len(beMatches))
+	matched = append(matched, svcMatches...)
+	matched = append(matched, siMatches...)
+	matched = append(matched, beMatches...)
 
 	resolveErr := &status.PolicyResolveError{
 		Reason:  egv1a1.PolicyReasonInvalid,
