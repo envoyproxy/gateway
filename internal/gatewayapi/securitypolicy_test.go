@@ -1713,7 +1713,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "mixed allow and deny ok",
@@ -2608,6 +2608,66 @@ func Test_securityPolicyOwnerChoose(t *testing.T) {
 	})
 }
 
+func TestFilterAuthorizationForTCP(t *testing.T) {
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-headers"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{Name: "x-user"},
+					},
+				},
+			},
+			{
+				Name:   new("allow-cidr"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+				},
+			},
+			{
+				Name:   new("deny-headers"),
+				Action: egv1a1.AuthorizationActionDeny,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{Name: "x-admin"},
+					},
+				},
+			},
+		},
+	}
+
+	skipped := filterAuthorizationForTCP(policy)
+
+	require.Equal(t, []string{"allow-headers"}, skipped)
+	require.Len(t, policy.Spec.Authorization.Rules, 2)
+	require.Equal(t, "allow-cidr", *policy.Spec.Authorization.Rules[0].Name)
+	require.Equal(t, "deny-headers", *policy.Spec.Authorization.Rules[1].Name)
+
+	require.NoError(t, validateSecurityPolicyForTCP(&egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					policy.Spec.Authorization.Rules[0],
+				},
+			},
+		},
+	}))
+
+	require.Error(t, validateSecurityPolicyForTCP(&egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					policy.Spec.Authorization.Rules[1],
+				},
+			},
+		},
+	}))
+}
+
 func TestTranslateSecurityPolicyForListeners_HTTPOnlyDoesNotFailForTCPIncompatibleDeny(t *testing.T) {
 	tr := &Translator{}
 
@@ -2813,6 +2873,82 @@ func TestTranslateSecurityPolicyForListeners_TCPFailsClosedForIncompatibleDeny(t
 	require.NotNil(t, result)
 	require.Error(t, result.tcpDenyError)
 	require.Empty(t, result.skippedTCPAllowRules)
+
+	require.NotNil(t, tcpRoute.Authorization)
+	require.Empty(t, tcpRoute.Authorization.Rules)
+	require.Equal(
+		t,
+		egv1a1.AuthorizationActionDeny,
+		tcpRoute.Authorization.DefaultAction,
+	)
+}
+
+func TestTranslateSecurityPolicyForListeners_TCPFailsClosedWhenAuthorizationBuildFails(t *testing.T) {
+	tr := &Translator{}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+
+	policy := sp("default", "test-policy")
+	policy.Spec.JWT = &egv1a1.JWT{
+		Providers: []egv1a1.JWTProvider{},
+	}
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		DefaultAction: new(egv1a1.AuthorizationActionAllow),
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-with-missing-jwt-provider"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					JWT: &egv1a1.JWTPrincipal{
+						Provider: "missing-provider",
+					},
+				},
+			},
+		},
+	}
+
+	tcpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "tcp",
+			Protocol: gwapiv1.TCPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	tcpRoute := &ir.TCPRoute{
+		Name: "tcp-route",
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRoute},
+				},
+			},
+		},
+	}
+
+	result, err := tr.translateSecurityPolicyForListeners(
+		policy,
+		gtwCtx,
+		resource.NewResources(),
+		xdsIR,
+		[]*ListenerContext{tcpListener},
+	)
+
+	require.Error(t, err)
+	require.NotNil(t, result)
 
 	require.NotNil(t, tcpRoute.Authorization)
 	require.Empty(t, tcpRoute.Authorization.Rules)
