@@ -678,7 +678,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-Each Envoy proxy keeps these buckets in its own memory, in a bounded least recently used cache per rule with a `Distinct` selector on each route. A client whose requests reach different proxies gets a separate budget on each, and every bucket starts full again when the proxy restarts. When a new value does not fit in the cache, the least recently used entry is evicted; if that value appears again, its bucket starts full, so cache churn can let a value exceed its configured rate. Use [Global Rate Limiting][] when the limit must be shared across proxies.
+Each Envoy proxy keeps these buckets in its own memory, in a bounded least recently used cache per rule with a `Distinct` selector on each route. The cache holds 10,000 entries since v1.9.2; v1.9.0 and v1.9.1 hold 20. A client whose requests reach different proxies gets a separate budget on each, and every bucket starts full again when the proxy restarts. When a new value does not fit in the cache, the least recently used entry is evicted; if that value appears again, its bucket starts full, so cache churn can let a value exceed its configured rate. Use [Global Rate Limiting][] when the limit must be shared across proxies.
 
 ## Rate Limit Based on Path
 
