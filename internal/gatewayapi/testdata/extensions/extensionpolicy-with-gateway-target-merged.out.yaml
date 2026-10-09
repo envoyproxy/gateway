@@ -5,8 +5,7 @@ extensionServerPolicies:
     name: test2
     namespace: envoy-gateway
   spec:
-    data: listener-scoped Gateway targets are rejected too while mergeGateways is
-      enabled
+    data: attached to listener http3 of gateway-2 only
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -22,10 +21,9 @@ extensionServerPolicies:
         sectionName: http3
       conditions:
       - lastTransitionTime: null
-        message: ExtensionServerPolicy cannot target a Gateway when mergeGateways
-          is enabled for its GatewayClass; target the GatewayClass instead
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: foo.example.io/v1alpha1
@@ -34,8 +32,8 @@ extensionServerPolicies:
     name: test1
     namespace: envoy-gateway
   spec:
-    data: should be rejected because targeting a Gateway is not allowed while mergeGateways
-      is enabled
+    data: attached to every listener of gateway-1 only, even though the xDS IR is
+      shared
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -49,10 +47,9 @@ extensionServerPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: ExtensionServerPolicy cannot target a Gateway when mergeGateways
-          is enabled for its GatewayClass; target the GatewayClass instead
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -208,6 +205,67 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionResources:
+    - name: foo.example.io/bar/envoy-gateway/test2
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test2
+          namespace: envoy-gateway
+        spec:
+          data: attached to listener http3 of gateway-2 only
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-2
+            sectionName: http3
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-2
+              namespace: envoy-gateway
+              sectionName: http3
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - name: foo.example.io/bar/envoy-gateway/test1
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test1
+          namespace: envoy-gateway
+        spec:
+          data: attached to every listener of gateway-1 only, even though the xDS
+            IR is shared
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionServerPolicies:
+    - name: foo.example.io/bar/envoy-gateway/test2
+    - name: foo.example.io/bar/envoy-gateway/test1
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -229,6 +287,8 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test1
       externalPort: 81
       hostnames:
       - '*'
@@ -243,6 +303,8 @@ xdsIR:
         mergeSlashes: true
       port: 10081
     - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test1
       externalPort: 80
       hostnames:
       - '*'
@@ -257,6 +319,8 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test2
       externalPort: 82
       hostnames:
       - '*'

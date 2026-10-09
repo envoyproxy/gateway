@@ -52,7 +52,7 @@ extensionServerPolicies:
       kind: Gateway
       group: gateway.networking.k8s.io
       name: gateway-1
-    data: "should be rejected because targeting a Gateway is not allowed while mergeGateways is enabled"
+    data: "attached to every listener of gateway-1 only, even though the xDS IR is shared"
 - apiVersion: foo.example.io/v1alpha1
   kind: Bar
   metadata:
@@ -64,4 +64,4 @@ extensionServerPolicies:
       group: gateway.networking.k8s.io
       name: gateway-2
       sectionName: http3
-    data: "listener-scoped Gateway targets are rejected too while mergeGateways is enabled"
+    data: "attached to listener http3 of gateway-2 only"
