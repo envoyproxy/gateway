@@ -21,7 +21,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
-	endpointsutil "github.com/envoyproxy/gateway/internal/utils/endpoints"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -1044,17 +1043,23 @@ func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, b
 func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
 	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
 
+	// A slice may carry both service-name labels (e.g. Cilium ClusterMesh MCS
+	// slices), so file it under every backend it belongs to.
 	for _, slice := range slices {
-		kind, svcName, ok := endpointsutil.BackendForSlice(slice)
-		if !ok {
-			continue
+		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
+			t.addEndpointSliceForBackend(resource.KindService, name, slice)
 		}
-
-		key := backendServiceKey{
-			kind:      kind,
-			namespace: slice.Namespace,
-			name:      svcName,
+		if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
+			t.addEndpointSliceForBackend(resource.KindServiceImport, name, slice)
 		}
-		t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 	}
+}
+
+func (t *TranslatorContext) addEndpointSliceForBackend(kind, svcName string, slice *discoveryv1.EndpointSlice) {
+	key := backendServiceKey{
+		kind:      kind,
+		namespace: slice.Namespace,
+		name:      svcName,
+	}
+	t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 }
