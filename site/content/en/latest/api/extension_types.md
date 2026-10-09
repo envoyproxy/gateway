@@ -4829,6 +4829,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `methods` | _[HTTPMethod](#httpmethod) array_ |  false  |  | Methods are the HTTP methods of the request.<br />If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule. |
 | `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the HTTP path of the request.<br />Support Exact, PathPrefix and RegularExpression match types. |
+| `hosts` | _Hostname array_ |  false  |  | Hosts are the HTTP hosts of the request, matched against the :authority header.<br />If multiple hosts are specified, the rule matches if any of the hosts match.<br />Wildcard hostnames such as "*.example.com" are allowed. |
 
 
 #### Origin
