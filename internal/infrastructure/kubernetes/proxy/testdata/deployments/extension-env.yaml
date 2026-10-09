@@ -380,7 +380,7 @@ spec:
           timeoutSeconds: 1
         resources:
           limits:
-            memory: 32Mi
+            memory: 64Mi
           requests:
             cpu: 10m
             memory: 32Mi
