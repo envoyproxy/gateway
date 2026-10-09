@@ -12,6 +12,7 @@ import (
 	alternateprotocolscachev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/alternate_protocols_cache/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -67,41 +68,20 @@ func patchRouteWithAlternateProtocolsCache(route *routev3.Route, irRoute *ir.HTT
 	})
 }
 
-// upstreamHTTP3Settings returns the HTTP/3 settings the route proxies to its backends with,
-// or nil. The route's own Traffic.HTTP3 governs its route-scoped cluster, the one built from
-// Destination.Settings; a merged cluster behind a BackendClusterRef carries its own, since
-// it is shared with other routes and may have been accepted or dropped independently. The
-// gatewayapi translator clears HTTP3 wherever the backends cannot use it, so only presence
-// is checked here. Redirect and direct-response routes never dial.
-func upstreamHTTP3Settings(route *ir.HTTPRoute, backendIndex backendClusterIndex) *ir.BackendHTTP3Settings {
-	if route == nil || route.Destination == nil {
-		return nil
-	}
-	if len(route.Destination.Settings) > 0 && route.Traffic != nil && route.Traffic.HTTP3 != nil {
-		return route.Traffic.HTTP3
-	}
-	for _, bc := range resolveBackendClusters(route.Destination, backendIndex) {
-		if bc.Traffic != nil && bc.Traffic.HTTP3 != nil {
-			return bc.Traffic.HTTP3
-		}
-	}
-	return nil
-}
-
-func routeUsesAutoHTTP3(route *ir.HTTPRoute, backendIndex backendClusterIndex) bool {
+// routeHasHTTP3Cluster reports whether the route proxies to a cluster that the cluster builder
+// gives QUIC and whose HTTP/3 settings accept returns true for. The route's own Traffic.HTTP3
+// governs its route-scoped cluster, the one built from Destination.Settings; a merged cluster
+// behind a BackendClusterRef carries its own, since it is shared with other routes and may have
+// been accepted or dropped independently. Redirect and direct-response routes never dial.
+func routeHasHTTP3Cluster(route *ir.HTTPRoute, backendIndex backendClusterIndex, accept func(*ir.BackendHTTP3Settings) bool) bool {
 	if route == nil || route.Destination == nil {
 		return false
 	}
-	isAuto := func(settings *ir.BackendHTTP3Settings) bool {
-		return settings != nil && settings.Mode == string(egv1a1.BackendHTTP3ModeAuto)
-	}
-	if len(route.Destination.Settings) > 0 && route.Traffic != nil && isAuto(route.Traffic.HTTP3) {
+	if settings := routeClusterHTTP3Settings(route); settings != nil && accept(settings) {
 		return true
 	}
-	// A route can reach clusters with different modes. Enable discovery if any of
-	// them uses Auto, regardless of backend order or the route-scoped cluster's mode.
 	for _, bc := range resolveBackendClusters(route.Destination, backendIndex) {
-		if bc.Traffic != nil && isAuto(bc.Traffic.HTTP3) {
+		if settings := backendClusterHTTP3Settings(bc); settings != nil && accept(settings) {
 			return true
 		}
 	}
@@ -109,7 +89,41 @@ func routeUsesAutoHTTP3(route *ir.HTTPRoute, backendIndex backendClusterIndex) b
 }
 
 func routeUsesUpstreamHTTP3(route *ir.HTTPRoute, backendIndex backendClusterIndex) bool {
-	return upstreamHTTP3Settings(route, backendIndex) != nil
+	return routeHasHTTP3Cluster(route, backendIndex, func(*ir.BackendHTTP3Settings) bool { return true })
+}
+
+// routeUsesAutoHTTP3 reports whether any cluster the route reaches uses mode Auto, so discovery
+// is enabled regardless of backend order or the route-scoped cluster's mode.
+func routeUsesAutoHTTP3(route *ir.HTTPRoute, backendIndex backendClusterIndex) bool {
+	return routeHasHTTP3Cluster(route, backendIndex, func(settings *ir.BackendHTTP3Settings) bool {
+		return settings.Mode == string(egv1a1.BackendHTTP3ModeAuto)
+	})
+}
+
+// routeClusterHTTP3Settings returns the HTTP/3 settings the route-scoped cluster is built
+// with, or nil when there is no such cluster or the cluster builder would not give it QUIC.
+// Sharing ir.CanUseHTTP3 with the cluster builder keeps the alt-svc strip and the alternate
+// protocols cache from being enabled on a route whose cluster never speaks HTTP/3, even when
+// the IR still carries HTTP3 for backends that cannot use it.
+func routeClusterHTTP3Settings(route *ir.HTTPRoute) *ir.BackendHTTP3Settings {
+	if len(route.Destination.Settings) == 0 || route.Traffic == nil || route.Traffic.HTTP3 == nil {
+		return nil
+	}
+	if !ir.CanUseHTTP3(route.Destination.Settings, ptr.Deref(route.UseClientProtocol, false), route.Traffic.ProxyProtocol != nil) {
+		return nil
+	}
+	return route.Traffic.HTTP3
+}
+
+// backendClusterHTTP3Settings is routeClusterHTTP3Settings for a merged cluster.
+func backendClusterHTTP3Settings(bc *ir.BackendCluster) *ir.BackendHTTP3Settings {
+	if bc == nil || bc.Traffic == nil || bc.Traffic.HTTP3 == nil {
+		return nil
+	}
+	if !ir.CanUseHTTP3([]*ir.DestinationSetting{bc.Setting}, ptr.Deref(bc.UseClientProtocol, false), bc.Traffic.ProxyProtocol != nil) {
+		return nil
+	}
+	return bc.Traffic.HTTP3
 }
 
 func listenerHasUpstreamHTTP3(listener *ir.HTTPListener, backendIndex backendClusterIndex) bool {

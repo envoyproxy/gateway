@@ -17,10 +17,11 @@ import (
 )
 
 func TestAlternateProtocolsCacheMixedBackendModes(t *testing.T) {
+	tlsSetting := &ir.DestinationSetting{TLS: &ir.TLSUpstreamConfig{}}
 	backendIndex := backendClusterIndex{
-		"always": {Traffic: &ir.ClusterTrafficFeatures{HTTP3: &ir.BackendHTTP3Settings{Mode: "Always"}}},
-		"auto":   {Traffic: &ir.ClusterTrafficFeatures{HTTP3: &ir.BackendHTTP3Settings{Mode: "Auto"}}},
-		"plain":  {},
+		"always": {Setting: tlsSetting, Traffic: &ir.ClusterTrafficFeatures{HTTP3: &ir.BackendHTTP3Settings{Mode: "Always"}}},
+		"auto":   {Setting: tlsSetting, Traffic: &ir.ClusterTrafficFeatures{HTTP3: &ir.BackendHTTP3Settings{Mode: "Auto"}}},
+		"plain":  {Setting: &ir.DestinationSetting{}},
 	}
 	for _, tc := range []struct {
 		name             string
@@ -44,7 +45,7 @@ func TestAlternateProtocolsCacheMixedBackendModes(t *testing.T) {
 				route.Destination.BackendClusterRefs = append(route.Destination.BackendClusterRefs, &ir.BackendClusterRef{Name: backend})
 			}
 			if tc.hasRouteSettings {
-				route.Destination.Settings = []*ir.DestinationSetting{{}}
+				route.Destination.Settings = []*ir.DestinationSetting{tlsSetting}
 			}
 			if tc.routeMode != "" {
 				route.Traffic = &ir.TrafficFeatures{ClusterTrafficFeatures: ir.ClusterTrafficFeatures{

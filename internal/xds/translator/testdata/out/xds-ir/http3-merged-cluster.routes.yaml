@@ -34,3 +34,31 @@
         cluster: service/default/plain-backend/8080/http
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        path: /merged-auto-plaintext-route
+      name: merged-auto-plaintext-route
+      route:
+        cluster: service/default/auto-plaintext/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: /merged-auto-http2-route
+      name: merged-auto-http2-route
+      route:
+        cluster: service/default/auto-http2/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: /merged-auto-proxy-protocol-route
+      name: merged-auto-proxy-protocol-route
+      route:
+        cluster: service/default/auto-proxy-protocol/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        path: /auto-client-protocol-route
+      name: auto-client-protocol-route
+      route:
+        cluster: httproute/default/auto-client-protocol/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket

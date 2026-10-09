@@ -2,6 +2,10 @@
 # Always and Auto clusters, so discovery must be enabled even though Always comes first.
 # The second route carries a Gateway policy's Traffic.HTTP3 but only reaches a plaintext
 # merged cluster that dropped it, so the route-level field must be ignored there.
+# The remaining routes still carry http3 Auto, as an extension hook can leave it, on clusters
+# the cluster builder refuses QUIC for: a plaintext, an HTTP/2 and a proxy protocol merged
+# cluster, and a route-scoped cluster with useClientProtocol. None of them gets the alt-svc
+# strip or the alternate protocols cache.
 http:
   - address: 0.0.0.0
     hostnames:
@@ -34,6 +38,58 @@ http:
         pathMatch:
           exact: /merged-plain-route
           name: ""
+        traffic:
+          http3:
+            mode: Auto
+      - destination:
+          backendClusterRefs:
+            - name: service/default/auto-plaintext/8080/http
+              weight: 1
+          name: httproute/default/auto-plaintext/rule/0
+        hostname: '*'
+        name: merged-auto-plaintext-route
+        pathMatch:
+          exact: /merged-auto-plaintext-route
+          name: ""
+      - destination:
+          backendClusterRefs:
+            - name: service/default/auto-http2/8080/http
+              weight: 1
+          name: httproute/default/auto-http2/rule/0
+        hostname: '*'
+        name: merged-auto-http2-route
+        pathMatch:
+          exact: /merged-auto-http2-route
+          name: ""
+      - destination:
+          backendClusterRefs:
+            - name: service/default/auto-proxy-protocol/8080/http
+              weight: 1
+          name: httproute/default/auto-proxy-protocol/rule/0
+        hostname: '*'
+        name: merged-auto-proxy-protocol-route
+        pathMatch:
+          exact: /merged-auto-proxy-protocol-route
+          name: ""
+      - destination:
+          name: httproute/default/auto-client-protocol/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 10.244.0.13
+                  port: 8080
+              name: httproute/default/auto-client-protocol/rule/0/backend/0
+              protocol: HTTP
+              tls:
+                insecureSkipVerify: true
+                SNI: example.com
+              weight: 1
+        hostname: '*'
+        name: auto-client-protocol-route
+        pathMatch:
+          exact: /auto-client-protocol-route
+          name: ""
+        useClientProtocol: true
         traffic:
           http3:
             mode: Auto
@@ -106,3 +162,74 @@ backendClusters:
         sectionName: "8080"
       name: service/default/plain-backend/8080/http
       protocol: HTTP
+  - metadata:
+      kind: Service
+      name: auto-plaintext
+      namespace: default
+      sectionName: "8080"
+    name: service/default/auto-plaintext/8080/http
+    setting:
+      addressType: IP
+      endpoints:
+        - host: 10.244.0.14
+          port: 8080
+      metadata:
+        kind: Service
+        name: auto-plaintext
+        namespace: default
+        sectionName: "8080"
+      name: service/default/auto-plaintext/8080/http
+      protocol: HTTP
+    traffic:
+      http3:
+        mode: Auto
+  - metadata:
+      kind: Service
+      name: auto-http2
+      namespace: default
+      sectionName: "8080"
+    name: service/default/auto-http2/8080/http
+    setting:
+      addressType: IP
+      endpoints:
+        - host: 10.244.0.15
+          port: 8080
+      metadata:
+        kind: Service
+        name: auto-http2
+        namespace: default
+        sectionName: "8080"
+      name: service/default/auto-http2/8080/http
+      protocol: HTTP2
+      tls:
+        insecureSkipVerify: true
+        SNI: example.com
+    traffic:
+      http3:
+        mode: Auto
+  - metadata:
+      kind: Service
+      name: auto-proxy-protocol
+      namespace: default
+      sectionName: "8080"
+    name: service/default/auto-proxy-protocol/8080/http
+    setting:
+      addressType: IP
+      endpoints:
+        - host: 10.244.0.16
+          port: 8080
+      metadata:
+        kind: Service
+        name: auto-proxy-protocol
+        namespace: default
+        sectionName: "8080"
+      name: service/default/auto-proxy-protocol/8080/http
+      protocol: HTTP
+      tls:
+        insecureSkipVerify: true
+        SNI: example.com
+    traffic:
+      http3:
+        mode: Auto
+      proxyProtocol:
+        version: V2

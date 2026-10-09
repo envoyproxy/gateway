@@ -89,6 +89,9 @@ http:
         traffic:
           http3:
             mode: Always
+      # Still carries http3 Auto, as an extension hook or a mixed weighted rule can leave it,
+      # but the plaintext backend never gets QUIC, so neither the alt-svc strip nor the
+      # alternate protocols cache is enabled on the route.
       - destination:
           name: httproute/default/http3-no-tls/rule/0
           settings:
@@ -107,9 +110,9 @@ http:
         traffic:
           http3:
             mode: Auto
-  # Listener with downstream HTTP/3 and an upstream HTTP/3 route: the backend alt-svc is
-  # stripped and the gateway's own is re-added by the header mutation filter, on every
-  # route of the listener, instead of being appended by the router.
+  # Listener with downstream HTTP/3 and an upstream HTTP/3 route: on that route the backend
+  # alt-svc is stripped and the gateway's own is re-added by the header mutation filter,
+  # while the other route gets the gateway's alt-svc appended by the router.
   - address: 0.0.0.0
     externalPort: 443
     hostnames:
