@@ -6,6 +6,7 @@
 package status
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -242,6 +243,12 @@ func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
 		}
 	}
 	return builder.String()
+}
+
+// MergedConditionMessage builds the status message for a Merged condition, naming the
+// policy that was merged with.
+func MergedConditionMessage(mergedWith metav1.Object) string {
+	return fmt.Sprintf("Merged with policy %s/%s", mergedWith.GetNamespace(), mergedWith.GetName())
 }
 
 func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {
