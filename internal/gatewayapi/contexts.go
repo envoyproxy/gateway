@@ -766,13 +766,10 @@ func IsParentRefEqual(ref1, ref2 gwapiv1.ParentReference, routeNS string) bool {
 	}
 
 	// Compare SectionName (optional field)
-	if ref1.SectionName == nil && ref2.SectionName == nil {
-		return true
-	}
-	if ref1.SectionName == nil || ref2.SectionName == nil {
+	if (ref1.SectionName == nil) != (ref2.SectionName == nil) {
 		return false
 	}
-	if *ref1.SectionName != *ref2.SectionName {
+	if ref1.SectionName != nil && *ref1.SectionName != *ref2.SectionName {
 		return false
 	}
 
@@ -882,6 +879,32 @@ type BackendClusterKey struct {
 	Protocol     ir.AppProtocol
 }
 
+// ExtensionResourceKey identifies a unique extension-introduced resource per gateway for dedup.
+type ExtensionResourceKey struct {
+	GatewayIRKey string
+	Group        string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
+// CACertificateKey identifies a shared upstream CA bundle within a gateway's IR by a digest
+// of its content.
+type CACertificateKey struct {
+	GatewayIRKey string
+	Digest       string
+}
+
+// ResolvedCAKey identifies a resource whose CA was already resolved. It keys on the resource
+// rather than the CA's secret name, which a Backend and a BackendTLSPolicy of the same name
+// and namespace mint identically.
+type ResolvedCAKey struct {
+	GatewayIRKey string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -892,9 +915,11 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
+	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
+	ResolvedCAMap           map[ResolvedCAKey]string
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
-	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 }
 
@@ -1018,23 +1043,23 @@ func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, b
 func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
 	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
 
-	var kind, svcName string
+	// A slice may carry both service-name labels (e.g. Cilium ClusterMesh MCS
+	// slices), so file it under every backend it belongs to.
 	for _, slice := range slices {
 		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
-			kind = resource.KindService
-			svcName = name
-		} else if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
-			kind = resource.KindServiceImport
-			svcName = name
-		} else {
-			continue
+			t.addEndpointSliceForBackend(resource.KindService, name, slice)
 		}
-
-		key := backendServiceKey{
-			kind:      kind,
-			namespace: slice.Namespace,
-			name:      svcName,
+		if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
+			t.addEndpointSliceForBackend(resource.KindServiceImport, name, slice)
 		}
-		t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 	}
+}
+
+func (t *TranslatorContext) addEndpointSliceForBackend(kind, svcName string, slice *discoveryv1.EndpointSlice) {
+	key := backendServiceKey{
+		kind:      kind,
+		namespace: slice.Namespace,
+		name:      svcName,
+	}
+	t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 }

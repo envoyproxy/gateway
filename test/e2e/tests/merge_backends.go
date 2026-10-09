@@ -12,9 +12,13 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -71,6 +75,51 @@ var MergeBackendsTest = suite.ConformanceTest{
 			}
 			if !hasDemerged {
 				t.Errorf("expected route C to keep its own demerged Cluster %q, not found (all clusters: %v)", demergedCluster, names)
+			}
+		})
+
+		t.Run("merged Cluster carries the backend-targeted BackendTrafficPolicy's settings", func(t *testing.T) {
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+				types.NamespacedName{Name: "merge-backends-service-btp", Namespace: ConformanceInfraNamespace},
+				suite.ControllerName, ancestorRef)
+
+			body, err := fetchEnvoyClustersOutput(t, suite,
+				"app.kubernetes.io/name=envoy",
+				"gateway.envoyproxy.io/owning-gateway-name="+gwNN.Name,
+				"gateway.envoyproxy.io/owning-gateway-namespace="+gwNN.Namespace,
+			)
+			if err != nil {
+				t.Fatalf("failed to fetch Envoy cluster stats: %v", err)
+			}
+
+			const (
+				mergedCluster   = "service/gateway-conformance-infra/infra-backend-v1/8080/http"
+				demergedCluster = "httproute/gateway-conformance-infra/merge-backends-route-c/rule/0"
+			)
+			maxConnections := map[string]string{}
+			for _, line := range strings.Split(body, "\n") {
+				name, rest, ok := strings.Cut(line, "::")
+				if !ok {
+					continue
+				}
+				_, value, ok := strings.Cut(rest, "default_priority::max_connections::")
+				if !ok {
+					continue
+				}
+				maxConnections[name] = value
+			}
+
+			if got := maxConnections[mergedCluster]; got != "512" {
+				t.Errorf("expected merged Cluster %q to have max_connections 512 from the backend-targeted BackendTrafficPolicy, got %q (all max_connections: %v)", mergedCluster, got, maxConnections)
+			}
+			if got := maxConnections[demergedCluster]; got != "2048" {
+				t.Errorf("expected route C's demerged Cluster %q to keep its own max_connections 2048, got %q (all max_connections: %v)", demergedCluster, got, maxConnections)
 			}
 		})
 	},

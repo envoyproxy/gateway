@@ -1249,7 +1249,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			err = perr.WithMessage(err, "CORS")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	var csrf *ir.CSRF
@@ -1541,7 +1544,10 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			err = perr.WithMessage(err, "CORS")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	var csrf *ir.CSRF
@@ -1732,7 +1738,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	return errs
 }
 
-func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
+func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
@@ -1746,6 +1752,26 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 				Exact: (*string)(&origin),
 			})
 		}
+	}
+
+	for _, originRegex := range cors.AllowOriginRegexes {
+		regexStr := string(originRegex)
+		// Validate the pattern before it is anchored below, since anchoring an unbalanced pattern
+		// such as ")(" would make it valid.
+		if err := regex.Validate(regexStr); err != nil {
+			return nil, err
+		}
+		// Envoy's CORS filter tries each origin matcher against the literal "*" before the request
+		// origin, so a regex that fully matches "*" allows all origins.
+		// https://github.com/envoyproxy/envoy/blob/b579d07d3ad7ee11d32b105e91a5a39ad24718d7/source/extensions/filters/http/cors/cors_filter.cc#L208-L215
+		anchored, err := regexp.Compile("^(?:" + regexStr + ")$")
+		if err != nil {
+			return nil, err
+		}
+		if anchored.MatchString("*") {
+			return nil, fmt.Errorf(`origin regular expression %q must not match "*", use allowOrigins with value "*" to allow all origins`, regexStr)
+		}
+		allowOrigins = append(allowOrigins, &ir.StringMatch{SafeRegex: &regexStr})
 	}
 
 	irCORS := &ir.CORS{
@@ -1762,7 +1788,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
-	return irCORS
+	return irCORS, nil
 }
 
 func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
@@ -1932,8 +1958,16 @@ func validateJWTProvider(providers []egv1a1.JWTProvider) error {
 			switch {
 			case len(claimToHeader.Header) == 0:
 				errs = append(errs, fmt.Errorf("header must be set for claimToHeader provider: %s", claimToHeader.Header))
-			case len(claimToHeader.Claim) == 0:
-				errs = append(errs, fmt.Errorf("claim must be set for claimToHeader provider: %s", claimToHeader.Claim))
+			case len(claimToHeader.Claim) == 0 && len(claimToHeader.ClaimPath) == 0:
+				errs = append(errs, fmt.Errorf("either claim or claimPath must be set for claimToHeader header: %s", claimToHeader.Header))
+			case len(claimToHeader.Claim) != 0 && len(claimToHeader.ClaimPath) != 0:
+				errs = append(errs, fmt.Errorf("only one of claim or claimPath may be set for claimToHeader header: %s", claimToHeader.Header))
+			}
+			for _, segment := range claimToHeader.ClaimPath {
+				if len(segment) == 0 {
+					errs = append(errs, fmt.Errorf("claimPath segments must not be empty for claimToHeader header: %s", claimToHeader.Header))
+					break
+				}
 			}
 		}
 	}
@@ -2801,7 +2835,7 @@ func (t *Translator) buildExtAuth(
 		http              = policy.Spec.ExtAuth.HTTP
 		grpc              = policy.Spec.ExtAuth.GRPC
 		backendRefs       []egv1a1.BackendRef
-		backendSettings   *egv1a1.ClusterSettings
+		backendSettings   *egv1a1.BackendSettings
 		protocol          ir.AppProtocol
 		rd                *ir.RouteDestination
 		authority         string
@@ -3040,7 +3074,17 @@ func (t *Translator) buildAuthorization(
 		irAuth        = &ir.Authorization{}
 		// The default action is Deny if not specified
 		defaultAction = egv1a1.AuthorizationActionDeny
+		// The JWT providers this policy resolves a rule's JWT principal against. For a
+		// merging policy this is the merged set, so a rule may reference a provider that
+		// only the parent policy defines.
+		jwtProviders = sets.New[string]()
 	)
+
+	if policy.Spec.JWT != nil {
+		for _, provider := range policy.Spec.JWT.Providers {
+			jwtProviders.Insert(provider.Name)
+		}
+	}
 
 	ownerPolicy := policyOwnerOr(owners.authorizationRules, policy)
 
@@ -3061,6 +3105,13 @@ func (t *Translator) buildAuthorization(
 				}
 
 				irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
+			}
+
+			// The JWT provider name is the key the JWT authn filter writes its payload
+			// under, so a rule naming a provider that is not configured can never match.
+			// Reject it here instead of silently never matching the rule.
+			if rule.Principal.JWT != nil && !jwtProviders.Has(rule.Principal.JWT.Provider) {
+				return nil, fmt.Errorf("unable to translate authorization rule: jwt provider %q is not defined in jwt.providers", rule.Principal.JWT.Provider)
 			}
 
 			irPrincipal.JWT = rule.Principal.JWT

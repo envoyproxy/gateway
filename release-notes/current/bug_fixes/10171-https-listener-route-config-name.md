@@ -1,0 +1,1 @@
+Fixed HTTPS listeners referencing non-existent RouteConfigurations when they share a container port with an HTTP listener that is translated first (for example HTTPS on port 443 and HTTP on port 10443). The HTTPS virtual hosts were added to the HTTP listener's RouteConfiguration, leaving the HTTPS filter chains without routes.

@@ -6,12 +6,14 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/httpstream"
@@ -23,7 +25,16 @@ import (
 )
 
 type PortForwarder interface {
+	// Start waits indefinitely for the port forward to become ready. Prefer
+	// StartWithContext when the caller needs a bound on how long it can block.
 	Start() error
+
+	// StartWithContext is like Start, but returns ctx.Err() once ctx is done instead of
+	// blocking forever. This can't interrupt a Kubernetes upgrade/dial already in flight -
+	// client-go's dialer offers no cancellation hook for it - but it guarantees the caller
+	// isn't blocked past ctx's deadline, and it stops the forwarder before returning so a
+	// dial that does eventually complete doesn't outlive the caller.
+	StartWithContext(ctx context.Context) error
 
 	Stop()
 
@@ -42,7 +53,8 @@ type localForwarder struct {
 	localPort int
 	podPort   int
 
-	stopCh chan struct{}
+	stopCh   chan struct{}
+	stopOnce sync.Once
 }
 
 func NewLocalPortForwarder(client CLIClient, namespacedName types.NamespacedName, localPort, podPort int) (PortForwarder, error) {
@@ -66,6 +78,10 @@ func NewLocalPortForwarder(client CLIClient, namespacedName types.NamespacedName
 }
 
 func (f *localForwarder) Start() error {
+	return f.StartWithContext(context.Background())
+}
+
+func (f *localForwarder) StartWithContext(ctx context.Context) error {
 	errCh := make(chan error, 1)
 	readyCh := make(chan struct{}, 1)
 	go func() {
@@ -96,6 +112,12 @@ func (f *localForwarder) Start() error {
 		return fmt.Errorf("failed to start port forwarder: %w", err)
 	case <-readyCh:
 		return nil
+	case <-ctx.Done():
+		// Give up rather than block the caller past ctx's deadline. Stop the forwarder
+		// so that, if the wedged dial above does eventually return, it tears down
+		// instead of lingering with a bound local port nobody is using anymore.
+		f.Stop()
+		return ctx.Err()
 	}
 }
 
@@ -138,7 +160,12 @@ func (f *localForwarder) buildKubernetesPortForwarder(readyCh chan struct{}) (*p
 }
 
 func (f *localForwarder) Stop() {
-	close(f.stopCh)
+	// Idempotent: StartWithContext may already have stopped the forwarder on a timeout
+	// before the caller gets a chance to call Stop() itself (e.g. via a deferred call
+	// guarded by a successful Start, or an explicit Stop() in an error path).
+	f.stopOnce.Do(func() {
+		close(f.stopCh)
+	})
 }
 
 func (f *localForwarder) WaitForStop() {

@@ -22,6 +22,8 @@
           - safeRegex:
               regex: '*.example.com'
           - exact: foo.bar.com
+          - safeRegex:
+              regex: https://preview-[0-9]+\.example\.com(:8443)?
           exposeHeaders: x-header-3, x-header-4
           forwardNotMatchingPreflights: false
           maxAge: "1000"
