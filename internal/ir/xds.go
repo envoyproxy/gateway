@@ -796,6 +796,13 @@ func (b *BackendWeights) AddWeighted(s *DestinationSetting, weight *uint32) {
 	}
 }
 
+// TCPSettings provides TCP proxy configuration on the listener.
+// +k8s:deepcopy-gen=true
+type TCPSettings struct {
+	// EnableActiveDrain closes client connections when the listener is draining.
+	EnableActiveDrain bool `json:"enableActiveDrain,omitempty" yaml:"enableActiveDrain,omitempty"`
+}
+
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 // +k8s:deepcopy-gen=true
 type HTTP1Settings struct {
@@ -2743,6 +2750,8 @@ type TCPListener struct {
 	Timeout *ClientTimeout `json:"timeout,omitempty" yaml:"clientTimeout,omitempty"`
 	// Connection settings for clients
 	Connection *ClientConnection `json:"connection,omitempty" yaml:"connection,omitempty"`
+	// TCP provides TCP proxy configuration on the listener.
+	TCP *TCPSettings `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 	// Routes associated with TCP traffic to the listener.
 	Routes []*TCPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 }
