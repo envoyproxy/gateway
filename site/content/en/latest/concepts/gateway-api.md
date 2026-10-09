@@ -32,4 +32,5 @@ Envoy Gateway leverages this model by introducing a suite of Gateway API extensi
 ## Related Resources
 - [Getting Started with Envoy Gateway](../tasks/quickstart.md)
 - [Envoy Gateway API Reference](../api/extension_types)
+- [Gateway API Support](gatewayapi-support.md)
 - [Extensibility Tasks](../tasks/extensibility/_index.md)
