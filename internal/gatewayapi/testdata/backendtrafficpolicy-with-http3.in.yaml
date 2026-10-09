@@ -35,7 +35,8 @@ httpRoutes:
               namespace: backends
               port: 8080
   # Backend has no TLS configured, so HTTP/3 is dropped for this route with a
-  # Warning condition on its policy.
+  # Warning condition on its policy. Omitting sectionName must put Warning and
+  # Accepted on the same Gateway ancestor, without a warning-only listener entry.
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
@@ -45,7 +46,6 @@ httpRoutes:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-btls
-          sectionName: http
       rules:
         - matches:
             - path:

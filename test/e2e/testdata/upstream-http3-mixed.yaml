@@ -1,0 +1,86 @@
+# Reuse the Caddy deployment from upstream-http3.yaml, but isolate the mixed-mode
+# route and its Auto backend cache so other routes cannot seed HTTP/3 discovery.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: upstream-http3-mixed
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: upstream-http3-mixed
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: upstream-http3-mixed
+  namespace: gateway-conformance-infra
+spec:
+  mergeBackends: {}
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: h3-mixed-auto
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: h3-backend.gateway-conformance-infra.svc.cluster.local
+        port: 8443
+  tls:
+    insecureSkipVerify: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: upstream-http3-mixed
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: upstream-http3-mixed
+  rules:
+    - backendRefs:
+        # Always must come first to catch discovery stopping at the first mode.
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: h3-backend
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: h3-mixed-auto
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: upstream-http3-mixed
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: upstream-http3-mixed
+  http3:
+    mode: Always
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: h3-mixed-auto
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: h3-mixed-auto
+  http3:
+    mode: Auto

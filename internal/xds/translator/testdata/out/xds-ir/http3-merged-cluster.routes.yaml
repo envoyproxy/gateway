@@ -9,9 +9,15 @@
         path: /merged-h3-route
       name: merged-h3-route
       route:
-        cluster: service/default/h3-backend/8080/http
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
         upgradeConfigs:
         - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: service/default/h3-always/8080/http
+            weight: 1
+          - name: service/default/h3-backend/8080/http
+            weight: 1
       typedPerFilterConfig:
         envoy.filters.http.alternate_protocols_cache:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig

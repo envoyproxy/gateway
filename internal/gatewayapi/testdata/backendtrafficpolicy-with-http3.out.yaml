@@ -80,7 +80,6 @@ backendTrafficPolicies:
         kind: Gateway
         name: gateway-btls
         namespace: envoy-gateway
-        sectionName: http
       conditions:
       - lastTransitionTime: null
         message: 'HTTP/3 is disabled for route(s) httproute/envoy-gateway/httproute-plaintext-backend/rule/0/match/0/*:
@@ -182,7 +181,6 @@ httpRoutes:
     parentRefs:
     - name: gateway-btls
       namespace: envoy-gateway
-      sectionName: http
     rules:
     - backendRefs:
       - name: plaintext-backend
@@ -209,7 +207,6 @@ httpRoutes:
       parentRef:
         name: gateway-btls
         namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-btls:
     proxy:

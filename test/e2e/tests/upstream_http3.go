@@ -35,7 +35,7 @@ func init() {
 var UpstreamHTTP3Test = suite.ConformanceTest{
 	ShortName:   "UpstreamHTTP3",
 	Description: "BackendTrafficPolicy http3 makes Envoy talk HTTP/3 to the backend",
-	Manifests:   []string{"testdata/upstream-http3.yaml"},
+	Manifests:   []string{"testdata/upstream-http3.yaml", "testdata/upstream-http3-mixed.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ctx := context.Background()
 		ns := "gateway-conformance-infra"
@@ -67,8 +67,8 @@ var UpstreamHTTP3Test = suite.ConformanceTest{
 		// The alt-svc header is also returned: the backend sends one that names its own
 		// port, and it must not reach the client. The Gateway listener here is plain HTTP, so
 		// the response must carry no alt-svc at all.
-		getStatus := func(path string) (int, []string, error) {
-			req, err := nethttp.NewRequestWithContext(ctx, nethttp.MethodGet, fmt.Sprintf("http://%s%s", gwAddr, path), nil)
+		getStatus := func(address, path string) (int, []string, error) {
+			req, err := nethttp.NewRequestWithContext(ctx, nethttp.MethodGet, fmt.Sprintf("http://%s%s", address, path), nil)
 			if err != nil {
 				return 0, nil, err
 			}
@@ -86,17 +86,16 @@ var UpstreamHTTP3Test = suite.ConformanceTest{
 		// apart. A 200 on its own would not prove the protocol: a cluster that fell back to
 		// TCP answers just the same. This counter is only incremented by Envoy's HTTP/3
 		// connection pool.
-		testMode := func(t *testing.T, path string, routeNN types.NamespacedName) {
-			clusterName := fmt.Sprintf("httproute/%s/%s/rule/0", ns, routeNN.Name)
+		testMode := func(t *testing.T, address, gatewayName, path, clusterName string) {
 			promQL := fmt.Sprintf(
 				`envoy_cluster_upstream_cx_http3_total{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`,
-				clusterName, gtwName)
+				clusterName, gatewayName)
 
 			sawOK := false
 			err := wait.PollUntilContextTimeout(ctx, time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 				// Auto only switches to QUIC once a response has advertised alt-svc, so keep
 				// sending requests rather than expecting the first one to be HTTP/3.
-				code, altSvc, err := getStatus(path)
+				code, altSvc, err := getStatus(address, path)
 				if err != nil {
 					tlog.Logf(t, "request to %s failed: %v", path, err)
 					return false, nil
@@ -129,13 +128,27 @@ var UpstreamHTTP3Test = suite.ConformanceTest{
 
 		// Always goes straight to QUIC, with no TCP fallback that could mask a failure.
 		t.Run("mode Always uses HTTP/3 upstream", func(t *testing.T) {
-			testMode(t, "/upstream-http3", alwaysRouteNN)
+			testMode(t, gwAddr, gtwName, "/upstream-http3", fmt.Sprintf("httproute/%s/%s/rule/0", ns, alwaysRouteNN.Name))
 		})
 
 		// Auto has to discover HTTP/3 through alt-svc first, which exercises the alternate
 		// protocols cache and the upstream filter that populates it.
 		t.Run("mode Auto upgrades to HTTP/3 after alt-svc", func(t *testing.T) {
-			testMode(t, "/upstream-http3-auto", autoRouteNN)
+			testMode(t, gwAddr, gtwName, "/upstream-http3-auto", fmt.Sprintf("httproute/%s/%s/rule/0", ns, autoRouteNN.Name))
+		})
+
+		t.Run("mixed Always and Auto backends discover HTTP/3", func(t *testing.T) {
+			mixedNN := types.NamespacedName{Name: "upstream-http3-mixed", Namespace: ns}
+			mixedAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
+				suite.ControllerName, kubernetes.NewGatewayRef(mixedNN), mixedNN)
+			mixedAncestor := ancestorRef
+			mixedAncestor.Name = gwapiv1.ObjectName(mixedNN.Name)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, mixedNN, suite.ControllerName, mixedAncestor)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+				types.NamespacedName{Name: "h3-mixed-auto", Namespace: ns}, suite.ControllerName, mixedAncestor)
+			// Count the Auto cluster alone: connections to the Always cluster cannot
+			// demonstrate that this route's alternate protocols cache filter is enabled.
+			testMode(t, mixedAddr, mixedNN.Name, "/", fmt.Sprintf("backend/%s/h3-mixed-auto/0/http", ns))
 		})
 	},
 }

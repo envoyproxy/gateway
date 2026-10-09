@@ -930,13 +930,20 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	}
 
 	if policy.Spec.MergeType == nil {
-		// Apply per parent listener so that each ancestor only reports the HTTP/3
-		// warnings for its own gateway. A build error is policy-level, so it is the same
-		// on every listener and is reported once for all ancestors.
+		// Apply per parent listener, but accumulate warnings on the route's original
+		// parent reference, matching the Accepted condition. A build error is policy-level,
+		// so it is the same on every listener and is reported once for all ancestors.
 		var buildErr error
 		for _, parentRefCtx := range parentRefCtxs {
+			parentNN := types.NamespacedName{
+				Namespace: NamespaceDerefOr(parentRefCtx.Namespace, targetedRoute.GetNamespace()),
+				Name:      string(parentRefCtx.Name),
+			}
+			ancestorRef := getAncestorRefForPolicy(parentNN, parentRefCtx.SectionName)
+			if parentRefCtx.Kind != nil && *parentRefCtx.Kind == resource.KindListenerSet {
+				ancestorRef = getAncestorRefForListenerSetPolicy(parentNN, parentRefCtx.SectionName)
+			}
 			for _, listener := range parentRefCtx.listeners {
-				ancestorRef := routeAncestorRefForListener(listener)
 				warnings, err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener)
 				if err != nil {
 					buildErr = err

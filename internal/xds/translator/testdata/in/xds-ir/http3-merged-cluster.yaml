@@ -1,5 +1,5 @@
 # Merged clusters carry their own http3: the first route has no Traffic.HTTP3 yet reaches an
-# HTTP/3 cluster, so the alternate protocols cache filter must be added and enabled on it.
+# Always and Auto clusters, so discovery must be enabled even though Always comes first.
 # The second route carries a Gateway policy's Traffic.HTTP3 but only reaches a plaintext
 # merged cluster that dropped it, so the route-level field must be ignored there.
 http:
@@ -14,6 +14,8 @@ http:
     routes:
       - destination:
           backendClusterRefs:
+            - name: service/default/h3-always/8080/http
+              weight: 1
             - name: service/default/h3-backend/8080/http
               weight: 1
           name: httproute/default/http3-merged/rule/0
@@ -36,6 +38,30 @@ http:
           http3:
             mode: Auto
 backendClusters:
+  - metadata:
+      kind: Service
+      name: h3-always
+      namespace: default
+      sectionName: "8080"
+    name: service/default/h3-always/8080/http
+    setting:
+      addressType: IP
+      endpoints:
+        - host: 10.244.0.11
+          port: 8080
+      metadata:
+        kind: Service
+        name: h3-always
+        namespace: default
+        sectionName: "8080"
+      name: service/default/h3-always/8080/http
+      protocol: HTTP
+      tls:
+        insecureSkipVerify: true
+        SNI: example.com
+    traffic:
+      http3:
+        mode: Always
   - metadata:
       kind: Service
       name: h3-backend

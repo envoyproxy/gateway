@@ -89,8 +89,23 @@ func upstreamHTTP3Settings(route *ir.HTTPRoute, backendIndex backendClusterIndex
 }
 
 func routeUsesAutoHTTP3(route *ir.HTTPRoute, backendIndex backendClusterIndex) bool {
-	http3 := upstreamHTTP3Settings(route, backendIndex)
-	return http3 != nil && http3.Mode == string(egv1a1.BackendHTTP3ModeAuto)
+	if route == nil || route.Destination == nil {
+		return false
+	}
+	isAuto := func(settings *ir.BackendHTTP3Settings) bool {
+		return settings != nil && settings.Mode == string(egv1a1.BackendHTTP3ModeAuto)
+	}
+	if len(route.Destination.Settings) > 0 && route.Traffic != nil && isAuto(route.Traffic.HTTP3) {
+		return true
+	}
+	// A route can reach clusters with different modes. Enable discovery if any of
+	// them uses Auto, regardless of backend order or the route-scoped cluster's mode.
+	for _, bc := range resolveBackendClusters(route.Destination, backendIndex) {
+		if bc.Traffic != nil && isAuto(bc.Traffic.HTTP3) {
+			return true
+		}
+	}
+	return false
 }
 
 func routeUsesUpstreamHTTP3(route *ir.HTTPRoute, backendIndex backendClusterIndex) bool {
