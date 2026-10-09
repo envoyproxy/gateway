@@ -18,11 +18,10 @@ global:
       # -- Pull secrets for the Envoy Gateway control plane Deployment.
       pullSecrets: []
     ratelimit:
-      # This is the full image name including the hub, repo, and tag.
-      image: "docker.io/envoyproxy/ratelimit:master"
-      # Specify image pull policy if default behavior isn't desired.
-      # Default behavior: latest images will be Always else IfNotPresent.
-      pullPolicy: IfNotPresent
+      # If not specified, the default image built into the envoy-gateway binary is used.
+      image: ""
+      # Specify image pull policy if an image override is configured.
+      pullPolicy: ""
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
     envoyProxy:

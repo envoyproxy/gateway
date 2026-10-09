@@ -31,14 +31,19 @@ const (
 	DefaultShutdownManagerCPUResourceRequests = "10m"
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
-	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
-	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
-	// DefaultRateLimitImage is the default image used by ratelimit.
-	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:master"
 	// HTTPProtocol is the common-used http protocol.
 	HTTPProtocol = "http"
 	// GRPCProtocol is the common-used grpc protocol.
 	GRPCProtocol = "grpc"
+)
+
+var (
+	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
+	// This can be overridden at build time via -ldflags -X for releases.
+	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
+	// DefaultRateLimitImage is the default image used by ratelimit.
+	// This can be overridden at build time via -ldflags -X for releases.
+	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:master"
 )
 
 const (

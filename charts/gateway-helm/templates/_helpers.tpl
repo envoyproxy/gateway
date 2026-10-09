@@ -215,6 +215,8 @@ envoyProxy:
 {{- end }}
 provider:
   type: Kubernetes
+  {{- /* Only inject rateLimitDeployment if the user has explicitly configured a ratelimit image or pull secrets */}}
+  {{- if or .Values.global.images.ratelimit.image .Values.global.images.ratelimit.pullSecrets .Values.global.images.ratelimit.pullPolicy }}
   kubernetes:
     rateLimitDeployment:
       container:
@@ -234,8 +236,12 @@ provider:
                 - name: envoy-ratelimit
                   imagePullPolicy: {{ . }}
       {{- end }}
+    {{- /* Only inject shutdownManager if the user has a custom gateway image or registry */}}
+    {{- if or .Values.global.imageRegistry .Values.global.images.envoyGateway.image .Values.deployment.envoyGateway.image.repository }}
     shutdownManager:
       image: {{ include "eg.image" . }}
+    {{- end }}
+  {{- end }}
 {{- with .Values.config.envoyGateway.extensionApis }}
 extensionApis:
   {{- toYaml . | nindent 2 }}
