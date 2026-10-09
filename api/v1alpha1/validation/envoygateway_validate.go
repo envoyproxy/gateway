@@ -449,6 +449,11 @@ func validateRateLimitClusterHealthCheck(hc *egv1a1.HealthCheck) error {
 		if hc.Active.Type == egv1a1.ActiveHealthCheckerTypeHTTP {
 			return fmt.Errorf("healthCheck.active.type HTTP is not supported for the managed rate limit service, use GRPC or TCP instead")
 		}
+		// For the same reason, the check must stay on the serving (TLS gRPC) port: every other port
+		// the managed service exposes is plaintext, and overriding to the serving port is a no-op.
+		if hc.Active.Overrides != nil {
+			return fmt.Errorf("healthCheck.active.overrides is not supported for the managed rate limit service")
+		}
 		if err := validateOptionalDuration("healthCheck.active.timeout", hc.Active.Timeout); err != nil {
 			return err
 		}

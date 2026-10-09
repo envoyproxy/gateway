@@ -1877,6 +1877,18 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			expectErr: "healthCheck.active.type HTTP is not supported for the managed rate limit service",
 		},
 		{
+			name: "active health check port override is rejected",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Active: &egv1a1.ActiveHealthCheck{
+						Type:      egv1a1.ActiveHealthCheckerTypeGRPC,
+						Overrides: &egv1a1.HealthCheckOverrides{Port: 8080},
+					},
+				},
+			},
+			expectErr: "healthCheck.active.overrides is not supported for the managed rate limit service",
+		},
+		{
 			name: "GRPC active health check is accepted",
 			cs: &egv1a1.ClusterSettings{
 				HealthCheck: &egv1a1.HealthCheck{
