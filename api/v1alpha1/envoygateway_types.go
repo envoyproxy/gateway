@@ -733,6 +733,8 @@ type RateLimit struct {
 	// ClusterSettings holds configuration for managing the connection to the rate limit
 	// service, such as circuit breakers, timeouts, health checks, and load balancing.
 	// ProxyProtocol is not supported, since the managed rate limit service doesn't accept it.
+	// HTTP active health checks are not supported, since the managed rate limit service only
+	// serves its HTTP health endpoint as plaintext; use GRPC or TCP instead.
 	//
 	// +optional
 	ClusterSettings *ClusterSettings `json:"clusterSettings,omitempty"`

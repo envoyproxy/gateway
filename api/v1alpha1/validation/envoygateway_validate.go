@@ -442,6 +442,13 @@ func validateRateLimitClusterHealthCheck(hc *egv1a1.HealthCheck) error {
 	}
 
 	if hc.Active != nil {
+		// The rate limit service cluster always uses an mTLS transport socket, which health checks
+		// inherit, but the managed service only serves its HTTP /healthcheck endpoint as plaintext.
+		// An HTTP active check can therefore never succeed, leaving no healthy endpoints, and the
+		// default fail-open behavior would then silently disable global rate limiting.
+		if hc.Active.Type == egv1a1.ActiveHealthCheckerTypeHTTP {
+			return fmt.Errorf("healthCheck.active.type HTTP is not supported for the managed rate limit service, use GRPC or TCP instead")
+		}
 		if err := validateOptionalDuration("healthCheck.active.timeout", hc.Active.Timeout); err != nil {
 			return err
 		}

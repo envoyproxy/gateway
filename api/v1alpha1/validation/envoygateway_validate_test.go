@@ -1863,6 +1863,30 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			expectErr: "healthCheck.active.timeout: invalid duration",
 		},
 		{
+			name: "HTTP active health check is rejected",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Active: &egv1a1.ActiveHealthCheck{
+						Type: egv1a1.ActiveHealthCheckerTypeHTTP,
+						HTTP: &egv1a1.HTTPActiveHealthChecker{
+							Path: "/healthcheck",
+						},
+					},
+				},
+			},
+			expectErr: "healthCheck.active.type HTTP is not supported for the managed rate limit service",
+		},
+		{
+			name: "GRPC active health check is accepted",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Active: &egv1a1.ActiveHealthCheck{
+						Type: egv1a1.ActiveHealthCheckerTypeGRPC,
+					},
+				},
+			},
+		},
+		{
 			name: "proxy protocol is rejected",
 			cs: &egv1a1.ClusterSettings{
 				ProxyProtocol: &egv1a1.ProxyProtocol{
