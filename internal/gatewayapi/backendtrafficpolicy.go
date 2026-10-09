@@ -238,11 +238,18 @@ func multipleSourceCIDRWarning(policy *egv1a1.BackendTrafficPolicy) string {
 		return ""
 	}
 
+	// Mirror buildRateLimit: the deprecated Type field selects a single branch.
+	useLocal, useGlobal := true, true
+	if t := policy.Spec.RateLimit.Type; t != nil {
+		useLocal = *t == egv1a1.LocalRateLimitType
+		useGlobal = *t == egv1a1.GlobalRateLimitType
+	}
+
 	var rules []egv1a1.RateLimitRule
-	if policy.Spec.RateLimit.Local != nil {
+	if useLocal && policy.Spec.RateLimit.Local != nil {
 		rules = append(rules, policy.Spec.RateLimit.Local.Rules...)
 	}
-	if policy.Spec.RateLimit.Global != nil {
+	if useGlobal && policy.Spec.RateLimit.Global != nil {
 		rules = append(rules, policy.Spec.RateLimit.Global.Rules...)
 	}
 
