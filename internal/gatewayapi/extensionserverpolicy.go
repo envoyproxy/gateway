@@ -356,24 +356,10 @@ func (t *Translator) processExtensionServerPolicyForGateway(
 		return
 	}
 
-	// When mergeGateways is enabled, every Gateway under the GatewayClass shares a single xDS IR
-	// entry keyed by GatewayClass name, and gwIR.ExtensionServerPolicies is forwarded once to the
-	// PostTranslation hook for that whole shared tree. A Gateway-targeted policy therefore can't be
-	// isolated to its Gateway - the policy must target the GatewayClass instead.
-	if t.MergeGateways {
-		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
-		gatewayNN := utils.NamespacedName(gateway)
-		ancestorRef := getAncestorRefForPolicy(gatewayNN, currTarget.SectionName)
-		resolveErr := &status.PolicyResolveError{
-			Reason:  gwapiv1.PolicyReasonInvalid,
-			Message: "ExtensionServerPolicy cannot target a Gateway when mergeGateways is enabled for its GatewayClass; target the GatewayClass instead",
-		}
-		status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
-		policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
-		return
-	}
-
 	// Append policy extension server policy list for related gateway.
+	// When mergeGateways is enabled, every Gateway under the GatewayClass shares a single xDS IR
+	// entry keyed by GatewayClass name, so this list is forwarded once to the PostTranslation hook
+	// for that whole shared tree. Listener ExtensionRefs below are still scoped to this Gateway.
 	gatewayKey := t.getIRKey(gateway.Gateway)
 	gwIR := xdsIR[gatewayKey]
 	gwIR.ExtensionServerPolicies = t.appendUnstructuredRefIfAbsent(gwIR, gateway, gwIR.ExtensionServerPolicies, policy)
@@ -464,10 +450,10 @@ func (t *Translator) translateExtServerPolicyForGateway(
 	irKey := t.getIRKey(gateway.Gateway)
 	gwIR := xdsIR[irKey]
 
-	// Gateway-kind targeting is only reached when mergeGateways is disabled (see the caller), so
-	// gwIR already belongs solely to this Gateway. A whole-Gateway target covers every listener,
-	// including those contributed by ListenerSets, while a sectionName only matches the Gateway's
-	// own listeners, consistent with the other Gateway-scoped policy types.
+	// Resolve the targeted listeners through the Gateway rather than scanning gwIR by name, so that
+	// with mergeGateways only this Gateway's listeners in the shared IR are matched. A whole-Gateway
+	// target covers every listener, including those contributed by ListenerSets, while a sectionName
+	// only matches the Gateway's own listeners, consistent with the other Gateway-scoped policy types.
 	listenerNames := sets.New[string]()
 	for _, listener := range gatewayPolicyTargetListeners(gateway, target) {
 		listenerNames.Insert(irListenerName(listener))
