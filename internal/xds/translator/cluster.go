@@ -322,9 +322,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// The gatewayapi translator clears HTTP3 on incompatible routes and reports why through
 	// the policy status; the same predicate here keeps a bad IR from producing a config
-	// Envoy would reject. All-TLS settings also guarantee a transport socket for QUIC to wrap.
-	requiresHTTP3 := args.http3Settings != nil &&
-		len(ir.HTTP3Incompatibilities(args.settings, args.useClientProtocol, proxyProtocolEnabled)) == 0
+	// Envoy would reject.
+	requiresHTTP3 := args.http3Settings != nil && ir.CanUseHTTP3(args.settings, args.useClientProtocol, proxyProtocolEnabled)
 
 	if proxyProtocolEnabled {
 		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket, requiresAutoHTTPConfig)
@@ -368,8 +367,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	}
 
-	// TransportSocket is required for auto HTTP config
-	if requiresAutoHTTPConfig && cluster.TransportSocket == nil && !proxyProtocolEnabled {
+	// TransportSocket is required for auto HTTP config. HTTP/3 needs one to wrap in QUIC
+	// below, and an unresolvable backendRef in the settings disables auto HTTP config.
+	if (requiresAutoHTTPConfig || requiresHTTP3) && cluster.TransportSocket == nil && !proxyProtocolEnabled {
 		// we need a dummy transport socket to pass the validation
 		cluster.TransportSocket = dummyTransportSocket
 	}
@@ -1371,12 +1371,11 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 	return filters, secrets, nil
 }
 
-// alternateProtocolsCacheName names the alt-svc cache after the destination's backends rather
-// than after the cluster. Envoy Gateway builds one cluster per route rule, so a backend fronted
-// by many routes would otherwise get one cache per route, per worker thread, each having to
-// relearn the same alt-svc advertisement before it could use HTTP/3. Naming by backend lets those
-// clusters share what they learn, while keeping unrelated backends — notably dynamic resolver
-// clusters, which see one origin per Host header — from evicting each other's entries.
+// alternateProtocolsCacheName names the alt-svc cache after the cluster's set of backends, so
+// route rules with the same backends share one cache instead of each relearning the same
+// alt-svc advertisement. Rules with different backend sets get separate caches, which also
+// keeps dynamic resolver backends, with one origin per Host header, from evicting entries of
+// clusters that do not reach them. Entries are keyed by origin, so sharing is always safe.
 func alternateProtocolsCacheName(args *xdsClusterArgs) string {
 	backends := make([]string, 0, len(args.settings))
 	for _, ds := range args.settings {

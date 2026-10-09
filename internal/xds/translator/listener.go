@@ -353,7 +353,6 @@ func (t *Translator) addHCMToXDSListener(
 	accesslog *ir.AccessLog,
 	tracing *ir.Tracing,
 	http3Listener bool,
-	http3Enabled bool,
 	connection *ir.ClientConnection,
 ) error {
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
@@ -483,7 +482,7 @@ func (t *Translator) addHCMToXDSListener(
 	}
 	// Add HTTP filters to the HCM, the filters have already been sorted in the
 	// correct order in the patchHCMWithFilters function.
-	if err := t.patchHCMWithFilters(mgr, irListener, accesslog, http3Enabled); err != nil {
+	if err := t.patchHCMWithFilters(mgr, irListener, accesslog); err != nil {
 		return err
 	}
 

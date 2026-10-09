@@ -2337,3 +2337,30 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTP3Incompatibilities(t *testing.T) {
+	tlsSetting := &DestinationSetting{Protocol: HTTP, TLS: &TLSUpstreamConfig{}}
+	plainSetting := &DestinationSetting{Protocol: HTTP}
+	invalidSetting := &DestinationSetting{Protocol: HTTP, Invalid: true}
+
+	tests := []struct {
+		name        string
+		settings    []*DestinationSetting
+		wantReasons int
+		wantCanUse  bool
+	}{
+		{name: "tls", settings: []*DestinationSetting{tlsSetting}, wantCanUse: true},
+		{name: "plaintext", settings: []*DestinationSetting{tlsSetting, plainSetting}, wantReasons: 1},
+		// An unresolvable backendRef never dials, so it has no say.
+		{name: "tls and invalid", settings: []*DestinationSetting{tlsSetting, invalidSetting}, wantCanUse: true},
+		// Nothing to report, but nothing to wrap in QUIC either.
+		{name: "all invalid", settings: []*DestinationSetting{invalidSetting}},
+		{name: "none", settings: nil},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Len(t, HTTP3Incompatibilities(tc.settings, false, false), tc.wantReasons)
+			require.Equal(t, tc.wantCanUse, CanUseHTTP3(tc.settings, false, false))
+		})
+	}
+}

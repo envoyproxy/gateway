@@ -2289,8 +2289,13 @@ func AllSettingsHaveTLS(settings []*DestinationSetting) bool {
 // transport socket, so it is incompatible with plaintext or TCP backends and with
 // settings that assume a TCP stream. The gatewayapi translator reports these through
 // the policy status and the xds translator uses the same answer to decide whether a
-// cluster gets QUIC, so the two cannot drift.
+// cluster gets QUIC, so the two cannot drift. Unresolvable backendRefs never dial, so
+// they are skipped rather than reported as lacking TLS.
 func HTTP3Incompatibilities(settings []*DestinationSetting, useClientProtocol, proxyProtocol bool) []string {
+	settings = dialableSettings(settings)
+	if len(settings) == 0 {
+		return nil
+	}
 	var reasons []string
 	if !AllSettingsHaveTLS(settings) {
 		reasons = append(reasons, "HTTP/3 requires TLS to the backend, "+
@@ -2321,6 +2326,24 @@ func HTTP3Incompatibilities(settings []*DestinationSetting, useClientProtocol, p
 		reasons = append(reasons, "TCP backends cannot be used together with http3")
 	}
 	return reasons
+}
+
+// CanUseHTTP3 reports whether a cluster for the given backends can be given QUIC: at least
+// one backend is resolvable and none of them is incompatible with HTTP/3.
+func CanUseHTTP3(settings []*DestinationSetting, useClientProtocol, proxyProtocol bool) bool {
+	return len(dialableSettings(settings)) > 0 &&
+		len(HTTP3Incompatibilities(settings, useClientProtocol, proxyProtocol)) == 0
+}
+
+// dialableSettings drops the settings of unresolvable backendRefs, which never dial.
+func dialableSettings(settings []*DestinationSetting) []*DestinationSetting {
+	out := make([]*DestinationSetting, 0, len(settings))
+	for _, s := range settings {
+		if s != nil && !s.Invalid {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {

@@ -61,20 +61,44 @@ func (*headerMutation) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListene
 	return nil
 }
 
-// patchHCMWithUpstreamHTTP3AltSvc strips the backend's alt-svc header on listeners that
-// proxy with upstream HTTP/3, so that clients are not told to probe the gateway host on
-// the backend's port. The strip has to run after the alternate protocols cache filter
-// has recorded the header, and route-level header removal runs before it in the router,
-// so the header mutation filter is the only place this can be done. That filter also runs
-// after the router has added the gateway's own alt-svc, so it is re-appended here.
-//
-// TODO: replace with the filter's own strip option once Envoy supports it, see
-// https://github.com/envoyproxy/envoy/issues/48169.
-func patchHCMWithUpstreamHTTP3AltSvc(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener, http3Enabled bool, backendIndex backendClusterIndex) error {
-	if !listenerHasUpstreamHTTP3(irListener, backendIndex) {
+// upstreamHTTP3AltSvcFilterName names a header mutation filter instance of its own, so it never
+// collides with the one carrying ClientTrafficPolicy response header mutations.
+var upstreamHTTP3AltSvcFilterName = perRouteFilterName(egv1a1.EnvoyFilterHeaderMutation, "upstream_http3")
+
+// patchHCMWithUpstreamHTTP3AltSvc adds a disabled header mutation filter to a listener with a
+// route proxying over upstream HTTP/3; patchRouteWithUpstreamHTTP3AltSvc enables it per route.
+func (t *Translator) patchHCMWithUpstreamHTTP3AltSvc(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+	if mgr == nil {
+		return errors.New("hcm is nil")
+	}
+	if irListener == nil {
+		return errors.New("ir listener is nil")
+	}
+	if hcmContainsFilter(mgr, upstreamHTTP3AltSvcFilterName) || !listenerHasUpstreamHTTP3(irListener, t.backendIndex) {
 		return nil
 	}
 
+	mutationAny, err := proto.ToAnyWithValidation(&mutationv3.HeaderMutation{})
+	if err != nil {
+		return err
+	}
+	mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
+		Name:       upstreamHTTP3AltSvcFilterName,
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mutationAny},
+		Disabled:   true,
+	})
+	return nil
+}
+
+// patchRouteWithUpstreamHTTP3AltSvc strips the backend's alt-svc on a route proxying over
+// upstream HTTP/3, so clients are not told to probe the gateway host on the backend's port.
+// Route-level header removal runs in the router, before the alternate protocols cache filter
+// has recorded the header, so the strip has to live here. This filter also runs after the
+// router has added the gateway's own alt-svc, so that one is re-appended.
+//
+// TODO: replace with the filter's own strip option once Envoy supports it, see
+// https://github.com/envoyproxy/envoy/issues/48169.
+func patchRouteWithUpstreamHTTP3AltSvc(route *routev3.Route, irListener *ir.HTTPListener, http3Enabled bool) error {
 	mutations := []*mutation_rulesv3.HeaderMutation{{
 		Action: &mutation_rulesv3.HeaderMutation_Remove{Remove: altSvcHeader},
 	}}
@@ -91,37 +115,9 @@ func patchHCMWithUpstreamHTTP3AltSvc(mgr *hcmv3.HttpConnectionManager, irListene
 			},
 		})
 	}
-
-	filterName := egv1a1.EnvoyFilterHeaderMutation.String()
-	mutationProto := &mutationv3.HeaderMutation{}
-	var existing *hcmv3.HttpFilter
-	for _, f := range mgr.HttpFilters {
-		if f.Name == filterName {
-			existing = f
-			if err := f.GetTypedConfig().UnmarshalTo(mutationProto); err != nil {
-				return err
-			}
-			break
-		}
-	}
-	if mutationProto.Mutations == nil {
-		mutationProto.Mutations = &mutationv3.Mutations{}
-	}
-	mutationProto.Mutations.ResponseMutations = append(mutationProto.Mutations.ResponseMutations, mutations...)
-
-	mutationAny, err := proto.ToAnyWithValidation(mutationProto)
-	if err != nil {
-		return err
-	}
-	if existing != nil {
-		existing.ConfigType = &hcmv3.HttpFilter_TypedConfig{TypedConfig: mutationAny}
-		return nil
-	}
-	mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
-		Name:       filterName,
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mutationAny},
+	return enableFilterOnRoute(route, upstreamHTTP3AltSvcFilterName, &mutationv3.HeaderMutationPerRoute{
+		Mutations: &mutationv3.Mutations{ResponseMutations: mutations},
 	})
-	return nil
 }
 
 func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, error) {

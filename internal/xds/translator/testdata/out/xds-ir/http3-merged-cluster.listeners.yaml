@@ -14,12 +14,10 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.header_mutation
+        - disabled: true
+          name: envoy.filters.http.header_mutation/upstream_http3
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation
-            mutations:
-              responseMutations:
-              - remove: alt-svc
         - disabled: true
           name: envoy.filters.http.alternate_protocols_cache
           typedConfig:

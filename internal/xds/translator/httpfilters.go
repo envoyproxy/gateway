@@ -286,7 +286,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 // manager.
 // Important: don't forget to set the order for newly added filters in the
 // newOrderedHTTPFilter method.
-func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener, accesslog *ir.AccessLog, http3Enabled bool) error {
+func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
 	// The order of filter patching is not relevant here.
 	// All the filters will be sorted in correct order after the patching is done.
 	//
@@ -298,12 +298,11 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 		}
 	}
 
-	// Handled outside the filter loop because they need the backend cluster index, and the
-	// listener-wide HTTP/3 flag derived from every listener sharing this address and port.
+	// Handled outside the filter loop because they need the backend cluster index.
 	if err := t.patchHCMWithAlternateProtocolsCache(mgr, irListener); err != nil {
 		return err
 	}
-	if err := patchHCMWithUpstreamHTTP3AltSvc(mgr, irListener, http3Enabled, t.backendIndex); err != nil {
+	if err := t.patchHCMWithUpstreamHTTP3AltSvc(mgr, irListener); err != nil {
 		return err
 	}
 

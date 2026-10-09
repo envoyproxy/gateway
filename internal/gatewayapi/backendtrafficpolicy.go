@@ -859,8 +859,14 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// scope whose policy it can override.
 	parentRefs := GetManagedParentReferences(targetedRoute)
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
-	// parentRefCtxs holds parent gateway/listener contexts for using in policy merge logic.
-	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
+	// routeParents pairs each accepted parent's context with the ancestor its status is
+	// reported on, so the merge logic and the per-parent warnings use the same ancestor
+	// the Accepted condition does.
+	type routeParent struct {
+		ctx      *RouteParentContext
+		ancestor *gwapiv1.ParentReference
+	}
+	routeParents := make([]routeParent, 0, len(parentRefs))
 	routeNN := utils.NamespacedName(targetedRoute)
 	routeAsChildScope := routeScope(routeNN, string(targetedRoute.GetRouteType()))
 	for _, p := range parentRefs {
@@ -883,7 +889,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			ancestorRef := getAncestorRefForPolicy(parentNN, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
-				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+				routeParents = append(routeParents, routeParent{ctx: parentRefCtx, ancestor: &ancestorRef})
 			}
 		} else if *p.Kind == resource.KindListenerSet {
 			// The Route attaches through a ListenerSet. Resolve the ListenerSet
@@ -913,7 +919,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			ancestorRef := getAncestorRefForListenerSetPolicy(parentNN, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
-				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
+				routeParents = append(routeParents, routeParent{ctx: parentRefCtx, ancestor: &ancestorRef})
 			}
 		}
 	}
@@ -930,25 +936,14 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	}
 
 	if policy.Spec.MergeType == nil {
-		// Apply per parent listener, but accumulate warnings on the route's original
-		// parent reference, matching the Accepted condition. A build error is policy-level,
-		// so it is the same on every listener and is reported once for all ancestors.
-		var buildErr error
-		for _, parentRefCtx := range parentRefCtxs {
-			parentNN := types.NamespacedName{
-				Namespace: NamespaceDerefOr(parentRefCtx.Namespace, targetedRoute.GetNamespace()),
-				Name:      string(parentRefCtx.Name),
-			}
-			ancestorRef := getAncestorRefForPolicy(parentNN, parentRefCtx.SectionName)
-			if parentRefCtx.Kind != nil && *parentRefCtx.Kind == resource.KindListenerSet {
-				ancestorRef = getAncestorRefForListenerSetPolicy(parentNN, parentRefCtx.SectionName)
-			}
-			for _, listener := range parentRefCtx.listeners {
-				warnings, err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener)
-				if err != nil {
-					buildErr = err
-				}
-				status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+		// The features depend only on the policy, so build them once and apply them per
+		// parent listener, accumulating warnings on the route's original parent reference,
+		// matching the Accepted condition. A build error is reported once for all ancestors.
+		tf, buildErr := t.buildTrafficFeatures(policy, nil)
+		for _, parent := range routeParents {
+			for _, listener := range parent.ctx.listeners {
+				warnings := t.applyTrafficFeaturesForRouteListener(tf, buildErr, policy, targetedRoute, currTarget, xdsIR, listener)
+				status.SetWarningForPolicyAncestor(&policy.Status, parent.ancestor, t.GatewayControllerName,
 					status.PolicyReasonUnsupportedHTTP3Backend, warnings.message(), policy.Generation)
 			}
 		}
@@ -967,8 +962,16 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		// policy, then the ListenerSet policy, then the parent Gateway policy;
 		// they intentionally skip Gateway listener policies because those are
 		// sibling scopes.
-		for _, parentRefCtx := range parentRefCtxs {
-			for _, listener := range parentRefCtx.listeners {
+		//
+		// Without a parent policy the route falls back to its own features, which depend
+		// only on the policy and so are built at most once across listeners.
+		var (
+			ownTF       *ir.TrafficFeatures
+			ownBuildErr error
+			ownBuilt    bool
+		)
+		for _, parent := range routeParents {
+			for _, listener := range parent.ctx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 				var (
 					ancestorRef  gwapiv1.ParentReference
@@ -1006,14 +1009,18 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 				if parentPolicy == nil {
 					// not found, fall back to the current policy
-					warnings, err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener)
-					if err != nil {
+					if !ownBuilt {
+						ownTF, ownBuildErr = t.buildTrafficFeatures(policy, nil)
+						ownBuilt = true
+					}
+					warnings := t.applyTrafficFeaturesForRouteListener(ownTF, ownBuildErr, policy, targetedRoute, currTarget, xdsIR, listener)
+					if ownBuildErr != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
 							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
 							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
+							status.Error2ConditionMsg(ownBuildErr),
 							policy.Generation,
 						)
 					}
@@ -1502,35 +1509,25 @@ func routeAncestorRefForListener(listener *ListenerContext) gwapiv1.ParentRefere
 	return getAncestorRefForPolicy(utils.NamespacedName(listener.gateway.Gateway), &listener.Name)
 }
 
-func (t *Translator) translateBackendTrafficPolicyForRoute(
+// applyTrafficFeaturesForRouteListener applies prebuilt traffic features to the route's IR
+// routes on one listener and returns the HTTP/3 warnings raised there.
+func (t *Translator) applyTrafficFeaturesForRouteListener(
+	tf *ir.TrafficFeatures, buildErr error,
 	policy *egv1a1.BackendTrafficPolicy,
 	route RouteContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
-	policyTargetListener *ListenerContext,
-) (http3Warnings, error) {
-	tf, buildErr := t.buildTrafficFeatures(policy, nil)
+	listener *ListenerContext,
+) http3Warnings {
+	warnings := http3Warnings{}
 	if tf == nil {
 		// should not happen
-		return nil, nil
+		return warnings
 	}
-
-	var targetListenerName string
-	if policyTargetListener != nil {
-		targetListenerName = irListenerName(policyTargetListener)
+	if x, ok := xdsIR[t.getIRKey(listener.gateway.Gateway)]; ok {
+		t.applyTrafficFeatureToRoute(route, tf, buildErr, policy, target, x, irListenerName(listener), warnings)
 	}
-
-	warnings := http3Warnings{}
-	for key, x := range xdsIR {
-		// if policyTargetListener is not nil, only apply within its parent Gateway
-		if policyTargetListener != nil && key != t.getIRKey(policyTargetListener.gateway.Gateway) {
-			// Skip if not the gateway wanted
-			continue
-		}
-		t.applyTrafficFeatureToRoute(route, tf, buildErr, policy, target, x, targetListenerName, warnings)
-	}
-
-	return warnings, buildErr
+	return warnings
 }
 
 func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
@@ -2137,22 +2134,12 @@ func (w http3Warnings) message() string {
 // validateBackendHTTP3 reports why HTTP/3 cannot be used to reach the backends in the route's
 // own, route-scoped cluster. Backends behind BackendClusterRefs are not the route's to judge:
 // their merged cluster is shared with other routes and is validated and reported on its own
-// in applyGatewayPolicyToMergedCluster. Unresolvable backendRefs never dial, so they are
-// skipped rather than reported as lacking TLS.
+// in applyGatewayPolicyToMergedCluster.
 func validateBackendHTTP3(r *ir.HTTPRoute) []string {
 	if r.Traffic == nil || r.Traffic.HTTP3 == nil || r.Destination == nil {
 		return nil
 	}
-	settings := make([]*ir.DestinationSetting, 0, len(r.Destination.Settings))
-	for _, s := range r.Destination.Settings {
-		if s != nil && !s.Invalid {
-			settings = append(settings, s)
-		}
-	}
-	if len(settings) == 0 {
-		return nil
-	}
-	return ir.HTTP3Incompatibilities(settings, ptr.Deref(r.UseClientProtocol, false), r.Traffic.ProxyProtocol != nil)
+	return ir.HTTP3Incompatibilities(r.Destination.Settings, ptr.Deref(r.UseClientProtocol, false), r.Traffic.ProxyProtocol != nil)
 }
 
 // applyGatewayPolicyToMergedCluster stores on bc the subset of a whole-Gateway

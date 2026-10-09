@@ -22,6 +22,11 @@
         envoy.filters.http.alternate_protocols_cache:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+        envoy.filters.http.header_mutation/upstream_http3:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
+          mutations:
+            responseMutations:
+            - remove: alt-svc
     - match:
         path: /merged-plain-route
       name: merged-plain-route

@@ -16,6 +16,11 @@
         envoy.filters.http.alternate_protocols_cache:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+        envoy.filters.http.header_mutation/upstream_http3:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
+          mutations:
+            responseMutations:
+            - remove: alt-svc
     - match:
         path: /auto-route-2
       name: auto-route-2
@@ -27,6 +32,11 @@
         envoy.filters.http.alternate_protocols_cache:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+        envoy.filters.http.header_mutation/upstream_http3:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
+          mutations:
+            responseMutations:
+            - remove: alt-svc
     - match:
         path: /always-route
       name: always-route
@@ -34,6 +44,12 @@
         cluster: httproute/default/http3-always/rule/0
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.header_mutation/upstream_http3:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
+          mutations:
+            responseMutations:
+            - remove: alt-svc
     - match:
         path: /no-tls-route
       name: no-tls-route
@@ -45,6 +61,11 @@
         envoy.filters.http.alternate_protocols_cache:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+        envoy.filters.http.header_mutation/upstream_http3:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
+          mutations:
+            responseMutations:
+            - remove: alt-svc
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-http3/https
   virtualHosts:
@@ -63,9 +84,23 @@
         envoy.filters.http.alternate_protocols_cache:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+        envoy.filters.http.header_mutation/upstream_http3:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
+          mutations:
+            responseMutations:
+            - remove: alt-svc
+            - append:
+                header:
+                  key: alt-svc
+                  value: h3=":8443"; ma=86400
     - match:
         path: /https-plain-route
       name: https-plain-route
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":8443"; ma=86400
       route:
         cluster: httproute/default/https-plain/rule/0
         upgradeConfigs:
