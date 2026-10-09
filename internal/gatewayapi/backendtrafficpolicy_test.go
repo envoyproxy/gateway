@@ -3120,7 +3120,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			}
 			t.Run(string(protocol)+"/"+name, func(t *testing.T) {
 				bc := mergedClusterForProtocol(protocol)
-				applyGatewayPolicyToMergedCluster(bc, structWithFieldSet[ir.TrafficFeatures](name), nil)
+				applyGatewayPolicyToMergedCluster(bc, structWithFieldSet[ir.ClusterTrafficFeatures](name), nil)
 				require.NotNil(t, bc.Traffic)
 				kept := !reflect.ValueOf(bc.Traffic).Elem().FieldByName(name).IsNil()
 				require.Equal(t, want, kept,
@@ -3157,7 +3157,7 @@ func TestApplyGatewayPolicyToMergedClusterUseClientProtocol(t *testing.T) {
 			// Pre-set it, so a protocol that must not carry it is seen to clear it rather than
 			// merely leave it alone.
 			bc.UseClientProtocol = new(true)
-			applyGatewayPolicyToMergedCluster(bc, &ir.TrafficFeatures{}, new(true))
+			applyGatewayPolicyToMergedCluster(bc, &ir.ClusterTrafficFeatures{}, new(true))
 			require.Equal(t, test.want, bc.UseClientProtocol)
 		})
 	}
@@ -3186,19 +3186,19 @@ func TestIsBackendTargetKind(t *testing.T) {
 // TestApplyGatewayPolicyToMergedClusterDropsRouteScopedTimeout checks that the route-scoped timeout
 // members, which are never read from a cluster, stay off a merged cluster whatever its protocol.
 func TestApplyGatewayPolicyToMergedClusterDropsRouteScopedTimeout(t *testing.T) {
-	tf := &ir.TrafficFeatures{ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+	cf := &ir.ClusterTrafficFeatures{
 		Timeout: &ir.Timeout{HTTP: &ir.HTTPTimeout{
 			ClusterHTTPTimeout: ir.ClusterHTTPTimeout{
 				ConnectionIdleTimeout: new(metav1.Duration{Duration: 16 * time.Second}),
 			},
 			RequestTimeout: new(metav1.Duration{Duration: 18 * time.Second}),
 		}},
-	}}
+	}
 
 	for _, protocol := range []ir.AppProtocol{ir.TCP, ir.HTTP} {
 		t.Run(string(protocol), func(t *testing.T) {
 			bc := mergedClusterForProtocol(protocol)
-			applyGatewayPolicyToMergedCluster(bc, tf, nil)
+			applyGatewayPolicyToMergedCluster(bc, cf, nil)
 			require.NotNil(t, bc.Traffic.Timeout.HTTP)
 			require.Equal(t, 16*time.Second, bc.Traffic.Timeout.HTTP.ConnectionIdleTimeout.Duration)
 			require.Nil(t, bc.Traffic.Timeout.HTTP.RequestTimeout)
@@ -3322,15 +3322,16 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
 	singleSetting := []*ir.DestinationSetting{{Metadata: matchMD}}
 
-	requireEmpty := func(t *testing.T, policy *egv1a1.BackendTrafficPolicy) {
+	requireEmpty := func(t *testing.T, policy *egv1a1.BackendTrafficPolicy, _ *ir.Xds) {
 		require.Empty(t, policy.Status.Ancestors)
 	}
 
 	tests := []struct {
-		name   string
-		x      *ir.Xds // nil means the gateway has no xdsIR entry at all
-		policy *egv1a1.BackendTrafficPolicy
-		check  func(t *testing.T, policy *egv1a1.BackendTrafficPolicy)
+		name             string
+		x                *ir.Xds // nil means the gateway has no xdsIR entry at all
+		policy           *egv1a1.BackendTrafficPolicy
+		gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy // nil means none
+		check            func(t *testing.T, policy *egv1a1.BackendTrafficPolicy, x *ir.Xds)
 	}{
 		{
 			name:   "gateway with no xdsIR entry is skipped",
@@ -3380,7 +3381,7 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 					},
 				},
 			},
-			check: func(t *testing.T, policy *egv1a1.BackendTrafficPolicy) {
+			check: func(t *testing.T, policy *egv1a1.BackendTrafficPolicy, _ *ir.Xds) {
 				require.Len(t, policy.Status.Ancestors, 1)
 				var sawWarning bool
 				for _, cond := range policy.Status.Ancestors[0].Conditions {
@@ -3389,6 +3390,27 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 					}
 				}
 				require.True(t, sawWarning, "expected a DeprecatedField warning for using the deprecated singular targetRef")
+			},
+		},
+		{
+			// gwPolicy's RateLimit is route-scoped and broken; this policy's own CircuitBreaker is
+			// cluster-scoped and valid, so it must still apply despite the merge's combined error.
+			name:   "gwPolicy's broken RateLimit doesn't block this policy's cluster-scoped CircuitBreaker",
+			x:      &ir.Xds{BackendClusters: []*ir.BackendCluster{mergedClusterForProtocol(ir.HTTP)}},
+			policy: newBackendTargetPolicy(),
+			gatewayPolicyMap: map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}}: {
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-btp"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						RateLimit: &egv1a1.RateLimitSpec{Type: new(egv1a1.LocalRateLimitType)},
+					},
+				},
+			},
+			check: func(t *testing.T, _ *egv1a1.BackendTrafficPolicy, x *ir.Xds) {
+				bc := x.BackendClusters[0]
+				require.NotNil(t, bc.Traffic)
+				require.NotNil(t, bc.Traffic.CircuitBreaker)
+				require.Equal(t, uint32(100), *bc.Traffic.CircuitBreaker.MaxConnections)
 			},
 		},
 	}
@@ -3400,14 +3422,25 @@ func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
 			xdsIR := gwapiresource.XdsIRMap{}
 			if tc.x != nil {
 				xdsIR[tr.getIRKey(gw.Gateway)] = tc.x
+				matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+				for _, bc := range tc.x.BackendClusters {
+					if bc.Metadata == nil {
+						bc.Metadata = matchMD
+					}
+				}
+			}
+
+			gatewayPolicyMap := tc.gatewayPolicyMap
+			if gatewayPolicyMap == nil {
+				gatewayPolicyMap = map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy{}
 			}
 
 			require.NotPanics(t, func() {
 				tr.processBackendTrafficPolicyForBackend(xdsIR, []*GatewayContext{gw},
-					map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy{}, tc.policy, target,
+					gatewayPolicyMap, tc.policy, target,
 					map[backendPolicyKey]*egv1a1.BackendTrafficPolicy{})
 			})
-			tc.check(t, tc.policy)
+			tc.check(t, tc.policy, tc.x)
 		})
 	}
 }
@@ -3473,6 +3506,33 @@ func TestProcessBackendTrafficPolicyForBackendUseClientProtocol(t *testing.T) {
 			require.Equal(t, test.want, bc.UseClientProtocol)
 		})
 	}
+}
+
+// TestTranslateBackendTrafficPolicyForListenersClusterErrorIsolation is the whole-Gateway counterpart to TestProcessBackendTrafficPolicyForBackendEdgeCases' RateLimit case.
+func TestTranslateBackendTrafficPolicyForListenersClusterErrorIsolation(t *testing.T) {
+	policy := &egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-btp"},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			RateLimit: &egv1a1.RateLimitSpec{Type: new(egv1a1.LocalRateLimitType)},
+			ClusterSettings: egv1a1.ClusterSettings{
+				CircuitBreaker: &egv1a1.CircuitBreaker{MaxConnections: new(int64(100))},
+			},
+		},
+	}
+
+	bc := mergedClusterForProtocol(ir.HTTP)
+
+	tr := &Translator{GatewayControllerName: "test-controller"}
+	gw := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-1"}}}
+	xdsIR := gwapiresource.XdsIRMap{}
+	xdsIR[tr.getIRKey(gw.Gateway)] = &ir.Xds{BackendClusters: []*ir.BackendCluster{bc}}
+
+	errs := tr.translateBackendTrafficPolicyForListeners(policy, gw, nil, true, xdsIR)
+
+	require.Error(t, errs, "the broken RateLimit must still surface as a translation error")
+	require.NotNil(t, bc.Traffic)
+	require.NotNil(t, bc.Traffic.CircuitBreaker)
+	require.Equal(t, uint32(100), *bc.Traffic.CircuitBreaker.MaxConnections)
 }
 
 func TestPolicyHasBackendTargetSelectors(t *testing.T) {
