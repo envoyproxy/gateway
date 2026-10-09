@@ -525,7 +525,8 @@ func (t *Translator) processExtensionServerPolicyForGatewayClass(
 	// is translated independently and each Translator only knows about its own GatewayClassName -
 	// otherwise a Translator for an unrelated, non-merged GatewayClass would incorrectly stamp an
 	// Invalid status onto a policy that actually targets a different, merged GatewayClass.
-	if currTarget.Name != t.GatewayClassName {
+	// A GatewayClass ref from any other API group names a different resource, so ignore it.
+	if currTarget.Group != gwapiv1.GroupName || currTarget.Name != t.GatewayClassName {
 		return
 	}
 
@@ -542,22 +543,23 @@ func (t *Translator) processExtensionServerPolicyForGatewayClass(
 		return
 	}
 
+	// The class has no merged xDS IR entry when it currently has no Gateways; that is reported
+	// below as a target with no listeners rather than leaving the policy without a status.
+	found := false
 	gwXdsIR, ok := xdsIR[string(t.GatewayClassName)]
-	if !ok {
-		return
-	}
-
-	// Resolve the targeted listeners through each merged Gateway, as a Gateway-kind target does, so
-	// a sectionName only matches the Gateways' own listeners and never same-named listeners that a
-	// ListenerSet contributes.
-	listenerNames := sets.New[string]()
-	for _, gateway := range gatewayMap {
-		for _, listener := range gatewayPolicyTargetListeners(gateway.GatewayContext, currTarget) {
-			listenerNames.Insert(irListenerName(listener))
+	if ok {
+		// Resolve the targeted listeners through each merged Gateway, as a Gateway-kind target does, so
+		// a sectionName only matches the Gateways' own listeners and never same-named listeners that a
+		// ListenerSet contributes.
+		listenerNames := sets.New[string]()
+		for _, gateway := range gatewayMap {
+			for _, listener := range gatewayPolicyTargetListeners(gateway.GatewayContext, currTarget) {
+				listenerNames.Insert(irListenerName(listener))
+			}
 		}
-	}
 
-	found := t.attachExtensionRefToListeners(gwXdsIR, nil, policy, listenerNames)
+		found = t.attachExtensionRefToListeners(gwXdsIR, nil, policy, listenerNames)
+	}
 
 	// A target that matches no listener across the merged Gateways must fail to attach with a
 	// status explaining why, rather than being silently dropped while still reaching the

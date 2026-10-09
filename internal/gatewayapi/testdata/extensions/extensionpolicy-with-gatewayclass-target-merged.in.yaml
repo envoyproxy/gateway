@@ -146,3 +146,14 @@ extensionServerPolicies:
       matchLabels:
         tier: shared
     data: "matched by both a targetRef and a selector; must be attached only once per listener"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test7
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: GatewayClass
+      group: foo.example.io
+      name: envoy-gateway-class
+    data: "GatewayClass ref from a different API group names another resource, so it is ignored"
