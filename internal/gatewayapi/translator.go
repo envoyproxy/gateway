@@ -152,6 +152,10 @@ type Translator struct {
 	// feature is enabled.
 	EnvoyPatchPolicyEnabled bool
 
+	// EnvoyProxyPatchDisabled disables applying the Kubernetes resource `patch`
+	// fields configured on EnvoyProxy's Kubernetes provider settings.
+	EnvoyProxyPatchDisabled bool
+
 	// LuaEnvoyExtensionPolicyDisabled when the Lua EnvoyExtensionPolicy feature is disabled.
 	LuaEnvoyExtensionPolicyDisabled bool
 
@@ -366,7 +370,6 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	)
 	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
 	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
-	t.BTPLoadBalancerIndex = btpIndexes.LoadBalancer
 
 	// Pre-compute which gateways/listeners have a ClientTrafficPolicy-sourced
 	// cluster-affecting override, for O(1) lookup during route processing.
@@ -593,6 +596,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
+			if t.EnvoyProxyPatchDisabled {
+				status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
+			}
 		}
 	}
 
@@ -669,6 +675,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
+				if t.EnvoyProxyPatchDisabled {
+					status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
+				}
 			}
 		}
 
@@ -706,6 +715,35 @@ func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
 	}
 
 	return deprecatedFields
+}
+
+// disabledPatchFieldsUsedInEnvoyProxy returns the Kubernetes resource `patch`
+// fields configured on the given EnvoyProxy's Kubernetes provider settings, so
+// callers can surface which ones were ignored when patching is disabled.
+func disabledPatchFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) []string {
+	var fields []string
+	if ep.Spec.Provider == nil || ep.Spec.Provider.Kubernetes == nil {
+		return fields
+	}
+
+	kube := ep.Spec.Provider.Kubernetes
+	if kube.EnvoyDeployment != nil && kube.EnvoyDeployment.Patch != nil {
+		fields = append(fields, "spec.provider.kubernetes.envoyDeployment.patch")
+	}
+	if kube.EnvoyDaemonSet != nil && kube.EnvoyDaemonSet.Patch != nil {
+		fields = append(fields, "spec.provider.kubernetes.envoyDaemonSet.patch")
+	}
+	if kube.EnvoyService != nil && kube.EnvoyService.Patch != nil {
+		fields = append(fields, "spec.provider.kubernetes.envoyService.patch")
+	}
+	if kube.EnvoyHpa != nil && kube.EnvoyHpa.Patch != nil {
+		fields = append(fields, "spec.provider.kubernetes.envoyHpa.patch")
+	}
+	if kube.EnvoyPDB != nil && kube.EnvoyPDB.Patch != nil {
+		fields = append(fields, "spec.provider.kubernetes.envoyPDB.patch")
+	}
+
+	return fields
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.

@@ -45,7 +45,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex, geoIPHeaders []string) (*routev3.Route, error) {
 	connectMatch := httpRoute.Traffic.HasConnectUpgrade()
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
@@ -59,7 +59,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	if len(httpRoute.RemoveRequestHeaders) > 0 {
 		router.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
 	}
-	router.RequestHeadersToRemove = append(router.RequestHeadersToRemove, geoIPHeadersToRemove(httpListener)...)
+	router.RequestHeadersToRemove = append(router.RequestHeadersToRemove, geoIPHeaders...)
 
 	if len(httpRoute.AddResponseHeaders) > 0 {
 		router.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)
@@ -156,6 +156,11 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 
 	// Metrics
 	router.StatPrefix = ptr.Deref(httpRoute.StatName, "")
+
+	// Request body buffer limit
+	if httpRoute.Traffic != nil && httpRoute.Traffic.RequestBodyBufferLimit != nil {
+		router.RequestBodyBufferLimit = wrapperspb.UInt64(*httpRoute.Traffic.RequestBodyBufferLimit)
+	}
 
 	// Add per route filter configs to the route, if needed.
 	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {

@@ -61,6 +61,28 @@ type HTTPRouteFilterSpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=8
 	Matches []HTTPRouteMatchFilter `json:"matches,omitempty"`
+	// BackendPriority sets the Envoy locality priority of the endpoints belonging to the
+	// backendRef this filter is attached to, enabling priority-based failover between the
+	// backendRefs of a single route rule. 0 is the highest priority.
+	//
+	// Envoy sends traffic to the lowest priority value that has enough healthy endpoints,
+	// and only spills over to the next value as that health degrades. It is highly
+	// recommended to configure active or passive health checks so that failover can be
+	// detected when the higher priority backends become unhealthy.
+	//
+	// This overrides the priority derived from the referenced Backend's fallback field.
+	// For additional details, see
+	// https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/priority
+	//
+	// This filter is only valid when referenced from a backendRef's filters. Referencing it
+	// from a route rule's filters is rejected: a rule-level filter applies uniformly to every
+	// backendRef of the rule, and a uniform priority carries no failover meaning.
+	//
+	// +optional
+	// +notImplementedHide
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=128
+	BackendPriority *int32 `json:"backendPriority,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host

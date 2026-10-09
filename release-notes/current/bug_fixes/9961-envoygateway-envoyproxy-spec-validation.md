@@ -1,0 +1,1 @@
+Fixed `EnvoyGateway.spec.envoyProxy` accepting an invalid `EnvoyProxySpec` template. This default/merge-base spec is now validated the same way a standalone `EnvoyProxy` resource is, so misconfigurations such as an invalid provider are rejected at config-load time instead of surfacing later as a translation failure.

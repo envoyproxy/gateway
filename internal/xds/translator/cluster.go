@@ -95,6 +95,9 @@ type xdsClusterArgs struct {
 	logger            logging.Logger
 	healthCheckLog    *ir.ProxyHealthCheckLog
 	isRoute           bool
+	// caIndex resolves name-only TLSCACertificate references in settings against the
+	// current xdsIR's CACertificates registry. Nil when the settings carry their bytes.
+	caIndex caCertificateIndex
 }
 
 type EndpointType int
@@ -1543,7 +1546,6 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// Populate traffic features.
 	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
 
 	return clusterArgs
@@ -1575,6 +1577,7 @@ func (BackendClusterTranslator) asClusterArgs(name string,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
 		healthCheckLog:    extra.healthCheckLog,
+		isRoute:           true,
 	}
 
 	applyTraffic(clusterArgs, extra.traffic)

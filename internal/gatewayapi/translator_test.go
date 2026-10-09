@@ -59,6 +59,7 @@ func TestTranslate(t *testing.T) {
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
 		RateLimitClusterSettings        *egv1a1.ClusterSettings
+		EnvoyProxyPatchDisabled         bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -151,6 +152,10 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:                    "envoyproxy-patch-disabled",
+			EnvoyProxyPatchDisabled: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -178,6 +183,7 @@ func TestTranslate(t *testing.T) {
 			sdsEnabled := false
 			perResourceSystemCASecret := false
 			var rateLimitClusterSettings *egv1a1.ClusterSettings
+			envoyProxyPatchDisabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -189,6 +195,7 @@ func TestTranslate(t *testing.T) {
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
 					rateLimitClusterSettings = config.RateLimitClusterSettings
+					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
 				}
 			}
 
@@ -208,6 +215,7 @@ func TestTranslate(t *testing.T) {
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
+				EnvoyProxyPatchDisabled:         envoyProxyPatchDisabled,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
@@ -1239,7 +1247,9 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
+		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
+		CACertificates          []*ir.CACertificateEntry
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,
@@ -1253,7 +1263,9 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
+		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
+		CACertificates:          a.CACertificates,
 	}
 
 	// Ensure we didn't drop an exported field.
