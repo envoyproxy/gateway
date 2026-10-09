@@ -230,6 +230,36 @@ func BuildBTPIndexes(
 	}
 }
 
+// multipleSourceCIDRWarning returns a warning message when a rate limit rule has more than
+// one sourceCIDR clientSelector. The IR holds a single CIDR match per rule, so only the last
+// selector takes effect. It returns an empty string if there is nothing to warn about.
+func multipleSourceCIDRWarning(policy *egv1a1.BackendTrafficPolicy) string {
+	if policy.Spec.RateLimit == nil {
+		return ""
+	}
+
+	var rules []egv1a1.RateLimitRule
+	if policy.Spec.RateLimit.Local != nil {
+		rules = append(rules, policy.Spec.RateLimit.Local.Rules...)
+	}
+	if policy.Spec.RateLimit.Global != nil {
+		rules = append(rules, policy.Spec.RateLimit.Global.Rules...)
+	}
+
+	for _, rule := range rules {
+		count := 0
+		for _, sel := range rule.ClientSelectors {
+			if sel.SourceCIDR != nil {
+				count++
+			}
+		}
+		if count > 1 {
+			return "rateLimit rule has multiple sourceCIDR clientSelectors, only the last one is applied"
+		}
+	}
+	return ""
+}
+
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
@@ -1029,6 +1059,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
+	if msg := multipleSourceCIDRWarning(policy); msg != "" {
+		for _, ancestorRef := range ancestorRefs {
+			status.SetWarningForPolicyAncestor(&policy.Status, ancestorRef, t.GatewayControllerName, status.PolicyReasonMultipleSourceCIDR, msg, policy.Generation)
+		}
+	}
 
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// If policy target is route rule, we can skip the check
@@ -1164,6 +1199,9 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
+	if msg := multipleSourceCIDRWarning(policy); msg != "" {
+		status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, status.PolicyReasonMultipleSourceCIDR, msg, policy.Generation)
+	}
 }
 
 func (t *Translator) processBackendTrafficPolicyForGateway(
@@ -1222,6 +1260,9 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	// Check for deprecated fields and set warning if any are found
 	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+	if msg := multipleSourceCIDRWarning(policy); msg != "" {
+		status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, status.PolicyReasonMultipleSourceCIDR, msg, policy.Generation)
 	}
 
 	// Determine this policy's own scope so we can look up merged and overriding
@@ -2315,16 +2356,6 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 
 		if match.SourceCIDR != nil {
-			// Only a single sourceCIDR selector is supported per rule: irRule.CIDRMatch
-			// holds one CIDRMatch, so a second selector would silently overwrite the
-			// first rather than being ANDed with it. Reject this explicitly instead of
-			// silently dropping the earlier sourceCIDR selector.
-			if irRule.CIDRMatch != nil {
-				return nil, fmt.Errorf(
-					"unable to translate rateLimit: only one sourceCIDR selector is supported per rule," +
-						" found multiple sourceCIDR conditions across clientSelectors")
-			}
-
 			distinct := false
 			if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
 				distinct = true

@@ -32,14 +32,14 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'RateLimit: unable to translate rateLimit: only one sourceCIDR selector
-          is supported per rule, found multiple sourceCIDR conditions across clientSelectors.'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: spec.targetRef is deprecated, use spec.targetRefs instead; rateLimit
+          rule has multiple sourceCIDR clientSelectors, only the last one is applied
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -201,19 +201,39 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          rateLimit:
+            local:
+              default:
+                requests: 4294967295
+                unit: Second
+              rules:
+              - cidrMatch:
+                  cidr: 10.1.0.0/24
+                  distinct: false
+                  invert: true
+                  isIPv6: false
+                  maskLen: 24
+                headerMatches: []
+                limit:
+                  requests: 10
+                  unit: Minute
+                name: envoy-gateway/policy-for-gateway/rule/0
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

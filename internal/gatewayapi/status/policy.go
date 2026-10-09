@@ -23,6 +23,10 @@ const (
 	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
 	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
 
+	// PolicyReasonMultipleSourceCIDR is used with the "Warning" condition when a rate limit rule
+	// has more than one sourceCIDR clientSelector and only the last one is applied.
+	PolicyReasonMultipleSourceCIDR gwapiv1.PolicyConditionReason = "MultipleSourceCIDR"
+
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"

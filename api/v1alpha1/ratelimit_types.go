@@ -107,7 +107,6 @@ type RateLimitRule struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:validation:XValidation:rule="self.filter(s, has(s.sourceCIDR)).size() <= 1",message="only one sourceCIDR selector is supported per rule"
 	ClientSelectors []RateLimitSelectCondition `json:"clientSelectors,omitempty"`
 	// Limit holds the rate limit values.
 	// This limit is applied for traffic flows when the selectors
