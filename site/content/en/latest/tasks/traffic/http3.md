@@ -188,9 +188,10 @@ endpoint's port. The QUIC listener on the backend must also be reachable on that
 
 The backend's `alt-svc` header is not forwarded to clients. It names a port on the backend, which a
 client would read as a port on the Gateway, so Envoy Gateway strips it after recording it and adds
-the Gateway's own `alt-svc` when the listener has HTTP/3 enabled. Do not remove `alt-svc` with an
-HTTPRoute `ResponseHeaderModifier` filter: that runs before the advertisement is recorded, so
-`Auto` mode would never discover the backend's HTTP/3 support.
+the Gateway's own `alt-svc` when the listener has HTTP/3 enabled. An HTTPRoute
+`ResponseHeaderModifier` filter that removes `alt-svc` runs before the advertisement is recorded,
+so `Auto` mode could never discover the backend's HTTP/3 support. HTTP/3 is left off for such a
+route and the policy reports a `Warning` condition.
 
 `Always` sends every request over HTTP/3 and never falls back to TCP. Use it only where the backend
 is known to speak HTTP/3 and UDP is known to work, since there is no recovery if QUIC fails. Active

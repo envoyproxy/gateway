@@ -964,12 +964,8 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		// sibling scopes.
 		//
 		// Without a parent policy the route falls back to its own features, which depend
-		// only on the policy and so are built at most once across listeners.
-		var (
-			ownTF       *ir.TrafficFeatures
-			ownBuildErr error
-			ownBuilt    bool
-		)
+		// only on the policy and so are built once for all listeners.
+		ownTF, ownBuildErr := t.buildTrafficFeatures(policy, nil)
 		for _, parent := range routeParents {
 			for _, listener := range parent.ctx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
@@ -1009,10 +1005,6 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 				if parentPolicy == nil {
 					// not found, fall back to the current policy
-					if !ownBuilt {
-						ownTF, ownBuildErr = t.buildTrafficFeatures(policy, nil)
-						ownBuilt = true
-					}
 					warnings := t.applyTrafficFeaturesForRouteListener(ownTF, ownBuildErr, policy, targetedRoute, currTarget, xdsIR, listener)
 					if ownBuildErr != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
@@ -2076,6 +2068,8 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 // http3Warnings records, per subject and reason, the routes and merged backend clusters that
 // had to drop HTTP/3. Dropping HTTP/3 leaves the rest of the policy in effect, so this is
 // reported as a Warning condition rather than as a translation error.
+const altSvcHeader = "alt-svc"
+
 type http3Warnings map[http3WarningKey]sets.Set[string]
 
 type http3WarningKey struct {
@@ -2139,7 +2133,40 @@ func validateBackendHTTP3(r *ir.HTTPRoute) []string {
 	if r.Traffic == nil || r.Traffic.HTTP3 == nil || r.Destination == nil {
 		return nil
 	}
-	return ir.HTTP3Incompatibilities(r.Destination.Settings, ptr.Deref(r.UseClientProtocol, false), r.Traffic.ProxyProtocol != nil)
+	reasons := ir.HTTP3Incompatibilities(r.Destination.Settings, ptr.Deref(r.UseClientProtocol, false), r.Traffic.ProxyProtocol != nil)
+	// Mode Auto learns which backends speak HTTP/3 from their alt-svc response header, and a
+	// route-level removal runs in the router before the alternate protocols cache filter can
+	// record it, so the cluster would stay on TCP for good. Like the reasons above, this is
+	// only judged for a route-scoped cluster that dials.
+	if r.Traffic.HTTP3.Mode == string(egv1a1.BackendHTTP3ModeAuto) &&
+		ir.HasDialableSettings(r.Destination.Settings) && routeRemovesAltSvc(r) {
+		reasons = append(reasons, "removing the alt-svc response header with an HTTPRoute filter "+
+			"cannot be used together with http3 mode Auto, which discovers HTTP/3 backends through it")
+	}
+	return reasons
+}
+
+// routeRemovesAltSvc reports whether an HTTPRoute filter removes alt-svc from the responses
+// of the route or of one of its resolvable backends.
+func routeRemovesAltSvc(r *ir.HTTPRoute) bool {
+	if removesHeader(r.RemoveResponseHeaders, altSvcHeader) {
+		return true
+	}
+	for _, s := range r.Destination.Settings {
+		if s != nil && !s.Invalid && s.Filters != nil && removesHeader(s.Filters.RemoveResponseHeaders, altSvcHeader) {
+			return true
+		}
+	}
+	return false
+}
+
+func removesHeader(headers []string, name string) bool {
+	for _, h := range headers {
+		if strings.EqualFold(h, name) {
+			return true
+		}
+	}
+	return false
 }
 
 // applyGatewayPolicyToMergedCluster stores on bc the subset of a whole-Gateway

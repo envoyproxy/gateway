@@ -55,6 +55,32 @@ httpRoutes:
             - name: plaintext-backend
               namespace: backends
               port: 8080
+  # The route removes alt-svc from responses, which hides the advertisement Auto mode
+  # discovers HTTP/3 backends through, so HTTP/3 is dropped with a Warning.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-alt-svc-removed
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-btls
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                type: Exact
+                value: "/alt-svc-removed"
+          filters:
+            - type: ResponseHeaderModifier
+              responseHeaderModifier:
+                remove:
+                  - Alt-Svc
+          backendRefs:
+            - name: http-backend
+              namespace: backends
+              port: 8080
 
 referenceGrants:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -209,3 +235,15 @@ backendTrafficPolicies:
           name: httproute-plaintext-backend
       http3:
         mode: Always
+  # Auto mode on a TLS backend whose route strips alt-svc: dropped with a Warning.
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-http3-alt-svc-removed
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-alt-svc-removed
+      http3: {}
