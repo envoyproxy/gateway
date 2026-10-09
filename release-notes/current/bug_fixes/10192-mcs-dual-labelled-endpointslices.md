@@ -1,0 +1,1 @@
+Fixed Service and ServiceImport backends whose EndpointSlices carry both `kubernetes.io/service-name` and `multicluster.kubernetes.io/service-name` (as Cilium ClusterMesh creates them): ServiceImport backends no longer report `EndpointsNotFound`, and Service backends now pick up endpoint changes.

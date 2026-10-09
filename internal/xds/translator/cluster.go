@@ -1546,7 +1546,6 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// Populate traffic features.
 	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
 
 	return clusterArgs

@@ -1,0 +1,1 @@
+Wasm.Code is now a pointer (*WasmCodeSource) and is optional. Go clients that set Code: WasmCodeSource{...} must take the address. YAML that already sets code is unchanged. wasm[].name is limited to 253 characters. The unused ConfigMap Wasm code type was removed from the CRD enum.
