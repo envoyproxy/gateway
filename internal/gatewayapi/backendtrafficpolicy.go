@@ -607,7 +607,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 					&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
 				continue
 			}
-			// gwPolicy's RateLimit failing must not block this cluster-scoped result.
+			// A route-scoped field failing on gwPolicy must not block this cluster-scoped result.
 			cf, err := t.buildClusterTrafficFeatures(mergedPolicy)
 			if err != nil || cf == nil {
 				if err != nil {
