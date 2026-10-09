@@ -12,8 +12,8 @@ SHUTDOWN_MANAGER_IMAGE ?= docker.io/envoyproxy/gateway-dev:latest
 # Falls back to the abbreviated commit SHA when tags are unavailable (e.g. shallow clone).
 GO_LDFLAGS += -X $(VERSION_PACKAGE).envoyGatewayVersion=$(shell git describe --tags --always) \
 	-X $(VERSION_PACKAGE).gitCommitID=$(GIT_COMMIT) \
-	-X github.com/envoyproxy/gateway/api/v1alpha1.DefaultRateLimitImage=$(RATELIMIT_IMAGE) \
-	-X github.com/envoyproxy/gateway/api/v1alpha1.DefaultShutdownManagerImage=$(SHUTDOWN_MANAGER_IMAGE)
+	-X github.com/envoyproxy/gateway/api/v1alpha1.defaultRateLimitImage=$(RATELIMIT_IMAGE) \
+	-X github.com/envoyproxy/gateway/api/v1alpha1.defaultShutdownManagerImage=$(SHUTDOWN_MANAGER_IMAGE)
 
 GIT_COMMIT:=$(shell git rev-parse HEAD)
 
