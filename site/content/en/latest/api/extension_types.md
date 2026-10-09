@@ -425,7 +425,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Auto` | BackendHTTP3ModeAuto uses HTTP/3 only for backends that advertise support for it<br />through an alt-svc response header. Envoy races a QUIC connection against a TCP one<br />and uses whichever is established first, so it falls back to HTTP/1.1 or HTTP/2 when<br />QUIC is unavailable.<br /> | 
-| `Always` | BackendHTTP3ModeAlways always uses HTTP/3, without falling back to TCP. Use this only<br />in environments where the backend is known to speak HTTP/3.<br /> | 
+| `Always` | BackendHTTP3ModeAlways always uses HTTP/3, without falling back to TCP. Use this only<br />in environments where the backend is known to speak HTTP/3. Active health checks are<br />still sent over TLS on TCP, so a backend with an active health check must also accept<br />TCP on the same port.<br /> | 
 
 
 #### BackendHTTP3Settings

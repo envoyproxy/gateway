@@ -193,7 +193,11 @@ HTTPRoute `ResponseHeaderModifier` filter: that runs before the advertisement is
 `Auto` mode would never discover the backend's HTTP/3 support.
 
 `Always` sends every request over HTTP/3 and never falls back to TCP. Use it only where the backend
-is known to speak HTTP/3 and UDP is known to work, since there is no recovery if QUIC fails.
+is known to speak HTTP/3 and UDP is known to work, since there is no recovery if QUIC fails. Active
+health checks are the exception: Envoy sends them over TLS on TCP even in `Always` mode, so a backend
+with an active `healthCheck` must also accept TCP on the same port, or every endpoint is marked
+unhealthy while QUIC traffic still works. Passive health checks observe the QUIC traffic itself and
+are unaffected.
 
 Note that `http3` cannot be combined with `useClientProtocol` or `proxyProtocol`: the first would
 have Envoy pick the upstream protocol from the downstream request, and PROXY protocol is a TCP

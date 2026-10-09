@@ -810,7 +810,9 @@ const (
 	// QUIC is unavailable.
 	BackendHTTP3ModeAuto BackendHTTP3Mode = "Auto"
 	// BackendHTTP3ModeAlways always uses HTTP/3, without falling back to TCP. Use this only
-	// in environments where the backend is known to speak HTTP/3.
+	// in environments where the backend is known to speak HTTP/3. Active health checks are
+	// still sent over TLS on TCP, so a backend with an active health check must also accept
+	// TCP on the same port.
 	BackendHTTP3ModeAlways BackendHTTP3Mode = "Always"
 )
 
