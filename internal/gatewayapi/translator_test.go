@@ -145,6 +145,10 @@ func TestTranslate(t *testing.T) {
 				CircuitBreaker: &egv1a1.CircuitBreaker{
 					MaxRequestsPerConnection: new(int64(10)),
 				},
+				// Omitted fields must be defaulted, since EnvoyGateway isn't admitted as a CRD.
+				HealthCheck: &egv1a1.HealthCheck{
+					Passive: &egv1a1.PassiveHealthCheck{},
+				},
 				Timeout: &egv1a1.Timeout{
 					HTTP: &egv1a1.HTTPTimeout{
 						MaxConnectionDuration: new(gwapiv1.Duration("30s")),

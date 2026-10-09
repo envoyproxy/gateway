@@ -65,6 +65,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 						cs.Timeout.HTTP.RequestTimeout = nil
 						cs.Timeout.HTTP.StreamIdleTimeout = nil
 					}
+					setRateLimitHealthCheckDefaults(cs.HealthCheck)
 					backendSetting = &egv1a1.BackendSettings{
 						ClusterSettings: *cs,
 					}
@@ -206,4 +207,53 @@ func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
 		}
 	}
 	return false
+}
+
+// setRateLimitHealthCheckDefaults fills in the kubebuilder defaults of the rate limit service
+// cluster's health check. EnvoyGateway is loaded as static configuration rather than admitted
+// as a CRD, so these defaults are never applied by the API server, and xDS translation
+// dereferences the active timeout/interval and passive interval/baseEjectionTime unconditionally.
+func setRateLimitHealthCheckDefaults(hc *egv1a1.HealthCheck) {
+	if hc == nil {
+		return
+	}
+
+	if a := hc.Active; a != nil {
+		if a.Timeout == nil {
+			a.Timeout = new(gwapiv1.Duration("1s"))
+		}
+		if a.Interval == nil {
+			a.Interval = new(gwapiv1.Duration("3s"))
+		}
+		if a.UnhealthyThreshold == nil {
+			a.UnhealthyThreshold = new(uint32(3))
+		}
+		if a.HealthyThreshold == nil {
+			a.HealthyThreshold = new(uint32(1))
+		}
+	}
+
+	if p := hc.Passive; p != nil {
+		if p.SplitExternalLocalOriginErrors == nil {
+			p.SplitExternalLocalOriginErrors = new(false)
+		}
+		if p.Interval == nil {
+			p.Interval = new(gwapiv1.Duration("3s"))
+		}
+		if p.ConsecutiveLocalOriginFailures == nil {
+			p.ConsecutiveLocalOriginFailures = new(uint32(5))
+		}
+		if p.Consecutive5xxErrors == nil {
+			p.Consecutive5xxErrors = new(uint32(5))
+		}
+		if p.BaseEjectionTime == nil {
+			p.BaseEjectionTime = new(gwapiv1.Duration("30s"))
+		}
+		if p.MaxEjectionPercent == nil {
+			p.MaxEjectionPercent = new(int32(10))
+		}
+		if p.AlwaysEjectOneEndpoint == nil {
+			p.AlwaysEjectOneEndpoint = new(false)
+		}
+	}
 }

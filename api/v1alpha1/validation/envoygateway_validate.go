@@ -362,6 +362,10 @@ func validateRateLimitClusterSettings(cs *egv1a1.ClusterSettings) error {
 		}
 	}
 
+	if err := validateRateLimitClusterHealthCheck(cs.HealthCheck); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -423,6 +427,37 @@ func validateRateLimitClusterTimeout(t *egv1a1.Timeout) error {
 			return err
 		}
 		if err := validateOptionalDuration("timeout.http.maxStreamDuration", t.HTTP.MaxStreamDuration); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateRateLimitClusterHealthCheck rejects malformed health check durations: translation
+// silently drops a duration it can't parse, leaving a nil field that xDS translation dereferences.
+func validateRateLimitClusterHealthCheck(hc *egv1a1.HealthCheck) error {
+	if hc == nil {
+		return nil
+	}
+
+	if hc.Active != nil {
+		if err := validateOptionalDuration("healthCheck.active.timeout", hc.Active.Timeout); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.active.interval", hc.Active.Interval); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.active.initialJitter", hc.Active.InitialJitter); err != nil {
+			return err
+		}
+	}
+
+	if hc.Passive != nil {
+		if err := validateOptionalDuration("healthCheck.passive.interval", hc.Passive.Interval); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.passive.baseEjectionTime", hc.Passive.BaseEjectionTime); err != nil {
 			return err
 		}
 	}

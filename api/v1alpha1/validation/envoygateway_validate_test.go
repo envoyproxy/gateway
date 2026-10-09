@@ -1840,6 +1840,29 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			expectErr: "dns.dnsRefreshRate: invalid duration",
 		},
 		{
+			name: "malformed passive health check interval",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Passive: &egv1a1.PassiveHealthCheck{
+						Interval: new(gwapiv1.Duration("not-a-duration")),
+					},
+				},
+			},
+			expectErr: "healthCheck.passive.interval: invalid duration",
+		},
+		{
+			name: "malformed active health check timeout",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Active: &egv1a1.ActiveHealthCheck{
+						Type:    egv1a1.ActiveHealthCheckerTypeTCP,
+						Timeout: new(gwapiv1.Duration("not-a-duration")),
+					},
+				},
+			},
+			expectErr: "healthCheck.active.timeout: invalid duration",
+		},
+		{
 			name: "proxy protocol is rejected",
 			cs: &egv1a1.ClusterSettings{
 				ProxyProtocol: &egv1a1.ProxyProtocol{

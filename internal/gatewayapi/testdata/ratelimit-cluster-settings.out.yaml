@@ -166,6 +166,15 @@ xdsIR:
         traffic:
           circuitBreaker:
             maxRequestsPerConnection: 10
+          healthCheck:
+            passive:
+              alwaysEjectOneEndpoint: false
+              baseEjectionTime: 30s
+              consecutive5XxErrors: 5
+              consecutiveLocalOriginFailures: 5
+              interval: 3s
+              maxEjectionPercent: 10
+              splitExternalLocalOriginErrors: false
           timeout:
             http:
               maxConnectionDuration: 30s
