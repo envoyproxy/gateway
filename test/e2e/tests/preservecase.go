@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
@@ -172,7 +171,7 @@ func checkHeaderCaseNotPreserved(t *testing.T, s *suite.ConformanceTestSuite, gw
 
 var PreserveCase = suite.ConformanceTest{
 	ShortName:   "PreserveCase",
-	Description: "Preserve header cases using the deprecated http1 field, then clientHttp1/backendHttp1",
+	Description: "Verify CTP http1 preserveHeaderCase seeds the backend codec, and BTP http1 overrides it",
 	Manifests:   []string{"testdata/preserve-case.yaml"},
 	Test: func(t *testing.T, s *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
@@ -189,31 +188,22 @@ var PreserveCase = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 
-		// Phase 1: deprecated http1 field on CTP — case should be preserved.
-		t.Run("deprecated http1 field preserves header case", func(t *testing.T) {
+		// Phase 1: CTP http1 preserveHeaderCase — both listener and backend codec preserve case.
+		// The backend echoes the request headers it received; the mixed-case header should appear preserved.
+		t.Run("CTP http1 preserveHeaderCase seeds backend codec", func(t *testing.T) {
 			ClientTrafficPolicyMustBeAccepted(t, s.Client, types.NamespacedName{Name: "preserve-case", Namespace: ns}, s.ControllerName, ancestorRef)
-			require.True(t, checkHeaderCasePreserved(t, s, gwAddr, "/preserve", ns), "expected header case to be preserved with deprecated http1 field")
+			require.True(t, checkHeaderCasePreserved(t, s, gwAddr, "/preserve", ns), "expected header case to be preserved with CTP http1 field")
 		})
 
-		// Phase 2: delete the deprecated CTP — case should no longer be preserved.
-		t.Run("without CTP header case is not preserved", func(t *testing.T) {
-			ctpNN := types.NamespacedName{Name: "preserve-case", Namespace: ns}
-			existing := &egv1a1.ClientTrafficPolicy{}
-			require.NoError(t, s.Client.Get(t.Context(), ctpNN, existing))
-			require.NoError(t, s.Client.Delete(t.Context(), existing))
-			ClientTrafficPolicyMustNotExist(t, s.Client, ctpNN)
-
-			require.True(t, checkHeaderCaseNotPreserved(t, s, gwAddr, "/preserve", ns), "expected header case to NOT be preserved after CTP deletion")
-		})
-
-		// Phase 3: apply clientHttp1 on CTP and backendHttp1 on BTP — case should be preserved again.
-		t.Run("clientHttp1 and backendHttp1 fields preserve header case", func(t *testing.T) {
+		// Phase 2: add BTP http1 preserveHeaderCase: false alongside the existing CTP.
+		// BTP overrides the cluster codec — the backend now receives normalized headers,
+		// proving BTP controls the backend HTTP/1 codec independently of CTP.
+		t.Run("BTP http1 overrides CTP-seeded backend codec", func(t *testing.T) {
 			s.Applier.MustApplyWithCleanup(t, s.Client, s.TimeoutConfig, "testdata/preserve-case-new-http1-fields.yaml", true)
 
-			ClientTrafficPolicyMustBeAccepted(t, s.Client, types.NamespacedName{Name: "preserve-case-new", Namespace: ns}, s.ControllerName, ancestorRef)
-			BackendTrafficPolicyMustBeAccepted(t, s.Client, types.NamespacedName{Name: "preserve-case-new", Namespace: ns}, s.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, s.Client, types.NamespacedName{Name: "preserve-case-btp-override", Namespace: ns}, s.ControllerName, ancestorRef)
 
-			require.True(t, checkHeaderCasePreserved(t, s, gwAddr, "/preserve", ns), "expected header case to be preserved with clientHttp1 and backendHttp1 fields")
+			require.True(t, checkHeaderCaseNotPreserved(t, s, gwAddr, "/preserve", ns), "expected header case to NOT be preserved at backend when BTP overrides CTP seed")
 		})
 	},
 }

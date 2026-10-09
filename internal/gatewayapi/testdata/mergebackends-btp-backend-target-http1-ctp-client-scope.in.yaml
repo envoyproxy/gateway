@@ -10,10 +10,13 @@ gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
     metadata:
-      namespace: envoy-gateway
+      namespace: default
       name: gateway-1
     spec:
       gatewayClassName: envoy-gateway-class
+      allowedListeners:
+        namespaces:
+          from: Same
       listeners:
         - name: http-1
           protocol: HTTP
@@ -21,26 +24,49 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
-        - name: http-2
+listenerSets:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      namespace: default
+      name: ls-1
+    spec:
+      parentRef:
+        name: gateway-1
+      listeners:
+        - name: ls-http
           protocol: HTTP
-          port: 8080
+          port: 8081
           allowedRoutes:
             namespaces:
-              from: All
+              from: Same
 clientTrafficPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: ClientTrafficPolicy
     metadata:
-      namespace: envoy-gateway
-      name: ctp-gateway-wide-clienthttp1
+      namespace: default
+      name: ctp-listenerset-http1
     spec:
       targetRefs:
         - group: gateway.networking.k8s.io
-          kind: Gateway
-          name: gateway-1
+          kind: ListenerSet
+          name: ls-1
       http1:
-        client:
-          preserveHeaderCase: true
+        preserveHeaderCase: true
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: btp-backend-http1
+    spec:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: service-1
+      mergeType: StrategicMerge
+      http1:
+        enableTrailers: true
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
@@ -49,8 +75,7 @@ httpRoutes:
       name: http-route-1
     spec:
       parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
+        - name: gateway-1
           sectionName: http-1
       rules:
         - backendRefs:
@@ -63,9 +88,10 @@ httpRoutes:
       name: http-route-2
     spec:
       parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
-          sectionName: http-2
+        - group: gateway.networking.k8s.io
+          kind: ListenerSet
+          name: ls-1
+          sectionName: ls-http
       rules:
         - backendRefs:
             - name: service-1

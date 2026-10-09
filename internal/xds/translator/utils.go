@@ -200,15 +200,6 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 	return addXdsCluster(tCtx, clusterArgs)
 }
 
-// listenerHTTP1ForCluster returns s for use as the upstream cluster seed, or nil if s is
-// client-only (sourced from spec.http1.client) and must not flow to the upstream cluster codec.
-func listenerHTTP1ForCluster(s *ir.HTTP1Settings) *ir.HTTP1Settings {
-	if s == nil || s.ClientOnly {
-		return nil
-	}
-	return s
-}
-
 // applyTraffic copies the cluster-scoped traffic features onto the cluster args.
 // HTTP1 is nil-guarded: args.http1Settings may be pre-seeded from the listener's CTP HTTP1,
 // and BTP's traffic.HTTP1 only overrides it when explicitly set.

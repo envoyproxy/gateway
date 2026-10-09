@@ -418,61 +418,37 @@ type HTTP3Settings struct {
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {
-	// Client configures HTTP/1 settings for client connections.
-	// When set, Client takes precedence over the deprecated flat fields below,
-	// all flat fields are ignored entirely, even if set.
-	//
-	// +optional
-	Client *ClientHTTP1Settings `json:"client,omitempty"`
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
 	//
-	// Deprecated: Use client.enableTrailers instead.
+	// Note: this field currently configures both the client connection and the backend HTTP/1
+	// protocol settings. In a future release it will be restricted to the client connection only.
+	// Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+	// Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+	// to opt in to the new behavior now.
 	//
 	// +optional
 	EnableTrailers *bool `json:"enableTrailers,omitempty"`
 	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
 	// By default, Envoy will lowercase all the headers.
 	//
-	// Deprecated: Use client.preserveHeaderCase instead.
+	// Note: this field currently configures both the client connection and the backend HTTP/1
+	// protocol settings. In a future release it will be restricted to the client connection only.
+	// Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+	// Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+	// to opt in to the new behavior now.
 	//
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
 	//
-	// Deprecated: Use client.http10 instead.
+	// Note: this field currently configures both the client connection and the backend HTTP/1
+	// protocol settings. In a future release it will be restricted to the client connection only.
+	// Use BackendTrafficPolicy.http1.http10 for backend settings.
+	// Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+	// to opt in to the new behavior now.
 	//
 	// +optional
 	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
-	// DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
-	// By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.
-	// It then adds a Connection: close header and gracefully closes the connection after the response completes.
-	// When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
-	// Has no effect unless maxConnectionDuration is set.
-	//
-	// Deprecated: Use client.disableSafeMaxConnectionDuration instead.
-	//
-	// +optional
-	DisableSafeMaxConnectionDuration *bool `json:"disableSafeMaxConnectionDuration,omitempty"`
-	// IgnoredUpgradeTypes specifies a list of upgrade types for which
-	// HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being
-	// rejected with a 403 response. When a client sends an HTTP/1.1 request
-	// with Connection: Upgrade and an Upgrade header matching one of these
-	// matchers, Envoy will strip the upgrade headers and process the request
-	// as a normal HTTP/1.1 request.
-	//
-	// Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".
-	//
-	// Deprecated: Use client.ignoredUpgradeTypes instead.
-	//
-	// +optional
-	IgnoredUpgradeTypes []StringMatch `json:"ignoredUpgradeTypes,omitempty"`
-}
-
-// ClientHTTP1Settings provides HTTP/1 configuration on the downstream listener.
-// It is the canonical replacement for the deprecated flat fields on HTTP1Settings.
-type ClientHTTP1Settings struct {
-	// CommonHTTP1Settings contains the HTTP/1 fields shared with BackendTrafficPolicy.
-	CommonHTTP1Settings `json:",inline"`
 	// DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
 	// By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.
 	// It then adds a Connection: close header and gracefully closes the connection after the response completes.

@@ -144,6 +144,17 @@ func (t *Translator) xdsNameSchemeV2() bool {
 	return t.RuntimeFlags.IsEnabled(egv1a1.XDSNameSchemeV2)
 }
 
+// clusterHTTP1Settings returns the http1 settings to seed into backend clusters.
+// When ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly is enabled, returns nil —
+// CTP http1 fields apply to the client connection only and must not configure backend
+// HTTP/1 protocol settings. Remove this method when that runtime flag is removed.
+func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings {
+	if t.RuntimeFlags != nil && t.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly) {
+		return nil
+	}
+	return s
+}
+
 type GlobalRateLimitSettings struct {
 	// ServiceURL is the URL of the global
 	// rate limit service.
@@ -792,11 +803,8 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			ea := &ExtraArgs{
-				metrics: metrics,
-				// Seed cluster with CTP HTTP1 only when sourced from the deprecated flat fields.
-				// When ClientOnly=true (sourced from h.Client), those fields are listener-scoped
-				// and must not flow to the upstream cluster codec.
-				http1Settings:    listenerHTTP1ForCluster(httpListener.HTTP1),
+				metrics:          metrics,
+				http1Settings:    t.clusterHTTP1Settings(httpListener.HTTP1),
 				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
 				statName:         httpRoute.Destination.StatName,
 				unstructuredRefs: extensionResources,

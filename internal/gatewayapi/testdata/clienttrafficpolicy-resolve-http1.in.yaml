@@ -40,8 +40,5 @@ clientTrafficPolicies:
         kind: Gateway
         name: gateway-1
       http1:
-        preserveHeaderCase: false
-        enableTrailers: true
-        client:
-          preserveHeaderCase: true
-          enableTrailers: false
+        preserveHeaderCase: true
+        enableTrailers: false

@@ -1,4 +1,4 @@
-- clusterName: first-route-dest
+- clusterName: preserve-case-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -9,8 +9,8 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: first-route-dest/backend/0
-- clusterName: second-route-dest
+      region: preserve-case-dest/backend/0
+- clusterName: trailers-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -21,4 +21,16 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: second-route-dest/backend/0
+      region: trailers-dest/backend/0
+- clusterName: http10-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.6
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: http10-dest/backend/0

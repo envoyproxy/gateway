@@ -1,21 +1,7 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: ClientTrafficPolicy
-metadata:
-  name: preserve-case-new
-  namespace: gateway-conformance-infra
-spec:
-  targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: same-namespace
-  http1:
-    client:
-      preserveHeaderCase: true
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: preserve-case-new
+  name: preserve-case-btp-override
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
@@ -23,4 +9,4 @@ spec:
       kind: Gateway
       name: same-namespace
   http1:
-    preserveHeaderCase: true
+    preserveHeaderCase: false

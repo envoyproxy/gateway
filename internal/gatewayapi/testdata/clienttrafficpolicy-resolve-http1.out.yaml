@@ -6,11 +6,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     http1:
-      client:
-        enableTrailers: false
-        preserveHeaderCase: true
-      enableTrailers: true
-      preserveHeaderCase: false
+      enableTrailers: false
+      preserveHeaderCase: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -29,13 +26,14 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.http1.enableTrailers is deprecated, and is being ignored since
-          spec.http1.client is set; use spec.http1.client.enableTrailers and BackendTrafficPolicy.http1.enableTrailers
-          instead; spec.http1.preserveHeaderCase is deprecated, and is being ignored
-          since spec.http1.client is set; use spec.http1.client.preserveHeaderCase
-          and BackendTrafficPolicy.http1.preserveHeaderCase instead; spec.targetRef
-          is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.enableTrailers
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.enableTrailers
+          for backend settings; spec.http1.preserveHeaderCase behavior will change
+          in a future release: this field will only apply to client connections, for
+          compatibility: use BackendTrafficPolicy.http1.preserveHeaderCase for backend
+          settings'
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -163,7 +161,6 @@ xdsIR:
       hostnames:
       - '*'
       http1:
-        clientOnly: true
         preserveHeaderCase: true
       metadata:
         kind: Gateway

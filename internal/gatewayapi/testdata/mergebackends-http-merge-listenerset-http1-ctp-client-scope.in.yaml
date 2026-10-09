@@ -10,10 +10,13 @@ gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
     metadata:
-      namespace: envoy-gateway
+      namespace: default
       name: gateway-1
     spec:
       gatewayClassName: envoy-gateway-class
+      allowedListeners:
+        namespaces:
+          from: Same
       listeners:
         - name: http-1
           protocol: HTTP
@@ -21,19 +24,34 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
+listenerSets:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      namespace: default
+      name: ls-1
+    spec:
+      parentRef:
+        name: gateway-1
+      listeners:
+        - name: ls-http
+          protocol: HTTP
+          port: 8081
+          allowedRoutes:
+            namespaces:
+              from: Same
 clientTrafficPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: ClientTrafficPolicy
     metadata:
-      namespace: envoy-gateway
-      name: ctp-both-http1-fields
+      namespace: default
+      name: ctp-listenerset-http1
     spec:
       targetRefs:
         - group: gateway.networking.k8s.io
-          kind: Gateway
-          name: gateway-1
+          kind: ListenerSet
+          name: ls-1
       http1:
-        enableTrailers: true
         preserveHeaderCase: true
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
@@ -43,9 +61,23 @@ httpRoutes:
       name: http-route-1
     spec:
       parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
+        - name: gateway-1
           sectionName: http-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-2
+    spec:
+      parentRefs:
+        - group: gateway.networking.k8s.io
+          kind: ListenerSet
+          name: ls-1
+          sectionName: ls-http
       rules:
         - backendRefs:
             - name: service-1

@@ -21,19 +21,25 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
+        - name: http-2
+          protocol: HTTP
+          port: 8080
+          allowedRoutes:
+            namespaces:
+              from: All
 clientTrafficPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: ClientTrafficPolicy
     metadata:
       namespace: envoy-gateway
-      name: ctp-both-http1-fields
+      name: ctp-http-1-preserve-case
     spec:
       targetRefs:
         - group: gateway.networking.k8s.io
           kind: Gateway
           name: gateway-1
+          sectionName: http-1
       http1:
-        enableTrailers: true
         preserveHeaderCase: true
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
@@ -45,7 +51,6 @@ httpRoutes:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
-          sectionName: http-1
       rules:
         - backendRefs:
             - name: service-1

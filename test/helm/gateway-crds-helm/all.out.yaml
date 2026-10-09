@@ -29783,85 +29783,6 @@ spec:
                   When set, ClientTrafficPolicy.HTTP1.Client and BackendTrafficPolicy.HTTP1 take
                   precedence over the deprecated fields in this struct.
                 properties:
-                  client:
-                    description: |-
-                      Client configures HTTP/1 settings for client connections.
-                      When set, Client takes precedence over the deprecated flat fields below,
-                      all flat fields are ignored entirely, even if set.
-                    properties:
-                      disableSafeMaxConnectionDuration:
-                        description: |-
-                          DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
-                          By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.
-                          It then adds a Connection: close header and gracefully closes the connection after the response completes.
-                          When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
-                          Has no effect unless maxConnectionDuration is set.
-                        type: boolean
-                      enableTrailers:
-                        description: EnableTrailers defines if HTTP/1 trailers should
-                          be proxied by Envoy.
-                        type: boolean
-                      http10:
-                        description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
-                          requests.
-                        properties:
-                          useDefaultHost:
-                            description: |-
-                              UseDefaultHost specifies whether a default Host header should be injected
-                              into HTTP/1.0 requests that do not include one.
-
-                              When set to true, Envoy Gateway injects the hostname associated with the
-                              listener or route into the request, in the following order:
-
-                                1. If the targeted listener has a non-wildcard hostname, use that hostname.
-                                2. If there is exactly one HTTPRoute with a non-wildcard hostname under
-                                   the targeted listener, use that hostname.
-
-                               Note: Setting this field to true without a non-wildcard hostname makes the
-                              ClientTrafficPolicy invalid.
-                            type: boolean
-                        type: object
-                      ignoredUpgradeTypes:
-                        description: |-
-                          IgnoredUpgradeTypes specifies a list of upgrade types for which
-                          HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being
-                          rejected with a 403 response. When a client sends an HTTP/1.1 request
-                          with Connection: Upgrade and an Upgrade header matching one of these
-                          matchers, Envoy will strip the upgrade headers and process the request
-                          as a normal HTTP/1.1 request.
-
-                          Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".
-                        items:
-                          description: |-
-                            StringMatch defines how to match any strings.
-                            This is a general purpose match condition that can be used by other EG APIs
-                            that need to match against a string.
-                          properties:
-                            type:
-                              default: Exact
-                              description: Type specifies how to match against a string.
-                              enum:
-                              - Exact
-                              - Prefix
-                              - Suffix
-                              - RegularExpression
-                              type: string
-                            value:
-                              description: Value specifies the string value that the
-                                match must have.
-                              maxLength: 1024
-                              minLength: 1
-                              type: string
-                          required:
-                          - value
-                          type: object
-                        type: array
-                      preserveHeaderCase:
-                        description: |-
-                          PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
-                          By default, Envoy will lowercase all the headers.
-                        type: boolean
-                    type: object
                   disableSafeMaxConnectionDuration:
                     description: |-
                       DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
@@ -29869,20 +29790,26 @@ spec:
                       It then adds a Connection: close header and gracefully closes the connection after the response completes.
                       When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.
                       Has no effect unless maxConnectionDuration is set.
-
-                      Deprecated: Use client.disableSafeMaxConnectionDuration instead.
                     type: boolean
                   enableTrailers:
                     description: |-
                       EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
 
-                      Deprecated: Use client.enableTrailers instead.
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                   http10:
                     description: |-
                       HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
 
-                      Deprecated: Use client.http10 instead.
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.http10 for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     properties:
                       useDefaultHost:
                         description: |-
@@ -29910,8 +29837,6 @@ spec:
                       as a normal HTTP/1.1 request.
 
                       Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".
-
-                      Deprecated: Use client.ignoredUpgradeTypes instead.
                     items:
                       description: |-
                         StringMatch defines how to match any strings.
@@ -29942,7 +29867,11 @@ spec:
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
                       By default, Envoy will lowercase all the headers.
 
-                      Deprecated: Use client.preserveHeaderCase instead.
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                 type: object
               http2:

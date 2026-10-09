@@ -120,6 +120,12 @@ func TestTranslateXds(t *testing.T) {
 				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
 			},
 		},
+		"http1-listener-settings-ctp-client-scope": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly},
+			},
+		},
+
 		"http-route-with-tls-system-truststore-per-resource-secret": {
 			runtimeFlags: &egv1a1.RuntimeFlags{
 				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},

@@ -31,13 +31,13 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: first-listener
+          routeConfigName: preserve-case-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
         useRemoteAddress: true
-    name: first-listener
+    name: preserve-case-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: first-listener
+  name: preserve-case-listener
   perConnectionBufferLimitBytes: 32768
 - address:
     socketAddress:
@@ -61,11 +61,6 @@
             suppressEnvoyHeaders: true
         httpProtocolOptions:
           enableTrailers: true
-          headerKeyFormat:
-            statefulFormatter:
-              name: preserve_case
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -73,11 +68,49 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: second-listener
+          routeConfigName: trailers-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10081
         useRemoteAddress: true
-    name: second-listener
+    name: trailers-listener
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: second-listener
+  name: trailers-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10082
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        httpProtocolOptions:
+          acceptHttp10: true
+          defaultHostForHttp10: foo.com
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: http10-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10082
+        useRemoteAddress: true
+    name: http10-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: http10-listener
   perConnectionBufferLimitBytes: 32768

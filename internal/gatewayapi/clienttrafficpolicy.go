@@ -42,14 +42,12 @@ const (
 	scopeEntireListenerSet ctpAttachScope = iota
 )
 
-// ctpSpecHasClusterScopedFields reports whether spec sets any field that affects upstream
-// cluster (CDS) configuration. The deprecated flat HTTP1 fields EnableTrailers,
-// PreserveHeaderCase, and HTTP10 flow to the upstream cluster codec and can cause divergence
-// between listeners sharing a merged backend cluster.
-//
-// When h.Client is set it is the sole effective source for all HTTP/1 settings; the flat
-// fields are ignored entirely and carry no cluster-scoped effect, so no demerging is needed.
-func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
+// ctpSpecHasClusterScopedFields reports whether spec sets any CTP http1 field that currently
+// also configures backend HTTP/1 protocol settings, causing divergence between listeners
+// sharing a merged backend cluster.
+// When the ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly flag is on, these fields apply to
+// client connections only and do not configure backend HTTP/1 protocol settings, so this returns false.
+func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec, ctpHTTP1ClientScopeOnly bool) bool {
 	if spec == nil {
 		return false
 	}
@@ -57,13 +55,9 @@ func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
 	if h == nil {
 		return false
 	}
-	// h.Client takes full precedence — flat fields are inert, no cluster-scoped effect.
-	if h.Client != nil {
-		return false
-	}
-	// Of the flat fields, only these three flow to the upstream cluster codec; the rest
-	// (DisableSafeMaxConnectionDuration, IgnoredUpgradeTypes) are listener-scoped only.
-	return h.EnableTrailers != nil || h.PreserveHeaderCase != nil || h.HTTP10 != nil
+	// Of the flat fields, only these three also configure backend HTTP/1 protocol settings; the rest
+	// (DisableSafeMaxConnectionDuration, IgnoredUpgradeTypes) are client connection only.
+	return !ctpHTTP1ClientScopeOnly && (h.EnableTrailers != nil || h.PreserveHeaderCase != nil || h.HTTP10 != nil)
 }
 
 // CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
@@ -109,6 +103,7 @@ func BuildCTPClusterSettingsIndex(
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
 	namespaceLookup func(string) *corev1.Namespace,
 	mergeBackendsEnabled bool,
+	ctpHTTP1ClientScopeOnly bool,
 ) *CTPClusterSettingsIndex {
 	idx := newCTPClusterSettingsIndex()
 	// Moot when no accepted gateway can enable merging.
@@ -117,7 +112,7 @@ func BuildCTPClusterSettingsIndex(
 	}
 
 	for _, ctp := range ctps {
-		hasClusterScoped := ctpSpecHasClusterScopedFields(&ctp.Spec)
+		hasClusterScoped := ctpSpecHasClusterScopedFields(&ctp.Spec, ctpHTTP1ClientScopeOnly)
 
 		refs := resolvePolicyTargetsForGatewayAndListenerSet(
 			ctp.Spec.PolicyTargetReferences,
@@ -171,45 +166,31 @@ func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolic
 		policy.Spec.TLS.ClientValidation.Optional {
 		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
 	}
-	if policy.Spec.HTTP1 != nil {
-		h := policy.Spec.HTTP1
-		// When http1.client is also set the flat fields are ignored entirely, not just
-		// deprecated — make the alternative message reflect that so users get an explicit
-		// signal rather than silently losing the setting.
-		clientSet := h.Client != nil
-		// altCluster builds the deprecation alternative for cluster-scoped flat fields.
-		// Both CTP and BTP replacements are always named since the flat field covered both
-		// client and backend HTTP/1 behaviour.
-		altCluster := func(clientField, btpField string) string {
-			suffix := "use " + clientField + " and BackendTrafficPolicy." + btpField + " instead"
-			if clientSet {
-				return "and is being ignored since spec.http1.client is set; " + suffix
-			}
-			return "and may be overridden by BackendTrafficPolicy.http1; " + suffix
-		}
-		alt := func(newField string) string {
-			if clientSet {
-				return "and is being ignored since spec.http1.client is set; use " + newField + " instead"
-			}
-			return newField
-		}
-		if h.EnableTrailers != nil {
-			deprecatedFields["spec.http1.enableTrailers"] = altCluster("spec.http1.client.enableTrailers", "http1.enableTrailers")
-		}
-		if h.PreserveHeaderCase != nil {
-			deprecatedFields["spec.http1.preserveHeaderCase"] = altCluster("spec.http1.client.preserveHeaderCase", "http1.preserveHeaderCase")
-		}
-		if h.HTTP10 != nil {
-			deprecatedFields["spec.http1.http10"] = altCluster("spec.http1.client.http10", "http1.http10")
-		}
-		if h.DisableSafeMaxConnectionDuration != nil {
-			deprecatedFields["spec.http1.disableSafeMaxConnectionDuration"] = alt("spec.http1.client.disableSafeMaxConnectionDuration")
-		}
-		if len(h.IgnoredUpgradeTypes) > 0 {
-			deprecatedFields["spec.http1.ignoredUpgradeTypes"] = alt("spec.http1.client.ignoredUpgradeTypes")
-		}
-	}
 	return deprecatedFields
+}
+
+// behaviorChangedFieldsUsedInClientTrafficPolicy returns a map of CTP field paths to free-form
+// message suffixes for fields whose behavior will change in a future release.
+//
+// TODO: remove this function once the ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly runtime flag is removed
+// (i.e. when the behavior change becomes permanent and the flag is no longer needed).
+func behaviorChangedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]string {
+	fields := make(map[string]string)
+	if policy.Spec.HTTP1 == nil {
+		return fields
+	}
+	h := policy.Spec.HTTP1
+	// TODO: remove these checks once ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly runtime flag is removed.
+	if h.EnableTrailers != nil {
+		fields["spec.http1.enableTrailers"] = "use BackendTrafficPolicy.http1.enableTrailers for backend settings"
+	}
+	if h.PreserveHeaderCase != nil {
+		fields["spec.http1.preserveHeaderCase"] = "use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings"
+	}
+	if h.HTTP10 != nil {
+		fields["spec.http1.http10"] = "use BackendTrafficPolicy.http1.http10 for backend settings"
+	}
+	return fields
 }
 
 func (t *Translator) ProcessClientTrafficPolicies(
@@ -369,11 +350,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
 					status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 				}
+				if behaviorFields := behaviorChangedFieldsUsedInClientTrafficPolicy(policy); len(behaviorFields) > 0 {
+					status.SetBehaviorChangedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, behaviorFields, "this field will only apply to client connections")
+				}
 			}
 		}
 	}
 
-	// Resolve each policy's targets.
 	policyTargets := make([][]policyTargetReferenceWithSectionName, len(clientTrafficPolicies))
 	for i, currPolicy := range clientTrafficPolicies {
 		policyTargets[i] = resolvePolicyTargetsForGatewayAndListenerSet(
@@ -578,6 +561,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					// Check for deprecated fields and set warning if any are found
 					if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
 						status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+					}
+					if behaviorFields := behaviorChangedFieldsUsedInClientTrafficPolicy(policy); len(behaviorFields) > 0 {
+						status.SetBehaviorChangedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, behaviorFields, "this field will only apply to client connections")
 					}
 				}
 			}
@@ -842,10 +828,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
 
-		// Translate HTTP1 Settings — prefer ClientHTTP1, fall back to deprecated HTTP1.
-		effectiveHTTP1 := resolveClientHTTP1Settings(policy)
-		clientOnly := policy.Spec.HTTP1 != nil && policy.Spec.HTTP1.Client != nil
-		if err = translateHTTP1Settings(effectiveHTTP1, connection, httpIR, clientOnly); err != nil {
+		// Translate HTTP1 Settings.
+		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
 			errs = errors.Join(errs, err)
 		}
@@ -1147,54 +1131,30 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	return errs
 }
 
-// resolveClientHTTP1Settings returns the effective ClientHTTP1Settings for a policy.
-// If http1.client is set it is returned as-is; the deprecated flat fields are ignored
-// entirely and there is no merging. If only flat fields are set they are promoted into a
-// ClientHTTP1Settings value so the rest of the translation path is uniform.
-func resolveClientHTTP1Settings(policy *egv1a1.ClientTrafficPolicy) *egv1a1.ClientHTTP1Settings {
-	if policy.Spec.HTTP1 == nil {
+func translateHTTP1Settings(h *egv1a1.HTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
+	if h == nil {
 		return nil
 	}
-	if policy.Spec.HTTP1.Client != nil {
-		return policy.Spec.HTTP1.Client
-	}
-	// Migrate deprecated flat HTTP1 fields to ClientHTTP1Settings shape.
-	return &egv1a1.ClientHTTP1Settings{
-		CommonHTTP1Settings: egv1a1.CommonHTTP1Settings{
-			EnableTrailers:     policy.Spec.HTTP1.EnableTrailers,
-			PreserveHeaderCase: policy.Spec.HTTP1.PreserveHeaderCase,
-			HTTP10:             policy.Spec.HTTP1.HTTP10,
-		},
-		DisableSafeMaxConnectionDuration: policy.Spec.HTTP1.DisableSafeMaxConnectionDuration,
-		IgnoredUpgradeTypes:              policy.Spec.HTTP1.IgnoredUpgradeTypes,
-	}
-}
-
-func translateHTTP1Settings(http1Settings *egv1a1.ClientHTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener, clientOnly bool) error {
-	if http1Settings == nil {
-		return nil
-	}
-	ignoreUpgrade := make([]*ir.StringMatch, 0, len(http1Settings.IgnoredUpgradeTypes))
-	for _, match := range http1Settings.IgnoredUpgradeTypes {
+	ignoreUpgrade := make([]*ir.StringMatch, 0, len(h.IgnoredUpgradeTypes))
+	for _, match := range h.IgnoredUpgradeTypes {
 		ignoreUpgrade = append(ignoreUpgrade, irStringMatch("", match))
 	}
 	httpIR.HTTP1 = &ir.HTTP1Settings{
-		EnableTrailers:      ptr.Deref(http1Settings.EnableTrailers, false),
-		PreserveHeaderCase:  ptr.Deref(http1Settings.PreserveHeaderCase, false),
 		IgnoredUpgradeTypes: ignoreUpgrade,
-		ClientOnly:          clientOnly,
+		EnableTrailers:      ptr.Deref(h.EnableTrailers, false),
+		PreserveHeaderCase:  ptr.Deref(h.PreserveHeaderCase, false),
 	}
 	if connection != nil {
 		if connection.ConnectionLimit != nil {
 			if connection.ConnectionLimit.MaxConnectionDuration != nil {
-				httpIR.HTTP1.DisableSafeMaxConnectionDuration = ptr.Deref(http1Settings.DisableSafeMaxConnectionDuration, false)
+				httpIR.HTTP1.DisableSafeMaxConnectionDuration = ptr.Deref(h.DisableSafeMaxConnectionDuration, false)
 			}
 		}
 	}
 
-	if http1Settings.HTTP10 != nil {
+	if h.HTTP10 != nil {
 		var defaultHost *string
-		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
+		if ptr.Deref(h.HTTP10.UseDefaultHost, false) {
 			// First level of precedence - the first non-wildcard hostname associated with the listener
 			for _, hostname := range httpIR.Hostnames {
 				if !strings.Contains(hostname, "*") {
