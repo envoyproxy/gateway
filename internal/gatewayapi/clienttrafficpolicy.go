@@ -187,9 +187,6 @@ func behaviorChangedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTraffic
 	if h.PreserveHeaderCase != nil {
 		fields["spec.http1.preserveHeaderCase"] = "use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings"
 	}
-	if h.HTTP10 != nil {
-		fields["spec.http1.http10"] = "use BackendTrafficPolicy.http1.http10 for backend settings"
-	}
 	return fields
 }
 

@@ -1975,6 +1975,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 			}
 
 			r.Traffic = tf.DeepCopy()
+
 			if localTo, err := buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
@@ -2054,19 +2055,14 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeat
 }
 
 // translateBackendHTTP1Settings converts BTP BackendHTTP1Settings to the IR representation.
-// Only cluster-relevant fields are populated; listener-only fields have no upstream equivalent.
 func translateBackendHTTP1Settings(s *egv1a1.BackendHTTP1Settings) *ir.HTTP1Settings {
 	if s == nil {
 		return nil
 	}
-	out := &ir.HTTP1Settings{
+	return &ir.HTTP1Settings{
 		EnableTrailers:     ptr.Deref(s.EnableTrailers, false),
 		PreserveHeaderCase: ptr.Deref(s.PreserveHeaderCase, false),
 	}
-	if s.HTTP10 != nil {
-		out.HTTP10 = &ir.HTTP10Settings{}
-	}
-	return out
 }
 
 func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {

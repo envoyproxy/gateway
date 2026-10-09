@@ -428,7 +428,6 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
 | `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
-| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 
 
 #### BackendMetrics
@@ -1104,7 +1103,7 @@ _Appears in:_
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  |  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  |  | Timeout settings for the client connections. |
 | `connection` | _[ClientConnection](#clientconnection)_ |  false  |  | Connection includes client connection settings. |
-| `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener.<br />Note: The individual fields within this struct that configure both client and backend<br />HTTP/1 behaviour are deprecated and will be removed in a future release.<br />Use ClientTrafficPolicy.HTTP1.Client for client settings and<br />BackendTrafficPolicy.HTTP1 for backend settings instead.<br />When set, ClientTrafficPolicy.HTTP1.Client and BackendTrafficPolicy.HTTP1 take<br />precedence over the deprecated fields in this struct. |
+| `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
 | `grpc` | _[GRPCSettings](#grpcsettings)_ |  false  |  | GRPC provides gRPC configuration on the listener. |
@@ -1188,23 +1187,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `includeAll` | _boolean_ |  false  |  | IncludeAll defines whether all clusters should be included in the translation hook.<br />Default is true for backward compatibility. |
-
-
-#### CommonHTTP1Settings
-
-
-
-CommonHTTP1Settings provides HTTP/1 configuration shared between client and backend connections.
-It is the common base embedded by ClientHTTP1Settings and BackendHTTP1Settings.
-
-_Appears in:_
-- [BackendHTTP1Settings](#backendhttp1settings)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
-| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
-| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 
 
 #### Compression
@@ -3129,8 +3111,6 @@ _Appears in:_
 HTTP10Settings provides HTTP/1.0 configuration on the listener.
 
 _Appears in:_
-- [BackendHTTP1Settings](#backendhttp1settings)
-- [CommonHTTP1Settings](#commonhttp1settings)
 - [HTTP1Settings](#http1settings)
 
 | Field | Type | Required | Default | Description |

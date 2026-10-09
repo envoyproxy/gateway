@@ -60,5 +60,4 @@
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
         httpProtocolOptions:
-          acceptHttp10: true
           enableTrailers: true

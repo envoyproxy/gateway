@@ -711,12 +711,6 @@ type ClusterSettings struct {
 
 // BackendHTTP1Settings provides HTTP/1 configuration for upstream backend connections.
 type BackendHTTP1Settings struct {
-	CommonHTTP1Settings `json:",inline"`
-}
-
-// CommonHTTP1Settings provides HTTP/1 configuration shared between client and backend connections.
-// It is the common base embedded by ClientHTTP1Settings and BackendHTTP1Settings.
-type CommonHTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
 	// +optional
 	EnableTrailers *bool `json:"enableTrailers,omitempty"`
@@ -724,9 +718,6 @@ type CommonHTTP1Settings struct {
 	// By default, Envoy will lowercase all the headers.
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
-	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
-	// +optional
-	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.

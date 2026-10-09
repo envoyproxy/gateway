@@ -10,6 +10,8 @@ spec:
       name: same-namespace
   http1:
     preserveHeaderCase: true
+    http10:
+      useDefaultHost: true
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -19,11 +21,20 @@ metadata:
 spec:
   parentRefs:
     - name: same-namespace
+  hostnames:
+    - "http10.example.com"
   rules:
     - matches:
         - path:
             type: PathPrefix
             value: /preserve
+      backendRefs:
+        - name: fasthttp-backend
+          port: 8000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /http10
       backendRefs:
         - name: fasthttp-backend
           port: 8000

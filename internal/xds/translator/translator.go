@@ -148,11 +148,23 @@ func (t *Translator) xdsNameSchemeV2() bool {
 // When ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly is enabled, returns nil —
 // CTP http1 fields apply to the client connection only and must not configure backend
 // HTTP/1 protocol settings. Remove this method when that runtime flag is removed.
+// HTTP10 settings are always stripped: accept_http_10 and default_host_for_http_10
+// are downstream-only fields in Envoy's Http1ProtocolOptions and have no effect on
+// upstream clusters.
 func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
 	if t.RuntimeFlags != nil && t.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly) {
 		return nil
 	}
-	return s
+	// HTTP10 is downstream-only; strip it unconditionally before seeding cluster settings.
+	if s.HTTP10 == nil {
+		return s
+	}
+	stripped := *s
+	stripped.HTTP10 = nil
+	return &stripped
 }
 
 type GlobalRateLimitSettings struct {

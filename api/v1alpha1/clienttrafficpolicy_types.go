@@ -94,13 +94,6 @@ type ClientTrafficPolicySpec struct {
 	Connection *ClientConnection `json:"connection,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener.
 	//
-	// Note: The individual fields within this struct that configure both client and backend
-	// HTTP/1 behaviour are deprecated and will be removed in a future release.
-	// Use ClientTrafficPolicy.HTTP1.Client for client settings and
-	// BackendTrafficPolicy.HTTP1 for backend settings instead.
-	// When set, ClientTrafficPolicy.HTTP1.Client and BackendTrafficPolicy.HTTP1 take
-	// precedence over the deprecated fields in this struct.
-	//
 	// +optional
 	HTTP1 *HTTP1Settings `json:"http1,omitempty"`
 	// HTTP2 provides HTTP/2 configuration on the listener.

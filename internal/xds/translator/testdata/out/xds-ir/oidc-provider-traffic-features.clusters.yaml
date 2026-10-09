@@ -28,6 +28,16 @@
   name: httproute/default/httproute-1/rule/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        httpProtocolOptions:
+          headerKeyFormat:
+            statefulFormatter:
+              name: preserve_case
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig
 - circuitBreakers:
     thresholds:
     - maxConnections: 2048
@@ -108,7 +118,8 @@
         maxConnectionDuration: 17s
         maxRequestsPerConnection: 1
       explicitHttpConfig:
-        httpProtocolOptions: {}
+        httpProtocolOptions:
+          enableTrailers: true
       hashPolicy:
       - connectionProperties:
           sourceIp: true
