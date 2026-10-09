@@ -842,6 +842,13 @@ type HTTP2KeepaliveSettings struct {
 	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
 }
 
+// BackendHTTP3Settings provides HTTP/3 configuration for clusters.
+// +k8s:deepcopy-gen=true
+type BackendHTTP3Settings struct {
+	// Mode determines when HTTP/3 is used to reach the backend: "Auto" or "Always".
+	Mode string `json:"mode" yaml:"mode"`
+}
+
 // GRPCSettings provides gRPC configuration on the listener.
 // +k8s:deepcopy-gen=true
 type GRPCSettings struct {
@@ -1224,6 +1231,9 @@ type ClusterTrafficFeatures struct {
 	// HTTP2 provides HTTP/2 configuration for clusters
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
+	// HTTP3 provides HTTP/3 configuration for clusters
+	// +optional
+	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty" yaml:"http3,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
@@ -2258,6 +2268,59 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	}
 
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
+}
+
+// AllSettingsHaveTLS returns true if every destination setting is configured with TLS.
+// HTTP/3 to the backend requires it, because QUIC always runs over TLS.
+func AllSettingsHaveTLS(settings []*DestinationSetting) bool {
+	if len(settings) == 0 {
+		return false
+	}
+	for _, s := range settings {
+		if s == nil || s.TLS == nil {
+			return false
+		}
+	}
+	return true
+}
+
+// HTTP3Incompatibilities reports why HTTP/3 cannot be used to reach the given backends,
+// or nothing when it can. QUIC always runs over TLS and replaces the cluster's TCP
+// transport socket, so it is incompatible with plaintext or TCP backends and with
+// settings that assume a TCP stream. The gatewayapi translator reports these through
+// the policy status and the xds translator uses the same answer to decide whether a
+// cluster gets QUIC, so the two cannot drift.
+func HTTP3Incompatibilities(settings []*DestinationSetting, useClientProtocol, proxyProtocol bool) []string {
+	var reasons []string
+	if !AllSettingsHaveTLS(settings) {
+		reasons = append(reasons, "HTTP/3 requires TLS to the backend, "+
+			"configured with a BackendTLSPolicy or the Backend's spec.tls")
+	}
+	if useClientProtocol {
+		reasons = append(reasons, "useClientProtocol cannot be used together with http3")
+	}
+	if proxyProtocol {
+		reasons = append(reasons, "proxyProtocol cannot be used together with http3, it has no QUIC equivalent")
+	}
+	forceHTTP1, http2OrGRPC, tcp := false, false, false
+	for _, s := range settings {
+		if s == nil {
+			continue
+		}
+		forceHTTP1 = forceHTTP1 || s.ForceHTTP1Upstream
+		http2OrGRPC = http2OrGRPC || s.Protocol == HTTP2 || s.Protocol == GRPC
+		tcp = tcp || s.Protocol == TCP
+	}
+	if forceHTTP1 {
+		reasons = append(reasons, "backends requiring HTTP/1.1 upstream cannot be used together with http3")
+	}
+	if http2OrGRPC {
+		reasons = append(reasons, "backends with an HTTP/2 or gRPC appProtocol cannot be used together with http3")
+	}
+	if tcp {
+		reasons = append(reasons, "TCP backends cannot be used together with http3")
+	}
+	return reasons
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {

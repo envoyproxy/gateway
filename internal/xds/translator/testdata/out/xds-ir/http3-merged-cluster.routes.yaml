@@ -1,0 +1,25 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-http3/http
+  virtualHosts:
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-http3/http/*
+    routes:
+    - match:
+        path: /merged-h3-route
+      name: merged-h3-route
+      route:
+        cluster: service/default/h3-backend/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.alternate_protocols_cache:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - match:
+        path: /merged-plain-route
+      name: merged-plain-route
+      route:
+        cluster: service/default/plain-backend/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket

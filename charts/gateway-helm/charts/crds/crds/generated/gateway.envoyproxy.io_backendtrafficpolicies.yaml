@@ -1092,6 +1092,26 @@ spec:
                       Default: TerminateConnection
                     type: string
                 type: object
+              http3:
+                description: |-
+                  HTTP3 enables HTTP/3 for backend connections.
+                  HTTP/3 always runs over TLS, so the backend must be configured
+                  with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                  HTTP/3 is only supported for the backends of a route, through
+                  BackendTrafficPolicy. It is rejected for the backends of other
+                  resources, such as the external services of a SecurityPolicy
+                  or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                properties:
+                  mode:
+                    default: Auto
+                    description: |-
+                      Mode determines when HTTP/3 is used to reach the backend.
+                      Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                    enum:
+                    - Auto
+                    - Always
+                    type: string
+                type: object
               httpUpgrade:
                 description: |-
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
@@ -3652,6 +3672,8 @@ spec:
                 in [''Service'', ''ServiceImport'', ''Backend'']) || !has(ref.sectionName))'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
+            - message: useClientProtocol cannot be used together with http3
+              rule: '!has(self.http3) || !has(self.useClientProtocol) || !self.useClientProtocol'
             - message: requestBuffer with mode BufferAndLimit cannot be used together
                 with httpUpgrade
               rule: '!has(self.requestBuffer) || self.requestBuffer.mode == ''LimitOnly''
@@ -3680,6 +3702,8 @@ spec:
                 has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer)
                 && has(self.loadBalancer.type) && self.loadBalancer.type in [''Random'',
                 ''RoundRobin'']))'
+            - message: proxyProtocol cannot be used together with http3
+              rule: '!has(self.http3) || !has(self.proxyProtocol)'
           status:
             description: status defines the current status of BackendTrafficPolicy.
             properties:

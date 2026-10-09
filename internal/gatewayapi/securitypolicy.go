@@ -2010,7 +2010,7 @@ func (t *Translator) buildRemoteJWKS(
 	}
 
 	if remoteJWKS.BackendSettings != nil {
-		if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
+		if traffic, err = translateExtServiceBackendSettings(remoteJWKS.BackendSettings); err != nil {
 			return nil, err
 		}
 	}
@@ -2366,7 +2366,7 @@ func (t *Translator) buildOIDCProvider(
 		return nil, err
 	}
 
-	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(provider.BackendSettings); err != nil {
 		return nil, err
 	}
 
@@ -2904,7 +2904,7 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(backendSettings); err != nil {
 		return nil, err
 	}
 

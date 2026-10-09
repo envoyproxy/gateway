@@ -547,12 +547,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addHCM {
-			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, httpListener.Connection); err != nil {
+			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, http3Enabled, httpListener.Connection); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
+				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, http3Enabled, httpListener.Connection); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -561,12 +561,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// When the DefaultFilterChain is shared by multiple Gateway HTTP
 			// Listeners, we need to add the HTTP filters associated with the
 			// HTTPListener to the HCM if they have not yet been added.
-			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
+			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener, accessLog, http3Enabled); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
+				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener, accessLog, http3Enabled); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -768,12 +768,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 
-		if http3Enabled {
-			advertisedPort := httpListener.ExternalPort
-			if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
-				advertisedPort = *httpListener.HTTP3.AdvertisedPort
-			}
-			http3AltSvcHeader := buildHTTP3AltSvcHeader(advertisedPort)
+		// On listeners with upstream HTTP/3 the header mutation filter strips the backend's
+		// alt-svc and appends this one, see patchHCMWithUpstreamHTTP3AltSvc.
+		if http3Enabled && !listenerHasUpstreamHTTP3(httpListener, t.backendIndex) {
+			http3AltSvcHeader := buildHTTP3AltSvcHeader(http3AdvertisedPort(httpListener))
 			if xdsRoute.ResponseHeadersToAdd == nil {
 				xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
 			}
@@ -903,7 +901,7 @@ func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string, 
 	return fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname)
 }
 
-func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
+func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener, accesslog *ir.AccessLog, http3Enabled bool) error {
 	var (
 		hcm *hcmv3.HttpConnectionManager
 		err error
@@ -914,7 +912,7 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	}
 
 	// Add http filters to the HCM if they have not yet been added.
-	if err = t.patchHCMWithFilters(hcm, httpListener, accesslog); err != nil {
+	if err = t.patchHCMWithFilters(hcm, httpListener, accesslog, http3Enabled); err != nil {
 		return err
 	}
 	return replaceHCMInFilterChain(hcm, filterChain)
@@ -953,12 +951,27 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 	return nil, errors.New("http connection manager not found")
 }
 
+const altSvcHeader = "alt-svc"
+
+// http3AdvertisedPort is the port clients are told to use for HTTP/3: the advertised
+// port from the ClientTrafficPolicy when set, else the listener's external port.
+func http3AdvertisedPort(httpListener *ir.HTTPListener) uint32 {
+	if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
+		return *httpListener.HTTP3.AdvertisedPort
+	}
+	return httpListener.ExternalPort
+}
+
+func http3AltSvcValue(port uint32) string {
+	return strings.Join([]string{fmt.Sprintf(`%s=":%d"; ma=86400`, "h3", port)}, ", ")
+}
+
 func buildHTTP3AltSvcHeader(port uint32) *corev3.HeaderValueOption {
 	return &corev3.HeaderValueOption{
 		Append: &wrapperspb.BoolValue{Value: true},
 		Header: &corev3.HeaderValue{
-			Key:   "alt-svc",
-			Value: strings.Join([]string{fmt.Sprintf(`%s=":%d"; ma=86400`, "h3", port)}, ", "),
+			Key:   altSvcHeader,
+			Value: http3AltSvcValue(port),
 		},
 	}
 }

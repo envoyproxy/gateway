@@ -61,6 +61,69 @@ func (*headerMutation) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListene
 	return nil
 }
 
+// patchHCMWithUpstreamHTTP3AltSvc strips the backend's alt-svc header on listeners that
+// proxy with upstream HTTP/3, so that clients are not told to probe the gateway host on
+// the backend's port. The strip has to run after the alternate protocols cache filter
+// has recorded the header, and route-level header removal runs before it in the router,
+// so the header mutation filter is the only place this can be done. That filter also runs
+// after the router has added the gateway's own alt-svc, so it is re-appended here.
+//
+// TODO: replace with the filter's own strip option once Envoy supports it, see
+// https://github.com/envoyproxy/envoy/issues/48169.
+func patchHCMWithUpstreamHTTP3AltSvc(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener, http3Enabled bool, backendIndex backendClusterIndex) error {
+	if !listenerHasUpstreamHTTP3(irListener, backendIndex) {
+		return nil
+	}
+
+	mutations := []*mutation_rulesv3.HeaderMutation{{
+		Action: &mutation_rulesv3.HeaderMutation_Remove{Remove: altSvcHeader},
+	}}
+	if http3Enabled {
+		mutations = append(mutations, &mutation_rulesv3.HeaderMutation{
+			Action: &mutation_rulesv3.HeaderMutation_Append{
+				Append: &corev3.HeaderValueOption{
+					Header: &corev3.HeaderValue{
+						Key:   altSvcHeader,
+						Value: http3AltSvcValue(http3AdvertisedPort(irListener)),
+					},
+					AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
+				},
+			},
+		})
+	}
+
+	filterName := egv1a1.EnvoyFilterHeaderMutation.String()
+	mutationProto := &mutationv3.HeaderMutation{}
+	var existing *hcmv3.HttpFilter
+	for _, f := range mgr.HttpFilters {
+		if f.Name == filterName {
+			existing = f
+			if err := f.GetTypedConfig().UnmarshalTo(mutationProto); err != nil {
+				return err
+			}
+			break
+		}
+	}
+	if mutationProto.Mutations == nil {
+		mutationProto.Mutations = &mutationv3.Mutations{}
+	}
+	mutationProto.Mutations.ResponseMutations = append(mutationProto.Mutations.ResponseMutations, mutations...)
+
+	mutationAny, err := proto.ToAnyWithValidation(mutationProto)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		existing.ConfigType = &hcmv3.HttpFilter_TypedConfig{TypedConfig: mutationAny}
+		return nil
+	}
+	mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
+		Name:       filterName,
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mutationAny},
+	})
+	return nil
+}
+
 func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, error) {
 	if headers == nil {
 		return nil, nil

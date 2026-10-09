@@ -3022,6 +3022,7 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Connection":        true,
 		"DNS":               true,
 		"HTTP2":             true,
+		"HTTP3":             true,
 		"MergeType":         false,
 		"RateLimit":         false,
 		"BandwidthLimit":    false,
@@ -3080,6 +3081,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      false,
 			"BackendConnection": false,
 			"HTTP2":             false,
+			"HTTP3":             false,
 			"DNS":               true,
 		},
 		ir.TCP: {
@@ -3092,6 +3094,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      true,
 			"BackendConnection": false,
 			"HTTP2":             false,
+			"HTTP3":             false,
 			"DNS":               true,
 		},
 		ir.HTTP: {
@@ -3104,6 +3107,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      true,
 			"BackendConnection": true,
 			"HTTP2":             true,
+			"HTTP3":             true,
 			"DNS":               true,
 		},
 	}
@@ -3207,10 +3211,129 @@ func TestApplyGatewayPolicyToMergedClusterDropsRouteScopedTimeout(t *testing.T) 
 }
 
 // mergedClusterForProtocol builds a minimal merged BackendCluster serving protocol.
+// mergedClusterForProtocol builds a cluster that can carry every field a merged cluster of
+// that protocol may honor; TLS is set because HTTP/3 is dropped from a plaintext backend.
 func mergedClusterForProtocol(protocol ir.AppProtocol) *ir.BackendCluster {
 	return &ir.BackendCluster{
 		Name:    "bc-1",
-		Setting: &ir.DestinationSetting{Protocol: protocol},
+		Setting: &ir.DestinationSetting{Protocol: protocol, TLS: &ir.TLSUpstreamConfig{}},
+	}
+}
+
+// TestValidateBackendHTTP3 checks that a route is judged on its route-scoped settings only:
+// merged refs are the cluster's business and unresolvable backendRefs never dial.
+func TestValidateBackendHTTP3(t *testing.T) {
+	http3 := &ir.TrafficFeatures{ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+		HTTP3: &ir.BackendHTTP3Settings{Mode: string(egv1a1.BackendHTTP3ModeAuto)},
+	}}
+	tlsSetting := &ir.DestinationSetting{Protocol: ir.HTTP, TLS: &ir.TLSUpstreamConfig{}}
+	plainSetting := &ir.DestinationSetting{Protocol: ir.HTTP}
+
+	tests := []struct {
+		name        string
+		route       *ir.HTTPRoute
+		wantReasons int
+	}{
+		{
+			name:  "no http3 on the route",
+			route: &ir.HTTPRoute{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{plainSetting}}},
+		},
+		{
+			name:  "redirect route has no destination",
+			route: &ir.HTTPRoute{Traffic: http3},
+		},
+		{
+			name:  "tls settings",
+			route: &ir.HTTPRoute{Traffic: http3, Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{tlsSetting}}},
+		},
+		{
+			name:        "plaintext setting",
+			route:       &ir.HTTPRoute{Traffic: http3, Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{tlsSetting, plainSetting}}},
+			wantReasons: 1,
+		},
+		{
+			name: "invalid setting is skipped",
+			route: &ir.HTTPRoute{Traffic: http3, Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{
+				tlsSetting, {Protocol: ir.HTTP, Invalid: true},
+			}}},
+		},
+		{
+			name: "all settings invalid",
+			route: &ir.HTTPRoute{Traffic: http3, Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{
+				{Protocol: ir.HTTP, Invalid: true},
+			}}},
+		},
+		{
+			name: "merged refs are not the route's to judge",
+			route: &ir.HTTPRoute{Traffic: http3, Destination: &ir.RouteDestination{BackendClusterRefs: []*ir.BackendClusterRef{
+				{Name: "service/default/plain/8080/http"},
+			}}},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Len(t, validateBackendHTTP3(tc.route), tc.wantReasons)
+		})
+	}
+}
+
+func TestHTTP3WarningsMessage(t *testing.T) {
+	w := http3Warnings{}
+	require.Empty(t, w.message())
+
+	w.addBackend("service/default/svc-2/8080/http", []string{"reason b"})
+	w.addRoute("route-2", []string{"reason a"})
+	w.addRoute("route-1", []string{"reason a"})
+	require.Equal(t,
+		"HTTP/3 is disabled for route(s) route-1, route-2: reason a; "+
+			"HTTP/3 is disabled for backend(s) service/default/svc-2/8080/http: reason b",
+		w.message())
+}
+
+// TestApplyGatewayPolicyToMergedClusterHTTP3 checks that a merged cluster only keeps HTTP3
+// when its backend can actually use it, and reports why otherwise.
+func TestApplyGatewayPolicyToMergedClusterHTTP3(t *testing.T) {
+	tf := &ir.TrafficFeatures{
+		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			HTTP3: &ir.BackendHTTP3Settings{Mode: string(egv1a1.BackendHTTP3ModeAuto)},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		setting     *ir.DestinationSetting
+		wantHTTP3   bool
+		wantReasons int
+	}{
+		{
+			name:      "tls http backend keeps http3",
+			setting:   &ir.DestinationSetting{Protocol: ir.HTTP, TLS: &ir.TLSUpstreamConfig{}},
+			wantHTTP3: true,
+		},
+		{
+			name:        "plaintext http backend drops http3",
+			setting:     &ir.DestinationSetting{Protocol: ir.HTTP},
+			wantReasons: 1,
+		},
+		{
+			name:        "http2 backend drops http3",
+			setting:     &ir.DestinationSetting{Protocol: ir.HTTP2, TLS: &ir.TLSUpstreamConfig{}},
+			wantReasons: 1,
+		},
+		{
+			// A TCP cluster never carries HTTP-only settings, so nothing is dropped or reported.
+			name:    "tcp backend never carries http3",
+			setting: &ir.DestinationSetting{Protocol: ir.TCP},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bc := &ir.BackendCluster{Name: "bc-1", Setting: tc.setting}
+			reasons := applyGatewayPolicyToMergedCluster(bc, tf, nil)
+			require.Len(t, reasons, tc.wantReasons)
+			require.NotNil(t, bc.Traffic)
+			require.Equal(t, tc.wantHTTP3, bc.Traffic.HTTP3 != nil)
+		})
 	}
 }
 

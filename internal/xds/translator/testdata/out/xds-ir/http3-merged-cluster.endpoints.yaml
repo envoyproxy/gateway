@@ -1,0 +1,44 @@
+- clusterName: service/default/h3-backend/8080/http
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.11
+            portValue: 8080
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: service/default/h3-backend/8080/http/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: service/default/h3-backend/8080/http
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: h3-backend
+            namespace: default
+            sectionName: "8080"
+- clusterName: service/default/plain-backend/8080/http
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.12
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: service/default/plain-backend/8080/http
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: plain-backend
+            namespace: default
+            sectionName: "8080"

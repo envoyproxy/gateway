@@ -23,6 +23,10 @@ const (
 	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
 	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
 
+	// PolicyReasonUnsupportedHTTP3Backend is used with the "Warning" condition when HTTP/3 to
+	// a backend is disabled because the backend, or another setting, cannot use QUIC.
+	PolicyReasonUnsupportedHTTP3Backend gwapiv1.PolicyConditionReason = "UnsupportedHTTP3Backend"
+
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
@@ -108,6 +112,13 @@ func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicySt
 // SetDeprecatedFieldsWarningForPolicyAncestor sets a deprecated fields warning condition for a specific ancestor reference.
 func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
+}
+
+// SetWarningForPolicyAncestors sets or appends a warning condition for each ancestor reference.
+func SetWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, reason gwapiv1.PolicyConditionReason, message string, generation int64) {
+	for _, ancestorRef := range ancestorRefs {
+		SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, reason, message, generation)
+	}
 }
 
 // SetWarningForPolicyAncestor sets or appends a warning condition for a specific ancestor reference.

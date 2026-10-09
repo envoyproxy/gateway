@@ -156,8 +156,12 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 308
 	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
 		order = 309
-	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+	// Sits next to the router so that on the response path it sees the alt-svc header
+	// straight from upstream, before any other filter can rewrite or strip it.
+	case isFilterType(filter, egv1a1.EnvoyFilterAlternateProtocolsCache):
 		order = 310
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 311
 	}
 
 	return &OrderedHTTPFilter{
@@ -282,7 +286,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 // manager.
 // Important: don't forget to set the order for newly added filters in the
 // newOrderedHTTPFilter method.
-func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
+func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener, accesslog *ir.AccessLog, http3Enabled bool) error {
 	// The order of filter patching is not relevant here.
 	// All the filters will be sorted in correct order after the patching is done.
 	//
@@ -292,6 +296,15 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 		if err := filter.patchHCM(mgr, irListener); err != nil {
 			return err
 		}
+	}
+
+	// Handled outside the filter loop because they need the backend cluster index, and the
+	// listener-wide HTTP/3 flag derived from every listener sharing this address and port.
+	if err := t.patchHCMWithAlternateProtocolsCache(mgr, irListener); err != nil {
+		return err
+	}
+	if err := patchHCMWithUpstreamHTTP3AltSvc(mgr, irListener, http3Enabled, t.backendIndex); err != nil {
+		return err
 	}
 
 	// RateLimit filter is handled separately because it relies on the global
