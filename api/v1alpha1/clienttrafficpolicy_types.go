@@ -340,18 +340,31 @@ type DirectSourceIPSettings struct{}
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 // Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 // for more details.
+//
+// The detected client address is used wherever Envoy needs the client IP: access logs
+// (%DOWNSTREAM_REMOTE_ADDRESS%), client IP authorization, rate limiting and GeoIP.
+// Whether Envoy also exposes it to the backend in the x-envoy-external-address header
+// depends on which of NumTrustedHops or TrustedCIDRs is used; see those fields.
 // +kubebuilder:validation:XValidation:rule="(has(self.numTrustedHops) && !has(self.trustedCIDRs)) || (!has(self.numTrustedHops) && has(self.trustedCIDRs))", message="only one of numTrustedHops or trustedCIDRs must be set"
 type XForwardedForSettings struct {
 	// NumTrustedHops specifies how many trusted hops to count from the rightmost side of
 	// the X-Forwarded-For (XFF) header when determining the original client’s IP address.
 	//
 	// If NumTrustedHops is set to N, the client IP is taken from the Nth address from the
-	// right end of the XFF header.
+	// right end of the XFF header. If the header carries fewer than N addresses, or N is 0,
+	// the address of the downstream connection is used.
 	//
 	// Example:
 	//   XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"
 	//   NumTrustedHops = 2
 	//   → Trusted client address = 203.0.113.10
+	//
+	// Use this when a fixed number of trusted proxies sit in front of Envoy, such as a cloud
+	// load balancer that appends the client address to XFF (NumTrustedHops = 1). Envoy acts
+	// as the trusted edge in this mode: it appends the downstream connection address to XFF
+	// unless DisableXForwardedForAppend is set, sets x-envoy-external-address to the detected
+	// client address, trusts x-forwarded-proto from the trusted hops, and removes x-envoy-*
+	// internal headers sent by the client.
 	//
 	// Only one of NumTrustedHops or TrustedCIDRs should be configured.
 	// +optional
@@ -363,6 +376,14 @@ type XForwardedForSettings struct {
 	// each entry in the x-forwarded-for header is evaluated from right to left
 	// and the first public non-trusted address is used as the original client address.
 	// If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.
+	//
+	// Use this when the number of trusted proxies in front of Envoy varies but their address
+	// ranges are known. Envoy implements this mode with its xff original IP detection
+	// extension, which does not let Envoy act as the trusted edge: the detected address is
+	// used for access logging, authorization, rate limiting and GeoIP, but Envoy does not set
+	// x-envoy-external-address, and x-envoy-* headers sent by the client are not removed.
+	// Use NumTrustedHops when the backend needs x-envoy-external-address.
+	//
 	// Only one of NumTrustedHops and TrustedCIDRs must be set.
 	//
 	// +optional
