@@ -1,0 +1,162 @@
+securitypolicies:
+# The targeted ListenerSet has no attached route, so the policy is accepted but
+# never reaches the generated configuration.
+# this policy status
+# - Accepted: true
+# - Warning: true
+#   - NoAttachedRoutes
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-listenerset-without-routes
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+    cors:
+      allowOrigins:
+      - "https://foo.example.com"
+# Authorization is the one feature that reaches TCP listeners, and the targeted
+# TCP listener has an attached TCPRoute, so no warning is expected.
+# this policy status
+# - Accepted: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gw-tcp-section-with-authorization
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+      sectionName: tcp
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/24
+# The targeted TCP listener has an attached TCPRoute, but CORS can only be
+# applied to HTTP routes.
+# this policy status
+# - Accepted: true
+# - Warning: true
+#   - NoAttachedRoutes
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gw-tcp-section-with-cors
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: composite-gateway
+      sectionName: tcp2
+    cors:
+      allowOrigins:
+      - "https://foo.example.com"
+httpRoutes:
+# Attached to the Gateway HTTP listener only, never to the ListenerSet listener.
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-gw
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: composite-gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: route-on-tcp
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: composite-gateway
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: route-on-tcp2
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: composite-gateway
+      sectionName: tcp2
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: tcp
+      protocol: TCP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: tcp2
+      protocol: TCP
+      port: 8083
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: ext-http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
