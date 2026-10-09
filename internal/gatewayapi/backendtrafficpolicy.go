@@ -620,9 +620,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				continue
 			}
 			// Reuse the gateway-BTP path's protocol subsetting to keep HTTP-only fields off UDP/TCP clusters.
-			if reasons := applyGatewayPolicyToMergedCluster(bc, tf, mergedPolicy.Spec.UseClientProtocol); len(reasons) > 0 {
-				warnings.addBackend(bc.Name, reasons)
-			}
+			warnings.addMergedCluster(bc, applyGatewayPolicyToMergedCluster(bc, tf, mergedPolicy.Spec.UseClientProtocol))
 
 			matchedGWs.Insert(gwNN)
 			if gwPolicy != nil {
@@ -1706,10 +1704,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
-				if reasons := validateBackendHTTP3(r); len(reasons) > 0 {
-					r.Traffic.HTTP3 = nil
-					warnings.addRoute(r.Name, reasons)
-				}
+				applyRouteHTTP3(r, warnings)
 				appendTrafficPolicyMetadata(r.Metadata, policy)
 			}
 		}
@@ -2033,11 +2028,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 			if policy.Spec.UseClientProtocol != nil {
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
 			}
-
-			if reasons := validateBackendHTTP3(r); len(reasons) > 0 {
-				r.Traffic.HTTP3 = nil
-				warnings.addRoute(r.Name, reasons)
-			}
+			applyRouteHTTP3(r, warnings)
 
 			appendTrafficPolicyMetadata(r.Metadata, policy)
 		}
@@ -2056,9 +2047,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	// takes from it still depends on the protocol it serves.
 	if applyToBackendClusters && buildErr == nil {
 		for _, bc := range x.BackendClusters {
-			if reasons := applyGatewayPolicyToMergedCluster(bc, tf, policy.Spec.UseClientProtocol); len(reasons) > 0 {
-				warnings.addBackend(bc.Name, reasons)
-			}
+			warnings.addMergedCluster(bc, applyGatewayPolicyToMergedCluster(bc, tf, policy.Spec.UseClientProtocol))
 		}
 	}
 
@@ -2068,11 +2057,22 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 // http3Warnings records, per subject and reason, the routes and merged backend clusters that
 // had to drop HTTP/3. Dropping HTTP/3 leaves the rest of the policy in effect, so this is
 // reported as a Warning condition rather than as a translation error.
-const altSvcHeader = "alt-svc"
+const (
+	altSvcHeader = "alt-svc"
 
+	// http3ALPNIgnoredReason is reported when HTTP/3 stays on but the cluster drops the
+	// configured backendTLS alpnProtocols, see ir.HTTP3IgnoresALPN.
+	http3ALPNIgnoredReason = "backendTLS alpnProtocols cannot be offered over QUIC, so the cluster " +
+		"offers none and its TCP connections negotiate h2 or http/1.1"
+)
+
+// http3Warnings collects, per reason, the routes and merged clusters that lost HTTP/3 and
+// those that keep it while a setting is ignored, for one Warning condition message.
 type http3Warnings map[http3WarningKey]sets.Set[string]
 
 type http3WarningKey struct {
+	// ignored means HTTP/3 stays on and reason names the setting the cluster drops.
+	ignored bool
 	subject string
 	reason  string
 }
@@ -2092,14 +2092,31 @@ func (w http3Warnings) addBackend(clusterName string, reasons []string) {
 	w.add(http3WarningBackends, clusterName, reasons)
 }
 
+// addMergedCluster records why bc lost HTTP/3, or the ALPN list HTTP/3 ignores on it.
+func (w http3Warnings) addMergedCluster(bc *ir.BackendCluster, dropped []string) {
+	switch {
+	case len(dropped) > 0:
+		w.addBackend(bc.Name, dropped)
+	case bc.Traffic != nil && bc.Traffic.HTTP3 != nil && ir.HTTP3IgnoresALPN([]*ir.DestinationSetting{bc.Setting}):
+		w.addIgnored(http3WarningBackends, bc.Name, http3ALPNIgnoredReason)
+	}
+}
+
 func (w http3Warnings) add(subject, name string, reasons []string) {
 	for _, reason := range reasons {
-		key := http3WarningKey{subject: subject, reason: reason}
-		if w[key] == nil {
-			w[key] = sets.New[string]()
-		}
-		w[key].Insert(name)
+		w.insert(http3WarningKey{subject: subject, reason: reason}, name)
 	}
+}
+
+func (w http3Warnings) addIgnored(subject, name, reason string) {
+	w.insert(http3WarningKey{ignored: true, subject: subject, reason: reason}, name)
+}
+
+func (w http3Warnings) insert(key http3WarningKey, name string) {
+	if w[key] == nil {
+		w[key] = sets.New[string]()
+	}
+	w[key].Insert(name)
 }
 
 // message renders the warnings as one condition message, routes first, or "" when there are none.
@@ -2109,6 +2126,12 @@ func (w http3Warnings) message() string {
 		keys = append(keys, key)
 	}
 	slices.SortFunc(keys, func(a, b http3WarningKey) int {
+		if a.ignored != b.ignored {
+			if a.ignored {
+				return 1
+			}
+			return -1
+		}
 		if a.subject != b.subject {
 			if a.subject == http3WarningRoutes {
 				return -1
@@ -2119,10 +2142,27 @@ func (w http3Warnings) message() string {
 	})
 	parts := make([]string, 0, len(keys))
 	for _, key := range keys {
-		parts = append(parts, fmt.Sprintf("HTTP/3 is disabled for %s %s: %s",
-			key.subject, strings.Join(sets.List(w[key]), ", "), key.reason))
+		verb := "is disabled"
+		if key.ignored {
+			verb = "ignores a setting"
+		}
+		parts = append(parts, fmt.Sprintf("HTTP/3 %s for %s %s: %s",
+			verb, key.subject, strings.Join(sets.List(w[key]), ", "), key.reason))
 	}
 	return strings.Join(parts, "; ")
+}
+
+// applyRouteHTTP3 drops HTTP/3 from the route when its route-scoped cluster cannot use it and
+// records why, or records the ALPN list the cluster ignores when HTTP/3 stays on.
+func applyRouteHTTP3(r *ir.HTTPRoute, warnings http3Warnings) {
+	if reasons := validateBackendHTTP3(r); len(reasons) > 0 {
+		r.Traffic.HTTP3 = nil
+		warnings.addRoute(r.Name, reasons)
+		return
+	}
+	if r.Traffic != nil && r.Traffic.HTTP3 != nil && r.Destination != nil && ir.HTTP3IgnoresALPN(r.Destination.Settings) {
+		warnings.addIgnored(http3WarningRoutes, r.Name, http3ALPNIgnoredReason)
+	}
 }
 
 // validateBackendHTTP3 reports why HTTP/3 cannot be used to reach the backends in the route's

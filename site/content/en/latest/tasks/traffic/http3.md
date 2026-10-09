@@ -193,6 +193,11 @@ the Gateway's own `alt-svc` when the listener has HTTP/3 enabled. An HTTPRoute
 so `Auto` mode could never discover the backend's HTTP/3 support. HTTP/3 is left off for such a
 route and the policy reports a `Warning` condition.
 
+The EnvoyProxy `backendTLS.alpnProtocols` setting is not applied to a cluster using HTTP/3. Envoy
+offers that list on the QUIC handshake too, where only `h3` is valid, so the cluster offers no ALPN
+list of its own: QUIC negotiates `h3` and the cluster's TCP connections fall back to `h2` and
+`http/1.1`. The policy reports a `Warning` condition naming the cluster.
+
 `Always` sends every request over HTTP/3 and never falls back to TCP. Use it only where the backend
 is known to speak HTTP/3 and UDP is known to work, since there is no recovery if QUIC fails. Active
 health checks are the exception: Envoy sends them over TLS on TCP even in `Always` mode, so a backend

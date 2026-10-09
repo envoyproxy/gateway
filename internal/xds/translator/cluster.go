@@ -1134,12 +1134,17 @@ func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpo
 
 // buildQuicUpstreamTransportSocket wraps an upstream TLS transport socket in a QUIC one.
 // QUIC's handshake is TLS 1.3, so Envoy requires the TLS context to be carried inside
-// QuicUpstreamTransport rather than configured alongside it. ALPN is left untouched: Envoy
-// uses "h3" on the QUIC leg, and the wrapped context's own ALPN on the TCP leg.
+// QuicUpstreamTransport rather than configured alongside it. The wrapped context also builds
+// the cluster's TCP connections, and Envoy offers its ALPN list on both legs, where QUIC only
+// accepts h3. The list is dropped so that QUIC offers h3 and TCP falls back to Envoy's h2 and
+// http/1.1; the gatewayapi translator reports the dropped list through the policy status.
 func buildQuicUpstreamTransportSocket(tlsSocket *corev3.TransportSocket) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.UpstreamTlsContext{}
 	if err := tlsSocket.GetTypedConfig().UnmarshalTo(tlsCtx); err != nil {
 		return nil, err
+	}
+	if tlsCtx.CommonTlsContext != nil {
+		tlsCtx.CommonTlsContext.AlpnProtocols = nil
 	}
 
 	quicCtx := &quicv3.QuicUpstreamTransport{UpstreamTlsContext: tlsCtx}

@@ -2335,6 +2335,19 @@ func CanUseHTTP3(settings []*DestinationSetting, useClientProtocol, proxyProtoco
 		len(HTTP3Incompatibilities(settings, useClientProtocol, proxyProtocol)) == 0
 }
 
+// HTTP3IgnoresALPN reports whether a cluster given QUIC drops a configured ALPN list. Envoy
+// offers the upstream TLS context's ALPN on the QUIC leg as well, where only h3 is valid, so
+// the xds translator leaves the list out of the QUIC transport; Envoy then offers h3 over
+// QUIC and falls back to h2 and http/1.1 on the cluster's TCP connections.
+func HTTP3IgnoresALPN(settings []*DestinationSetting) bool {
+	for _, s := range dialableSettings(settings) {
+		if s.TLS != nil && len(s.TLS.ALPNProtocols) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // HasDialableSettings reports whether at least one backendRef resolved, so the cluster dials.
 func HasDialableSettings(settings []*DestinationSetting) bool {
 	return len(dialableSettings(settings)) > 0

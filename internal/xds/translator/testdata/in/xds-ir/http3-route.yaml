@@ -89,6 +89,32 @@ http:
         traffic:
           http3:
             mode: Always
+      # The backend TLS carries an ALPN list, which QUIC cannot offer, so the QUIC transport
+      # drops it and the cluster is otherwise the same as the Always one.
+      - destination:
+          name: httproute/default/http3-alpn/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 10.244.0.12
+                  port: 8080
+              protocol: HTTP
+              name: httproute/default/http3-alpn/rule/0/backend/0
+              tls:
+                alpnProtocols:
+                  - h2
+                  - http/1.1
+                insecureSkipVerify: true
+                SNI: example.com
+              weight: 1
+        hostname: '*'
+        name: alpn-route
+        pathMatch:
+          exact: /alpn-route
+          name: ""
+        traffic:
+          http3:
+            mode: Always
       # Still carries http3 Auto, as an extension hook or a mixed weighted rule can leave it,
       # but the plaintext backend never gets QUIC, so neither the alt-svc strip nor the
       # alternate protocols cache is enabled on the route.

@@ -3311,9 +3311,11 @@ func TestHTTP3WarningsMessage(t *testing.T) {
 	w.addBackend("service/default/svc-2/8080/http", []string{"reason b"})
 	w.addRoute("route-2", []string{"reason a"})
 	w.addRoute("route-1", []string{"reason a"})
+	w.addIgnored(http3WarningRoutes, "route-3", "reason c")
 	require.Equal(t,
 		"HTTP/3 is disabled for route(s) route-1, route-2: reason a; "+
-			"HTTP/3 is disabled for backend(s) service/default/svc-2/8080/http: reason b",
+			"HTTP/3 is disabled for backend(s) service/default/svc-2/8080/http: reason b; "+
+			"HTTP/3 ignores a setting for route(s) route-3: reason c",
 		w.message())
 }
 
