@@ -37,6 +37,15 @@ const (
 
 	// Network configuration related condition types
 	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"
+
+	// RouteConditionWarning indicates that the route configuration contains
+	// non-critical issues that are accepted but require attention.
+	RouteConditionWarning gwapiv1.RouteConditionType = "Warning"
+
+	// RouteReasonNameContainsDots is used with the "Warning" condition when the route
+	// name or a rule name contains a dot, which causes Envoy to truncate Prometheus
+	// metric labels at the first dot and can produce duplicate metric series.
+	RouteReasonNameContainsDots gwapiv1.RouteConditionReason = "NameContainsDots"
 )
 
 // Listener condition reasons for various error scenarios
