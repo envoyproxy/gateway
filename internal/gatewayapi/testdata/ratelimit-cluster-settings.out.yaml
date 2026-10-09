@@ -166,6 +166,8 @@ xdsIR:
         traffic:
           circuitBreaker:
             maxRequestsPerConnection: 10
+            perEndpoint:
+              maxConnections: 1024
           healthCheck:
             passive:
               alwaysEjectOneEndpoint: false

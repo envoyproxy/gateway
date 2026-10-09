@@ -66,6 +66,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 						cs.Timeout.HTTP.StreamIdleTimeout = nil
 					}
 					setRateLimitHealthCheckDefaults(cs.HealthCheck)
+					setRateLimitCircuitBreakerDefaults(cs.CircuitBreaker)
 					backendSetting = &egv1a1.BackendSettings{
 						ClusterSettings: *cs,
 					}
@@ -207,6 +208,18 @@ func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
 		}
 	}
 	return false
+}
+
+// setRateLimitCircuitBreakerDefaults fills in the kubebuilder default of the rate limit service
+// cluster's per-endpoint circuit breaker, which, like the health check defaults, is never applied
+// to static configuration. Without it an explicitly enabled per-endpoint breaker is dropped.
+func setRateLimitCircuitBreakerDefaults(cb *egv1a1.CircuitBreaker) {
+	if cb == nil || cb.PerEndpoint == nil {
+		return
+	}
+	if cb.PerEndpoint.MaxConnections == nil {
+		cb.PerEndpoint.MaxConnections = new(int64(1024))
+	}
 }
 
 // setRateLimitHealthCheckDefaults fills in the kubebuilder defaults of the rate limit service

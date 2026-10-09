@@ -144,6 +144,7 @@ func TestTranslate(t *testing.T) {
 			RateLimitClusterSettings: &egv1a1.ClusterSettings{
 				CircuitBreaker: &egv1a1.CircuitBreaker{
 					MaxRequestsPerConnection: new(int64(10)),
+					PerEndpoint:              &egv1a1.PerEndpointCircuitBreakers{},
 				},
 				// Omitted fields must be defaulted, since EnvoyGateway isn't admitted as a CRD.
 				HealthCheck: &egv1a1.HealthCheck{
