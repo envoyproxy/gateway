@@ -902,29 +902,45 @@ func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gatew
 
 // findOwningGateway finds a Gateway using the provided labels.
 // Returns the Gateway only if it belongs to this controller, or nil otherwise.
-func (r *gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[string]string) *gwapiv1.Gateway {
-	gwName, ok := labels[gatewayapi.OwningGatewayNameLabel]
+func (r *gatewayAPIReconciler) findOwningGateway(ctx context.Context, objectLabels map[string]string) *gwapiv1.Gateway {
+	gwName, ok := objectLabels[gatewayapi.OwningGatewayNameLabel]
 	if !ok {
 		return nil
 	}
 
-	gwNamespace, ok := labels[gatewayapi.OwningGatewayNamespaceLabel]
+	gwNamespace, ok := objectLabels[gatewayapi.OwningGatewayNamespaceLabel]
 	if !ok {
 		return nil
 	}
 
 	gatewayKey := types.NamespacedName{Namespace: gwNamespace, Name: gwName}
 	gtw := new(gwapiv1.Gateway)
-	if err := r.client.Get(ctx, gatewayKey, gtw); err != nil {
-		r.log.Info("gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
-		return nil
+	if err := r.client.Get(ctx, gatewayKey, gtw); err == nil {
+		if !r.validateGatewayForReconcile(gtw) {
+			return nil
+		}
+		return gtw
 	}
 
-	if !r.validateGatewayForReconcile(gtw) {
+	// owning-gateway-name may be a hashed label value when the Gateway name exceeds 63 characters.
+	gateways := new(gwapiv1.GatewayList)
+	if err := r.client.List(ctx, gateways, &client.ListOptions{Namespace: gwNamespace}); err != nil {
+		r.log.Info("gateway not found", "namespace", gwNamespace, "name", gwName)
 		return nil
 	}
+	for i := range gateways.Items {
+		candidate := &gateways.Items[i]
+		if utils.LabelValue(candidate.Name) != gwName {
+			continue
+		}
+		if !r.validateGatewayForReconcile(candidate) {
+			return nil
+		}
+		return candidate
+	}
 
-	return gtw
+	r.log.Info("gateway not found", "namespace", gwNamespace, "name", gwName)
+	return nil
 }
 
 // updateStatusForGatewaysUnderGatewayClass updates status of all Gateways under the GatewayClass.

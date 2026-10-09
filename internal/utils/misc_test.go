@@ -6,10 +6,31 @@
 package utils
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
+
+func TestLabelValue(t *testing.T) {
+	short := "gateway-1"
+	require.Equal(t, short, LabelValue(short))
+
+	atLimit := strings.Repeat("a", 63)
+	require.Equal(t, atLimit, LabelValue(atLimit))
+
+	long := strings.Repeat("a", 64)
+	got := LabelValue(long)
+	require.NotEqual(t, long, got)
+	require.Equal(t, GetHashedName(long, 54), got)
+	require.LessOrEqual(t, len(got), 63)
+	require.Empty(t, validation.IsValidLabelValue(got))
+
+	other := strings.Repeat("b", 64)
+	require.NotEqual(t, LabelValue(long), LabelValue(other))
+	require.Equal(t, LabelValue(long), LabelValue(long))
+}
 
 func TestGetHashedName(t *testing.T) {
 	testCases := []struct {

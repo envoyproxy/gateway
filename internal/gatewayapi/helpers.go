@@ -271,15 +271,15 @@ func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.G
 // the provided namespace and name as the values.
 func GatewayOwnerLabels(namespace, name string) map[string]string {
 	return map[string]string{
-		OwningGatewayNamespaceLabel: namespace,
-		OwningGatewayNameLabel:      name,
+		OwningGatewayNamespaceLabel: utils.LabelValue(namespace),
+		OwningGatewayNameLabel:      utils.LabelValue(name),
 	}
 }
 
 // GatewayClassOwnerLabel returns the GatewayCLass Owner label using
 // the provided name as the value.
 func GatewayClassOwnerLabel(name string) map[string]string {
-	return map[string]string{OwningGatewayClassLabel: name}
+	return map[string]string{OwningGatewayClassLabel: utils.LabelValue(name)}
 }
 
 // OwnerLabels returns the owner labels based on the mergeGateways setting

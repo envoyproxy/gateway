@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,6 +33,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 // TestGatewayClassHasMatchingController tests the hasMatchingController
@@ -332,6 +334,18 @@ func TestFindOwningGateway(t *testing.T) {
 				gatewayapi.OwningGatewayNamespaceLabel: "default",
 			},
 			expect: nil,
+		},
+		{
+			name: "returns Gateway when owning-gateway-name is a hashed long name",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", controllerName, nil),
+				test.GetGateway(types.NamespacedName{Namespace: "default", Name: strings.Repeat("g", 64)}, "test-gc", 8080),
+			},
+			labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      utils.LabelValue(strings.Repeat("g", 64)),
+				gatewayapi.OwningGatewayNamespaceLabel: "default",
+			},
+			expect: test.GetGateway(types.NamespacedName{Namespace: "default", Name: strings.Repeat("g", 64)}, "test-gc", 8080),
 		},
 	}
 
