@@ -57,8 +57,16 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 
 				var backendSetting *egv1a1.BackendSettings
 				if t.RateLimitClusterSettings != nil {
+					cs := t.RateLimitClusterSettings.DeepCopy()
+					// The rate limit service cluster has no associated route, so route-scoped
+					// HTTP timeouts have no effect. Strip them before translation so a malformed
+					// (and ignored) value can't fail the whole translation.
+					if cs.Timeout != nil && cs.Timeout.HTTP != nil {
+						cs.Timeout.HTTP.RequestTimeout = nil
+						cs.Timeout.HTTP.StreamIdleTimeout = nil
+					}
 					backendSetting = &egv1a1.BackendSettings{
-						ClusterSettings: *t.RateLimitClusterSettings,
+						ClusterSettings: *cs,
 					}
 				}
 				tf, err := translateTrafficFeatures(backendSetting)

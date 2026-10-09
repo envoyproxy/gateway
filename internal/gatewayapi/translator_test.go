@@ -148,6 +148,9 @@ func TestTranslate(t *testing.T) {
 				Timeout: &egv1a1.Timeout{
 					HTTP: &egv1a1.HTTPTimeout{
 						MaxConnectionDuration: new(gwapiv1.Duration("30s")),
+						// Route-scoped timeouts are ignored for the rate limit service
+						// cluster, so a malformed value must not fail translation.
+						RequestTimeout: new(gwapiv1.Duration("not-a-duration")),
 					},
 				},
 			},
