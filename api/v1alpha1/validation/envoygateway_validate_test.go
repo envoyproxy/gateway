@@ -1839,6 +1839,15 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			},
 			expectErr: "dns.dnsRefreshRate: invalid duration",
 		},
+		{
+			name: "proxy protocol is rejected",
+			cs: &egv1a1.ClusterSettings{
+				ProxyProtocol: &egv1a1.ProxyProtocol{
+					Version: egv1a1.ProxyProtocolVersionV2,
+				},
+			},
+			expectErr: "proxyProtocol is not supported for the managed rate limit service",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

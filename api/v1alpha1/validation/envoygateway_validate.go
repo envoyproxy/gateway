@@ -333,6 +333,12 @@ func validateRateLimitClusterSettings(cs *egv1a1.ClusterSettings) error {
 		return nil
 	}
 
+	// The rate limit service is deployed and managed by Envoy Gateway, and it doesn't accept
+	// PROXY protocol headers: enabling it would break every rate limit request.
+	if cs.ProxyProtocol != nil {
+		return fmt.Errorf("proxyProtocol is not supported for the managed rate limit service")
+	}
+
 	if err := validateRateLimitClusterCircuitBreaker(cs.CircuitBreaker); err != nil {
 		return err
 	}
