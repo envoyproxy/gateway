@@ -1011,6 +1011,18 @@ type ExtensionService struct {
 	//
 	// +optional
 	Retry *ExtensionServiceRetry `json:"retry,omitempty"`
+
+	// Timeout is the maximum duration of a single call to the extension service,
+	// including the time spent waiting for the connection to become ready and
+	// any retries. When the timeout is exceeded the call fails with
+	// DEADLINE_EXCEEDED, which lets ExtensionManager.FailOpen take effect when the
+	// extension service is unreachable.
+	//
+	// If unset, calls have no deadline and block until the extension service
+	// becomes reachable.
+	//
+	// +optional
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
 }
 
 // ExtensionTLS defines the TLS configuration when connecting to an extension service.
