@@ -17,6 +17,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -4842,6 +4843,31 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid brotli quality 0",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{
+								Quality: new(uint32(0)),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "compressor settings out of range - should fail",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -5445,4 +5471,34 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			}
 		})
 	}
+
+	// A negative quality cannot be set through the typed API since the field is a uint32.
+	t.Run("brotli quality below minimum - should fail", func(t *testing.T) {
+		btp := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": egv1a1.GroupVersion.String(),
+			"kind":       egv1a1.KindBackendTrafficPolicy,
+			"metadata": map[string]any{
+				"name":      fmt.Sprintf("btp-%v", time.Now().UnixNano()),
+				"namespace": metav1.NamespaceDefault,
+			},
+			"spec": map[string]any{
+				"targetRef": map[string]any{
+					"group": "gateway.networking.k8s.io",
+					"kind":  "Gateway",
+					"name":  "eg",
+				},
+				"compressor": []any{
+					map[string]any{
+						"type":   string(egv1a1.BrotliCompressorType),
+						"brotli": map[string]any{"quality": int64(-1)},
+					},
+				},
+			},
+		}}
+
+		wantError := "spec.compressor[0].brotli.quality: Invalid value: -1: spec.compressor[0].brotli.quality in body should be greater than or equal to 0"
+		if err := c.Create(ctx, btp); err == nil || !strings.Contains(err.Error(), wantError) {
+			t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%q", err, wantError)
+		}
+	})
 }

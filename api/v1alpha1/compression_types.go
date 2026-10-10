@@ -121,6 +121,7 @@ type BrotliCompressor struct {
 	// The higher the quality, the slower the compression. If not set, defaults to 3.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=11
 	Quality *uint32 `json:"quality,omitempty"`
 
