@@ -286,7 +286,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 			}
 
 			// Call attachEnvoyProxy
-			err := gCtx.attachEnvoyProxy(resources, epMap)
+			err := gCtx.attachEnvoyProxy(resources, epMap, "")
 			require.NoError(t, err)
 
 			// Verify results
@@ -487,4 +487,18 @@ func TestIsParentRefEqual(t *testing.T) {
 			require.Equal(t, tc.expected, IsParentRefEqual(tc.ref2, tc.ref1, routeNS))
 		})
 	}
+}
+
+func TestAttachEnvoyProxyDefaultSpecNamespace(t *testing.T) {
+	gCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+	resources := &resource.Resources{
+		EnvoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+			BackendTLS: &egv1a1.BackendTLSConfig{},
+		},
+	}
+
+	require.NoError(t, gCtx.attachEnvoyProxy(resources, nil, "envoy-gateway-system"))
+	_, meta := gCtx.GetBackendTLSConfig()
+	require.NotNil(t, meta)
+	require.Equal(t, "envoy-gateway-system", meta.Namespace)
 }
