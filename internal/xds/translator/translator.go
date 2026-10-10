@@ -756,6 +756,19 @@ func (t *Translator) addRouteToRouteConfig(
 			continue
 		}
 
+		// A route proxying over upstream HTTP/3 strips the backend's alt-svc in the header
+		// mutation filter and re-adds this one there, since that filter runs after the router.
+		// Done before the extension hook so the extension sees the complete route.
+		switch {
+		case routeUsesUpstreamHTTP3(httpRoute, t.backendIndex):
+			if err = patchRouteWithUpstreamHTTP3AltSvc(xdsRoute, httpListener, http3Enabled); err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
+		case http3Enabled:
+			xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, buildHTTP3AltSvcHeader(http3AdvertisedPort(httpListener)))
+		}
+
 		// Check if an extension want to modify the route we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex); err != nil {
@@ -766,18 +779,6 @@ func (t *Translator) addRouteToRouteConfig(
 			} else {
 				t.Logger.Error(err, "Extension Manager PostRoute failure")
 			}
-		}
-
-		// A route proxying over upstream HTTP/3 strips the backend's alt-svc in the header
-		// mutation filter and re-adds this one there, since that filter runs after the router.
-		switch {
-		case routeUsesUpstreamHTTP3(httpRoute, t.backendIndex):
-			if err = patchRouteWithUpstreamHTTP3AltSvc(xdsRoute, httpListener, http3Enabled); err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-		case http3Enabled:
-			xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, buildHTTP3AltSvcHeader(http3AdvertisedPort(httpListener)))
 		}
 		vHost.Routes = append(vHost.Routes, xdsRoute)
 
