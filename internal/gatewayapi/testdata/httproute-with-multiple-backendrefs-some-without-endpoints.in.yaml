@@ -34,7 +34,7 @@ httpRoutes:
         port: 8080
       - name: service-with-no-endpoints
         port: 8080
-    # the invalid backendRef is kept to return 500 for its share, the backendRef without endpoints is dropped
+    # the backendRef without endpoints is kept to preserve the invalid fraction, the invalid and no endpoints share returns 503
     - matches:
       - path:
           type: PathPrefix
