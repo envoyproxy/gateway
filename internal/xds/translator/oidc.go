@@ -379,7 +379,10 @@ func buildHeaderMatchers(jwt *ir.JWT) []*routev3.HeaderMatcher {
 	for _, provider := range jwt.Providers {
 		if provider.ExtractFrom == nil {
 			// If extractFrom is not specified, it adds "Authorization: Bearer ..." as a default
-			stringMatcher := matcherv3.StringMatcher{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "Bearer "}}
+			stringMatcher := matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "Bearer "},
+				IgnoreCase:   true,
+			}
 			headerMatcher := routev3.HeaderMatcher{
 				Name:                 "Authorization",
 				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{StringMatch: &stringMatcher},
