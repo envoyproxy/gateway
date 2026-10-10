@@ -26,7 +26,7 @@ spec:
         - name: infra-backend-v1
           port: 8080
           weight: 9
-        - name: infra-backend-without-endpoints    # should return 503 for empty cluster
+        - name: infra-backend-without-endpoints    # should be dropped, infra-backend-v1 receives all the traffic
           port: 8080
           weight: 1
 ---

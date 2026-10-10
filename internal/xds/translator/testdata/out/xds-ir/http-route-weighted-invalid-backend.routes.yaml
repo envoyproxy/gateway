@@ -42,3 +42,13 @@
             weight: 2
           - name: third-route-dest/backend/0
             weight: 1
+    - match:
+        prefix: /
+      name: fourth-route
+      route:
+        weightedClusters:
+          clusters:
+          - name: invalid-backend-cluster
+            weight: 1
+          - name: fourth-route-dest/backend/0
+            weight: 1

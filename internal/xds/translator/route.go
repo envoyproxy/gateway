@@ -337,7 +337,8 @@ func buildXdsRouteAction(route *ir.HTTPRoute, backendIndex backendClusterIndex) 
 
 	// Weighted routing is needed whenever there's more than one cluster to route between.
 	if route.NeedsClusterPerSetting() || clusterCount > 1 {
-		return buildXdsWeightedRouteAction(route.Destination, backendIndex)
+		// IsHTTP2 is only set for GRPCRoute.
+		return buildXdsWeightedRouteAction(route.Destination, backendIndex, route.IsHTTP2)
 	}
 
 	// Defaults to the destination's own name; a single backend cluster overrides it.
@@ -352,7 +353,7 @@ func buildXdsRouteAction(route *ir.HTTPRoute, backendIndex backendClusterIndex) 
 	}
 }
 
-func buildXdsWeightedRouteAction(destination *ir.RouteDestination, backendIndex backendClusterIndex) *routev3.RouteAction {
+func buildXdsWeightedRouteAction(destination *ir.RouteDestination, backendIndex backendClusterIndex, isGRPC bool) *routev3.RouteAction {
 	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0)
 
 	backendWeights := destination.ToBackendWeights()
@@ -398,8 +399,10 @@ func buildXdsWeightedRouteAction(destination *ir.RouteDestination, backendIndex 
 	// 503 status code should be returned for Services without ready endpoints
 	// Reference: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule
 	clusterNotFoundResponseCode := routev3.RouteAction_INTERNAL_SERVER_ERROR
-	// Envoy can't handle mixed 500 and 503 responses, so we use 503 when both invalid and empty
-	if backendWeights.NoEndpoints > 0 {
+	// Envoy can't handle mixed 500 and 503 responses, so we use 503 when both invalid and empty.
+	// For GRPCRoute, invalid GRPCBackendRefs must receive an UNAVAILABLE status, which Envoy maps from 503.
+	// Reference: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#grpcrouterule
+	if backendWeights.NoEndpoints > 0 || isGRPC {
 		clusterNotFoundResponseCode = routev3.RouteAction_SERVICE_UNAVAILABLE
 	}
 	return &routev3.RouteAction{

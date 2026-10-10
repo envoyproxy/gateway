@@ -154,11 +154,6 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 			path:        "/mixed-valid-and-invalid",
 			failureCode: 500,
 		},
-		{
-			name:        "MixedValidAndNoEndpoints",
-			path:        "/mixed-valid-and-no-endpoints",
-			failureCode: 503,
-		},
 	}
 
 	for _, scenario := range scenarios {
@@ -166,6 +161,11 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 			runMixedValidAndInvalidScenario(t, suite, gwAddr, scenario.path, scenario.failureCode)
 		})
 	}
+
+	// The backendRef without endpoints is dropped, so all the requests are routed to the valid backend.
+	t.Run("MixedValidAndNoEndpoints", func(t *testing.T) {
+		runMixedValidAndNoEndpointsScenario(t, suite, gwAddr, "/mixed-valid-and-no-endpoints")
+	})
 }
 
 const (
@@ -227,4 +227,33 @@ func runMixedValidAndInvalidScenario(t *testing.T, suite *suite.ConformanceTestS
 	}
 
 	t.Logf("success count for %s is %d, failure count for %s is %d", path, successCount, path, failureCount)
+}
+
+func runMixedValidAndNoEndpointsScenario(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr, path string) {
+	t.Helper()
+
+	expected := http.ExpectedResponse{
+		Request: http.Request{
+			Path: path,
+		},
+		Response: http.Response{
+			StatusCodes: []int{200},
+		},
+		Namespace: ConformanceInfraNamespace,
+	}
+
+	// Make sure the valid(response 200) backend are ready.
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
+
+	req := http.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
+	for i := 0; i < mixedValidAndInvalidRequests; i++ {
+		_, response, err := suite.RoundTripper.CaptureRoundTrip(req)
+		if err != nil {
+			t.Errorf("failed to get expected response: %v", err)
+			continue
+		}
+		if response.StatusCode != 200 {
+			t.Errorf("unexpected status code %d for %s", response.StatusCode, path)
+		}
+	}
 }
