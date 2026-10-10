@@ -33,6 +33,7 @@ backendTrafficPolicies:
         http:
           method: GET
           path: /
+          version: Auto
         interval: 3s
         timeout: 1s
         type: HTTP
