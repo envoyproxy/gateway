@@ -25174,6 +25174,9 @@ spec:
                     rule: '!has(self.zstd) || self.type == ''Zstd'''
                 maxItems: 3
                 type: array
+                x-kubernetes-validations:
+                - message: compression types must be unique
+                  rule: self.all(c, self.filter(o, o.type == c.type).size() == 1)
               compressor:
                 description: |-
                   The compressor config for the http streams.
@@ -25369,6 +25372,9 @@ spec:
                     rule: '!has(self.zstd) || self.type == ''Zstd'''
                 maxItems: 3
                 type: array
+                x-kubernetes-validations:
+                - message: compressor types must be unique
+                  rule: self.all(c, self.filter(o, o.type == c.type).size() == 1)
               connection:
                 description: Connection includes backend connection settings.
                 properties:

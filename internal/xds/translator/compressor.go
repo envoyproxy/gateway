@@ -296,7 +296,8 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 	// Overwrite the HCM level filter config with the per route filter config.
 	perFilterCfg = route.GetTypedPerFilterConfig()
 	if perFilterCfg == nil {
-		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+		perFilterCfg = make(map[string]*anypb.Any)
+		route.TypedPerFilterConfig = perFilterCfg
 	}
 
 	for _, irComp := range irRoute.Traffic.Compression {
@@ -319,7 +320,7 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 			return err
 		}
 
-		route.TypedPerFilterConfig[filterName] = compressorAny
+		perFilterCfg[filterName] = compressorAny
 	}
 
 	// Ensure accept-encoding from the request to prevent double compression.

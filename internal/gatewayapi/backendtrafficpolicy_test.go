@@ -570,6 +570,59 @@ func TestBuildCompression(t *testing.T) {
 			},
 		},
 		{
+			name: "only the first compressor of each type is used",
+			compressor: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(1)),
+					},
+				},
+				{
+					Type:   egv1a1.BrotliCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{},
+				},
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(1)),
+					},
+				},
+				{
+					Type: egv1a1.BrotliCompressorType,
+				},
+			},
+		},
+		{
+			name: "only the first compression of each type is used",
+			compression: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					MinContentLength: new(resource.MustParse("100")),
+				},
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					MinContentLength: new(resource.MustParse("200")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: new(uint32(100)),
+				},
+			},
+		},
+		{
 			name: "compression settings of other compressor types are ignored",
 			compression: []*egv1a1.Compression{
 				{

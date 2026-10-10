@@ -4956,6 +4956,48 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"spec.compressor: Too many: 4: must have at most 3 items"},
 		},
 		{
+			desc: "duplicate compressor types - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{CompressionLevel: new(uint32(1))}},
+						{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{CompressionLevel: new(uint32(9))}},
+					},
+				}
+			},
+			wantErrors: []string{"compressor types must be unique"},
+		},
+		{
+			desc: "duplicate compression types - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.BrotliCompressorType},
+						{Type: egv1a1.BrotliCompressorType},
+					},
+				}
+			},
+			wantErrors: []string{"compression types must be unique"},
+		},
+		{
 			desc: "both compression and compressor fields specified - should fail",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

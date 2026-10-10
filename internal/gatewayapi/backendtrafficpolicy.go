@@ -2820,7 +2820,15 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 	// Handle the Compressor field first (higher priority)
 	if len(compressor) > 0 {
 		result := make([]*ir.Compression, 0, len(compressor))
+		types := sets.New[egv1a1.CompressorType]()
 		for i, c := range compressor {
+			// Duplicate types are rejected by the API, but stored or file-provided policies
+			// may still contain them, so only the first compressor of each type is used.
+			if types.Has(c.Type) {
+				continue
+			}
+			types.Insert(c.Type)
+
 			// Only add compression if the corresponding compressor not null
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
@@ -2847,7 +2855,13 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		return nil
 	}
 	result := make([]*ir.Compression, 0, len(compression))
+	types := sets.New[egv1a1.CompressorType]()
 	for i, c := range compression {
+		if types.Has(c.Type) {
+			continue
+		}
+		types.Insert(c.Type)
+
 		irCompression := ir.Compression{
 			Type:        c.Type,
 			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst

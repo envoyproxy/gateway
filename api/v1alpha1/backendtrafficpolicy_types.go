@@ -117,6 +117,7 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=3
+	// +kubebuilder:validation:XValidation:rule="self.all(c, self.filter(o, o.type == c.type).size() == 1)",message="compression types must be unique"
 	Compression []*Compression `json:"compression,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// The compressor config for the http streams.
@@ -128,6 +129,7 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=3
+	// +kubebuilder:validation:XValidation:rule="self.all(c, self.filter(o, o.type == c.type).size() == 1)",message="compressor types must be unique"
 	Compressor []*Compression `json:"compressor,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.

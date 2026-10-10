@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	brotliv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/brotli/compressor/v3"
 	gzipv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
 	zstdv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/zstd/compressor/v3"
@@ -271,6 +272,20 @@ func TestBuildCompressorLibrary(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCompressorPatchRouteDuplicateType(t *testing.T) {
+	irRoute := &ir.HTTPRoute{
+		Traffic: &ir.TrafficFeatures{
+			Compression: []*ir.Compression{
+				{Type: egv1a1.GzipCompressorType},
+				{Type: egv1a1.GzipCompressorType},
+			},
+		},
+	}
+
+	err := (&compressor{}).patchRoute(&routev3.Route{}, irRoute, nil)
+	require.ErrorContains(t, err, "route already contains filter config: envoy.filters.http.compressor.gzip")
 }
 
 func TestCompressorFilterName(t *testing.T) {
