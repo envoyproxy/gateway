@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/validation"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -1630,6 +1632,28 @@ func TestServiceAccount(t *testing.T) {
 
 			assert.Equal(t, expected, sa)
 		})
+	}
+}
+
+func TestServiceAccountOwnerLabelsBounded(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	longName := strings.Repeat("g", 64)
+	infra := newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "default", Name: longName})
+	r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+	require.NoError(t, err)
+
+	sa, err := r.ServiceAccount()
+	require.NoError(t, err)
+
+	owningName := sa.Labels[gatewayapi.OwningGatewayNameLabel]
+	require.NotEqual(t, longName, owningName)
+	require.LessOrEqual(t, len(owningName), 63)
+	require.Empty(t, validation.IsValidLabelValue(owningName))
+	for _, v := range sa.Labels {
+		require.LessOrEqual(t, len(v), 63)
+		require.Empty(t, validation.IsValidLabelValue(v))
 	}
 }
 

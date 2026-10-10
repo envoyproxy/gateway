@@ -43,6 +43,24 @@ func NamespacedName(obj client.Object) types.NamespacedName {
 	}
 }
 
+// maxKubernetesLabelValueLen is the maximum length of a Kubernetes label value.
+const maxKubernetesLabelValueLen = 63
+
+// hashedLabelPrefixLen is the number of original name characters kept when a
+// label value must be hashed. Combined with a hyphen and an 8-character hash,
+// the result is at most maxKubernetesLabelValueLen characters.
+const hashedLabelPrefixLen = 54
+
+// LabelValue returns a Kubernetes-valid label value for name.
+// Names of 63 characters or fewer are returned unchanged.
+// Longer names are replaced with a deterministic hashed value from GetHashedName.
+func LabelValue(name string) string {
+	if len(name) <= maxKubernetesLabelValueLen {
+		return name
+	}
+	return GetHashedName(name, hashedLabelPrefixLen)
+}
+
 // GetHashedName returns a partially hashed name for the string including up to the given length of the original name characters before the hash.
 // Input `nsName` should be formatted as `{Namespace}/{ResourceName}`.
 func GetHashedName(nsName string, length int) string {
