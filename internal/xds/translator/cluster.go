@@ -98,6 +98,8 @@ type xdsClusterArgs struct {
 	// caIndex resolves name-only TLSCACertificate references in settings against the
 	// current xdsIR's CACertificates registry. Nil when the settings carry their bytes.
 	caIndex caCertificateIndex
+	// endpointMetadata enables emitting backend identity metadata on each endpoint.
+	endpointMetadata bool
 }
 
 type EndpointType int
@@ -880,14 +882,17 @@ func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreake
 	return trb
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
+func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig, emitBackendMetadata bool) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
-
-		var metadata *corev3.Metadata
-
+		// Build endpoint-level metadata: backend service identity for %UPSTREAM_METADATA% access logs,
+		// merged with TLS transport socket match metadata when TLS is configured.
+		var endpointMetadata *corev3.Metadata
+		if emitBackendMetadata {
+			endpointMetadata = buildXdsEndpointMetadata(ds.Metadata)
+		}
 		if ds.TLS != nil {
-			metadata = &corev3.Metadata{
+			tlsMetadata := &corev3.Metadata{
 				FilterMetadata: map[string]*structpb.Struct{
 					"envoy.transport_socket_match": {
 						Fields: map[string]*structpb.Value{
@@ -895,6 +900,13 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 						},
 					},
 				},
+			}
+			if endpointMetadata == nil {
+				endpointMetadata = tlsMetadata
+			} else {
+				for k, v := range tlsMetadata.FilterMetadata {
+					endpointMetadata.FilterMetadata[k] = v
+				}
 			}
 		}
 
@@ -906,11 +918,11 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
 		switch {
 		case len(weightedZones) > 0:
-			localities = append(localities, buildWeightedZonalLocalities(metadata, ds, hc, weightedZones)...)
+			localities = append(localities, buildWeightedZonalLocalities(endpointMetadata, ds, hc, weightedZones)...)
 		case ds.PreferLocal != nil || preferLocal != nil:
-			localities = append(localities, buildZonalLocalities(metadata, ds, hc)...)
+			localities = append(localities, buildZonalLocalities(endpointMetadata, ds, hc)...)
 		default:
-			localities = append(localities, buildWeightedLocalities(metadata, ds, hc))
+			localities = append(localities, buildWeightedLocalities(endpointMetadata, ds, hc))
 		}
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}

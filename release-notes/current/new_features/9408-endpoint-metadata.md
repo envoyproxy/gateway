@@ -1,0 +1,1 @@
+Added the `LbEndpointMetadata` runtime flag (disabled by default). When enabled, Envoy Gateway annotates each endpoint with the kind, name, namespace and sectionName of the upstream backend under `envoy-gateway.backend` endpoint metadata, so it can be used in access logs, e.g. `%METADATA(UPSTREAM_HOST:envoy-gateway:backend:name)%`.

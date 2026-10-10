@@ -1,0 +1,53 @@
+- clusterName: first-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.1.2.3
+            portValue: 8080
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            backend:
+              kind: Service
+              name: svc-backend
+              namespace: default
+              sectionName: "8080"
+    loadBalancingWeight: 60
+    locality:
+      region: first-route-dest/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: svc-backend
+            namespace: default
+            sectionName: "8080"
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 443
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            backend:
+              kind: Backend
+              name: fqdn-backend
+              namespace: default
+              sectionName: ""
+    loadBalancingWeight: 40
+    locality:
+      region: first-route-dest/backend/1
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: fqdn-backend
+            namespace: default

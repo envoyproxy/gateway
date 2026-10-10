@@ -130,6 +130,26 @@ func TestTranslateXds(t *testing.T) {
 				Enabled: []egv1a1.RuntimeFlag{egv1a1.PerResourceSystemCASecret},
 			},
 		},
+		"endpoint-metadata-weighted-backends": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.LbEndpointMetadata},
+			},
+		},
+		"endpoint-metadata-with-tls": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.LbEndpointMetadata},
+			},
+		},
+		"endpoint-metadata-zonal-routing": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.LbEndpointMetadata},
+			},
+		},
+		"endpoint-metadata-tcp-route": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.LbEndpointMetadata},
+			},
+		},
 		"jsonpatch-system-truststore-enforcement": {
 			requireEnvoyPatchPolicies: true,
 		},
