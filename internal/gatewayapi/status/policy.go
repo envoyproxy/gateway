@@ -23,6 +23,10 @@ const (
 	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
 	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
 
+	// PolicyReasonBehaviorChange is used with the "Warning" condition when a field's behavior
+	// will change in a future release. Users should prepare by migrating to the recommended alternative.
+	PolicyReasonBehaviorChange gwapiv1.PolicyConditionReason = "BehaviorChange"
+
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
@@ -108,6 +112,18 @@ func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicySt
 // SetDeprecatedFieldsWarningForPolicyAncestor sets a deprecated fields warning condition for a specific ancestor reference.
 func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
+}
+
+// SetBehaviorChangedFieldsWarningForPolicyAncestors sets behavior-change warning conditions for each ancestor reference.
+func SetBehaviorChangedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, behaviorFields map[string]string, change string) {
+	for _, ancestorRef := range ancestorRefs {
+		SetBehaviorChangedFieldsWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation, behaviorFields, change)
+	}
+}
+
+// SetBehaviorChangedFieldsWarningForPolicyAncestor sets a behavior-change warning condition for a specific ancestor reference.
+func SetBehaviorChangedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, behaviorFields map[string]string, change string) {
+	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, PolicyReasonBehaviorChange, buildBehaviorChangeWarningMessage(behaviorFields, change), generation)
 }
 
 // SetWarningForPolicyAncestor sets or appends a warning condition for a specific ancestor reference.
@@ -210,7 +226,10 @@ func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 	policyStatus.Ancestors = append(policyStatus.Ancestors[:worst], policyStatus.Ancestors[worst+1:]...)
 }
 
-// buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
+// buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to
+// their alternatives. Values that contain a space are treated as free-form suffixes and emitted
+// as "<key> is deprecated, <value>"; plain field-path values (no spaces) use the standard form
+// "<key> is deprecated, use <value> instead".
 func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
 	if len(deprecatedFields) == 0 {
 		return ""
@@ -228,10 +247,43 @@ func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
 		if i > 0 {
 			builder.WriteString("; ")
 		}
+		alt := deprecatedFields[deprecated]
 		builder.WriteString(deprecated)
-		builder.WriteString(" is deprecated, use ")
-		builder.WriteString(deprecatedFields[deprecated])
-		builder.WriteString(" instead")
+		if strings.ContainsRune(alt, ' ') {
+			builder.WriteString(" is deprecated, ")
+			builder.WriteString(alt)
+		} else {
+			builder.WriteString(" is deprecated, use ")
+			builder.WriteString(alt)
+			builder.WriteString(" instead")
+		}
+	}
+	return builder.String()
+}
+
+// buildBehaviorChangeWarningMessage formats behavior-change warnings for a set of fields.
+// Each entry produces: "<key> behavior will change in a future release: <change>, for compatibility: <action>"
+func buildBehaviorChangeWarningMessage(behaviorFields map[string]string, change string) string {
+	if len(behaviorFields) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(behaviorFields))
+	for k := range behaviorFields {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var builder strings.Builder
+	for i, key := range keys {
+		if i > 0 {
+			builder.WriteString("; ")
+		}
+		builder.WriteString(key)
+		builder.WriteString(" behavior will change in a future release: ")
+		builder.WriteString(change)
+		builder.WriteString(", for compatibility: ")
+		builder.WriteString(behaviorFields[key])
 	}
 	return builder.String()
 }

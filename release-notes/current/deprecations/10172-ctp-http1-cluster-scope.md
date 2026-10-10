@@ -1,0 +1,3 @@
+The `ClientTrafficPolicy` `http1` fields `enableTrailers`, `preserveHeaderCase`, and `http10` currently configure both client and backend HTTP/1 protocol settings. In a future release these fields will be restricted to client connections only and will no longer configure backend HTTP/1 protocol settings. Use `BackendTrafficPolicy.http1.enableTrailers`, `BackendTrafficPolicy.http1.preserveHeaderCase`, and `BackendTrafficPolicy.http1.http10` for backend settings.
+
+The `ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly` (default: false) runtime flag in the `EnvoyGateway` resource can set used to opt-in to the new behavior. The flag will be enabled by default and eventually removed in future releases.

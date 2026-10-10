@@ -26,8 +26,14 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.enableTrailers
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.enableTrailers
+          for backend settings; spec.http1.preserveHeaderCase behavior will change
+          in a future release: this field will only apply to client connections, for
+          compatibility: use BackendTrafficPolicy.http1.preserveHeaderCase for backend
+          settings'
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

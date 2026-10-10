@@ -3028,6 +3028,7 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"FaultInjection":    false,
 		"AdmissionControl":  true,
 		"UseClientProtocol": true,
+		"HTTP1":             true,
 		"Compression":       false,
 		"Compressor":        false,
 		"ResponseOverride":  false,
@@ -3080,6 +3081,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      false,
 			"BackendConnection": false,
 			"HTTP2":             false,
+			"HTTP1":             false,
 			"DNS":               true,
 		},
 		ir.TCP: {
@@ -3092,6 +3094,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      true,
 			"BackendConnection": false,
 			"HTTP2":             false,
+			"HTTP1":             false,
 			"DNS":               true,
 		},
 		ir.HTTP: {
@@ -3104,6 +3107,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      true,
 			"BackendConnection": true,
 			"HTTP2":             true,
+			"HTTP1":             true,
 			"DNS":               true,
 		},
 	}
@@ -3151,13 +3155,14 @@ func TestApplyGatewayPolicyToMergedClusterUseClientProtocol(t *testing.T) {
 		{protocol: ir.HTTP, want: new(true)},
 		{protocol: ir.GRPC, want: new(true)},
 	}
+	useClientProtocol := true
 	for _, test := range tests {
 		t.Run(string(test.protocol), func(t *testing.T) {
 			bc := mergedClusterForProtocol(test.protocol)
 			// Pre-set it, so a protocol that must not carry it is seen to clear it rather than
 			// merely leave it alone.
 			bc.UseClientProtocol = new(true)
-			applyGatewayPolicyToMergedCluster(bc, &ir.TrafficFeatures{}, new(true))
+			applyGatewayPolicyToMergedCluster(bc, &ir.TrafficFeatures{}, &useClientProtocol)
 			require.Equal(t, test.want, bc.UseClientProtocol)
 		})
 	}

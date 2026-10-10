@@ -1581,6 +1581,42 @@ spec:
                         type: boolean
                     type: object
                 type: object
+              http1:
+                description: |-
+                  HTTP1 provides HTTP/1 configuration for backend connections.
+                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                  this field takes precedence for backend (upstream) traffic.
+                properties:
+                  enableTrailers:
+                    description: EnableTrailers defines if HTTP/1 trailers should
+                      be proxied by Envoy.
+                    type: boolean
+                  http10:
+                    description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
+                      requests.
+                    properties:
+                      useDefaultHost:
+                        description: |-
+                          UseDefaultHost specifies whether a default Host header should be injected
+                          into HTTP/1.0 requests that do not include one.
+
+                          When set to true, Envoy Gateway injects the hostname associated with the
+                          listener or route into the request, in the following order:
+
+                            1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                            2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                               the targeted listener, use that hostname.
+
+                           Note: Setting this field to true without a non-wildcard hostname makes the
+                          ClientTrafficPolicy invalid.
+                        type: boolean
+                    type: object
+                  preserveHeaderCase:
+                    description: |-
+                      PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                      By default, Envoy will lowercase all the headers.
+                    type: boolean
+                type: object
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
@@ -5682,7 +5718,15 @@ spec:
                 - path
                 type: object
               http1:
-                description: HTTP1 provides HTTP/1 configuration on the listener.
+                description: |-
+                  HTTP1 provides HTTP/1 configuration on the listener.
+
+                  Note: The individual fields within this struct that configure both client and backend
+                  HTTP/1 behaviour are deprecated and will be removed in a future release.
+                  Use ClientTrafficPolicy.HTTP1.Client for client settings and
+                  BackendTrafficPolicy.HTTP1 for backend settings instead.
+                  When set, ClientTrafficPolicy.HTTP1.Client and BackendTrafficPolicy.HTTP1 take
+                  precedence over the deprecated fields in this struct.
                 properties:
                   disableSafeMaxConnectionDuration:
                     description: |-
@@ -5693,12 +5737,24 @@ spec:
                       Has no effect unless maxConnectionDuration is set.
                     type: boolean
                   enableTrailers:
-                    description: EnableTrailers defines if HTTP/1 trailers should
-                      be proxied by Envoy.
+                    description: |-
+                      EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                   http10:
-                    description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
-                      requests.
+                    description: |-
+                      HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.http10 for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     properties:
                       useDefaultHost:
                         description: |-
@@ -5755,6 +5811,12 @@ spec:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
                       By default, Envoy will lowercase all the headers.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                 type: object
               http2:
@@ -8022,6 +8084,42 @@ spec:
                                     origin.
                                   type: boolean
                               type: object
+                          type: object
+                        http1:
+                          description: |-
+                            HTTP1 provides HTTP/1 configuration for backend connections.
+                            When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                            this field takes precedence for backend (upstream) traffic.
+                          properties:
+                            enableTrailers:
+                              description: EnableTrailers defines if HTTP/1 trailers
+                                should be proxied by Envoy.
+                              type: boolean
+                            http10:
+                              description: HTTP10 turns on support for HTTP/1.0 and
+                                HTTP/0.9 requests.
+                              properties:
+                                useDefaultHost:
+                                  description: |-
+                                    UseDefaultHost specifies whether a default Host header should be injected
+                                    into HTTP/1.0 requests that do not include one.
+
+                                    When set to true, Envoy Gateway injects the hostname associated with the
+                                    listener or route into the request, in the following order:
+
+                                      1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                      2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                         the targeted listener, use that hostname.
+
+                                     Note: Setting this field to true without a non-wildcard hostname makes the
+                                    ClientTrafficPolicy invalid.
+                                  type: boolean
+                              type: object
+                            preserveHeaderCase:
+                              description: |-
+                                PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                By default, Envoy will lowercase all the headers.
+                              type: boolean
                           type: object
                         http2:
                           description: HTTP2 provides HTTP/2 configuration for backend
@@ -23108,6 +23206,43 @@ spec:
                                                     type: boolean
                                                 type: object
                                             type: object
+                                          http1:
+                                            description: |-
+                                              HTTP1 provides HTTP/1 configuration for backend connections.
+                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                              this field takes precedence for backend (upstream) traffic.
+                                            properties:
+                                              enableTrailers:
+                                                description: EnableTrailers defines
+                                                  if HTTP/1 trailers should be proxied
+                                                  by Envoy.
+                                                type: boolean
+                                              http10:
+                                                description: HTTP10 turns on support
+                                                  for HTTP/1.0 and HTTP/0.9 requests.
+                                                properties:
+                                                  useDefaultHost:
+                                                    description: |-
+                                                      UseDefaultHost specifies whether a default Host header should be injected
+                                                      into HTTP/1.0 requests that do not include one.
+
+                                                      When set to true, Envoy Gateway injects the hostname associated with the
+                                                      listener or route into the request, in the following order:
+
+                                                        1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                                        2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                                           the targeted listener, use that hostname.
+
+                                                       Note: Setting this field to true without a non-wildcard hostname makes the
+                                                      ClientTrafficPolicy invalid.
+                                                    type: boolean
+                                                type: object
+                                              preserveHeaderCase:
+                                                description: |-
+                                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                                  By default, Envoy will lowercase all the headers.
+                                                type: boolean
+                                            type: object
                                           http2:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
@@ -24801,6 +24936,43 @@ spec:
                                                       between external and local origin.
                                                     type: boolean
                                                 type: object
+                                            type: object
+                                          http1:
+                                            description: |-
+                                              HTTP1 provides HTTP/1 configuration for backend connections.
+                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                              this field takes precedence for backend (upstream) traffic.
+                                            properties:
+                                              enableTrailers:
+                                                description: EnableTrailers defines
+                                                  if HTTP/1 trailers should be proxied
+                                                  by Envoy.
+                                                type: boolean
+                                              http10:
+                                                description: HTTP10 turns on support
+                                                  for HTTP/1.0 and HTTP/0.9 requests.
+                                                properties:
+                                                  useDefaultHost:
+                                                    description: |-
+                                                      UseDefaultHost specifies whether a default Host header should be injected
+                                                      into HTTP/1.0 requests that do not include one.
+
+                                                      When set to true, Envoy Gateway injects the hostname associated with the
+                                                      listener or route into the request, in the following order:
+
+                                                        1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                                        2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                                           the targeted listener, use that hostname.
+
+                                                       Note: Setting this field to true without a non-wildcard hostname makes the
+                                                      ClientTrafficPolicy invalid.
+                                                    type: boolean
+                                                type: object
+                                              preserveHeaderCase:
+                                                description: |-
+                                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                                  By default, Envoy will lowercase all the headers.
+                                                type: boolean
                                             type: object
                                           http2:
                                             description: HTTP2 provides HTTP/2 configuration
@@ -26729,6 +26901,42 @@ spec:
                                               type: boolean
                                           type: object
                                       type: object
+                                    http1:
+                                      description: |-
+                                        HTTP1 provides HTTP/1 configuration for backend connections.
+                                        When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                        this field takes precedence for backend (upstream) traffic.
+                                      properties:
+                                        enableTrailers:
+                                          description: EnableTrailers defines if HTTP/1
+                                            trailers should be proxied by Envoy.
+                                          type: boolean
+                                        http10:
+                                          description: HTTP10 turns on support for
+                                            HTTP/1.0 and HTTP/0.9 requests.
+                                          properties:
+                                            useDefaultHost:
+                                              description: |-
+                                                UseDefaultHost specifies whether a default Host header should be injected
+                                                into HTTP/1.0 requests that do not include one.
+
+                                                When set to true, Envoy Gateway injects the hostname associated with the
+                                                listener or route into the request, in the following order:
+
+                                                  1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                                  2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                                     the targeted listener, use that hostname.
+
+                                                 Note: Setting this field to true without a non-wildcard hostname makes the
+                                                ClientTrafficPolicy invalid.
+                                              type: boolean
+                                          type: object
+                                        preserveHeaderCase:
+                                          description: |-
+                                            PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                            By default, Envoy will lowercase all the headers.
+                                          type: boolean
+                                      type: object
                                     http2:
                                       description: HTTP2 provides HTTP/2 configuration
                                         for backend connections.
@@ -28538,6 +28746,42 @@ spec:
                                           and local origin.
                                         type: boolean
                                     type: object
+                                type: object
+                              http1:
+                                description: |-
+                                  HTTP1 provides HTTP/1 configuration for backend connections.
+                                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                  this field takes precedence for backend (upstream) traffic.
+                                properties:
+                                  enableTrailers:
+                                    description: EnableTrailers defines if HTTP/1
+                                      trailers should be proxied by Envoy.
+                                    type: boolean
+                                  http10:
+                                    description: HTTP10 turns on support for HTTP/1.0
+                                      and HTTP/0.9 requests.
+                                    properties:
+                                      useDefaultHost:
+                                        description: |-
+                                          UseDefaultHost specifies whether a default Host header should be injected
+                                          into HTTP/1.0 requests that do not include one.
+
+                                          When set to true, Envoy Gateway injects the hostname associated with the
+                                          listener or route into the request, in the following order:
+
+                                            1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                            2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                               the targeted listener, use that hostname.
+
+                                           Note: Setting this field to true without a non-wildcard hostname makes the
+                                          ClientTrafficPolicy invalid.
+                                        type: boolean
+                                    type: object
+                                  preserveHeaderCase:
+                                    description: |-
+                                      PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                      By default, Envoy will lowercase all the headers.
+                                    type: boolean
                                 type: object
                               http2:
                                 description: HTTP2 provides HTTP/2 configuration for
@@ -32058,6 +32302,42 @@ spec:
                                     type: boolean
                                 type: object
                             type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              http10:
+                                description: HTTP10 turns on support for HTTP/1.0
+                                  and HTTP/0.9 requests.
+                                properties:
+                                  useDefaultHost:
+                                    description: |-
+                                      UseDefaultHost specifies whether a default Host header should be injected
+                                      into HTTP/1.0 requests that do not include one.
+
+                                      When set to true, Envoy Gateway injects the hostname associated with the
+                                      listener or route into the request, in the following order:
+
+                                        1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                        2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                           the targeted listener, use that hostname.
+
+                                       Note: Setting this field to true without a non-wildcard hostname makes the
+                                      ClientTrafficPolicy invalid.
+                                    type: boolean
+                                type: object
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
+                            type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
@@ -33611,6 +33891,42 @@ spec:
                                       origin.
                                     type: boolean
                                 type: object
+                            type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              http10:
+                                description: HTTP10 turns on support for HTTP/1.0
+                                  and HTTP/0.9 requests.
+                                properties:
+                                  useDefaultHost:
+                                    description: |-
+                                      UseDefaultHost specifies whether a default Host header should be injected
+                                      into HTTP/1.0 requests that do not include one.
+
+                                      When set to true, Envoy Gateway injects the hostname associated with the
+                                      listener or route into the request, in the following order:
+
+                                        1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                        2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                           the targeted listener, use that hostname.
+
+                                       Note: Setting this field to true without a non-wildcard hostname makes the
+                                      ClientTrafficPolicy invalid.
+                                    type: boolean
+                                type: object
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
                             type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
@@ -35499,6 +35815,42 @@ spec:
                                             and local origin.
                                           type: boolean
                                       type: object
+                                  type: object
+                                http1:
+                                  description: |-
+                                    HTTP1 provides HTTP/1 configuration for backend connections.
+                                    When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                    this field takes precedence for backend (upstream) traffic.
+                                  properties:
+                                    enableTrailers:
+                                      description: EnableTrailers defines if HTTP/1
+                                        trailers should be proxied by Envoy.
+                                      type: boolean
+                                    http10:
+                                      description: HTTP10 turns on support for HTTP/1.0
+                                        and HTTP/0.9 requests.
+                                      properties:
+                                        useDefaultHost:
+                                          description: |-
+                                            UseDefaultHost specifies whether a default Host header should be injected
+                                            into HTTP/1.0 requests that do not include one.
+
+                                            When set to true, Envoy Gateway injects the hostname associated with the
+                                            listener or route into the request, in the following order:
+
+                                              1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                              2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                                 the targeted listener, use that hostname.
+
+                                             Note: Setting this field to true without a non-wildcard hostname makes the
+                                            ClientTrafficPolicy invalid.
+                                          type: boolean
+                                      type: object
+                                    preserveHeaderCase:
+                                      description: |-
+                                        PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                        By default, Envoy will lowercase all the headers.
+                                      type: boolean
                                   type: object
                                 http2:
                                   description: HTTP2 provides HTTP/2 configuration
@@ -37475,6 +37827,42 @@ spec:
                                       origin.
                                     type: boolean
                                 type: object
+                            type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              http10:
+                                description: HTTP10 turns on support for HTTP/1.0
+                                  and HTTP/0.9 requests.
+                                properties:
+                                  useDefaultHost:
+                                    description: |-
+                                      UseDefaultHost specifies whether a default Host header should be injected
+                                      into HTTP/1.0 requests that do not include one.
+
+                                      When set to true, Envoy Gateway injects the hostname associated with the
+                                      listener or route into the request, in the following order:
+
+                                        1. If the targeted listener has a non-wildcard hostname, use that hostname.
+                                        2. If there is exactly one HTTPRoute with a non-wildcard hostname under
+                                           the targeted listener, use that hostname.
+
+                                       Note: Setting this field to true without a non-wildcard hostname makes the
+                                      ClientTrafficPolicy invalid.
+                                    type: boolean
+                                type: object
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
                             type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend

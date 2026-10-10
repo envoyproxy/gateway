@@ -58,6 +58,7 @@ func TestTranslate(t *testing.T) {
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
 		EnvoyProxyPatchDisabled         bool
+		CTPHTTP1ClientScopeOnly         bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -139,6 +140,26 @@ func TestTranslate(t *testing.T) {
 			name:                    "envoyproxy-patch-disabled",
 			EnvoyProxyPatchDisabled: true,
 		},
+		{
+			name:                    "mergebackends-http-merge-listenerset-http1-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-listener-http1-divergence-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-listener-ctp-divergence-no-sectionname-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-ctp-flat-http1-btp-override-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-btp-backend-target-http1-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -166,6 +187,7 @@ func TestTranslate(t *testing.T) {
 			sdsEnabled := false
 			perResourceSystemCASecret := false
 			envoyProxyPatchDisabled := false
+			ctpHTTP1ClientScopeOnly := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -177,6 +199,7 @@ func TestTranslate(t *testing.T) {
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
 					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
+					ctpHTTP1ClientScopeOnly = config.CTPHTTP1ClientScopeOnly
 				}
 			}
 
@@ -196,6 +219,7 @@ func TestTranslate(t *testing.T) {
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
 				EnvoyProxyPatchDisabled:         envoyProxyPatchDisabled,
+				CTPHTTP1ClientScopeOnly:         ctpHTTP1ClientScopeOnly,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 

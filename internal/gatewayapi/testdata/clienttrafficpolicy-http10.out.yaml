@@ -27,8 +27,11 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.http10
+          for backend settings'
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -61,8 +64,11 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.http10
+          for backend settings'
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -96,8 +102,11 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.http10
+          for backend settings'
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -130,8 +139,11 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.http10
+          for backend settings'
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -165,8 +177,11 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.http10
+          for backend settings'
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
