@@ -142,6 +142,77 @@ Hence we need external loadbalancer to test this feature out.
 {{% /tab %}}
 {{< /tabpane >}}
 
+## HTTP/3 to the Backend
+
+Everything above configures HTTP/3 between the client and the Gateway. HTTP/3 to the backend is
+configured separately, with the `http3` field of a [BackendTrafficPolicy][]. It is only supported
+there: setting `http3` in the `backendSettings` of a SecurityPolicy, EnvoyExtensionPolicy or
+EnvoyProxy is rejected, since the control-plane clusters those build never learn that a server
+speaks HTTP/3.
+
+QUIC always runs over TLS, so the backend must already be configured with TLS through a
+[BackendTLSPolicy][] or a [Backend][] resource's `spec.tls`. When a BackendTrafficPolicy enables
+`http3` for a route whose backends are not all configured with TLS, HTTP/3 is left off for that
+route, the rest of the policy still applies, and the policy reports a `Warning` condition naming the
+route. For a backend with a self-signed certificate, set `insecureSkipVerify: true` on the
+[Backend][] resource: the QUIC handshake still happens, but the certificate is not verified.
+
+There are two modes:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: backend-http3
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  http3:
+    mode: Auto
+```
+
+`Auto` is the default. Envoy uses HTTP/3 only for backends that advertise support for it through an
+`alt-svc` response header. It caches that advertisement, then races a QUIC connection against a TCP
+one and uses whichever is established first, so it falls back to HTTP/1.1 or HTTP/2 whenever QUIC is
+unavailable. This is the safe choice for backends reached over a network where UDP may be blocked.
+
+Envoy only honors an `alt-svc` entry whose port is the port it dials the backend on, and that names
+no host. For a Service backend that is the Pod IP and `targetPort`, not the Service port. A backend
+that advertises `h3=":443"` behind a Service that maps port 443 to `targetPort` 8443 is dialed on
+8443, so the advertisement never matches and `Auto` keeps using TCP. Either have the backend
+advertise the port it actually listens on, as in `h3=":8443"`, or give the Service the same port and
+`targetPort`. The same rule applies to a [Backend][] resource: the advertised port must be the
+endpoint's port. The QUIC listener on the backend must also be reachable on that port over UDP.
+
+The backend's `alt-svc` header is not forwarded to clients. It names a port on the backend, which a
+client would read as a port on the Gateway, so Envoy Gateway strips it after recording it and adds
+the Gateway's own `alt-svc` when the listener has HTTP/3 enabled. Do not remove `alt-svc` with an
+HTTPRoute `ResponseHeaderModifier` filter: that runs before the advertisement is recorded, so
+`Auto` mode would never discover the backend's HTTP/3 support.
+
+The EnvoyProxy `backendTLS.alpnProtocols` setting is not applied to a cluster using HTTP/3. Envoy
+offers that list on the QUIC handshake too, where only `h3` is valid, so the cluster offers no ALPN
+list of its own: QUIC negotiates `h3` and the cluster's TCP connections fall back to `h2` and
+`http/1.1`. The policy reports a `Warning` condition naming the cluster.
+
+`Always` sends every request over HTTP/3 and never falls back to TCP. Use it only where the backend
+is known to speak HTTP/3 and UDP is known to work, since there is no recovery if QUIC fails. Active
+health checks are the exception: Envoy sends them over TLS on TCP even in `Always` mode, so a backend
+with an active `healthCheck` must also accept TCP on the same port, or every endpoint is marked
+unhealthy while QUIC traffic still works. Passive health checks observe the QUIC traffic itself and
+are unaffected.
+
+Note that `http3` cannot be combined with `useClientProtocol` or `proxyProtocol`: the first would
+have Envoy pick the upstream protocol from the downstream request, and PROXY protocol is a TCP
+preamble with no QUIC equivalent. A policy that sets both is rejected at admission. HTTP/3 is also
+left off, with the same `Warning` condition, for backends that declare an HTTP/2 or gRPC
+`appProtocol`, since those ask for a protocol HTTP/3 cannot provide.
+
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[Backend]: ../../../api/extension_types#backend
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [Secret]: https://kubernetes.io/docs/concepts/configuration/secret/

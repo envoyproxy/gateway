@@ -497,6 +497,8 @@ spec:
 
                   - envoy.filters.http.dynamic_forward_proxy
 
+                  - envoy.filters.http.alternate_protocols_cache
+
                   - envoy.filters.http.router
 
                   Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -536,6 +538,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                     before:
                       description: |-
@@ -569,6 +572,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                     name:
                       description: Name of the filter.
@@ -600,6 +604,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                   required:
                   - name
@@ -12781,6 +12786,26 @@ spec:
                                                   Default: TerminateConnection
                                                 type: string
                                             type: object
+                                          http3:
+                                            description: |-
+                                              HTTP3 enables HTTP/3 for backend connections.
+                                              HTTP/3 always runs over TLS, so the backend must be configured
+                                              with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                              HTTP/3 is only supported for the backends of a route, through
+                                              BackendTrafficPolicy. It is rejected for the backends of other
+                                              resources, such as the external services of a SecurityPolicy
+                                              or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                            properties:
+                                              mode:
+                                                default: Auto
+                                                description: |-
+                                                  Mode determines when HTTP/3 is used to reach the backend.
+                                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                                enum:
+                                                - Auto
+                                                - Always
+                                                type: string
+                                            type: object
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
@@ -13435,6 +13460,9 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                        - message: proxyProtocol cannot be used together
+                                            with http3
+                                          rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -14475,6 +14503,26 @@ spec:
                                                   Default: TerminateConnection
                                                 type: string
                                             type: object
+                                          http3:
+                                            description: |-
+                                              HTTP3 enables HTTP/3 for backend connections.
+                                              HTTP/3 always runs over TLS, so the backend must be configured
+                                              with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                              HTTP/3 is only supported for the backends of a route, through
+                                              BackendTrafficPolicy. It is rejected for the backends of other
+                                              resources, such as the external services of a SecurityPolicy
+                                              or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                            properties:
+                                              mode:
+                                                default: Auto
+                                                description: |-
+                                                  Mode determines when HTTP/3 is used to reach the backend.
+                                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                                enum:
+                                                - Auto
+                                                - Always
+                                                type: string
+                                            type: object
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
@@ -15129,6 +15177,9 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                        - message: proxyProtocol cannot be used together
+                                            with http3
+                                          rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                       headers:
                                         description: |-
                                           Headers is a list of additional headers to send with OTLP export requests.
@@ -16399,6 +16450,26 @@ spec:
                                             Default: TerminateConnection
                                           type: string
                                       type: object
+                                    http3:
+                                      description: |-
+                                        HTTP3 enables HTTP/3 for backend connections.
+                                        HTTP/3 always runs over TLS, so the backend must be configured
+                                        with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                        HTTP/3 is only supported for the backends of a route, through
+                                        BackendTrafficPolicy. It is rejected for the backends of other
+                                        resources, such as the external services of a SecurityPolicy
+                                        or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                      properties:
+                                        mode:
+                                          default: Auto
+                                          description: |-
+                                            Mode determines when HTTP/3 is used to reach the backend.
+                                            Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                          enum:
+                                          - Auto
+                                          - Always
+                                          type: string
+                                      type: object
                                     loadBalancer:
                                       description: |-
                                         LoadBalancer policy to apply when routing traffic from the gateway to
@@ -17033,6 +17104,9 @@ spec:
                                       && has(self.connection.preconnect.predictivePercent))
                                       && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                       && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                                  - message: proxyProtocol cannot be used together
+                                      with http3
+                                    rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                 headers:
                                   description: |-
                                     Headers is a list of additional headers to send with OTLP export requests.
@@ -18208,6 +18282,26 @@ spec:
                                       Default: TerminateConnection
                                     type: string
                                 type: object
+                              http3:
+                                description: |-
+                                  HTTP3 enables HTTP/3 for backend connections.
+                                  HTTP/3 always runs over TLS, so the backend must be configured
+                                  with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                  HTTP/3 is only supported for the backends of a route, through
+                                  BackendTrafficPolicy. It is rejected for the backends of other
+                                  resources, such as the external services of a SecurityPolicy
+                                  or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                properties:
+                                  mode:
+                                    default: Auto
+                                    description: |-
+                                      Mode determines when HTTP/3 is used to reach the backend.
+                                      Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                    enum:
+                                    - Auto
+                                    - Always
+                                    type: string
+                                type: object
                               loadBalancer:
                                 description: |-
                                   LoadBalancer policy to apply when routing traffic from the gateway to
@@ -18827,6 +18921,9 @@ spec:
                                 && has(self.connection.preconnect.predictivePercent))
                                 && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                 && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                            - message: proxyProtocol cannot be used together with
+                                http3
+                              rule: '!has(self.http3) || !has(self.proxyProtocol)'
                           host:
                             description: |-
                               Host define the provider service hostname.

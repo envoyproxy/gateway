@@ -1,0 +1,182 @@
+# An HTTP/3 capable backend. Caddy enables HTTP/3 by default for TLS-enabled sites,
+# so it listens for QUIC on the same port it serves HTTPS on. The site is a catch-all
+# rather than a named one because the request still carries the client's Host header,
+# not the backend's hostname.
+#
+# openssl req -x509 -sha256 -nodes -days 36500 -newkey rsa:2048 \
+#   -subj '/O=example Inc./CN=h3-backend.gateway-conformance-infra.svc.cluster.local' \
+#   -addext "subjectAltName=DNS:h3-backend.gateway-conformance-infra.svc.cluster.local,DNS:h3-backend" \
+#   -keyout tls.key -out tls.crt
+apiVersion: v1
+kind: Secret
+metadata:
+  name: h3-backend-tls
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQ1RENDQXN5Z0F3SUJBZ0lVUFc3ZzJwWFdnOFJhZVVsTitodnZDTzZsTm5Nd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1dERVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVQ4d1BRWURWUVFERERab015MWlZV05yWlc1awpMbWRoZEdWM1lYa3RZMjl1Wm05eWJXRnVZMlV0YVc1bWNtRXVjM1pqTG1Oc2RYTjBaWEl1Ykc5allXd3dJQmNOCk1qWXdPVEl5TURnek9UQTJXaGdQTWpFeU5qQTRNamt3T0RNNU1EWmFNRmd4RlRBVEJnTlZCQW9NREdWNFlXMXcKYkdVZ1NXNWpMakUvTUQwR0ExVUVBd3cyYURNdFltRmphMlZ1WkM1bllYUmxkMkY1TFdOdmJtWnZjbTFoYm1ObApMV2x1Wm5KaExuTjJZeTVqYkhWemRHVnlMbXh2WTJGc01JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBCk1JSUJDZ0tDQVFFQXFCSnpqcEVubUVZWU9DRFpjeTRCd1BMUENmaGo2Z24vdExxUWdrRk1QNGNmRTZETVd4ZUIKdUpQOU84QWpoUkdVTEowd2ZtZWNHRzV3M1c0OTlqTkNBMzFHUzVYSy96cXRmdmhpRDFLbVZscjVENkVJZXNVMgo2T3NkRHA3VmpuQUU2QXhZSnNrejNtTEpDWkFwcVZITVgwRi9mVWMvU0VhUDR6OHc1OFNEZ2hkMFlWL1pwTHBNCnl6YUVzSzFyQzFOZVJ5L2loemwzcW9WZ3ZqMnBnR1M0czh4R3plaHVGTlRTOHBSaWlSNEt4KzRsRnVoeHJyRnUKTW5iN1Z5dElBc0UvVmJqKzdLM1ZaNWZGVkhWVmNqcktkOE9PUXFBc1cwQmJJSmhmNWRUL3FiWlVlZVJsclB6Kwp1RVFKN1RIMzIrNlRhc3VZMjBEOHJZZUdtRS9maDlnQk93SURBUUFCbzRHak1JR2dNQjBHQTFVZERnUVdCQlNlCkxreGtyV0ZwRmhCOExzSnAvd0dwR2FDMTZqQWZCZ05WSFNNRUdEQVdnQlNlTGt4a3JXRnBGaEI4THNKcC93R3AKR2FDMTZqQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01FMEdBMVVkRVFSR01FU0NObWd6TFdKaFkydGxibVF1WjJGMApaWGRoZVMxamIyNW1iM0p0WVc1alpTMXBibVp5WVM1emRtTXVZMngxYzNSbGNpNXNiMk5oYklJS2FETXRZbUZqCmEyVnVaREFOQmdrcWhraUc5dzBCQVFzRkFBT0NBUUVBVlpVR2NvQkFLck8vbHR3MkJGV1lNOTYvWFVuYVNCK0kKZVU2RTRuTDhzVUJzd2ZGL044VkoyUFdEODdYbmtGZWFQVi9yS0ZCS0c1T3BBYmEvbG82SHpjbzRnT1pwTlE4agpGNjJiNHJmM1hMV1MvQ2VLVEtiWFBlWGNaSXAxbkhNdFNORVZtVmhJNUI5YmxKNkZNeWFDeENIMDhMZHRHTDhSCitSU2xVYktJRk1FTmhtVUpQdUUyUmFVUW9yVmdKcE90UlhMbEFXOHhpRjhGaUNWNGxuZDdCRVBZeGJLRDhSczUKRVA3dXpkT1U5TXc4MjlPWnV1Nk9rV0lPVXVwSDN2bkY2a1J6akRLSllZV2dvV2h5S2lJOWpGSGZ6eDRoZVltUQpMMjlyd2VUVngrR2sxb2VqN2NZd1JqenJRcTRxVGkxL1k0RVZFVURoVDQ2aGlCNVl2d3ViOEE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ29Fbk9Pa1NlWVJoZzQKSU5sekxnSEE4czhKK0dQcUNmKzB1cENDUVV3L2h4OFRvTXhiRjRHNGsvMDd3Q09GRVpRc25UQitaNXdZYm5EZApiajMyTTBJRGZVWkxsY3IvT3ExKytHSVBVcVpXV3ZrUG9RaDZ4VGJvNngwT250V09jQVRvREZnbXlUUGVZc2tKCmtDbXBVY3hmUVg5OVJ6OUlSby9qUHpEbnhJT0NGM1JoWDlta3VrekxOb1N3cldzTFUxNUhMK0tIT1hlcWhXQysKUGFtQVpMaXp6RWJONkc0VTFOTHlsR0tKSGdySDdpVVc2SEd1c1c0eWR2dFhLMGdDd1Q5VnVQN3NyZFZubDhWVQpkVlZ5T3NwM3c0NUNvQ3hiUUZzZ21GL2wxUCtwdGxSNTVHV3MvUDY0UkFudE1mZmI3cE5xeTVqYlFQeXRoNGFZClQ5K0gyQUU3QWdNQkFBRUNnZ0VBR3hyR3FnSTh1WERzYlBqWE9Kejl5V2tlL0lPalVWWUZkOWJ5Z1I4WXRkSUwKci9XcG56TWVSMjhPVXJsOHdQUUJ5bVFiTXZkd2svd1RsWkkyeWVLZ1RjSEJPV1ZSMUhGWkUzWHBFb0dJczdwKwpHZ2dsUHU5WkdKejZGYWFGMkMrMml0bWF5YjUrNytsTWRJOWNPS01wYTE4N3VTOXBSRFdrOU1mM0VobDkvOWVYCmd6dEFBMEdyeGtyblZINHZRQUJDUGp6cUt4cEdMdDArN3p1UWxCL2ZmbTZUTTdqd3BWRmZ2VWdseDkvUTR3WHUKaDFIWmFPTENFYVMvak5oa3ZubFo2WEZVem9uR3V6VGpIUGNIdSs3b2pQQUk0M3dERUF5TnJlb0ZYZW5OVnlhKwpPT1YyUWtEQUl0UkRuKy9IaFdzc3M3NW0rTi9HTVNzTzBGU05hN0JCR1FLQmdRRFpDRzEzeXhHQXBWSVI1VFhrCnpmczJZa2dMaDREQzlmNEx1TkIzS01aNlFYa1FydWx5N1J5bmZtWUVlNnp1UlhMVU5yZ1RORmhENU5BdTZQaFQKQ05JSXcyWWkvSXFxTUhRSHEycTdDR2VZMmRBV1hPSEkzVmhOdW1IaTArd2g3TDMvQUhQVytQaVJvL2QxQjV0bApBVTNYOG9IS1doRWFSelBoaHdjMWVjUzRMd0tCZ1FER1A1M1hvT1FqMnlDbUVBenVPQi9WazViYlNTYTIyNG9mClc3MnFmV1NuWGpId2hsS2NKcTFwOUZFc0xlaW0wZWpJOWhPSENCY1FxcjJEanBXK1NXZGVPa1dIOXR0ZWNlTDkKQVB5N1BCcFlmeWFuTnRjejVRRHZSNy9GVXp0UG14c2hyRGRYZ2plU3RMWFdwM01UNE83U0JiZDlZUk02ZUxSNwo0WTdkY3FDNHRRS0JnUURHdkh6aE1VWjVzdWtRRWYvajRPcWt4aUtLekM0UVdRbWsyanVxb2QvOW0yNnM1RDVKClN1N3VRVVJSM3A1Z0lhQWd5MnFMeTJiMzVOTHQ0YzlpMmJUYTZYTGhucmVyV0dzbmlzUlZPRUVGS283dHEyZmwKY3lxbElvTDRIbThnTVpWWnFLUnF1ZG1FSTgwNWtSbXV5QjdzRzlqVjN0dkNZR2tWbjN2dWIrNi9hUUtCZ1FDNwpEeC9TYkQrWURaVTYyLzQzY01HbzlyL3JYWlNvQ1hMRXIvM0F0dHlZaCtxN055TVByL2NFK01EMjNNS2ZWWVUrCnllSVhFVzBpRHRrUEh5VHdEYmI1VkNaemFsd0hPNUtnZzZQMHozdFVjWFY1WmVlZFVjR1dCYTlQYzMrTlY1ODgKSUpGL2dxRUpUbllkZXBhODlRcWpKVDNEa2l0Z2lyQlNDN3lQK3k3bjJRS0JnREFlMENFeEd2aGQ0SWMrR0lBYwpldG9YMHRTTHF5Ykl5UUpvREZld2IrVVgyNTRzWHNRUVFlaG5lNjNwK2N3V3d6dUFqN1lPdDNBaFRCWUM1eWNLCkVITlFyZnVlN0M1SmxSNytNRng4V2FZMkp1UWh1V3JnbnhvYnRza1NMamtoNjBCb2NMRWU4NlZxZmttZDFxakUKbWY3OGI0RGw1VmJ0enRMOHRXUTF5aXlPCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: h3-backend-caddyfile
+  namespace: gateway-conformance-infra
+data:
+  Caddyfile: |
+    {
+      auto_https off
+    }
+    :8443 {
+      tls /etc/tls/tls.crt /etc/tls/tls.key
+      respond "hello from the http3 backend"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: h3-backend
+  namespace: gateway-conformance-infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: h3-backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: h3-backend
+        version: v1
+    spec:
+      containers:
+        - name: caddy
+          image: caddy:2.8-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            - name: quic
+              containerPort: 8443
+              protocol: UDP
+          readinessProbe:
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            tcpSocket:
+              port: 8443
+          volumeMounts:
+            - name: caddyfile
+              mountPath: /etc/caddy
+            - name: tls
+              mountPath: /etc/tls
+              readOnly: true
+      volumes:
+        - name: caddyfile
+          configMap:
+            name: h3-backend-caddyfile
+        - name: tls
+          secret:
+            secretName: h3-backend-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: h3-backend
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: h3-backend
+    version: v1
+  ports:
+    # QUIC is UDP, so the Service has to expose the port for both protocols:
+    # the TCP one carries the HTTP/1.1 and HTTP/2 fallback in Auto mode.
+    - name: https
+      port: 8443
+      targetPort: 8443
+      protocol: TCP
+    - name: quic
+      port: 8443
+      targetPort: 8443
+      protocol: UDP
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: h3-backend
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: h3-backend.gateway-conformance-infra.svc.cluster.local
+        port: 8443
+  tls:
+    insecureSkipVerify: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: upstream-http3
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /upstream-http3
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: h3-backend
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: upstream-http3
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: upstream-http3
+  # Always, so the test does not depend on the backend advertising alt-svc first:
+  # Envoy goes straight to QUIC and there is no TCP fallback to mask a failure.
+  http3:
+    mode: Always
+---
+# Same Backend, a second BackendTrafficPolicy: only the mode differs.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: upstream-http3-auto
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /upstream-http3-auto
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: h3-backend
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: upstream-http3-auto
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: upstream-http3-auto
+  # Auto reaches HTTP/3 the long way round: the first request goes over TCP, Caddy's
+  # response advertises h3 through alt-svc, and only then does Envoy race QUIC. Early
+  # requests are therefore expected to be HTTP/1.1 or HTTP/2.
+  http3:
+    mode: Auto

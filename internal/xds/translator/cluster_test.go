@@ -18,6 +18,7 @@ import (
 	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -77,6 +78,48 @@ func TestBuildXdsClusterDNSRefreshRateValidation(t *testing.T) {
 	}
 	_, err := buildXdsCluster(args)
 	require.ErrorContains(t, err, "DnsRefreshRate")
+}
+
+// An unresolvable backendRef reaches the cluster as an empty Invalid setting. It must not
+// decide whether the resolvable backends get QUIC, and alone it must not enable HTTP/3,
+// since there would be no TLS context to wrap.
+func TestBuildXdsClusterHTTP3InvalidSetting(t *testing.T) {
+	tlsSetting := &ir.DestinationSetting{
+		Protocol: ir.HTTP, AddressType: new(ir.STATIC),
+		Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8443}},
+		TLS:       &ir.TLSUpstreamConfig{InsecureSkipVerify: true},
+	}
+	invalidSetting := &ir.DestinationSetting{Protocol: ir.HTTP, Invalid: true}
+
+	tests := []struct {
+		name      string
+		settings  []*ir.DestinationSetting
+		wantHTTP3 bool
+	}{
+		{name: "tls and invalid", settings: []*ir.DestinationSetting{tlsSetting, invalidSetting}, wantHTTP3: true},
+		{name: "all invalid", settings: []*ir.DestinationSetting{invalidSetting}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := buildXdsCluster(&xdsClusterArgs{
+				name: "backend", settings: tc.settings, endpointType: EndpointTypeStatic,
+				http3Settings: &ir.BackendHTTP3Settings{Mode: "Always"},
+			})
+			require.NoError(t, err)
+			optionsAny := result.cluster.TypedExtensionProtocolOptions["envoy.extensions.upstreams.http.v3.HttpProtocolOptions"]
+			if !tc.wantHTTP3 {
+				require.Nil(t, optionsAny)
+				require.Nil(t, result.cluster.TransportSocket)
+				return
+			}
+			options := &httpv3.HttpProtocolOptions{}
+			require.NoError(t, optionsAny.UnmarshalTo(options))
+			require.NotNil(t, options.GetExplicitHttpConfig().GetHttp3ProtocolOptions())
+			require.Equal(t, wellknown.TransportSocketQuic, result.cluster.TransportSocket.Name)
+			require.Len(t, result.cluster.TransportSocketMatches, 1)
+			require.Equal(t, wellknown.TransportSocketQuic, result.cluster.TransportSocketMatches[0].TransportSocket.Name)
+		})
+	}
 }
 
 func TestToCommonDNSLookupFamily(t *testing.T) {

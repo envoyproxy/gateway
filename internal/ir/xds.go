@@ -842,6 +842,13 @@ type HTTP2KeepaliveSettings struct {
 	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
 }
 
+// BackendHTTP3Settings provides HTTP/3 configuration for clusters.
+// +k8s:deepcopy-gen=true
+type BackendHTTP3Settings struct {
+	// Mode determines when HTTP/3 is used to reach the backend: "Auto" or "Always".
+	Mode string `json:"mode" yaml:"mode"`
+}
+
 // GRPCSettings provides gRPC configuration on the listener.
 // +k8s:deepcopy-gen=true
 type GRPCSettings struct {
@@ -1229,6 +1236,9 @@ type ClusterTrafficFeatures struct {
 	// HTTP2 provides HTTP/2 configuration for clusters
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
+	// HTTP3 provides HTTP/3 configuration for clusters
+	// +optional
+	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty" yaml:"http3,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
@@ -2263,6 +2273,95 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	}
 
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
+}
+
+// AllSettingsHaveTLS returns true if every destination setting is configured with TLS.
+// HTTP/3 to the backend requires it, because QUIC always runs over TLS.
+func AllSettingsHaveTLS(settings []*DestinationSetting) bool {
+	if len(settings) == 0 {
+		return false
+	}
+	for _, s := range settings {
+		if s == nil || s.TLS == nil {
+			return false
+		}
+	}
+	return true
+}
+
+// HTTP3Incompatibilities reports why HTTP/3 cannot be used to reach the given backends,
+// or nothing when it can. QUIC always runs over TLS and replaces the cluster's TCP
+// transport socket, so it is incompatible with plaintext or TCP backends and with
+// settings that assume a TCP stream. The gatewayapi translator reports these through
+// the policy status and the xds translator uses the same answer to decide whether a
+// cluster gets QUIC, so the two cannot drift. Unresolvable backendRefs never dial, so
+// they are skipped rather than reported as lacking TLS.
+func HTTP3Incompatibilities(settings []*DestinationSetting, useClientProtocol, proxyProtocol bool) []string {
+	settings = dialableSettings(settings)
+	if len(settings) == 0 {
+		return nil
+	}
+	var reasons []string
+	if !AllSettingsHaveTLS(settings) {
+		reasons = append(reasons, "HTTP/3 requires TLS to the backend, "+
+			"configured with a BackendTLSPolicy or the Backend's spec.tls")
+	}
+	if useClientProtocol {
+		reasons = append(reasons, "useClientProtocol cannot be used together with http3")
+	}
+	if proxyProtocol {
+		reasons = append(reasons, "proxyProtocol cannot be used together with http3, it has no QUIC equivalent")
+	}
+	forceHTTP1, http2OrGRPC, tcp := false, false, false
+	for _, s := range settings {
+		if s == nil {
+			continue
+		}
+		forceHTTP1 = forceHTTP1 || s.ForceHTTP1Upstream
+		http2OrGRPC = http2OrGRPC || s.Protocol == HTTP2 || s.Protocol == GRPC
+		tcp = tcp || s.Protocol == TCP
+	}
+	if forceHTTP1 {
+		reasons = append(reasons, "backends requiring HTTP/1.1 upstream cannot be used together with http3")
+	}
+	if http2OrGRPC {
+		reasons = append(reasons, "backends with an HTTP/2 or gRPC appProtocol cannot be used together with http3")
+	}
+	if tcp {
+		reasons = append(reasons, "TCP backends cannot be used together with http3")
+	}
+	return reasons
+}
+
+// CanUseHTTP3 reports whether a cluster for the given backends can be given QUIC: at least
+// one backend is resolvable and none of them is incompatible with HTTP/3.
+func CanUseHTTP3(settings []*DestinationSetting, useClientProtocol, proxyProtocol bool) bool {
+	return len(dialableSettings(settings)) > 0 &&
+		len(HTTP3Incompatibilities(settings, useClientProtocol, proxyProtocol)) == 0
+}
+
+// HTTP3IgnoresALPN reports whether a cluster given QUIC drops a configured ALPN list. Envoy
+// offers the upstream TLS context's ALPN on the QUIC leg as well, where only h3 is valid, so
+// the xds translator leaves the list out of the QUIC transport; Envoy then offers h3 over
+// QUIC and falls back to h2 and http/1.1 on the cluster's TCP connections.
+func HTTP3IgnoresALPN(settings []*DestinationSetting) bool {
+	for _, s := range dialableSettings(settings) {
+		if s.TLS != nil && len(s.TLS.ALPNProtocols) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// dialableSettings drops the settings of unresolvable backendRefs, which never dial.
+func dialableSettings(settings []*DestinationSetting) []*DestinationSetting {
+	out := make([]*DestinationSetting, 0, len(settings))
+	for _, s := range settings {
+		if s != nil && !s.Invalid {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {

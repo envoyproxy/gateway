@@ -1,0 +1,304 @@
+backendTLSPolicies:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: BackendTLSPolicy
+  metadata:
+    name: policy-btls
+    namespace: default
+  spec:
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: service-1
+    validation:
+      caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: ca-cert
+      hostname: example.com
+  status:
+    ancestors:
+    - ancestorRef:
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: btp-gateway-http3
+    namespace: envoy-gateway
+  spec:
+    http3:
+      mode: Always
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: 'HTTP/3 is disabled because HTTP/3 requires TLS to the backend, configured
+          with a BackendTLSPolicy or the Backend''s spec.tls, for these backends:
+          [service/default/service-2/8080/http]'
+        reason: UnsupportedHTTP3Backend
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: http-route-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /rule-1
+      name: rule-1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeBackends: {}
+        status: {}
+      listeners:
+      - name: envoy-gateway/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    backendClusters:
+    - metadata:
+        kind: Service
+        name: service-1
+        namespace: default
+        sectionName: "8080"
+      name: service/default/service-1/8080/http
+      setting:
+        addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: service/default/service-1/8080/http
+        protocol: HTTP
+        tls:
+          alpnProtocols: null
+          caCertificate:
+            digest: sha256-60fcccf80101fc7798549e146b6dd5580002df9a540d06967e78b56a92fbc57c
+            name: policy-btls/default-ca
+          maxVersion: "1.3"
+          minVersion: "1.2"
+          sni: example.com
+      traffic:
+        http3:
+          mode: Always
+    - metadata:
+        kind: Service
+        name: service-2
+        namespace: default
+        sectionName: "8080"
+      name: service/default/service-2/8080/http
+      setting:
+        addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: service/default/service-2/8080/http
+        protocol: HTTP
+      traffic: {}
+    caCertificates:
+    - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCiAgICAgICAgTUlJREp6Q0NBZytnQXdJQkFnSVVBbDZVS0l1S216dGU4MWNsbHo1UGZkTjJJbEl3RFFZSktvWklodmNOQVFFTAogICAgICAgIEJRQXdJekVRTUE0R0ExVUVBd3dIYlhsamFXVnVkREVQTUEwR0ExVUVDZ3dHYTNWaVpXUmlNQjRYRFRJek1UQXcKICAgICAgICBNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCiAgICAgICAgQTFVRUNnd0dhM1ZpWldSaU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBd1NUYwogICAgICAgIDF5ajhIVzYybnlua0ZiWG80VlhLdjJqQzBQTTdkUFZreTg3RndlWmNUS0xvV1FWUFFFMnAya0xESzZPRXN6bU0KICAgICAgICB5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCiAgICAgICAga3o1N21JblgyVnBpRE9LZzRreUhmaXVYV3BpQnFyQ3gwS05McHhvM0RFUWNGY3NRVGVUSHpoNDc1MkdWMDRSVQogICAgICAgIFRpL0dFV3l6SXNsNFJnN3RHdEF3bWNJUGdVTlVmWTJRMzkwRkdxZEg0YWhuK213LzZhRmJXMzFXNjNkOVlKVnEKICAgICAgICBpb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCiAgICAgICAgYnBFaGMzNWFwS0xCMjFIT1VRSURBUUFCbzFNd1VUQWRCZ05WSFE0RUZnUVV5dmwwVkk1dkpWU3VZRlh1N0I0OAogICAgICAgIDZQYk1FQW93SHdZRFZSMGpCQmd3Rm9BVXl2bDBWSTV2SlZTdVlGWHU3QjQ4NlBiTUVBb3dEd1lEVlIwVEFRSC8KICAgICAgICBCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CiAgICAgICAgMk12WHE1RVVtdWF3SVVpOWthWWp3ZFZpRFJFR1NqazdKVzE3dmw1NzZIakRrZGZSd2k0RTI4U3lkUkluWmY2SgogICAgICAgIGk4SFpjWjdjYUg2RHhSMzM1ZmdIVnpMaTVOaVRjZS9Pak5CUXpRMk1KWFZEZDhEQm1HNWZ5YXRKaU9KUTRiV0UKICAgICAgICBBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCiAgICAgICAgZC82dGhBa1dEYnQvUU5UK0VKSERDdmhEUktoMVJ1R0h5ZytZKy9uZWJUV1dyRldza3RScmJPb0hDWmlDcFhJMQogICAgICAgIDNlWEU2bnQwWWtndER4RzIyS3FuaHBBZzlnVVNzMmhsaG94eXZrenlGMG11Nk5oUGx3QWducTcrL1E9PQogICAgICAgIC0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+      digest: sha256-60fcccf80101fc7798549e146b6dd5580002df9a540d06967e78b56a92fbc57c
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          backendClusterRefs:
+          - name: service/default/service-1/8080/http
+            weight: 1
+          - name: service/default/service-2/8080/http
+            weight: 1
+          metadata:
+            kind: HTTPRoute
+            name: http-route-1
+            namespace: default
+            sectionName: rule-1
+          name: httproute/default/http-route-1/rule/0
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: http-route-1
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: btp-gateway-http3
+            namespace: envoy-gateway
+          sectionName: rule-1
+        name: httproute/default/http-route-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /rule-1
+        traffic:
+          http3:
+            mode: Always
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

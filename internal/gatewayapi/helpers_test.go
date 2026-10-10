@@ -1844,3 +1844,19 @@ func structWithFieldSet[T any](fieldName string) *T {
 	}
 	return specPtr
 }
+
+func TestFormatNameList(t *testing.T) {
+	names := func(n int) []string {
+		out := make([]string, 0, n)
+		for i := range n {
+			out = append(out, fmt.Sprintf("ns/route-%02d", i))
+		}
+		return out
+	}
+	require.Equal(t, "[ns/route-00 ns/route-01]", formatNameList(names(2)))
+	require.NotContains(t, formatNameList(names(maxNamesListed)), "more")
+	over := formatNameList(names(maxNamesListed + 5))
+	require.Contains(t, over, fmt.Sprintf("ns/route-%02d]", maxNamesListed-1))
+	require.NotContains(t, over, fmt.Sprintf("ns/route-%02d", maxNamesListed))
+	require.Contains(t, over, "] and 5 more")
+}
