@@ -253,3 +253,7 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+
+## Backend dependencies
+
+Declare HTTP callout dependencies with [extension backend bindings](../extension-backends/).

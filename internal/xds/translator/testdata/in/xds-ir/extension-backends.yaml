@@ -1,0 +1,98 @@
+http:
+- address: 0.0.0.0
+  hostnames: ['*']
+  name: default/gateway/http
+  port: 10080
+  routes:
+  - name: route-one
+    hostname: example.com
+    metadata:
+      kind: HTTPRoute
+      name: route-one
+      namespace: default
+    pathMatch:
+      prefix: /one
+    destination:
+      name: route-backend
+      settings:
+      - name: route-backend/0
+        protocol: HTTP
+        addressType: IP
+        endpoints:
+        - host: 10.0.0.1
+          port: 8080
+        weight: 1
+    envoyExtensions:
+      backends:
+        resolver:
+          name: envoyextensionpolicy/default/one/backend/resolver/0
+          traffic:
+            loadBalancer:
+              roundRobin: {}
+            timeout:
+              tcp:
+                connectTimeout: 3s
+          settings:
+          - name: envoyextensionpolicy/default/one/backend/resolver/0/0
+            protocol: HTTP
+            addressType: IP
+            endpoints:
+            - host: 10.0.0.2
+              port: 8080
+            weight: 1
+      luas:
+      - name: envoyextensionpolicy/default/one/lua/0
+        code: |
+          function envoy_on_request(handle)
+            local cluster = handle:route():metadata():get("resolver")
+            handle:httpCall(cluster, {[":method"]="GET", [":path"]="/", [":authority"]="resolver"}, nil, 1000)
+          end
+        filterContext:
+          preserved: value
+      - name: envoyextensionpolicy/default/one/lua/1
+        code: function envoy_on_request(handle) end
+      wasms:
+      - name: envoyextensionpolicy/default/one/wasm/0
+        wasmName: callout
+        config:
+          backend: resolver
+        httpWasmCode:
+          servingURL: http://envoy-gateway:18002/callout.wasm
+          originalDownloadingURL: https://example.com/callout.wasm
+          sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
+      dynamicModules:
+      - name: envoyextensionpolicy/default/one/dynamic-module/0
+        path: /usr/lib/envoy/callout.so
+        filterName: callout
+        config:
+          backend: resolver
+  - name: route-two
+    hostname: example.com
+    pathMatch:
+      prefix: /two
+    directResponse:
+      statusCode: 200
+    envoyExtensions:
+      backends:
+        resolver:
+          name: envoyextensionpolicy/default/two/backend/resolver/0
+          settings:
+          - name: envoyextensionpolicy/default/two/backend/resolver/0/0
+            protocol: HTTP
+            addressType: FQDN
+            endpoints:
+            - host: resolver.example.com
+              port: 443
+            weight: 1
+            tls:
+              sni: resolver.example.com
+              caCertificate:
+                name: extension-ca
+                certificate: [99, 97]
+              clientCertificates:
+              - name: extension-client
+                certificate: [99, 101, 114, 116]
+                privateKey: [107, 101, 121]
+      luas:
+      - name: envoyextensionpolicy/default/two/lua/0
+        code: function envoy_on_request(handle) end
