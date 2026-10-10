@@ -157,6 +157,11 @@ func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 			if route.Destination != nil {
 				collectSDSURLs(route.Destination.Settings)
 			}
+			if route.EnvoyExtensions != nil {
+				for _, destination := range route.EnvoyExtensions.Backends {
+					collectSDSURLs(destination.Settings)
+				}
+			}
 		}
 	}
 

@@ -1358,6 +1358,8 @@ type SecurityFeatures struct {
 // EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
 // +k8s:deepcopy-gen=true
 type EnvoyExtensionFeatures struct {
+	// Backends maps extension aliases to the destinations used for HTTP callouts.
+	Backends map[string]*ExtensionBackend `json:"backends,omitempty" yaml:"backends,omitempty"`
 	// External Processing extensions
 	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
 	// Wasm extensions
@@ -1366,6 +1368,13 @@ type EnvoyExtensionFeatures struct {
 	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 	// Dynamic Module extensions
 	DynamicModules []DynamicModule `json:"dynamicModules,omitempty" yaml:"dynamicModules,omitempty"`
+}
+
+// ExtensionBackend holds a callout destination and its cluster settings.
+// +k8s:deepcopy-gen=true
+type ExtensionBackend struct {
+	RouteDestination `json:",inline" yaml:",inline"`
+	Traffic          *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension

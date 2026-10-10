@@ -575,6 +575,10 @@ function StreamHandle:metadata()
   return Metadata
 end
 
+function StreamHandle:route()
+  return {metadata = function() return Metadata end}
+end
+
 function StreamHandle:streamInfo()
   return StreamInfo
 end
