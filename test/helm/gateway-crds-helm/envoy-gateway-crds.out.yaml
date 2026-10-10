@@ -30574,6 +30574,34 @@ spec:
                             Operation specifies the operation of a request, such as HTTP methods.
                             If not specified, all operations are matched on.
                           properties:
+                            hosts:
+                              description: |-
+                                Hosts are the HTTP hosts of the request, matched against the :authority header.
+                                If multiple hosts are specified, the rule matches if any of the hosts match.
+                                Wildcard hostnames such as "*.example.com" are allowed.
+                              items:
+                                description: |-
+                                  Hostname is the fully qualified domain name of a network host. This matches
+                                  the RFC 1123 definition of a hostname with 2 notable exceptions:
+
+                                   1. IPs are not allowed.
+                                   2. A hostname may be prefixed with a wildcard label (`*.`). The wildcard
+                                      label must appear by itself as the first label.
+
+                                  Hostname can be "precise" which is a domain name without the terminating
+                                  dot of a network host (e.g. "foo.example.com") or "wildcard", which is a
+                                  domain name prefixed with a single wildcard label (e.g. `*.example.com`).
+
+                                  Note that as per RFC1035 and RFC1123, a *label* must consist of lower case
+                                  alphanumeric characters or '-', and must start and end with an alphanumeric
+                                  character. No other punctuation is allowed.
+                                maxLength: 253
+                                minLength: 1
+                                pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                type: string
+                              maxItems: 16
+                              minItems: 1
+                              type: array
                             methods:
                               description: |-
                                 Methods are the HTTP methods of the request.
@@ -30635,8 +30663,9 @@ spec:
                               type: object
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of methods or path must be specified
-                            rule: has(self.methods) || has(self.path)
+                          - message: at least one of methods, path, or hosts must
+                              be specified
+                            rule: has(self.methods) || has(self.path) || has(self.hosts)
                         principal:
                           description: |-
                             Principal specifies the client identity of a request.
