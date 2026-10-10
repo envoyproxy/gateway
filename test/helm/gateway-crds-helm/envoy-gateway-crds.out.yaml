@@ -10787,6 +10787,7 @@ spec:
                                 the dynamic module shared library (.so file).
                               maxLength: 4096
                               minLength: 1
+                              pattern: ^/.*
                               type: string
                           required:
                           - path
