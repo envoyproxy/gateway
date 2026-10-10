@@ -1697,6 +1697,25 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "operation not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: &egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+							Operation: &egv1a1.Operation{
+								Methods: []gwapiv1.HTTPMethod{"GET"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "mixed allow and deny ok",
 			spec: egv1a1.SecurityPolicySpec{
 				Authorization: &egv1a1.Authorization{
@@ -2587,4 +2606,819 @@ func Test_securityPolicyOwnerChoose(t *testing.T) {
 		assert.Same(t, parentPolicy, owners.extAuth)
 		assert.Same(t, parentPolicy, owners.extAuthBackendRefs)
 	})
+}
+
+func TestFilterAuthorizationForTCP(t *testing.T) {
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-headers"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{Name: "x-user"},
+					},
+				},
+			},
+			{
+				Name:   new("allow-cidr"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+				},
+			},
+			{
+				Name:   new("deny-headers"),
+				Action: egv1a1.AuthorizationActionDeny,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{Name: "x-admin"},
+					},
+				},
+			},
+		},
+	}
+
+	skipped := filterAuthorizationForTCP(policy)
+
+	require.Equal(t, []string{"allow-headers"}, skipped)
+	require.Len(t, policy.Spec.Authorization.Rules, 2)
+	require.Equal(t, "allow-cidr", *policy.Spec.Authorization.Rules[0].Name)
+	require.Equal(t, "deny-headers", *policy.Spec.Authorization.Rules[1].Name)
+
+	require.NoError(t, validateSecurityPolicyForTCP(&egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					policy.Spec.Authorization.Rules[0],
+				},
+			},
+		},
+	}))
+
+	require.Error(t, validateSecurityPolicyForTCP(&egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					policy.Spec.Authorization.Rules[1],
+				},
+			},
+		},
+	}))
+}
+
+func TestTranslateSecurityPolicyForListeners_HTTPOnlyDoesNotFailForTCPIncompatibleDeny(t *testing.T) {
+	tr := &Translator{}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("deny-with-headers"),
+				Action: egv1a1.AuthorizationActionDeny,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{
+							Name: "x-user",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	httpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "http",
+			Protocol: gwapiv1.HTTPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	httpRoute := &ir.HTTPRoute{
+		Name: "http-route",
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			HTTP: []*ir.HTTPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/http",
+					},
+					Routes: []*ir.HTTPRoute{httpRoute},
+				},
+			},
+		},
+	}
+
+	result, err := tr.translateSecurityPolicyForListeners(
+		policy,
+		gtwCtx,
+		resource.NewResources(),
+		xdsIR,
+		[]*ListenerContext{httpListener},
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NoError(t, result.tcpDenyError)
+	require.Empty(t, result.skippedTCPAllowRules)
+	require.NotNil(t, httpRoute.Security)
+	require.NotNil(t, httpRoute.Security.Authorization)
+}
+
+func TestTranslateSecurityPolicyForListeners_TCPSkipsIncompatibleAllow(t *testing.T) {
+	tr := &Translator{}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-with-headers"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{
+							Name: "x-user",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	tcpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "tcp",
+			Protocol: gwapiv1.TCPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	tcpRoute := &ir.TCPRoute{
+		Name: "tcp-route",
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRoute},
+				},
+			},
+		},
+	}
+
+	result, err := tr.translateSecurityPolicyForListeners(
+		policy,
+		gtwCtx,
+		resource.NewResources(),
+		xdsIR,
+		[]*ListenerContext{tcpListener},
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NoError(t, result.tcpDenyError)
+	require.Equal(t, []string{"allow-with-headers"}, result.skippedTCPAllowRules)
+}
+
+func TestTranslateSecurityPolicyForListeners_TCPFailsClosedForIncompatibleDeny(t *testing.T) {
+	tr := &Translator{}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		DefaultAction: new(egv1a1.AuthorizationActionAllow),
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("deny-with-headers"),
+				Action: egv1a1.AuthorizationActionDeny,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{
+							Name: "x-user",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	tcpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "tcp",
+			Protocol: gwapiv1.TCPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	tcpRoute := &ir.TCPRoute{
+		Name: "tcp-route",
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRoute},
+				},
+			},
+		},
+	}
+
+	result, err := tr.translateSecurityPolicyForListeners(
+		policy,
+		gtwCtx,
+		resource.NewResources(),
+		xdsIR,
+		[]*ListenerContext{tcpListener},
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Error(t, result.tcpDenyError)
+	require.Empty(t, result.skippedTCPAllowRules)
+
+	require.NotNil(t, tcpRoute.Authorization)
+	require.Empty(t, tcpRoute.Authorization.Rules)
+	require.Equal(
+		t,
+		egv1a1.AuthorizationActionDeny,
+		tcpRoute.Authorization.DefaultAction,
+	)
+}
+
+func TestTranslateSecurityPolicyForListeners_TCPFailsClosedWhenAuthorizationBuildFails(t *testing.T) {
+	tr := &Translator{}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+
+	policy := sp("default", "test-policy")
+	policy.Spec.JWT = &egv1a1.JWT{
+		Providers: []egv1a1.JWTProvider{},
+	}
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		DefaultAction: new(egv1a1.AuthorizationActionAllow),
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-with-missing-jwt-provider"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					JWT: &egv1a1.JWTPrincipal{
+						Provider: "missing-provider",
+					},
+				},
+			},
+		},
+	}
+
+	tcpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "tcp",
+			Protocol: gwapiv1.TCPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	tcpRoute := &ir.TCPRoute{
+		Name: "tcp-route",
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRoute},
+				},
+			},
+		},
+	}
+
+	result, err := tr.translateSecurityPolicyForListeners(
+		policy,
+		gtwCtx,
+		resource.NewResources(),
+		xdsIR,
+		[]*ListenerContext{tcpListener},
+	)
+
+	require.Error(t, err)
+	require.NotNil(t, result)
+
+	require.NotNil(t, tcpRoute.Authorization)
+	require.Empty(t, tcpRoute.Authorization.Rules)
+	require.Equal(
+		t,
+		egv1a1.AuthorizationActionDeny,
+		tcpRoute.Authorization.DefaultAction,
+	)
+}
+
+func TestTranslateSecurityPolicyForListeners_MixedListenersSkipsOnlyTCPAllow(t *testing.T) {
+	tr := &Translator{}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-with-headers"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{
+							Name: "x-user",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	httpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "http",
+			Protocol: gwapiv1.HTTPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	tcpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "tcp",
+			Protocol: gwapiv1.TCPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	httpRoute := &ir.HTTPRoute{
+		Name: "http-route",
+	}
+
+	tcpRoute := &ir.TCPRoute{
+		Name: "tcp-route",
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			HTTP: []*ir.HTTPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/http",
+					},
+					Routes: []*ir.HTTPRoute{httpRoute},
+				},
+			},
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRoute},
+				},
+			},
+		},
+	}
+
+	result, err := tr.translateSecurityPolicyForListeners(
+		policy,
+		gtwCtx,
+		resource.NewResources(),
+		xdsIR,
+		[]*ListenerContext{httpListener, tcpListener},
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	require.NoError(t, result.tcpDenyError)
+	require.Equal(t, []string{"allow-with-headers"}, result.skippedTCPAllowRules)
+
+	// HTTP gets the complete authorization rule.
+	require.NotNil(t, httpRoute.Security)
+	require.NotNil(t, httpRoute.Security.Authorization)
+	require.Len(t, httpRoute.Security.Authorization.Rules, 1)
+	require.Equal(t, "allow-with-headers", httpRoute.Security.Authorization.Rules[0].Name)
+
+	// TCP does not receive the incompatible rule.
+	require.NotNil(t, tcpRoute.Authorization)
+	require.Empty(t, tcpRoute.Authorization.Rules)
+}
+
+func TestTranslateSecurityPolicyForListeners_MixedListenersFailsClosedForDeny(t *testing.T) {
+	tr := &Translator{}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		DefaultAction: new(egv1a1.AuthorizationActionAllow),
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("deny-with-headers"),
+				Action: egv1a1.AuthorizationActionDeny,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{
+							Name: "x-user",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	httpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "http",
+			Protocol: gwapiv1.HTTPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	tcpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "tcp",
+			Protocol: gwapiv1.TCPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	httpRoute := &ir.HTTPRoute{
+		Name: "http-route",
+	}
+
+	tcpRoute := &ir.TCPRoute{
+		Name: "tcp-route",
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			HTTP: []*ir.HTTPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/http",
+					},
+					Routes: []*ir.HTTPRoute{httpRoute},
+				},
+			},
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRoute},
+				},
+			},
+		},
+	}
+
+	result, err := tr.translateSecurityPolicyForListeners(
+		policy,
+		gtwCtx,
+		resource.NewResources(),
+		xdsIR,
+		[]*ListenerContext{httpListener, tcpListener},
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Error(t, result.tcpDenyError)
+	require.Empty(t, result.skippedTCPAllowRules)
+
+	// HTTP still receives the complete authorization policy.
+	require.NotNil(t, httpRoute.Security)
+	require.NotNil(t, httpRoute.Security.Authorization)
+	require.Len(t, httpRoute.Security.Authorization.Rules, 1)
+	require.Equal(t, "deny-with-headers", httpRoute.Security.Authorization.Rules[0].Name)
+
+	// TCP fails closed.
+	require.NotNil(t, tcpRoute.Authorization)
+	require.Empty(t, tcpRoute.Authorization.Rules)
+	require.Equal(
+		t,
+		egv1a1.AuthorizationActionDeny,
+		tcpRoute.Authorization.DefaultAction,
+	)
+}
+
+func TestTranslateSecurityPolicyForListeners_TCPKeepsCompatibleAllow(t *testing.T) {
+	tr := &Translator{}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-cidr"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{
+						"10.0.0.0/8",
+					},
+				},
+			},
+		},
+	}
+
+	tcpListener := &ListenerContext{
+		Listener: &gwapiv1.Listener{
+			Name:     "tcp",
+			Protocol: gwapiv1.TCPProtocolType,
+		},
+		gateway: gtwCtx,
+	}
+
+	tcpRoute := &ir.TCPRoute{
+		Name: "tcp-route",
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRoute},
+				},
+			},
+		},
+	}
+
+	result, err := tr.translateSecurityPolicyForListeners(
+		policy,
+		gtwCtx,
+		resource.NewResources(),
+		xdsIR,
+		[]*ListenerContext{tcpListener},
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NoError(t, result.tcpDenyError)
+	require.Empty(t, result.skippedTCPAllowRules)
+
+	require.NotNil(t, tcpRoute.Authorization)
+	require.Len(t, tcpRoute.Authorization.Rules, 1)
+	require.Equal(t, "allow-cidr", tcpRoute.Authorization.Rules[0].Name)
+	require.Len(t, tcpRoute.Authorization.Rules[0].Principal.ClientCIDRs, 1)
+}
+
+func TestSecurityPolicyForGateway_TCPIncompatibleAllowSetsWarning(t *testing.T) {
+	tr := &Translator{
+		GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+	}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+		Spec: gwapiv1.GatewaySpec{
+			Listeners: []gwapiv1.Listener{
+				{
+					Name:     "tcp",
+					Protocol: gwapiv1.TCPProtocolType,
+					Port:     8080,
+				},
+			},
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+	gtwCtx.ResetListeners()
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-with-headers"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{Name: "x-user"},
+					},
+				},
+			},
+		},
+	}
+	target := policyTargetReferenceWithSectionName{
+		Group:     gwapiv1.Group(gwapiv1.GroupVersion.Group),
+		Kind:      resource.KindGateway,
+		Name:      "test-gateway",
+		Namespace: "default",
+	}
+
+	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{
+		{
+			Namespace: "default",
+			Name:      "test-gateway",
+		}: {
+			GatewayContext: gtwCtx,
+		},
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{
+						{Name: "tcp-route"},
+					},
+				},
+			},
+		},
+	}
+
+	tr.processSecurityPolicyForGateway(
+		resource.NewResources(),
+		xdsIR,
+		gatewayMap,
+		newPolicyScopeGraph(),
+		newPolicyScopeGraph(),
+		policy,
+		target,
+	)
+
+	require.NotEmpty(t, policy.Status.Ancestors)
+
+	var accepted, warning bool
+	for _, condition := range policy.Status.Ancestors[0].Conditions {
+		switch condition.Type {
+		case string(gwapiv1.PolicyConditionAccepted):
+			accepted = condition.Status == metav1.ConditionTrue
+		case string(egv1a1.PolicyConditionWarning):
+			warning = true
+			require.Equal(t, string(egv1a1.PolicyReasonUnsupportedAuthorizationRule), condition.Reason)
+			require.Contains(t, condition.Message, "allow-with-headers")
+		}
+	}
+
+	require.True(t, accepted)
+	require.True(t, warning)
+}
+
+func TestSecurityPolicyForGateway_TCPIncompatibleDenySetsAcceptedFalse(t *testing.T) {
+	tr := &Translator{
+		GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+	}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+		Spec: gwapiv1.GatewaySpec{
+			Listeners: []gwapiv1.Listener{
+				{
+					Name:     "tcp",
+					Protocol: gwapiv1.TCPProtocolType,
+					Port:     8080,
+				},
+			},
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+	gtwCtx.ResetListeners()
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("deny-with-headers"),
+				Action: egv1a1.AuthorizationActionDeny,
+				Principal: &egv1a1.Principal{
+					Headers: []egv1a1.AuthorizationHeaderMatch{
+						{Name: "x-user"},
+					},
+				},
+			},
+		},
+	}
+
+	target := policyTargetReferenceWithSectionName{
+		Group:     gwapiv1.Group(gwapiv1.GroupVersion.Group),
+		Kind:      resource.KindGateway,
+		Name:      "test-gateway",
+		Namespace: "default",
+	}
+
+	gatewayMap := map[types.NamespacedName]*policyGatewayTargetContext{
+		{
+			Namespace: "default",
+			Name:      "test-gateway",
+		}: {
+			GatewayContext: gtwCtx,
+		},
+	}
+
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{
+						{Name: "tcp-route"},
+					},
+				},
+			},
+		},
+	}
+
+	tr.processSecurityPolicyForGateway(
+		resource.NewResources(),
+		xdsIR,
+		gatewayMap,
+		newPolicyScopeGraph(),
+		newPolicyScopeGraph(),
+		policy,
+		target,
+	)
+
+	require.NotEmpty(t, policy.Status.Ancestors)
+
+	var accepted bool
+	for _, condition := range policy.Status.Ancestors[0].Conditions {
+		if condition.Type == string(gwapiv1.PolicyConditionAccepted) {
+			accepted = condition.Status == metav1.ConditionTrue
+			require.Equal(t, string(gwapiv1.PolicyReasonInvalid), condition.Reason)
+		}
+	}
+
+	require.False(t, accepted)
 }
