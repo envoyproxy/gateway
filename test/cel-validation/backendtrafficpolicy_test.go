@@ -17,6 +17,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -4793,6 +4794,236 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid compressor with custom settings",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{
+								CompressionLevel:    new(uint32(9)),
+								CompressionStrategy: new(egv1a1.GzipCompressionStrategyRLE),
+								MemoryLevel:         new(uint32(8)),
+								WindowBits:          new(uint32(15)),
+								ChunkSize:           new(uint32(8192)),
+							},
+						},
+						{
+							Type: egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{
+								Quality:                       new(uint32(11)),
+								EncoderMode:                   new(egv1a1.BrotliEncoderModeText),
+								WindowBits:                    new(uint32(24)),
+								InputBlockBits:                new(uint32(16)),
+								ChunkSize:                     new(uint32(4096)),
+								DisableLiteralContextModeling: new(true),
+							},
+						},
+						{
+							Type: egv1a1.ZstdCompressorType,
+							Zstd: &egv1a1.ZstdCompressor{
+								CompressionLevel: new(uint32(22)),
+								EnableChecksum:   new(true),
+								Strategy:         new(egv1a1.ZstdCompressionStrategyBTUltra2),
+								ChunkSize:        new(uint32(65536)),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid brotli quality 0",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{
+								Quality: new(uint32(0)),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "compressor settings out of range - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{
+								CompressionLevel: new(uint32(10)),
+								MemoryLevel:      new(uint32(0)),
+								WindowBits:       new(uint32(16)),
+								ChunkSize:        new(uint32(1024)),
+							},
+						},
+						{
+							Type: egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{
+								Quality:        new(uint32(12)),
+								WindowBits:     new(uint32(25)),
+								InputBlockBits: new(uint32(15)),
+							},
+						},
+						{
+							Type: egv1a1.ZstdCompressorType,
+							Zstd: &egv1a1.ZstdCompressor{
+								CompressionLevel: new(uint32(23)),
+								ChunkSize:        new(uint32(65537)),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.compressor[0].gzip.compressionLevel: Invalid value: 10: spec.compressor[0].gzip.compressionLevel in body should be less than or equal to 9",
+				"spec.compressor[0].gzip.memoryLevel: Invalid value: 0: spec.compressor[0].gzip.memoryLevel in body should be greater than or equal to 1",
+				"spec.compressor[0].gzip.windowBits: Invalid value: 16: spec.compressor[0].gzip.windowBits in body should be less than or equal to 15",
+				"spec.compressor[0].gzip.chunkSize: Invalid value: 1024: spec.compressor[0].gzip.chunkSize in body should be greater than or equal to 4096",
+				"spec.compressor[1].brotli.quality: Invalid value: 12: spec.compressor[1].brotli.quality in body should be less than or equal to 11",
+				"spec.compressor[1].brotli.windowBits: Invalid value: 25: spec.compressor[1].brotli.windowBits in body should be less than or equal to 24",
+				"spec.compressor[1].brotli.inputBlockBits: Invalid value: 15: spec.compressor[1].brotli.inputBlockBits in body should be greater than or equal to 16",
+				"spec.compressor[2].zstd.compressionLevel: Invalid value: 23: spec.compressor[2].zstd.compressionLevel in body should be less than or equal to 22",
+				"spec.compressor[2].zstd.chunkSize: Invalid value: 65537: spec.compressor[2].zstd.chunkSize in body should be less than or equal to 65536",
+			},
+		},
+		{
+			desc: "compressor settings not matching the compressor type - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{},
+							Brotli: &egv1a1.BrotliCompressor{
+								Quality: new(uint32(11)),
+							},
+						},
+						{
+							Type: egv1a1.BrotliCompressorType,
+							Zstd: &egv1a1.ZstdCompressor{},
+						},
+						{
+							Type: egv1a1.ZstdCompressorType,
+							Gzip: &egv1a1.GzipCompressor{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"The brotli configuration is only allowed when the type is Brotli.",
+				"The zstd configuration is only allowed when the type is Zstd.",
+				"The gzip configuration is only allowed when the type is Gzip.",
+			},
+		},
+		{
+			desc: "more compressors than compressor types - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{}},
+						{Type: egv1a1.BrotliCompressorType, Brotli: &egv1a1.BrotliCompressor{}},
+						{Type: egv1a1.ZstdCompressorType, Zstd: &egv1a1.ZstdCompressor{}},
+						{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{}},
+					},
+				}
+			},
+			wantErrors: []string{"spec.compressor: Too many: 4: must have at most 3 items"},
+		},
+		{
+			desc: "duplicate compressor types - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compressor: []*egv1a1.Compression{
+						{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{CompressionLevel: new(uint32(1))}},
+						{Type: egv1a1.GzipCompressorType, Gzip: &egv1a1.GzipCompressor{CompressionLevel: new(uint32(9))}},
+					},
+				}
+			},
+			wantErrors: []string{"compressor types must be unique"},
+		},
+		{
+			desc: "duplicate compression types - should fail",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					Compression: []*egv1a1.Compression{
+						{Type: egv1a1.BrotliCompressorType},
+						{Type: egv1a1.BrotliCompressorType},
+					},
+				}
+			},
+			wantErrors: []string{"compression types must be unique"},
+		},
+		{
 			desc: "both compression and compressor fields specified - should fail",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -5240,4 +5471,34 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			}
 		})
 	}
+
+	// A negative quality cannot be set through the typed API since the field is a uint32.
+	t.Run("brotli quality below minimum - should fail", func(t *testing.T) {
+		btp := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": egv1a1.GroupVersion.String(),
+			"kind":       egv1a1.KindBackendTrafficPolicy,
+			"metadata": map[string]any{
+				"name":      fmt.Sprintf("btp-%v", time.Now().UnixNano()),
+				"namespace": metav1.NamespaceDefault,
+			},
+			"spec": map[string]any{
+				"targetRef": map[string]any{
+					"group": "gateway.networking.k8s.io",
+					"kind":  "Gateway",
+					"name":  "eg",
+				},
+				"compressor": []any{
+					map[string]any{
+						"type":   string(egv1a1.BrotliCompressorType),
+						"brotli": map[string]any{"quality": int64(-1)},
+					},
+				},
+			},
+		}}
+
+		wantError := "spec.compressor[0].brotli.quality: Invalid value: -1: spec.compressor[0].brotli.quality in body should be greater than or equal to 0"
+		if err := c.Create(ctx, btp); err == nil || !strings.Contains(err.Error(), wantError) {
+			t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%q", err, wantError)
+		}
+	})
 }
