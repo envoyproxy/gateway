@@ -2331,7 +2331,7 @@ func HTTP3Incompatibilities(settings []*DestinationSetting, useClientProtocol, p
 // CanUseHTTP3 reports whether a cluster for the given backends can be given QUIC: at least
 // one backend is resolvable and none of them is incompatible with HTTP/3.
 func CanUseHTTP3(settings []*DestinationSetting, useClientProtocol, proxyProtocol bool) bool {
-	return HasDialableSettings(settings) &&
+	return len(dialableSettings(settings)) > 0 &&
 		len(HTTP3Incompatibilities(settings, useClientProtocol, proxyProtocol)) == 0
 }
 
@@ -2346,11 +2346,6 @@ func HTTP3IgnoresALPN(settings []*DestinationSetting) bool {
 		}
 	}
 	return false
-}
-
-// HasDialableSettings reports whether at least one backendRef resolved, so the cluster dials.
-func HasDialableSettings(settings []*DestinationSetting) bool {
-	return len(dialableSettings(settings)) > 0
 }
 
 // dialableSettings drops the settings of unresolvable backendRefs, which never dial.

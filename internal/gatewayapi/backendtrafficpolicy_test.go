@@ -3264,33 +3264,6 @@ func TestValidateBackendHTTP3(t *testing.T) {
 			}}},
 		},
 		{
-			name: "alt-svc removed by the route in mode Auto",
-			route: &ir.HTTPRoute{
-				Traffic:               http3,
-				RemoveResponseHeaders: []string{"Alt-Svc"},
-				Destination:           &ir.RouteDestination{Settings: []*ir.DestinationSetting{tlsSetting}},
-			},
-			wantReasons: 1,
-		},
-		{
-			name: "alt-svc removed by a backend filter in mode Auto",
-			route: &ir.HTTPRoute{Traffic: http3, Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{
-				tlsSetting,
-				{Protocol: ir.HTTP, TLS: &ir.TLSUpstreamConfig{}, Filters: &ir.DestinationFilters{RemoveResponseHeaders: []string{"alt-svc"}}},
-			}}},
-			wantReasons: 1,
-		},
-		{
-			name: "alt-svc removed in mode Always needs no discovery",
-			route: &ir.HTTPRoute{
-				Traffic: &ir.TrafficFeatures{ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
-					HTTP3: &ir.BackendHTTP3Settings{Mode: string(egv1a1.BackendHTTP3ModeAlways)},
-				}},
-				RemoveResponseHeaders: []string{"alt-svc"},
-				Destination:           &ir.RouteDestination{Settings: []*ir.DestinationSetting{tlsSetting}},
-			},
-		},
-		{
 			name: "merged refs are not the route's to judge",
 			route: &ir.HTTPRoute{Traffic: http3, Destination: &ir.RouteDestination{BackendClusterRefs: []*ir.BackendClusterRef{
 				{Name: "service/default/plain/8080/http"},

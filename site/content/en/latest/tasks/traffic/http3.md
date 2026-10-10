@@ -188,10 +188,9 @@ endpoint's port. The QUIC listener on the backend must also be reachable on that
 
 The backend's `alt-svc` header is not forwarded to clients. It names a port on the backend, which a
 client would read as a port on the Gateway, so Envoy Gateway strips it after recording it and adds
-the Gateway's own `alt-svc` when the listener has HTTP/3 enabled. An HTTPRoute
-`ResponseHeaderModifier` filter that removes `alt-svc` runs before the advertisement is recorded,
-so `Auto` mode could never discover the backend's HTTP/3 support. HTTP/3 is left off for such a
-route and the policy reports a `Warning` condition.
+the Gateway's own `alt-svc` when the listener has HTTP/3 enabled. Do not remove `alt-svc` with an
+HTTPRoute `ResponseHeaderModifier` filter: that runs before the advertisement is recorded, so
+`Auto` mode would never discover the backend's HTTP/3 support.
 
 The EnvoyProxy `backendTLS.alpnProtocols` setting is not applied to a cluster using HTTP/3. Envoy
 offers that list on the QUIC handshake too, where only `h3` is valid, so the cluster offers no ALPN

@@ -2057,14 +2057,10 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 // http3Warnings records, per subject and reason, the routes and merged backend clusters that
 // had to drop HTTP/3. Dropping HTTP/3 leaves the rest of the policy in effect, so this is
 // reported as a Warning condition rather than as a translation error.
-const (
-	altSvcHeader = "alt-svc"
-
-	// http3ALPNIgnoredReason is reported when HTTP/3 stays on but the cluster drops the
-	// configured backendTLS alpnProtocols, see ir.HTTP3IgnoresALPN.
-	http3ALPNIgnoredReason = "backendTLS alpnProtocols cannot be offered over QUIC, so the cluster " +
-		"offers none and its TCP connections negotiate h2 or http/1.1"
-)
+// http3ALPNIgnoredReason is reported when HTTP/3 stays on but the cluster drops the
+// configured backendTLS alpnProtocols, see ir.HTTP3IgnoresALPN.
+const http3ALPNIgnoredReason = "backendTLS alpnProtocols cannot be offered over QUIC, so the cluster " +
+	"offers none and its TCP connections negotiate h2 or http/1.1"
 
 // http3Warnings collects, per reason, the routes and merged clusters that lost HTTP/3 and
 // those that keep it while a setting is ignored, for one Warning condition message.
@@ -2173,40 +2169,7 @@ func validateBackendHTTP3(r *ir.HTTPRoute) []string {
 	if r.Traffic == nil || r.Traffic.HTTP3 == nil || r.Destination == nil {
 		return nil
 	}
-	reasons := ir.HTTP3Incompatibilities(r.Destination.Settings, ptr.Deref(r.UseClientProtocol, false), r.Traffic.ProxyProtocol != nil)
-	// Mode Auto learns which backends speak HTTP/3 from their alt-svc response header, and a
-	// route-level removal runs in the router before the alternate protocols cache filter can
-	// record it, so the cluster would stay on TCP for good. Like the reasons above, this is
-	// only judged for a route-scoped cluster that dials.
-	if r.Traffic.HTTP3.Mode == string(egv1a1.BackendHTTP3ModeAuto) &&
-		ir.HasDialableSettings(r.Destination.Settings) && routeRemovesAltSvc(r) {
-		reasons = append(reasons, "removing the alt-svc response header with an HTTPRoute filter "+
-			"cannot be used together with http3 mode Auto, which discovers HTTP/3 backends through it")
-	}
-	return reasons
-}
-
-// routeRemovesAltSvc reports whether an HTTPRoute filter removes alt-svc from the responses
-// of the route or of one of its resolvable backends.
-func routeRemovesAltSvc(r *ir.HTTPRoute) bool {
-	if removesHeader(r.RemoveResponseHeaders, altSvcHeader) {
-		return true
-	}
-	for _, s := range r.Destination.Settings {
-		if s != nil && !s.Invalid && s.Filters != nil && removesHeader(s.Filters.RemoveResponseHeaders, altSvcHeader) {
-			return true
-		}
-	}
-	return false
-}
-
-func removesHeader(headers []string, name string) bool {
-	for _, h := range headers {
-		if strings.EqualFold(h, name) {
-			return true
-		}
-	}
-	return false
+	return ir.HTTP3Incompatibilities(r.Destination.Settings, ptr.Deref(r.UseClientProtocol, false), r.Traffic.ProxyProtocol != nil)
 }
 
 // applyGatewayPolicyToMergedCluster stores on bc the subset of a whole-Gateway

@@ -94,40 +94,6 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    name: policy-http3-alt-svc-removed
-    namespace: envoy-gateway
-  spec:
-    http3: {}
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-alt-svc-removed
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-btls
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: 'HTTP/3 is disabled for route(s) httproute/envoy-gateway/httproute-alt-svc-removed/rule/0/match/0/*:
-          removing the alt-svc response header with an HTTPRoute filter cannot be
-          used together with http3 mode Auto, which discovers HTTP/3 backends through
-          it'
-        reason: UnsupportedHTTP3Backend
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -145,7 +111,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 3
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -241,48 +207,6 @@ httpRoutes:
       parentRef:
         name: gateway-btls
         namespace: envoy-gateway
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: httproute-alt-svc-removed
-    namespace: envoy-gateway
-  spec:
-    parentRefs:
-    - name: gateway-btls
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: http-backend
-        namespace: backends
-        port: 8080
-      filters:
-      - responseHeaderModifier:
-          remove:
-          - Alt-Svc
-        type: ResponseHeaderModifier
-      matches:
-      - path:
-          type: Exact
-          value: /alt-svc-removed
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-btls
-        namespace: envoy-gateway
-        sectionName: http
 infraIR:
   envoy-gateway/gateway-btls:
     proxy:
@@ -347,51 +271,6 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: httproute-alt-svc-removed
-            namespace: envoy-gateway
-          name: httproute/envoy-gateway/httproute-alt-svc-removed/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 10.244.0.11
-              port: 8080
-            metadata:
-              kind: Service
-              name: http-backend
-              namespace: backends
-              sectionName: "8080"
-            name: httproute/envoy-gateway/httproute-alt-svc-removed/rule/0/backend/0
-            protocol: HTTP
-            tls:
-              alpnProtocols: null
-              caCertificate:
-                digest: sha256-57dbd4ac94f613100dbef91c32f552ed648325104e44de707cee1a0cae69eaed
-                name: policy-btls/backends-ca
-              maxVersion: "1.3"
-              minVersion: "1.2"
-              sni: example.com
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: httproute-alt-svc-removed
-          namespace: envoy-gateway
-          policies:
-          - kind: BackendTrafficPolicy
-            name: policy-http3-alt-svc-removed
-            namespace: envoy-gateway
-        name: httproute/envoy-gateway/httproute-alt-svc-removed/rule/0/match/0/*
-        pathMatch:
-          distinct: false
-          exact: /alt-svc-removed
-          name: ""
-        removeResponseHeaders:
-        - Alt-Svc
-        traffic: {}
       - destination:
           metadata:
             kind: HTTPRoute
