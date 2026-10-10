@@ -7,12 +7,14 @@ package validation
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -85,14 +87,42 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	return nil
 }
 
-// WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
+// WarnEnvoyGateway returns non-fatal warnings for the provided EnvoyGateway configuration:
+// deprecated fields, and fields that are accepted but have no effect.
 func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
-	if eg == nil || eg.ExtensionAPIs == nil {
+	if eg == nil {
 		return nil
 	}
+
 	var warnings []string
-	if eg.ExtensionAPIs.DisableLua != nil {
+
+	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil {
 		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
+	}
+
+	warnings = append(warnings, warnRateLimitClusterSettings(eg.RateLimit)...)
+
+	return warnings
+}
+
+// warnRateLimitClusterSettings warns about RateLimit.ClusterSettings members that are accepted
+// by validateRateLimitClusterSettings but have no effect on the rate limit service cluster: it
+// has no associated route, so ir.Timeout.ClusterOnly() strips HTTP.RequestTimeout/
+// HTTP.StreamIdleTimeout before the CDS cluster is built.
+func warnRateLimitClusterSettings(rateLimit *egv1a1.RateLimit) []string {
+	if rateLimit == nil || rateLimit.ClusterSettings == nil {
+		return nil
+	}
+	cs := rateLimit.ClusterSettings
+
+	var warnings []string
+	if cs.Timeout != nil && cs.Timeout.HTTP != nil {
+		if cs.Timeout.HTTP.RequestTimeout != nil {
+			warnings = append(warnings, "rateLimit.clusterSettings.timeout.http.requestTimeout has no effect: the rate limit service cluster has no associated route")
+		}
+		if cs.Timeout.HTTP.StreamIdleTimeout != nil {
+			warnings = append(warnings, "rateLimit.clusterSettings.timeout.http.streamIdleTimeout has no effect: the rate limit service cluster has no associated route")
+		}
 	}
 	return warnings
 }
@@ -232,6 +262,11 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit == nil {
 		return nil
 	}
+
+	if err := validateRateLimitClusterSettings(rateLimit.ClusterSettings); err != nil {
+		return fmt.Errorf("invalid rateLimit.clusterSettings: %w", err)
+	}
+
 	if rateLimit.Backend.Type != egv1a1.RedisBackendType {
 		return fmt.Errorf("unsupported ratelimit backend %v", rateLimit.Backend.Type)
 	}
@@ -274,6 +309,183 @@ func ValidateRedisURL(redisURL string) error {
 		if _, err := url.Parse(host); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}
+	}
+	return nil
+}
+
+// validateRateLimitClusterSettings validates EnvoyGateway.RateLimit.ClusterSettings.
+//
+// EnvoyGateway is loaded as static configuration rather than admitted as a CRD, so the
+// kubebuilder/CEL constraints declared on ClusterSettings (e.g. Minimum=0 on circuit breaker
+// fields, the Go-duration format on timeout fields) are never enforced. Without this check, a
+// malformed value here is accepted at startup and only surfaces once a Global rate limit policy
+// is actually used and ProcessGlobalResources fails to translate it -- by which point the runner
+// has already begun publishing IR built from the rest of the (valid) configuration.
+//
+// The rate limit service cluster has no associated route, so route-scoped ClusterSettings
+// members have nowhere to apply: ir.TrafficFeatures.ClusterFeatures() drops Retry entirely, and
+// ir.Timeout.ClusterOnly() strips HTTP.RequestTimeout/HTTP.StreamIdleTimeout before the CDS
+// cluster is built. Rather than rejecting the whole configuration because of them, those members
+// are accepted here -- only the fields that actually apply to a cluster are validated below --
+// and WarnEnvoyGateway surfaces a non-fatal warning that they have no effect.
+func validateRateLimitClusterSettings(cs *egv1a1.ClusterSettings) error {
+	if cs == nil {
+		return nil
+	}
+
+	// The rate limit service is deployed and managed by Envoy Gateway, and it doesn't accept
+	// PROXY protocol headers: enabling it would break every rate limit request.
+	if cs.ProxyProtocol != nil {
+		return fmt.Errorf("proxyProtocol is not supported for the managed rate limit service")
+	}
+
+	if err := validateRateLimitClusterCircuitBreaker(cs.CircuitBreaker); err != nil {
+		return err
+	}
+
+	if err := validateRateLimitClusterTimeout(cs.Timeout); err != nil {
+		return err
+	}
+
+	if cs.TCPKeepalive != nil {
+		if err := validateOptionalDuration("tcpKeepalive.idleTime", cs.TCPKeepalive.IdleTime); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("tcpKeepalive.interval", cs.TCPKeepalive.Interval); err != nil {
+			return err
+		}
+	}
+
+	if cs.DNS != nil {
+		if err := validateOptionalDuration("dns.dnsRefreshRate", cs.DNS.DNSRefreshRate); err != nil {
+			return err
+		}
+	}
+
+	if err := validateRateLimitClusterHealthCheck(cs.HealthCheck); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateRateLimitClusterCircuitBreaker(cb *egv1a1.CircuitBreaker) error {
+	if cb == nil {
+		return nil
+	}
+
+	fields := []struct {
+		name string
+		val  *int64
+	}{
+		{"circuitBreaker.maxConnections", cb.MaxConnections},
+		{"circuitBreaker.maxPendingRequests", cb.MaxPendingRequests},
+		{"circuitBreaker.maxParallelRequests", cb.MaxParallelRequests},
+		{"circuitBreaker.maxParallelRetries", cb.MaxParallelRetries},
+		{"circuitBreaker.maxRequestsPerConnection", cb.MaxRequestsPerConnection},
+	}
+	if cb.PerEndpoint != nil {
+		fields = append(fields, struct {
+			name string
+			val  *int64
+		}{"circuitBreaker.perEndpoint.maxConnections", cb.PerEndpoint.MaxConnections})
+	}
+
+	for _, f := range fields {
+		if f.val == nil {
+			continue
+		}
+		if *f.val < 0 || *f.val > math.MaxUint32 {
+			return fmt.Errorf("%s value %d is out of range [0, %d]", f.name, *f.val, uint32(math.MaxUint32))
+		}
+	}
+
+	return nil
+}
+
+func validateRateLimitClusterTimeout(t *egv1a1.Timeout) error {
+	if t == nil {
+		return nil
+	}
+
+	if t.TCP != nil {
+		if err := validateOptionalDuration("timeout.tcp.connectTimeout", t.TCP.ConnectTimeout); err != nil {
+			return err
+		}
+	}
+
+	if t.HTTP != nil {
+		// RequestTimeout and StreamIdleTimeout only ever take effect on a route, and the rate
+		// limit service cluster has none -- ir.Timeout.ClusterOnly() already drops them before
+		// the CDS cluster is built, so there's nothing to validate here. WarnEnvoyGateway warns
+		// about them separately (see warnRateLimitClusterSettings).
+
+		if err := validateOptionalDuration("timeout.http.connectionIdleTimeout", t.HTTP.ConnectionIdleTimeout); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("timeout.http.maxConnectionDuration", t.HTTP.MaxConnectionDuration); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("timeout.http.maxStreamDuration", t.HTTP.MaxStreamDuration); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateRateLimitClusterHealthCheck rejects malformed health check durations: translation
+// silently drops a duration it can't parse, leaving a nil field that xDS translation dereferences.
+func validateRateLimitClusterHealthCheck(hc *egv1a1.HealthCheck) error {
+	if hc == nil {
+		return nil
+	}
+
+	if hc.Active != nil {
+		// The rate limit service cluster always uses an mTLS transport socket, which health checks
+		// inherit, but the managed service only serves its HTTP /healthcheck endpoint as plaintext.
+		// An HTTP active check can therefore never succeed, leaving no healthy endpoints, and the
+		// default fail-open behavior would then silently disable global rate limiting.
+		if hc.Active.Type == egv1a1.ActiveHealthCheckerTypeHTTP {
+			return fmt.Errorf("healthCheck.active.type HTTP is not supported for the managed rate limit service, use GRPC or TCP instead")
+		}
+		// For the same reason, the check must stay on the serving (TLS gRPC) port: every other port
+		// the managed service exposes is plaintext, and overriding to the serving port is a no-op.
+		if hc.Active.Overrides != nil {
+			return fmt.Errorf("healthCheck.active.overrides is not supported for the managed rate limit service")
+		}
+		if err := validateOptionalDuration("healthCheck.active.timeout", hc.Active.Timeout); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.active.interval", hc.Active.Interval); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.active.initialJitter", hc.Active.InitialJitter); err != nil {
+			return err
+		}
+	}
+
+	if hc.Passive != nil {
+		if err := validateOptionalDuration("healthCheck.passive.interval", hc.Passive.Interval); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.passive.baseEjectionTime", hc.Passive.BaseEjectionTime); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateOptionalDuration parses d, when set, the same way IR translation does
+// (time.ParseDuration), so a malformed value is rejected at config-load time instead of at
+// first use.
+func validateOptionalDuration(field string, d *gwapiv1.Duration) error {
+	if d == nil {
+		return nil
+	}
+	if _, err := time.ParseDuration(string(*d)); err != nil {
+		return fmt.Errorf("%s: invalid duration %q: %w", field, string(*d), err)
 	}
 	return nil
 }

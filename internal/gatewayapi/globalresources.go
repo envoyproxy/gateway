@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -52,7 +53,39 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 				xdsIR.GlobalResources = &ir.GlobalResources{}
 			}
 			if containsGlobalRateLimit(xdsIR.HTTP) {
-				xdsIR.GlobalResources.RateLimitServiceCluster = t.processRateLimitServiceCluster(resources)
+				dest := t.processRateLimitServiceCluster(resources)
+
+				var backendSetting *egv1a1.BackendSettings
+				if t.RateLimitClusterSettings != nil {
+					cs := t.RateLimitClusterSettings.DeepCopy()
+					// The rate limit service cluster has no associated route, so route-scoped
+					// HTTP timeouts have no effect. Strip them before translation so a malformed
+					// (and ignored) value can't fail the whole translation.
+					if cs.Timeout != nil && cs.Timeout.HTTP != nil {
+						cs.Timeout.HTTP.RequestTimeout = nil
+						cs.Timeout.HTTP.StreamIdleTimeout = nil
+					}
+					setRateLimitHealthCheckDefaults(cs.HealthCheck)
+					setRateLimitCircuitBreakerDefaults(cs.CircuitBreaker)
+					backendSetting = &egv1a1.BackendSettings{
+						ClusterSettings: *cs,
+					}
+				}
+				tf, err := translateTrafficFeatures(backendSetting)
+				if err != nil {
+					return fmt.Errorf("invalid rate limit cluster settings: %w", err)
+				}
+				traffic := tf.ClusterFeatures()
+
+				// Only populate the field when there's something to say: either a discovered
+				// destination or cluster-scoped traffic settings.
+				if dest != nil || traffic != nil {
+					rlsc := &ir.RateLimitServiceCluster{Traffic: traffic}
+					if dest != nil {
+						rlsc.RouteDestination = *dest
+					}
+					xdsIR.GlobalResources.RateLimitServiceCluster = rlsc
+				}
 			}
 			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
 				Name:        irGlobalConfigName(envoyTLSSecret),
@@ -175,4 +208,65 @@ func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
 		}
 	}
 	return false
+}
+
+// setRateLimitCircuitBreakerDefaults fills in the kubebuilder default of the rate limit service
+// cluster's per-endpoint circuit breaker, which, like the health check defaults, is never applied
+// to static configuration. Without it an explicitly enabled per-endpoint breaker is dropped.
+func setRateLimitCircuitBreakerDefaults(cb *egv1a1.CircuitBreaker) {
+	if cb == nil || cb.PerEndpoint == nil {
+		return
+	}
+	if cb.PerEndpoint.MaxConnections == nil {
+		cb.PerEndpoint.MaxConnections = new(int64(1024))
+	}
+}
+
+// setRateLimitHealthCheckDefaults fills in the kubebuilder defaults of the rate limit service
+// cluster's health check. EnvoyGateway is loaded as static configuration rather than admitted
+// as a CRD, so these defaults are never applied by the API server, and xDS translation
+// dereferences the active timeout/interval and passive interval/baseEjectionTime unconditionally.
+func setRateLimitHealthCheckDefaults(hc *egv1a1.HealthCheck) {
+	if hc == nil {
+		return
+	}
+
+	if a := hc.Active; a != nil {
+		if a.Timeout == nil {
+			a.Timeout = new(gwapiv1.Duration("1s"))
+		}
+		if a.Interval == nil {
+			a.Interval = new(gwapiv1.Duration("3s"))
+		}
+		if a.UnhealthyThreshold == nil {
+			a.UnhealthyThreshold = new(uint32(3))
+		}
+		if a.HealthyThreshold == nil {
+			a.HealthyThreshold = new(uint32(1))
+		}
+	}
+
+	if p := hc.Passive; p != nil {
+		if p.SplitExternalLocalOriginErrors == nil {
+			p.SplitExternalLocalOriginErrors = new(false)
+		}
+		if p.Interval == nil {
+			p.Interval = new(gwapiv1.Duration("3s"))
+		}
+		if p.ConsecutiveLocalOriginFailures == nil {
+			p.ConsecutiveLocalOriginFailures = new(uint32(5))
+		}
+		if p.Consecutive5xxErrors == nil {
+			p.Consecutive5xxErrors = new(uint32(5))
+		}
+		if p.BaseEjectionTime == nil {
+			p.BaseEjectionTime = new(gwapiv1.Duration("30s"))
+		}
+		if p.MaxEjectionPercent == nil {
+			p.MaxEjectionPercent = new(int32(10))
+		}
+		if p.AlwaysEjectOneEndpoint == nil {
+			p.AlwaysEjectOneEndpoint = new(false)
+		}
+	}
 }

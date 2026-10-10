@@ -729,6 +729,16 @@ type RateLimit struct {
 	// Telemetry defines telemetry configuration for RateLimit.
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+
+	// ClusterSettings holds configuration for managing the connection to the rate limit
+	// service, such as circuit breakers, timeouts, health checks, and load balancing.
+	// ProxyProtocol is not supported, since the managed rate limit service doesn't accept it.
+	// HTTP active health checks are not supported, since the managed rate limit service only
+	// serves its HTTP health endpoint as plaintext; use GRPC or TCP instead. For the same reason,
+	// active health check overrides are not supported.
+	//
+	// +optional
+	ClusterSettings *ClusterSettings `json:"clusterSettings,omitempty"`
 }
 
 type RateLimitTelemetry struct {
