@@ -119,4 +119,5 @@ backendTrafficPolicies:
         - group: ""
           kind: Service
           name: service-2
+      mergeType: StrategicMerge
       http3: {}

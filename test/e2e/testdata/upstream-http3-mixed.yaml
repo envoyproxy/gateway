@@ -82,5 +82,7 @@ spec:
     - group: gateway.envoyproxy.io
       kind: Backend
       name: h3-mixed-auto
+  # Required for a backend target; merges over the Gateway policy's Always mode.
+  mergeType: StrategicMerge
   http3:
     mode: Auto

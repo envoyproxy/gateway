@@ -40,6 +40,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     http3: {}
+    mergeType: StrategicMerge
     targetRefs:
     - group: ""
       kind: Service
