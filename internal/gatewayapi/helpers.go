@@ -21,11 +21,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -1104,8 +1106,18 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 func irConfigName(policy client.Object) string {
 	return fmt.Sprintf(
 		"%s/%s",
-		strings.ToLower(policy.GetObjectKind().GroupVersionKind().Kind),
+		strings.ToLower(kindOf(policy)),
 		utils.NamespacedName(policy).String())
+}
+
+// kindOf resolves obj's Kind from the scheme rather than its TypeMeta, which is not set on
+// objects listed from the informer cache.
+func kindOf(obj client.Object) string {
+	gvk, err := apiutil.GVKForObject(obj, envoygateway.GetScheme())
+	if err != nil {
+		return obj.GetObjectKind().GroupVersionKind().Kind
+	}
+	return gvk.Kind
 }
 
 type targetRefWithTimestamp struct {
