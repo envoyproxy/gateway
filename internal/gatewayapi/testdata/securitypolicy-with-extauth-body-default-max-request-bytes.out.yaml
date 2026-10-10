@@ -165,7 +165,6 @@ securityPolicies:
   spec:
     extAuth:
       bodyToExtAuth:
-        maxRequestBytes: 32768
         packAsBytes: true
       failOpen: true
       grpc:
@@ -208,8 +207,7 @@ securityPolicies:
     namespace: default
   spec:
     extAuth:
-      bodyToExtAuth:
-        maxRequestBytes: 16384
+      bodyToExtAuth: {}
       grpc:
         backendRefs:
         - group: gateway.envoyproxy.io
@@ -435,7 +433,7 @@ xdsIR:
         security:
           extAuth:
             bodyToExtAuth:
-              maxRequestBytes: 16384
+              maxRequestBytes: 32768
             grpc:
               authority: primary.foo.com:3000
               destination:

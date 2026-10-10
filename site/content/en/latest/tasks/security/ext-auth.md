@@ -428,6 +428,40 @@ Send a request to the backend service with `Authorization` header:
 curl -v -H "Host: www.example.com" -H "Authorization: Bearer token1" "http://${GATEWAY_HOST}/myapp"
 ```
 
+### Sending the Request Body
+
+Use `bodyToExtAuth` to buffer the request body and send it to the external authorization service.
+`maxRequestBytes` sets the largest body that will be buffered; requests with a larger body are rejected with HTTP 413.
+It defaults to 32768 bytes (32KiB).
+
+By default, the body is sent to a gRPC external authorization service as a UTF-8 string in the `body` field.
+Set `packAsBytes: true` to send it as raw bytes in the `raw_body` field instead. Use this for binary or
+non-UTF-8 bodies, such as protobuf payloads, file uploads, or compressed content.
+
+`packAsBytes` only works with gRPC external authorization services. An HTTP external authorization
+service always receives the raw request body, so enabling `packAsBytes` with `http` is rejected.
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
+  extAuth:
+    bodyToExtAuth:
+      maxRequestBytes: 32768
+      packAsBytes: true
+    grpc:
+      backendRefs:
+        - name: grpc-ext-auth
+          port: 9002
+```
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.

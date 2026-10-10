@@ -100,7 +100,6 @@ securityPolicies:
           - header1
           - header2
         bodyToExtAuth:
-          maxRequestBytes: 32768
           packAsBytes: true
         grpc:
           backendRefs:
@@ -119,8 +118,7 @@ securityPolicies:
         kind: HTTPRoute
         name: httproute-2
       extAuth:
-        bodyToExtAuth:
-          maxRequestBytes: 16384
+        bodyToExtAuth: {}
         grpc:
           backendRefs:
             - name: backend-fqdn
