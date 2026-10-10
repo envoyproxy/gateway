@@ -18,15 +18,6 @@
           name: envoy.filters.http.api_key_auth
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuth
-            credentials:
-            - client: client-1
-              key: key1
-            forwarding:
-              header: X-API-KEY-CLIENT-ID
-              hideCredentials: true
-            keySources:
-            - header: X-API-KEY
-            - header: X-API-KEY-2
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
