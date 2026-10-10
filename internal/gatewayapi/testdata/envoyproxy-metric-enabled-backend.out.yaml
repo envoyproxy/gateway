@@ -188,6 +188,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     metrics:
+      enableCircuitBreakerRemainingStats: false
       enablePerEndpointStats: true
       enableRequestResponseSizesStats: true
       enableVirtualHostStats: true
