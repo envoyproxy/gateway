@@ -107,7 +107,7 @@
                   exact: foo.bar.com
                 sanType: DNS
             validationContextSdsSecretConfig:
-              name: policy-btls/default-ca
+              name: configmap/default/ca-cmap
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3

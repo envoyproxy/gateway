@@ -132,7 +132,7 @@ type Translator struct {
 	// xdsIR.ExtensionResources registry. Rebuilt at the start of every Translate() call.
 	extensionIndex extensionResourceIndex
 
-	// caIndex resolves TLSCACertificate.Digest against the current Translate() call's
+	// caIndex resolves TLSCACertificate.Name against the current Translate() call's
 	// xdsIR.CACertificates registry. Rebuilt at the start of every Translate() call.
 	caIndex caCertificateIndex
 }
@@ -1297,7 +1297,7 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 }
 
 // addXdsSecret adds a xds secret with args.
-// If the secret already exists, it skips adding the secret and returns nil
+// If a secret of the same name already exists, it keeps that one and returns nil.
 func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error {
 	// Return early if secret with the same name exists
 	if c := findXdsSecret(tCtx, secret.Name); c != nil {
@@ -1342,7 +1342,9 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 				// Create an SDS secret for the CA certificate — inline bytes or filesystem ref.
 				secret := buildXdsUpstreamTLSCASecret(ds.TLS, args.caIndex)
 				if secret != nil {
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					// Dedupe by name: this runs once per cluster, and clusters trusting the
+					// same source object share one secret.
+					if err := addXdsSecret(tCtx, secret); err != nil {
 						return err
 					}
 				}

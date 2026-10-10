@@ -200,8 +200,8 @@ type Xds struct {
 	// +optional
 	ExtensionResources []*UnstructuredRef `json:"extensionResources,omitempty" yaml:"extensionResources,omitempty"`
 
-	// CACertificates holds upstream CA bundles deduplicated by content, so policies trusting
-	// the same CA share one entry whichever Secret or ConfigMap they read it from.
+	// CACertificates holds upstream CA bundles keyed by Name, so every policy reading a CA
+	// from the same Secret, ConfigMap or ClusterTrustBundle shares one entry.
 	//
 	// +optional
 	CACertificates []*CACertificateEntry `json:"caCertificates,omitempty" yaml:"caCertificates,omitempty"`
@@ -623,24 +623,26 @@ type TLSCrl struct {
 // TLSCACertificate holds CA Certificate to validate clients
 // +k8s:deepcopy-gen=true
 type TLSCACertificate struct {
-	// Name of the Secret object.
+	// Name is the xDS secret name. For upstream validation it is derived from the source
+	// object as "<kind>/<namespace>/<name>", joined by "," for multiple refs in declared
+	// order, so one Kubernetes object yields one SDS secret.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-	// Digest names the Xds.CACertificates entry holding this reference's bytes. Empty when
-	// Certificate is carried inline instead, which happens where no gateway IR is in scope
-	// to register against.
-	Digest string `json:"digest,omitempty" yaml:"digest,omitempty"`
-	// Certificate content. Empty when the bytes live in Xds.CACertificates under Digest.
+	// Certificate content. Empty when the bytes live in Xds.CACertificates under Name, which
+	// happens only for upstream validation with a gateway IR in scope. Downstream validation
+	// and the in-process TLS paths always carry the bytes here, so this field is load-bearing:
+	// see ToTLSConfig, which reads it directly.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
 }
 
 // CACertificateEntry is one CA bundle in Xds.CACertificates, shared by every
-// TLSCACertificate whose Digest matches.
+// TLSCACertificate with the same Name.
 // +k8s:deepcopy-gen=true
 type CACertificateEntry struct {
-	// Digest content-addresses Certificate, and is what references join on.
-	Digest string `json:"digest" yaml:"digest"`
+	// Name identifies the source object(s) the bundle was read from, and is what
+	// references join on.
+	Name string `json:"name" yaml:"name"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
