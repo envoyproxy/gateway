@@ -19,6 +19,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             disableXEnvoyRatelimitedHeader: true
             domain: first-listener
+            enableRetryAfterHeader: true
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
               grpcService:
@@ -30,6 +31,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             disableXEnvoyRatelimitedHeader: true
             domain: test-namespace/test-policy-1
+            enableRetryAfterHeader: true
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
               grpcService:
@@ -41,6 +43,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             disableXEnvoyRatelimitedHeader: true
             domain: test-namespace/test-policy-2
+            enableRetryAfterHeader: true
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
               grpcService:
@@ -52,6 +55,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             disableXEnvoyRatelimitedHeader: true
             domain: test-namespace/test-policy-4
+            enableRetryAfterHeader: true
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
               grpcService:
