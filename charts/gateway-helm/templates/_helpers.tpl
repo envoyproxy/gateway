@@ -133,14 +133,13 @@ imagePullSecrets: {{ toYaml list }}
 The name of the Envoy Ratelimit image.
 */}}
 {{- define "eg.ratelimit.image" -}}
-{{-   $imageParts := splitn "/" 2 .Values.global.images.ratelimit.image -}}
-{{/*    if global.imageRegistry is defined, it takes precedence always */}}
-{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
-{{-   $repositoryTag := $imageParts._1 -}}
-{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
-{{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := default "master" $repositoryParts._1 -}}
-{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{- $image := .Values.global.images.ratelimit.image | default "docker.io/envoyproxy/ratelimit:master" -}}
+{{- $imageParts := splitn "/" 2 $image -}}
+{{- if .Values.global.imageRegistry -}}
+{{- printf "%s/%s" .Values.global.imageRegistry $imageParts._1 -}}
+{{- else -}}
+{{- $image -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -215,10 +214,18 @@ envoyProxy:
 {{- end }}
 provider:
   type: Kubernetes
+  {{- $renderRateLimit := or .Values.global.imageRegistry .Values.global.imagePullSecrets .Values.global.images.ratelimit.image .Values.global.images.ratelimit.pullSecrets .Values.global.images.ratelimit.pullPolicy }}
+  {{- $renderShutdown := or .Values.global.imageRegistry .Values.global.images.envoyGateway.image .Values.deployment.envoyGateway.image.repository }}
+  
+  {{- if or $renderRateLimit $renderShutdown }}
   kubernetes:
+    {{- if $renderRateLimit }}
     rateLimitDeployment:
+      {{- /* Only render the image field if an override or global registry is set, otherwise let the Go binary default handle it */}}
+      {{- if or .Values.global.imageRegistry .Values.global.images.ratelimit.image }}
       container:
         image: {{ include "eg.ratelimit.image" . }}
+      {{- end }}
       {{- if (or .Values.global.imagePullSecrets .Values.global.images.ratelimit.pullSecrets) }}
       pod:
         {{- include "eg.ratelimit.image.pullSecrets" . | nindent 8 }}
@@ -234,8 +241,13 @@ provider:
                 - name: envoy-ratelimit
                   imagePullPolicy: {{ . }}
       {{- end }}
+    {{- end }}
+    
+    {{- if $renderShutdown }}
     shutdownManager:
       image: {{ include "eg.image" . }}
+    {{- end }}
+  {{- end }}
 {{- with .Values.config.envoyGateway.extensionApis }}
 extensionApis:
   {{- toYaml . | nindent 2 }}
