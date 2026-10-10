@@ -2054,9 +2054,6 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	return warnings, buildErr
 }
 
-// http3Warnings records, per subject and reason, the routes and merged backend clusters that
-// had to drop HTTP/3. Dropping HTTP/3 leaves the rest of the policy in effect, so this is
-// reported as a Warning condition rather than as a translation error.
 // http3ALPNIgnoredReason is reported when HTTP/3 stays on but the cluster drops the
 // configured backendTLS alpnProtocols, see ir.HTTP3IgnoresALPN.
 const http3ALPNIgnoredReason = "backendTLS alpnProtocols cannot be offered over QUIC, so the cluster " +
