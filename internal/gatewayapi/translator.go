@@ -228,7 +228,7 @@ func newTranslateResult(
 			translateResult.Gateways[i] = gateway.Gateway
 			// If the EnvoyProxy is from the Gateway itself, add it to the result so that the status can be updated in the provider layer.
 			// If it's inherited from GatewayClass, it should be handled in EnvoyProxyForGatewayClass(L164).
-			if gateway.envoyProxyFromGateway && gateway.envoyProxy != nil {
+			if gateway.envoyProxyForGateway != nil && gateway.envoyProxy != nil {
 				epKey := utils.NamespacedName(gateway.envoyProxy)
 				if !epProxiesSet.Has(epKey) {
 					translateResult.EnvoyProxiesForGateways = append(translateResult.EnvoyProxiesForGateways, gateway.envoyProxy)
@@ -640,7 +640,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		}
 
 		var ancestor *gwapiv1.ParentReference
-		if gCtx.envoyProxyFromGateway {
+		if gCtx.envoyProxyForGateway != nil {
 			// didn't need to update EnvoyProxy status if it's inherited
 			//  from GatewayClass/EnvoyGateway.
 			ancestor = &gwapiv1.ParentReference{
@@ -659,14 +659,14 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 					fmt.Sprintf("%s: %v", "Invalid parametersRef:", err.Error()))
 
-				if gCtx.envoyProxyFromGateway {
+				if gCtx.envoyProxyForGateway != nil {
 					status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 						egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
 				}
 				continue
 			}
 
-			if gCtx.envoyProxyFromGateway {
+			if gCtx.envoyProxyForGateway != nil {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
