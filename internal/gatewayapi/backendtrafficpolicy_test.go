@@ -3293,11 +3293,10 @@ func TestHTTP3WarningsMessage(t *testing.T) {
 	// A second rule of the same HTTPRoute is listed once.
 	w.addRoute(route("route-1", "1"), []string{"reason a"})
 	w.addIgnoredRoute(route("route-3", "0"), "reason c")
-	w.addIgnoredRoute(&ir.HTTPRoute{Name: "no-metadata"}, "reason c")
 	require.Equal(t,
 		"HTTP/3 is disabled because reason a, for these routes: [default/route-1 default/route-2]; "+
 			"HTTP/3 is disabled because reason b, for these backends: [service/default/svc-2/8080/http]; "+
-			"HTTP/3 ignores a setting because reason c, for these routes: [/no-metadata default/route-3]",
+			"HTTP/3 ignores a setting because reason c, for these routes: [default/route-3]",
 		w.message())
 }
 

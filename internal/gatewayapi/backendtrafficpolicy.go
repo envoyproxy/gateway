@@ -2125,11 +2125,15 @@ func (w http3Warnings) addIgnoredRoute(r *ir.HTTPRoute, reason string) {
 }
 
 func (w http3Warnings) insertRoute(key http3WarningKey, r *ir.HTTPRoute) {
+	scope, ok := routeWarningScope(r)
+	if !ok {
+		return
+	}
 	t := w.targets(key)
 	if t.routes == nil {
 		t.routes = sets.New[policyScope]()
 	}
-	t.routes.Insert(routeWarningScope(r))
+	t.routes.Insert(scope)
 }
 
 func (w http3Warnings) insertBackend(key http3WarningKey, name string) {
@@ -2148,12 +2152,13 @@ func (w http3Warnings) targets(key http3WarningKey) *http3WarningTargets {
 }
 
 // routeWarningScope names the HTTPRoute an IR route was built from, so that a route with many
-// rules and matches is listed once. A route without metadata is listed under its IR name.
-func routeWarningScope(r *ir.HTTPRoute) policyScope {
+// rules and matches is listed once. Every IR HTTP route carries that metadata; one without it
+// is skipped, as the route overlap check does.
+func routeWarningScope(r *ir.HTTPRoute) (policyScope, bool) {
 	if r.Metadata == nil {
-		return routeScope(types.NamespacedName{Name: r.Name}, resource.KindHTTPRoute)
+		return policyScope{}, false
 	}
-	return routeScope(types.NamespacedName{Namespace: r.Metadata.Namespace, Name: r.Metadata.Name}, r.Metadata.Kind)
+	return routeScope(types.NamespacedName{Namespace: r.Metadata.Namespace, Name: r.Metadata.Name}, r.Metadata.Kind), true
 }
 
 // message renders the warnings as one condition message, routes first, or "" when there are none.
