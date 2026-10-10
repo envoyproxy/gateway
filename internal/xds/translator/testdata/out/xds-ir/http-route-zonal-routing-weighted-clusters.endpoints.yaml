@@ -7,6 +7,7 @@
             address: 1.2.3.4
             portValue: 8080
       loadBalancingWeight: 1
+    loadBalancingWeight: 1
     locality:
       zone: us-east-1a
   - lbEndpoints:
@@ -16,6 +17,7 @@
             address: 2.3.4.5
             portValue: 8080
       loadBalancingWeight: 1
+    loadBalancingWeight: 1
     locality:
       zone: us-east-1b
 - clusterName: first-route-dest/backend/1
