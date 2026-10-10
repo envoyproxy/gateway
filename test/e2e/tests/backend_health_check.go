@@ -14,6 +14,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -30,6 +35,7 @@ import (
 func init() {
 	ConformanceTests = append(ConformanceTests,
 		BackendHealthCheckActiveHTTPTest,
+		BackendHealthCheckActiveGRPCTest,
 		BackendHealthCheckWithOverrideTest,
 		BackendHealthCheckEventLogTest,
 	)
@@ -146,6 +152,116 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 			})
 		})
 	},
+}
+
+var BackendHealthCheckActiveGRPCTest = suite.ConformanceTest{
+	ShortName:   "BackendHealthCheckActiveGRPC",
+	Description: "Active gRPC health checks send a valid :authority to backends that reject malformed ones",
+	Manifests:   []string{"testdata/backend-health-check-active-grpc.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ctx := context.Background()
+		ns := "gateway-conformance-infra"
+		gtwName := "same-namespace"
+		gwNN := types.NamespacedName{Name: gtwName, Namespace: ns}
+		explicitHostnameRouteNN := types.NamespacedName{Name: "grpc-health-check-explicit-hostname", Namespace: ns}
+		routeHostnameRouteNN := types.NamespacedName{Name: "grpc-health-check-route-hostname", Namespace: ns}
+		clusterNameRouteNN := types.NamespacedName{Name: "grpc-health-check-cluster-name", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+			kubernetes.NewGatewayRef(gwNN), &gwapiv1.GRPCRoute{}, true,
+			explicitHostnameRouteNN, routeHostnameRouteNN, clusterNameRouteNN)
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		for _, routeNN := range []types.NamespacedName{explicitHostnameRouteNN, routeHostnameRouteNN, clusterNameRouteNN} {
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: routeNN.Name + "-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
+		}
+
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-health-backend"}, corev1.PodRunning, &PodReady)
+
+		promClient, err := prometheus.NewClient(suite.Client,
+			types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},
+		)
+		require.NoError(t, err)
+
+		// awaitHealthCheckStat waits until the health check counter of the route's
+		// cluster satisfies the given condition.
+		awaitHealthCheckStat := func(t *testing.T, routeNN types.NamespacedName, stat string, condition func(float64) bool) {
+			t.Helper()
+			clusterName := fmt.Sprintf("grpcroute/%s/%s/rule/0", ns, routeNN.Name)
+			promQL := fmt.Sprintf(`envoy_cluster_health_check_%s{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, stat, clusterName, gtwName)
+			http.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					v, err := promClient.QuerySum(ctx, promQL)
+					if err != nil {
+						// wait until Prometheus sync stats
+						return false
+					}
+					tlog.Logf(t, "cluster %s: health check %s count: %v", clusterName, stat, v)
+					return condition(v)
+				},
+			)
+		}
+
+		t.Run("explicit hostname is used as authority", func(t *testing.T) {
+			awaitHealthCheckStat(t, explicitHostnameRouteNN, "success", func(v float64) bool { return v > 0 })
+			grpcHealthCheckThroughGatewayMustReturn(t, suite, gwAddr, "foo.grpc-hc-explicit.example.com", codes.OK)
+		})
+
+		t.Run("route hostname is used as authority", func(t *testing.T) {
+			awaitHealthCheckStat(t, routeHostnameRouteNN, "success", func(v float64) bool { return v > 0 })
+			grpcHealthCheckThroughGatewayMustReturn(t, suite, gwAddr, "grpc-hc-route.example.com", codes.OK)
+		})
+
+		// With a wildcard route hostname and no explicit hostname, Envoy falls back
+		// to the cluster name as authority, which the backend rejects. With panic
+		// mode disabled, Unavailable proves that no endpoint passed a health check.
+		t.Run("cluster name is rejected as authority", func(t *testing.T) {
+			awaitHealthCheckStat(t, clusterNameRouteNN, "failure", func(v float64) bool { return v > 0 })
+			grpcHealthCheckThroughGatewayMustReturn(t, suite, gwAddr, "foo.grpc-hc-cluster-name.example.com", codes.Unavailable)
+		})
+	},
+}
+
+// grpcHealthCheckThroughGatewayMustReturn sends a grpc.health.v1.Health/Check
+// request through the Gateway with the given authority, and waits until it
+// consistently returns the expected code. Envoy answers with Unavailable when
+// every endpoint of the cluster is unhealthy.
+func grpcHealthCheckThroughGatewayMustReturn(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr, authority string, expected codes.Code) {
+	t.Helper()
+	conn, err := grpc.NewClient(gwAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithAuthority(authority),
+	)
+	require.NoError(t, err)
+	defer conn.Close()
+	client := healthpb.NewHealthClient(conn)
+
+	http.AwaitConvergence(
+		t,
+		suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+		suite.TimeoutConfig.MaxTimeToConsistency,
+		func(_ time.Duration) bool {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			resp, err := client.Check(ctx, &healthpb.HealthCheckRequest{})
+			if got := status.Code(err); got != expected {
+				tlog.Logf(t, "health check through gateway with authority %s: got code %v, want %v (err: %v)", authority, got, expected, err)
+				return false
+			}
+			if expected == codes.OK && resp.GetStatus() != healthpb.HealthCheckResponse_SERVING {
+				tlog.Logf(t, "health check through gateway with authority %s: got status %v, want SERVING", authority, resp.GetStatus())
+				return false
+			}
+			return true
+		},
+	)
 }
 
 var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{

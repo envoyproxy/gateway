@@ -237,6 +237,18 @@ type GRPCActiveHealthChecker struct {
 	// server and not to a specific service.
 	// +optional
 	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
+	// Hostname defines the value of the :authority header sent with active gRPC
+	// health checks. Authority selection uses this order: this field, the
+	// associated Backend endpoint hostname if available, then the effective Route
+	// hostname. If none of them is set, Envoy falls back to the name of the
+	// cluster, which is not a valid authority and is rejected by some gRPC
+	// servers.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +optional
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 }
 
 // HealthCheckOverrides allows overriding default health check behavior for specific use cases.

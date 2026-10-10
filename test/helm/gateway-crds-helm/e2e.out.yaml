@@ -1167,6 +1167,18 @@ spec:
                           GRPC defines the configuration of the GRPC health checker.
                           It's optional, and can only be used if the specified type is GRPC.
                         properties:
+                          hostname:
+                            description: |-
+                              Hostname defines the value of the :authority header sent with active gRPC
+                              health checks. Authority selection uses this order: this field, the
+                              associated Backend endpoint hostname if available, then the effective Route
+                              hostname. If none of them is set, Envoy falls back to the name of the
+                              cluster, which is not a valid authority and is rejected by some gRPC
+                              servers.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
                           service:
                             description: |-
                               Service to send in the health check request.
@@ -7586,6 +7598,18 @@ spec:
                                     GRPC defines the configuration of the GRPC health checker.
                                     It's optional, and can only be used if the specified type is GRPC.
                                   properties:
+                                    hostname:
+                                      description: |-
+                                        Hostname defines the value of the :authority header sent with active gRPC
+                                        health checks. Authority selection uses this order: this field, the
+                                        associated Backend endpoint hostname if available, then the effective Route
+                                        hostname. If none of them is set, Envoy falls back to the name of the
+                                        cluster, which is not a valid authority and is rejected by some gRPC
+                                        servers.
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
                                     service:
                                       description: |-
                                         Service to send in the health check request.
@@ -22623,6 +22647,18 @@ spec:
                                                       GRPC defines the configuration of the GRPC health checker.
                                                       It's optional, and can only be used if the specified type is GRPC.
                                                     properties:
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the value of the :authority header sent with active gRPC
+                                                          health checks. Authority selection uses this order: this field, the
+                                                          associated Backend endpoint hostname if available, then the effective Route
+                                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                                          servers.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       service:
                                                         description: |-
                                                           Service to send in the health check request.
@@ -24317,6 +24353,18 @@ spec:
                                                       GRPC defines the configuration of the GRPC health checker.
                                                       It's optional, and can only be used if the specified type is GRPC.
                                                     properties:
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the value of the :authority header sent with active gRPC
+                                                          health checks. Authority selection uses this order: this field, the
+                                                          associated Backend endpoint hostname if available, then the effective Route
+                                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                                          servers.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       service:
                                                         description: |-
                                                           Service to send in the health check request.
@@ -26266,6 +26314,18 @@ spec:
                                                 GRPC defines the configuration of the GRPC health checker.
                                                 It's optional, and can only be used if the specified type is GRPC.
                                               properties:
+                                                hostname:
+                                                  description: |-
+                                                    Hostname defines the value of the :authority header sent with active gRPC
+                                                    health checks. Authority selection uses this order: this field, the
+                                                    associated Backend endpoint hostname if available, then the effective Route
+                                                    hostname. If none of them is set, Envoy falls back to the name of the
+                                                    cluster, which is not a valid authority and is rejected by some gRPC
+                                                    servers.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                  type: string
                                                 service:
                                                   description: |-
                                                     Service to send in the health check request.
@@ -28081,6 +28141,18 @@ spec:
                                           GRPC defines the configuration of the GRPC health checker.
                                           It's optional, and can only be used if the specified type is GRPC.
                                         properties:
+                                          hostname:
+                                            description: |-
+                                              Hostname defines the value of the :authority header sent with active gRPC
+                                              health checks. Authority selection uses this order: this field, the
+                                              associated Backend endpoint hostname if available, then the effective Route
+                                              hostname. If none of them is set, Envoy falls back to the name of the
+                                              cluster, which is not a valid authority and is rejected by some gRPC
+                                              servers.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                            type: string
                                           service:
                                             description: |-
                                               Service to send in the health check request.
@@ -31616,6 +31688,18 @@ spec:
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
@@ -33170,6 +33254,18 @@ spec:
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
@@ -35041,6 +35137,18 @@ spec:
                                             GRPC defines the configuration of the GRPC health checker.
                                             It's optional, and can only be used if the specified type is GRPC.
                                           properties:
+                                            hostname:
+                                              description: |-
+                                                Hostname defines the value of the :authority header sent with active gRPC
+                                                health checks. Authority selection uses this order: this field, the
+                                                associated Backend endpoint hostname if available, then the effective Route
+                                                hostname. If none of them is set, Envoy falls back to the name of the
+                                                cluster, which is not a valid authority and is rejected by some gRPC
+                                                servers.
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                              type: string
                                             service:
                                               description: |-
                                                 Service to send in the health check request.
@@ -37034,6 +37142,18 @@ spec:
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
