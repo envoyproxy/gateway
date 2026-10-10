@@ -2268,11 +2268,18 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeat
 	return nil
 }
 
+// appendTrafficPolicyMetadata records the policy on the route once, since a route can be
+// applied twice when two of its parentRefs resolve to the same listener.
 func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {
 	if md == nil || policy == nil {
 		return
 	}
-
+	for _, p := range md.Policies {
+		if p != nil && p.Kind == egv1a1.KindBackendTrafficPolicy &&
+			p.Name == policy.Name && p.Namespace == policy.Namespace {
+			return
+		}
+	}
 	md.Policies = append(md.Policies, &ir.PolicyMetadata{
 		Kind:      egv1a1.KindBackendTrafficPolicy,
 		Name:      policy.Name,
