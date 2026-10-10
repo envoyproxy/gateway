@@ -933,6 +933,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		return
 	}
 
+	// Two parentRefs can resolve to the same listener, one naming it by sectionName and one
+	// covering the whole Gateway. The features are applied to a listener once and its
+	// warnings are repeated on every ancestor that reaches it, since a second application
+	// finds the routes already set and would report nothing.
+	listenerWarnings := map[string]http3Warnings{}
 	if policy.Spec.MergeType == nil {
 		// The features depend only on the policy, so build them once and apply them per
 		// parent listener, accumulating warnings on the route's original parent reference,
@@ -940,7 +945,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		tf, buildErr := t.buildTrafficFeatures(policy, nil)
 		for _, parent := range routeParents {
 			for _, listener := range parent.ctx.listeners {
-				warnings := t.applyTrafficFeaturesForRouteListener(tf, buildErr, policy, targetedRoute, currTarget, xdsIR, listener)
+				warnings, applied := listenerWarnings[irListenerName(listener)]
+				if !applied {
+					warnings = t.applyTrafficFeaturesForRouteListener(tf, buildErr, policy, targetedRoute, currTarget, xdsIR, listener)
+					listenerWarnings[irListenerName(listener)] = warnings
+				}
 				status.SetWarningForPolicyAncestor(&policy.Status, parent.ancestor, t.GatewayControllerName,
 					status.PolicyReasonUnsupportedHTTP3Backend, warnings.message(), policy.Generation)
 			}
@@ -1003,7 +1012,11 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 				if parentPolicy == nil {
 					// not found, fall back to the current policy
-					warnings := t.applyTrafficFeaturesForRouteListener(ownTF, ownBuildErr, policy, targetedRoute, currTarget, xdsIR, listener)
+					warnings, applied := listenerWarnings[irListenerName(listener)]
+					if !applied {
+						warnings = t.applyTrafficFeaturesForRouteListener(ownTF, ownBuildErr, policy, targetedRoute, currTarget, xdsIR, listener)
+						listenerWarnings[irListenerName(listener)] = warnings
+					}
 					if ownBuildErr != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
@@ -1020,19 +1033,24 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				}
 
 				// merge with parent policy
-				warnings, err := t.translateBackendTrafficPolicyForRouteWithMerge(
-					policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
-				)
-				if err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
+				warnings, applied := listenerWarnings[irListenerName(listener)]
+				if !applied {
+					var err error
+					warnings, err = t.translateBackendTrafficPolicyForRouteWithMerge(
+						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
 					)
-					continue
+					if err != nil {
+						status.SetConditionForPolicyAncestor(&policy.Status,
+							&ancestorRef,
+							t.GatewayControllerName,
+							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+							egv1a1.PolicyReasonInvalid,
+							status.Error2ConditionMsg(err),
+							policy.Generation,
+						)
+						continue
+					}
+					listenerWarnings[irListenerName(listener)] = warnings
 				}
 				status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
 					status.PolicyReasonUnsupportedHTTP3Backend, warnings.message(), policy.Generation)
