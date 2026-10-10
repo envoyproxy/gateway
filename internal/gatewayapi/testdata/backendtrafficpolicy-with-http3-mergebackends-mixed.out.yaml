@@ -54,9 +54,9 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: 'HTTP/3 is disabled for backend(s) service/default/service-2/8080/http:
-          HTTP/3 requires TLS to the backend, configured with a BackendTLSPolicy or
-          the Backend''s spec.tls'
+        message: 'HTTP/3 is disabled because HTTP/3 requires TLS to the backend, configured
+          with a BackendTLSPolicy or the Backend''s spec.tls, for these backends:
+          [service/default/service-2/8080/http]'
         reason: UnsupportedHTTP3Backend
         status: "True"
         type: Warning

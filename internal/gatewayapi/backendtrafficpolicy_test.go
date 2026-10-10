@@ -3281,14 +3281,23 @@ func TestHTTP3WarningsMessage(t *testing.T) {
 	w := http3Warnings{}
 	require.Empty(t, w.message())
 
+	route := func(name, rule string) *ir.HTTPRoute {
+		return &ir.HTTPRoute{
+			Name:     "httproute/default/" + name + "/rule/" + rule + "/match/0/*",
+			Metadata: &ir.ResourceMetadata{Kind: "HTTPRoute", Namespace: "default", Name: name, SectionName: rule},
+		}
+	}
 	w.addBackend("service/default/svc-2/8080/http", []string{"reason b"})
-	w.addRoute("route-2", []string{"reason a"})
-	w.addRoute("route-1", []string{"reason a"})
-	w.addIgnored(http3WarningRoutes, "route-3", "reason c")
+	w.addRoute(route("route-2", "0"), []string{"reason a"})
+	w.addRoute(route("route-1", "0"), []string{"reason a"})
+	// A second rule of the same HTTPRoute is listed once.
+	w.addRoute(route("route-1", "1"), []string{"reason a"})
+	w.addIgnoredRoute(route("route-3", "0"), "reason c")
+	w.addIgnoredRoute(&ir.HTTPRoute{Name: "no-metadata"}, "reason c")
 	require.Equal(t,
-		"HTTP/3 is disabled for route(s) route-1, route-2: reason a; "+
-			"HTTP/3 is disabled for backend(s) service/default/svc-2/8080/http: reason b; "+
-			"HTTP/3 ignores a setting for route(s) route-3: reason c",
+		"HTTP/3 is disabled because reason a, for these routes: [default/route-1 default/route-2]; "+
+			"HTTP/3 is disabled because reason b, for these backends: [service/default/svc-2/8080/http]; "+
+			"HTTP/3 ignores a setting because reason c, for these routes: [/no-metadata default/route-3]",
 		w.message())
 }
 

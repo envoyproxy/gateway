@@ -2078,29 +2078,36 @@ const http3ALPNIgnoredReason = "backendTLS alpnProtocols cannot be offered over 
 	"offers none and its TCP connections negotiate h2 or http/1.1"
 
 // http3Warnings collects, per reason, the routes and merged clusters that lost HTTP/3 and
-// those that keep it while a setting is ignored, for one Warning condition message.
-type http3Warnings map[http3WarningKey]sets.Set[string]
+// those that keep it while a setting is ignored, for one Warning condition message. Routes are
+// recorded at HTTPRoute granularity, as the Overridden and Merged conditions do, and the
+// message names the reason before the list so that truncating a long list keeps the reason.
+type http3Warnings map[http3WarningKey]*http3WarningTargets
 
 type http3WarningKey struct {
 	// ignored means HTTP/3 stays on and reason names the setting the cluster drops.
 	ignored bool
-	subject string
-	reason  string
+	// backends means the targets are merged backend clusters rather than routes.
+	backends bool
+	reason   string
 }
 
-const (
-	http3WarningRoutes   = "route(s)"
-	http3WarningBackends = "backend(s)"
-)
+type http3WarningTargets struct {
+	routes   sets.Set[policyScope]
+	backends sets.Set[string]
+}
 
 // addRoute records a route whose route-scoped cluster cannot use HTTP/3.
-func (w http3Warnings) addRoute(routeName string, reasons []string) {
-	w.add(http3WarningRoutes, routeName, reasons)
+func (w http3Warnings) addRoute(r *ir.HTTPRoute, reasons []string) {
+	for _, reason := range reasons {
+		w.insertRoute(http3WarningKey{reason: reason}, r)
+	}
 }
 
 // addBackend records a merged backend cluster that cannot use HTTP/3.
 func (w http3Warnings) addBackend(clusterName string, reasons []string) {
-	w.add(http3WarningBackends, clusterName, reasons)
+	for _, reason := range reasons {
+		w.insertBackend(http3WarningKey{backends: true, reason: reason}, clusterName)
+	}
 }
 
 // addMergedCluster records why bc lost HTTP/3, or the ALPN list HTTP/3 ignores on it.
@@ -2109,25 +2116,44 @@ func (w http3Warnings) addMergedCluster(bc *ir.BackendCluster, dropped []string)
 	case len(dropped) > 0:
 		w.addBackend(bc.Name, dropped)
 	case bc.Traffic != nil && bc.Traffic.HTTP3 != nil && ir.HTTP3IgnoresALPN([]*ir.DestinationSetting{bc.Setting}):
-		w.addIgnored(http3WarningBackends, bc.Name, http3ALPNIgnoredReason)
+		w.insertBackend(http3WarningKey{ignored: true, backends: true, reason: http3ALPNIgnoredReason}, bc.Name)
 	}
 }
 
-func (w http3Warnings) add(subject, name string, reasons []string) {
-	for _, reason := range reasons {
-		w.insert(http3WarningKey{subject: subject, reason: reason}, name)
+func (w http3Warnings) addIgnoredRoute(r *ir.HTTPRoute, reason string) {
+	w.insertRoute(http3WarningKey{ignored: true, reason: reason}, r)
+}
+
+func (w http3Warnings) insertRoute(key http3WarningKey, r *ir.HTTPRoute) {
+	t := w.targets(key)
+	if t.routes == nil {
+		t.routes = sets.New[policyScope]()
 	}
+	t.routes.Insert(routeWarningScope(r))
 }
 
-func (w http3Warnings) addIgnored(subject, name, reason string) {
-	w.insert(http3WarningKey{ignored: true, subject: subject, reason: reason}, name)
+func (w http3Warnings) insertBackend(key http3WarningKey, name string) {
+	t := w.targets(key)
+	if t.backends == nil {
+		t.backends = sets.New[string]()
+	}
+	t.backends.Insert(name)
 }
 
-func (w http3Warnings) insert(key http3WarningKey, name string) {
+func (w http3Warnings) targets(key http3WarningKey) *http3WarningTargets {
 	if w[key] == nil {
-		w[key] = sets.New[string]()
+		w[key] = &http3WarningTargets{}
 	}
-	w[key].Insert(name)
+	return w[key]
+}
+
+// routeWarningScope names the HTTPRoute an IR route was built from, so that a route with many
+// rules and matches is listed once. A route without metadata is listed under its IR name.
+func routeWarningScope(r *ir.HTTPRoute) policyScope {
+	if r.Metadata == nil {
+		return routeScope(types.NamespacedName{Name: r.Name}, resource.KindHTTPRoute)
+	}
+	return routeScope(types.NamespacedName{Namespace: r.Metadata.Namespace, Name: r.Metadata.Name}, r.Metadata.Kind)
 }
 
 // message renders the warnings as one condition message, routes first, or "" when there are none.
@@ -2143,11 +2169,11 @@ func (w http3Warnings) message() string {
 			}
 			return -1
 		}
-		if a.subject != b.subject {
-			if a.subject == http3WarningRoutes {
-				return -1
+		if a.backends != b.backends {
+			if a.backends {
+				return 1
 			}
-			return 1
+			return -1
 		}
 		return strings.Compare(a.reason, b.reason)
 	})
@@ -2157,8 +2183,11 @@ func (w http3Warnings) message() string {
 		if key.ignored {
 			verb = "ignores a setting"
 		}
-		parts = append(parts, fmt.Sprintf("HTTP/3 %s for %s %s: %s",
-			verb, key.subject, strings.Join(sets.List(w[key]), ", "), key.reason))
+		target := formatPolicyScopes(w[key].routes)
+		if key.backends {
+			target = fmt.Sprintf("these backends: %s", formatNameList(sets.List(w[key].backends)))
+		}
+		parts = append(parts, fmt.Sprintf("HTTP/3 %s because %s, for %s", verb, key.reason, target))
 	}
 	return strings.Join(parts, "; ")
 }
@@ -2168,11 +2197,11 @@ func (w http3Warnings) message() string {
 func applyRouteHTTP3(r *ir.HTTPRoute, warnings http3Warnings) {
 	if reasons := validateBackendHTTP3(r); len(reasons) > 0 {
 		r.Traffic.HTTP3 = nil
-		warnings.addRoute(r.Name, reasons)
+		warnings.addRoute(r, reasons)
 		return
 	}
 	if r.Traffic != nil && r.Traffic.HTTP3 != nil && r.Destination != nil && ir.HTTP3IgnoresALPN(r.Destination.Settings) {
-		warnings.addIgnored(http3WarningRoutes, r.Name, http3ALPNIgnoredReason)
+		warnings.addIgnoredRoute(r, http3ALPNIgnoredReason)
 	}
 }
 

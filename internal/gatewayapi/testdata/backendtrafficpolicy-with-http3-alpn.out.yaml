@@ -56,9 +56,9 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'HTTP/3 ignores a setting for route(s) httproute/envoy-gateway/httproute-tls-backend/rule/0/match/0/*:
-          backendTLS alpnProtocols cannot be offered over QUIC, so the cluster offers
-          none and its TCP connections negotiate h2 or http/1.1'
+        message: 'HTTP/3 ignores a setting because backendTLS alpnProtocols cannot
+          be offered over QUIC, so the cluster offers none and its TCP connections
+          negotiate h2 or http/1.1, for these routes: [envoy-gateway/httproute-tls-backend]'
         reason: UnsupportedHTTP3Backend
         status: "True"
         type: Warning

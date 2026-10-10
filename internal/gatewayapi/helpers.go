@@ -1028,6 +1028,11 @@ func (g policyScopeGraph) GetWithDescendants(parent policyScope) sets.Set[policy
 // these listener set listeners: [...] and these routes: [...] and these route rules: [...]".
 //
 // Returns "" when scopes is empty.
+// maxNamesListed bounds the names a condition message lists per kind. A policy over a large
+// fleet would otherwise push the message past the condition size limit, where truncation
+// cuts the tail; the first names are enough to point at what to fix.
+const maxNamesListed = 20
+
 func formatPolicyScopes(scopes sets.Set[policyScope]) string {
 	if scopes.Len() == 0 {
 		return ""
@@ -1059,10 +1064,19 @@ func formatPolicyScopes(scopes sets.Set[policyScope]) string {
 	parts := make([]string, 0, len(order))
 	for _, o := range order {
 		if list, ok := byKind[o.Kind]; ok {
-			parts = append(parts, fmt.Sprintf("%s: %v", o.Label, list))
+			parts = append(parts, fmt.Sprintf("%s: %s", o.Label, formatNameList(list)))
 		}
 	}
 	return strings.Join(parts, " and ")
+}
+
+// formatNameList renders a sorted name list the way formatPolicyScopes always has, as
+// "[a b c]", keeping the first maxNamesListed names and counting the rest.
+func formatNameList(names []string) string {
+	if len(names) <= maxNamesListed {
+		return fmt.Sprintf("%v", names)
+	}
+	return fmt.Sprintf("%v and %d more", names[:maxNamesListed], len(names)-maxNamesListed)
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
