@@ -390,6 +390,82 @@ func TestHTTPRouteFilter(t *testing.T) {
 				"should be less than or equal to 128",
 			},
 		},
+		{
+			desc: "valid RequestMirror with Literal",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type:    egv1a1.RequestMirrorHostnameModifierLiteral,
+							Literal: new(gwapiv1.PreciseHostname("mirror.example.internal")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid RequestMirror with Backend",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type: egv1a1.RequestMirrorHostnameModifierBackend,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid RequestMirror Literal missing literal field",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type: egv1a1.RequestMirrorHostnameModifierLiteral,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestMirror.hostname: Invalid value:",
+				": literal must be specified for Literal type",
+			},
+		},
+		{
+			desc: "invalid RequestMirror Backend with literal set",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type:    egv1a1.RequestMirrorHostnameModifierBackend,
+							Literal: new(gwapiv1.PreciseHostname("mirror.example.internal")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestMirror.hostname: Invalid value:",
+				": literal must be nil if the type is not Literal",
+			},
+		},
+		{
+			desc: "invalid RequestMirror Literal with spaces",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type:    egv1a1.RequestMirrorHostnameModifierLiteral,
+							Literal: new(gwapiv1.PreciseHostname("invalid hostname")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestMirror.hostname.literal: Invalid value:",
+			},
+		},
 	}
 
 	for _, tc := range cases {

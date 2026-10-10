@@ -54249,6 +54249,41 @@ spec:
                   type: object
                 maxItems: 8
                 type: array
+              requestMirror:
+                description: |-
+                  RequestMirror defines configuration for request mirroring modifiers.
+                  This configuration works together with the Gateway API RequestMirror filter
+                  on the attached HTTPRoute rule.
+                properties:
+                  hostname:
+                    description: Hostname defines the configuration to rewrite the
+                      Host header for mirrored requests.
+                    properties:
+                      literal:
+                        description: |-
+                          Literal specifies a fixed hostname to rewrite the Host header to.
+                          Required when Type is "Literal". Must be empty when Type is "Backend".
+                          Note: gwapiv1.PreciseHostname already carries MinLength=1, MaxLength=253,
+                          and RFC 1123 pattern validation, which automatically flow into the generated CRD.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      type:
+                        description: Type defines the type of hostname rewrite.
+                        enum:
+                        - Backend
+                        - Literal
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: literal must be nil if the type is not Literal
+                      rule: '!(has(self.literal) && self.type != ''Literal'')'
+                    - message: literal must be specified for Literal type
+                      rule: '!(!has(self.literal) && self.type == ''Literal'')'
+                type: object
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
