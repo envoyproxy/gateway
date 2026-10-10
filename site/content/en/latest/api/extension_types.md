@@ -1141,6 +1141,7 @@ ClusterSettings contains CDS-only fields that configure the upstream Envoy Clust
 _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ExtensionBackend](#extensionbackend)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1578,6 +1579,7 @@ _Appears in:_
 | `filterName` | _string_ |  false  |  | FilterName identifies a specific filter implementation within the dynamic<br />module. A single shared library can contain multiple filter implementations.<br />This value is passed to the module's HTTP filter config init function to<br />select the appropriate implementation.<br />If not specified, defaults to an empty string. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the dynamic module filter.<br />This is serialized as JSON and passed to the module's initialization function. |
 | `terminalFilter` | _boolean_ |  false  | false | TerminalFilter indicates that this dynamic module handles requests without<br />requiring an upstream backend. The module is responsible for generating and<br />sending the response to downstream directly.<br />Defaults to false. |
+| `backends` | _[ExtensionBackend](#extensionbackend) array_ |  false  |  | Backends defines Envoy clusters used by this module. |
 
 
 #### DynamicModuleEntry
@@ -2586,6 +2588,22 @@ _Appears in:_
 | `disableLua` | _boolean_ |  false  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.<br />This field is mutually exclusive with EnableLua.<br />Deprecated: Use EnableLua instead. This field will be removed in a future release. |
 | `enableLua` | _boolean_ |  false  |  | EnableLua enables the Lua EnvoyExtensionPolicy feature.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be enabled.<br />By default, Lua policies are disabled.<br />This field is mutually exclusive with DisableLua. |
 | `enableSDSSecretRef` | _boolean_ |  true  |  | EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds). |
+
+
+#### ExtensionBackend
+
+
+
+ExtensionBackend defines a named backend for an extension.
+
+_Appears in:_
+- [DynamicModule](#dynamicmodule)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the Envoy cluster name. Dynamic module configuration must use<br />the same name. Configurations in one proxy deployment must use the same<br />backend reference and settings for this name. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendobjectreference)_ |  true  |  | BackendRef references the one backend for this cluster. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings configures traffic to this backend cluster.<br />Timeout.HTTP.RequestTimeout and Timeout.HTTP.StreamIdleTimeout are ignored.<br />Request timeouts and retries are controlled by the dynamic module. |
 
 
 #### ExtensionHooks

@@ -57,6 +57,35 @@ func TestEndpointSliceIndexFuncs(t *testing.T) {
 	}
 }
 
+func TestBackendEnvoyExtensionPolicyIndexFunc(t *testing.T) {
+	policy := &egv1a1.EnvoyExtensionPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+		Spec: egv1a1.EnvoyExtensionPolicySpec{
+			DynamicModule: []egv1a1.DynamicModule{
+				{
+					Backends: []egv1a1.ExtensionBackend{
+						{
+							Name: "local",
+							BackendRef: gwapiv1.BackendObjectReference{
+								Name: "local-service",
+							},
+						},
+						{
+							Name: "remote",
+							BackendRef: gwapiv1.BackendObjectReference{
+								Namespace: new(gwapiv1.Namespace("other")),
+								Name:      "remote-service",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	require.ElementsMatch(t, []string{"default/local-service", "other/remote-service"}, backendEnvoyExtensionPolicyIndexFunc(policy))
+}
+
 func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 	testCases := []struct {
 		name     string
