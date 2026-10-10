@@ -314,6 +314,35 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Build ListenerSet policy maps, which are needed when processing the policies targeting xRoutes.
 	t.buildListenerSetBackendTrafficPolicyMap(backendTrafficPolicies, listenerSetMap, listenerSetPolicyMap, resources)
 
+	// Resolve once, then reuse these targets during route policy application.
+	// Count targets rather than policies because selectors can match many routes.
+	targetsByPolicy := make([][]policyTargetReferenceWithSectionName, policyMapSize)
+	httpRouteTargets := 0
+	for i, policy := range backendTrafficPolicies {
+		targetsByPolicy[i] = resolvePolicyTargets(policy.Spec.PolicyTargetReferences, routes,
+			resources.ReferenceGrants, egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)
+		for _, target := range targetsByPolicy[i] {
+			if target.Kind != resource.KindHTTPRoute && target.Kind != resource.KindGRPCRoute {
+				continue
+			}
+			key := policyTargetRouteKey{
+				Kind:      string(target.Kind),
+				Namespace: string(target.Namespace),
+				Name:      string(target.Name),
+			}
+			if routeMap[key] != nil {
+				httpRouteTargets++
+			}
+		}
+	}
+	var httpRouteIndex backendTrafficPolicyHTTPRouteIndex
+	// Amortize index construction over a larger target set, even when each
+	// source route produces only one generated match and scanning is cheaper.
+	const minHTTPRouteIndexTargets = 128
+	if httpRouteTargets >= minHTTPRouteIndexTargets {
+		httpRouteIndex = make(backendTrafficPolicyHTTPRouteIndex)
+	}
+
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
@@ -328,7 +357,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
+				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex,
 					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
@@ -337,15 +366,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Process the policies targeting Routes
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargets(
-			currPolicy.Spec.PolicyTargetReferences,
-			routes,
-			resources.ReferenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindBackendTrafficPolicy,
-			currPolicy.Namespace,
-			t.GetNamespace)
-		for _, currTarget := range targetRefs {
+		for _, currTarget := range targetsByPolicy[i] {
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
@@ -354,7 +375,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
+				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex,
 					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
@@ -821,6 +842,7 @@ func (t *Translator) buildListenerSetBackendTrafficPolicyMap(
 
 func (t *Translator) processBackendTrafficPolicyForRoute(
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
@@ -921,7 +943,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 	if policy.Spec.MergeType == nil {
 		// Set conditions for translation error if it got any
-		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil); err != nil {
+		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, httpRouteIndex, nil); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -977,7 +999,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 				if parentPolicy == nil {
 					// not found, fall back to the current policy
-					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener); err != nil {
+					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, httpRouteIndex, listener); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -992,7 +1014,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 				// merge with parent policy
 				if err := t.translateBackendTrafficPolicyForRouteWithMerge(
-					policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
+					policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR, httpRouteIndex,
 				); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -1452,6 +1474,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	route RouteContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 	policyTargetListener *ListenerContext,
 ) error {
 	tf, errs := t.buildTrafficFeatures(policy, nil)
@@ -1472,7 +1495,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 			// Skip if not the gateway wanted
 			continue
 		}
-		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, targetListenerName)
+		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, httpRouteIndex, targetListenerName)
 	}
 
 	return errs
@@ -1483,6 +1506,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	target policyTargetReferenceWithSectionName,
 	policyTargetListener *ListenerContext, route RouteContext,
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 ) error {
 	mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
 	if err != nil {
@@ -1533,9 +1557,44 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		// should not happen.
 		return nil
 	}
-	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, irListenerName(policyTargetListener))
+	t.applyTrafficFeatureToRoute(route, tf, errs, mergedPolicy, target, x, httpRouteIndex, irListenerName(policyTargetListener))
 
 	return errs
+}
+
+// The index lives for one policy pass. A listener's first lookup uses the
+// existing scan; only repeated lookups pay the cost of building an index.
+type backendTrafficPolicyHTTPRouteIndex map[*ir.HTTPListener]map[policyTargetRouteKey][]*ir.HTTPRoute
+
+func (idx backendTrafficPolicyHTTPRouteIndex) routesFor(listener *ir.HTTPListener, route RouteContext) []*ir.HTTPRoute {
+	if idx == nil {
+		return listener.Routes
+	}
+	routes, ok := idx[listener]
+	if !ok {
+		idx[listener] = nil
+		return listener.Routes
+	}
+	if routes == nil {
+		routes = make(map[policyTargetRouteKey][]*ir.HTTPRoute)
+		for _, r := range listener.Routes {
+			if r.Metadata == nil {
+				continue
+			}
+			key := policyTargetRouteKey{
+				Kind:      r.Metadata.Kind,
+				Namespace: r.Metadata.Namespace,
+				Name:      r.Metadata.Name,
+			}
+			routes[key] = append(routes[key], r)
+		}
+		idx[listener] = routes
+	}
+	return routes[policyTargetRouteKey{
+		Kind:      string(route.GetRouteType()),
+		Namespace: route.GetNamespace(),
+		Name:      route.GetName(),
+	}]
 }
 
 func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
@@ -1543,6 +1602,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	policy *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	x *ir.Xds,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 	policyTargetListenerName string,
 ) {
 	routeStatName := ""
@@ -1607,7 +1667,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 			// Skip if not the listener wanted
 			continue
 		}
-		for _, r := range http.Routes {
+		for _, r := range httpRouteIndex.routesFor(http, route) {
 			// If specified the sectionName in policy target, must match route rule from ir route metadata.
 			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 				continue
