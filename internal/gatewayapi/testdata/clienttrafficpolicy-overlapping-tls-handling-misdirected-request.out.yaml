@@ -1,3 +1,37 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    name: target-gateway-1-https-1
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: https-1
+    tls:
+      overlappingTLSHandling: MisdirectedRequest
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: https-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -206,6 +240,7 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
+      overlappingTLSHandling: MisdirectedRequest
       externalPort: 443
       hostnames:
       - foo.example.com
@@ -256,6 +291,8 @@ xdsIR:
         - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR3RENDQXFpZ0F3SUJBZ0lVVDRyelIreStHd1VzMm9ydExIZ0k1MzBKeG9Fd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVJRd0VnWURWUVFEREF0bGVHRnRjR3hsTG1OdgpiVEFlRncweU5UQTBNakl3TWpVNU1UQmFGdzB6TlRBME1qQXdNalU1TVRCYU1EVXhGREFTQmdOVkJBTU1DMlp2CmJ5NWlZWEl1WTI5dE1SMHdHd1lEVlFRS0RCUmxlR0Z0Y0d4bElHOXlaMkZ1YVhwaGRHbHZiakNDQVNJd0RRWUoKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTE4wbnJNR1NZNjBPT0JuTFVaSGpCRFkxazhqWHA2RwppeG1RaFNOK3lZUi9VQWVqSmhCOVI3S2RuT3d0eGljTnozdUFtL0p0UTFKRUU0dW5xQnhVTU8ydWpvVXl4ZisrCjRnb2tFYmVpTlhNN0ptaklPOGxEWlJjcEhFTlE3eUNJL3d1cEZBcHgwNnVrNUtBSlpRMUlmVXhZWS9RRkJsc3cKdUx0TWozVlB6eDBJYjRIV1lHdGhXcDIzUWduMUdGUWVTOGMwZHdqWWNBTGtrTFdwWWdUZTZGT0VhR3hvUzdwTQpGbitvZnRFUjlxZCtDcnRDSXM5TzFtOW5MUU9UWGJDNU5nSzR1ZFdhMFBuYjJ6TEk4WjZsVHFRSTNSODE2NkxKCkVDQi9ZSlYzVmtMb2cxUmx0d0FrM3hrWHFnbVhTZUxILzY3MHh6MEx5OGZHQVpmejFMQVpkSXNDQXdFQUFhT0IKenpDQnpEQWRCZ05WSFE0RUZnUVUzbVFodVB2dVl1K0lmN0ZaM010eU9jMWdjQ1V3YUFZRFZSMGpCR0V3WDRBVQpXWmxKWFQ1bXlEVnlsUjlSS2JQQTAxTkVlcytoTWFRdk1DMHhGVEFUQmdOVkJBb01ER1Y0WVcxd2JHVWdTVzVqCkxqRVVNQklHQTFVRUF3d0xaWGhoYlhCc1pTNWpiMjJDRkJuNktuTlBhbm1Db1daVStNYmtwKzJScmN4dU1Bc0cKQTFVZER3UUVBd0lDL0RBcEJnTlZIUkVFSWpBZ2dnOW1iMjh1WlhoaGJYQnNaUzVqYjIyQ0RTb3VaWGhoYlhCcwpaUzVqYjIwd0NRWURWUjBTQkFJd0FEQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFIa2xEbzkvNnRLcDNFd3JSCnJjVStKOUtmUkFGajc5YU1DREpVb0NyM2J6RFIycXQ4ZzlsbDdFSzZaeEtFa0xzWkFlYzBxU0Z1QjBvbzVqZFEKM3VvT2hNK1JKTkZoTldFd3dHWmpMb0FlK2oxaXByN1A5ajdmdFNzck8ra3M3TVNMeTE2RW9IV2Q0eG00Rk5QZQpmUVpRYWhpTTdMYVFCdW5wdXlhZWtLdG5tU241RzlkSHpGeTVNelRSbFJyVWxhVzdVbDRUeExlOEROZ2ZpR2ZCCnpjcmpVK2l3RUJXeS94b3B2aDEzNmlybmV3NTg3RWt3dzQ3QXFhc3gvZStMK2NhSlYySGVMd0dSaE5xR2pIcjkKQ2dSVHpud3F5QjdtTVNXYStWaXBNSHlUVmRCNjRvYjZxbkdqTldvWXdRbUUraU0vL0VrTURzd2JVcTc2R1pKMApsWlRkTlE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
           name: envoy-gateway/tls-secret-example-com
           privateKey: '[redacted]'
+        maxVersion: "1.3"
+        minVersion: "1.2"
       tlsOverlaps: true
       tlsOverlapsHostnames:
       - bar.example.com

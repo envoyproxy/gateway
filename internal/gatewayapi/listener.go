@@ -685,6 +685,46 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			}
 		}
 	}
+
+	setTLSOverlapsHostnames(httpsListeners)
+}
+
+// setTLSOverlapsHostnames records, for each listener, the hostnames of all the other listeners on the same port
+// whose certificate SANs overlap with it. Unlike the OverlappingTLSConfig condition, which only reports one
+// overlapping listener, this must cover every overlap because an HTTP/2 client may coalesce requests for any of
+// those hostnames onto this listener's connections.
+func setTLSOverlapsHostnames(httpsListeners []*ListenerContext) {
+	overlapsHostnames := make([]sets.Set[string], len(httpsListeners))
+	for i := range httpsListeners {
+		if httpsListeners[i].httpIR == nil || hasInvalidCondition(httpsListeners[i]) {
+			continue
+		}
+		for j := i + 1; j < len(httpsListeners); j++ {
+			if httpsListeners[j].httpIR == nil || hasInvalidCondition(httpsListeners[j]) {
+				continue
+			}
+			if httpsListeners[i].Port != httpsListeners[j].Port {
+				continue
+			}
+			if isOverlappingCertificate(httpsListeners[i].tls.certDNSNames, httpsListeners[j].tls.certDNSNames) == nil {
+				continue
+			}
+			if overlapsHostnames[i] == nil {
+				overlapsHostnames[i] = sets.New[string]()
+			}
+			if overlapsHostnames[j] == nil {
+				overlapsHostnames[j] = sets.New[string]()
+			}
+			overlapsHostnames[i].Insert(httpsListeners[j].httpIR.Hostnames...)
+			overlapsHostnames[j].Insert(httpsListeners[i].httpIR.Hostnames...)
+		}
+	}
+
+	for i, hostnames := range overlapsHostnames {
+		if hostnames != nil {
+			httpsListeners[i].httpIR.TLSOverlapsHostnames = sets.List(hostnames)
+		}
+	}
 }
 
 type overlappingCertificate struct {
