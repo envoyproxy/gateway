@@ -1,0 +1,136 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: server-header-overwrite-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: server-header-overwrite-ctp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: server-header-overwrite-gateway
+  headers:
+    serverHeaderTransformation: Overwrite
+    serverName: envoy-gateway-e2e
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-server-header-overwrite
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: server-header-overwrite-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /server-header
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: server-header-append-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: server-header-append-ctp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: server-header-append-gateway
+  headers:
+    serverHeaderTransformation: AppendIfAbsent
+    serverName: envoy-gateway-e2e
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-server-header-append
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: server-header-append-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /server-header
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: server-header-passthrough-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: server-header-passthrough-ctp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: server-header-passthrough-gateway
+  headers:
+    serverHeaderTransformation: PassThrough
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-server-header-passthrough
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: server-header-passthrough-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /server-header
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
