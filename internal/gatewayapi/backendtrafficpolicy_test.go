@@ -3584,3 +3584,35 @@ func TestRejectBackendTargetSelectors(t *testing.T) {
 	require.Len(t, ancestor.Conditions, 1)
 	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
 }
+
+func TestMultipleSourceCIDRWarningHonorsType(t *testing.T) {
+	dup := func() []egv1a1.RateLimitRule {
+		sel := func(v string) egv1a1.RateLimitSelectCondition {
+			return egv1a1.RateLimitSelectCondition{SourceCIDR: &egv1a1.SourceMatch{Value: v}}
+		}
+		return []egv1a1.RateLimitRule{{
+			ClientSelectors: []egv1a1.RateLimitSelectCondition{sel("10.0.0.0/24"), sel("10.1.0.0/24")},
+			Limit:           egv1a1.RateLimitValue{Requests: 5, Unit: egv1a1.RateLimitUnitMinute},
+		}}
+	}
+	build := func(typ *egv1a1.RateLimitType, local, global bool) *egv1a1.BackendTrafficPolicy {
+		rl := &egv1a1.RateLimitSpec{Type: typ}
+		if local {
+			rl.Local = &egv1a1.LocalRateLimit{Rules: dup()}
+		}
+		if global {
+			rl.Global = &egv1a1.GlobalRateLimit{Rules: dup()}
+		}
+		return &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{RateLimit: rl}}
+	}
+
+	localType := egv1a1.LocalRateLimitType
+	globalType := egv1a1.GlobalRateLimitType
+
+	require.NotEmpty(t, multipleSourceCIDRWarning(build(nil, true, false)))
+	require.NotEmpty(t, multipleSourceCIDRWarning(build(nil, false, true)))
+	require.NotEmpty(t, multipleSourceCIDRWarning(build(&localType, true, true)))
+	require.Empty(t, multipleSourceCIDRWarning(build(&localType, false, true)))
+	require.Empty(t, multipleSourceCIDRWarning(build(&globalType, true, false)))
+	require.NotEmpty(t, multipleSourceCIDRWarning(build(&globalType, false, true)))
+}

@@ -1,0 +1,1 @@
+A `BackendTrafficPolicy` rate limit rule with more than one `sourceCIDR` selector in `clientSelectors` now gets a `Warning` condition on its status noting that only the last selector is applied. Behavior is unchanged and the policy is still accepted.
