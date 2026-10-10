@@ -1,0 +1,28 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    mergeGateways: true
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: GatewayClass
+      group: gateway.networking.k8s.io
+      name: envoy-gateway-class
+      sectionName: http1
+    data: "no Gateways exist under the merged GatewayClass, so it must fail with TargetNotFound"
