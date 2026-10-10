@@ -1,0 +1,1 @@
+Fixed the listener-level `api_key_auth` filter being built from the first route that uses API key auth. Rotating that route's keys no longer forces a listener update that drains long-lived connections on every route of the listener, and a route whose credential Secret has no usable keys now rejects requests instead of accepting the first route's keys.
