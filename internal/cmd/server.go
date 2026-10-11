@@ -196,9 +196,6 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
 	// It will be closed once the leader is elected in the controller manager.
 	cfg.Elected = make(chan struct{})
-	// The StoppedLeading channel is used to stop the tasks that require leadership.
-	// It will be closed once the controller manager stops, e.g. because it lost its lease.
-	cfg.StoppedLeading = make(chan struct{})
 	// ProviderReady is used to block consumers of the provider's cached client until the provider has
 	// synced its cache.
 	cfg.ProviderReady = make(chan struct{})
@@ -208,6 +205,12 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	if extMgr, err = extensionregistry.NewManager(cfg, cfg.EnvoyGateway.Provider.IsRunningOnKubernetes()); err != nil {
 		return err
 	}
+
+	providerRunner := providerrunner.New(&providerrunner.Config{
+		Server:            *cfg,
+		ProviderResources: channels.pResources,
+		RunnerErrors:      runnerErrors,
+	})
 
 	runners := []struct {
 		runner Runner
@@ -226,11 +229,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			// Important: order matters here: the provider runner must be started before the infra manager runner because
 			// the provider runner creates the Kubernetes client that is needed by the infra manager runner to reconcile
 			// the Envoy Proxy and the rate limit infra resources.
-			runner: providerrunner.New(&providerrunner.Config{
-				Server:            *cfg,
-				ProviderResources: channels.pResources,
-				RunnerErrors:      runnerErrors,
-			}),
+			runner: providerRunner,
 		},
 		{
 			// Start the GatewayAPI Translator Runner
@@ -339,9 +338,10 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		started = append(started, r.runner)
 	}
 
-	// Wait until done
-	<-ctx.Done()
-	return nil
+	// Wait until done, or until the provider stops on its own, e.g. because it
+	// lost its leader lease. Its error then stops the other runners, through the
+	// deferred cancel, and ends the process, through the config loader.
+	return providerRunner.Wait(ctx)
 }
 
 func startRunner(ctx context.Context, cfg *config.Server, runner Runner) error {

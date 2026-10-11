@@ -665,22 +665,6 @@ func startRunner(t *testing.T, mgr *fakeManager, disableLeaderElection bool) *Ru
 	return r
 }
 
-// requireStopped fails the test unless every goroutine that r started exits
-// within a minute, although r's context is still live.
-func requireStopped(t *testing.T, r *Runner) {
-	t.Helper()
-	stopped := make(chan struct{})
-	go func() {
-		r.done.Wait()
-		close(stopped)
-	}()
-	select {
-	case <-stopped:
-	case <-time.After(time.Minute):
-		t.Fatal("the runner kept running after it stopped leading")
-	}
-}
-
 // TestRetriesStartOnlyAfterElected checks that, with leader election enabled,
 // neither the first attempt nor its retries happen before the runner is elected.
 func TestRetriesStartOnlyAfterElected(t *testing.T) {
@@ -698,79 +682,6 @@ func TestRetriesStartOnlyAfterElected(t *testing.T) {
 		synctest.Wait()
 		require.Len(t, mgr.createCalls(), 2)
 	})
-}
-
-// TestStoppedLeadingStopsInfra checks that, with leader election enabled, the
-// runner stops once it stops leading, e.g. because it lost its lease, although
-// its context is still live: a pending retry is dropped, a retry in flight is
-// canceled, and later updates are not applied, so that a former leader never
-// overwrites the infra of the new one. Without leader election, StoppedLeading
-// changes nothing.
-func TestStoppedLeadingStopsInfra(t *testing.T) {
-	older := testInfra("default/eg")
-	newer := testInfra("default/eg")
-	newer.Proxy.Listeners[0].Ports[0].ServicePort = 8080
-
-	testCases := []struct {
-		name                  string
-		disableLeaderElection bool
-		// blockRetry makes the retry block until its context is canceled, so
-		// requireStopped passes only if it is.
-		blockRetry    bool
-		stopLeadingAt time.Duration
-		// wantOffsets of the applies of older, its retry and, a minute in,
-		// newer.
-		wantOffsets []time.Duration
-	}{
-		{
-			name:          "retry pending",
-			stopLeadingAt: 500 * time.Millisecond,
-			wantOffsets:   seconds(0),
-		},
-		{
-			name:          "retry in flight",
-			blockRetry:    true,
-			stopLeadingAt: 1500 * time.Millisecond,
-			wantOffsets:   seconds(0, 1),
-		},
-		{
-			name:                  "leader election disabled",
-			disableLeaderElection: true,
-			stopLeadingAt:         500 * time.Millisecond,
-			wantOffsets:           seconds(0, 1, 60),
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				start := time.Now()
-				mgr := &fakeManager{createErr: func(ctx context.Context, _ *ir.Infra, n int) error {
-					switch {
-					case n == 0:
-						return webhookErr
-					case tc.blockRetry:
-						<-ctx.Done()
-						return ctx.Err()
-					}
-					return nil
-				}}
-				r := startRunner(t, mgr, tc.disableLeaderElection)
-				close(r.Elected)
-
-				r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: older})
-				time.Sleep(tc.stopLeadingAt)
-				close(r.StoppedLeading)
-				if !tc.disableLeaderElection {
-					requireStopped(t, r)
-				}
-				time.Sleep(time.Minute - time.Since(start))
-				r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: newer})
-				time.Sleep(10 * time.Minute)
-				synctest.Wait()
-				require.Equal(t, tc.wantOffsets, mgr.createOffsets(start, "default/eg"))
-			})
-		})
-	}
 }
 
 func TestIsRetryable(t *testing.T) {
