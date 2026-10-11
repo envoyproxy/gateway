@@ -259,6 +259,9 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// process HTTP Route filters first, so that the filters can be applied to the IR route later
 		var processFilterError error
 		httpFiltersContext, errs := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources, xdsIR)
+		if err := validateRuleLevelFilters(httpFiltersContext); err != nil {
+			errs = append(errs, err)
+		}
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
@@ -307,7 +310,14 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		var mergeUnsafeForRule bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.HTTPBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeUnsafeForRule = t.mergeIncompatibleForWeightedRule(httpRoute, backendRefs, rule.SessionPersistence != nil)
+			var backendFilterRefs []*gwapiv1.LocalObjectReference
+			for _, ref := range rule.BackendRefs {
+				for _, f := range ref.Filters {
+					backendFilterRefs = append(backendFilterRefs, f.ExtensionRef)
+				}
+			}
+			backendPriority := hasBackendPriorityFilter(resources, httpRoute.GetNamespace(), backendFilterRefs...)
+			mergeUnsafeForRule = t.mergeIncompatibleForWeightedRule(httpRoute, backendRefs, rule.SessionPersistence != nil, backendPriority)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
@@ -872,15 +882,22 @@ func (t *Translator) isFallbackBackend(backendRef gwapiv1.BackendObjectReference
 }
 
 // mergeIncompatibleForWeightedRule reports whether a rule-level condition makes cluster
-// deduplication unsafe for any of this rule's backendRefs: session persistence or a fallback
-// backend. For HTTP/GRPC, whose weighted-clusters route action can represent multiple distinct
-// clusters in one rule, consistent hashing can still be configured independently on each merged
-// cluster.
+// deduplication unsafe for any of this rule's backendRefs: a backendPriority filter, session
+// persistence or a fallback backend. For HTTP/GRPC, whose weighted-clusters route action can
+// represent multiple distinct clusters in one rule, consistent hashing can still be configured
+// independently on each merged cluster.
 func (t *Translator) mergeIncompatibleForWeightedRule(
 	routeCtx RouteContext,
 	backendRefs []gwapiv1.BackendObjectReference,
 	sessionPersistent bool,
+	backendPriority bool,
 ) bool {
+	// A backendPriority filter sets the priority per backendRef, not per backend: priority
+	// failover needs the rule's backends in one cluster, and even a lone backendRef would leak
+	// its priority into a cluster shared with routes that reference the same backend.
+	if backendPriority {
+		return true
+	}
 	// A single backendRef has no multi-backend pool for the checks below to protect —
 	// nothing to fragment, so it's always mergeable at this point.
 	if len(backendRefs) <= 1 {
@@ -1507,6 +1524,9 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// process GRPC route filters first, so that the filters can be applied to the IR route later
 		var processFilterError error
 		httpFiltersContext, errs := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources, xdsIR)
+		if err := validateRuleLevelFilters(httpFiltersContext); err != nil {
+			errs = append(errs, err)
+		}
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
@@ -1553,7 +1573,8 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.GRPCBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, false)
+			// GRPCRoute backendRefs don't support ExtensionRef filters, so they can't set a backendPriority.
+			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, false, false)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
@@ -2956,10 +2977,17 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	ds.TLS = tls
 
-	var filtersErr error
-	ds.Filters, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources, xdsIR)
+	var (
+		backendPriority *uint32
+		filtersErr      error
+	)
+	ds.Filters, backendPriority, filtersErr = t.processDestinationFilters(routeType, backendRefContext, parentRef, route, resources, xdsIR)
 	if filtersErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
+	}
+	// A backendPriority filter overrides the priority derived from the Backend's fallback field.
+	if backendPriority != nil {
+		ds.Priority = backendPriority
 	}
 
 	if err := validateDestinationSettings(ds, t.IsServiceRouting(envoyProxy, btpRoutingType), backendRef.Kind); err != nil {
@@ -3190,14 +3218,15 @@ func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 	return nil
 }
 
-func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) (*ir.DestinationFilters, error) {
+// processDestinationFilters translates a backendRef's filters into its DestinationFilters and
+// the locality priority set by a backendPriority filter, if any.
+func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) (*ir.DestinationFilters, *uint32, error) {
 	backendFilters := getBackendFilters(routeType, backendRefContext)
 	if backendFilters == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	var httpFiltersContext *HTTPFiltersContext
-	var destFilters ir.DestinationFilters
 
 	var errs []status.Error
 	switch filters := backendFilters.(type) {
@@ -3211,32 +3240,49 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 		for _, e := range errs {
 			err = errors.Join(err, e)
 		}
-		return nil, err
+		return nil, nil, err
 	}
-	applyHTTPFiltersContextToDestinationFilters(httpFiltersContext, &destFilters)
 
-	return &destFilters, nil
+	destFilters := buildDestinationFilters(httpFiltersContext)
+	if destFilters == nil {
+		// Any non-nil DestinationFilters puts each backendRef of the rule in its own cluster, which
+		// would defeat priority failover. Leave it nil when the filters only set a priority.
+		if httpFiltersContext.BackendPriority != nil {
+			return nil, httpFiltersContext.BackendPriority, nil
+		}
+		destFilters = &ir.DestinationFilters{}
+	}
+	return destFilters, httpFiltersContext.BackendPriority, nil
 }
 
-func applyHTTPFiltersContextToDestinationFilters(httpFiltersContext *HTTPFiltersContext, destFilters *ir.DestinationFilters) {
+func buildDestinationFilters(httpFiltersContext *HTTPFiltersContext) *ir.DestinationFilters {
+	var destFilters *ir.DestinationFilters
+	filters := func() *ir.DestinationFilters {
+		if destFilters == nil {
+			destFilters = &ir.DestinationFilters{}
+		}
+		return destFilters
+	}
+
 	if len(httpFiltersContext.AddRequestHeaders) > 0 {
-		destFilters.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
+		filters().AddRequestHeaders = httpFiltersContext.AddRequestHeaders
 	}
 	if len(httpFiltersContext.RemoveRequestHeaders) > 0 {
-		destFilters.RemoveRequestHeaders = httpFiltersContext.RemoveRequestHeaders
+		filters().RemoveRequestHeaders = httpFiltersContext.RemoveRequestHeaders
 	}
 	if len(httpFiltersContext.AddResponseHeaders) > 0 {
-		destFilters.AddResponseHeaders = httpFiltersContext.AddResponseHeaders
+		filters().AddResponseHeaders = httpFiltersContext.AddResponseHeaders
 	}
 	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
-		destFilters.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
+		filters().RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
 	}
 	if httpFiltersContext.CredentialInjection != nil {
-		destFilters.CredentialInjection = httpFiltersContext.CredentialInjection
+		filters().CredentialInjection = httpFiltersContext.CredentialInjection
 	}
 	if httpFiltersContext.URLRewrite != nil {
-		destFilters.URLRewrite = httpFiltersContext.URLRewrite
+		filters().URLRewrite = httpFiltersContext.URLRewrite
 	}
+	return destFilters
 }
 
 func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {

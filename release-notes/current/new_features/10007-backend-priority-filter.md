@@ -1,0 +1,1 @@
+Added the `backendPriority` field to `HTTPRouteFilter`, which sets the Envoy locality priority of the HTTPRoute backendRef it is referenced from, enabling multi-tier, per-route priority failover between a rule's backendRefs. Rules using it are excluded from MergeBackends cluster deduplication.
