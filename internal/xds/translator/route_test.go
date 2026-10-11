@@ -92,7 +92,7 @@ func TestBuildRegexRedirectAction(t *testing.T) {
 					}},
 				},
 			}
-			got, err := buildXdsRoute(route, &ir.HTTPListener{}, nil)
+			got, err := buildXdsRoute(route, &ir.HTTPListener{}, nil, nil)
 			require.NoError(t, err)
 			require.NoError(t, got.ValidateAll())
 			require.Nil(t, got.GetRoute())

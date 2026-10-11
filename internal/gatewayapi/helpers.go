@@ -579,6 +579,13 @@ func irBackendClusterName(key *BackendClusterKey) string {
 	return base + "/" + strings.ToLower(string(key.Protocol))
 }
 
+func irExtensionResourceName(key *ExtensionResourceKey) string {
+	if key.Group == "" {
+		return fmt.Sprintf("%s/%s/%s", strings.ToLower(key.Kind), key.Namespace, key.Name)
+	}
+	return fmt.Sprintf("%s/%s/%s/%s", strings.ToLower(key.Group), strings.ToLower(key.Kind), key.Namespace, key.Name)
+}
+
 func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
 }
@@ -761,6 +768,31 @@ type policyTargetRouteKey struct {
 	Kind      string
 	Namespace string
 	Name      string
+}
+
+// backendPolicyKey identifies a backend-targeted BackendTrafficPolicy's target, for conflict
+// detection.
+type backendPolicyKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+func backendPolicyKeyFromTarget(target policyTargetReferenceWithSectionName) backendPolicyKey {
+	return backendPolicyKey{
+		Kind:      string(target.Kind),
+		Namespace: string(target.Namespace),
+		Name:      string(target.Name),
+	}
+}
+
+// backendPolicyKeyFromMetadata builds the same key from a BackendCluster's Metadata, so it can be
+// matched against the map backendPolicyKeyFromTarget populates. Returns the zero key for nil.
+func backendPolicyKeyFromMetadata(md *ir.ResourceMetadata) backendPolicyKey {
+	if md == nil {
+		return backendPolicyKey{}
+	}
+	return backendPolicyKey{Kind: md.Kind, Namespace: md.Namespace, Name: md.Name}
 }
 
 type policyRouteTargetContext struct {
@@ -1133,6 +1165,17 @@ func isGateway(target policyTargetReferenceWithSectionName) bool {
 func isListener(target policyTargetReferenceWithSectionName) bool {
 	// If the target is a gateway and the section name is not nil, then it's a listener.
 	return target.Kind == resource.KindGateway && target.SectionName != nil
+}
+
+// isBackendTargetKind reports whether target's kind is Service, ServiceImport, or Backend -
+// i.e. the target is a backend, not a Gateway/ListenerSet/xRoute.
+func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {
+	switch target.Kind {
+	case gwapiv1.Kind(resource.KindService), gwapiv1.Kind(resource.KindServiceImport), gwapiv1.Kind(resource.KindBackend):
+		return true
+	default:
+		return false
+	}
 }
 
 func isListenerSet(target policyTargetReferenceWithSectionName) bool {

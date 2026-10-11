@@ -27,6 +27,60 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func TestBuildCORSOriginRegexes(t *testing.T) {
+	tr := &Translator{}
+
+	tests := []struct {
+		name        string
+		originRegex string
+		wantError   string
+	}{
+		{
+			name:        "regex is preserved",
+			originRegex: `https://preview-[0-9]+\.example\.com(:8443)?`,
+		},
+		{
+			name:        "broad regex that does not match the wildcard is preserved",
+			originRegex: "https?://.*",
+		},
+		{
+			name:        "invalid regex",
+			originRegex: "[",
+			wantError:   `regex "[" is invalid`,
+		},
+		{
+			name:        "regex matching any host allows all origins",
+			originRegex: `[^/]+`,
+			wantError:   `origin regular expression "[^/]+" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+		{
+			name:        "regex matching anything allows all origins",
+			originRegex: ".*",
+			wantError:   `origin regular expression ".*" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+		{
+			name:        "escaped wildcard allows all origins",
+			originRegex: `\*`,
+			wantError:   `origin regular expression "\\*" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tr.buildCORS(&egv1a1.CORS{
+				AllowOriginRegexes: []egv1a1.CORSOriginRegex{egv1a1.CORSOriginRegex(tt.originRegex)},
+			})
+			if tt.wantError != "" {
+				require.ErrorContains(t, err, tt.wantError)
+				require.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, []*ir.StringMatch{{SafeRegex: &tt.originRegex}}, got.AllowOrigins)
+		})
+	}
+}
+
 func Test_wildcard2regex(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -833,6 +887,87 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 				t.Errorf("validateSecurityPolicy() error = %v, wantErr %v", err, tt.wantError)
 				return
 			}
+		})
+	}
+}
+
+func TestBuildAuthorizationJWTProvider(t *testing.T) {
+	jwtWith := func(names ...string) *egv1a1.JWT {
+		providers := make([]egv1a1.JWTProvider, 0, len(names))
+		for _, name := range names {
+			providers = append(providers, egv1a1.JWTProvider{Name: name})
+		}
+		return &egv1a1.JWT{Providers: providers}
+	}
+	authorizationWith := func(providers ...string) *egv1a1.Authorization {
+		rules := make([]egv1a1.AuthorizationRule, 0, len(providers))
+		for _, provider := range providers {
+			rules = append(rules, egv1a1.AuthorizationRule{
+				Action:    egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{JWT: &egv1a1.JWTPrincipal{Provider: provider}},
+			})
+		}
+		return &egv1a1.Authorization{Rules: rules}
+	}
+
+	tests := []struct {
+		name          string
+		jwt           *egv1a1.JWT
+		authorization *egv1a1.Authorization
+		wantError     bool
+	}{
+		{
+			name:          "provider defined in the same policy",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("example"),
+		},
+		{
+			name:          "no authorization rules",
+			jwt:           jwtWith("example"),
+			authorization: &egv1a1.Authorization{},
+		},
+		{
+			name: "principal without a jwt is ignored",
+			authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action:    egv1a1.AuthorizationActionAllow,
+						Principal: &egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
+					},
+				},
+			},
+		},
+		{
+			name:          "unknown provider",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("does-not-exist"),
+			wantError:     true,
+		},
+		{
+			name:          "no jwt providers at all",
+			authorization: authorizationWith("example"),
+			wantError:     true,
+		},
+		{
+			name:          "one known and one unknown provider",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("example", "does-not-exist"),
+			wantError:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policy := &egv1a1.SecurityPolicy{
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT:           tt.jwt,
+					Authorization: tt.authorization,
+				},
+			}
+
+			translator := &Translator{}
+			_, err := translator.buildAuthorization(policy, &securityPolicyOwners{})
+			require.Equal(t, tt.wantError, err != nil, "buildAuthorization() error = %v", err)
 		})
 	}
 }
