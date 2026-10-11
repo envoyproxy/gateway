@@ -47,7 +47,8 @@ type Runner struct {
 
 	// mu is held around the proxy infra calls of the subscription handler and
 	// of retryProxyInfra, so a key is never applied by both at once, and
-	// guards failed.
+	// guards failed. Either may wait for a call of the other in flight, which
+	// can last as long as a webhook timeout, whatever key either applies.
 	mu sync.Mutex
 	// failed holds, for each key whose last CreateOrUpdateProxyInfra failed
 	// with a retryable error, what to retry and when. retries hands the keys

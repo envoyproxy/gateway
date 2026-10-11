@@ -82,8 +82,9 @@ func TestProviderStartReturnsOnStartupFailureBeforeCacheSync(t *testing.T) {
 func TestProviderStartClosesStoppedLeading(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		leaseLost := make(chan struct{})
+		startErr := errors.New("leader election lost")
 		p := &Provider{
-			manager:        &fakeManager{startErr: errors.New("leader election lost"), release: leaseLost},
+			manager:        &fakeManager{startErr: startErr, release: leaseLost},
 			providerReady:  make(chan struct{}),
 			stoppedLeading: make(chan struct{}),
 		}
@@ -98,7 +99,7 @@ func TestProviderStartClosesStoppedLeading(t *testing.T) {
 		}
 
 		close(leaseLost)
-		require.EqualError(t, <-done, "leader election lost")
+		require.Equal(t, startErr, <-done)
 		select {
 		case <-p.stoppedLeading:
 		default:
