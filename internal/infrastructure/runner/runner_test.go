@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"testing/synctest"
@@ -648,31 +649,67 @@ func TestNonRetryableErrorIsNotRetried(t *testing.T) {
 	}
 }
 
+// startRunner starts a Runner through Start, with leader election enabled
+// unless disableLeaderElection, and backs it with mgr. mgr replaces the
+// Manager that Start creates before Start's goroutines can call it: they only
+// do once Elected is closed or, without leader election, once an Infra IR is
+// stored. When the test ends, it stops the runner and checks that mgr was only
+// called with r.mu held, never concurrently.
+func startRunner(t *testing.T, mgr *fakeManager, disableLeaderElection bool) *Runner {
+	t.Helper()
+	ctx, cancel := context.WithCancel(t.Context())
+	cli := config.NewKubernetesClientHolder()
+	cli.Set(fake.NewClientBuilder().Build())
+	provider := egv1a1.DefaultEnvoyGatewayProvider()
+	provider.Kubernetes.LeaderElection.Disable = new(disableLeaderElection)
+	r := New(&Config{
+		Server: config.Server{
+			EnvoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{Provider: provider},
+			},
+			Logger:           logging.DefaultLogger(t.Output(), egv1a1.LogLevelInfo),
+			Elected:          make(chan struct{}),
+			StoppedLeading:   make(chan struct{}),
+			ProviderReady:    make(chan struct{}),
+			KubernetesClient: cli,
+		},
+		InfraIR: new(message.InfraIR),
+	})
+	require.NoError(t, r.Start(ctx))
+	r.mgr = mgr
+	mgr.lock = &r.mu
+	t.Cleanup(func() {
+		stopRunner(t, r, cancel)
+		mgr.mu.Lock()
+		defer mgr.mu.Unlock()
+		require.Zero(t, mgr.unlockedCalls, "the runner called the manager without holding r.mu")
+		require.LessOrEqual(t, mgr.maxInFlight, 1, "the runner called the manager concurrently")
+	})
+	return r
+}
+
+// requireStopped fails the test unless every goroutine that r started exits
+// within a minute, although r's context is still live.
+func requireStopped(t *testing.T, r *Runner) {
+	t.Helper()
+	stopped := make(chan struct{})
+	go func() {
+		r.done.Wait()
+		close(stopped)
+	}()
+	select {
+	case <-stopped:
+	case <-time.After(time.Minute):
+		t.Fatal("the runner kept running after it stopped leading")
+	}
+}
+
 // TestRetriesStartOnlyAfterElected checks that, with leader election enabled,
 // neither the first attempt nor its retries happen before the runner is elected.
 func TestRetriesStartOnlyAfterElected(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		ctx, cancel := context.WithCancel(t.Context())
-		cli := config.NewKubernetesClientHolder()
-		cli.Set(fake.NewClientBuilder().Build())
-		r := New(&Config{
-			Server: config.Server{
-				EnvoyGateway: &egv1a1.EnvoyGateway{
-					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{Provider: egv1a1.DefaultEnvoyGatewayProvider()},
-				},
-				Logger:           logging.DefaultLogger(t.Output(), egv1a1.LogLevelInfo),
-				Elected:          make(chan struct{}),
-				ProviderReady:    make(chan struct{}),
-				KubernetesClient: cli,
-			},
-			InfraIR: new(message.InfraIR),
-		})
-		require.NoError(t, r.Start(ctx))
-		t.Cleanup(func() { stopRunner(t, r, cancel) })
-		// Start's goroutines call the manager only once Elected is closed.
 		mgr := &fakeManager{createErrs: []error{webhookErr}}
-		r.mgr = mgr
-		mgr.lock = &r.mu
+		r := startRunner(t, mgr, false)
 
 		r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: testInfra("default/eg")})
 		time.Sleep(10 * time.Minute)
@@ -684,6 +721,81 @@ func TestRetriesStartOnlyAfterElected(t *testing.T) {
 		synctest.Wait()
 		require.Len(t, mgr.createCalls(), 2)
 	})
+}
+
+// TestStoppedLeadingStopsInfra checks that, with leader election enabled, the
+// runner stops once it stops leading, e.g. because it lost its lease, although
+// its context is still live: a pending retry is dropped, a retry in flight is
+// canceled, and later updates are not applied, so that a former leader never
+// overwrites the infra of the new one. Without leader election, StoppedLeading
+// changes nothing.
+func TestStoppedLeadingStopsInfra(t *testing.T) {
+	older := testInfra("default/eg")
+	newer := testInfra("default/eg")
+	newer.Proxy.Listeners[0].Ports[0].ServicePort = 8080
+
+	testCases := []struct {
+		name                  string
+		disableLeaderElection bool
+		// blockRetry makes the retry block until its context is canceled.
+		blockRetry    bool
+		stopLeadingAt time.Duration
+		// wantOffsets of the applies of older, its retry and, a minute in,
+		// newer.
+		wantOffsets []time.Duration
+	}{
+		{
+			name:          "retry pending",
+			stopLeadingAt: 500 * time.Millisecond,
+			wantOffsets:   seconds(0),
+		},
+		{
+			name:          "retry in flight",
+			blockRetry:    true,
+			stopLeadingAt: 1500 * time.Millisecond,
+			wantOffsets:   seconds(0, 1),
+		},
+		{
+			name:                  "leader election disabled",
+			disableLeaderElection: true,
+			stopLeadingAt:         500 * time.Millisecond,
+			wantOffsets:           seconds(0, 1, 60),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				start := time.Now()
+				var canceled atomic.Bool
+				mgr := &fakeManager{createErr: func(ctx context.Context, _ *ir.Infra, n int) error {
+					switch {
+					case n == 0:
+						return webhookErr
+					case tc.blockRetry:
+						<-ctx.Done()
+						canceled.Store(true)
+						return ctx.Err()
+					}
+					return nil
+				}}
+				r := startRunner(t, mgr, tc.disableLeaderElection)
+				close(r.Elected)
+
+				r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: older})
+				time.Sleep(tc.stopLeadingAt)
+				close(r.StoppedLeading)
+				if !tc.disableLeaderElection {
+					requireStopped(t, r)
+				}
+				time.Sleep(time.Minute - time.Since(start))
+				r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: newer})
+				time.Sleep(10 * time.Minute)
+				synctest.Wait()
+				require.Equal(t, tc.wantOffsets, mgr.createOffsets(start, "default/eg"))
+				require.Equal(t, tc.blockRetry, canceled.Load())
+			})
+		})
+	}
 }
 
 func TestIsRetryable(t *testing.T) {

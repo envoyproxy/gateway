@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -19,13 +20,18 @@ import (
 // fakeManager lets Start return an error immediately while its cache never
 // reports synced, reproducing a startup failure that controller-runtime
 // surfaces before the caches ever sync (e.g. a metrics/health listener bind
-// conflict, which is started before the caches in manager.Start).
+// conflict, which is started before the caches in manager.Start). If release
+// is set, Start returns only once it is closed.
 type fakeManager struct {
 	manager.Manager
 	startErr error
+	release  chan struct{}
 }
 
 func (f *fakeManager) Start(context.Context) error {
+	if f.release != nil {
+		<-f.release
+	}
 	return f.startErr
 }
 
@@ -51,8 +57,9 @@ func (blockingCache) WaitForCacheSync(ctx context.Context) bool {
 func TestProviderStartReturnsOnStartupFailureBeforeCacheSync(t *testing.T) {
 	startErr := errors.New("boom")
 	p := &Provider{
-		manager:       &fakeManager{startErr: startErr},
-		providerReady: make(chan struct{}),
+		manager:        &fakeManager{startErr: startErr},
+		providerReady:  make(chan struct{}),
+		stoppedLeading: make(chan struct{}),
 	}
 
 	done := make(chan error, 1)
@@ -66,4 +73,36 @@ func TestProviderStartReturnsOnStartupFailureBeforeCacheSync(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Provider.Start did not return after manager startup failed -- deadlocked waiting for cache sync")
 	}
+}
+
+// TestProviderStartClosesStoppedLeading checks that Start closes
+// stoppedLeading once the manager stops, here because it lost its lease, and
+// not while the manager runs, so the tasks that require leadership stop as
+// soon as this EG instance no longer leads.
+func TestProviderStartClosesStoppedLeading(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		leaseLost := make(chan struct{})
+		p := &Provider{
+			manager:        &fakeManager{startErr: errors.New("leader election lost"), release: leaseLost},
+			providerReady:  make(chan struct{}),
+			stoppedLeading: make(chan struct{}),
+		}
+		done := make(chan error, 1)
+		go func() { done <- p.Start(t.Context()) }()
+
+		synctest.Wait()
+		select {
+		case <-p.stoppedLeading:
+			t.Fatal("stoppedLeading was closed while the manager was running")
+		default:
+		}
+
+		close(leaseLost)
+		require.EqualError(t, <-done, "leader election lost")
+		select {
+		case <-p.stoppedLeading:
+		default:
+			t.Fatal("stoppedLeading was not closed once the manager stopped")
+		}
+	})
 }

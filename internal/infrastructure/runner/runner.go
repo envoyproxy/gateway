@@ -95,8 +95,12 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return err
 	}
 
-	// This is a blocking function that subscribes to the infraIR and initializes the infrastructure.
-	subscribeInitInfra := func() {
+	// This is a blocking function that subscribes to the infraIR and initializes the infrastructure,
+	// until ctx is done or stoppedLeading is closed.
+	subscribeInitInfra := func(stoppedLeading <-chan struct{}) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
 		// Subscribe to InfraIR updates.
 		sub := r.InfraIR.Subscribe(ctx)
 		r.done.Go(func() {
@@ -109,12 +113,17 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		})
 
 		r.Logger.Info("started")
-		<-ctx.Done()
+		select {
+		case <-ctx.Done():
+		case <-stoppedLeading:
+			r.Logger.Info("stopped leading")
+		}
 		r.Logger.Info("shutting down")
 	}
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
-	// to avoid multiple EG instances processing envoy proxy infra resources.
+	// to avoid multiple EG instances processing envoy proxy infra resources. It stops once leadership is
+	// lost, so that a former leader never overwrites the infra of the new one, e.g. with a retry.
 	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
 		!ptr.Deref(r.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false) {
 		r.done.Go(func() {
@@ -123,12 +132,12 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 				return
 			case <-r.Elected:
 				// As a leader EG instance subscribe to infraIR to initialize the infrastructure.
-				subscribeInitInfra()
+				subscribeInitInfra(r.StoppedLeading)
 			}
 		})
 	} else {
 		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure.
-		r.done.Go(subscribeInitInfra)
+		r.done.Go(func() { subscribeInitInfra(nil) })
 	}
 	return err
 }

@@ -45,9 +45,10 @@ import (
 // and defines the topology of the provider and its managed components, wiring
 // them together.
 type Provider struct {
-	client        client.Client
-	manager       manager.Manager
-	providerReady chan struct{}
+	client         client.Client
+	manager        manager.Manager
+	providerReady  chan struct{}
+	stoppedLeading chan struct{}
 }
 
 const (
@@ -407,9 +408,10 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	}()
 
 	return &Provider{
-		manager:       mgr,
-		client:        mgr.GetClient(),
-		providerReady: svrCfg.ProviderReady,
+		manager:        mgr,
+		client:         mgr.GetClient(),
+		providerReady:  svrCfg.ProviderReady,
+		stoppedLeading: svrCfg.StoppedLeading,
 	}, nil
 }
 
@@ -425,6 +427,10 @@ func (p *Provider) GetClient() client.Client {
 // Start starts the Provider synchronously, blocking until the manager and
 // all of its registered runnables have exited.
 func (p *Provider) Start(ctx context.Context) error {
+	// Once the manager has stopped, this EG instance no longer leads, e.g.
+	// because it lost its lease, so stop the tasks that require leadership.
+	defer close(p.stoppedLeading)
+
 	cacheCtx, cancel := context.WithCancel(ctx)
 
 	var wg sync.WaitGroup
