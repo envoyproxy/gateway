@@ -28,6 +28,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -57,24 +58,35 @@ func wrapApplyErr(err error) error {
 // fakeManager is an infrastructure.Manager that records every
 // CreateOrUpdateProxyInfra and DeleteProxyInfra call. The nth
 // CreateOrUpdateProxyInfra call returns createErr(ctx, infra, n) if createErr
-// is set, and otherwise the first calls fail with createErrs in turn.
+// is set, and otherwise the first calls fail with createErrs in turn. If lock
+// is set, it also counts the calls made while lock is not held.
 type fakeManager struct {
 	createErr func(ctx context.Context, infra *ir.Infra, n int) error
+	lock      *sync.Mutex
 
-	mu          sync.Mutex
-	createErrs  []error
-	creates     []*ir.Infra
-	createdAt   []time.Time
-	deletes     []*ir.Infra
-	inFlight    int
-	maxInFlight int
+	mu            sync.Mutex
+	createErrs    []error
+	creates       []*ir.Infra
+	createdAt     []time.Time
+	deletes       []*ir.Infra
+	inFlight      int
+	maxInFlight   int
+	unlockedCalls int
 }
 
 // enter records the start of a proxy infra call, and the func it returns
 // records its end.
 func (m *fakeManager) enter() func() {
+	// TryLock fails while the runner holds lock, as it must during the call.
+	unlocked := m.lock != nil && m.lock.TryLock()
+	if unlocked {
+		m.lock.Unlock()
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if unlocked {
+		m.unlockedCalls++
+	}
 	m.inFlight++
 	m.maxInFlight = max(m.maxInFlight, m.inFlight)
 	return func() {
@@ -164,7 +176,7 @@ func seconds(secs ...int) []time.Duration {
 
 // startTestRunner subscribes a Runner backed by mgr to a new InfraIR map, as
 // Start does once the Manager exists. When the test ends, it stops the runner
-// and checks that mgr was never called concurrently.
+// and checks that mgr was only called with r.mu held, never concurrently.
 func startTestRunner(t *testing.T, mgr *fakeManager) (*Runner, context.CancelFunc) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(t.Context())
@@ -175,12 +187,14 @@ func startTestRunner(t *testing.T, mgr *fakeManager) (*Runner, context.CancelFun
 		InfraIR: new(message.InfraIR),
 	})
 	r.mgr = mgr
+	mgr.lock = &r.mu
 	sub := r.InfraIR.Subscribe(ctx)
 	r.done.Go(func() { r.updateProxyInfraFromSubscription(ctx, sub) })
 	t.Cleanup(func() {
 		stopRunner(t, r, cancel)
 		mgr.mu.Lock()
 		defer mgr.mu.Unlock()
+		require.Zero(t, mgr.unlockedCalls, "the runner called the manager without holding r.mu")
 		require.LessOrEqual(t, mgr.maxInFlight, 1, "the runner called the manager concurrently")
 	})
 	return r, cancel
@@ -206,11 +220,14 @@ func stopRunner(t *testing.T, r *Runner, cancel context.CancelFunc) {
 }
 
 // requireNoRetry asserts that r neither holds an Infra IR to retry for key
-// nor tracks failures of it.
+// nor tracks failures of it. It must be called while r is idle, such as after
+// synctest.Wait.
 func requireNoRetry(t *testing.T, r *Runner, key string) {
 	t.Helper()
-	r.sem <- struct{}{}
-	defer func() { <-r.sem }()
+	if !r.mu.TryLock() {
+		t.Fatal("r.mu is held while the runner should be idle")
+	}
+	defer r.mu.Unlock()
 	require.NotContains(t, r.failed, key)
 	require.Zero(t, r.retries.NumRequeues(key))
 }
@@ -278,7 +295,8 @@ func TestRetryBacksOffUntilWebhookRecovers(t *testing.T) {
 
 // TestRetryAppliesOnlyNewestInfraIR checks that an update stored while a
 // retry is pending supersedes the Infra IR that the retry holds, so an older
-// Infra IR is never applied after a newer one.
+// Infra IR is never applied after a newer one, and that a retry of the newer
+// one waits for its own backoff.
 func TestRetryAppliesOnlyNewestInfraIR(t *testing.T) {
 	older := testInfra("default/eg")
 	newer := testInfra("default/eg")
@@ -287,33 +305,40 @@ func TestRetryAppliesOnlyNewestInfraIR(t *testing.T) {
 	noListeners.Proxy.Listeners = nil
 
 	testCases := []struct {
-		name       string
-		newer      *ir.Infra
-		createErrs []error
-		want       []*ir.Infra
+		name        string
+		newer       *ir.Infra
+		createErrs  []error
+		want        []*ir.Infra
+		wantOffsets []time.Duration
 	}{
 		{
-			name:       "newer update succeeds",
-			newer:      newer,
-			createErrs: []error{webhookErr},
-			want:       []*ir.Infra{older, newer},
+			name:        "newer update succeeds",
+			newer:       newer,
+			createErrs:  []error{webhookErr},
+			want:        []*ir.Infra{older, newer},
+			wantOffsets: []time.Duration{0, 500 * time.Millisecond},
 		},
 		{
-			name:       "newer update fails too",
-			newer:      newer,
-			createErrs: []error{webhookErr, webhookErr},
-			want:       []*ir.Infra{older, newer, newer},
+			// The retry queue still holds the key for the older Infra IR, due
+			// at 1s, but the newer one is retried 1s after it failed.
+			name:        "newer update fails too",
+			newer:       newer,
+			createErrs:  []error{webhookErr, webhookErr},
+			want:        []*ir.Infra{older, newer, newer},
+			wantOffsets: []time.Duration{0, 500 * time.Millisecond, 1500 * time.Millisecond},
 		},
 		{
-			name:       "newer update has no listeners",
-			newer:      noListeners,
-			createErrs: []error{webhookErr},
-			want:       []*ir.Infra{older},
+			name:        "newer update has no listeners",
+			newer:       noListeners,
+			createErrs:  []error{webhookErr},
+			want:        []*ir.Infra{older},
+			wantOffsets: []time.Duration{0},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
+				start := time.Now()
 				mgr := &fakeManager{createErrs: tc.createErrs}
 				r, _ := startTestRunner(t, mgr)
 
@@ -323,64 +348,92 @@ func TestRetryAppliesOnlyNewestInfraIR(t *testing.T) {
 				time.Sleep(10 * time.Minute)
 				synctest.Wait()
 				require.Equal(t, tc.want, mgr.createCalls())
+				require.Equal(t, tc.wantOffsets, mgr.createOffsets(start, "default/eg"))
 				requireNoRetry(t, r, "default/eg")
 			})
 		})
 	}
 }
 
-// TestNewerUpdateDuringSlowRetry checks the same while each call takes as long
-// as a webhook timeout, so the newer update arrives while a retry is being
-// applied: the update is applied once that retry is done, the older Infra IR
-// is never applied after the newer one, and each retry still waits for its
-// backoff after the failure it retries.
-func TestNewerUpdateDuringSlowRetry(t *testing.T) {
+// TestUpdateDuringSlowRetry checks an update stored while a retry is being
+// applied, when each failing call takes as long as a webhook timeout: the
+// update is applied as soon as that retry is done, an older Infra IR is never
+// applied after a newer one, and each retry waits for its backoff after the
+// failure it retries. The retry stores the update itself, as the last thing it
+// does, because under synctest time cannot pass while a goroutine waits for
+// r.mu.
+func TestUpdateDuringSlowRetry(t *testing.T) {
 	older := testInfra("default/eg")
 	newer := testInfra("default/eg")
 	newer.Proxy.Listeners[0].Ports[0].ServicePort = 8080
+	other := testInfra("default/b")
 
 	testCases := []struct {
-		name        string
-		failures    int
+		name string
+		// stored is stored at the end of the first retry of older, and its
+		// first storedFails applies fail.
+		stored      *ir.Infra
+		storedFails int
 		wantCreates []*ir.Infra
-		wantOffsets []time.Duration
+		wantOffsets map[string][]time.Duration
 	}{
 		{
 			name:        "newer update succeeds",
-			failures:    2,
+			stored:      newer,
 			wantCreates: []*ir.Infra{older, older, newer},
-			wantOffsets: seconds(0, 11, 21),
+			wantOffsets: map[string][]time.Duration{"default/eg": seconds(0, 11, 21)},
 		},
 		{
-			// The newer update fails at 31s while the retry queue still holds
-			// the key for the failure at 21s, which was due at 23s.
-			name:        "newer update fails twice",
-			failures:    4,
-			wantCreates: []*ir.Infra{older, older, newer, newer, newer},
-			wantOffsets: seconds(0, 11, 21, 32, 44),
+			// The newer update restarts the backoff, so it is retried 1s after
+			// it fails, before the retry of older that was due at 23s.
+			name:        "newer update fails once",
+			stored:      newer,
+			storedFails: 1,
+			wantCreates: []*ir.Infra{older, older, newer, newer},
+			wantOffsets: map[string][]time.Duration{"default/eg": seconds(0, 11, 21, 22)},
+		},
+		{
+			name:        "update of another key",
+			stored:      other,
+			wantCreates: []*ir.Infra{older, older, other, older, older, older, older},
+			wantOffsets: map[string][]time.Duration{
+				"default/eg": seconds(0, 11, 23, 27, 35, 51),
+				"default/b":  seconds(21),
+			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				start := time.Now()
-				mgr := &fakeManager{createErr: func(_ context.Context, _ *ir.Infra, n int) error {
-					time.Sleep(10 * time.Second)
-					if n < tc.failures {
+				storedFails := tc.storedFails
+				var r *Runner
+				mgr := &fakeManager{createErr: func(_ context.Context, infra *ir.Infra, n int) error {
+					switch {
+					case n <= 1: // the first apply of older and its first retry
+						time.Sleep(10 * time.Second)
+						if n == 1 {
+							r.InfraIR.Store(tc.stored.Proxy.Name, &message.InfraIRWithContext{Infra: tc.stored})
+						}
+						return webhookErr
+					case infra.Proxy.Name != tc.stored.Proxy.Name:
+						return webhookErr
+					case storedFails > 0:
+						storedFails--
 						return webhookErr
 					}
 					return nil
 				}}
-				r, _ := startTestRunner(t, mgr)
+				r, _ = startTestRunner(t, mgr)
 
 				r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: older})
-				time.Sleep(15 * time.Second) // the first retry is applied from 11s to 21s.
-				r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: newer})
-				time.Sleep(10 * time.Minute)
+				time.Sleep(time.Minute)
 				synctest.Wait()
 				require.Equal(t, tc.wantCreates, mgr.createCalls())
-				require.Equal(t, tc.wantOffsets, mgr.createOffsets(start, "default/eg"))
-				requireNoRetry(t, r, "default/eg")
+				for name, want := range tc.wantOffsets {
+					require.Equal(t, want, mgr.createOffsets(start, name), name)
+				}
+				requireNoRetry(t, r, tc.stored.Proxy.Name)
 			})
 		})
 	}
@@ -475,42 +528,14 @@ func TestFailingKeyDoesNotDelayOtherKeys(t *testing.T) {
 	})
 }
 
-// TestRetryDelaysOtherKeysByAtMostOneApply checks that while a retry is being
-// applied, an update of another key waits for that one apply only, even when
-// each apply of the failing key takes as long as a webhook timeout.
-func TestRetryDelaysOtherKeysByAtMostOneApply(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		start := time.Now()
-		mgr := &fakeManager{createErr: func(_ context.Context, infra *ir.Infra, _ int) error {
-			if infra.Proxy.Name == "default/a" {
-				time.Sleep(10 * time.Second)
-				return webhookErr
-			}
-			return nil
-		}}
-		r, _ := startTestRunner(t, mgr)
-
-		r.InfraIR.Store("default/a", &message.InfraIRWithContext{Infra: testInfra("default/a")})
-		time.Sleep(15 * time.Second) // default/a fails at 10s and is retried from 11s to 21s.
-		r.InfraIR.Store("default/b", &message.InfraIRWithContext{Infra: testInfra("default/b")})
-		time.Sleep(time.Minute)
-		synctest.Wait()
-		require.Equal(t, seconds(21), mgr.createOffsets(start, "default/b"))
-	})
-}
-
 // TestCancelStopsRetries checks that cancelling the runner's context stops
-// retries, whether one is pending, in flight, or waiting for the handler to
-// apply another key, and that Close then returns once nothing calls the
-// manager. synctest fails the test if a goroutine, such as the retry worker or
-// the retry queue's own, is left blocked.
+// retries, whether one is pending or in flight, and that Close then returns
+// once nothing calls the manager. synctest fails the test if a goroutine, such
+// as the retry worker or the retry queue's own, is left blocked.
 func TestCancelStopsRetries(t *testing.T) {
 	testCases := []struct {
 		name      string
 		createErr func(ctx context.Context, infra *ir.Infra, n int) error
-		// slowKey also stores, 500ms in, a key whose apply blocks the
-		// handler until the runner stops.
-		slowKey   bool
 		cancelAt  time.Duration
 		wantCalls int
 	}{
@@ -535,39 +560,60 @@ func TestCancelStopsRetries(t *testing.T) {
 			cancelAt:  2 * time.Second,
 			wantCalls: 2,
 		},
-		{
-			name: "retry waiting for the handler",
-			createErr: func(ctx context.Context, infra *ir.Infra, _ int) error {
-				if infra.Proxy.Name == "default/slow" {
-					<-ctx.Done()
-					return ctx.Err()
-				}
-				return webhookErr
-			},
-			slowKey:   true,
-			cancelAt:  1500 * time.Millisecond, // default/eg is due at 1s and waits for the handler.
-			wantCalls: 2,
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				start := time.Now()
 				mgr := &fakeManager{createErr: tc.createErr}
 				r, cancel := startTestRunner(t, mgr)
 
 				r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: testInfra("default/eg")})
-				if tc.slowKey {
-					time.Sleep(500 * time.Millisecond)
-					r.InfraIR.Store("default/slow", &message.InfraIRWithContext{Infra: testInfra("default/slow")})
-				}
-				time.Sleep(tc.cancelAt - time.Since(start))
+				time.Sleep(tc.cancelAt)
 				synctest.Wait()
 				stopRunner(t, r, cancel)
 				time.Sleep(10 * time.Minute)
 				synctest.Wait()
 				require.Len(t, mgr.createCalls(), tc.wantCalls)
 			})
+		})
+	}
+}
+
+// TestRetryKeySkipsCanceledContext checks that the retry worker does not apply
+// a key it is handed once the runner's context is canceled, such as a key that
+// was waiting for the handler to release r.mu when the runner stopped. It calls
+// retryKey directly, because under synctest a goroutine waiting for a
+// sync.Mutex is not durably blocked, so the test cannot hold the worker there.
+// For the same reason, it cannot tell whether the check runs after r.mu is
+// acquired.
+func TestRetryKeySkipsCanceledContext(t *testing.T) {
+	testCases := []struct {
+		name      string
+		canceled  bool
+		wantCalls int
+	}{
+		{name: "running", wantCalls: 1},
+		{name: "canceled", canceled: true, wantCalls: 0},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mgr := &fakeManager{}
+			r := New(&Config{Server: config.Server{Logger: logging.DefaultLogger(t.Output(), egv1a1.LogLevelInfo)}})
+			r.mgr = mgr
+			mgr.lock = &r.mu
+			r.failed = map[string]*failedInfra{"default/eg": {infra: testInfra("default/eg")}}
+			r.backoff = workqueue.NewTypedItemExponentialFailureRateLimiter[string](time.Second, time.Minute)
+			r.retries = workqueue.NewTypedRateLimitingQueue(r.backoff)
+			t.Cleanup(r.retries.ShutDown)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			if tc.canceled {
+				cancel()
+			}
+
+			r.retryKey(ctx, "default/eg")
+			require.Len(t, mgr.createCalls(), tc.wantCalls)
+			require.Zero(t, mgr.unlockedCalls)
 		})
 	}
 }
@@ -626,6 +672,7 @@ func TestRetriesStartOnlyAfterElected(t *testing.T) {
 		// Start's goroutines call the manager only once Elected is closed.
 		mgr := &fakeManager{createErrs: []error{webhookErr}}
 		r.mgr = mgr
+		mgr.lock = &r.mu
 
 		r.InfraIR.Store("default/eg", &message.InfraIRWithContext{Infra: testInfra("default/eg")})
 		time.Sleep(10 * time.Minute)

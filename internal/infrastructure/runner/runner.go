@@ -45,12 +45,10 @@ type Runner struct {
 	// them to exit before closing mgr, which they call into.
 	done sync.WaitGroup
 
-	// sem is held around the proxy infra calls of the subscription handler and
-	// of retryProxyInfra, so a key is never applied by both at once. The Go
-	// runtime hands it to blocked senders in the order they blocked, so neither
-	// waits for more than one call of the other. Unlike a sync.Mutex, a blocked
-	// send is durably blocking under testing/synctest, which the tests rely on.
-	sem chan struct{}
+	// mu is held around the proxy infra calls of the subscription handler and
+	// of retryProxyInfra, so a key is never applied by both at once, and
+	// guards failed.
+	mu sync.Mutex
 	// failed holds, for each key whose last CreateOrUpdateProxyInfra failed
 	// with a retryable error, what to retry and when. retries hands the keys
 	// out to retryProxyInfra, backing off per key with backoff.
@@ -138,7 +136,6 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *message.InfraIRWithContext]) {
 	// Retry a key after 1s, 2s, 4s, ... and then once a minute. The queue has
 	// no name, so it registers no workqueue metrics.
-	r.sem = make(chan struct{}, 1)
 	r.failed = make(map[string]*failedInfra)
 	r.backoff = workqueue.NewTypedItemExponentialFailureRateLimiter[string](time.Second, time.Minute)
 	r.retries = workqueue.NewTypedRateLimitingQueue(r.backoff)
@@ -174,8 +171,8 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 				attribute.Bool("update.delete", update.Delete),
 			)
 
-			r.sem <- struct{}{}
-			defer func() { <-r.sem }()
+			r.mu.Lock()
+			defer r.mu.Unlock()
 			// This update supersedes the Infra IR of any retry pending for its key.
 			delete(r.failed, update.Key)
 			r.retries.Forget(update.Key)
@@ -261,8 +258,8 @@ func (r *Runner) scheduleRetry(key string, f *failedInfra) {
 // retryKey applies the failed Infra IR of key again, unless an update has
 // superseded it since.
 func (r *Runner) retryKey(ctx context.Context, key string) {
-	r.sem <- struct{}{}
-	defer func() { <-r.sem }()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	f, ok := r.failed[key]
 	if !ok || ctx.Err() != nil {
 		return
