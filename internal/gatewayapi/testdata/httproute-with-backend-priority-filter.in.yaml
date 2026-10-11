@@ -102,6 +102,34 @@ httpRoutes:
                     group: gateway.envoyproxy.io
                     kind: HTTPRouteFilter
                     name: priority-2
+  # Rejected: backendPriority referenced from the rule's filters after a DirectResponse filter.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-4
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-5
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: direct-response
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: priority-1
+          backendRefs:
+            - name: service-1
+              port: 8080
 grpcRoutes:
   # Rejected: GRPCRoute backendRefs don't support ExtensionRef filters.
   - apiVersion: gateway.networking.k8s.io/v1
@@ -145,6 +173,31 @@ grpcRoutes:
           backendRefs:
             - name: service-1
               port: 8080
+  # Rejected: backendPriority referenced from the rule's filters after a DirectResponse filter.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GRPCRoute
+    metadata:
+      namespace: default
+      name: grpc-route-3
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: direct-response
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: priority-1
+          backendRefs:
+            - name: service-1
+              port: 8080
 httpFilters:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: HTTPRouteFilter
@@ -160,6 +213,14 @@ httpFilters:
       name: priority-2
     spec:
       backendPriority: 2
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: direct-response
+    spec:
+      directResponse:
+        statusCode: 503
 backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend

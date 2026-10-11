@@ -87,8 +87,8 @@ const (
 
 // validateRuleLevelFilters rejects filters that are only valid on a backendRef's filters
 // but were referenced from a route rule's filters.
-func validateRuleLevelFilters(httpFiltersContext *HTTPFiltersContext) status.Error {
-	if httpFiltersContext.BackendPriority != nil {
+func validateRuleLevelFilters(resources *resource.Resources, ns string, extRefs ...*gwapiv1.LocalObjectReference) status.Error {
+	if hasBackendPriorityFilter(resources, ns, extRefs...) {
 		return status.NewRouteStatusError(
 			errors.New(backendPriorityRuleLevelMsg),
 			gwapiv1.RouteReasonUnsupportedValue,
@@ -98,11 +98,12 @@ func validateRuleLevelFilters(httpFiltersContext *HTTPFiltersContext) status.Err
 }
 
 // hasBackendPriorityFilter reports whether any of extRefs resolves to an HTTPRouteFilter in
-// namespace ns that sets backendPriority. It resolves refs the same way
-// processExtensionRefHTTPFilter does, so it never misses a priority that translation applies.
+// namespace ns that sets backendPriority.
 func hasBackendPriorityFilter(resources *resource.Resources, ns string, extRefs ...*gwapiv1.LocalObjectReference) bool {
 	for _, extRef := range extRefs {
-		if extRef == nil || string(extRef.Kind) != egv1a1.KindHTTPRouteFilter {
+		if extRef == nil ||
+			string(extRef.Group) != egv1a1.GroupVersion.Group ||
+			string(extRef.Kind) != egv1a1.KindHTTPRouteFilter {
 			continue
 		}
 		for _, hrf := range resources.HTTPRouteFilters {

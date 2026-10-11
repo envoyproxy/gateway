@@ -259,7 +259,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// process HTTP Route filters first, so that the filters can be applied to the IR route later
 		var processFilterError error
 		httpFiltersContext, errs := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, ruleIdx, resources, xdsIR)
-		if err := validateRuleLevelFilters(httpFiltersContext); err != nil {
+		ruleFilterRefs := make([]*gwapiv1.LocalObjectReference, 0, len(rule.Filters))
+		for _, f := range rule.Filters {
+			ruleFilterRefs = append(ruleFilterRefs, f.ExtensionRef)
+		}
+		if err := validateRuleLevelFilters(resources, httpRoute.GetNamespace(), ruleFilterRefs...); err != nil {
 			errs = append(errs, err)
 		}
 		if len(errs) > 0 {
@@ -1524,7 +1528,11 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		// process GRPC route filters first, so that the filters can be applied to the IR route later
 		var processFilterError error
 		httpFiltersContext, errs := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources, xdsIR)
-		if err := validateRuleLevelFilters(httpFiltersContext); err != nil {
+		ruleFilterRefs := make([]*gwapiv1.LocalObjectReference, 0, len(rule.Filters))
+		for _, f := range rule.Filters {
+			ruleFilterRefs = append(ruleFilterRefs, f.ExtensionRef)
+		}
+		if err := validateRuleLevelFilters(resources, grpcRoute.GetNamespace(), ruleFilterRefs...); err != nil {
 			errs = append(errs, err)
 		}
 		if len(errs) > 0 {

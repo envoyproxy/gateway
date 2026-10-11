@@ -34,7 +34,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 4
+    - attachedRoutes: 5
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -112,6 +112,48 @@ grpcRoutes:
       - name: service-1
         port: 8080
       filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: priority-1
+        type: ExtensionRef
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: BackendPriority HTTPRouteFilter can only be referenced from a backendRef's
+          filters, not from a route rule's filters.
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    name: grpc-route-3
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response
+        type: ExtensionRef
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
@@ -268,6 +310,51 @@ httpRoutes:
           backendPriority filters for a single backendRef.'
         reason: InvalidBackendFilters
         status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: http-route-4
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response
+        type: ExtensionRef
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: priority-1
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /route-5
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: BackendPriority HTTPRouteFilter can only be referenced from a backendRef's
+          filters, not from a route rule's filters.
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -438,6 +525,19 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /route-4
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: http-route-4
+          namespace: default
+        name: httproute/default/http-route-4/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-5
       - destination:
           metadata:
             kind: GRPCRoute
