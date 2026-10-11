@@ -477,6 +477,8 @@ spec:
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+            - message: endpoints must be specified when type is Endpoints
+              rule: self.type != 'Endpoints' || has(self.endpoints)
             - message: DynamicResolver type cannot use autoSNIFromEndpointHostname
               rule: self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
                 && self.tls.autoSNIFromEndpointHostname)
@@ -4836,6 +4838,11 @@ spec:
                     description: |-
                       DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
                       when rate limiting is enabled.
+                    type: boolean
+                  disableRetryAfterHeader:
+                    description: |-
+                      DisableRetryAfterHeader configures Envoy Proxy to omit the "Retry-After" response header
+                      on rate-limited 429 responses.
                     type: boolean
                   earlyRequestHeaders:
                     description: |-
