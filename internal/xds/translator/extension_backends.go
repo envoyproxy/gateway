@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"slices"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -48,8 +49,14 @@ func patchExtensionBackendResources(tCtx *types.ResourceVersionTable, listeners 
 			if route.EnvoyExtensions == nil {
 				continue
 			}
+			aliases := make([]string, 0, len(route.EnvoyExtensions.Backends))
+			for alias := range route.EnvoyExtensions.Backends {
+				aliases = append(aliases, alias)
+			}
+			slices.Sort(aliases)
 			// The same policy can serve many routes. Existing helpers reuse its resources.
-			for _, destination := range route.EnvoyExtensions.Backends {
+			for _, alias := range aliases {
+				destination := route.EnvoyExtensions.Backends[alias]
 				if err := createExtServiceXDSCluster(&destination.RouteDestination, destination.Traffic, tCtx); err != nil {
 					errs = errors.Join(errs, err)
 				}
