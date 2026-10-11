@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/resource"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -82,6 +83,42 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Compression: &egv1a1.Compression{
 							Type: egv1a1.ZstdCompressorType,
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
+			name: "enable-prometheus-gzip-compression-with-settings",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{
+								CompressionLevel:    new(uint32(1)),
+								CompressionStrategy: new(egv1a1.GzipCompressionStrategyRLE),
+								WindowBits:          new(uint32(15)),
+							},
+							MinContentLength: new(resource.MustParse("1Ki")),
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
+			name: "enable-prometheus-brotli-compression-with-settings",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: egv1a1.BrotliCompressorType,
+							Brotli: &egv1a1.BrotliCompressor{
+								Quality:     new(uint32(5)),
+								EncoderMode: new(egv1a1.BrotliEncoderModeText),
+							},
 						},
 					},
 				},
@@ -394,6 +431,22 @@ func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
 				},
 			},
 			expectedError: "metrics sink backendRef otel-collector has no port",
+		},
+		{
+			name: "prometheus compression with unsupported settings",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: egv1a1.GzipCompressorType,
+							Gzip: &egv1a1.GzipCompressor{
+								CompressionStrategy: new(egv1a1.GzipCompressionStrategy("Unknown")),
+							},
+						},
+					},
+				},
+			},
+			expectedError: "unsupported gzip compression strategy: Unknown",
 		},
 	}
 

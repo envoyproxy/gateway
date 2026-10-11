@@ -15,6 +15,7 @@ import (
 	"strings"
 	"text/template"
 
+	protobuf "google.golang.org/protobuf/proto"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -22,7 +23,9 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/cert"
 	netutils "github.com/envoyproxy/gateway/internal/utils/net"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/utils/regex"
+	"github.com/envoyproxy/gateway/internal/xds/filters"
 )
 
 const (
@@ -62,6 +65,10 @@ var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Funcs(template.
 	"base64": func(data []byte) string {
 		return base64.StdEncoding.EncodeToString(data)
 	},
+	"indent": func(spaces int, s string) string {
+		pad := strings.Repeat(" ", spaces)
+		return pad + strings.ReplaceAll(strings.TrimSuffix(s, "\n"), "\n", "\n"+pad)
+	},
 }).Parse(bootstrapTmplStr))
 
 // bootstrapConfig defines the envoy Bootstrap configuration.
@@ -89,11 +96,9 @@ type bootstrapParameters struct {
 
 	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
 	EnablePrometheus bool
-	// EnablePrometheusCompression defines whether to enable HTTP compression on metrics endpoint for prometheus.
-	EnablePrometheusCompression bool
-	// PrometheusCompressionLibrary defines the HTTP compression library for metrics endpoint for prometheus.
-	// TODO: remove this field because it is not used.
-	PrometheusCompressionLibrary string
+	// PrometheusCompression defines the HTTP compression on metrics endpoint for prometheus.
+	// Nil means no compression.
+	PrometheusCompression *prometheusCompressionParameters
 
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []MetricSink
@@ -159,6 +164,17 @@ type MetricSinkTLS struct {
 	CACertificate []byte
 }
 
+type prometheusCompressionParameters struct {
+	// Library is the HTTP compression library.
+	Library string
+	// LibrarySettings is the YAML encoded settings of the compression library.
+	// It is empty when no custom settings are configured.
+	LibrarySettings string
+	// MinContentLength is the minimum response size in bytes to apply compression.
+	// It is zero when not configured.
+	MinContentLength uint32
+}
+
 type adminServerParameters struct {
 	// Address is the address of the Envoy admin interface.
 	Address string
@@ -214,14 +230,46 @@ func (b *bootstrapConfig) render() error {
 	return nil
 }
 
+// buildPrometheusCompressionParameters builds the compression parameters of the metrics endpoint for prometheus.
+func buildPrometheusCompressionParameters(compression *egv1a1.Compression) (*prometheusCompressionParameters, error) {
+	params := &prometheusCompressionParameters{
+		Library: string(compression.Type),
+	}
+
+	library, err := filters.CompressorLibrary(compression.Type, compression.Gzip, compression.Brotli, compression.Zstd)
+	if err != nil {
+		return nil, err
+	}
+	settings, err := library.TypedConfig.UnmarshalNew()
+	if err != nil {
+		return nil, err
+	}
+	// Unset settings are omitted so the Envoy defaults apply.
+	if protobuf.Size(settings) > 0 {
+		data, err := proto.ToYAML(settings)
+		if err != nil {
+			return nil, err
+		}
+		params.LibrarySettings = string(data)
+	}
+
+	if compression.MinContentLength != nil {
+		if minContentLength, ok := compression.MinContentLength.AsInt64(); ok {
+			params.MinContentLength = uint32(minContentLength)
+		}
+	}
+
+	return params, nil
+}
+
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
 func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, error) {
 	var (
-		enablePrometheus             = true
-		enablePrometheusCompression  = false
-		prometheusCompressionLibrary = "Gzip"
-		metricSinks                  []MetricSink
-		StatsMatcher                 StatsMatcherParameters
+		enablePrometheus      = true
+		prometheusCompression *prometheusCompressionParameters
+		metricSinks           []MetricSink
+		StatsMatcher          StatsMatcherParameters
+		err                   error
 	)
 
 	if opts != nil && opts.ProxyMetrics != nil {
@@ -231,8 +279,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			enablePrometheus = !proxyMetrics.Prometheus.Disable
 
 			if proxyMetrics.Prometheus.Compression != nil {
-				enablePrometheusCompression = true
-				prometheusCompressionLibrary = string(proxyMetrics.Prometheus.Compression.Type)
+				if prometheusCompression, err = buildPrometheusCompressionParameters(proxyMetrics.Prometheus.Compression); err != nil {
+					return "", err
+				}
 			}
 		}
 
@@ -318,15 +367,14 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 				Address: netutils.IPv4ListenerAddress,
 				Port:    EnvoyStatsPort,
 			},
-			SdsCertificatePath:           defaultSdsCertificatePath,
-			SdsTrustedCAPath:             defaultSdsTrustedCAPath,
-			SystemCACertPath:             cert.SystemCertPath,
-			EnablePrometheus:             enablePrometheus,
-			EnablePrometheusCompression:  enablePrometheusCompression,
-			PrometheusCompressionLibrary: prometheusCompressionLibrary,
-			OtelMetricSinks:              metricSinks,
-			ServiceClusterName:           defaultServiceClusterName,
-			ServiceAccountTokenPath:      defaultServiceAccountTokenPath,
+			SdsCertificatePath:      defaultSdsCertificatePath,
+			SdsTrustedCAPath:        defaultSdsTrustedCAPath,
+			SystemCACertPath:        cert.SystemCertPath,
+			EnablePrometheus:        enablePrometheus,
+			PrometheusCompression:   prometheusCompression,
+			OtelMetricSinks:         metricSinks,
+			ServiceClusterName:      defaultServiceClusterName,
+			ServiceAccountTokenPath: defaultServiceAccountTokenPath,
 		},
 	}
 
