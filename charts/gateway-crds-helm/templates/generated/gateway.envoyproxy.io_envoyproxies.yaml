@@ -866,6 +866,12 @@ spec:
                   rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
                   improves upstream connection pooling.
 
+                  Only a route's own backendRefs (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute) are
+                  considered. A backend used any other way, such as a RequestMirror filter or an external
+                  service of a SecurityPolicy or EnvoyExtensionPolicy, is never merged. A BackendTrafficPolicy
+                  that targets a backend only reports status for Gateways where the backend is used as a route
+                  backendRef.
+
                   Disabled when unset; specifying this field at all (even without further configuration)
                   enables it. Mutually exclusive with MergeGateways.
                 properties:

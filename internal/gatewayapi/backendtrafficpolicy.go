@@ -497,7 +497,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 }
 
 // gatewayReferencesBackend reports whether any BackendCluster or inline DestinationSetting in x
-// identifies the same backend as key, across merged clusters and every route kind.
+// identifies the same backend as key, across merged clusters and every route kind's backendRefs.
 func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 	for _, bc := range x.BackendClusters {
 		if backendPolicyKeyFromMetadata(bc.Metadata) == key {
@@ -506,21 +506,12 @@ func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 	}
 	for _, http := range x.HTTP {
 		for _, route := range http.Routes {
-			if route.Destination != nil {
-				for _, ds := range route.Destination.Settings {
-					if backendPolicyKeyFromMetadata(ds.Metadata) == key {
-						return true
-					}
-				}
+			if route.Destination == nil {
+				continue
 			}
-			for _, mirror := range route.Mirrors {
-				if mirror.Destination == nil {
-					continue
-				}
-				for _, ds := range mirror.Destination.Settings {
-					if backendPolicyKeyFromMetadata(ds.Metadata) == key {
-						return true
-					}
+			for _, ds := range route.Destination.Settings {
+				if backendPolicyKeyFromMetadata(ds.Metadata) == key {
+					return true
 				}
 			}
 		}
