@@ -710,6 +710,8 @@ type ClusterSettings struct {
 }
 
 // BackendHTTP1Settings provides HTTP/1 configuration for upstream backend connections.
+// Setting this field to an empty value (http1: {}) forces explicit HTTP/1 on the upstream
+// cluster, preventing Envoy from negotiating HTTP/2 via ALPN on TLS backends.
 type BackendHTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
 	// +optional

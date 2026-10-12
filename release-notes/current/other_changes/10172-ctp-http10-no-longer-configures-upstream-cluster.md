@@ -4,3 +4,6 @@ used by Envoy when configured in client (downstream) context. The upstream HTTP/
 unconditionally writes `HTTP/1.1` as the request line protocol — hardcoded as `REQUEST_POSTFIX`
 in `source/common/http/http1/codec_impl.cc` — so these fields have no effect on upstream clusters.
 HTTP/1.0 downstream traffic continues to be proxied correctly without these backend settings.
+
+In a future release, `http1.http10` will no longer force explicit HTTP/1 on upstream clusters.
+To force HTTP/1 on a backend cluster explicitly, use `BackendTrafficPolicy.http1: {}`.

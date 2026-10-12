@@ -439,12 +439,6 @@ type HTTP1Settings struct {
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
 	//
-	// Note: this field currently configures both the client connection and the backend HTTP/1
-	// protocol settings. In a future release it will be restricted to the client connection only.
-	// Use BackendTrafficPolicy.http1.http10 for backend settings.
-	// Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
-	// to opt in to the new behavior now.
-	//
 	// +optional
 	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
 	// DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.

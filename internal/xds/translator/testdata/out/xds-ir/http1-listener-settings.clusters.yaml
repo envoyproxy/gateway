@@ -83,3 +83,8 @@
   name: http10-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        httpProtocolOptions: {}
