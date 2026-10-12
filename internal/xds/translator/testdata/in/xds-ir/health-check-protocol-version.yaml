@@ -80,8 +80,8 @@ http:
               name: "tls-explicit-http2-dest/backend/0"
               tls:
                 insecureSkipVerify: true
-      # TLS backend that requires its own ALPN protocol: pinning it to the codec would
-      # break the handshake, so the cluster ALPN is inherited as-is.
+      # TLS backend that requires its own ALPN protocol: overriding it could break the
+      # handshake, so health checks inherit the cluster ALPN as is.
       - name: "tls-custom-alpn"
         hostname: "*"
         traffic:
@@ -152,8 +152,8 @@ http:
               protocol: HTTP2
               tls:
                 insecureSkipVerify: true
-      # TLS backend whose ALPN only leaves h2 negotiable: it can only speak HTTP/2, even
-      # though it isn't declared as an HTTP/2 backend.
+      # TLS backend whose ALPN only leaves h2 negotiable: health checks inherit it and
+      # negotiate HTTP/2, even though it isn't declared as an HTTP/2 backend.
       - name: "tls-alpn-http2-only"
         hostname: "*"
         traffic:
@@ -178,8 +178,8 @@ http:
                 insecureSkipVerify: true
                 alpnProtocols:
                   - h2
-      # TLS backend that allows both protocols: health checks negotiate the protocol the
-      # same way requests to the endpoint do.
+      # TLS backend that allows both protocols: health checks inherit its ALPN and
+      # negotiate the protocol the same way requests to the endpoint do.
       - name: "tls-alpn-both"
         hostname: "*"
         traffic:

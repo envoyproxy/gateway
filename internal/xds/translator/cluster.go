@@ -8,7 +8,6 @@ package translator
 import (
 	"encoding/hex"
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -108,10 +107,6 @@ const (
 	EndpointTypeStatic
 	EndpointTypeDynamicResolver
 )
-
-// httpALPNProtocols are the protocols an HTTP health check can speak, in the order they are
-// offered on a health check connection.
-var httpALPNProtocols = []string{string(egv1a1.HTTPProtocolVersion2), string(egv1a1.HTTPProtocolVersion1_1)}
 
 var (
 	// we need a dummy transport socket to pass the validation,
@@ -290,7 +285,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	forceHTTP1UpstreamProtocol := false
 	hasLiteralSNI := false
 	hasAutoSNIFromEndpointHostname := false
-	hasBackendTLS := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
@@ -307,7 +301,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		// auto HTTP config is required if all the destinations use HTTPS-based protocol
 		requiresAutoHTTPConfig = requiresAutoHTTPConfig && (ds.TLS != nil)
 		if ds.TLS != nil {
-			hasBackendTLS = true
 			// it's safe to set autoSNI on cluster level only if all endpoints do not set literal SNIs.
 			// Otherwise, autoSNI will override transport-socket level SNI.
 			// See here: https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/securing#connect-to-an-endpoint-with-sni
@@ -366,12 +359,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	requiresHTTP1Options := args.http1Settings != nil &&
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
-	upstreamProto := resolveUpstreamProtocol(args.useClientProtocol, forceHTTP1UpstreamProtocol,
-		requiresHTTP2Options, requiresHTTP1Options, requiresAutoHTTPConfig)
 
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, upstreamProto, requiresAutoHTTPConfig,
-		requiresHTTP2Options, requiresHTTP1Options, requiresAutoSNI, forceHTTP1UpstreamProtocol)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresHTTP1Options, requiresAutoSNI, forceHTTP1UpstreamProtocol)
 	if err != nil {
 		return nil, err
 	}
@@ -504,8 +494,13 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		var err error
+		// Health checks are sent over the protocol that requests to the backend use, which
+		// buildTypedExtensionProtocolOptions settles with the same precedence.
+		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol && !args.useClientProtocol
+		upstreamNegotiated := requiresAutoHTTPConfig && !requiresHTTP2Options && !requiresHTTP1Options &&
+			!forceHTTP1UpstreamProtocol && !args.useClientProtocol
 		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog,
-			args.settings, upstreamProto, hasBackendTLS)
+			args.settings, upstreamHTTP2, upstreamNegotiated)
 		if err != nil {
 			return nil, err
 		}
@@ -646,7 +641,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 }
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog,
-	settings []*ir.DestinationSetting, upstreamProto upstreamProtocol, hasBackendTLS bool,
+	settings []*ir.DestinationSetting, upstreamHTTP2, upstreamNegotiated bool,
 ) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
@@ -678,17 +673,14 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
 		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
-		httpChecker.CodecClientType = buildHealthCheckCodecClientType(healthcheck.HTTP.Version, upstreamProto, settings)
-		// A cluster that negotiates its upstream protocol lets its health checks negotiate
-		// theirs too, unless a version was configured explicitly. Envoy only selects the
-		// codec from ALPN when asked to, and otherwise pins the configured one. A cluster
-		// only negotiates when every destination uses TLS, which ALPN requires.
-		negotiate := upstreamProto == upstreamProtocolNegotiated &&
-			ptr.Deref(healthcheck.HTTP.Version, egv1a1.HTTPHealthCheckVersionAuto) == egv1a1.HTTPHealthCheckVersionAuto
+		version := ptr.Deref(healthcheck.HTTP.Version, egv1a1.HTTPHealthCheckVersionAuto)
+		httpChecker.CodecClientType = buildHealthCheckCodecClientType(version, upstreamHTTP2)
+		// A cluster that negotiates its upstream protocol through ALPN lets its health
+		// checks negotiate theirs the same way, unless a version was configured explicitly.
+		// Envoy only selects the codec from ALPN when asked to, and pins it otherwise.
+		negotiate := upstreamNegotiated && version == egv1a1.HTTPHealthCheckVersionAuto
 		httpChecker.UseAlpnProtocol = negotiate
-		if hasBackendTLS {
-			hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType, negotiate)
-		}
+		hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType, negotiate)
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
 			HttpHealthCheck: httpChecker,
 		}
@@ -703,11 +695,8 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			TcpHealthCheck: tcpChecker,
 		}
 	case healthcheck.GRPC != nil:
-		// Envoy always uses HTTP/2 to send gRPC health check requests, and exposes no
-		// codec setting for them.
-		if hasBackendTLS {
-			hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2, false)
-		}
+		// Envoy always sends gRPC health check requests over HTTP/2.
+		hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2, false)
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
 			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
 				ServiceName: ptr.Deref(healthcheck.GRPC.Service, ""),
@@ -740,128 +729,51 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 	return []*corev3.HealthCheck{hc}, nil
 }
 
-// buildHealthCheckCodecClientType returns the codec that Envoy uses to send HTTP health check
-// requests. For a health check that selects its codec from ALPN, it's the fallback used when
-// the connection negotiated no protocol, because the peer doesn't do ALPN for example, rather
-// than the codec of every check.
-//
-// UseClientProtocol isn't considered here, even though it takes precedence over the backend
-// protocol on the data path: it makes the upstream protocol vary per request, and a health
-// check has no downstream request to mirror. The protocol declared by the backend is the only
-// usable signal. An explicit version is the way out for a backend whose health check endpoint
-// doesn't serve that protocol.
-func buildHealthCheckCodecClientType(version *egv1a1.HTTPHealthCheckVersion, upstreamProto upstreamProtocol,
-	settings []*ir.DestinationSetting,
-) xdstype.CodecClientType {
-	switch ptr.Deref(version, egv1a1.HTTPHealthCheckVersionAuto) {
-	case egv1a1.HTTPHealthCheckVersionHTTP1:
-		return xdstype.CodecClientType_HTTP1
-	case egv1a1.HTTPHealthCheckVersionHTTP2:
+// buildHealthCheckCodecClientType returns the codec of HTTP health check requests: the
+// configured version, or the one that requests to the backend use. A health check that
+// negotiates its protocol only falls back to it when nothing is negotiated.
+func buildHealthCheckCodecClientType(version egv1a1.HTTPHealthCheckVersion, upstreamHTTP2 bool) xdstype.CodecClientType {
+	switch {
+	case version == egv1a1.HTTPHealthCheckVersionHTTP2, version == egv1a1.HTTPHealthCheckVersionAuto && upstreamHTTP2:
 		return xdstype.CodecClientType_HTTP2
 	default:
-		if upstreamProto == upstreamProtocolHTTP2 {
-			return xdstype.CodecClientType_HTTP2
-		}
-		// A backend whose TLS settings only leave one of the two protocols negotiable can
-		// only speak that one, whatever protocol the cluster itself uses.
-		if negotiable := healthCheckALPNProtocols(settings, httpALPNProtocols); len(negotiable) == 1 {
-			return codecClientTypeForALPN(negotiable[0])
-		}
 		return xdstype.CodecClientType_HTTP1
 	}
 }
 
 // buildHealthCheckTLSOptions returns the ALPN protocols offered on health check connections
-// to a backend that uses TLS. A health check that selects its codec from ALPN takes it from
-// the protocol negotiated on its connection, so what's offered here decides which protocol a
-// probe can speak. It's only meaningful for a backend that uses TLS: a plaintext health check
-// connection negotiates nothing, and the codec alone decides what Envoy sends.
-//
-// Health check connections are created outside of the connection pool, so they don't get the
-// ALPN protocols that the pool derives from the cluster protocol options, and a cluster that
-// configures none advertises nothing on its health checks.
-//
-// A cluster that negotiates its upstream protocol offers both protocols, so that every
-// endpoint is checked over the protocol that requests to it use, including a backend whose
-// endpoints don't all speak the same one. A cluster that uses a fixed protocol offers only
-// that protocol: an endpoint that selected the other one would be checked over a protocol
-// that requests to it never use, and could be reported healthy while they fail.
-//
-// Protocols that the backend TLS settings don't allow are left out, and nothing is offered
-// when none of them is allowed, for example by a backend that only accepts the `istio` ALPN
-// protocol. Overriding its ALPN would break the handshake instead of keeping the health
-// check consistent.
+// to a backend that uses TLS. Envoy doesn't derive them from the cluster protocol options as
+// it does for data connections, so they are set here to the same effect: a negotiating health
+// check offers both protocols, and a pinned one only the protocol of its codec, so that an
+// endpoint isn't reported healthy over a protocol that requests to it never use. A backend
+// that configures its own ALPN keeps it on health checks too, as overriding it could break
+// the handshake.
 func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype.CodecClientType,
 	negotiate bool,
 ) *corev3.HealthCheck_TlsOptions {
-	candidates := httpALPNProtocols
-	if !negotiate {
-		alpn := alpnForCodecClientType(codec)
-		if alpn == "" {
-			return nil
-		}
-		candidates = []string{alpn}
-	}
-
-	alpn := healthCheckALPNProtocols(settings, candidates)
-	if len(alpn) == 0 {
-		return nil
-	}
-
-	return &corev3.HealthCheck_TlsOptions{AlpnProtocols: alpn}
-}
-
-// healthCheckALPNProtocols keeps the candidate ALPN protocols that every destination using
-// TLS can negotiate.
-func healthCheckALPNProtocols(settings []*ir.DestinationSetting, candidates []string) []string {
-	var alpn []string
-	for _, candidate := range candidates {
-		if backendTLSCanNegotiateALPN(settings, candidate) {
-			alpn = append(alpn, candidate)
-		}
-	}
-
-	return alpn
-}
-
-func codecClientTypeForALPN(alpn string) xdstype.CodecClientType {
-	if alpn == string(egv1a1.HTTPProtocolVersion2) {
-		return xdstype.CodecClientType_HTTP2
-	}
-
-	return xdstype.CodecClientType_HTTP1
-}
-
-func alpnForCodecClientType(codec xdstype.CodecClientType) string {
-	switch codec {
-	case xdstype.CodecClientType_HTTP1:
-		return string(egv1a1.HTTPProtocolVersion1_1)
-	case xdstype.CodecClientType_HTTP2:
-		return string(egv1a1.HTTPProtocolVersion2)
-	default:
-		return ""
-	}
-}
-
-// backendTLSCanNegotiateALPN reports whether the backend TLS settings can negotiate the
-// given ALPN protocol on every destination that uses TLS.
-//
-// A backend that asks for a protocol the health check codec can't speak, for example one
-// that only accepts the `istio` ALPN protocol, can't have its ALPN pinned: overriding it
-// would break the handshake instead of keeping it consistent with the codec.
-func backendTLSCanNegotiateALPN(settings []*ir.DestinationSetting, alpn string) bool {
+	tls := false
 	for _, ds := range settings {
 		if ds == nil || ds.TLS == nil {
 			continue
 		}
-		// A nil ALPN list means that the backend TLS settings don't configure ALPN, while
-		// an empty list means that ALPN is disabled.
-		if ds.TLS.ALPNProtocols != nil && !slices.Contains(ds.TLS.ALPNProtocols, alpn) {
-			return false
+		if ds.TLS.ALPNProtocols != nil {
+			return nil
 		}
+		tls = true
+	}
+	if !tls {
+		return nil
 	}
 
-	return true
+	h2, http11 := string(egv1a1.HTTPProtocolVersion2), string(egv1a1.HTTPProtocolVersion1_1)
+	switch {
+	case negotiate:
+		return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{h2, http11}}
+	case codec == xdstype.CodecClientType_HTTP2:
+		return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{h2}}
+	default:
+		return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{http11}}
+	}
 }
 
 func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
@@ -1272,47 +1184,7 @@ func hasTimeoutArgs(args *xdsClusterArgs) bool {
 		(!args.isRoute && timeout.MaxStreamDuration != nil) // Only set cluster-level maxStreamDuration for non-route clusters
 }
 
-// upstreamProtocol describes how a cluster settles the protocol of its upstream connections.
-type upstreamProtocol int
-
-const (
-	// upstreamProtocolHTTP1 and upstreamProtocolHTTP2 are fixed by the cluster's explicit
-	// protocol options.
-	upstreamProtocolHTTP1 upstreamProtocol = iota
-	upstreamProtocolHTTP2
-	// upstreamProtocolDownstream mirrors the protocol of the downstream request.
-	upstreamProtocolDownstream
-	// upstreamProtocolNegotiated is settled per connection through ALPN.
-	upstreamProtocolNegotiated
-)
-
-// resolveUpstreamProtocol returns how the cluster settles the protocol of its upstream
-// connections. It's the single source of truth for that precedence: the protocol options
-// of the cluster are built from it, and health checks are sent over the same protocol.
-func resolveUpstreamProtocol(useClientProtocol, forceHTTP1UpstreamProtocol,
-	requiresHTTP2Options, requiresHTTP1Options, requiresAutoHTTPConfig bool,
-) upstreamProtocol {
-	switch {
-	// useClientProtocol wins over the protocol of the backend itself.
-	case useClientProtocol:
-		return upstreamProtocolDownstream
-	// A backend that must use HTTP/1, a WebSocket one for example, wins over its own protocol.
-	case forceHTTP1UpstreamProtocol:
-		return upstreamProtocolHTTP1
-	case requiresHTTP2Options:
-		return upstreamProtocolHTTP2
-	case requiresHTTP1Options:
-		return upstreamProtocolHTTP1
-	case requiresAutoHTTPConfig:
-		return upstreamProtocolNegotiated
-	default:
-		return upstreamProtocolHTTP1
-	}
-}
-
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, upstreamProto upstreamProtocol,
-	requiresAutoHTTPConfig, requiresHTTP2Options, requiresHTTP1Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool,
-) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresHTTP1Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresCommonHTTPOptions := hasTimeoutArgs(args) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
@@ -1359,17 +1231,28 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, upstreamProto upst
 	}
 
 	http1Opts, http2Opts := buildHTTP1Settings(args.http1Settings), buildHTTP2Settings(args.http2Settings)
-	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory.
-	switch upstreamProto {
-	// Envoy uses the same protocol upstream as downstream.
-	case upstreamProtocolDownstream:
+	// When setting any Typed Extension Protocol Options, UpstreamProtocolOptions are mandatory
+	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
+	// Default to http1 otherwise
+	switch {
+	// If useClientProtocol is set, force Envoy to use the same protocol upstream as downstream, regardless of other settings.
+	case args.useClientProtocol:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
 			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
 				HttpProtocolOptions:  http1Opts,
 				Http2ProtocolOptions: http2Opts,
 			},
 		}
-	case upstreamProtocolHTTP2:
+	// If forceHTTP1UpstreamProtocol is set, force Envoy to use HTTP1 upstream regardless of other settings.
+	case forceHTTP1UpstreamProtocol:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+					HttpProtocolOptions: http1Opts,
+				},
+			},
+		}
+	case requiresHTTP2Options:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{
@@ -1377,8 +1260,16 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, upstreamProto upst
 				},
 			},
 		}
-	// Envoy negotiates the protocol per connection through ALPN, which requires a transport socket.
-	case upstreamProtocolNegotiated:
+	case requiresHTTP1Options:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+					HttpProtocolOptions: http1Opts,
+				},
+			},
+		}
+	case requiresAutoHTTPConfig:
+		// use Auto when there's a transport socket
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_AutoConfig{
 			AutoConfig: &httpv3.HttpProtocolOptions_AutoHttpConfig{
 				HttpProtocolOptions:  http1Opts,
@@ -1386,15 +1277,9 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, upstreamProto upst
 			},
 		}
 	default:
-		explicitHTTP1 := &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{}
-		// The HTTP/1 options are only attached when the upstream protocol was settled by
-		// them, or by a backend that must use HTTP/1.
-		if forceHTTP1UpstreamProtocol || requiresHTTP1Options {
-			explicitHTTP1.HttpProtocolOptions = http1Opts
-		}
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
-				ProtocolConfig: explicitHTTP1,
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{},
 			},
 		}
 	}
