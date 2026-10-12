@@ -798,9 +798,10 @@ func backendRejectionMessage(reason backendPolicyRejection) string {
 	switch reason {
 	case rejectionSelector:
 		return "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead"
-	default:
+	case rejectionMixed:
 		return "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy"
 	}
+	return ""
 }
 
 // backendSelectorMatches returns the Services, ServiceImports and Backends matched by the policy's
