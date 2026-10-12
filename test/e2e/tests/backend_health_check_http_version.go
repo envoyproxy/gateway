@@ -47,11 +47,16 @@ var BackendHealthCheckHTTPVersionTest = suite.ConformanceTest{
 			// healthy is whether the health check is expected to pass.
 			healthy bool
 		}{
-			// The h2c port of the backend only answers HTTP/2, which Auto derives from its appProtocol.
+			// The h2c port of the backend only answers HTTP/2 requests. Auto derives HTTP/2 from
+			// the kubernetes.io/h2c appProtocol of the port, so the probe gets a 200.
 			{name: "h2c-auto", healthy: true},
+			// An explicit HTTP1 version is sent as is, and the h2c port rejects it with a 400.
 			{name: "h2c-http1", healthy: false},
-			// The TLS backend negotiates HTTP/2 through ALPN, which the health check matches in the body.
+			// The TLS backend negotiates its protocol through ALPN. Auto negotiates it the same
+			// way and lands on HTTP/2, which the probe matches in the echoed "proto" field.
 			{name: "tls-auto", healthy: true},
+			// An explicit HTTP1 version is negotiated as is, so the backend echoes HTTP/1.1 and
+			// the probe fails to match the body.
 			{name: "tls-http1", healthy: false},
 		}
 
