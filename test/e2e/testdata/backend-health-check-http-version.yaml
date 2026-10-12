@@ -1,0 +1,236 @@
+apiVersion: v1
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDQzCCAiugAwIBAgIBATANBgkqhkiG9w0BAQsFADBCMRMwEQYDVQQKEwpFbnZv
+    eVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBHYXRld2F5
+    IENBMCAXDTI0MDMxMDE1MzIxN1oYDzIxMjQwMzEwMTYzMjE3WjBCMRMwEQYDVQQK
+    EwpFbnZveVByb3h5MRAwDgYDVQQLEwdHYXRld2F5MRkwFwYDVQQDExBFbnZveSBH
+    YXRld2F5IENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7ZFmGB4e
+    m1KdGEohAZBfqydAEGLDHJ1YyfHWdd+vBAevdW64bZx3pggJOtgCnePuFd02rDQS
+    dlsJlX/6mFtoQilo6wvxDSJRfaTDbtfTjw+7k8yfd/Jsmh0RWG+UeyI7Na9sXAz7
+    b57mpxsCoNowzeK5ETiOGGNWPcjENJkSnBarz5muN00xIZWBU+yN5PLJNxZvxpZJ
+    Ol/SSI8sno0e0PxAmp3fe7QaXiZj/TAGJPGuTJkUxrHqyZGJtYUxsS8A0dT1zBjj
+    izA5Dp+b5yzYo23Hh7BgpbZ7X4gsDThFuwCD6fHyepuv2zHPqvSsdqg2hAhDp91R
+    zrn7a9GxG2VSIwIDAQABo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUw
+    AwEB/zAdBgNVHQ4EFgQUUpP1aZ1M2KIuPPWrNPDV2c5CngowDQYJKoZIhvcNAQEL
+    BQADggEBAGSEkAVz+Z0qS4FmA0q4SCpIIq64bsdEjiUzev7pK1LEK0/Y28QBPixV
+    cUXfax18VPR9pls1JgXto9qY+C0hnRZic6611QTJlWK1p6dinQ/eDdYCBC+nv5xx
+    ssASwmplIxMvj3S1qF6dr7sMI2ZVD5HElTWdO19UBLyhiKKZW2KxDsYj+5NRwGFe
+    G+JuDgq7njUM8mdyYk0NehefdBUEUUCQtnwUtW95/429XwqQROuRDteGT9kjD+Y5
+    ea5mW4mfqLeuGJXZs9bdWjKKdLQPrn9IshPysWqz2Hz8dQ1f7N9/g8UWVSjd4cyx
+    S5EAolzVv0yB7wHCWCgfG/ckdOTUNnE=
+    -----END CERTIFICATE-----
+kind: ConfigMap
+metadata:
+  name: backend-tls-ca
+  namespace: gateway-conformance-infra
+---
+# keep this v1alpha3 to verify EG worked for both v1alpha3 and v1
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: tls-backend-2
+      sectionName: https
+  validation:
+    caCertificateRefs:
+      - name: backend-tls-ca
+        group: ""
+        kind: ConfigMap
+    hostname: example.com
+---
+# The h2c port of infra-backend-v1 only answers HTTP/2 requests. Expose it with the
+# kubernetes.io/h2c appProtocol, which the health check version is derived from.
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-v1-h2c
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: infra-backend-v1
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 3001
+      appProtocol: kubernetes.io/h2c
+---
+# A health check that passes the h2c port was sent over HTTP/2, the version derived
+# from the appProtocol of the port.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: health-check-h2c-auto-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-health-check-h2c-auto
+  healthCheck:
+    # Disable panic mode so that a cluster whose health checks fail returns 503.
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/"
+        expectedStatuses:
+          - 200
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-health-check-h2c-auto
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health-check-h2c-auto
+      backendRefs:
+        - name: infra-backend-v1-h2c
+          port: 8081
+---
+# An explicit HTTP/1.1 version is used as is, and the h2c port rejects it.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: health-check-h2c-http1-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-health-check-h2c-http1
+  healthCheck:
+    # Disable panic mode so that a cluster whose health checks fail returns 503.
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/"
+        version: HTTP1
+        expectedStatuses:
+          - 200
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-health-check-h2c-http1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health-check-h2c-http1
+      backendRefs:
+        - name: infra-backend-v1-h2c
+          port: 8081
+---
+# tls-backend-2 negotiates its protocol through ALPN, so health checks negotiate it
+# the same way and reach the backend over HTTP/2, which it echoes in the body.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: health-check-tls-auto-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-health-check-tls-auto
+  healthCheck:
+    # Disable panic mode so that a cluster whose health checks fail returns 503.
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/"
+        expectedResponse:
+          type: Text
+          text: '"proto": "HTTP/2.0"'
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-health-check-tls-auto
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health-check-tls-auto
+      backendRefs:
+        - name: tls-backend-2
+          port: 443
+---
+# An explicit HTTP/1.1 version is negotiated as is, so the body doesn't match.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: health-check-tls-http1-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-health-check-tls-http1
+  healthCheck:
+    # Disable panic mode so that a cluster whose health checks fail returns 503.
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: HTTP
+      http:
+        path: "/"
+        version: HTTP1
+        expectedResponse:
+          type: Text
+          text: '"proto": "HTTP/2.0"'
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-health-check-tls-http1
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /health-check-tls-http1
+      backendRefs:
+        - name: tls-backend-2
+          port: 443
