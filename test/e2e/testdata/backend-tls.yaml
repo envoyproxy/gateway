@@ -92,6 +92,29 @@ spec:
         - name: tls-backend-2-no-policy
           port: 443
 ---
+# The two subtests that use the routes below reach the public host gateway.envoyproxy.io.
+# Envoy resolves it as soon as these manifests are applied, and that first lookup can time
+# out on some CI runners. With the default DNS settings a failed lookup is retried only after
+# 30s, and a failed IPv4 lookup falls back to IPv6 addresses the runner cannot reach. Either
+# outlasts the 30s test window, so resolve IPv4 only and retry failed lookups every second.
+# Keep this policy before the routes so their clusters are created with these settings.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: backend-tls-public-host-dns
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-backend-tls-system-trust-store
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-backend-tls-auto-sni-from-upstream-host
+  dns:
+    dnsRefreshRate: 1s
+    lookupFamily: IPv4
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: BackendTLSPolicy
 metadata:

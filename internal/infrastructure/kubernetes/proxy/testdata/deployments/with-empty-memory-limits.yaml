@@ -380,6 +380,9 @@ spec:
           timeoutSeconds: 1
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp
+          name: shutdown-manager-tmp
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -400,4 +403,6 @@ spec:
           name: envoy-default-37a8eec1
           optional: false
         name: sds
+      - emptyDir: {}
+        name: shutdown-manager-tmp
 status: {}
