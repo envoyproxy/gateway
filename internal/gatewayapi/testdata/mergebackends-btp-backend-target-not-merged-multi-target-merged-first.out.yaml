@@ -28,6 +28,12 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'The following targets were not merged into a cluster on this Gateway,
+          so the policy was not applied to them: Service service-2'
+        reason: NotMerged
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1

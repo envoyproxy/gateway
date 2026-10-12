@@ -64,7 +64,8 @@ const (
 	PolicyReasonMerged gwapiv1.PolicyConditionReason = "Merged"
 
 	// PolicyReasonNotMerged is used with the "Accepted" condition when a policy targeting a
-	// backend cannot be applied because the backend is not part of a merged cluster.
+	// backend cannot be applied because the backend was not merged into a cluster. It is used
+	// with the "Warning" condition when only some of the policy's backend targets were not merged.
 	PolicyReasonNotMerged gwapiv1.PolicyConditionReason = "NotMerged"
 
 	// PolicyConditionWarning indicates that the policy configuration contains
