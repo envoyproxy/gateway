@@ -45,8 +45,6 @@ var ESResilience = suite.ResilienceTest{
 			ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 		}
 
-		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
-
 		// Preserve original convergence semantics for resilience tests
 		localTimeout := suite.TimeoutConfig
 		localTimeout.RequiredConsecutiveSuccesses = 2

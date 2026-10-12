@@ -303,7 +303,11 @@ spec:
                       ClientCertificateRef defines the reference to a Kubernetes Secret that contains
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
-                      This secret should be located within the same namespace as the Envoy proxy resource that references it.
+                      The Secret must be in the same namespace as the EnvoyProxy or Backend resource
+                      that references it.
+                      Cross-namespace references are not supported, even with a ReferenceGrant.
+                      The ReferenceGrant requirement in the namespace field's description is inherited
+                      from the Gateway API SecretObjectReference type and does not apply to this field.
                     properties:
                       group:
                         default: ""
@@ -473,6 +477,8 @@ spec:
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+            - message: endpoints must be specified when type is Endpoints
+              rule: self.type != 'Endpoints' || has(self.endpoints)
             - message: DynamicResolver type cannot use autoSNIFromEndpointHostname
               rule: self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
                 && self.tls.autoSNIFromEndpointHostname)

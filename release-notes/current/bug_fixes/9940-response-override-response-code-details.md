@@ -1,0 +1,1 @@
+Fixed `responseOverride` in `BackendTrafficPolicy` clearing `%RESPONSE_CODE_DETAILS%`. The reason the request actually failed (for example `csrf_origin_mismatch`) is now preserved in access logs instead of being logged as an empty string.

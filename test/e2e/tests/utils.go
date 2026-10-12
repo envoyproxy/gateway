@@ -80,8 +80,28 @@ func TimeoutConfig() config.TimeoutConfig {
 	// The default value of RequiredConsecutiveSuccesses is 3,
 	// which means a test needs to pass 3 times in a row to be considered successful.
 	// This's not necessary for E2E test.
-	timeout.RequiredConsecutiveSuccesses = 0
+	timeout.RequiredConsecutiveSuccesses = 1
 	return timeout
+}
+
+func WaitForPodsReady(t *testing.T, cl client.Client, namespace string, selectors map[string]string) {
+	WaitForPods(t, cl, namespace, selectors, corev1.PodRunning, &PodReady)
+}
+
+// WaitForGatewayPodsReady waits for the Envoy Proxy pod(s) backing the given Gateway to reach
+// Ready. GatewayAndRoutesMustBeAccepted/GatewayAndHTTPRoutesMustBeAccepted only confirm the
+// Gateway's k8s status conditions and that its Service was assigned an address - which happens
+// almost instantly (e.g. via MetalLB) regardless of whether the data-plane pod behind it is
+// actually up yet. Since this suite's EnvoyProxy config doesn't set mergeGateways, every distinct
+// Gateway gets its own freshly-provisioned Envoy Proxy Deployment/Pod, which can take tens of
+// seconds to become Ready - without this wait, the first request(s) sent to a newly-created
+// Gateway race pod startup instead of deterministically waiting for it.
+func WaitForGatewayPodsReady(t *testing.T, cl client.Client, gwNN types.NamespacedName) {
+	t.Helper()
+	WaitForPodsReady(t, cl, GetGatewayResourceNamespace(), map[string]string{
+		"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
+		"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
+	})
 }
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
@@ -754,9 +774,23 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 		return -1, fmt.Errorf("no envoy-ratelimit pod found")
 	}
 
+	total := 0
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		count, err := getOverLimitCount(cli, pod)
+		if err != nil {
+			return -1, err
+		}
+		total += count
+	}
+
+	return total, nil
+}
+
+func getOverLimitCount(cli kubernetes.CLIClient, pod *corev1.Pod) (int, error) {
 	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
 		Namespace: "envoy-gateway-system",
-		Name:      pods.Items[0].Name,
+		Name:      pod.Name,
 	}, 0, 19001)
 	if err != nil {
 		return -1, err
@@ -782,8 +816,156 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 			total += int(*m.Counter.Value)
 		}
 	}
-
 	return total, nil
+}
+
+// rateLimitDebugPort is the debug HTTP port the envoy-ratelimit service listens on
+// (DEBUG_HOST/DEBUG_PORT in the envoyproxy/ratelimit project), which exposes the
+// /rlconfig endpoint used to dump the currently loaded rate limit config.
+const rateLimitDebugPort = 6070
+
+// rateLimitDebugAttemptTimeout bounds each attempt inside WaitForRateLimitDomainsToBeLoaded's
+// require.Eventually poll loop - both starting the port-forward and issuing the HTTP request -
+// so a single stuck attempt (the port-forward's Kubernetes upgrade/dial wedges, or the pod
+// stops responding) fails fast and lets Eventually retry, rather than hanging the whole call
+// (and therefore the test) until the suite-level timeout eventually kills it with a much less
+// useful error.
+const rateLimitDebugAttemptTimeout = 3 * time.Second
+
+// dumpRateLimitConfigForPod fetches the config currently loaded by one envoy-ratelimit pod via
+// its /rlconfig debug endpoint - the same one used by `egctl config envoy-ratelimit`. Callers
+// need one replica's config, not "the" config: WaitForRateLimitDomainsToBeLoaded calls this once
+// per pod and requires every one of them to have loaded a domain before treating it as ready,
+// since checking just one arbitrary replica is exactly the race that helper exists to close.
+func dumpRateLimitConfigForPod(t *testing.T, suite *suite.ConformanceTestSuite, podName string) (string, error) {
+	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
+	if err != nil {
+		return "", err
+	}
+
+	fwd, err := kubernetes.NewLocalPortForwarder(cli, types.NamespacedName{
+		Namespace: "envoy-gateway-system",
+		Name:      podName,
+	}, 0, rateLimitDebugPort)
+	if err != nil {
+		return "", err
+	}
+
+	// Bound port-forward startup by the same per-attempt timeout as the HTTP request below -
+	// see rateLimitDebugAttemptTimeout. Without this, a wedged Kubernetes upgrade/dial inside
+	// fwd.Start() could block this call indefinitely regardless of the HTTP client's timeout.
+	startCtx, cancel := context.WithTimeout(t.Context(), rateLimitDebugAttemptTimeout)
+	defer cancel()
+	if err := fwd.StartWithContext(startCtx); err != nil {
+		return "", err
+	}
+	defer fwd.Stop()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/rlconfig", fwd.Address()), nil)
+	if err != nil {
+		return "", err
+	}
+
+	// Use a bounded client instead of http.DefaultClient (no timeout); see
+	// rateLimitDebugAttemptTimeout for why this must be bounded.
+	httpClient := &http.Client{
+		Timeout: rateLimitDebugAttemptTimeout,
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
+}
+
+// WaitForRateLimitDomainToBeLoaded polls the envoy-ratelimit service's /rlconfig debug endpoint
+// until it reports a loaded config for the given rate limit domain, failing the test if it
+// doesn't appear within the suite's MaxTimeToConsistency. This closes a race that
+// BackendTrafficPolicyMustBeAccepted alone cannot: the k8s Accepted status only means EG's
+// controller finished translating the policy, not that the ratelimit service - a separate
+// component, updated via its own xDS push from EG (see internal/globalratelimit/runner) - has
+// received and applied the descriptor config for this domain yet. Sending test traffic before
+// that happens can look like "rate limiting isn't working" (an unmatched domain is unlimited,
+// not rejected).
+//
+// domain must match EG's internal rate limit domain naming convention exactly - see
+// RateLimitListenerDomain and RateLimitSharedDomain, which build it correctly. That's an internal
+// implementation detail, not a stable public API, so this helper may need updating if that naming
+// convention ever changes.
+func WaitForRateLimitDomainToBeLoaded(t *testing.T, suite *suite.ConformanceTestSuite, domain string) {
+	t.Helper()
+	WaitForRateLimitDomainsToBeLoaded(t, suite, domain)
+}
+
+// WaitForRateLimitDomainsToBeLoaded is like WaitForRateLimitDomainToBeLoaded, but waits for all
+// of the given rate limit domains to be loaded, using a single poll loop. Use this when a test
+// exercises more than one domain (e.g. multiple listeners, or a mix of shared and non-shared
+// rules) so that traffic doesn't start until every domain it depends on is ready.
+func WaitForRateLimitDomainsToBeLoaded(t *testing.T, suite *suite.ConformanceTestSuite, domains ...string) {
+	t.Helper()
+
+	cli, err := kubernetes.NewForRestConfig(suite.RestConfig)
+	require.NoErrorf(t, err, "failed to build client for envoy-ratelimit pod discovery")
+
+	require.Eventually(t, func() bool {
+		pods, err := cli.PodsForSelector("envoy-gateway-system", "app.kubernetes.io/name=envoy-ratelimit")
+		if err != nil || len(pods.Items) == 0 {
+			tlog.Logf(t, "failed to list envoy-ratelimit pods, retrying: %v", err)
+			return false
+		}
+
+		// Every replica gets the xDS push independently (see internal/globalratelimit/runner), so
+		// a domain isn't actually ready until *every* replica has loaded it, not just whichever pod
+		// happens to be checked (previously always pods.Items[0]). Otherwise Envoy can send the
+		// next rate-limit RPC to a replica that hasn't caught up yet, which fails open (an
+		// unmatched domain is treated as unlimited) - reintroducing the same "expected 429, got
+		// 200" race this helper exists to close. This matters most for profiles like
+		// gateway-namespace-mode that run more than one ratelimit replica - see
+		// rateLimitDeployment.replicas in test/config/envoy-gateaway-config/gateway-namespace-mode.yaml.
+		for i := range pods.Items {
+			pod := &pods.Items[i]
+			cfg, err := dumpRateLimitConfigForPod(t, suite, pod.Name)
+			if err != nil {
+				tlog.Logf(t, "failed to fetch envoy-ratelimit config from pod %s, retrying: %v", pod.Name, err)
+				return false
+			}
+			tlog.Logf(t, "dump rate limit config from pod %s: %s", pod.Name, cfg)
+			// Dump() emits one line per configured descriptor limit, keyed as "<domain>.<descriptor
+			// path>: ...", so this substring is present only once the ratelimit service has actually
+			// loaded a limit for this domain.
+			for _, domain := range domains {
+				if !strings.Contains(cfg, domain) {
+					return false
+				}
+			}
+		}
+		return true
+	}, suite.TimeoutConfig.MaxTimeToConsistency, time.Second, "envoy-ratelimit service never loaded config for domains %v on every replica", domains)
+}
+
+// RateLimitListenerDomain returns the rate limit domain name EG assigns to a non-shared
+// (rule's "shared" field false or unset) global rate limit rule that applies to the given
+// listener - see irListenerName in internal/gatewayapi/helpers.go. This is the domain used
+// whether the policy directly targets that Gateway or targets an HTTPRoute attached to it, since
+// non-shared rules are always keyed by listener rather than by policy.
+func RateLimitListenerDomain(gwNN types.NamespacedName, listenerName string) string {
+	return fmt.Sprintf("%s/%s/%s.", gwNN.Namespace, gwNN.Name, listenerName)
+}
+
+// RateLimitSharedDomain returns the rate limit domain name EG assigns to a "shared: true" global
+// rate limit rule defined by the given BackendTrafficPolicy - see stripRuleIndexSuffix in
+// internal/xds/translator/ratelimit.go. Unlike non-shared rules, all shared rules on the same
+// policy collapse onto this one domain regardless of which listener(s) or route(s) they end up
+// applying to.
+func RateLimitSharedDomain(policyNN types.NamespacedName) string {
+	return fmt.Sprintf("%s/%s.", policyNN.Namespace, policyNN.Name)
 }
 
 func buildLokiQuery(keyValues map[string]string, match string) string {
@@ -939,20 +1121,6 @@ func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption
 	if _, err := tb.CollectResult(t.Context(), rest, opts...); err != nil {
 		tlog.Logf(t, "failed to collect all data: %v", err)
 	}
-}
-
-func consistentHashDump(t *testing.T, rest *rest.Config) {
-	dumpedNamespaces := []string{"envoy-gateway-system"}
-	if IsGatewayNamespaceMode() {
-		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
-	}
-
-	runCollectAndDump(t, rest,
-		tb.WithCollectedNamespaces(dumpedNamespaces),
-		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
-		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
-		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
-	)
 }
 
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {

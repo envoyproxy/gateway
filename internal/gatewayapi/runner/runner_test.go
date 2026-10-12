@@ -154,12 +154,12 @@ func TestDeleteKeys(t *testing.T) {
 	// Create KeyCache with subset of keys to delete (selective deletion)
 	keysToDelete := newKeyCache()
 	keysToDelete.IR["test-ir-1"] = true // Delete only one IR key
-	keysToDelete.GatewayStatus[keys[0]] = true
-	keysToDelete.HTTPRouteStatus[keys[1]] = true
-	keysToDelete.TLSRouteStatus[keys[3]] = true
-	keysToDelete.UDPRouteStatus[keys[5]] = true // Delete only one UDP route
-	keysToDelete.BackendTLSPolicyStatus[keys[8]] = true
-	keysToDelete.SecurityPolicyStatus[keys[11]] = true
+	keysToDelete.GatewayStatus[keys[0]] = ""
+	keysToDelete.HTTPRouteStatus[keys[1]] = ""
+	keysToDelete.TLSRouteStatus[keys[3]] = ""
+	keysToDelete.UDPRouteStatus[keys[5]] = "" // Delete only one UDP route
+	keysToDelete.BackendTLSPolicyStatus[keys[8]] = ""
+	keysToDelete.SecurityPolicyStatus[keys[11]] = ""
 	// Leave some keys to verify selective deletion works
 
 	// Test selective deletion
@@ -184,19 +184,19 @@ func TestDeleteKeys(t *testing.T) {
 	// Verify keyCache was updated correctly
 	require.False(t, r.keyCache.IR["test-ir-1"])
 	require.True(t, r.keyCache.IR["test-ir-2"]) // Should remain
-	require.False(t, r.keyCache.GatewayStatus[keys[0]])
-	require.False(t, r.keyCache.HTTPRouteStatus[keys[1]])
-	require.True(t, r.keyCache.GRPCRouteStatus[keys[2]]) // Should remain
-	require.False(t, r.keyCache.TLSRouteStatus[keys[3]])
-	require.True(t, r.keyCache.TCPRouteStatus[keys[4]]) // Should remain
-	require.False(t, r.keyCache.UDPRouteStatus[keys[5]])
-	require.True(t, r.keyCache.UDPRouteStatus[keys[6]]) // Should remain
-	require.True(t, r.keyCache.BackendStatus[keys[7]])  // Should remain
-	require.False(t, r.keyCache.BackendTLSPolicyStatus[keys[8]])
-	require.True(t, r.keyCache.ClientTrafficPolicyStatus[keys[9]])   // Should remain
-	require.True(t, r.keyCache.BackendTrafficPolicyStatus[keys[10]]) // Should remain
-	require.False(t, r.keyCache.SecurityPolicyStatus[keys[11]])
-	require.True(t, r.keyCache.EnvoyExtensionPolicyStatus[keys[12]]) // Should remain
+	require.NotContains(t, r.keyCache.GatewayStatus, keys[0])
+	require.NotContains(t, r.keyCache.HTTPRouteStatus, keys[1])
+	require.Contains(t, r.keyCache.GRPCRouteStatus, keys[2]) // Should remain
+	require.NotContains(t, r.keyCache.TLSRouteStatus, keys[3])
+	require.Contains(t, r.keyCache.TCPRouteStatus, keys[4]) // Should remain
+	require.NotContains(t, r.keyCache.UDPRouteStatus, keys[5])
+	require.Contains(t, r.keyCache.UDPRouteStatus, keys[6]) // Should remain
+	require.Contains(t, r.keyCache.BackendStatus, keys[7])  // Should remain
+	require.NotContains(t, r.keyCache.BackendTLSPolicyStatus, keys[8])
+	require.Contains(t, r.keyCache.ClientTrafficPolicyStatus, keys[9])   // Should remain
+	require.Contains(t, r.keyCache.BackendTrafficPolicyStatus, keys[10]) // Should remain
+	require.NotContains(t, r.keyCache.SecurityPolicyStatus, keys[11])
+	require.Contains(t, r.keyCache.EnvoyExtensionPolicyStatus, keys[12]) // Should remain
 }
 
 func TestDeleteAllKeys(t *testing.T) {
@@ -254,7 +254,7 @@ func TestMergePolicyStatus(t *testing.T) {
 			generation: 2,
 		}
 
-		got := mergePolicyStatus(existing, nil, 10)
+		got := mergePolicyStatus(existing, nil, 10, "")
 		require.Equal(t, existing, got)
 	})
 
@@ -268,7 +268,7 @@ func TestMergePolicyStatus(t *testing.T) {
 			},
 		}
 
-		got := mergePolicyStatus(aggregatedPolicyStatus{}, incoming, 7)
+		got := mergePolicyStatus(aggregatedPolicyStatus{}, incoming, 7, "")
 		require.Same(t, incoming, got.status)
 		require.Equal(t, int64(7), got.generation)
 	})
@@ -291,15 +291,15 @@ func TestMergePolicyStatus(t *testing.T) {
 			},
 		}
 
-		entry := mergePolicyStatus(aggregatedPolicyStatus{}, first, 3)
-		entry = mergePolicyStatus(entry, second, 9)
+		entry := mergePolicyStatus(aggregatedPolicyStatus{}, first, 3, "")
+		entry = mergePolicyStatus(entry, second, 9, "")
 
 		require.Len(t, entry.status.Ancestors, 2)
 		require.Equal(t, gwapiv1.ObjectName("gw-a"), entry.status.Ancestors[0].AncestorRef.Name)
 		require.Equal(t, gwapiv1.ObjectName("gw-b"), entry.status.Ancestors[1].AncestorRef.Name)
 		require.Equal(t, int64(9), entry.generation)
 
-		entry = mergePolicyStatus(entry, &gwapiv1.PolicyStatus{}, 4)
+		entry = mergePolicyStatus(entry, &gwapiv1.PolicyStatus{}, 4, "")
 		require.Equal(t, int64(9), entry.generation)
 	})
 
@@ -314,9 +314,9 @@ func TestMergePolicyStatus(t *testing.T) {
 		}
 
 		// First merge - status becomes both aggregated and incoming
-		entry := mergePolicyStatus(aggregatedPolicyStatus{}, status, 1)
+		entry := mergePolicyStatus(aggregatedPolicyStatus{}, status, 1, "")
 		// Second merge with same status - should not duplicate
-		entry = mergePolicyStatus(entry, status, 2)
+		entry = mergePolicyStatus(entry, status, 2, "")
 
 		// Should still have only one ancestor, not duplicated
 		require.Len(t, entry.status.Ancestors, 1)
@@ -408,7 +408,7 @@ func TestMergeRouteStatus(t *testing.T) {
 			generation: 2,
 		}
 
-		got := mergeAggregatedRouteStatus(existing, nil, 10)
+		got := mergeAggregatedRouteStatus(existing, nil, 10, "")
 		require.Equal(t, existing, got)
 	})
 
@@ -422,7 +422,7 @@ func TestMergeRouteStatus(t *testing.T) {
 			},
 		}
 
-		got := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, incoming, 7)
+		got := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, incoming, 7, "")
 		require.Same(t, incoming, got.status)
 		require.Equal(t, int64(7), got.generation)
 	})
@@ -445,15 +445,15 @@ func TestMergeRouteStatus(t *testing.T) {
 			},
 		}
 
-		entry := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, first, 3)
-		entry = mergeAggregatedRouteStatus(entry, second, 9)
+		entry := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, first, 3, "")
+		entry = mergeAggregatedRouteStatus(entry, second, 9, "")
 
 		require.Len(t, entry.status.Parents, 2)
 		require.Equal(t, gwapiv1.ObjectName("gw-a"), entry.status.Parents[0].ParentRef.Name)
 		require.Equal(t, gwapiv1.ObjectName("gw-b"), entry.status.Parents[1].ParentRef.Name)
 		require.Equal(t, int64(9), entry.generation)
 
-		entry = mergeAggregatedRouteStatus(entry, &gwapiv1.RouteStatus{}, 4)
+		entry = mergeAggregatedRouteStatus(entry, &gwapiv1.RouteStatus{}, 4, "")
 		require.Equal(t, int64(9), entry.generation)
 	})
 }

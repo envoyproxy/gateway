@@ -22,23 +22,13 @@ import (
 )
 
 func init() {
-	ResilienceTests = append(ResilienceTests, EPResilience)
+	ResilienceTests = append(ResilienceTests, EnvoyProxy)
 }
 
-var EPResilience = suite.ResilienceTest{
-	ShortName:   "EPResilience",
-	Description: "Envoyproxy resilience test",
+var EnvoyProxy = suite.ResilienceTest{
+	ShortName:   "EnvoyProxy",
+	Description: "Envoy proxy resilience test",
 	Test: func(t *testing.T, suite *suite.ResilienceTestSuite) {
-		var ()
-
-		ap := kubernetes.Applier{
-			ManifestFS:     suite.ManifestFS,
-			GatewayClass:   suite.GatewayClassName,
-			ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
-		}
-
-		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
-
 		// Preserve original convergence semantics for resilience tests
 		localTimeout := suite.TimeoutConfig
 		localTimeout.RequiredConsecutiveSuccesses = 2

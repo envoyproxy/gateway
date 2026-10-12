@@ -1,4 +1,4 @@
-FROM golang:1.27.0@sha256:65b6f280bf050ec5af12716857e8ea8439d694dbba8f31ceeb7630670071f2bb AS builder
+FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS builder
 
 ARG GO_LDFLAGS=""
 
@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
     GOARCH=${TARGETARCH} \
     go build -o /bin/backend-utilization -ldflags "${GO_LDFLAGS}" .
 
-FROM gcr.io/distroless/static-debian11
+FROM gcr.io/distroless/static-debian11@sha256:1dbe426d60caed5d19597532a2d74c8056cd7b1674042b88f7328690b5ead8ed
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/backend-utilization /
 

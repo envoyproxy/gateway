@@ -10,6 +10,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -167,6 +168,14 @@ func WaitForEnvoyClusterHosts(t *testing.T, suite *suite.ConformanceTestSuite, g
 	}
 }
 
+// clusterHostRegexp matches the address prefixing the stats of a single host of
+// a cluster in the /clusters output, either "10.244.0.168:53" or, on an IPv6
+// cluster, "[fd00:10:244:1::46]:53". Envoy brackets an IPv6 address to keep it
+// apart from the port, and the address itself holds "::", so splitting the
+// stats on "::" truncates it to its node prefix and collapses every host of a
+// node into one.
+var clusterHostRegexp = regexp.MustCompile(`^(\[[0-9a-fA-F:]+\]:\d+|\d{1,3}(?:\.\d{1,3}){3}:\d+)::`)
+
 // envoyClusterHosts returns the distinct hosts that the Envoy proxy of the
 // given gateway holds for the cluster whose name contains clusterName.
 func envoyClusterHosts(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, clusterName string) ([]string, error) {
@@ -184,19 +193,22 @@ func envoyClusterHosts(t *testing.T, suite *suite.ConformanceTestSuite, gwNN typ
 	// /clusters returns one stat per line as "<cluster_name>::<stat_path>::<value>".
 	// The stats of a single host are prefixed by its address, e.g.:
 	//   udproute/ns/udp-lb-coredns/rule/-1::10.244.0.168:53::health_flags::healthy
+	//   udproute/ns/udp-lb-coredns/rule/-1::[fd00:10:244:1::46]:53::health_flags::healthy
 	//   udproute/ns/udp-lb-coredns/rule/-1::added_via_api::true
-	// Only the former carries a port, which is what tells the two apart.
+	// Only the host stats are prefixed by an address, which is what tells them
+	// apart. A cluster name never holds "::", so cutting the line on it is safe,
+	// but an IPv6 address does, so the address is matched rather than cut off.
 	hosts := sets.New[string]()
 	for _, line := range strings.Split(body, "\n") {
 		name, stat, ok := strings.Cut(line, "::")
 		if !ok || !strings.Contains(name, clusterName) {
 			continue
 		}
-		host, _, ok := strings.Cut(stat, "::")
-		if !ok || !strings.Contains(host, ":") {
+		host := clusterHostRegexp.FindStringSubmatch(stat)
+		if host == nil {
 			continue
 		}
-		hosts.Insert(host)
+		hosts.Insert(host[1])
 	}
 
 	return sets.List(hosts), nil

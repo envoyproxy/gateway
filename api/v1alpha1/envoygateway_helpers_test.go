@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsRunningOnKubernetes(t *testing.T) {
@@ -427,6 +428,63 @@ func TestGetKubernetesInfrastructureConfiguration(t *testing.T) {
 				got = tt.provider.GetKubernetesInfrastructureConfiguration()
 			})
 			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestDebounceDefaultsToDisabled(t *testing.T) {
+	eg := &EnvoyGateway{}
+	eg.SetEnvoyGatewayDefaults()
+
+	// Debouncing is opt in, so defaulting must not define the config, and defining
+	// it is what turns debouncing on.
+	require.Nil(t, eg.Debounce)
+	require.False(t, eg.Debounce.Enabled())
+	require.True(t, (&Debounce{}).Enabled())
+
+	// A config that sets no durations falls back to the advertised defaults.
+	after, maxHold, err := (&Debounce{}).ResolveDurations()
+	require.NoError(t, err)
+	require.Equal(t, DefaultDebounceAfter, after)
+	require.Equal(t, DefaultDebounceMax, maxHold)
+}
+
+func TestEnvoyProxyPatchRuntimeFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		eg       EnvoyGateway
+		expected bool
+	}{
+		{
+			name:     "enabled by default",
+			eg:       EnvoyGateway{},
+			expected: true,
+		},
+		{
+			name: "explicitly disabled",
+			eg: EnvoyGateway{
+				EnvoyGatewaySpec: EnvoyGatewaySpec{
+					RuntimeFlags: &RuntimeFlags{Disabled: []RuntimeFlag{EnvoyProxyPatch}},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "disabled takes precedence",
+			eg: EnvoyGateway{
+				EnvoyGatewaySpec: EnvoyGatewaySpec{
+					RuntimeFlags: &RuntimeFlags{
+						Enabled:  []RuntimeFlag{EnvoyProxyPatch},
+						Disabled: []RuntimeFlag{EnvoyProxyPatch},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.eg.RuntimeFlags.IsEnabled(EnvoyProxyPatch))
 		})
 	}
 }

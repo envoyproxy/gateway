@@ -28,6 +28,7 @@
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
                           textFormat: gateway-1 Not Found
+                        preserveResponseCodeDetails: true
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -58,6 +59,7 @@
                             {
                               "error": "Internal Server Error"
                             }
+                        preserveResponseCodeDetails: true
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -148,6 +150,7 @@
                       name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        preserveResponseCodeDetails: true
                         statusCode: 404
                   predicate:
                     singlePredicate:
@@ -164,6 +167,7 @@
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
                           textFormat: matched response header
+                        preserveResponseCodeDetails: true
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:
@@ -185,6 +189,7 @@
                         '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
                         bodyFormat:
                           textFormat: '{"error":"combined match"}'
+                        preserveResponseCodeDetails: true
                         responseHeadersToAdd:
                         - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
                           header:

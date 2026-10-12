@@ -27,3 +27,7 @@ adopters:
     logo: "/logos/keda.svg"
     url: "https://keda.sh"
     description: "KEDA integrates with Envoy Gateway through http-add-on for autoscaling workloads based on real-time HTTP traffic metrics. This integration allows users to leverage Envoy Gateway's capabilities for scaling behavior shaping desired traffic patterns."
+  - name: "Presence"
+    logo: "/logos/presence.svg"
+    url: "https://presence.decionis.com/developers"
+    description: "Presence is a human-verification and execution-control layer that uses an EnvoyExtensionPolicy-attached proxy-wasm filter to gate sensitive routes on a verified Presence session or short-lived proof without application changes."

@@ -61,6 +61,10 @@ spec:
         resources:
           requests:
             cpu: 10m
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -109,6 +113,10 @@ spec:
         resources:
           requests:
             cpu: 10m
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy

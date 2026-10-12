@@ -51,7 +51,7 @@ func getShutdownCommand() *cobra.Command {
 		"Minimum drain duration allowing time for endpoint deprogramming to complete.")
 
 	cmd.PersistentFlags().IntVar(&exitAtConnections, "exit-at-connections", 0,
-		"Number of connections to wait for when monitoring Envoy listener drain process.")
+		"Number of connections, including UDP proxy sessions, to wait for when monitoring Envoy listener drain process.")
 
 	return cmd
 }

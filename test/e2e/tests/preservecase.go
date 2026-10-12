@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	nethttp "net/http"
 	"net/http/httputil"
 	"regexp"
@@ -30,7 +31,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, PreserveCaseTest)
+	ConformanceTests = append(ConformanceTests, PreserveCase)
 }
 
 // Copied from the conformance suite because it's needed in casePreservingRoundTrip
@@ -63,9 +64,7 @@ func casePreservingRoundTrip(request *roundtripper.Request, transport nethttp.Ro
 		req.Host = request.Host
 	}
 	if request.Headers != nil {
-		for name, value := range request.Headers {
-			req.Header[name] = value
-		}
+		maps.Copy(req.Header, request.Headers)
 	}
 	if suite.Debug {
 		var dump []byte
@@ -108,7 +107,7 @@ func casePreservingRoundTrip(request *roundtripper.Request, transport nethttp.Ro
 	return cReq, nil
 }
 
-var PreserveCaseTest = suite.ConformanceTest{
+var PreserveCase = suite.ConformanceTest{
 	ShortName:   "PreserveCase",
 	Description: "Preserve header cases",
 	Manifests:   []string{"testdata/preserve-case.yaml"},
@@ -119,9 +118,9 @@ var PreserveCaseTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-			WaitForPods(t, suite.Client, "gateway-preserve-case-backend", map[string]string{"app": "preserve-case"}, corev1.PodRunning, &PodReady)
+			WaitForPods(t, suite.Client, ns, map[string]string{"app": "preserve-case"}, corev1.PodRunning, &PodReady)
 
-			err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(_ context.Context) (bool, error) {
+			err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
 				// Can't use the standard method for checking the response, since the remote side isn't the
 				// conformance echo server and it returns a differently formatted response.
 				expectedResponse := http.ExpectedResponse{
@@ -150,7 +149,7 @@ var PreserveCaseTest = suite.ConformanceTest{
 				return true, nil
 			})
 			if err != nil {
-				tlog.Errorf(t, "failed to get expected response: %v", err)
+				tlog.Fatalf(t, "failed to get expected response: %v", err)
 			}
 		})
 	},

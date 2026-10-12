@@ -66,6 +66,13 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        - name: ENVOY_GATEWAY_SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.serviceAccountName
+        - name: ENVOY_GATEWAY_FULLNAME
+          value: {{ include "eg.fullname" . }}
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
         {{- with .Values.deployment.envoyGateway.extraEnv }}
