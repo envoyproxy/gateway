@@ -3508,7 +3508,7 @@ func (t *Translator) processBackendDestinationSetting(
 		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
 	}
 
-	ds := &ir.DestinationSetting{Name: name}
+	ds := &ir.DestinationSetting{Name: name, Metadata: buildResourceMetadata(backend, nil)}
 
 	// There is only one backend if it is a dynamic resolver
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
@@ -3572,8 +3572,6 @@ func (t *Translator) processBackendDestinationSetting(
 			ds.Priority = new(uint32(1))
 		}
 	}
-
-	ds.Metadata = buildResourceMetadata(backend, nil)
 
 	return ds
 }
