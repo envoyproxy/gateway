@@ -101,6 +101,16 @@ httpRoutes:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
           name: regex-redirect
+    # Requests without the redirect cookie must fall through to this rule.
+    - matches:
+      - path:
+          value: /conflict
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: deny
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
@@ -208,6 +218,10 @@ httpFilters:
     namespace: default
     name: regex-redirect
   spec:
+    matches:
+    - cookies:
+      - name: cohort
+        value: redirect
     redirect:
       path:
         type: ReplaceRegexMatch

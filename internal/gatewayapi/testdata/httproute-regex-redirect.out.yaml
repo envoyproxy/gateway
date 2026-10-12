@@ -243,15 +243,29 @@ httpRoutes:
       matches:
       - path:
           value: /conflict
+    - filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: deny
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /conflict
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'HTTPRouteFilter default/regex-redirect: redirect path cannot be
-          combined with RequestRedirect.path.'
-        reason: IncompatibleFilters
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'Dropped Rule(s) [0]: HTTPRouteFilter default/regex-redirect: redirect
+          path cannot be combined with RequestRedirect.path.'
+        reason: IncompatibleFilters
+        status: "True"
+        type: PartiallyInvalid
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
@@ -408,7 +422,11 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - hostname: '*'
+      - cookieMatches:
+        - distinct: false
+          exact: redirect
+          name: cohort
+        hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
@@ -430,7 +448,11 @@ xdsIR:
           port: 443
           scheme: https
           statusCode: 301
-      - hostname: standalone.example.com
+      - cookieMatches:
+        - distinct: false
+          exact: redirect
+          name: cohort
+        hostname: standalone.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
@@ -450,7 +472,11 @@ xdsIR:
               substitution: /post-\1
           port: 80
           statusCode: 302
-      - directResponse:
+      - cookieMatches:
+        - distinct: false
+          exact: redirect
+          name: cohort
+        directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -463,7 +489,11 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /invalid-redirect
-      - hostname: '*'
+      - cookieMatches:
+        - distinct: false
+          exact: redirect
+          name: cohort
+        hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
@@ -485,7 +515,11 @@ xdsIR:
           port: 8443
           scheme: https
           statusCode: 302
-      - directResponse:
+      - cookieMatches:
+        - distinct: false
+          exact: redirect
+          name: cohort
+        directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: false
@@ -494,6 +528,19 @@ xdsIR:
           name: conflicting-redirect
           namespace: default
         name: httproute/default/conflicting-redirect/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /conflict
+      - directResponse:
+          statusCode: 403
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: conflicting-redirect
+          namespace: default
+        name: httproute/default/conflicting-redirect/rule/1/match/0/*
         pathMatch:
           distinct: false
           name: ""

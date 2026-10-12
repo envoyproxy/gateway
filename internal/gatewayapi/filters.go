@@ -103,7 +103,7 @@ func (t *Translator) ProcessHTTPFilters(
 		errs.Add(err)
 		for _, filter := range filters {
 			if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
-				errs.Add(t.validateExtensionRefHTTPFilter(filter.ExtensionRef, route, resources))
+				errs.Add(t.validateExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources))
 			}
 		}
 		return httpFiltersContext, errs.GetAllErrors()
@@ -220,7 +220,7 @@ func (t *Translator) ProcessGRPCFilters(
 				).WithType(gwapiv1.RouteConditionAccepted))
 				for _, filter := range filters {
 					if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
-						errs.Add(t.validateExtensionRefHTTPFilter(filter.ExtensionRef, route, resources))
+						errs.Add(t.validateExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources))
 					}
 				}
 				return httpFiltersContext, errs.GetAllErrors()
@@ -958,13 +958,16 @@ func validateRedirectSubstitution(substitution string, captures int) error {
 	return nil
 }
 
-func (t *Translator) validateExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, route RouteContext, resources *resource.Resources) status.Error {
+func (t *Translator) validateExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, context *HTTPFiltersContext, resources *resource.Resources) status.Error {
 	filterContext := &HTTPFiltersContext{
-		Route:        route,
-		HTTPFilterIR: &HTTPFilterIR{},
+		Route:        context.Route,
+		HTTPFilterIR: &HTTPFilterIR{Matches: context.Matches},
 	}
 	// Validation does not attach extensions to a Gateway or publish xDS resources.
 	err := t.processExtensionRefHTTPFilter(extFilter, filterContext, resources, nil)
+	// Keep the match constraints even when the redirect is rejected, so the
+	// generated error response cannot intercept requests outside this rule.
+	context.Matches = filterContext.Matches
 	if err != nil && err.Type() == gwapiv1.RouteConditionResolvedRefs {
 		return err
 	}

@@ -156,10 +156,11 @@ func TestRedirectExtension(t *testing.T) {
 
 func TestRedirectExtensionReferenceErrors(t *testing.T) {
 	translator := &Translator{}
+	matches := []egv1a1.HTTPRouteMatchFilter{{Cookies: []egv1a1.HTTPCookieMatch{{Name: "cohort", Value: "redirect"}}}}
 	resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
-			Spec:       egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{}},
+			Spec:       egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{}, Matches: matches},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "deny", Namespace: "default"},
@@ -203,7 +204,7 @@ func TestRedirectExtensionReferenceErrors(t *testing.T) {
 						route := &GRPCRouteContext{GRPCRoute: &gwapiv1.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
 						got, errs = translator.ProcessGRPCFilters(nil, route, filters, resources, nil)
 					}
-					require.Equal(t, &HTTPFilterIR{}, got.HTTPFilterIR)
+					require.Equal(t, &HTTPFilterIR{Matches: matches}, got.HTTPFilterIR)
 					conditionErrors := make(map[gwapiv1.RouteConditionType][]string)
 					for _, err := range errs {
 						conditionErrors[err.Type()] = append(conditionErrors[err.Type()], err.Error())
