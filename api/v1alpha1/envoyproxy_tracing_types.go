@@ -41,7 +41,7 @@ const (
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:message="openTelemetry can only be used with type OpenTelemetry",rule="has(self.openTelemetry) ? self.type == 'OpenTelemetry' : true"
-// +kubebuilder:validation:XValidation:message="http1 is not supported for tracing backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
+// +kubebuilder:validation:XValidation:message="http1 is not supported for OpenTelemetry tracing backends, which use gRPC.",rule="self.type != 'OpenTelemetry' || !has(self.backendSettings) || !has(self.backendSettings.http1)"
 type TracingProvider struct {
 	BackendCluster `json:",inline"`
 	// Type defines the tracing provider type.
