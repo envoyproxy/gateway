@@ -248,8 +248,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	routes []RouteContext,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
-	backendTrafficPolicies := resources.BackendTrafficPolicies
 	// BackendTrafficPolicies are already sorted by the provider layer
+	backendTrafficPolicies, mixedTargetPolicies := splitMixedBackendTargetPolicies(resources.BackendTrafficPolicies)
 
 	routeMapSize := len(routes)
 	gatewayMapSize := len(gateways)
@@ -490,6 +490,11 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		}
 	}
 
+	for _, policy := range mixedTargetPolicies {
+		t.rejectMixedBackendTargetPolicy(xdsIR, gateways, policy)
+		res = append(res, policy)
+	}
+
 	for _, policy := range res {
 		// Truncate Ancestor list of longer than 16
 		if len(policy.Status.Ancestors) > 16 {
@@ -683,6 +688,61 @@ func (t *Translator) setNotMergedStatusForBackendTargets(
 			status.SetWarningForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, egv1a1.PolicyReasonNotMerged, message, policy.Generation)
 		} else {
 			status.SetNotMergedForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation, message)
+		}
+	}
+}
+
+// mixesBackendTargets reports whether policy targets a Service, ServiceImport, or Backend together
+// with any other kind of target.
+func mixesBackendTargets(policy *egv1a1.BackendTrafficPolicy) bool {
+	var hasBackend, hasOther bool
+	for _, target := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
+		if isBackendTargetKind(target) {
+			hasBackend = true
+		} else {
+			hasOther = true
+		}
+	}
+	for _, sel := range policy.Spec.TargetSelectors {
+		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
+			hasBackend = true
+		} else {
+			hasOther = true
+		}
+	}
+	return hasBackend && hasOther
+}
+
+func splitMixedBackendTargetPolicies(policies []*egv1a1.BackendTrafficPolicy) (valid, mixed []*egv1a1.BackendTrafficPolicy) {
+	valid = make([]*egv1a1.BackendTrafficPolicy, 0, len(policies))
+	for _, policy := range policies {
+		if mixesBackendTargets(policy) {
+			mixed = append(mixed, policy)
+		} else {
+			valid = append(valid, policy)
+		}
+	}
+	return valid, mixed
+}
+
+// rejectMixedBackendTargetPolicy marks the policy invalid on every gateway that uses one of its
+// backend targets; none of the policy's targets are applied.
+func (t *Translator) rejectMixedBackendTargetPolicy(xdsIR resource.XdsIRMap, gateways []*GatewayContext, policy *egv1a1.BackendTrafficPolicy) {
+	for _, target := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
+		if !isBackendTargetKind(target) {
+			continue
+		}
+		key := backendPolicyKeyFromTarget(target)
+		for _, gw := range gateways {
+			if x, ok := xdsIR[t.getIRKey(gw.Gateway)]; !ok || !gatewayReferencesBackend(x, key) {
+				continue
+			}
+			ref := getAncestorRefForPolicy(utils.NamespacedName(gw), nil)
+			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
+				&status.PolicyResolveError{
+					Reason:  egv1a1.PolicyReasonInvalid,
+					Message: "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy",
+				})
 		}
 	}
 }

@@ -3649,3 +3649,116 @@ func TestSetNotMergedStatusForBackendTargets(t *testing.T) {
 		})
 	}
 }
+
+func TestMixesBackendTargets(t *testing.T) {
+	ref := func(group, kind string) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+		return gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+				Group: gwapiv1.Group(group),
+				Kind:  gwapiv1.Kind(kind),
+				Name:  "target",
+			},
+		}
+	}
+
+	tests := []struct {
+		name string
+		refs egv1a1.PolicyTargetReferences
+		want bool
+	}{
+		{
+			name: "backend targets only",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("", "Service"),
+					ref("gateway.envoyproxy.io", "Backend"),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "route targets only",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("gateway.networking.k8s.io", "HTTPRoute"),
+					ref("gateway.networking.k8s.io", "Gateway"),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "backend and route in targetRefs",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("", "Service"),
+					ref("gateway.networking.k8s.io", "HTTPRoute"),
+				},
+			},
+			want: true,
+		},
+		{
+			name: "backend and gateway in targetRefs",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("gateway.envoyproxy.io", "Backend"),
+					ref("gateway.networking.k8s.io", "Gateway"),
+				},
+			},
+			want: true,
+		},
+		{
+			name: "backend in targetRefs and route in targetSelectors",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("", "Service"),
+				},
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "HTTPRoute",
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "route in targetRefs and backend in targetSelectors",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("gateway.networking.k8s.io", "HTTPRoute"),
+				},
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Service",
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "deprecated singular targetRef is combined with targetSelectors",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRef: func() *gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+					r := ref("", "Service")
+					return &r
+				}(),
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "HTTPRoute",
+					},
+				},
+			},
+			want: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			policy := &egv1a1.BackendTrafficPolicy{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
+				Spec:       egv1a1.BackendTrafficPolicySpec{PolicyTargetReferences: tc.refs},
+			}
+
+			require.Equal(t, tc.want, mixesBackendTargets(policy))
+		})
+	}
+}
