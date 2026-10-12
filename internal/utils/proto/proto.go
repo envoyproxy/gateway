@@ -27,6 +27,10 @@ var (
 	// bootstrap configuration.
 	marshaler   = &jsonpb.Marshaler{OrigName: true}
 	unmarshaler = &jsonpb.Unmarshaler{AllowUnknownFields: true}
+
+	// deterministicMarshalOptions marshals map fields in a stable key order. Stability holds
+	// within a binary, which is sufficient for de-duplicating xDS resources.
+	deterministicMarshalOptions = proto.MarshalOptions{Deterministic: true}
 )
 
 func FromYAML(content []byte, pb proto.Message) error {
@@ -59,11 +63,14 @@ func ToAnyWithValidation(msg proto.Message) (*anypb.Any, error) {
 		return nil, err
 	}
 
-	any, err := anypb.New(msg)
-	if err != nil {
+	// Marshal deterministically so map fields (e.g. an access log's json_format) serialize in a
+	// stable key order across translations; without it, re-ordered map keys produce byte-different
+	// but semantically identical resources and repeated no-op xDS pushes.
+	a := &anypb.Any{}
+	if err := anypb.MarshalFrom(a, msg, deterministicMarshalOptions); err != nil {
 		return nil, err
 	}
-	return any, nil
+	return a, nil
 }
 
 // Validate validates the given message by calling its ValidateAll or Validate methods.

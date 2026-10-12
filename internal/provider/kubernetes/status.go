@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -26,10 +27,19 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-// updateStatusFromSubscriptions writes gateway API object status updates to the Kubernetes API server.
-func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context, extensionManagerEnabled bool) {
+func sendError(ctx context.Context, errChan chan<- error, err error) {
+	select {
+	case <-ctx.Done():
+	case errChan <- err:
+	}
+}
+
+// updateStatusFromSubscriptions starts workers that write gateway API object status updates to the Kubernetes API server.
+func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context, extensionManagerEnabled bool) *sync.WaitGroup {
+	var workers sync.WaitGroup
+
 	// GatewayClass object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GatewayClassStatusMessageName},
 			r.subscriptions.gatewayClassStatuses,
@@ -39,7 +49,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 					return
 				}
 
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: update.Key,
 					Resource:       new(gwapiv1.GatewayClass),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
@@ -61,10 +71,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("gatewayclass status subscriber shutting down")
-	}()
+	})
 
 	// Gateway object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GatewayStatusMessageName},
 			r.subscriptions.gatewayStatuses,
@@ -77,7 +87,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				gtw := new(gwapiv1.Gateway)
 				if err := r.client.Get(ctx, update.Key, gtw); err != nil {
 					r.log.Error(err, "gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
-					errChan <- err
+					sendError(ctx, errChan, err)
 					return
 				}
 				// Set the updated Status and call the status update
@@ -86,10 +96,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("gateway status subscriber shutting down")
-	}()
+	})
 
 	// HTTPRoute object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.HTTPRouteStatusMessageName},
 			r.subscriptions.httpRouteStatuses,
@@ -100,14 +110,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.HTTPRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						h, ok := obj.(*gwapiv1.HTTPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -128,10 +138,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("httpRoute status subscriber shutting down")
-	}()
+	})
 
 	// GRPCRoute object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GRPCRouteStatusMessageName},
 			r.subscriptions.grpcRouteStatuses,
@@ -142,14 +152,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.GRPCRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						g, ok := obj.(*gwapiv1.GRPCRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -170,10 +180,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("grpcRoute status subscriber shutting down")
-	}()
+	})
 
 	// TLSRoute object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TLSRouteStatusMessageName},
 			r.subscriptions.tlsRouteStatuses,
@@ -184,14 +194,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.TLSRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1.TLSRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -212,10 +222,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("tlsRoute status subscriber shutting down")
-	}()
+	})
 
 	// TCPRoute object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TCPRouteStatusMessageName},
 			r.subscriptions.tcpRouteStatuses,
@@ -226,14 +236,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.TCPRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1.TCPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -254,10 +264,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("tcpRoute status subscriber shutting down")
-	}()
+	})
 
 	// UDPRoute object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.UDPRouteStatusMessageName},
 			r.subscriptions.udpRouteStatuses,
@@ -268,14 +278,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.UDPRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						u, ok := obj.(*gwapiv1.UDPRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -296,10 +306,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("udpRoute status subscriber shutting down")
-	}()
+	})
 
 	// ListenerSet object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ListenerSetStatusMessageName},
 			r.subscriptions.listenerSetStatuses,
@@ -307,14 +317,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				if update.Delete {
 					return
 				}
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: update.Key,
 					Resource:       new(gwapiv1.ListenerSet),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						xls, ok := obj.(*gwapiv1.ListenerSet)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						statusCopy := update.Value.DeepCopy()
@@ -333,10 +343,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("listenerSet status subscriber shutting down")
-	}()
+	})
 
 	// EnvoyPatchPolicy object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyPatchPolicyStatusMessageName},
 			r.subscriptions.envoyPatchPolicyStatuses,
@@ -347,14 +357,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.EnvoyPatchPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.EnvoyPatchPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -371,10 +381,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("envoyPatchPolicy status subscriber shutting down")
-	}()
+	})
 
 	// ClientTrafficPolicy object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ClientTrafficPolicyStatusMessageName},
 			r.subscriptions.clientTrafficPolicyStatuses,
@@ -385,14 +395,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.ClientTrafficPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.ClientTrafficPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -409,10 +419,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("clientTrafficPolicy status subscriber shutting down")
-	}()
+	})
 
 	// BackendTrafficPolicy object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendTrafficPolicyStatusMessageName},
 			r.subscriptions.backendTrafficPolicyStatuses,
@@ -423,14 +433,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.BackendTrafficPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.BackendTrafficPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -447,10 +457,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("backendTrafficPolicy status subscriber shutting down")
-	}()
+	})
 
 	// SecurityPolicy object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.SecurityPolicyStatusMessageName},
 			r.subscriptions.securityPolicyStatuses,
@@ -461,14 +471,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.SecurityPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.SecurityPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -485,10 +495,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("securityPolicy status subscriber shutting down")
-	}()
+	})
 
 	// BackendTLSPolicy object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{
 				Runner:  string(egv1a1.LogComponentProviderRunner),
@@ -502,14 +512,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(gwapiv1.BackendTLSPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1.BackendTLSPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -526,10 +536,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("backendTlsPolicy status subscriber shutting down")
-	}()
+	})
 
 	// EnvoyExtensionPolicy object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyExtensionPolicyStatusMessageName},
 			r.subscriptions.envoyExtensionPolicyStatuses,
@@ -540,14 +550,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.EnvoyExtensionPolicy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.EnvoyExtensionPolicy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -564,10 +574,10 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("envoyExtensionPolicy status subscriber shutting down")
-	}()
+	})
 
 	// Backend object status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendStatusMessageName},
 			r.subscriptions.backendStatuses,
@@ -578,14 +588,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.Backend),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.Backend)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -602,11 +612,11 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("backend status subscriber shutting down")
-	}()
+	})
 
 	if extensionManagerEnabled {
 		// ExtensionServerPolicy object status updater
-		go func() {
+		workers.Go(func() {
 			message.HandleSubscription(r.log,
 				message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ExtensionServerPoliciesStatusMessageName},
 				r.subscriptions.extensionPolicyStatuses,
@@ -620,14 +630,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 					obj := unstructured.Unstructured{}
 					obj.SetGroupVersionKind(key.GroupVersionKind)
 
-					r.statusUpdater.Send(Update{
+					r.statusUpdater.Send(ctx, Update{
 						NamespacedName: key.NamespacedName,
 						Resource:       &obj,
 						Mutator: MutatorFunc(func(obj client.Object) client.Object {
 							t, ok := obj.(*unstructured.Unstructured)
 							if !ok {
 								err := fmt.Errorf("unsupported object type %T", obj)
-								errChan <- err
+								sendError(ctx, errChan, err)
 								panic(err)
 							}
 							valCopy := val.DeepCopy()
@@ -646,11 +656,11 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				},
 			)
 			r.log.Info("extensionServerPolicies status subscriber shutting down")
-		}()
+		})
 	}
 
 	// EnvoyProxy status updater
-	go func() {
+	workers.Go(func() {
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyProxyStatusMessageName},
 			r.subscriptions.envoyProxyStatuses,
@@ -661,14 +671,14 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				}
 				key := update.Key
 				val := update.Value
-				r.statusUpdater.Send(Update{
+				r.statusUpdater.Send(ctx, Update{
 					NamespacedName: key,
 					Resource:       new(egv1a1.EnvoyProxy),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.EnvoyProxy)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
-							errChan <- err
+							sendError(ctx, errChan, err)
 							panic(err)
 						}
 						valCopy := val.DeepCopy()
@@ -687,7 +697,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			},
 		)
 		r.log.Info("envoyProxy status subscriber shutting down")
-	}()
+	})
+
+	return &workers
 }
 
 // mergeRouteParentStatus merges the old and new RouteParentStatus.
@@ -768,7 +780,7 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 	key := utils.NamespacedName(gtw)
 
 	// publish status
-	r.statusUpdater.Send(Update{
+	r.statusUpdater.Send(ctx, Update{
 		NamespacedName: key,
 		Resource:       new(gwapiv1.Gateway),
 		Mutator: MutatorFunc(func(obj client.Object) client.Object {

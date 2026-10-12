@@ -45,7 +45,7 @@ func TestBuildWasmWithTLS(t *testing.T) {
 		{
 			name: "HTTP with TLS",
 			wasm: &egv1a1.Wasm{
-				Code: egv1a1.WasmCodeSource{
+				Code: &egv1a1.WasmCodeSource{
 					Type: egv1a1.HTTPWasmCodeSourceType,
 					HTTP: &egv1a1.HTTPWasmCodeSource{
 						URL: "https://example.com/wasm",
@@ -73,7 +73,7 @@ func TestBuildWasmWithTLS(t *testing.T) {
 		{
 			name: "Image with TLS",
 			wasm: &egv1a1.Wasm{
-				Code: egv1a1.WasmCodeSource{
+				Code: &egv1a1.WasmCodeSource{
 					Type: egv1a1.ImageWasmCodeSourceType,
 					Image: &egv1a1.ImageWasmCodeSource{
 						URL: "example.com/wasm:v1",
@@ -101,7 +101,7 @@ func TestBuildWasmWithTLS(t *testing.T) {
 		{
 			name: "HTTP with TLS error",
 			wasm: &egv1a1.Wasm{
-				Code: egv1a1.WasmCodeSource{
+				Code: &egv1a1.WasmCodeSource{
 					Type: egv1a1.HTTPWasmCodeSourceType,
 					HTTP: &egv1a1.HTTPWasmCodeSource{
 						URL: "https://example.com/wasm",
@@ -119,7 +119,7 @@ func TestBuildWasmWithTLS(t *testing.T) {
 		{
 			name: "Image with TLS error",
 			wasm: &egv1a1.Wasm{
-				Code: egv1a1.WasmCodeSource{
+				Code: &egv1a1.WasmCodeSource{
 					Type: egv1a1.ImageWasmCodeSourceType,
 					Image: &egv1a1.ImageWasmCodeSource{
 						URL: "example.com/wasm:v1",
@@ -161,7 +161,7 @@ func TestBuildWasmWithTLS(t *testing.T) {
 				Name:      "test-policy",
 			}
 
-			_, err := translator.buildWasm("test-wasm", tt.wasm, policy, 0, tt.resources)
+			_, err := translator.buildWasm("test-wasm", tt.wasm, policy, 0, tt.resources, nil)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {

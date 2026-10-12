@@ -176,11 +176,19 @@ func buildJWTRequirements(jwt *ir.JWT) (map[string]*jwtauthnv3.JwtProvider, []*j
 func buildJWTProvider(irProvider *ir.JWTProvider) (*jwtauthnv3.JwtProvider, error) {
 	claimToHeaders := make([]*jwtauthnv3.JwtClaimToHeader, 0, len(irProvider.ClaimToHeaders))
 	for _, claimToHeader := range irProvider.ClaimToHeaders {
-		claimToHeader := &jwtauthnv3.JwtClaimToHeader{
+		jwtClaimToHeader := &jwtauthnv3.JwtClaimToHeader{
 			HeaderName: claimToHeader.Header,
-			ClaimName:  claimToHeader.Claim,
 		}
-		claimToHeaders = append(claimToHeaders, claimToHeader)
+		if len(claimToHeader.ClaimPath) > 0 {
+			pathSegments := make([]*jwtauthnv3.JwtClaimToHeader_PathSegment, 0, len(claimToHeader.ClaimPath))
+			for _, segment := range claimToHeader.ClaimPath {
+				pathSegments = append(pathSegments, &jwtauthnv3.JwtClaimToHeader_PathSegment{Key: segment})
+			}
+			jwtClaimToHeader.ClaimPath = pathSegments
+		} else {
+			jwtClaimToHeader.ClaimName = claimToHeader.Claim
+		}
+		claimToHeaders = append(claimToHeaders, jwtClaimToHeader)
 	}
 	jwtProvider := &jwtauthnv3.JwtProvider{
 		Issuer:            irProvider.Issuer,

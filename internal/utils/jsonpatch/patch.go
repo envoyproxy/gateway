@@ -16,9 +16,9 @@ import (
 )
 
 // ApplyJSONPatches applies a series of JSONPatches to a provided JSON document.
-// Patches are applied in order, and any errors are aggregated into the return value.
-// An error with a specific patch just means that this specific patch is skipped, the document
-// will still be modified with any other provided patch operation.
+// Patches are applied in order. Validation and JSONPath evaluation errors skip the
+// affected patch and are aggregated. If applying a patch fails, processing stops
+// and no modified document is returned. Callers must discard the result on any error.
 // If a patch is applied to a JSONPath, then that JSONPath is first exploded to standard paths
 // and the patch is applied to all matching paths.
 func ApplyJSONPatches(document json.RawMessage, patches ...ir.JSONPatchOperation) (json.RawMessage, error) {
@@ -56,22 +56,24 @@ func ApplyJSONPatches(document json.RawMessage, patches ...ir.JSONPatchOperation
 			jsonPointers = []string{*p.Path}
 		}
 
+		patch := make(jsonpatchv5.Patch, 0, len(jsonPointers))
 		for _, path := range jsonPointers {
 			operation, err := toPatchOperation(path, p)
 			if err != nil {
 				tErrs = errors.Join(tErrs, err)
 				continue
 			}
+			patch = append(patch, operation)
+		}
+		if len(patch) == 0 {
+			continue
+		}
 
-			patch := jsonpatchv5.Patch{operation}
-
-			// Apply patch
-			document, err = patch.ApplyWithOptions(document, opts)
-			if err != nil {
-				tErr := fmt.Errorf("unable to apply patch: op=%s path=%s err: %s", string(p.Op), path, err.Error())
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
+		// Apply all matches with a single decode and encode of the document.
+		document, err = patch.ApplyWithOptions(document, opts)
+		if err != nil {
+			tErr := fmt.Errorf("unable to apply patch: op=%s err: %w", string(p.Op), err)
+			return nil, errors.Join(tErrs, tErr)
 		}
 	}
 	return document, tErrs

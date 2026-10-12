@@ -6,6 +6,9 @@
 package status
 
 import (
+	"fmt"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -50,6 +53,39 @@ func SetEnvoyProxyDeprecatedFieldsWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapi
 
 	cond := newCondition(string(egv1a1.EnvoyProxyConditionWarning), metav1.ConditionTrue,
 		string(egv1a1.EnvoyProxyReasonDeprecatedField), buildDeprecationWarningMessage(deprecatedFields), ep.Generation)
+
+	for i := range ep.Status.Ancestors {
+		item := ep.Status.Ancestors[i]
+		if ancestorRefsEqual(&item.AncestorRef, ancestor) {
+			ep.Status.Ancestors[i].Conditions = MergeConditions(item.Conditions, cond)
+			return
+		}
+	}
+
+	// ancestor not found, append a new one
+	ep.Status.Ancestors = append(ep.Status.Ancestors, egv1a1.EnvoyProxyAncestorStatus{
+		AncestorRef: *ancestor,
+		Conditions: []metav1.Condition{
+			cond,
+		},
+	})
+}
+
+// SetEnvoyProxyPatchDisabledWarning sets a Warning condition on the EnvoyProxy
+// ancestor status listing the Kubernetes resource `patch` fields that were
+// ignored because patching is disabled in the EnvoyGateway configuration.
+// It is a no-op when patchedFields is empty.
+func SetEnvoyProxyPatchDisabledWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, patchedFields []string) {
+	if ep == nil || ancestor == nil || len(patchedFields) == 0 {
+		return
+	}
+
+	msg := fmt.Sprintf(
+		"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: %s",
+		strings.Join(patchedFields, ", "))
+
+	cond := newCondition(string(egv1a1.EnvoyProxyConditionWarning), metav1.ConditionTrue,
+		string(egv1a1.EnvoyProxyReasonPatchDisabled), msg, ep.Generation)
 
 	for i := range ep.Status.Ancestors {
 		item := ep.Status.Ancestors[i]

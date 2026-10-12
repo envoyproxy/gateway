@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -769,6 +770,60 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
+		},
+		{
+			name: "mergeGateways and mergeBackends cannot both be enabled",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(true),
+					MergeBackends: &egv1a1.MergeBackendsConfig{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "mergeGateways alone is valid",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(true),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "mergeBackends alone is valid",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeBackends: &egv1a1.MergeBackendsConfig{},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "mergeGateways false with mergeBackends is valid",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(false),
+					MergeBackends: &egv1a1.MergeBackendsConfig{},
+				},
+			},
+			expected: true,
 		},
 	}
 

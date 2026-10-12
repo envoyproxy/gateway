@@ -97,8 +97,9 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    extensionServerPolicies:
-    - object:
+    extensionResources:
+    - name: foo.example.io/bar/envoy-gateway/test5
+      object:
         apiVersion: foo.example.io/v1alpha1
         kind: Bar
         metadata:
@@ -111,6 +112,8 @@ xdsIR:
             kind: Gateway
             name: gateway-1
             sectionName: nonexistent-listener
+    extensionServerPolicies:
+    - name: foo.example.io/bar/envoy-gateway/test5
     globalResources:
       proxyServiceCluster:
         metadata:
