@@ -763,11 +763,8 @@ func buildHealthCheckCodecClientType(protocol egv1a1.HTTPHealthCheckProtocol, up
 //   - Only the protocol of the codec for a pinned health check, so that an endpoint that
 //     speaks the other one fails the probe, as it would fail the requests to it.
 //
-// A negotiating health check keeps the ALPN a backend configures in its TLS context, as data
-// connections do. These options are set once per cluster and override every destination's
-// ALPN, so one destination that configures it leaves the others offering none, which falls
-// back to HTTP/1.1. A pinned health check sets its codec's protocol regardless, since an
-// endpoint that negotiates nothing or something else can't serve that codec.
+// When a destination configures ALPN, a negotiating health check keeps it and nothing is set
+// for the cluster, so a destination without one offers nothing and falls back to HTTP/1.1.
 func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype.CodecClientType,
 	negotiate bool,
 ) *corev3.HealthCheck_TlsOptions {
@@ -776,6 +773,10 @@ func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype
 		if ds == nil || ds.TLS == nil {
 			continue
 		}
+		// tls_options is one ALPN list for the whole cluster, so setting it overrides the
+		// ALPN of every destination. A negotiating probe keeps the ALPN a destination
+		// configures, as data connections do, and so sets nothing when any destination
+		// has one. A pinned probe must offer its codec's protocol, so it is set regardless.
 		if negotiate && ds.TLS.ALPNProtocols != nil {
 			return nil
 		}
