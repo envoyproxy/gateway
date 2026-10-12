@@ -673,12 +673,12 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
 		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
-		version := ptr.Deref(healthcheck.HTTP.Version, egv1a1.HTTPHealthCheckVersionAuto)
-		httpChecker.CodecClientType = buildHealthCheckCodecClientType(version, upstreamHTTP2)
+		protocol := ptr.Deref(healthcheck.HTTP.Protocol, egv1a1.HTTPHealthCheckProtocolAuto)
+		httpChecker.CodecClientType = buildHealthCheckCodecClientType(protocol, upstreamHTTP2)
 		// A cluster that negotiates its upstream protocol through ALPN lets its health
-		// checks negotiate theirs the same way, unless a version was configured explicitly.
+		// checks negotiate theirs the same way, unless a protocol was configured explicitly.
 		// Envoy only selects the codec from ALPN when asked to, and pins it otherwise.
-		negotiate := upstreamNegotiated && version == egv1a1.HTTPHealthCheckVersionAuto
+		negotiate := upstreamNegotiated && protocol == egv1a1.HTTPHealthCheckProtocolAuto
 		httpChecker.UseAlpnProtocol = negotiate
 		hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType, negotiate)
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
@@ -730,11 +730,11 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 }
 
 // buildHealthCheckCodecClientType returns the codec of HTTP health check requests: the
-// configured version, or the one that requests to the backend use. A health check that
+// configured protocol, or the one that requests to the backend use. A health check that
 // negotiates its protocol only falls back to it when nothing is negotiated.
-func buildHealthCheckCodecClientType(version egv1a1.HTTPHealthCheckVersion, upstreamHTTP2 bool) xdstype.CodecClientType {
+func buildHealthCheckCodecClientType(protocol egv1a1.HTTPHealthCheckProtocol, upstreamHTTP2 bool) xdstype.CodecClientType {
 	switch {
-	case version == egv1a1.HTTPHealthCheckVersionHTTP2, version == egv1a1.HTTPHealthCheckVersionAuto && upstreamHTTP2:
+	case protocol == egv1a1.HTTPHealthCheckProtocolHTTP2, protocol == egv1a1.HTTPHealthCheckProtocolAuto && upstreamHTTP2:
 		return xdstype.CodecClientType_HTTP2
 	default:
 		return xdstype.CodecClientType_HTTP1

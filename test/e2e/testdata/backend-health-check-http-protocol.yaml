@@ -46,7 +46,7 @@ spec:
     hostname: example.com
 ---
 # The h2c port of infra-backend-v1 only answers HTTP/2 requests. Expose it with the
-# kubernetes.io/h2c appProtocol, which the health check version is derived from.
+# kubernetes.io/h2c appProtocol, which the health check protocol is derived from.
 apiVersion: v1
 kind: Service
 metadata:
@@ -61,7 +61,7 @@ spec:
       targetPort: 3001
       appProtocol: kubernetes.io/h2c
 ---
-# A health check that passes the h2c port was sent over HTTP/2, the version derived
+# A health check that passes the h2c port was sent over HTTP/2, the protocol derived
 # from the appProtocol of the port.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -104,7 +104,7 @@ spec:
         - name: infra-backend-v1-h2c
           port: 8081
 ---
-# An explicit HTTP/1.1 version is used as is, and the h2c port rejects it.
+# An explicit HTTP/1.1 protocol is used as is, and the h2c port rejects it.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -126,7 +126,7 @@ spec:
       type: HTTP
       http:
         path: "/"
-        version: HTTP1
+        protocol: HTTP1
         expectedStatuses:
           - 200
 ---
@@ -191,7 +191,7 @@ spec:
         - name: tls-backend-2
           port: 443
 ---
-# An explicit HTTP/1.1 version is negotiated as is, so the body doesn't match.
+# An explicit HTTP/1.1 protocol is negotiated as is, so the body doesn't match.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -213,7 +213,7 @@ spec:
       type: HTTP
       http:
         path: "/"
-        version: HTTP1
+        protocol: HTTP1
         expectedResponse:
           type: Text
           text: '"proto": "HTTP/2.0"'

@@ -4581,9 +4581,9 @@ func (in *HTTPActiveHealthChecker) DeepCopyInto(out *HTTPActiveHealthChecker) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Version != nil {
-		in, out := &in.Version, &out.Version
-		*out = new(HTTPHealthCheckVersion)
+	if in.Protocol != nil {
+		in, out := &in.Protocol, &out.Protocol
+		*out = new(HTTPHealthCheckProtocol)
 		**out = **in
 	}
 	if in.Method != nil {

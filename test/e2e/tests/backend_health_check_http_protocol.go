@@ -27,16 +27,16 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, BackendHealthCheckHTTPVersionTest)
+	ConformanceTests = append(ConformanceTests, BackendHealthCheckHTTPProtocolTest)
 }
 
-// BackendHealthCheckHTTPVersionTest verifies the HTTP version of active health checks:
+// BackendHealthCheckHTTPProtocolTest verifies the HTTP protocol of active health checks:
 // derived from the backend protocol by default, negotiated through ALPN on a TLS backend
-// that negotiates its own protocol, and fixed by an explicit version.
-var BackendHealthCheckHTTPVersionTest = suite.ConformanceTest{
-	ShortName:   "BackendHealthCheckHTTPVersion",
-	Description: "Active HTTP health checks are sent over the HTTP version of the backend",
-	Manifests:   []string{"testdata/backend-health-check-http-version.yaml"},
+// that negotiates its own protocol, and fixed by an explicit protocol.
+var BackendHealthCheckHTTPProtocolTest = suite.ConformanceTest{
+	ShortName:   "BackendHealthCheckHTTPProtocol",
+	Description: "Active HTTP health checks are sent over the HTTP protocol of the backend",
+	Manifests:   []string{"testdata/backend-health-check-http-protocol.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		gtwName := "same-namespace"
@@ -50,12 +50,12 @@ var BackendHealthCheckHTTPVersionTest = suite.ConformanceTest{
 			// The h2c port of the backend only answers HTTP/2 requests. Auto derives HTTP/2 from
 			// the kubernetes.io/h2c appProtocol of the port, so the probe gets a 200.
 			{name: "h2c-auto", healthy: true},
-			// An explicit HTTP1 version is sent as is, and the h2c port rejects it with a 400.
+			// An explicit HTTP1 protocol is sent as is, and the h2c port rejects it with a 400.
 			{name: "h2c-http1", healthy: false},
 			// The TLS backend negotiates its protocol through ALPN. Auto negotiates it the same
 			// way and lands on HTTP/2, which the probe matches in the echoed "proto" field.
 			{name: "tls-auto", healthy: true},
-			// An explicit HTTP1 version is negotiated as is, so the backend echoes HTTP/1.1 and
+			// An explicit HTTP1 protocol is negotiated as is, so the backend echoes HTTP/1.1 and
 			// the probe fails to match the body.
 			{name: "tls-http1", healthy: false},
 		}

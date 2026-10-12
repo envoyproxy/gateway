@@ -1626,6 +1626,28 @@ spec:
                             maxLength: 1024
                             minLength: 1
                             type: string
+                          protocol:
+                            default: Auto
+                            description: |-
+                              Protocol is the HTTP protocol that active health check requests are sent with.
+
+                              Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                  `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                  GRPCRoute.
+                                - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                  with HTTP1 as the fallback when nothing is negotiated.
+                                - HTTP1 otherwise.
+
+                              Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                              the application, for example a backend that serves HTTP/1.1 traffic but only
+                              accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                            enum:
+                            - Auto
+                            - HTTP1
+                            - HTTP2
+                            type: string
                           requestBody:
                             description: RequestBody defines the HTTP request body
                               payload sent during health checking.
@@ -1670,28 +1692,6 @@ spec:
                               minimum: 100
                               type: integer
                             type: array
-                          version:
-                            default: Auto
-                            description: |-
-                              Version is the HTTP version that active health check requests are sent with.
-
-                              Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                  `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                  GRPCRoute.
-                                - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                  with HTTP1 as the fallback when nothing is negotiated.
-                                - HTTP1 otherwise.
-
-                              Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                              the application, for example a backend that serves HTTP/1.1 traffic but only
-                              accepts HTTP/2 health checks. An explicit version is always used as is.
-                            enum:
-                            - Auto
-                            - HTTP1
-                            - HTTP2
-                            type: string
                         required:
                         - path
                         type: object
@@ -8080,6 +8080,28 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    protocol:
+                                      default: Auto
+                                      description: |-
+                                        Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                        Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                          - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                            `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                            GRPCRoute.
+                                          - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                            with HTTP1 as the fallback when nothing is negotiated.
+                                          - HTTP1 otherwise.
+
+                                        Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                        the application, for example a backend that serves HTTP/1.1 traffic but only
+                                        accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                      enum:
+                                      - Auto
+                                      - HTTP1
+                                      - HTTP2
+                                      type: string
                                     requestBody:
                                       description: RequestBody defines the HTTP request
                                         body payload sent during health checking.
@@ -8127,28 +8149,6 @@ spec:
                                         minimum: 100
                                         type: integer
                                       type: array
-                                    version:
-                                      default: Auto
-                                      description: |-
-                                        Version is the HTTP version that active health check requests are sent with.
-
-                                        Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                          - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                            `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                            GRPCRoute.
-                                          - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                            with HTTP1 as the fallback when nothing is negotiated.
-                                          - HTTP1 otherwise.
-
-                                        Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                        the application, for example a backend that serves HTTP/1.1 traffic but only
-                                        accepts HTTP/2 health checks. An explicit version is always used as is.
-                                      enum:
-                                      - Auto
-                                      - HTTP1
-                                      - HTTP2
-                                      type: string
                                   required:
                                   - path
                                   type: object
@@ -23154,6 +23154,28 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      protocol:
+                                                        default: Auto
+                                                        description: |-
+                                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                              GRPCRoute.
+                                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                              with HTTP1 as the fallback when nothing is negotiated.
+                                                            - HTTP1 otherwise.
+
+                                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                        enum:
+                                                        - Auto
+                                                        - HTTP1
+                                                        - HTTP2
+                                                        type: string
                                                       requestBody:
                                                         description: RequestBody defines
                                                           the HTTP request body payload
@@ -23207,28 +23229,6 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
-                                                      version:
-                                                        default: Auto
-                                                        description: |-
-                                                          Version is the HTTP version that active health check requests are sent with.
-
-                                                          Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                                              GRPCRoute.
-                                                            - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                                              with HTTP1 as the fallback when nothing is negotiated.
-                                                            - HTTP1 otherwise.
-
-                                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                                          the application, for example a backend that serves HTTP/1.1 traffic but only
-                                                          accepts HTTP/2 health checks. An explicit version is always used as is.
-                                                        enum:
-                                                        - Auto
-                                                        - HTTP1
-                                                        - HTTP2
-                                                        type: string
                                                     required:
                                                     - path
                                                     type: object
@@ -24870,6 +24870,28 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      protocol:
+                                                        default: Auto
+                                                        description: |-
+                                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                              GRPCRoute.
+                                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                              with HTTP1 as the fallback when nothing is negotiated.
+                                                            - HTTP1 otherwise.
+
+                                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                        enum:
+                                                        - Auto
+                                                        - HTTP1
+                                                        - HTTP2
+                                                        type: string
                                                       requestBody:
                                                         description: RequestBody defines
                                                           the HTTP request body payload
@@ -24923,28 +24945,6 @@ spec:
                                                           minimum: 100
                                                           type: integer
                                                         type: array
-                                                      version:
-                                                        default: Auto
-                                                        description: |-
-                                                          Version is the HTTP version that active health check requests are sent with.
-
-                                                          Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                                              GRPCRoute.
-                                                            - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                                              with HTTP1 as the fallback when nothing is negotiated.
-                                                            - HTTP1 otherwise.
-
-                                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                                          the application, for example a backend that serves HTTP/1.1 traffic but only
-                                                          accepts HTTP/2 health checks. An explicit version is always used as is.
-                                                        enum:
-                                                        - Auto
-                                                        - HTTP1
-                                                        - HTTP2
-                                                        type: string
                                                     required:
                                                     - path
                                                     type: object
@@ -26986,6 +26986,28 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                protocol:
+                                                  default: Auto
+                                                  description: |-
+                                                    Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                    Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                      - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                        `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                        GRPCRoute.
+                                                      - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                        with HTTP1 as the fallback when nothing is negotiated.
+                                                      - HTTP1 otherwise.
+
+                                                    Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                    the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                    accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                  enum:
+                                                  - Auto
+                                                  - HTTP1
+                                                  - HTTP2
+                                                  type: string
                                                 requestBody:
                                                   description: RequestBody defines
                                                     the HTTP request body payload
@@ -27036,28 +27058,6 @@ spec:
                                                     minimum: 100
                                                     type: integer
                                                   type: array
-                                                version:
-                                                  default: Auto
-                                                  description: |-
-                                                    Version is the HTTP version that active health check requests are sent with.
-
-                                                    Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                                      - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                                        `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                                        GRPCRoute.
-                                                      - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                                        with HTTP1 as the fallback when nothing is negotiated.
-                                                      - HTTP1 otherwise.
-
-                                                    Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                                    the application, for example a backend that serves HTTP/1.1 traffic but only
-                                                    accepts HTTP/2 health checks. An explicit version is always used as is.
-                                                  enum:
-                                                  - Auto
-                                                  - HTTP1
-                                                  - HTTP2
-                                                  type: string
                                               required:
                                               - path
                                               type: object
@@ -28819,6 +28819,28 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          protocol:
+                                            default: Auto
+                                            description: |-
+                                              Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                              Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                  `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                  GRPCRoute.
+                                                - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                  with HTTP1 as the fallback when nothing is negotiated.
+                                                - HTTP1 otherwise.
+
+                                              Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                              the application, for example a backend that serves HTTP/1.1 traffic but only
+                                              accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                            enum:
+                                            - Auto
+                                            - HTTP1
+                                            - HTTP2
+                                            type: string
                                           requestBody:
                                             description: RequestBody defines the HTTP
                                               request body payload sent during health
@@ -28869,28 +28891,6 @@ spec:
                                               minimum: 100
                                               type: integer
                                             type: array
-                                          version:
-                                            default: Auto
-                                            description: |-
-                                              Version is the HTTP version that active health check requests are sent with.
-
-                                              Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                                - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                                  `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                                  GRPCRoute.
-                                                - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                                  with HTTP1 as the fallback when nothing is negotiated.
-                                                - HTTP1 otherwise.
-
-                                              Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                              the application, for example a backend that serves HTTP/1.1 traffic but only
-                                              accepts HTTP/2 health checks. An explicit version is always used as is.
-                                            enum:
-                                            - Auto
-                                            - HTTP1
-                                            - HTTP2
-                                            type: string
                                         required:
                                         - path
                                         type: object
@@ -32370,6 +32370,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -32418,28 +32440,6 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
-                                      version:
-                                        default: Auto
-                                        description: |-
-                                          Version is the HTTP version that active health check requests are sent with.
-
-                                          Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                              GRPCRoute.
-                                            - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                              with HTTP1 as the fallback when nothing is negotiated.
-                                            - HTTP1 otherwise.
-
-                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                          the application, for example a backend that serves HTTP/1.1 traffic but only
-                                          accepts HTTP/2 health checks. An explicit version is always used as is.
-                                        enum:
-                                        - Auto
-                                        - HTTP1
-                                        - HTTP2
-                                        type: string
                                     required:
                                     - path
                                     type: object
@@ -33946,6 +33946,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -33994,28 +34016,6 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
-                                      version:
-                                        default: Auto
-                                        description: |-
-                                          Version is the HTTP version that active health check requests are sent with.
-
-                                          Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                              GRPCRoute.
-                                            - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                              with HTTP1 as the fallback when nothing is negotiated.
-                                            - HTTP1 otherwise.
-
-                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                          the application, for example a backend that serves HTTP/1.1 traffic but only
-                                          accepts HTTP/2 health checks. An explicit version is always used as is.
-                                        enum:
-                                        - Auto
-                                        - HTTP1
-                                        - HTTP2
-                                        type: string
                                     required:
                                     - path
                                     type: object
@@ -35846,6 +35846,28 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            protocol:
+                                              default: Auto
+                                              description: |-
+                                                Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                  - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                    `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                    GRPCRoute.
+                                                  - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                    with HTTP1 as the fallback when nothing is negotiated.
+                                                  - HTTP1 otherwise.
+
+                                                Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                              enum:
+                                              - Auto
+                                              - HTTP1
+                                              - HTTP2
+                                              type: string
                                             requestBody:
                                               description: RequestBody defines the
                                                 HTTP request body payload sent during
@@ -35896,28 +35918,6 @@ spec:
                                                 minimum: 100
                                                 type: integer
                                               type: array
-                                            version:
-                                              default: Auto
-                                              description: |-
-                                                Version is the HTTP version that active health check requests are sent with.
-
-                                                Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                                  - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                                    `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                                    GRPCRoute.
-                                                  - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                                    with HTTP1 as the fallback when nothing is negotiated.
-                                                  - HTTP1 otherwise.
-
-                                                Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                                the application, for example a backend that serves HTTP/1.1 traffic but only
-                                                accepts HTTP/2 health checks. An explicit version is always used as is.
-                                              enum:
-                                              - Auto
-                                              - HTTP1
-                                              - HTTP2
-                                              type: string
                                           required:
                                           - path
                                           type: object
@@ -37901,6 +37901,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -37949,28 +37971,6 @@ spec:
                                           minimum: 100
                                           type: integer
                                         type: array
-                                      version:
-                                        default: Auto
-                                        description: |-
-                                          Version is the HTTP version that active health check requests are sent with.
-
-                                          Defaults to Auto, which uses the same version as regular requests to the backend:
-
-                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
-                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
-                                              GRPCRoute.
-                                            - The version negotiated through ALPN for a TLS backend that negotiates it,
-                                              with HTTP1 as the fallback when nothing is negotiated.
-                                            - HTTP1 otherwise.
-
-                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different version than
-                                          the application, for example a backend that serves HTTP/1.1 traffic but only
-                                          accepts HTTP/2 health checks. An explicit version is always used as is.
-                                        enum:
-                                        - Auto
-                                        - HTTP1
-                                        - HTTP2
-                                        type: string
                                     required:
                                     - path
                                     type: object
