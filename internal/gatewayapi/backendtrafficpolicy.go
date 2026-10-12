@@ -764,7 +764,7 @@ func (t *Translator) reportMixedBackendTargetPolicy(xdsIR resource.XdsIRMap, gat
 // policyHasBackendTargetSelectors reports a targetSelectors entry naming a kind translation never resolves.
 func policyHasBackendTargetSelectors(policy *egv1a1.BackendTrafficPolicy) bool {
 	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
+		if isBackendTarget(selectorTargetRef(sel)) {
 			return true
 		}
 	}
@@ -776,7 +776,7 @@ func policyHasBackendTargetSelectors(policy *egv1a1.BackendTrafficPolicy) bool {
 func (t *Translator) backendSelectorMatches(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []targetRefWithTimestamp {
 	var backendSelectors []egv1a1.TargetSelector
 	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
+		if isBackendTarget(selectorTargetRef(sel)) {
 			backendSelectors = append(backendSelectors, sel)
 		}
 	}

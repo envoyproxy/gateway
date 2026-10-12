@@ -1167,31 +1167,18 @@ func isListener(target policyTargetReferenceWithSectionName) bool {
 	return target.Kind == resource.KindGateway && target.SectionName != nil
 }
 
-// isBackendTargetKind reports whether target's kind is Service, ServiceImport, or Backend -
-// i.e. the target is a backend, not a Gateway/ListenerSet/xRoute.
-func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {
+// isBackendTarget reports whether target's group and kind together are a Service, ServiceImport, or
+// Backend, i.e. the target is a backend, not a Gateway/ListenerSet/xRoute or an unrelated resource.
+func isBackendTarget(target policyTargetReferenceWithSectionName) bool {
 	switch target.Kind {
-	case gwapiv1.Kind(resource.KindService), gwapiv1.Kind(resource.KindServiceImport), gwapiv1.Kind(resource.KindBackend):
-		return true
+	case gwapiv1.Kind(resource.KindService):
+		return target.Group == ""
+	case gwapiv1.Kind(resource.KindServiceImport):
+		return target.Group == GroupMultiClusterService
+	case gwapiv1.Kind(resource.KindBackend):
+		return target.Group == egv1a1.GroupName
 	default:
 		return false
-	}
-}
-
-// isBackendTarget reports whether target's group and kind together are a Service, ServiceImport, or
-// Backend, so a target that merely shares a backend's kind in another group is not a backend.
-func isBackendTarget(target policyTargetReferenceWithSectionName) bool {
-	return isBackendTargetKind(target) && target.Group == backendKindGroup(target.Kind)
-}
-
-func backendKindGroup(kind gwapiv1.Kind) gwapiv1.Group {
-	switch kind {
-	case gwapiv1.Kind(resource.KindServiceImport):
-		return GroupMultiClusterService
-	case gwapiv1.Kind(resource.KindBackend):
-		return egv1a1.GroupName
-	default:
-		return ""
 	}
 }
 

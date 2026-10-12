@@ -3164,26 +3164,6 @@ func TestApplyGatewayPolicyToMergedClusterUseClientProtocol(t *testing.T) {
 	}
 }
 
-func TestIsBackendTargetKind(t *testing.T) {
-	tests := []struct {
-		name string
-		kind gwapiv1.Kind
-		want bool
-	}{
-		{name: "Service", kind: gwapiv1.Kind(gwapiresource.KindService), want: true},
-		{name: "ServiceImport", kind: gwapiv1.Kind(gwapiresource.KindServiceImport), want: true},
-		{name: "Backend", kind: gwapiv1.Kind(gwapiresource.KindBackend), want: true},
-		{name: "Gateway", kind: gwapiv1.Kind(gwapiresource.KindGateway), want: false},
-		{name: "HTTPRoute", kind: gwapiv1.Kind(gwapiresource.KindHTTPRoute), want: false},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			target := policyTargetReferenceWithSectionName{Kind: tc.kind}
-			require.Equal(t, tc.want, isBackendTargetKind(target))
-		})
-	}
-}
-
 func TestIsBackendTarget(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -3564,16 +3544,25 @@ func TestPolicyHasBackendTargetSelectors(t *testing.T) {
 			name: "selector targets Service",
 			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Service")}},
+					TargetSelectors: []egv1a1.TargetSelector{{Group: new(gwapiv1.Group("")), Kind: gwapiv1.Kind("Service")}},
 				},
 			}},
 			want: true,
 		},
 		{
+			name: "selector targets Service in the default group, which is not a backend",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Service")}},
+				},
+			}},
+			want: false,
+		},
+		{
 			name: "selector targets ServiceImport",
 			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("ServiceImport")}},
+					TargetSelectors: []egv1a1.TargetSelector{{Group: new(gwapiv1.Group(GroupMultiClusterService)), Kind: gwapiv1.Kind("ServiceImport")}},
 				},
 			}},
 			want: true,
@@ -3582,7 +3571,7 @@ func TestPolicyHasBackendTargetSelectors(t *testing.T) {
 			name: "selector targets Backend",
 			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Backend")}},
+					TargetSelectors: []egv1a1.TargetSelector{{Group: new(gwapiv1.Group(egv1a1.GroupName)), Kind: gwapiv1.Kind("Backend")}},
 				},
 			}},
 			want: true,
@@ -3593,7 +3582,7 @@ func TestPolicyHasBackendTargetSelectors(t *testing.T) {
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetSelectors: []egv1a1.TargetSelector{
 						{Kind: gwapiv1.Kind("HTTPRoute")},
-						{Kind: gwapiv1.Kind("Backend")},
+						{Group: new(gwapiv1.Group(egv1a1.GroupName)), Kind: gwapiv1.Kind("Backend")},
 					},
 				},
 			}},
