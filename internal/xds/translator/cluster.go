@@ -774,9 +774,10 @@ func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype
 			continue
 		}
 		// tls_options is one ALPN list for the whole cluster, so setting it overrides the
-		// ALPN of every destination. A negotiating probe keeps the ALPN a destination
-		// configures, as data connections do, and so sets nothing when any destination
-		// has one. A pinned probe must offer its codec's protocol, so it is set regardless.
+		// ALPN of every destination. A health check that picks its protocol from ALPN keeps
+		// the ALPN a destination configures, as data connections do, so nothing is set when
+		// any destination has one. A health check with a fixed protocol must offer that
+		// protocol, so it is set regardless.
 		if negotiate && ds.TLS.ALPNProtocols != nil {
 			return nil
 		}
