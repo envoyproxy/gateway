@@ -1815,6 +1815,9 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http1 is not supported for ExtProc backends, which always
+                      use gRPC.
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                 maxItems: 16
                 type: array
               lua:

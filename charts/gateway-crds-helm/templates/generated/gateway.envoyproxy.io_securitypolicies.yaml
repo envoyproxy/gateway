@@ -2445,6 +2445,9 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: http1 is not supported for gRPC ExtAuth backends, which
+                        always use gRPC.
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included

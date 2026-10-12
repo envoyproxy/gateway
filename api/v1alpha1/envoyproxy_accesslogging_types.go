@@ -154,6 +154,7 @@ const (
 // +kubebuilder:validation:XValidation:message="must have at least one backend in backendRefs",rule="has(self.backendRefs) && self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="http1 is not supported for ALS backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
 type ALSEnvoyProxyAccessLog struct {
 	BackendCluster `json:",inline"`
 
@@ -196,6 +197,7 @@ type FileEnvoyProxyAccessLog struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:rule="!has(self.resources) || !has(self.resourceAttributes)",message="either resources or resourceAttributes can be set, not both"
+// +kubebuilder:validation:XValidation:message="http1 is not supported for OpenTelemetry access log backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	BackendCluster `json:",inline"`
 	// Host define the extension service hostname.

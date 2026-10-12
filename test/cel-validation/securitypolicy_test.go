@@ -1228,6 +1228,42 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "GRPC external auth service with http1 backendSettings is rejected",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+								BackendSettings: &egv1a1.BackendSettings{
+									ClusterSettings: egv1a1.ClusterSettings{
+										HTTP1: &egv1a1.BackendHTTP1Settings{},
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for gRPC ExtAuth backends, which always use gRPC."},
+		},
 
 		// JWT
 		{

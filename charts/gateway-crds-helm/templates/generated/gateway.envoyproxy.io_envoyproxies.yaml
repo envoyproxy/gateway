@@ -13516,6 +13516,9 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: http1 is not supported for ALS backends,
+                                        which always use gRPC.
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
@@ -15258,6 +15261,9 @@ spec:
                                     - message: either resources or resourceAttributes
                                         can be set, not both
                                       rule: '!has(self.resources) || !has(self.resourceAttributes)'
+                                    - message: http1 is not supported for OpenTelemetry
+                                        access log backends, which always use gRPC.
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -17332,6 +17338,9 @@ spec:
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                   f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                   : true'
+                              - message: http1 is not supported for OpenTelemetry
+                                  metrics backends, which always use gRPC.
+                                rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -19211,6 +19220,9 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
+                        - message: http1 is not supported for tracing backends, which
+                            always use gRPC.
+                          rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be

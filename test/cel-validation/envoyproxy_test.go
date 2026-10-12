@@ -1434,6 +1434,148 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"serviceName cannot be empty if provided"},
 		},
 		{
+			desc: "ALS access log with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "als-service",
+																Port: new(gwapiv1.PortNumber(9000)),
+															},
+														},
+													},
+													BackendSettings: &egv1a1.BackendSettings{
+														ClusterSettings: egv1a1.ClusterSettings{
+															HTTP1: &egv1a1.BackendHTTP1Settings{},
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for ALS backends, which always use gRPC."},
+		},
+		{
+			desc: "OpenTelemetry access log with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-log-service",
+																Port: new(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+													BackendSettings: &egv1a1.BackendSettings{
+														ClusterSettings: egv1a1.ClusterSettings{
+															HTTP1: &egv1a1.BackendHTTP1Settings{},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for OpenTelemetry access log backends, which always use gRPC."},
+		},
+		{
+			desc: "OpenTelemetry metrics sink with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name: "otel-metrics-service",
+														Port: new(gwapiv1.PortNumber(4317)),
+													},
+												},
+											},
+											BackendSettings: &egv1a1.BackendSettings{
+												ClusterSettings: egv1a1.ClusterSettings{
+													HTTP1: &egv1a1.BackendHTTP1Settings{},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for OpenTelemetry metrics backends, which always use gRPC."},
+		},
+		{
+			desc: "tracing provider with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "tracing-service",
+												Kind: new(gwapiv1.Kind("Service")),
+												Port: new(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+									BackendSettings: &egv1a1.BackendSettings{
+										ClusterSettings: egv1a1.ClusterSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for tracing backends, which always use gRPC."},
+		},
+		{
 			desc: "ProxyHpa-maxReplicas-is-required",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
