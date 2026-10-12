@@ -162,6 +162,15 @@ var EnvoyProxy = suite.ResilienceTest{
 				},
 			)
 			require.NoError(t, err, "Failed to confirm Envoy proxy disconnected from control plane")
+			snapshotCount, err := waitForMetricValueVerification(
+				t,
+				suite,
+				PrometheusXDSSnapshotSuccess,
+				func(actual float64) bool {
+					return actual >= 0
+				},
+			)
+			require.NoError(t, err, "Failed to get initial xDS snapshot count")
 			ap := kubernetes.Applier{
 				ManifestFS:     suite.ManifestFS,
 				GatewayClass:   suite.GatewayClassName,
@@ -176,6 +185,16 @@ var EnvoyProxy = suite.ResilienceTest{
 				"testdata/route_changes.yaml",
 				true,
 			)
+			t.Log("Waiting for updated configuration to generate a new xDS snapshot")
+			_, err = waitForMetricValueVerification(
+				t,
+				suite,
+				PrometheusXDSSnapshotSuccess,
+				func(actual float64) bool {
+					return actual > snapshotCount
+				},
+			)
+			require.NoError(t, err, "Updated route did not generate a new xDS snapshot")
 			t.Log("Restoring Envoy proxy xDS connectivity")
 			_, err = suite.Kube().ManageEgress(
 				ctx,
