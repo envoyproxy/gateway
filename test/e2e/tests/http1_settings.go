@@ -205,10 +205,11 @@ func sendHTTP10Request(gwAddr, path, host string) (map[string]string, error) {
 //   - preserveHeaderCase is applied to the upstream cluster codec
 //   - a BTP on a specific route overrides the CTP-seeded cluster codec
 //   - HTTP/1.0 downstream requests are proxied without acceptHttp10 on the cluster
-//   - useDefaultHost injects a Host for hostless HTTP/1.0 requests
+//   - useDefaultHost injects a Host for hostless HTTP/1.0 requests (dedicated gateway)
 //
 // Two routes share one gateway and one CTP. The "btp-override" route additionally
 // has a BTP that disables preserveHeaderCase at the cluster level.
+// The useDefaultHost subtest uses a dedicated gateway with a concrete hostname.
 var HTTP1Settings = suite.ConformanceTest{
 	ShortName:   "HTTP1Settings",
 	Description: "Verify CTP http1 settings: preserveHeaderCase, enableTrailers, http10, and BTP override",
@@ -223,6 +224,12 @@ var HTTP1Settings = suite.ConformanceTest{
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, s.Client, s.TimeoutConfig, s.ControllerName,
 			kubernetes.NewGatewayRef(gwNN), routeNN, routeBTPNN, routeHTTP10NN)
 
+		// Dedicated gateway for useDefaultHost — needs a concrete listener hostname.
+		http10GwNN := types.NamespacedName{Name: "http1-settings-http10-gtw", Namespace: ns}
+		routeDefaultHostNN := types.NamespacedName{Name: "http1-settings-http10-default-host", Namespace: ns}
+		http10GwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, s.Client, s.TimeoutConfig, s.ControllerName,
+			kubernetes.NewGatewayRef(http10GwNN), routeDefaultHostNN)
+
 		WaitForPods(t, s.Client, ns, map[string]string{"app": "preserve-case"}, corev1.PodRunning, &PodReady)
 
 		ancestorRef := gwapiv1.ParentReference{
@@ -231,10 +238,20 @@ var HTTP1Settings = suite.ConformanceTest{
 			Namespace: gatewayapi.NamespacePtr(ns),
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
+		http10AncestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(ns),
+			Name:      gwapiv1.ObjectName(http10GwNN.Name),
+		}
 
 		ClientTrafficPolicyMustBeAccepted(t, s.Client,
 			types.NamespacedName{Name: "http1-settings", Namespace: ns},
 			s.ControllerName, ancestorRef)
+
+		ClientTrafficPolicyMustBeAccepted(t, s.Client,
+			types.NamespacedName{Name: "http1-settings-http10", Namespace: ns},
+			s.ControllerName, http10AncestorRef)
 
 		BackendTrafficPolicyMustBeAccepted(t, s.Client,
 			types.NamespacedName{Name: "http1-settings-btp-override", Namespace: ns},
@@ -267,7 +284,7 @@ var HTTP1Settings = suite.ConformanceTest{
 		t.Run("CTP useDefaultHost injects Host for hostless HTTP/1.0 requests", func(t *testing.T) {
 			var ok bool
 			_ = wait.PollUntilContextTimeout(t.Context(), time.Second, s.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
-				headers, err := sendHTTP10Request(gwAddr, "/http10", "")
+				headers, err := sendHTTP10Request(http10GwAddr, "/http10", "")
 				if err != nil {
 					tlog.Logf(t, "HTTP/1.0 hostless request failed: %v", err)
 					return false, nil

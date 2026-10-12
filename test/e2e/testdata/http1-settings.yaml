@@ -11,8 +11,6 @@ spec:
   http1:
     preserveHeaderCase: true
     enableTrailers: true
-    http10:
-      useDefaultHost: true
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -118,3 +116,52 @@ spec:
     - protocol: TCP
       port: 8000
       targetPort: 8000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: http1-settings-http10-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      hostname: "http10.example.com"
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http1-settings-http10
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: http1-settings-http10-gtw
+  http1:
+    http10:
+      useDefaultHost: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http1-settings-http10-default-host
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: http1-settings-http10-gtw
+  hostnames:
+    - "http10.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /http10
+      backendRefs:
+        - name: preserve-case-backend
+          port: 8000
