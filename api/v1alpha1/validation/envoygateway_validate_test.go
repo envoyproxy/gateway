@@ -965,7 +965,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							// Invalid provider type
 							Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 								EnvoyService: &egv1a1.KubernetesServiceSpec{
-									Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+									Type: new(egv1a1.ServiceTypeLoadBalancer),
 								},
 							},
 						},
