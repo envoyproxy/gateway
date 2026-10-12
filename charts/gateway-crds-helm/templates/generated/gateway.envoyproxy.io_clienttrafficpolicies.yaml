@@ -235,7 +235,7 @@ spec:
                   Note Proxy Protocol must be present when this field is set, else the connection
                   is closed.
 
-                  Deprecated: Use ProxyProtocol instead.
+                  Deprecated: Use ProxyProtocol instead. This field will be removed in v1.11.
                 type: boolean
               grpc:
                 description: GRPC provides gRPC configuration on the listener.
@@ -1010,7 +1010,7 @@ spec:
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
 
-                      Deprecated: use RequestID=PreserveOrGenerate instead
+                      Deprecated: use RequestID=PreserveOrGenerate instead. This field will be removed in v1.11.
                     type: boolean
                   requestID:
                     description: |-
@@ -1326,7 +1326,7 @@ spec:
                   This policy and the TargetRef MUST be in the same namespace for this
                   Policy to have effect
 
-                  Deprecated: use targetRefs/targetSelectors instead
+                  Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
                 properties:
                   group:
                     description: Group is the group of the target resource.

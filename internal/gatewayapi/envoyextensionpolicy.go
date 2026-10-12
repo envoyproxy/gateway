@@ -40,10 +40,15 @@ const (
 )
 
 // deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
+	}
+	for i := range policy.Spec.ExtProc {
+		if policy.Spec.ExtProc[i].BackendRef != nil {
+			deprecatedFields[fmt.Sprintf("spec.extProc[%d].backendRef", i)] = deprecatedFieldScheduledForRemoval(fmt.Sprintf("spec.extProc[%d].backendRefs", i))
+		}
 	}
 	return deprecatedFields
 }

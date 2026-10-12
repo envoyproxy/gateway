@@ -90,21 +90,29 @@ func TestSetConditionForPolicyAncestorsTruncatesMessages(t *testing.T) {
 func TestBuildDeprecationWarningMessage(t *testing.T) {
 	tests := []struct {
 		name             string
-		deprecatedFields map[string]string
+		deprecatedFields map[string]DeprecatedField
 		expected         string
 	}{
 		{
 			name:             "empty map",
-			deprecatedFields: map[string]string{},
+			deprecatedFields: map[string]DeprecatedField{},
 			expected:         "",
 		},
 		{
 			name: "two entries with deterministic ordering",
-			deprecatedFields: map[string]string{
-				"spec.targetRef":   "spec.targetRefs",
-				"spec.compression": "spec.compressor",
+			deprecatedFields: map[string]DeprecatedField{
+				"spec.targetRef":   {Replacement: "spec.targetRefs"},
+				"spec.compression": {Replacement: "spec.compressor"},
 			},
 			expected: "spec.compression is deprecated, use spec.compressor instead; spec.targetRef is deprecated, use spec.targetRefs instead",
+		},
+		{
+			name: "entries scheduled for removal",
+			deprecatedFields: map[string]DeprecatedField{
+				"spec.targetRef":                     {Replacement: "spec.targetRefs", RemovedIn: DeprecatedFieldsRemovalRelease},
+				"spec.tls.clientValidation.optional": {Replacement: "spec.tls.clientValidation.mode"},
+			},
+			expected: "spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs instead; spec.tls.clientValidation.optional is deprecated, use spec.tls.clientValidation.mode instead",
 		},
 	}
 

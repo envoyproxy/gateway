@@ -57,7 +57,7 @@ type ClientTrafficPolicySpec struct {
 	// Note Proxy Protocol must be present when this field is set, else the connection
 	// is closed.
 	//
-	// Deprecated: Use ProxyProtocol instead.
+	// Deprecated: Use ProxyProtocol instead. This field will be removed in v1.11.
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
@@ -166,7 +166,7 @@ type HeaderSettings struct {
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// Defaults to false and cannot be combined with RequestID.
 	//
-	// Deprecated: use RequestID=PreserveOrGenerate instead
+	// Deprecated: use RequestID=PreserveOrGenerate instead. This field will be removed in v1.11.
 	//
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`

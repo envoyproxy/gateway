@@ -99,14 +99,14 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRe
 }
 
 // SetDeprecatedFieldsWarningForPolicyAncestors sets deprecated fields warning conditions for each ancestor reference.
-func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]DeprecatedField) {
 	for _, ancestorRef := range ancestorRefs {
 		SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation, deprecatedFields)
 	}
 }
 
 // SetDeprecatedFieldsWarningForPolicyAncestor sets a deprecated fields warning condition for a specific ancestor reference.
-func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]DeprecatedField) {
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
 }
 
@@ -210,8 +210,20 @@ func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 	policyStatus.Ancestors = append(policyStatus.Ancestors[:worst], policyStatus.Ancestors[worst+1:]...)
 }
 
+// DeprecatedFieldsRemovalRelease is the release that removes the deprecated fields tracked in
+// https://github.com/envoyproxy/gateway/issues/10211.
+const DeprecatedFieldsRemovalRelease = "v1.11"
+
+// DeprecatedField describes the replacement for a deprecated field.
+type DeprecatedField struct {
+	// Replacement is the field to use instead.
+	Replacement string
+	// RemovedIn is the release the field is scheduled to be removed in, if any.
+	RemovedIn string
+}
+
 // buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
-func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
+func buildDeprecationWarningMessage(deprecatedFields map[string]DeprecatedField) string {
 	if len(deprecatedFields) == 0 {
 		return ""
 	}
@@ -228,9 +240,15 @@ func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
 		if i > 0 {
 			builder.WriteString("; ")
 		}
+		field := deprecatedFields[deprecated]
 		builder.WriteString(deprecated)
-		builder.WriteString(" is deprecated, use ")
-		builder.WriteString(deprecatedFields[deprecated])
+		builder.WriteString(" is deprecated")
+		if field.RemovedIn != "" {
+			builder.WriteString(" and will be removed in ")
+			builder.WriteString(field.RemovedIn)
+		}
+		builder.WriteString(", use ")
+		builder.WriteString(field.Replacement)
 		builder.WriteString(" instead")
 	}
 	return builder.String()

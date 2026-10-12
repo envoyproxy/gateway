@@ -360,7 +360,7 @@ spec:
                 description: |-
                   The compression config for the http streams.
 
-                  Deprecated: Use Compressor instead.
+                  Deprecated: Use Compressor instead. This field will be removed in v1.11.
                 items:
                   description: |-
                     Compression defines the config of enabling compression.
@@ -1562,7 +1562,7 @@ spec:
                         description: |-
                           Header configures the header hash policy when the consistent hash type is set to Header.
 
-                          Deprecated: use Headers instead
+                          Deprecated: use Headers instead. This field will be removed in v1.11.
                         properties:
                           name:
                             description: Name of the header to hash.
@@ -3360,7 +3360,7 @@ spec:
                   This policy and the TargetRef MUST be in the same namespace for this
                   Policy to have effect
 
-                  Deprecated: use targetRefs/targetSelectors instead
+                  Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
                 properties:
                   group:
                     description: Group is the group of the target resource.

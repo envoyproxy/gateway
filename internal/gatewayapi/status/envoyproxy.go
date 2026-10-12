@@ -46,7 +46,7 @@ func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.Par
 	})
 }
 
-func SetEnvoyProxyDeprecatedFieldsWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, deprecatedFields map[string]string) {
+func SetEnvoyProxyDeprecatedFieldsWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, deprecatedFields map[string]DeprecatedField) {
 	if ep == nil || ancestor == nil || len(deprecatedFields) == 0 {
 		return
 	}

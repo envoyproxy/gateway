@@ -221,7 +221,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -265,7 +266,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -315,7 +317,8 @@ securityPolicies:
         status: "True"
         type: Overridden
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning

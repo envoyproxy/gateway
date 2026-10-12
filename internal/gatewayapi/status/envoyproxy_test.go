@@ -20,8 +20,8 @@ func TestSetEnvoyProxyDeprecatedFieldsWarning(t *testing.T) {
 
 	t.Run("sets a warning condition when deprecated fields are used", func(t *testing.T) {
 		ep := &egv1a1.EnvoyProxy{}
-		SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, map[string]string{
-			"spec.luaValidation": "spec.lua.validationType",
+		SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, map[string]DeprecatedField{
+			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
 		})
 
 		assert.Len(t, ep.Status.Ancestors, 1)
@@ -42,8 +42,8 @@ func TestSetEnvoyProxyDeprecatedFieldsWarning(t *testing.T) {
 	t.Run("appends the warning alongside an existing Accepted condition on the same ancestor", func(t *testing.T) {
 		ep := &egv1a1.EnvoyProxy{}
 		UpdateEnvoyProxyStatusAccepted(ep, ancestor, egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-		SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, map[string]string{
-			"spec.luaValidation": "spec.lua.validationType",
+		SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, map[string]DeprecatedField{
+			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
 		})
 
 		assert.Len(t, ep.Status.Ancestors, 1)

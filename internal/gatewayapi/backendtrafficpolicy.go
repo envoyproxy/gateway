@@ -231,13 +231,21 @@ func BuildBTPIndexes(
 }
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
 	}
 	if len(policy.Spec.Compression) > 0 {
-		deprecatedFields["spec.compression"] = "spec.compressor"
+		deprecatedFields["spec.compression"] = deprecatedFieldScheduledForRemoval("spec.compressor")
+	}
+	if lb := policy.Spec.LoadBalancer; lb != nil && lb.ConsistentHash != nil {
+		if lb.ConsistentHash.Type == egv1a1.HeaderConsistentHashType {
+			deprecatedFields["spec.loadBalancer.consistentHash.type: Header"] = deprecatedFieldScheduledForRemoval("spec.loadBalancer.consistentHash.type: Headers")
+		}
+		if lb.ConsistentHash.Header != nil {
+			deprecatedFields["spec.loadBalancer.consistentHash.header"] = deprecatedFieldScheduledForRemoval("spec.loadBalancer.consistentHash.headers")
+		}
 	}
 	return deprecatedFields
 }

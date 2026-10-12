@@ -87,14 +87,32 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 
 // WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
 func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
-	if eg == nil || eg.ExtensionAPIs == nil {
+	if eg == nil {
 		return nil
 	}
 	var warnings []string
-	if eg.ExtensionAPIs.DisableLua != nil {
+	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil {
 		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
 	}
+	if eg.ExtensionManager != nil {
+		warnings = append(warnings, warnExtensionServiceHost("extensionManager.service", eg.ExtensionManager.Service)...)
+	}
+	for i := range eg.ExtensionManagers {
+		warnings = append(warnings, warnExtensionServiceHost(fmt.Sprintf("extensionManagers[%d].service", i), eg.ExtensionManagers[i].Service)...)
+	}
+	if p := eg.Provider; p != nil && p.Custom != nil && p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Remote != nil {
+		warnings = append(warnings, warnExtensionServiceHost("provider.custom.infrastructure.remote.service", p.Custom.Infrastructure.Remote.Service)...)
+	}
 	return warnings
+}
+
+// warnExtensionServiceHost warns about the deprecated host/port fields of the ExtensionService at
+// path. Only host is checked: port carries a default, so it is always set.
+func warnExtensionServiceHost(path string, svc *egv1a1.ExtensionService) []string {
+	if svc == nil || svc.Host == "" {
+		return nil
+	}
+	return []string{fmt.Sprintf("%[1]s.host and %[1]s.port are deprecated and will be removed in v1.11, use %[1]s.fqdn, %[1]s.ip or %[1]s.unix instead", path)}
 }
 
 func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {
