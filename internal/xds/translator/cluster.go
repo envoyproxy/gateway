@@ -745,7 +745,10 @@ func buildHealthCheckCodecClientType(version egv1a1.HTTPHealthCheckVersion, upst
 // TLS backend offer, so that a probe negotiates the same protocol as data connections.
 //
 // A backend that configures ALPN has it in the cluster TLS context, which health check and
-// data connections both use, so nothing is set and the probe already matches.
+// data connections both use, so nothing is set and the probe already matches. The options
+// apply to the whole cluster and replace the ALPN of every TLS context, so one destination
+// that configures it leaves the others without them too, rather than probe it with a list
+// its data connections never offer.
 //
 // When the backend configures no ALPN, the cluster TLS context has none, and data connections
 // get it from the connection pool instead, derived from the cluster protocol options: h2 and
