@@ -6,9 +6,11 @@ Envoy Gateway configures the Envoy [overload manager][] in the bootstrap of ever
 
 This page describes the defaults Envoy Gateway applies today. They are implementation defaults and may change in future releases. There is no dedicated `EnvoyProxy` field to configure them yet, see [#3604](https://github.com/envoyproxy/gateway/issues/3604).
 
+These defaults are part of the default bootstrap. If you customize the bootstrap with `spec.bootstrap` in the `EnvoyProxy` resource, a `Replace` or `JSONPatch` bootstrap can change or remove the overload manager configuration. In that case, your bootstrap defines which limits apply.
+
 ## Downstream connection limit
 
-Envoy Gateway always configures the `envoy.resource_monitors.global_downstream_max_connections` resource monitor with a limit of 50000 active downstream connections, shared by all listeners of an Envoy proxy. Once the limit is reached, Envoy rejects new connections until existing ones close.
+With the default bootstrap, Envoy Gateway configures the `envoy.resource_monitors.global_downstream_max_connections` resource monitor with a limit of 50000 active downstream connections, shared by all listeners of an Envoy proxy. Once the limit is reached, Envoy rejects new connections until existing ones close.
 
 ## Heap memory limits
 
@@ -35,9 +37,36 @@ The listener that serves the readiness probe bypasses the overload manager, so a
 
 ## Autoscaling
 
-If you autoscale the Envoy proxy on memory usage, as described in [Customize EnvoyProxy Horizontal Pod Autoscaler](../customize-envoyproxy#customize-envoyproxy-horizontal-pod-autoscaler), scale out before Envoy stops accepting requests. The HPA computes memory utilization against the memory request, and measures container memory, which is higher than the heap usage Envoy measures. Keep the target utilization multiplied by the memory request well below 78.4% of the memory limit, and leave room for the time new pods take to become ready.
+If you autoscale the Envoy proxy on memory usage, as described in [Customize EnvoyProxy Horizontal Pod Autoscaler](../customize-envoyproxy#customize-envoyproxy-horizontal-pod-autoscaler), scale out before Envoy stops accepting requests. Use a `ContainerResource` metric for the `envoy` container. A `Resource` metric sums the memory of all containers in the pod, including the `shutdown-manager` container, so its threshold does not match the Envoy memory limit.
 
-For example, with a memory request and limit of `1Gi`, a target utilization of 70% scales out at about 717Mi of container memory, before Envoy stops accepting requests at about 803Mi of heap usage.
+The HPA computes memory utilization against the memory request, and measures container memory, which is higher than the heap usage Envoy measures. The HPA uses the average utilization of all pods, so one pod can reach the limit before the average does. By default, the HPA scales out only when utilization is more than 10% above the target. Keep `1.1 × target utilization × memory request` well below 78.4% of the memory limit, and leave room for the time new pods take to become ready.
+
+For example, with a memory request and limit of `1Gi` on the `envoy` container, a target utilization of 60% scales out when the average memory of the `envoy` containers is above about 676Mi, before Envoy stops accepting requests at about 803Mi of heap usage.
+
+```yaml
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          resources:
+            requests:
+              memory: 1Gi
+            limits:
+              memory: 1Gi
+      envoyHpa:
+        minReplicas: 2
+        maxReplicas: 10
+        metrics:
+          - type: ContainerResource
+            containerResource:
+              name: memory
+              container: envoy
+              target:
+                type: Utilization
+                averageUtilization: 60
+```
 
 ## Monitoring
 
