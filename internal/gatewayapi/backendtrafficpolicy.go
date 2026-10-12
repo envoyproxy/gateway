@@ -701,8 +701,11 @@ func (t *Translator) setNotMergedStatusForBackendTargets(
 type backendPolicyRejection int
 
 const (
+	// rejectionNone: a valid backend policy (backend targetRef/targetRefs only), or not a backend policy at all.
 	rejectionNone backendPolicyRejection = iota
+	// rejectionSelector: a targetSelectors entry names a backend kind, which backend targeting does not support.
 	rejectionSelector
+	// rejectionMixed: a backend target is combined with a non-backend target in the same policy.
 	rejectionMixed
 )
 
