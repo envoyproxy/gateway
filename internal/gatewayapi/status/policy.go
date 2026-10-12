@@ -98,17 +98,14 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRe
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, message, generation)
 }
 
-// SetNotMergedForPolicyAncestor reports targets that were not merged into a cluster. If nothing else
-// accepted the policy on the ancestor it is not accepted; if another target was, it is only a warning.
+// SetNotMergedForPolicyAncestor marks the ancestor not accepted because its targets were not merged,
+// unless an Accepted condition is already set for it.
 func SetNotMergedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, message string) {
-	accepted := getPolicyAncestorCondition(policyStatus, ancestorRef, controllerName, gwapiv1.PolicyConditionAccepted)
-	switch {
-	case accepted == nil:
-		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-			gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, egv1a1.PolicyReasonNotMerged, message, generation)
-	case accepted.Status == metav1.ConditionTrue:
-		SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonNotMerged, message, generation)
+	if getPolicyAncestorCondition(policyStatus, ancestorRef, controllerName, gwapiv1.PolicyConditionAccepted) != nil {
+		return
 	}
+	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, egv1a1.PolicyReasonNotMerged, message, generation)
 }
 
 // SetDeprecatedFieldsWarningForPolicyAncestors sets deprecated fields warning conditions for each ancestor reference.

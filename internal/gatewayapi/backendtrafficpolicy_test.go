@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -3583,4 +3584,68 @@ func TestRejectBackendTargetSelectors(t *testing.T) {
 	require.Equal(t, "gw-referencing", string(ancestor.AncestorRef.Name))
 	require.Len(t, ancestor.Conditions, 1)
 	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
+}
+
+func TestSetNotMergedStatusForBackendTargets(t *testing.T) {
+	gw1 := types.NamespacedName{Namespace: "default", Name: "gw-1"}
+	gw2 := types.NamespacedName{Namespace: "default", Name: "gw-2"}
+
+	tests := []struct {
+		name             string
+		notMergedTargets map[types.NamespacedName][]string
+		applied          sets.Set[types.NamespacedName]
+		want             map[string][]string
+	}{
+		{
+			name: "unmerged and not applied on the gateway is not accepted",
+			notMergedTargets: map[types.NamespacedName][]string{
+				gw1: {"Service svc-1"},
+			},
+			applied: sets.New[types.NamespacedName](),
+			want: map[string][]string{
+				"gw-1": {"Accepted/False/NotMerged"},
+			},
+		},
+		{
+			name: "unmerged but applied through another target only warns",
+			notMergedTargets: map[types.NamespacedName][]string{
+				gw1: {"Service svc-1"},
+			},
+			applied: sets.New(gw1),
+			want: map[string][]string{
+				"gw-1": {"Warning/True/NotMerged"},
+			},
+		},
+		{
+			name: "gateway without unmerged targets is untouched",
+			notMergedTargets: map[types.NamespacedName][]string{
+				gw1: {"Service svc-1", "Service svc-2"},
+			},
+			applied: sets.New(gw2),
+			want: map[string][]string{
+				"gw-1": {"Accepted/False/NotMerged"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{GatewayControllerName: "test-controller"}
+			gateways := []*GatewayContext{
+				{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: gw1.Namespace, Name: gw1.Name}}},
+				{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: gw2.Namespace, Name: gw2.Name}}},
+			}
+			policy := &egv1a1.BackendTrafficPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"}}
+
+			tr.setNotMergedStatusForBackendTargets(policy, gateways, tc.notMergedTargets, tc.applied)
+
+			got := map[string][]string{}
+			for _, ancestor := range policy.Status.Ancestors {
+				for _, c := range ancestor.Conditions {
+					got[string(ancestor.AncestorRef.Name)] = append(got[string(ancestor.AncestorRef.Name)], c.Type+"/"+string(c.Status)+"/"+c.Reason)
+				}
+			}
+			require.Equal(t, tc.want, got)
+		})
+	}
 }
