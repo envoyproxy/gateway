@@ -494,11 +494,17 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		var err error
-		// Health checks are sent over the protocol that requests to the backend use, which
-		// buildTypedExtensionProtocolOptions settles with the same precedence.
-		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol && !args.useClientProtocol
-		upstreamNegotiated := requiresAutoHTTPConfig && !requiresHTTP2Options && !requiresHTTP1Options &&
-			!forceHTTP1UpstreamProtocol && !args.useClientProtocol
+		// Health checks are sent over the protocol that requests to the backend use, settled
+		// in the same order as the UpstreamProtocolOptions in buildTypedExtensionProtocolOptions.
+		var upstreamHTTP2, upstreamNegotiated bool
+		switch {
+		case args.useClientProtocol, forceHTTP1UpstreamProtocol:
+		case requiresHTTP2Options:
+			upstreamHTTP2 = true
+		case requiresHTTP1Options:
+		case requiresAutoHTTPConfig:
+			upstreamNegotiated = true
+		}
 		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog,
 			args.settings, upstreamHTTP2, upstreamNegotiated)
 		if err != nil {
@@ -733,12 +739,17 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 // configured protocol, or the one that requests to the backend use. A health check that
 // negotiates its protocol only falls back to it when nothing is negotiated.
 func buildHealthCheckCodecClientType(protocol egv1a1.HTTPHealthCheckProtocol, upstreamHTTP2 bool) xdstype.CodecClientType {
-	switch {
-	case protocol == egv1a1.HTTPHealthCheckProtocolHTTP2, protocol == egv1a1.HTTPHealthCheckProtocolAuto && upstreamHTTP2:
-		return xdstype.CodecClientType_HTTP2
-	default:
+	switch protocol {
+	case egv1a1.HTTPHealthCheckProtocolHTTP1:
 		return xdstype.CodecClientType_HTTP1
+	case egv1a1.HTTPHealthCheckProtocolHTTP2:
+		return xdstype.CodecClientType_HTTP2
 	}
+	// Auto follows the protocol of the requests to the backend.
+	if upstreamHTTP2 {
+		return xdstype.CodecClientType_HTTP2
+	}
+	return xdstype.CodecClientType_HTTP1
 }
 
 // buildHealthCheckTLSOptions returns the ALPN protocols that health check connections to a
