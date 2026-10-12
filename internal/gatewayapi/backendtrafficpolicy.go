@@ -706,10 +706,35 @@ const (
 	rejectionMixed
 )
 
+// allPolicyTargetRefs resolves targetRef and targetRefs together; GetTargetRefs drops targetRefs when the singular targetRef is set.
+func allPolicyTargetRefs(policy *egv1a1.BackendTrafficPolicy) []policyTargetReferenceWithSectionName {
+	raw := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, 0, len(policy.Spec.TargetRefs)+1)
+	if policy.Spec.TargetRef != nil {
+		raw = append(raw, *policy.Spec.TargetRef)
+	}
+	raw = append(raw, policy.Spec.TargetRefs...)
+
+	var empty gwapiv1.LocalPolicyTargetReferenceWithSectionName
+	refs := make([]policyTargetReferenceWithSectionName, 0, len(raw))
+	for _, v := range raw {
+		if v == empty {
+			continue
+		}
+		refs = append(refs, policyTargetReferenceWithSectionName{
+			Group:       v.Group,
+			Kind:        v.Kind,
+			Name:        v.Name,
+			Namespace:   gwapiv1.Namespace(policy.Namespace),
+			SectionName: v.SectionName,
+		})
+	}
+	return refs
+}
+
 // classifyBackendPolicy gates backend policies by target group+kind only, so it is safe before route translation.
 func classifyBackendPolicy(policy *egv1a1.BackendTrafficPolicy) backendPolicyRejection {
 	var hasBackendRef, hasBackendSelector, hasOther bool
-	for _, ref := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
+	for _, ref := range allPolicyTargetRefs(policy) {
 		if isBackendGroupKind(targetRefGroupKind(ref)) {
 			hasBackendRef = true
 		} else {
@@ -739,7 +764,7 @@ func classifyBackendPolicy(policy *egv1a1.BackendTrafficPolicy) backendPolicyRej
 // or by selector.
 func (t *Translator) backendTargets(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []policyTargetReferenceWithSectionName {
 	var targets []policyTargetReferenceWithSectionName
-	for _, ref := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
+	for _, ref := range allPolicyTargetRefs(policy) {
 		if isBackendGroupKind(targetRefGroupKind(ref)) {
 			targets = append(targets, ref)
 		}

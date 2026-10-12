@@ -3685,6 +3685,38 @@ func TestClassifyBackendPolicy(t *testing.T) {
 			want: rejectionSelector,
 		},
 		{
+			name: "singular route targetRef plus backend targetRefs is mixed",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("HTTPRoute"),
+						Name:  "target",
+					},
+				},
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("", "Service"),
+				},
+			},
+			want: rejectionMixed,
+		},
+		{
+			name: "singular backend targetRef plus route targetRefs is mixed",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group(""),
+						Kind:  gwapiv1.Kind("Service"),
+						Name:  "target",
+					},
+				},
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("gateway.networking.k8s.io", "HTTPRoute"),
+				},
+			},
+			want: rejectionMixed,
+		},
+		{
 			name: "deprecated singular backend targetRef plus route selector is mixed",
 			refs: egv1a1.PolicyTargetReferences{
 				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
