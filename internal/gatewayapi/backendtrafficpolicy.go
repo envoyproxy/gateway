@@ -504,7 +504,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 
 	for _, policy := range resources.BackendTrafficPolicies {
 		if t.BTPMixedTargetPolicies.Has(utils.NamespacedName(policy)) {
-			t.reportMixedBackendTargetPolicy(xdsIR, gateways, policy)
+			t.reportMixedBackendTargetPolicy(xdsIR, gateways, resources, policy)
 			res = append(res, policy)
 		}
 	}
@@ -727,13 +727,25 @@ func mixesBackendTargets(policy *egv1a1.BackendTrafficPolicy) bool {
 	return hasBackend && hasOther
 }
 
+// backendTargets returns every Service, ServiceImport and Backend the policy targets, by reference
+// or by selector.
+func (t *Translator) backendTargets(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []policyTargetReferenceWithSectionName {
+	var targets []policyTargetReferenceWithSectionName
+	for _, ref := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
+		if isBackendTargetKind(ref) {
+			targets = append(targets, ref)
+		}
+	}
+	for _, match := range t.backendSelectorMatches(resources, policy) {
+		targets = append(targets, match.policyTargetReferenceWithSectionName)
+	}
+	return targets
+}
+
 // reportMixedBackendTargetPolicy marks the policy invalid on every gateway that uses one of its
 // backend targets; none of the policy's targets are applied.
-func (t *Translator) reportMixedBackendTargetPolicy(xdsIR resource.XdsIRMap, gateways []*GatewayContext, policy *egv1a1.BackendTrafficPolicy) {
-	for _, target := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
-		if !isBackendTargetKind(target) {
-			continue
-		}
+func (t *Translator) reportMixedBackendTargetPolicy(xdsIR resource.XdsIRMap, gateways []*GatewayContext, resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) {
+	for _, target := range t.backendTargets(resources, policy) {
 		key := backendPolicyKeyFromTarget(target)
 		for _, gw := range gateways {
 			if x, ok := xdsIR[t.getIRKey(gw.Gateway)]; !ok || !gatewayReferencesBackend(x, key) {
@@ -759,14 +771,9 @@ func policyHasBackendTargetSelectors(policy *egv1a1.BackendTrafficPolicy) bool {
 	return false
 }
 
-// rejectBackendTargetSelectors reports a resolve error for every ancestor a selector-based backend
-// target would otherwise silently have no effect on; the match itself is never applied.
-func (t *Translator) rejectBackendTargetSelectors(
-	xdsIR resource.XdsIRMap,
-	gateways []*GatewayContext,
-	resources *resource.Resources,
-	policy *egv1a1.BackendTrafficPolicy,
-) {
+// backendSelectorMatches returns the Services, ServiceImports and Backends matched by the policy's
+// backend-kind targetSelectors.
+func (t *Translator) backendSelectorMatches(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []targetRefWithTimestamp {
 	var backendSelectors []egv1a1.TargetSelector
 	for _, sel := range policy.Spec.TargetSelectors {
 		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
@@ -788,6 +795,18 @@ func (t *Translator) rejectBackendTargetSelectors(
 	matched = append(matched, svcMatches...)
 	matched = append(matched, siMatches...)
 	matched = append(matched, beMatches...)
+	return matched
+}
+
+// rejectBackendTargetSelectors reports a resolve error for every ancestor a selector-based backend
+// target would otherwise silently have no effect on; the match itself is never applied.
+func (t *Translator) rejectBackendTargetSelectors(
+	xdsIR resource.XdsIRMap,
+	gateways []*GatewayContext,
+	resources *resource.Resources,
+	policy *egv1a1.BackendTrafficPolicy,
+) {
+	matched := t.backendSelectorMatches(resources, policy)
 
 	resolveErr := &status.PolicyResolveError{
 		Reason:  egv1a1.PolicyReasonInvalid,
