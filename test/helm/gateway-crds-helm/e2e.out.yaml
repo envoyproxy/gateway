@@ -9249,6 +9249,9 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http1 is not supported for ExtProc backends, which always
+                      use gRPC.
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                 maxItems: 16
                 type: array
               lua:
@@ -24280,6 +24283,9 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: http1 is not supported for ALS backends,
+                                        which always use gRPC.
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
@@ -26022,6 +26028,9 @@ spec:
                                     - message: either resources or resourceAttributes
                                         can be set, not both
                                       rule: '!has(self.resources) || !has(self.resourceAttributes)'
+                                    - message: http1 is not supported for OpenTelemetry
+                                        access log backends, which always use gRPC.
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -28096,6 +28105,9 @@ spec:
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                   f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                   : true'
+                              - message: http1 is not supported for OpenTelemetry
+                                  metrics backends, which always use gRPC.
+                                rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -29975,6 +29987,9 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
+                        - message: http1 is not supported for tracing backends, which
+                            always use gRPC.
+                          rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
@@ -33350,6 +33365,9 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: http1 is not supported for gRPC ExtAuth backends, which
+                        always use gRPC.
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included

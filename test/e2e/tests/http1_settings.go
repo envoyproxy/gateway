@@ -185,11 +185,11 @@ func checkHeaderCasePreserved(t *testing.T, s *suite.ConformanceTestSuite, gwAdd
 	return preserved
 }
 
-// checkHeaderCaseNotPreserved polls until both directions show case is not preserved:
-//   - request: "SpEcIaL: Header" is forwarded to the backend lowercased as "special",
-//     so the body echo will not contain "SpEcIaL" (upstream cluster codec normalizes)
-//   - response: the backend sets "ReSpOnSeHeAdEr: PrEsEnT" but Envoy lowercases it
-//     to "responseheader: PrEsEnT" on the wire (verified via raw TCP bytes)
+// checkHeaderCaseNotPreserved polls until both directions confirm the BTP overrides the CTP codec:
+//   - request: "SpEcIaL: Header" is still forwarded preserved (shared cluster retains CTP codec),
+//     so the body echo WILL contain "SpEcIaL" — this confirms the request direction is unaffected
+//   - response: the backend sets "ReSpOnSeHeAdEr: PrEsEnT" but the BTP disables preserve_case
+//     for this route, so Envoy lowercases it to "responseheader: PrEsEnT" on the wire
 func checkHeaderCaseNotPreserved(t *testing.T, s *suite.ConformanceTestSuite, gwAddr, path string) bool {
 	t.Helper()
 	var notPreserved bool
@@ -208,8 +208,8 @@ func checkHeaderCaseNotPreserved(t *testing.T, s *suite.ConformanceTestSuite, gw
 			tlog.Logf(t, "request failed: %v", err)
 			return false, nil
 		}
-		if _, found := respBody["SpEcIaL"]; found {
-			tlog.Logf(t, "SpEcIaL still echoed in body (case not yet overridden): %+v", respBody)
+		if _, found := respBody["SpEcIaL"]; !found {
+			tlog.Logf(t, "SpEcIaL missing from body (unexpected — CTP codec should still preserve request headers): %+v", respBody)
 			return false, nil
 		}
 		if strings.Contains(tt.RawResponse(), "responseheader: PrEsEnT") {
