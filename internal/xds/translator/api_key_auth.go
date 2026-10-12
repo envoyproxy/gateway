@@ -42,35 +42,42 @@ func (*apiKeyAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 		return nil
 	}
 
-	var (
-		irAPIKeyAuth *ir.APIKeyAuth
-		filter       *hcmv3.HttpFilter
-		err          error
-	)
-
-	for _, route := range irListener.Routes {
-		if route.Security != nil && route.Security.APIKeyAuth != nil {
-			irAPIKeyAuth = route.Security.APIKeyAuth
-			break
-		}
-	}
-	if irAPIKeyAuth == nil {
+	if !listenerContainsAPIKeyAuth(irListener) {
 		return nil
 	}
 
-	// We use the first route that contains the api key auth config to build the filter.
-	// The HCM-level filter config doesn't matter since it is overridden at the route level.
-	if filter, err = buildHCMAPIKeyAuthFilter(irAPIKeyAuth); err != nil {
+	filter, err := buildHCMAPIKeyAuthFilter()
+	if err != nil {
 		return err
 	}
 	mgr.HttpFilters = append(mgr.HttpFilters, filter)
-	return err
+	return nil
 }
 
-// buildHCMAPIKeyAuthFilter returns a api_key_auth HTTP filter from the provided IR HTTPRoute.
-func buildHCMAPIKeyAuthFilter(apiKeyAuth *ir.APIKeyAuth) (*hcmv3.HttpFilter, error) {
-	apiKeyAuthProto := buildAPIKeyAuthFilterConfig(apiKeyAuth)
-	apiKeyAuthAny, err := proto.ToAnyWithValidation(apiKeyAuthProto)
+// listenerContainsAPIKeyAuth returns true if the provided listener has API key
+// authentication policies attached to its routes.
+func listenerContainsAPIKeyAuth(irListener *ir.HTTPListener) bool {
+	if irListener == nil {
+		return false
+	}
+
+	for _, route := range irListener.Routes {
+		if route.Security != nil && route.Security.APIKeyAuth != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// buildHCMAPIKeyAuthFilter returns a disabled api_key_auth HTTP filter with an empty
+// configuration. The filter is enabled per route through typed_per_filter_config. Seeding
+// this listener level config from an arbitrary route publishes that route's credentials in
+// the listener, which turns a credential change on that one route into an LDS update that
+// drains the filter chain and terminates long-lived requests on every route of the listener.
+// Envoy also falls back to this config for the credentials and the key sources that a per
+// route config leaves empty, so keeping it empty keeps each route's result its own.
+func buildHCMAPIKeyAuthFilter() (*hcmv3.HttpFilter, error) {
+	apiKeyAuthAny, err := proto.ToAnyWithValidation(&apikeyauthv3.ApiKeyAuth{})
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +96,9 @@ func (*apiKeyAuth) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) 
 }
 
 // patchRoute patches the provided route with the apiKeyAuth config if applicable.
-// Note: this method overwrites the HCM level filter config with the per route filter config.
+// Note: the per route config does not replace the listener level config as a whole. Envoy
+// merges them field by field, falling back to the listener level config for the credentials
+// and the key sources that the per route config leaves empty.
 func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
@@ -109,7 +118,7 @@ func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 			egv1a1.EnvoyFilterAPIKeyAuth.String(), route)
 	}
 
-	// Overwrite the HCM level filter config with the per route filter config.
+	// Build the per route config. It carries this route's own credentials and key sources.
 	apiKeyAuthProto := buildAPIKeyAuthFilterPerRouteConfig(irRoute.Security.APIKeyAuth)
 	apiKeyAuthAny, err := proto.ToAnyWithValidation(apiKeyAuthProto)
 	if err != nil {

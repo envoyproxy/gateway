@@ -549,6 +549,96 @@ func TestBuildCompression(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "compressor with custom settings",
+			compressor: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+		},
+		{
+			name: "only the first compressor of each type is used",
+			compressor: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(1)),
+					},
+				},
+				{
+					Type:   egv1a1.BrotliCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{},
+				},
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(1)),
+					},
+				},
+				{
+					Type: egv1a1.BrotliCompressorType,
+				},
+			},
+		},
+		{
+			name: "only the first compression of each type is used",
+			compression: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					MinContentLength: new(resource.MustParse("100")),
+				},
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					MinContentLength: new(resource.MustParse("200")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: new(uint32(100)),
+				},
+			},
+		},
+		{
+			name: "compression settings of other compressor types are ignored",
+			compression: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{
+						Quality: new(uint32(11)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -557,6 +647,21 @@ func TestBuildCompression(t *testing.T) {
 			require.Equal(t, tc.expected, got)
 		})
 	}
+
+	t.Run("compressor settings are copied", func(t *testing.T) {
+		compressor := []*egv1a1.Compression{
+			{
+				Type: egv1a1.ZstdCompressorType,
+				Zstd: &egv1a1.ZstdCompressor{
+					CompressionLevel: new(uint32(3)),
+				},
+			},
+		}
+		got := buildCompression(nil, compressor)
+		require.Len(t, got, 1)
+		require.NotSame(t, compressor[0].Zstd, got[0].Zstd)
+		require.NotSame(t, compressor[0].Zstd.CompressionLevel, got[0].Zstd.CompressionLevel)
+	})
 }
 
 func TestBuildRateLimitRuleQueryParams(t *testing.T) {
