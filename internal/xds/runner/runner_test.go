@@ -340,6 +340,39 @@ func TestRunner(t *testing.T) {
 	}, time.Second*5, time.Millisecond*50)
 }
 
+// TestRunner_CloseWaitsForGoroutines asserts that Close does not return until
+// the goroutines started by Start have actually exited, rather than racing
+// with them. It verifies this by checking that the xDS server's listening
+// port is free the instant Close returns, with no grace-period sleep.
+func TestRunner_CloseWaitsForGoroutines(t *testing.T) {
+	caFile, certFile, keyFile, cleanup := setupTLSCerts(t)
+	defer cleanup()
+
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: new(message.ProviderResources),
+		XdsIR:             new(message.XdsIR),
+		TLSCertPath:       certFile,
+		TLSKeyPath:        keyFile,
+		TLSCaPath:         caFile,
+	})
+
+	ctx, cancel := context.WithCancel(newTestTraceContext())
+	require.NoError(t, r.Start(ctx))
+
+	cancel()
+	require.NoError(t, r.Close())
+
+	// If Close returned before serveXdsServer's grpc.Server had actually
+	// stopped and released the listener, this bind would fail.
+	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
+	l, err := net.Listen("tcp", addr)
+	require.NoError(t, err, "xDS server port should be free immediately after Close returns")
+	require.NoError(t, l.Close())
+}
+
 func TestRunner_withMaxReceiveMessageSize(t *testing.T) {
 	caFile, certFile, keyFile, cleanup := setupTLSCerts(t)
 	defer cleanup()

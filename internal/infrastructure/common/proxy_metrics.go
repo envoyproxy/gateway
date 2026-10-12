@@ -26,6 +26,7 @@ func ConvertResolvedMetricSinks(irSinks []ir.ResolvedMetricSink) []bootstrap.Met
 			Authority:                sink.Authority,
 			ReportCountersAsDeltas:   sink.ReportCountersAsDeltas,
 			ReportHistogramsAsDeltas: sink.ReportHistogramsAsDeltas,
+			Prefix:                   sink.Prefix,
 			Headers:                  sink.Headers,
 			ResourceAttributes:       sink.ResourceAttributes,
 		}
