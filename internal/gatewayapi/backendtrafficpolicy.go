@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -137,10 +138,12 @@ func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
 }
 
 // BTPIndexes groups the two pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
-// together in one pass over btps.
+// together in one pass over btps, plus the policies it left out of them because they mix backend
+// targets with other target kinds.
 type BTPIndexes struct {
-	RoutingType     *BTPRoutingTypeIndex
-	ClusterSettings *BTPClusterSettingsIndex
+	RoutingType         *BTPRoutingTypeIndex
+	ClusterSettings     *BTPClusterSettingsIndex
+	MixedTargetPolicies sets.Set[types.NamespacedName]
 }
 
 // BuildBTPIndexes builds BTPIndexes, resolving each BackendTrafficPolicy's targets at most once.
@@ -165,7 +168,13 @@ func BuildBTPIndexes(
 		allTargets = append(allTargets, ls)
 	}
 
+	mixed := sets.New[types.NamespacedName]()
 	for _, btp := range btps {
+		if mixesBackendTargets(btp) {
+			mixed.Insert(utils.NamespacedName(btp))
+			continue
+		}
+
 		hasRoutingType := btp.Spec.RoutingType != nil
 		hasClusterScoped := btpSpecHasClusterScopedFields(&btp.Spec)
 
@@ -225,8 +234,9 @@ func BuildBTPIndexes(
 	}
 
 	return &BTPIndexes{
-		RoutingType:     routingTypeIdx,
-		ClusterSettings: clusterSettingsIdx,
+		RoutingType:         routingTypeIdx,
+		ClusterSettings:     clusterSettingsIdx,
+		MixedTargetPolicies: mixed,
 	}
 }
 
@@ -249,7 +259,9 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
 	// BackendTrafficPolicies are already sorted by the provider layer
-	backendTrafficPolicies, mixedTargetPolicies := splitMixedBackendTargetPolicies(resources.BackendTrafficPolicies)
+	backendTrafficPolicies := slices.DeleteFunc(slices.Clone(resources.BackendTrafficPolicies), func(policy *egv1a1.BackendTrafficPolicy) bool {
+		return t.BTPMixedTargetPolicies.Has(utils.NamespacedName(policy))
+	})
 
 	routeMapSize := len(routes)
 	gatewayMapSize := len(gateways)
@@ -490,9 +502,11 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		}
 	}
 
-	for _, policy := range mixedTargetPolicies {
-		t.rejectMixedBackendTargetPolicy(xdsIR, gateways, policy)
-		res = append(res, policy)
+	for _, policy := range resources.BackendTrafficPolicies {
+		if t.BTPMixedTargetPolicies.Has(utils.NamespacedName(policy)) {
+			t.reportMixedBackendTargetPolicy(xdsIR, gateways, policy)
+			res = append(res, policy)
+		}
 	}
 
 	for _, policy := range res {
@@ -713,21 +727,9 @@ func mixesBackendTargets(policy *egv1a1.BackendTrafficPolicy) bool {
 	return hasBackend && hasOther
 }
 
-func splitMixedBackendTargetPolicies(policies []*egv1a1.BackendTrafficPolicy) (valid, mixed []*egv1a1.BackendTrafficPolicy) {
-	valid = make([]*egv1a1.BackendTrafficPolicy, 0, len(policies))
-	for _, policy := range policies {
-		if mixesBackendTargets(policy) {
-			mixed = append(mixed, policy)
-		} else {
-			valid = append(valid, policy)
-		}
-	}
-	return valid, mixed
-}
-
-// rejectMixedBackendTargetPolicy marks the policy invalid on every gateway that uses one of its
+// reportMixedBackendTargetPolicy marks the policy invalid on every gateway that uses one of its
 // backend targets; none of the policy's targets are applied.
-func (t *Translator) rejectMixedBackendTargetPolicy(xdsIR resource.XdsIRMap, gateways []*GatewayContext, policy *egv1a1.BackendTrafficPolicy) {
+func (t *Translator) reportMixedBackendTargetPolicy(xdsIR resource.XdsIRMap, gateways []*GatewayContext, policy *egv1a1.BackendTrafficPolicy) {
 	for _, target := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
 		if !isBackendTargetKind(target) {
 			continue
