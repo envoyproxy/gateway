@@ -13,20 +13,7 @@ backendTrafficPolicies:
       kind: Service
       name: service-2
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: 'The following targets were not merged into a cluster on this Gateway,
-          so the policy was not applied to them: Service service-2'
-        reason: NotMerged
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ancestors: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
