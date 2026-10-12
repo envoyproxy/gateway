@@ -879,6 +879,7 @@ func processRedirectExtension(filters []gwapiv1.HTTPRouteFilter, route RouteCont
 	var redirect *gwapiv1.HTTPRequestRedirectFilter
 	var redirectCount int
 	var conflictingAction bool
+	var hasRequestMirror bool
 	var duplicateExtension bool
 	for _, filter := range filters {
 		switch filter.Type {
@@ -887,6 +888,8 @@ func processRedirectExtension(filters []gwapiv1.HTTPRouteFilter, route RouteCont
 			redirect = filter.RequestRedirect
 		case gwapiv1.HTTPRouteFilterURLRewrite:
 			conflictingAction = true
+		case gwapiv1.HTTPRouteFilterRequestMirror:
+			hasRequestMirror = true
 		case gwapiv1.HTTPRouteFilterExtensionRef:
 			ref := filter.ExtensionRef
 			if ref == nil || string(ref.Group) != egv1a1.GroupName || string(ref.Kind) != egv1a1.KindHTTPRouteFilter {
@@ -924,6 +927,10 @@ func processRedirectExtension(filters []gwapiv1.HTTPRouteFilter, route RouteCont
 		return invalid("redirect path cannot be combined with RequestRedirect.path", gwapiv1.RouteReasonIncompatibleFilters)
 	case conflictingAction:
 		return invalid("redirect cannot be combined with URLRewrite or DirectResponse", gwapiv1.RouteReasonIncompatibleFilters)
+	case hasRequestMirror:
+		// Check the configured filter, not the generated mirror IR: an unavailable
+		// mirror backend must not hide the redirect/mirror incompatibility.
+		return invalid(requestMirrorRedirectConflictMsg, gwapiv1.RouteReasonIncompatibleFilters)
 	}
 	path := extension.Spec.Redirect.Path
 	if path.Type != egv1a1.RegexHTTPPathModifier || path.ReplaceRegexMatch == nil || path.ReplaceRegexMatch.Pattern == "" {

@@ -155,6 +155,41 @@ func TestRedirectExtension(t *testing.T) {
 	}
 }
 
+func TestRedirectExtensionMirrorConflict(t *testing.T) {
+	for _, composed := range []bool{false, true} {
+		for _, mirrorFirst := range []bool{false, true} {
+			filters := []gwapiv1.HTTPRouteFilter{
+				{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{
+					Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "redirect",
+				}},
+				{Type: gwapiv1.HTTPRouteFilterRequestMirror, RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
+					BackendRef: gwapiv1.BackendObjectReference{Name: "mirror", Port: new(gwapiv1.PortNumber(8080))},
+				}},
+			}
+			if composed {
+				filters = append(filters, gwapiv1.HTTPRouteFilter{Type: gwapiv1.HTTPRouteFilterRequestRedirect, RequestRedirect: &gwapiv1.HTTPRequestRedirectFilter{}})
+			}
+			if mirrorFirst {
+				slices.Reverse(filters)
+			}
+			resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{{
+				ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
+				Spec: egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+					Type:              egv1a1.RegexHTTPPathModifier,
+					ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "^/old$", Substitution: "/new"},
+				}}},
+			}}}
+			route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+			path, err := processRedirectExtension(filters, route, resources)
+			require.NotNil(t, err, "composed=%t mirrorFirst=%t", composed, mirrorFirst)
+			require.Equal(t, gwapiv1.RouteConditionAccepted, err.Type())
+			require.Equal(t, gwapiv1.RouteReasonIncompatibleFilters, err.Reason())
+			require.Contains(t, err.Error(), requestMirrorRedirectConflictMsg)
+			require.Nil(t, path)
+		}
+	}
+}
+
 func TestRedirectExtensionReferenceErrors(t *testing.T) {
 	translator := &Translator{TranslatorContext: &TranslatorContext{}}
 	translator.SetServices([]*corev1.Service{{
