@@ -417,7 +417,9 @@ _Appears in:_
 
 
 
-BackendHTTP1Settings provides HTTP/1 configuration for upstream backend connections.
+BackendHTTP1Settings provides HTTP/1 configuration for backend connections.
+Setting this field to an empty value (http1: {}), or configuring any of its members,
+forces explicit HTTP/1 for backend connections.
 
 _Appears in:_
 - [BackendSettings](#backendsettings)
@@ -3181,7 +3183,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.<br />Note: this field currently configures both the client connection and the backend HTTP/1<br />protocol settings. In a future release it will be restricted to the client connection only.<br />Use BackendTrafficPolicy.http1.enableTrailers for backend settings.<br />Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly<br />to opt in to the new behavior now. |
 | `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers.<br />Note: this field currently configures both the client connection and the backend HTTP/1<br />protocol settings. In a future release it will be restricted to the client connection only.<br />Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.<br />Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly<br />to opt in to the new behavior now. |
-| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.<br />Note: this field currently configures both the client connection and the backend HTTP/1<br />protocol settings. In a future release it will be restricted to the client connection only.<br />Use BackendTrafficPolicy.http1.http10 for backend settings.<br />Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly<br />to opt in to the new behavior now. |
+| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.<br />Note: this field currently forces explicit HTTP/1 for backend connections when other<br />backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.<br />In a future release it will no longer force explicit HTTP/1 on backend connections.<br />Use BackendTrafficPolicy.http1: \{\} to force HTTP/1 on a backend cluster explicitly. |
 | `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
 | `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |
 

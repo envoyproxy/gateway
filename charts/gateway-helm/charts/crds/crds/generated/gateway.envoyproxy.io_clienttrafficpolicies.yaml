@@ -1126,11 +1126,10 @@ spec:
                     description: |-
                       HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
 
-                      Note: this field currently configures both the client connection and the backend HTTP/1
-                      protocol settings. In a future release it will be restricted to the client connection only.
-                      Use BackendTrafficPolicy.http1.http10 for backend settings.
-                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
-                      to opt in to the new behavior now.
+                      Note: this field currently forces explicit HTTP/1 for backend connections when other
+                      backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.
+                      In a future release it will no longer force explicit HTTP/1 on backend connections.
+                      Use BackendTrafficPolicy.http1: {} to force HTTP/1 on a backend cluster explicitly.
                     properties:
                       useDefaultHost:
                         description: |-
