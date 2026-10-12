@@ -3535,125 +3535,6 @@ func TestProcessBackendTrafficPolicyForBackendUseClientProtocol(t *testing.T) {
 	}
 }
 
-func TestPolicyHasBackendTargetSelectors(t *testing.T) {
-	tests := []struct {
-		name   string
-		policy *egv1a1.BackendTrafficPolicy
-		want   bool
-	}{
-		{
-			name:   "no target selectors",
-			policy: &egv1a1.BackendTrafficPolicy{},
-			want:   false,
-		},
-		{
-			name: "selector targets Gateway only",
-			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
-				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Gateway")}},
-				},
-			}},
-			want: false,
-		},
-		{
-			name: "selector targets Service",
-			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
-				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{{Group: new(gwapiv1.Group("")), Kind: gwapiv1.Kind("Service")}},
-				},
-			}},
-			want: true,
-		},
-		{
-			name: "selector targets Service in the default group, which is not a backend",
-			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
-				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Service")}},
-				},
-			}},
-			want: false,
-		},
-		{
-			name: "selector targets ServiceImport",
-			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
-				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{{Group: new(gwapiv1.Group(GroupMultiClusterService)), Kind: gwapiv1.Kind("ServiceImport")}},
-				},
-			}},
-			want: true,
-		},
-		{
-			name: "selector targets Backend",
-			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
-				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{{Group: new(gwapiv1.Group(egv1a1.GroupName)), Kind: gwapiv1.Kind("Backend")}},
-				},
-			}},
-			want: true,
-		},
-		{
-			name: "mixed selectors, one is a backend kind",
-			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
-				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{
-						{Kind: gwapiv1.Kind("HTTPRoute")},
-						{Group: new(gwapiv1.Group(egv1a1.GroupName)), Kind: gwapiv1.Kind("Backend")},
-					},
-				},
-			}},
-			want: true,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.want, policyHasBackendTargetSelectors(test.policy))
-		})
-	}
-}
-
-func TestRejectBackendTargetSelectors(t *testing.T) {
-	matchingService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "svc-1", Namespace: "default", Labels: map[string]string{"pick": "me"},
-		},
-		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
-	}
-	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
-
-	newPolicy := func() *egv1a1.BackendTrafficPolicy {
-		return &egv1a1.BackendTrafficPolicy{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-selector"},
-			Spec: egv1a1.BackendTrafficPolicySpec{
-				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-					TargetSelectors: []egv1a1.TargetSelector{
-						{Kind: gwapiv1.Kind("Service"), Group: new(gwapiv1.Group("")), MatchLabels: map[string]string{"pick": "me"}},
-					},
-				},
-				MergeType: new(egv1a1.StrategicMerge),
-			},
-		}
-	}
-
-	tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}, TranslatorContext: &TranslatorContext{}}
-	gwReferencing := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-referencing"}}}
-	gwUnrelated := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-unrelated"}}}
-
-	xdsIR := gwapiresource.XdsIRMap{}
-	xdsIR[tr.getIRKey(gwReferencing.Gateway)] = &ir.Xds{BackendClusters: []*ir.BackendCluster{{Metadata: matchMD}}}
-	xdsIR[tr.getIRKey(gwUnrelated.Gateway)] = &ir.Xds{}
-
-	resources := &gwapiresource.Resources{Services: []*corev1.Service{matchingService}}
-
-	policy := newPolicy()
-	tr.rejectBackendTargetSelectors(xdsIR, []*GatewayContext{gwReferencing, gwUnrelated}, resources, policy)
-
-	require.Len(t, policy.Status.Ancestors, 1)
-	ancestor := policy.Status.Ancestors[0]
-	require.Equal(t, "gw-referencing", string(ancestor.AncestorRef.Name))
-	require.Len(t, ancestor.Conditions, 1)
-	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
-}
-
 func TestSetNotMergedStatusForBackendTargets(t *testing.T) {
 	gw1 := types.NamespacedName{Namespace: "default", Name: "gw-1"}
 	gw2 := types.NamespacedName{Namespace: "default", Name: "gw-2"}
@@ -3718,7 +3599,7 @@ func TestSetNotMergedStatusForBackendTargets(t *testing.T) {
 	}
 }
 
-func TestMixesBackendTargets(t *testing.T) {
+func TestClassifyBackendPolicy(t *testing.T) {
 	ref := func(group, kind string) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 		return gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 			LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
@@ -3728,123 +3609,104 @@ func TestMixesBackendTargets(t *testing.T) {
 			},
 		}
 	}
+	coreServiceSelector := egv1a1.TargetSelector{Group: new(gwapiv1.Group("")), Kind: gwapiv1.Kind("Service")}
+	defaultServiceSelector := egv1a1.TargetSelector{Kind: gwapiv1.Kind("Service")}
+	routeSelector := egv1a1.TargetSelector{Kind: gwapiv1.Kind("HTTPRoute")}
 
 	tests := []struct {
 		name string
 		refs egv1a1.PolicyTargetReferences
-		want bool
+		want backendPolicyRejection
 	}{
 		{
-			name: "backend targets only",
+			name: "backend refs only is valid",
 			refs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					ref("", "Service"),
 					ref("gateway.envoyproxy.io", "Backend"),
 				},
 			},
-			want: false,
+			want: rejectionNone,
 		},
 		{
-			name: "route targets only",
+			name: "non-backend refs only is not a backend policy",
 			refs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					ref("gateway.networking.k8s.io", "HTTPRoute"),
-					ref("gateway.networking.k8s.io", "Gateway"),
 				},
 			},
-			want: false,
+			want: rejectionNone,
 		},
 		{
-			name: "backend and route in targetRefs",
+			name: "route ref plus default-group Service selector is not a backend policy",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("gateway.networking.k8s.io", "HTTPRoute"),
+				},
+				TargetSelectors: []egv1a1.TargetSelector{defaultServiceSelector},
+			},
+			want: rejectionNone,
+		},
+		{
+			name: "backend ref plus non-backend ref is mixed",
 			refs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					ref("", "Service"),
 					ref("gateway.networking.k8s.io", "HTTPRoute"),
 				},
 			},
-			want: true,
+			want: rejectionMixed,
 		},
 		{
-			name: "backend and gateway in targetRefs",
-			refs: egv1a1.PolicyTargetReferences{
-				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-					ref("gateway.envoyproxy.io", "Backend"),
-					ref("gateway.networking.k8s.io", "Gateway"),
-				},
-			},
-			want: true,
-		},
-		{
-			name: "backend in targetRefs and route in targetSelectors",
+			name: "backend ref plus route selector is mixed",
 			refs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					ref("", "Service"),
 				},
-				TargetSelectors: []egv1a1.TargetSelector{
-					{
-						Kind: "HTTPRoute",
-					},
-				},
+				TargetSelectors: []egv1a1.TargetSelector{routeSelector},
 			},
-			want: true,
+			want: rejectionMixed,
 		},
 		{
-			name: "route in targetRefs and default-group Service in targetSelectors",
+			name: "backend selector only is selector rejection",
 			refs: egv1a1.PolicyTargetReferences{
-				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-					ref("gateway.networking.k8s.io", "HTTPRoute"),
-				},
-				TargetSelectors: []egv1a1.TargetSelector{
-					{
-						Kind: "Service",
-					},
-				},
+				TargetSelectors: []egv1a1.TargetSelector{coreServiceSelector},
 			},
-			want: false,
+			want: rejectionSelector,
 		},
 		{
-			name: "route in targetRefs and core-group Service in targetSelectors",
-			refs: egv1a1.PolicyTargetReferences{
-				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-					ref("gateway.networking.k8s.io", "HTTPRoute"),
-				},
-				TargetSelectors: []egv1a1.TargetSelector{
-					{
-						Group: new(gwapiv1.Group("")),
-						Kind:  "Service",
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name: "backend in targetRefs and default-group Service in targetSelectors",
+			name: "backend ref plus backend selector is selector rejection",
 			refs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					ref("", "Service"),
 				},
-				TargetSelectors: []egv1a1.TargetSelector{
-					{
-						Kind: "Service",
-					},
-				},
+				TargetSelectors: []egv1a1.TargetSelector{coreServiceSelector},
 			},
-			want: true,
+			want: rejectionSelector,
 		},
 		{
-			name: "deprecated singular targetRef is combined with targetSelectors",
+			name: "deprecated singular backend targetRef plus route selector is mixed",
 			refs: egv1a1.PolicyTargetReferences{
-				TargetRef: func() *gwapiv1.LocalPolicyTargetReferenceWithSectionName {
-					r := ref("", "Service")
-					return &r
-				}(),
-				TargetSelectors: []egv1a1.TargetSelector{
-					{
-						Kind: "HTTPRoute",
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group(""),
+						Kind:  gwapiv1.Kind("Service"),
+						Name:  "target",
 					},
 				},
+				TargetSelectors: []egv1a1.TargetSelector{routeSelector},
 			},
-			want: true,
+			want: rejectionMixed,
+		},
+		{
+			name: "backend selector takes precedence over mixing",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("gateway.networking.k8s.io", "HTTPRoute"),
+				},
+				TargetSelectors: []egv1a1.TargetSelector{coreServiceSelector},
+			},
+			want: rejectionSelector,
 		},
 	}
 
@@ -3854,8 +3716,91 @@ func TestMixesBackendTargets(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
 				Spec:       egv1a1.BackendTrafficPolicySpec{PolicyTargetReferences: tc.refs},
 			}
+			require.Equal(t, tc.want, classifyBackendPolicy(policy))
+		})
+	}
+}
 
-			require.Equal(t, tc.want, mixesBackendTargets(policy))
+func TestReportRejectedBackendPolicy(t *testing.T) {
+	matchingService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "svc-1",
+			Namespace: "default",
+			Labels:    map[string]string{"pick": "me"},
+		},
+		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
+	}
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+
+	selectorPolicy := &egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-selector"},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{Group: new(gwapiv1.Group("")), Kind: gwapiv1.Kind("Service"), MatchLabels: map[string]string{"pick": "me"}},
+				},
+			},
+			MergeType: new(egv1a1.StrategicMerge),
+		},
+	}
+	refPolicy := &egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-ref"},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: gwapiv1.Group(""),
+							Kind:  gwapiv1.Kind("Service"),
+							Name:  gwapiv1.ObjectName("svc-1"),
+						},
+					},
+				},
+			},
+			MergeType: new(egv1a1.StrategicMerge),
+		},
+	}
+
+	tests := []struct {
+		name    string
+		policy  *egv1a1.BackendTrafficPolicy
+		reason  backendPolicyRejection
+		message string
+	}{
+		{
+			name:    "selector rejection reports on the gateway using the matched backend",
+			policy:  selectorPolicy,
+			reason:  rejectionSelector,
+			message: "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead",
+		},
+		{
+			name:    "mixed rejection reports on the gateway using the backend ref",
+			policy:  refPolicy,
+			reason:  rejectionMixed,
+			message: "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}, TranslatorContext: &TranslatorContext{}}
+			gwReferencing := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-referencing"}}}
+			gwUnrelated := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-unrelated"}}}
+
+			xdsIR := gwapiresource.XdsIRMap{}
+			xdsIR[tr.getIRKey(gwReferencing.Gateway)] = &ir.Xds{BackendClusters: []*ir.BackendCluster{{Metadata: matchMD}}}
+			xdsIR[tr.getIRKey(gwUnrelated.Gateway)] = &ir.Xds{}
+
+			resources := &gwapiresource.Resources{Services: []*corev1.Service{matchingService}}
+
+			tr.reportRejectedBackendPolicy(xdsIR, []*GatewayContext{gwReferencing, gwUnrelated}, resources, tc.policy, tc.reason)
+
+			require.Len(t, tc.policy.Status.Ancestors, 1)
+			ancestor := tc.policy.Status.Ancestors[0]
+			require.Equal(t, "gw-referencing", string(ancestor.AncestorRef.Name))
+			require.Len(t, ancestor.Conditions, 1)
+			require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
+			require.Equal(t, tc.message, ancestor.Conditions[0].Message)
 		})
 	}
 }

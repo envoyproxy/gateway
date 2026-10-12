@@ -26,8 +26,8 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Service, ServiceImport, and Backend targets cannot be combined with
-          other target kinds in the same BackendTrafficPolicy
+        message: targetSelectors is not supported for Service, ServiceImport, or Backend
+          kinds; use targetRef or targetRefs instead
         reason: Invalid
         status: "False"
         type: Accepted
