@@ -63,6 +63,10 @@ const (
 	// has been merged with another policy targeting the parent(e.g. Gateway).
 	PolicyReasonMerged gwapiv1.PolicyConditionReason = "Merged"
 
+	// PolicyReasonNotMerged is used with the "Accepted" condition when a policy targeting a
+	// backend cannot be applied because the backend is not part of a merged cluster.
+	PolicyReasonNotMerged gwapiv1.PolicyConditionReason = "NotMerged"
+
 	// PolicyConditionWarning indicates that the policy configuration contains
 	// non-critical issues that are accepted but requires attention.
 	PolicyConditionWarning gwapiv1.PolicyConditionType = "Warning"

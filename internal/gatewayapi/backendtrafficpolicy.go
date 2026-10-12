@@ -539,8 +539,9 @@ func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 // Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for conflict
 // detection, then applies it to the Traffic (and, for an HTTP/GRPC cluster, UseClientProtocol) of
 // every matching merged BackendCluster. A gateway with mergeBackends disabled only gets a Disabled
-// ancestor if it actually references the backend; otherwise it's skipped entirely. A backend that
-// never merges or doesn't resolve for other reasons gets no policy applied and no error.
+// ancestor if it actually references the backend; otherwise it's skipped entirely. A gateway that
+// references the backend without a merged cluster for it gets a NotMerged ancestor; a backend no
+// gateway references gets no status.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
@@ -596,10 +597,12 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 		if p, ok := gatewayPolicyMap[NamespacedNameWithSection{NamespacedName: gwNN}]; ok {
 			gwPolicy = p
 		}
+		hasMergedCluster := false
 		for _, bc := range x.BackendClusters {
 			if backendPolicyKeyFromMetadata(bc.Metadata) != key {
 				continue
 			}
+			hasMergedCluster = true
 			mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
 			if err != nil {
 				ref := getAncestorRefForPolicy(gwNN, nil)
@@ -623,6 +626,12 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			if gwPolicy != nil {
 				mergedGWs[gwNN] = gwPolicy
 			}
+		}
+
+		if !hasMergedCluster && gatewayReferencesBackend(x, key) {
+			ref := getAncestorRefForPolicy(gwNN, nil)
+			status.SetNotMergedForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
+				fmt.Sprintf("%s %s is not part of a merged cluster on this Gateway, so the policy has not been applied to it", string(target.Kind), string(target.Name)))
 		}
 	}
 
