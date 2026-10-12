@@ -433,6 +433,20 @@ func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
 			expectedError: "metrics sink backendRef otel-collector has no port",
 		},
 		{
+			name: "prometheus compression minContentLength overflows uint32",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type:             egv1a1.GzipCompressorType,
+							MinContentLength: new(resource.MustParse("4Gi")),
+						},
+					},
+				},
+			},
+			expectedError: "invalid prometheus compression: minContentLength must be between 1 and 4294967295 bytes, got 4Gi",
+		},
+		{
 			name: "prometheus compression with unsupported settings",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{

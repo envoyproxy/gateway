@@ -8,12 +8,14 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/netip"
 	"regexp"
 	"strings"
 
 	"github.com/dominikbraun/graph"
+	"k8s.io/apimachinery/pkg/api/resource"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/utils/ptr"
 
@@ -228,9 +230,28 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, clusterStatErr)
 			}
 		}
+
+		if prometheus := spec.Telemetry.Metrics.Prometheus; prometheus != nil && prometheus.Compression != nil {
+			if err := ValidateMinContentLength(prometheus.Compression.MinContentLength); err != nil {
+				errs = append(errs, fmt.Errorf("invalid prometheus compression: %w", err))
+			}
+		}
 	}
 
 	return errs
+}
+
+// ValidateMinContentLength validates that the compression minContentLength fits the uint32 Envoy field.
+func ValidateMinContentLength(minContentLength *resource.Quantity) error {
+	if minContentLength == nil {
+		return nil
+	}
+
+	value, ok := minContentLength.AsInt64()
+	if !ok || value < 1 || value > math.MaxUint32 {
+		return fmt.Errorf("minContentLength must be between 1 and %d bytes, got %s", uint32(math.MaxUint32), minContentLength.String())
+	}
+	return nil
 }
 
 func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {

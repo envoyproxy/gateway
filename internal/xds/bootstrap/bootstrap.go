@@ -21,6 +21,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/utils/cert"
 	netutils "github.com/envoyproxy/gateway/internal/utils/net"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
@@ -254,9 +255,11 @@ func buildPrometheusCompressionParameters(compression *egv1a1.Compression) (*pro
 	}
 
 	if compression.MinContentLength != nil {
-		if minContentLength, ok := compression.MinContentLength.AsInt64(); ok {
-			params.MinContentLength = uint32(minContentLength)
+		if err := validation.ValidateMinContentLength(compression.MinContentLength); err != nil {
+			return nil, fmt.Errorf("invalid prometheus compression: %w", err)
 		}
+		minContentLength, _ := compression.MinContentLength.AsInt64()
+		params.MinContentLength = uint32(minContentLength)
 	}
 
 	return params, nil
