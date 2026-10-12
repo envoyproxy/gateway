@@ -741,13 +741,22 @@ func buildHealthCheckCodecClientType(version egv1a1.HTTPHealthCheckVersion, upst
 	}
 }
 
-// buildHealthCheckTLSOptions returns the ALPN protocols offered on health check connections
-// to a backend that uses TLS. Envoy doesn't derive them from the cluster protocol options as
-// it does for data connections, so they are set here to the same effect: a negotiating health
-// check offers both protocols, and a pinned one only the protocol of its codec, so that an
-// endpoint isn't reported healthy over a protocol that requests to it never use. A backend
-// that configures its own ALPN keeps it on health checks too, as overriding it could break
-// the handshake.
+// buildHealthCheckTLSOptions returns the ALPN protocols that health check connections to a
+// TLS backend offer, so that a probe negotiates the same protocol as data connections.
+//
+// A backend that configures ALPN has it in the cluster TLS context, which health check and
+// data connections both use, so nothing is set and the probe already matches.
+//
+// When the backend configures no ALPN, the cluster TLS context has none, and data connections
+// get it from the connection pool instead, derived from the cluster protocol options: h2 and
+// http/1.1 for auto_config, the single protocol for an explicit config. Health check
+// connections are created outside the pool, so they would offer nothing. The list the pool
+// would offer is set here instead:
+//
+//   - h2 and http/1.1 for a cluster that negotiates its protocol, letting each endpoint pick
+//     the one it speaks, with use_alpn_protocol selecting the codec from the result.
+//   - Only the protocol of the codec for a pinned health check, so that an endpoint that
+//     speaks the other one fails the probe, as it would fail the requests to it.
 func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype.CodecClientType,
 	negotiate bool,
 ) *corev3.HealthCheck_TlsOptions {
