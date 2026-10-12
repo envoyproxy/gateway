@@ -102,8 +102,11 @@ func (t *Translator) ProcessHTTPFilters(
 	if err != nil {
 		errs.Add(err)
 		for _, filter := range filters {
-			if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
+			switch filter.Type {
+			case gwapiv1.HTTPRouteFilterExtensionRef:
 				errs.Add(t.validateExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources))
+			case gwapiv1.HTTPRouteFilterRequestMirror:
+				errs.Add(t.validateRequestMirrorFilter(filter.RequestMirror, route, resources))
 			}
 		}
 		return httpFiltersContext, errs.GetAllErrors()
@@ -219,8 +222,11 @@ func (t *Translator) ProcessGRPCFilters(
 					gwapiv1.RouteReasonUnsupportedValue,
 				).WithType(gwapiv1.RouteConditionAccepted))
 				for _, filter := range filters {
-					if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
+					switch filter.Type {
+					case gwapiv1.GRPCRouteFilterExtensionRef:
 						errs.Add(t.validateExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources))
+					case gwapiv1.GRPCRouteFilterRequestMirror:
+						errs.Add(t.validateRequestMirrorFilter(filter.RequestMirror, route, resources))
 					}
 				}
 				return httpFiltersContext, errs.GetAllErrors()
@@ -1224,6 +1230,21 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 	return t.processUnresolvedHTTPFilter(errMsg, filterContext)
 }
 
+// validateRequestMirrorFilter checks references without creating mirror destinations,
+// so rejected redirect rules still report unresolved references without publishing IR.
+func (t *Translator) validateRequestMirrorFilter(mirrorFilter *gwapiv1.HTTPRequestMirrorFilter, route RouteContext, resources *resource.Resources) status.Error {
+	if mirrorFilter == nil {
+		return nil
+	}
+	backendRef := DirectBackendRef{BackendRef: &gwapiv1.BackendRef{BackendObjectReference: mirrorFilter.BackendRef}}
+	backendNamespace := NamespaceDerefOr(mirrorFilter.BackendRef.Namespace, route.GetNamespace())
+	if err := t.validateBackendRef(backendRef, route, resources, backendNamespace, route.GetRouteType()); err != nil {
+		return status.NewRouteStatusError(
+			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
+	}
+	return nil
+}
+
 func (t *Translator) processRequestMirrorFilter(
 	filterIdx int,
 	mirrorFilter *gwapiv1.HTTPRequestMirrorFilter,
@@ -1236,8 +1257,10 @@ func (t *Translator) processRequestMirrorFilter(
 		return nil
 	}
 
-	// Get the route type from the filter context to determine the correct BackendRef type
-	routeType := filterContext.Route.GetRouteType()
+	if err := t.validateRequestMirrorFilter(mirrorFilter, filterContext.Route, resources); err != nil {
+		return err
+	}
+
 	weight := int32(1)
 	mirrorBackend := mirrorFilter.BackendRef
 
@@ -1247,16 +1270,6 @@ func (t *Translator) processRequestMirrorFilter(
 			BackendObjectReference: mirrorBackend,
 			Weight:                 &weight,
 		},
-	}
-
-	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
-	filterNs := filterContext.Route.GetNamespace()
-	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
-		resources, serviceNamespace, routeType)
-	if err != nil {
-		return status.NewRouteStatusError(
-			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
 	}
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)

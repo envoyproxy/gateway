@@ -96,6 +96,11 @@ grpcRoutes:
       namespace: envoy-gateway
     rules:
     - filters:
+      - requestMirror:
+          backendRef:
+            name: missing-mirror
+            port: 8080
+        type: RequestMirror
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
@@ -113,9 +118,10 @@ grpcRoutes:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
+        message: 'Failed to validate the RequestMirror filter: service default/missing-mirror
+          not found.'
+        reason: BackendNotFound
+        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -235,6 +241,11 @@ httpRoutes:
             replaceFullPath: /landing
             type: ReplaceFullPath
         type: RequestRedirect
+      - requestMirror:
+          backendRef:
+            name: missing-mirror
+            port: 8080
+        type: RequestMirror
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
@@ -267,9 +278,10 @@ httpRoutes:
         status: "True"
         type: PartiallyInvalid
       - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
+        message: 'Failed to validate the RequestMirror filter: service default/missing-mirror
+          not found.'
+        reason: BackendNotFound
+        status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:

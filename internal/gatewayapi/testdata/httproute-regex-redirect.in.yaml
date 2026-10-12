@@ -96,6 +96,11 @@ httpRoutes:
           path:
             type: ReplaceFullPath
             replaceFullPath: /landing
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            name: missing-mirror
+            port: 8080
       - type: ExtensionRef
         extensionRef:
           group: gateway.envoyproxy.io
@@ -206,6 +211,11 @@ grpcRoutes:
       - method:
           service: example.ResolvedRedirect
       filters:
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            name: missing-mirror
+            port: 8080
       - type: ExtensionRef
         extensionRef:
           group: gateway.envoyproxy.io

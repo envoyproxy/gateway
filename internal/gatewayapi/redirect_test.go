@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -155,7 +156,11 @@ func TestRedirectExtension(t *testing.T) {
 }
 
 func TestRedirectExtensionReferenceErrors(t *testing.T) {
-	translator := &Translator{}
+	translator := &Translator{TranslatorContext: &TranslatorContext{}}
+	translator.SetServices([]*corev1.Service{{
+		ObjectMeta: metav1.ObjectMeta{Name: "valid-mirror", Namespace: "default"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}})
 	matches := []egv1a1.HTTPRouteMatchFilter{{Cookies: []egv1a1.HTTPCookieMatch{{Name: "cohort", Value: "redirect"}}}}
 	resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
 		{
@@ -173,16 +178,21 @@ func TestRedirectExtensionReferenceErrors(t *testing.T) {
 				name    string
 				refs    []gwapiv1.ObjectName
 				missing []string
+				mirror  gwapiv1.ObjectName
 			}{
 				{name: "all references resolve", refs: []gwapiv1.ObjectName{"redirect", "deny"}},
 				{name: "redirect first", refs: []gwapiv1.ObjectName{"redirect", "missing"}, missing: []string{"missing"}},
 				{name: "missing reference first", refs: []gwapiv1.ObjectName{"missing", "redirect"}, missing: []string{"missing"}},
 				{name: "direct response first", refs: []gwapiv1.ObjectName{"deny", "redirect", "missing"}, missing: []string{"missing"}},
 				{name: "multiple missing references", refs: []gwapiv1.ObjectName{"missing", "deny", "redirect", "other"}, missing: []string{"missing", "other"}},
+				{name: "missing mirror", refs: []gwapiv1.ObjectName{"redirect"}, mirror: "missing-mirror", missing: []string{"missing-mirror"}},
+				{name: "direct response before missing mirror", refs: []gwapiv1.ObjectName{"deny", "redirect"}, mirror: "missing-mirror", missing: []string{"missing-mirror"}},
+				{name: "valid mirror without endpoints", refs: []gwapiv1.ObjectName{"redirect"}, mirror: "valid-mirror"},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
 					var got *HTTPFiltersContext
 					var errs []status.Error
+					mirror := &gwapiv1.HTTPRequestMirrorFilter{BackendRef: gwapiv1.BackendObjectReference{Name: tc.mirror, Port: new(gwapiv1.PortNumber(8080))}}
 					if routeKind == resource.KindHTTPRoute {
 						filters := make([]gwapiv1.HTTPRouteFilter, 0, len(tc.refs))
 						for _, name := range tc.refs {
@@ -190,6 +200,9 @@ func TestRedirectExtensionReferenceErrors(t *testing.T) {
 								Type:         gwapiv1.HTTPRouteFilterExtensionRef,
 								ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: name},
 							})
+						}
+						if tc.mirror != "" {
+							filters = append(filters, gwapiv1.HTTPRouteFilter{Type: gwapiv1.HTTPRouteFilterRequestMirror, RequestMirror: mirror})
 						}
 						route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
 						got, errs = translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
@@ -200,6 +213,9 @@ func TestRedirectExtensionReferenceErrors(t *testing.T) {
 								Type:         gwapiv1.GRPCRouteFilterExtensionRef,
 								ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: name},
 							})
+						}
+						if tc.mirror != "" {
+							filters = append(filters, gwapiv1.GRPCRouteFilter{Type: gwapiv1.GRPCRouteFilterRequestMirror, RequestMirror: mirror})
 						}
 						route := &GRPCRouteContext{GRPCRoute: &gwapiv1.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
 						got, errs = translator.ProcessGRPCFilters(nil, route, filters, resources, nil)
