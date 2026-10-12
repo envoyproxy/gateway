@@ -9,15 +9,15 @@ package tests
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 	"net"
 	nethttp "net/http"
-	"net/http/httputil"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,7 +40,6 @@ func init() {
 	ConformanceTests = append(ConformanceTests, HTTP1Settings)
 }
 
-// Copied from the conformance suite because it's needed in casePreservingRoundTrip
 var startLineRegex = regexp.MustCompile(`(?m)^`)
 
 func formatDump(data []byte) string {
@@ -48,16 +47,79 @@ func formatDump(data []byte) string {
 	return string(data)
 }
 
-// casePreservingRoundTrip sends a request without normalizing headers, so the
-// backend can echo back the exact case the proxy forwarded.
-func casePreservingRoundTrip(request *roundtripper.Request, transport nethttp.RoundTripper, suite *suite.ConformanceTestSuite) (map[string]any, error) {
+// teeConn wraps a net.Conn and tees all bytes read from it into buf, so the
+// raw wire response (including original header-name case) is available after
+// the HTTP exchange completes.
+type teeConn struct {
+	net.Conn
+	buf bytes.Buffer
+}
+
+func (c *teeConn) Read(b []byte) (int, error) {
+	n, err := c.Conn.Read(b)
+	c.buf.Write(b[:n])
+	return n, err
+}
+
+// teeTransport is an http.RoundTripper that wraps an inner transport's dial
+// with a teeConn so the raw response bytes are captured before net/http
+// canonicalizes header names.
+type teeTransport struct {
+	inner *nethttp.Transport
+	tc    *teeConn // set by DialContext hook; nil until first dial
+}
+
+func newTeeTransport(inner *nethttp.Transport) *teeTransport {
+	if inner == nil {
+		inner = &nethttp.Transport{}
+	}
+	t := &teeTransport{}
+	// Clone so we don't mutate the caller's transport.
+	cloned := inner.Clone()
+	origDial := cloned.DialContext
+	cloned.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		var (
+			conn net.Conn
+			err  error
+		)
+		if origDial != nil {
+			conn, err = origDial(ctx, network, addr)
+		} else {
+			conn, err = (&net.Dialer{}).DialContext(ctx, network, addr)
+		}
+		if err != nil {
+			return nil, err
+		}
+		t.tc = &teeConn{Conn: conn}
+		return t.tc, nil
+	}
+	t.inner = cloned
+	return t
+}
+
+func (t *teeTransport) RoundTrip(req *nethttp.Request) (*nethttp.Response, error) {
+	return t.inner.RoundTrip(req)
+}
+
+// RawResponse returns the raw response bytes captured during the last RoundTrip.
+func (t *teeTransport) RawResponse() string {
+	if t.tc == nil {
+		return ""
+	}
+	return t.tc.buf.String()
+}
+
+// customTransportRoundTrip sends an HTTP request using the provided transport
+// (nil uses the default) and returns the parsed JSON response body. It is the
+// standard way to send requests in tests that need a custom transport (e.g.
+// custom TLS config, response-byte capture via teeTransport).
+func customTransportRoundTrip(request *roundtripper.Request, transport nethttp.RoundTripper, s *suite.ConformanceTestSuite) (map[string]any, error) {
 	if request == nil {
 		return nil, fmt.Errorf("request cannot be nil")
 	}
-	client := &nethttp.Client{}
-	client.Transport = transport
+	client := &nethttp.Client{Transport: transport}
 
-	ctx, cancel := context.WithTimeout(context.Background(), suite.TimeoutConfig.RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.TimeoutConfig.RequestTimeout)
 	defer cancel()
 	req, err := nethttp.NewRequestWithContext(ctx, "GET", request.URL.String(), nil)
 	if err != nil {
@@ -66,97 +128,95 @@ func casePreservingRoundTrip(request *roundtripper.Request, transport nethttp.Ro
 	if request.Host != "" {
 		req.Host = request.Host
 	}
-	if request.Headers != nil {
-		maps.Copy(req.Header, request.Headers)
+	for k, v := range request.Headers {
+		req.Header[k] = v
 	}
-	if suite.Debug {
-		dump, err := httputil.DumpRequestOut(req, true)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Printf("Sending Request:\n%s\n\n", formatDump(dump))
-	}
-
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if suite.Debug {
-		dump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Printf("Received Response:\n%s\n\n", formatDump(dump))
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	cReq := map[string]any{}
-	if err = json.Unmarshal(body, &cReq); err != nil {
-		return nil, fmt.Errorf("unexpected error reading response: %w", err)
+	result := map[string]any{}
+	if err = json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("unexpected response body: %w", err)
 	}
-	return cReq, nil
+	return result, nil
 }
 
-// checkHeaderCasePreserved polls until the mixed-case "SpEcIaL" header appears
-// in the backend's echoed response, proving preserveHeaderCase is active.
-func checkHeaderCasePreserved(t *testing.T, s *suite.ConformanceTestSuite, gwAddr, path, ns string) bool {
+// checkHeaderCasePreserved polls until both directions show case preservation:
+//   - request: "SpEcIaL: Header" is sent to Envoy and forwarded as-is to the backend,
+//     which echoes it in the body as "SpEcIaL" (upstream cluster codec preserves case)
+//   - response: the backend sets "ReSpOnSeHeAdEr: PrEsEnT" and Envoy forwards it
+//     with case intact on the wire (verified via raw TCP bytes, before Go's HTTP
+//     parser canonicalizes received headers)
+func checkHeaderCasePreserved(t *testing.T, s *suite.ConformanceTestSuite, gwAddr, path string) bool {
 	t.Helper()
 	var preserved bool
 	_ = wait.PollUntilContextTimeout(t.Context(), time.Second, s.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+		tt := newTeeTransport(nil)
 		expectedResponse := http.ExpectedResponse{
 			Request: http.Request{
 				Host:    "preserve-case.example.com",
 				Path:    path + "?headers=ReSpOnSeHeAdEr",
 				Headers: map[string]string{"SpEcIaL": "Header"},
 			},
-			Namespace: ns,
 		}
-		var rt nethttp.RoundTripper
 		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-		respBody, err := casePreservingRoundTrip(&req, rt, s)
-		if err != nil {
-			tlog.Logf(t, "request failed: %v", err)
-			return false, nil
-		}
-		if _, found := respBody["SpEcIaL"]; found {
-			preserved = true
-			return true, nil
-		}
-		return false, nil
-	})
-	return preserved
-}
-
-// checkHeaderCaseNotPreserved polls until "SpEcIaL" is absent from the echoed
-// response body, proving the backend codec is normalizing headers.
-func checkHeaderCaseNotPreserved(t *testing.T, s *suite.ConformanceTestSuite, gwAddr, path, ns string) bool {
-	t.Helper()
-	var notPreserved bool
-	_ = wait.PollUntilContextTimeout(t.Context(), time.Second, s.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
-		expectedResponse := http.ExpectedResponse{
-			Request: http.Request{
-				Host:    "preserve-case.example.com",
-				Path:    path + "?headers=ReSpOnSeHeAdEr",
-				Headers: map[string]string{"SpEcIaL": "Header"},
-			},
-			Namespace: ns,
-		}
-		var rt nethttp.RoundTripper
-		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-		respBody, err := casePreservingRoundTrip(&req, rt, s)
+		respBody, err := customTransportRoundTrip(&req, tt, s)
 		if err != nil {
 			tlog.Logf(t, "request failed: %v", err)
 			return false, nil
 		}
 		if _, found := respBody["SpEcIaL"]; !found {
+			tlog.Logf(t, "SpEcIaL not echoed in body: %+v", respBody)
+			return false, nil
+		}
+		if strings.Contains(tt.RawResponse(), "ReSpOnSeHeAdEr: PrEsEnT") {
+			preserved = true
+			return true, nil
+		}
+		tlog.Logf(t, "rawResponse=%q", tt.RawResponse())
+		return false, nil
+	})
+	return preserved
+}
+
+// checkHeaderCaseNotPreserved polls until both directions show case is not preserved:
+//   - request: "SpEcIaL: Header" is forwarded to the backend lowercased as "special",
+//     so the body echo will not contain "SpEcIaL" (upstream cluster codec normalizes)
+//   - response: the backend sets "ReSpOnSeHeAdEr: PrEsEnT" but Envoy lowercases it
+//     to "responseheader: PrEsEnT" on the wire (verified via raw TCP bytes)
+func checkHeaderCaseNotPreserved(t *testing.T, s *suite.ConformanceTestSuite, gwAddr, path string) bool {
+	t.Helper()
+	var notPreserved bool
+	_ = wait.PollUntilContextTimeout(t.Context(), time.Second, s.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+		tt := newTeeTransport(nil)
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Host:    "preserve-case.example.com",
+				Path:    path + "?headers=ReSpOnSeHeAdEr",
+				Headers: map[string]string{"SpEcIaL": "Header"},
+			},
+		}
+		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+		respBody, err := customTransportRoundTrip(&req, tt, s)
+		if err != nil {
+			tlog.Logf(t, "request failed: %v", err)
+			return false, nil
+		}
+		if _, found := respBody["SpEcIaL"]; found {
+			tlog.Logf(t, "SpEcIaL still echoed in body (case not yet overridden): %+v", respBody)
+			return false, nil
+		}
+		if strings.Contains(tt.RawResponse(), "responseheader: PrEsEnT") {
 			notPreserved = true
 			return true, nil
 		}
+		tlog.Logf(t, "rawResponse=%q", tt.RawResponse())
 		return false, nil
 	})
 	return notPreserved
@@ -258,12 +318,12 @@ var HTTP1Settings = suite.ConformanceTest{
 			s.ControllerName, ancestorRef)
 
 		t.Run("CTP preserveHeaderCase seeds the backend cluster codec", func(t *testing.T) {
-			require.True(t, checkHeaderCasePreserved(t, s, gwAddr, "/preserve", ns),
+			require.True(t, checkHeaderCasePreserved(t, s, gwAddr, "/preserve"),
 				"expected header case to be preserved with CTP http1.preserveHeaderCase")
 		})
 
 		t.Run("BTP http1 overrides CTP-seeded backend cluster codec", func(t *testing.T) {
-			require.True(t, checkHeaderCaseNotPreserved(t, s, gwAddr, "/preserve-btp-override", ns),
+			require.True(t, checkHeaderCaseNotPreserved(t, s, gwAddr, "/preserve-btp-override"),
 				"expected header case to NOT be preserved when BTP http1.preserveHeaderCase=false overrides CTP")
 		})
 
