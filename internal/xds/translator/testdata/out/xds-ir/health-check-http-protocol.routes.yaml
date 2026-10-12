@@ -61,3 +61,17 @@
         cluster: tls-alpn-both-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-mixed-alpn-pinned-http2
+      route:
+        cluster: tls-mixed-alpn-pinned-http2-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tls-mixed-alpn-auto
+      route:
+        cluster: tls-mixed-alpn-auto-dest
+        upgradeConfigs:
+        - upgradeType: websocket

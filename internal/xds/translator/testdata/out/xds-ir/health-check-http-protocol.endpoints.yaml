@@ -122,3 +122,63 @@
     loadBalancingWeight: 1
     locality:
       region: tls-alpn-both-dest/backend/0
+- clusterName: tls-mixed-alpn-pinned-http2-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-mixed-alpn-pinned-http2-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-mixed-alpn-pinned-http2-dest/backend/0
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.6.7.8
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-mixed-alpn-pinned-http2-dest/tls/1
+    loadBalancingWeight: 1
+    locality:
+      region: tls-mixed-alpn-pinned-http2-dest/backend/1
+- clusterName: tls-mixed-alpn-auto-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-mixed-alpn-auto-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tls-mixed-alpn-auto-dest/backend/0
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.6.7.8
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tls-mixed-alpn-auto-dest/tls/1
+    loadBalancingWeight: 1
+    locality:
+      region: tls-mixed-alpn-auto-dest/backend/1
