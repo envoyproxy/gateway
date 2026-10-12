@@ -179,6 +179,36 @@ var EnvoyProxy = suite.ResilienceTest{
 				ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 			}
 
+			var envoyGatewayPods corev1.PodList
+			err = suite.Client.List(
+				t.Context(),
+				&envoyGatewayPods,
+				client.InNamespace(namespace),
+				client.MatchingLabels{"control-plane": "envoy-gateway"},
+			)
+			require.NoError(t, err, "Failed to list Envoy Gateway pods")
+
+			activePods := make([]string, 0, 1)
+			for i := range envoyGatewayPods.Items {
+				pod := &envoyGatewayPods.Items[i]
+				if pod.Status.Phase == corev1.PodRunning && pod.DeletionTimestamp == nil {
+					activePods = append(activePods, pod.Name)
+				}
+			}
+			require.Len(t, activePods, 1, "Expected exactly one running Envoy Gateway pod")
+
+			snapshotQuery := `sum(xds_snapshot_create_total{status="success",namespace="` + namespace + `",pod="` + activePods[0] + `"})`
+
+			snapshotCount, err := waitForMetricValueVerification(
+				t,
+				suite,
+				snapshotQuery,
+				func(actual float64) bool {
+					return actual > 0
+				},
+			)
+			require.NoError(t, err, "Failed to get current xDS snapshot count")
+
 			t.Log("Updating configuration while Envoy proxy is disconnected")
 			ap.MustApplyWithCleanup(
 				t,
@@ -198,6 +228,17 @@ var EnvoyProxy = suite.ResilienceTest{
 				false,
 				routeNN,
 			)
+
+			t.Log("Waiting for updated configuration to generate a new xDS snapshot")
+			_, err = waitForMetricValueVerification(
+				t,
+				suite,
+				snapshotQuery,
+				func(actual float64) bool {
+					return actual > snapshotCount
+				},
+			)
+			require.NoError(t, err, "Updated route did not generate a new xDS snapshot")
 
 			t.Log("Restoring Envoy proxy xDS connectivity")
 			_, err = suite.Kube().ManageEgress(
