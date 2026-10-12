@@ -7,6 +7,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,6 +16,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/env"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 const (
@@ -24,6 +26,8 @@ const (
 	DefaultDNSDomain = "cluster.local"
 	// EnvoyGatewayServiceName is the name of the Envoy Gateway service.
 	EnvoyGatewayServiceName = "envoy-gateway"
+	// EnvoyGatewayServiceAccountName is the well-known name of the Envoy Gateway service account.
+	EnvoyGatewayServiceAccountName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
 	EnvoyPrefix = "envoy"
 )
@@ -35,6 +39,14 @@ type Server struct {
 	EnvoyGateway *egv1a1.EnvoyGateway
 	// ControllerNamespace is the namespace that Envoy Gateway runs in.
 	ControllerNamespace string
+	// ControllerName is the well-known name of the Envoy Gateway controller's own resources
+	// (Deployment, Service, ServiceAccount). Used to detect naming collision attacks.
+	ControllerName string
+	// ControllerFullName is the Helm release fullname (eg.fullname) used for certgen and other
+	// release-scoped resources. Defaults to EnvoyGatewayServiceName.
+	ControllerFullName string
+	// ControllerServiceAccountName is the service account name of the Envoy Gateway controller pod.
+	ControllerServiceAccountName string
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
@@ -76,15 +88,18 @@ func (h *KubernetesClientHolder) Get() client.Client {
 // New returns a Server with default parameters.
 func New(stdout, stderr io.Writer) (*Server, error) {
 	return &Server{
-		EnvoyGateway:        egv1a1.DefaultEnvoyGateway(),
-		ControllerNamespace: env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
-		DNSDomain:           env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
-		Logger:              logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
-		Stdout:              stdout,
-		Stderr:              stderr,
-		Elected:             make(chan struct{}),
-		ProviderReady:       make(chan struct{}),
-		KubernetesClient:    NewKubernetesClientHolder(),
+		EnvoyGateway:                 egv1a1.DefaultEnvoyGateway(),
+		ControllerNamespace:          env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
+		ControllerName:               EnvoyGatewayServiceName,
+		ControllerFullName:           env.Lookup("ENVOY_GATEWAY_FULLNAME", EnvoyGatewayServiceName),
+		ControllerServiceAccountName: env.Lookup("ENVOY_GATEWAY_SERVICE_ACCOUNT", EnvoyGatewayServiceAccountName),
+		DNSDomain:                    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
+		Logger:                       logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),
+		Stdout:                       stdout,
+		Stderr:                       stderr,
+		Elected:                      make(chan struct{}),
+		ProviderReady:                make(chan struct{}),
+		KubernetesClient:             NewKubernetesClientHolder(),
 	}, nil
 }
 
@@ -96,10 +111,36 @@ func (s *Server) Validate() ([]string, error) {
 	case len(s.ControllerNamespace) == 0:
 		return nil, errors.New("namespace is empty string")
 	}
-	if err := validation.ValidateEnvoyGateway(s.EnvoyGateway); err != nil {
+	if err := ValidateEnvoyGateway(s.EnvoyGateway); err != nil {
 		return nil, err
 	}
 
 	warnings := validation.WarnEnvoyGateway(s.EnvoyGateway)
 	return warnings, nil
+}
+
+// validateEnvoyGateway validates the provided EnvoyGateway config, including
+// the bootstrap override under the embedded default EnvoyProxy spec.
+//
+// api/v1alpha1/validation.ValidateEnvoyGateway intentionally skips that check:
+// validating a bootstrap override means patching it onto the internal xDS
+// bootstrap template and diffing the result, which the api package cannot do
+// without depending on internal packages (see validateEnvoyProxySpec's doc
+// comment). Standalone EnvoyProxy resources get the same extra check in
+// internal/gatewayapi/translator.go's validateEnvoyProxy; this is the
+// equivalent for the merged default spec used by the config loader, so that
+// an override which breaks dynamic_resources or the xDS cluster is rejected
+// here too, rather than leaving Envoy unable to reach the control plane.
+func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
+	if err := validation.ValidateEnvoyGateway(eg); err != nil {
+		return err
+	}
+
+	if eg.EnvoyProxy != nil && eg.EnvoyProxy.Bootstrap != nil {
+		if err := bootstrap.Validate(eg.EnvoyProxy.Bootstrap); err != nil {
+			return fmt.Errorf("invalid EnvoyProxy template: %w", err)
+		}
+	}
+
+	return nil
 }

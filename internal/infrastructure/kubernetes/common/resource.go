@@ -22,6 +22,7 @@ const (
 
 func GetPodDisruptionBudget(pdb *egv1a1.KubernetesPodDisruptionBudgetSpec,
 	selector *metav1.LabelSelector, nn *types.NamespacedName, ownerReferences []metav1.OwnerReference,
+	disablePatch bool,
 ) (*policyv1.PodDisruptionBudget, error) {
 	// If podDisruptionBudget config is nil, ignore PodDisruptionBudget.
 	if pdb == nil {
@@ -57,7 +58,7 @@ func GetPodDisruptionBudget(pdb *egv1a1.KubernetesPodDisruptionBudgetSpec,
 	podDisruptionBudget.OwnerReferences = append(podDisruptionBudget.OwnerReferences, ownerReferences...)
 
 	// apply merge patch to PodDisruptionBudget
-	podDisruptionBudget, err := pdb.ApplyMergePatch(podDisruptionBudget)
+	podDisruptionBudget, err := pdb.ApplyMergePatch(podDisruptionBudget, disablePatch)
 	if err != nil {
 		return nil, err
 	}

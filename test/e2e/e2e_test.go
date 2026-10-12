@@ -52,7 +52,7 @@ func TestE2E(t *testing.T) {
 			tests.DynamicResolverBackendTest.ShortName,
 			tests.DynamicResolverBackendWithTLSTest.ShortName,
 			tests.RateLimitCIDRMatchTest.ShortName,
-			tests.RateLimitCIDRInvertMatchAlwaysEnforceTest.ShortName,
+			tests.RateLimitCIDRInvertMatchAlwaysEnforce.ShortName,
 			tests.RateLimitCIDRInvertAlwaysExemptTest.ShortName,
 			tests.RateLimitMultipleListenersTest.ShortName,
 			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,

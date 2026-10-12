@@ -40,7 +40,7 @@
                 '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
                 cookie:
                   name: session-header
-                  path: /v1
+                  path: /
                   ttl: 3600s
     - match:
         pathSeparatedPrefix: /v2
@@ -59,7 +59,7 @@
                 '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
                 cookie:
                   name: session-header
-                  path: /v2/
+                  path: /
     - match:
         path: /v3/user
       name: cookie-based-session-persistence-route-exact
@@ -77,5 +77,5 @@
                 '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
                 cookie:
                   name: session-cookie
-                  path: /v3/user
+                  path: /
                   ttl: 3600s

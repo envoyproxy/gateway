@@ -185,6 +185,8 @@ type LocalJWKS struct {
 }
 
 // ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.claim) && !has(self.claimPath)) || (!has(self.claim) && has(self.claimPath))",message="exactly one of claim or claimPath must be specified"
 type ClaimToHeader struct {
 	// Header defines the name of the HTTP request header that the JWT Claim will be saved into.
 	Header string `json:"header"`
@@ -192,7 +194,37 @@ type ClaimToHeader struct {
 	// Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type
 	// (eg. "claim.nested.key", "sub"). The nested claim name must use dot "."
 	// to separate the JSON name path.
-	Claim string `json:"claim"`
+	//
+	// Because the name is always split on ".", a claim whose own name contains a dot -- a
+	// URI-namespaced claim such as "https://example.com/claims/tenant_name" commonly emitted by
+	// OIDC providers -- cannot be addressed this way. Use ClaimPath for those claims instead.
+	//
+	// Exactly one of Claim or ClaimPath must be specified.
+	//
+	// +optional
+	Claim string `json:"claim,omitempty"`
+
+	// ClaimPath is the path to the claim to copy, given as an explicit list of segments. Each
+	// segment is matched in full against a key of the enclosing JSON object, so claim names
+	// containing dots are addressable. For example, a top-level claim named
+	// "https://example.com/claims/tenant_name" is selected with:
+	//
+	//	claimPath:
+	//	- "https://example.com/claims/tenant_name"
+	//
+	// and a nested claim `{"nested": {"claim": {"key": "value"}}}` is selected with:
+	//
+	//	claimPath:
+	//	- nested
+	//	- claim
+	//	- key
+	//
+	// Exactly one of Claim or ClaimPath must be specified.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:MinLength=1
+	ClaimPath []string `json:"claimPath,omitempty"`
 }
 
 // JWTExtractor defines a custom JWT token extraction from HTTP request.

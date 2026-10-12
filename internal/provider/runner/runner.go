@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -27,6 +28,7 @@ type Config struct {
 
 type Runner struct {
 	Config
+	wg sync.WaitGroup
 }
 
 func New(cfg *Config) *Runner {
@@ -34,7 +36,10 @@ func New(cfg *Config) *Runner {
 }
 
 // Close implements Runner interface.
-func (r *Runner) Close() error { return nil }
+func (r *Runner) Close() error {
+	r.wg.Wait()
+	return nil
+}
 
 // Name implements Runner interface.
 func (r *Runner) Name() string {
@@ -65,7 +70,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	}
 
 	r.Logger.Info("Running provider", "type", p.Type())
+	r.wg.Add(1)
 	go func() {
+		defer r.wg.Done()
 		if err := p.Start(ctx); err != nil {
 			r.Logger.Error(err, "unable to start provider")
 		}

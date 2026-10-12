@@ -281,6 +281,7 @@ securityPolicies:
       clientID: client1.apps.googleusercontent.com
       clientSecret:
         name: client1-secret
+      codeVerifierTTL: 2m
       csrfTokenTTL: 35m
       defaultRefreshTokenTTL: 24h
       defaultTokenTTL: 30m
@@ -451,6 +452,7 @@ xdsIR:
           oidc:
             clientID: client1.apps.googleusercontent.com
             clientSecret: '[redacted]'
+            codeVerifierTTL: 2m0s
             cookieSuffix: b0a1b740
             csrfTokenTTL: 35m0s
             defaultRefreshTokenTTL: 24h0m0s

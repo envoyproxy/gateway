@@ -229,6 +229,22 @@ type EnvoyProxySpec struct {
 	// +optional
 	DynamicModules []DynamicModuleEntry `json:"dynamicModules,omitempty"`
 
+	// WasmModules defines the set of Wasm modules that are allowed to be used by
+	// EnvoyExtensionPolicy resources. Each entry registers a module by a logical
+	// name and a source (currently Local path).
+	//
+	// When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up
+	// in this list.
+	//
+	// The EnvoyProxy owner is responsible for ensuring Local modules are available
+	// on the proxy container's filesystem (e.g., via init containers, custom images,
+	// or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path.
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	WasmModules []WasmModuleEntry `json:"wasmModules,omitempty"`
+
 	// GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet.
 	//
 	// +optional
@@ -365,7 +381,11 @@ type BackendTLSConfig struct {
 	// ClientCertificateRef defines the reference to a Kubernetes Secret that contains
 	// the client certificate and private key for Envoy to use when connecting to
 	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
-	// This secret should be located within the same namespace as the Envoy proxy resource that references it.
+	// The Secret must be in the same namespace as the EnvoyProxy or Backend resource
+	// that references it.
+	// Cross-namespace references are not supported, even with a ReferenceGrant.
+	// The ReferenceGrant requirement in the namespace field's description is inherited
+	// from the Gateway API SecretObjectReference type and does not apply to this field.
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 	TLSSettings          `json:",inline"`
@@ -802,6 +822,11 @@ const (
 	EnvoyProxyReasonInvalidParameters EnvoyProxyConditionReason = "InvalidParameters"
 
 	EnvoyProxyReasonDeprecatedField EnvoyProxyConditionReason = "DeprecatedField"
+
+	// EnvoyProxyReasonPatchDisabled indicates that one or more Kubernetes resource
+	// `patch` fields configured on this EnvoyProxy were ignored because patching is
+	// disabled in the EnvoyGateway configuration.
+	EnvoyProxyReasonPatchDisabled EnvoyProxyConditionReason = "PatchDisabled"
 )
 
 // +kubebuilder:object:root=true

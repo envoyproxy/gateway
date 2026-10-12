@@ -36,8 +36,11 @@ var CORSFromSecurityPolicyTest = suite.ConformanceTest{
 func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite) {
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: "http-with-cors-exact", Namespace: ns}
+	originRegexesRouteNN := types.NamespacedName{Name: "http-with-cors-origin-regexes", Namespace: ns}
+	allowAllRegexRouteNN := types.NamespacedName{Name: "http-with-cors-origin-regexes-allow-all", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+		kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN, originRegexesRouteNN, allowAllRegexRouteNN)
 
 	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -47,6 +50,12 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite) {
 	}
 
 	SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
+	SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-origin-regexes", Namespace: ns}, suite.ControllerName, ancestorRef)
+	SecurityPolicyMustFail(
+		t, suite.Client,
+		types.NamespacedName{Name: "cors-origin-regexes-allow-all", Namespace: ns},
+		suite.ControllerName,
+		ancestorRef, `origin regular expression "[^/]+" must not match "*"`)
 
 	t.Run("should enable cors with Allow Origin Exact", func(t *testing.T) {
 		expectedResponse := http.ExpectedResponse{
@@ -184,6 +193,162 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite) {
 				},
 			},
 			Namespace: "",
+		}
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+	})
+
+	t.Run("should enable cors with allowOriginRegexes", func(t *testing.T) {
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path:   "/cors-origin-regexes",
+				Method: "OPTIONS",
+				Headers: map[string]string{
+					"Origin":                         "https://preview-123.example.com",
+					"access-control-request-method":  "GET",
+					"access-control-request-headers": "x-header-1, x-header-2",
+				},
+			},
+			// Set the expected request properties to empty strings.
+			// This is a workaround to avoid the test failure.
+			// The response body is empty because the request is a preflight request.
+			ExpectedRequest: &http.ExpectedRequest{
+				Request: http.Request{
+					Host:    "",
+					Method:  "OPTIONS",
+					Path:    "",
+					Headers: nil,
+				},
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+				Headers: map[string]string{
+					"access-control-allow-origin":   "https://preview-123.example.com",
+					"access-control-allow-methods":  "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+					"access-control-allow-headers":  "x-header-1, x-header-2",
+					"access-control-expose-headers": "x-header-3, x-header-4",
+				},
+			},
+			Namespace: "",
+		}
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+	})
+
+	t.Run("should enable cors with allowOriginRegexes and port", func(t *testing.T) {
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path:   "/cors-origin-regexes",
+				Method: "OPTIONS",
+				Headers: map[string]string{
+					"Origin":                         "https://preview-123.example.com:8443",
+					"access-control-request-method":  "GET",
+					"access-control-request-headers": "x-header-1, x-header-2",
+				},
+			},
+			// Set the expected request properties to empty strings.
+			// This is a workaround to avoid the test failure.
+			// The response body is empty because the request is a preflight request.
+			ExpectedRequest: &http.ExpectedRequest{
+				Request: http.Request{
+					Host:    "",
+					Method:  "OPTIONS",
+					Path:    "",
+					Headers: nil,
+				},
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+				Headers: map[string]string{
+					"access-control-allow-origin":   "https://preview-123.example.com:8443",
+					"access-control-allow-methods":  "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+					"access-control-allow-headers":  "x-header-1, x-header-2",
+					"access-control-expose-headers": "x-header-3, x-header-4",
+				},
+			},
+			Namespace: "",
+		}
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+	})
+
+	t.Run("should enable cors with allowOrigins alongside allowOriginRegexes", func(t *testing.T) {
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path:   "/cors-origin-regexes",
+				Method: "OPTIONS",
+				Headers: map[string]string{
+					"Origin":                         "https://www.foo.com",
+					"access-control-request-method":  "GET",
+					"access-control-request-headers": "x-header-1, x-header-2",
+				},
+			},
+			// Set the expected request properties to empty strings.
+			// This is a workaround to avoid the test failure.
+			// The response body is empty because the request is a preflight request.
+			ExpectedRequest: &http.ExpectedRequest{
+				Request: http.Request{
+					Host:    "",
+					Method:  "OPTIONS",
+					Path:    "",
+					Headers: nil,
+				},
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+				Headers: map[string]string{
+					"access-control-allow-origin":   "https://www.foo.com",
+					"access-control-allow-methods":  "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+					"access-control-allow-headers":  "x-header-1, x-header-2",
+					"access-control-expose-headers": "x-header-3, x-header-4",
+				},
+			},
+			Namespace: "",
+		}
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+	})
+
+	t.Run("should not contain cors headers when Origin does not match allowOriginRegexes", func(t *testing.T) {
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path:   "/cors-origin-regexes",
+				Method: "OPTIONS",
+				Headers: map[string]string{
+					"Origin":                         "https://preview-abc.example.com",
+					"access-control-request-method":  "GET",
+					"access-control-request-headers": "x-header-1, x-header-2",
+				},
+			},
+			// Set the expected request properties to empty strings.
+			// This is a workaround to avoid the test failure.
+			// The response body is empty because the request is a preflight request.
+			ExpectedRequest: &http.ExpectedRequest{
+				Request: http.Request{
+					Host:    "",
+					Method:  "OPTIONS",
+					Path:    "",
+					Headers: nil,
+				},
+			},
+			Response: http.Response{
+				AbsentHeaders: []string{"access-control-allow-origin"},
+			},
+			Namespace: "",
+		}
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+	})
+
+	t.Run("http route with failed SecurityPolicy", func(t *testing.T) {
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/cors-origin-regexes-allow-all",
+			},
+			Response: http.Response{
+				StatusCodes: []int{500},
+			},
+			Namespace: ns,
 		}
 
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
