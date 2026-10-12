@@ -31,7 +31,7 @@ http:
                   port: 50000
               name: "plaintext-http2-auto-dest/backend/0"
               protocol: HTTP2
-      # TLS backend without an explicit version: the cluster negotiates its protocol
+      # TLS backend without an explicit protocol: the cluster negotiates its protocol
       # through ALPN, so health checks negotiate theirs the same way.
       - name: "tls-auto"
         hostname: "*"
@@ -68,7 +68,7 @@ http:
               healthyThreshold: 1
               http:
                 path: "/healthz"
-                version: HTTP2
+                protocol: HTTP2
                 expectedStatuses:
                   - 200
         destination:
