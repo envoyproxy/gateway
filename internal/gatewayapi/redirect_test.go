@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -13,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -272,6 +275,172 @@ func TestRedirectExtensionReferenceErrors(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func TestRedirectFilterOrdering(t *testing.T) {
+	for _, routeKind := range []gwapiv1.Kind{resource.KindHTTPRoute, resource.KindGRPCRoute} {
+		for _, invalidRedirect := range []bool{false, true} {
+			for _, composed := range []bool{false, true} {
+				if composed && routeKind == resource.KindGRPCRoute {
+					continue
+				}
+				for _, tc := range []struct {
+					name     string
+					refs     []string
+					accepted bool
+					missing  []string
+				}{
+					{name: "valid", refs: []string{"redirect"}},
+					{name: "missing first", refs: []string{"missing", "redirect"}, missing: []string{"missing"}},
+					{name: "missing last", refs: []string{"redirect", "missing"}, missing: []string{"missing"}},
+					{name: "multiple missing", refs: []string{"missing", "redirect", "other"}, missing: []string{"missing", "other"}},
+					{name: "direct first", refs: []string{"deny", "missing", "redirect"}, accepted: true, missing: []string{"missing"}},
+					{name: "direct last", refs: []string{"redirect", "missing", "deny"}, accepted: true, missing: []string{"missing"}},
+					{name: "duplicate matches first", refs: []string{"cookies", "missing", "redirect"}, accepted: true, missing: []string{"missing"}},
+					{name: "duplicate matches last", refs: []string{"redirect", "missing", "cookies"}, accepted: true, missing: []string{"missing"}},
+					{name: "unsupported first", refs: []string{"unsupported", "redirect", "missing"}, accepted: true, missing: []string{"missing"}},
+					{name: "unsupported last", refs: []string{"missing", "redirect", "unsupported"}, accepted: true, missing: []string{"missing"}},
+				} {
+					t.Run(fmt.Sprintf("%s/invalid=%t/composed=%t/%s", routeKind, invalidRedirect, composed, tc.name), func(t *testing.T) {
+						matches := []egv1a1.HTTPRouteMatchFilter{{Cookies: []egv1a1.HTTPCookieMatch{{Name: "cohort", Value: "redirect"}}}}
+						redirect := &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+							Type: egv1a1.RegexHTTPPathModifier, ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "^/old$", Substitution: "/new"},
+						}}
+						if invalidRedirect {
+							redirect.Path.ReplaceRegexMatch.Pattern = "("
+						}
+						resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
+							{ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"}, Spec: egv1a1.HTTPRouteFilterSpec{Redirect: redirect, Matches: matches}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "cookies", Namespace: "default"}, Spec: egv1a1.HTTPRouteFilterSpec{Matches: matches}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "deny", Namespace: "default"}, Spec: egv1a1.HTTPRouteFilterSpec{DirectResponse: &egv1a1.HTTPDirectResponseFilter{StatusCode: new(403)}}},
+						}}
+						httpFilters := make([]gwapiv1.HTTPRouteFilter, 0, len(tc.refs)+1)
+						grpcFilters := make([]gwapiv1.GRPCRouteFilter, 0, len(tc.refs))
+						if composed {
+							httpFilters = append(httpFilters, gwapiv1.HTTPRouteFilter{Type: gwapiv1.HTTPRouteFilterRequestRedirect, RequestRedirect: &gwapiv1.HTTPRequestRedirectFilter{}})
+						}
+						for _, name := range tc.refs {
+							ref := &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: gwapiv1.ObjectName(name)}
+							if name == "unsupported" {
+								ref.Group = "unsupported.example.com"
+							}
+							httpFilters = append(httpFilters, gwapiv1.HTTPRouteFilter{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: ref})
+							grpcFilters = append(grpcFilters, gwapiv1.GRPCRouteFilter{Type: gwapiv1.GRPCRouteFilterExtensionRef, ExtensionRef: ref})
+						}
+						translator := &Translator{}
+						var got *HTTPFiltersContext
+						var errs []status.Error
+						if routeKind == resource.KindHTTPRoute {
+							route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+							got, errs = translator.ProcessHTTPFilters(nil, route, httpFilters, 0, resources, nil)
+						} else {
+							route := &GRPCRouteContext{GRPCRoute: &gwapiv1.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+							got, errs = translator.ProcessGRPCFilters(nil, route, grpcFilters, resources, nil)
+						}
+						require.Equal(t, matches, got.Matches)
+						conditionErrors := make(map[gwapiv1.RouteConditionType][]string)
+						for _, err := range errs {
+							conditionErrors[err.Type()] = append(conditionErrors[err.Type()], err.Error())
+						}
+						wantAcceptedError := tc.accepted || invalidRedirect || routeKind == resource.KindGRPCRoute
+						require.Equal(t, wantAcceptedError, len(conditionErrors[gwapiv1.RouteConditionAccepted]) > 0)
+						for _, name := range tc.missing {
+							require.Contains(t, strings.Join(conditionErrors[gwapiv1.RouteConditionResolvedRefs], ";"), "default/"+name)
+						}
+						if len(tc.missing) == 0 {
+							require.Empty(t, conditionErrors[gwapiv1.RouteConditionResolvedRefs])
+						}
+						if !wantAcceptedError && len(tc.missing) == 0 {
+							require.Empty(t, errs)
+							require.NotNil(t, got.RedirectResponse)
+						}
+					})
+				}
+			}
+		}
+	}
+}
+
+func TestRedirectExternalFilterGroup(t *testing.T) {
+	translator := &Translator{
+		TranslatorContext:   &TranslatorContext{},
+		ExtensionGroupKinds: []schema.GroupKind{{Group: "example.com", Kind: egv1a1.KindHTTPRouteFilter}},
+	}
+	resources := &resource.Resources{
+		HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{{
+			ObjectMeta: metav1.ObjectMeta{Name: "external", Namespace: "default"},
+			Spec:       egv1a1.HTTPRouteFilterSpec{Matches: []egv1a1.HTTPRouteMatchFilter{{Cookies: []egv1a1.HTTPCookieMatch{{Name: "unrelated", Value: "cookie"}}}}},
+		}},
+		ExtensionRefFilters: []unstructured.Unstructured{{Object: map[string]interface{}{
+			"apiVersion": "example.com/v1", "kind": egv1a1.KindHTTPRouteFilter,
+			"metadata": map[string]interface{}{"name": "external", "namespace": "default"},
+		}}},
+	}
+	filters := []gwapiv1.HTTPRouteFilter{{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{
+		Group: "example.com", Kind: egv1a1.KindHTTPRouteFilter, Name: "external",
+	}}}
+	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+	got, errs := translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
+	require.Empty(t, errs)
+	require.Empty(t, got.Matches)
+	require.Len(t, got.ExtensionRefs, 1)
+	require.Equal(t, "example.com/v1", got.ExtensionRefs[0].Object.GetAPIVersion())
+
+	// Reference-only recovery must find the external resource without publishing
+	// it or accidentally loading a same-named built-in filter's matches.
+	filters = append([]gwapiv1.HTTPRouteFilter{{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{
+		Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "missing",
+	}}}, filters...)
+	got, errs = translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
+	require.Len(t, errs, 1)
+	require.Equal(t, gwapiv1.RouteConditionResolvedRefs, errs[0].Type())
+	require.Empty(t, got.Matches)
+	require.Empty(t, got.ExtensionRefs)
+	require.Empty(t, translator.ExtensionResourceMap)
+}
+
+func TestFilterReferencesAfterDirectResponse(t *testing.T) {
+	for _, routeKind := range []gwapiv1.Kind{resource.KindHTTPRoute, resource.KindGRPCRoute} {
+		for _, mirror := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/mirror=%t", routeKind, mirror), func(t *testing.T) {
+				translator := &Translator{TranslatorContext: &TranslatorContext{}}
+				matches := []egv1a1.HTTPRouteMatchFilter{{Cookies: []egv1a1.HTTPCookieMatch{{Name: "cohort", Value: "deny"}}}}
+				resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
+					{ObjectMeta: metav1.ObjectMeta{Name: "deny", Namespace: "default"}, Spec: egv1a1.HTTPRouteFilterSpec{DirectResponse: &egv1a1.HTTPDirectResponseFilter{StatusCode: new(403)}}},
+					{ObjectMeta: metav1.ObjectMeta{Name: "cookies", Namespace: "default"}, Spec: egv1a1.HTTPRouteFilterSpec{Matches: matches}},
+				}}
+				httpFilters := []gwapiv1.HTTPRouteFilter{
+					{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "deny"}},
+					{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "cookies"}},
+					{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "missing"}},
+				}
+				if mirror {
+					httpFilters[2] = gwapiv1.HTTPRouteFilter{Type: gwapiv1.HTTPRouteFilterRequestMirror, RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
+						BackendRef: gwapiv1.BackendObjectReference{Name: "missing", Port: new(gwapiv1.PortNumber(8080))},
+					}}
+				}
+				var got *HTTPFiltersContext
+				var errs []status.Error
+				if routeKind == resource.KindHTTPRoute {
+					route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+					got, errs = translator.ProcessHTTPFilters(nil, route, httpFilters, 0, resources, nil)
+				} else {
+					grpcFilters := make([]gwapiv1.GRPCRouteFilter, 0, len(httpFilters))
+					for _, filter := range httpFilters {
+						grpcFilters = append(grpcFilters, gwapiv1.GRPCRouteFilter{Type: gwapiv1.GRPCRouteFilterType(filter.Type), ExtensionRef: filter.ExtensionRef, RequestMirror: filter.RequestMirror})
+					}
+					route := &GRPCRouteContext{GRPCRoute: &gwapiv1.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+					got, errs = translator.ProcessGRPCFilters(nil, route, grpcFilters, resources, nil)
+				}
+				require.Equal(t, matches, got.Matches)
+				require.Len(t, errs, 1)
+				require.Equal(t, gwapiv1.RouteConditionResolvedRefs, errs[0].Type())
+				require.Contains(t, errs[0].Error(), "default/missing")
+				require.Equal(t, new(uint32(500)), got.DirectResponse.StatusCode)
+				require.Empty(t, got.Mirrors)
+			})
+		}
 	}
 }
 
