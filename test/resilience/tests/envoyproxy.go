@@ -141,6 +141,16 @@ var EnvoyProxy = suite.ResilienceTest{
 					)
 				}
 			})
+			t.Log("Waiting for Envoy proxy to be connected to control plane")
+			_, err = waitForMetricValueVerification(
+				t,
+				suite,
+				"envoy_control_plane_connected_state",
+				func(actual float64) bool {
+					return actual > 0
+				},
+			)
+			require.NoError(t, err, "Failed to confirm Envoy proxy connected to control plane")
 
 			_, err = suite.Kube().ManageEgress(
 				ctx,
@@ -162,15 +172,7 @@ var EnvoyProxy = suite.ResilienceTest{
 				},
 			)
 			require.NoError(t, err, "Failed to confirm Envoy proxy disconnected from control plane")
-			snapshotCount, err := waitForMetricValueVerification(
-				t,
-				suite,
-				PrometheusXDSSnapshotSuccess,
-				func(actual float64) bool {
-					return actual >= 0
-				},
-			)
-			require.NoError(t, err, "Failed to get initial xDS snapshot count")
+
 			ap := kubernetes.Applier{
 				ManifestFS:     suite.ManifestFS,
 				GatewayClass:   suite.GatewayClassName,
@@ -185,16 +187,18 @@ var EnvoyProxy = suite.ResilienceTest{
 				"testdata/route_changes.yaml",
 				true,
 			)
-			t.Log("Waiting for updated configuration to generate a new xDS snapshot")
-			_, err = waitForMetricValueVerification(
+			t.Log("Waiting for updated route to be accepted")
+			gwAddr = kubernetes.GatewayAndRoutesMustBeAccepted(
 				t,
-				suite,
-				PrometheusXDSSnapshotSuccess,
-				func(actual float64) bool {
-					return actual > snapshotCount
-				},
+				suite.Client,
+				suite.TimeoutConfig,
+				suite.ControllerName,
+				kubernetes.NewGatewayRef(gwNN),
+				&gwapiv1.HTTPRoute{},
+				false,
+				routeNN,
 			)
-			require.NoError(t, err, "Updated route did not generate a new xDS snapshot")
+
 			t.Log("Restoring Envoy proxy xDS connectivity")
 			_, err = suite.Kube().ManageEgress(
 				ctx,
