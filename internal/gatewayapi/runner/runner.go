@@ -317,15 +317,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				)
 				defer translateGCSpan.End()
 				// Translate and publish IRs.
-				var rateLimitClusterSettings *egv1a1.ClusterSettings
-				if r.EnvoyGateway.RateLimit != nil {
-					rateLimitClusterSettings = r.EnvoyGateway.RateLimit.ClusterSettings
-				}
 				t := &gatewayapi.Translator{
 					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
 					GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
-					RateLimitClusterSettings:        rateLimitClusterSettings,
+					RateLimitClusterSettings:        r.EnvoyGateway.RateLimit.GetBackendSettings(),
 					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					EnvoyProxyPatchDisabled:         !r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
 					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,

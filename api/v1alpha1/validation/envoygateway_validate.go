@@ -105,23 +105,23 @@ func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
 	return warnings
 }
 
-// warnRateLimitClusterSettings warns about RateLimit.ClusterSettings members that are accepted
+// warnRateLimitClusterSettings warns about RateLimit.Service.BackendSettings members that are accepted
 // by validateRateLimitClusterSettings but have no effect on the rate limit service cluster: it
 // has no associated route, so ir.Timeout.ClusterOnly() strips HTTP.RequestTimeout/
 // HTTP.StreamIdleTimeout before the CDS cluster is built.
 func warnRateLimitClusterSettings(rateLimit *egv1a1.RateLimit) []string {
-	if rateLimit == nil || rateLimit.ClusterSettings == nil {
+	cs := rateLimit.GetBackendSettings()
+	if cs == nil {
 		return nil
 	}
-	cs := rateLimit.ClusterSettings
 
 	var warnings []string
 	if cs.Timeout != nil && cs.Timeout.HTTP != nil {
 		if cs.Timeout.HTTP.RequestTimeout != nil {
-			warnings = append(warnings, "rateLimit.clusterSettings.timeout.http.requestTimeout has no effect: the rate limit service cluster has no associated route")
+			warnings = append(warnings, "rateLimit.service.backendSettings.timeout.http.requestTimeout has no effect: the rate limit service cluster has no associated route")
 		}
 		if cs.Timeout.HTTP.StreamIdleTimeout != nil {
-			warnings = append(warnings, "rateLimit.clusterSettings.timeout.http.streamIdleTimeout has no effect: the rate limit service cluster has no associated route")
+			warnings = append(warnings, "rateLimit.service.backendSettings.timeout.http.streamIdleTimeout has no effect: the rate limit service cluster has no associated route")
 		}
 	}
 	return warnings
@@ -263,8 +263,8 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return nil
 	}
 
-	if err := validateRateLimitClusterSettings(rateLimit.ClusterSettings); err != nil {
-		return fmt.Errorf("invalid rateLimit.clusterSettings: %w", err)
+	if err := validateRateLimitClusterSettings(rateLimit.GetBackendSettings()); err != nil {
+		return fmt.Errorf("invalid rateLimit.service.backendSettings: %w", err)
 	}
 
 	if rateLimit.Backend.Type != egv1a1.RedisBackendType {
@@ -313,7 +313,7 @@ func ValidateRedisURL(redisURL string) error {
 	return nil
 }
 
-// validateRateLimitClusterSettings validates EnvoyGateway.RateLimit.ClusterSettings.
+// validateRateLimitClusterSettings validates EnvoyGateway.RateLimit.Service.BackendSettings.
 //
 // EnvoyGateway is loaded as static configuration rather than admitted as a CRD, so the
 // kubebuilder/CEL constraints declared on ClusterSettings (e.g. Minimum=0 on circuit breaker

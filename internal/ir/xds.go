@@ -2976,7 +2976,7 @@ type RateLimitServiceCluster struct {
 	RouteDestination `json:",inline" yaml:",inline"`
 	// Traffic holds cluster-scoped traffic settings (circuit breakers, timeouts, health checks,
 	// etc.) for the rate limit service cluster, translated from
-	// EnvoyGateway.RateLimit.ClusterSettings.
+	// EnvoyGateway.RateLimit.Service.BackendSettings.
 	Traffic *ClusterTrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 

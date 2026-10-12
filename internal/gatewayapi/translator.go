@@ -125,7 +125,7 @@ type Translator struct {
 
 	// RateLimitClusterSettings holds cluster-level connection settings (circuit breakers,
 	// timeouts, health checks, etc.) for the rate limit service cluster, as configured on
-	// EnvoyGateway.RateLimit.ClusterSettings.
+	// EnvoyGateway.RateLimit.Service.BackendSettings.
 	RateLimitClusterSettings *egv1a1.ClusterSettings
 
 	// EndpointRoutingDisabled can be set to true to use
