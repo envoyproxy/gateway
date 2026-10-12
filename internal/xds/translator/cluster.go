@@ -679,11 +679,14 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		}
 		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
 		httpChecker.CodecClientType = buildHealthCheckCodecClientType(healthcheck.HTTP.Version, upstreamProto, settings)
+		// A cluster that negotiates its upstream protocol lets its health checks negotiate
+		// theirs too, unless a version was configured explicitly. Envoy only selects the
+		// codec from ALPN when asked to, and otherwise pins the configured one. A cluster
+		// only negotiates when every destination uses TLS, which ALPN requires.
+		negotiate := upstreamProto == upstreamProtocolNegotiated &&
+			ptr.Deref(healthcheck.HTTP.Version, egv1a1.HTTPHealthCheckVersionAuto) == egv1a1.HTTPHealthCheckVersionAuto
+		httpChecker.UseAlpnProtocol = negotiate
 		if hasBackendTLS {
-			// A cluster that negotiates its upstream protocol lets its health checks negotiate
-			// theirs too, unless a version was configured explicitly.
-			negotiate := upstreamProto == upstreamProtocolNegotiated &&
-				ptr.Deref(healthcheck.HTTP.Version, egv1a1.HTTPHealthCheckVersionAuto) == egv1a1.HTTPHealthCheckVersionAuto
 			hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType, negotiate)
 		}
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
@@ -737,13 +740,10 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 	return []*corev3.HealthCheck{hc}, nil
 }
 
-// buildHealthCheckCodecClientType returns the codec that Envoy uses to send HTTP health
-// check requests.
-//
 // buildHealthCheckCodecClientType returns the codec that Envoy uses to send HTTP health check
-// requests over a connection that negotiated no protocol: a plaintext one, or a TLS one whose
-// peer doesn't do ALPN. A health check that negotiates a protocol is sent over that one
-// instead, so this is the fallback rather than the codec of every check.
+// requests. For a health check that selects its codec from ALPN, it's the fallback used when
+// the connection negotiated no protocol, because the peer doesn't do ALPN for example, rather
+// than the codec of every check.
 //
 // UseClientProtocol isn't considered here, even though it takes precedence over the backend
 // protocol on the data path: it makes the upstream protocol vary per request, and a health
@@ -772,9 +772,9 @@ func buildHealthCheckCodecClientType(version *egv1a1.HTTPHealthCheckVersion, ups
 }
 
 // buildHealthCheckTLSOptions returns the ALPN protocols offered on health check connections
-// to a backend that uses TLS. Envoy takes the codec of a health check from the protocol
-// negotiated on its connection, so what's offered here decides which protocol a probe can
-// speak. It's only meaningful for a backend that uses TLS: a plaintext health check
+// to a backend that uses TLS. A health check that selects its codec from ALPN takes it from
+// the protocol negotiated on its connection, so what's offered here decides which protocol a
+// probe can speak. It's only meaningful for a backend that uses TLS: a plaintext health check
 // connection negotiates nothing, and the codec alone decides what Envoy sends.
 //
 // Health check connections are created outside of the connection pool, so they don't get the

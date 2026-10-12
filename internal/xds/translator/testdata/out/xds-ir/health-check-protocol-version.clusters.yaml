@@ -59,6 +59,7 @@
         start: "200"
       host: '*'
       path: /healthz
+      useAlpnProtocol: true
     interval: 3s
     timeout: 1s
     tlsOptions:
@@ -183,6 +184,7 @@
         start: "200"
       host: '*'
       path: /healthz
+      useAlpnProtocol: true
     interval: 3s
     timeout: 1s
     unhealthyThreshold: 3
@@ -362,6 +364,7 @@
         start: "200"
       host: '*'
       path: /healthz
+      useAlpnProtocol: true
     interval: 3s
     timeout: 1s
     tlsOptions:
@@ -425,6 +428,7 @@
         start: "200"
       host: '*'
       path: /healthz
+      useAlpnProtocol: true
     interval: 3s
     timeout: 1s
     tlsOptions:

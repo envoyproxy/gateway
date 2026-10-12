@@ -49,6 +49,7 @@
       path: /healthz
       receive:
       - binary: RXZlcnl0aGluZyBPSw==
+      useAlpnProtocol: true
     interval: 3s
     timeout: 0.500s
     tlsOptions:
