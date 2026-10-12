@@ -795,10 +795,12 @@ func (t *Translator) reportRejectedBackendPolicy(xdsIR resource.XdsIRMap, gatewa
 }
 
 func backendRejectionMessage(reason backendPolicyRejection) string {
-	if reason == rejectionSelector {
+	switch reason {
+	case rejectionSelector:
 		return "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead"
+	default:
+		return "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy"
 	}
-	return "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy"
 }
 
 // backendSelectorMatches returns the Services, ServiceImports and Backends matched by the policy's
