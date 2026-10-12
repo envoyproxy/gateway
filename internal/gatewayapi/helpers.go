@@ -1178,6 +1178,28 @@ func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {
 	}
 }
 
+// isBackendTarget reports whether target's group and kind together are a Service, ServiceImport, or
+// Backend, so a target that merely shares a backend's kind in another group is not a backend.
+func isBackendTarget(target policyTargetReferenceWithSectionName) bool {
+	return isBackendTargetKind(target) && target.Group == backendKindGroup(target.Kind)
+}
+
+func backendKindGroup(kind gwapiv1.Kind) gwapiv1.Group {
+	switch kind {
+	case gwapiv1.Kind(resource.KindServiceImport):
+		return GroupMultiClusterService
+	case gwapiv1.Kind(resource.KindBackend):
+		return egv1a1.GroupName
+	default:
+		return ""
+	}
+}
+
+// selectorTargetRef returns the group and kind a target selector refers to.
+func selectorTargetRef(selector egv1a1.TargetSelector) policyTargetReferenceWithSectionName {
+	return policyTargetReferenceWithSectionName{Group: ptr.Deref(selector.Group, gwapiv1.GroupName), Kind: selector.Kind}
+}
+
 func isListenerSet(target policyTargetReferenceWithSectionName) bool {
 	// If the target is a ListenerSet and the section name is nil, then it targets the whole ListenerSet.
 	return target.Kind == resource.KindListenerSet && target.SectionName == nil

@@ -474,7 +474,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		applied := sets.New[types.NamespacedName]()
 		notMergedTargets := make(map[types.NamespacedName][]string)
 		for _, currTarget := range targetRefs {
-			if isBackendTargetKind(currTarget) {
+			if isBackendTarget(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = backendTrafficPolicies[i]
@@ -564,7 +564,7 @@ func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 }
 
 // processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
-// Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for conflict
+// Service/ServiceImport/Backend by isBackendTarget) against backendPolicyMap for conflict
 // detection, then applies it to the Traffic (and, for an HTTP/GRPC cluster, UseClientProtocol) of
 // every matching merged BackendCluster. A gateway with mergeBackends disabled only gets a Disabled
 // ancestor if it actually references the backend; otherwise it's skipped entirely. It returns the
@@ -711,14 +711,14 @@ func (t *Translator) setNotMergedStatusForBackendTargets(
 func mixesBackendTargets(policy *egv1a1.BackendTrafficPolicy) bool {
 	var hasBackend, hasOther bool
 	for _, target := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
-		if isBackendTargetKind(target) {
+		if isBackendTarget(target) {
 			hasBackend = true
 		} else {
 			hasOther = true
 		}
 	}
 	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
+		if isBackendTarget(selectorTargetRef(sel)) {
 			hasBackend = true
 		} else {
 			hasOther = true
@@ -732,7 +732,7 @@ func mixesBackendTargets(policy *egv1a1.BackendTrafficPolicy) bool {
 func (t *Translator) backendTargets(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []policyTargetReferenceWithSectionName {
 	var targets []policyTargetReferenceWithSectionName
 	for _, ref := range resolvePolicyTargetsFromReferences(policy.Spec.PolicyTargetReferences, policy.Namespace) {
-		if isBackendTargetKind(ref) {
+		if isBackendTarget(ref) {
 			targets = append(targets, ref)
 		}
 	}

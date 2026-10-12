@@ -3184,6 +3184,70 @@ func TestIsBackendTargetKind(t *testing.T) {
 	}
 }
 
+func TestIsBackendTarget(t *testing.T) {
+	tests := []struct {
+		name  string
+		group gwapiv1.Group
+		kind  gwapiv1.Kind
+		want  bool
+	}{
+		{
+			name:  "core Service",
+			group: "",
+			kind:  gwapiv1.Kind(gwapiresource.KindService),
+			want:  true,
+		},
+		{
+			name:  "Service in the Gateway API group is not a backend",
+			group: gwapiv1.GroupName,
+			kind:  gwapiv1.Kind(gwapiresource.KindService),
+			want:  false,
+		},
+		{
+			name:  "ServiceImport in the multicluster group",
+			group: GroupMultiClusterService,
+			kind:  gwapiv1.Kind(gwapiresource.KindServiceImport),
+			want:  true,
+		},
+		{
+			name:  "ServiceImport in the core group is not a backend",
+			group: "",
+			kind:  gwapiv1.Kind(gwapiresource.KindServiceImport),
+			want:  false,
+		},
+		{
+			name:  "Backend in the Envoy Gateway group",
+			group: egv1a1.GroupName,
+			kind:  gwapiv1.Kind(gwapiresource.KindBackend),
+			want:  true,
+		},
+		{
+			name:  "Backend without a group is not a backend",
+			group: "",
+			kind:  gwapiv1.Kind(gwapiresource.KindBackend),
+			want:  false,
+		},
+		{
+			name:  "Gateway",
+			group: gwapiv1.GroupName,
+			kind:  gwapiv1.Kind(gwapiresource.KindGateway),
+			want:  false,
+		},
+		{
+			name:  "HTTPRoute",
+			group: gwapiv1.GroupName,
+			kind:  gwapiv1.Kind(gwapiresource.KindHTTPRoute),
+			want:  false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			target := policyTargetReferenceWithSectionName{Group: tc.group, Kind: tc.kind}
+			require.Equal(t, tc.want, isBackendTarget(target))
+		})
+	}
+}
+
 // TestApplyGatewayPolicyToMergedClusterDropsRouteScopedTimeout checks that the route-scoped timeout
 // members, which are never read from a cluster, stay off a merged cluster whatever its protocol.
 func TestApplyGatewayPolicyToMergedClusterDropsRouteScopedTimeout(t *testing.T) {
@@ -3721,10 +3785,39 @@ func TestMixesBackendTargets(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "route in targetRefs and backend in targetSelectors",
+			name: "route in targetRefs and default-group Service in targetSelectors",
 			refs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					ref("gateway.networking.k8s.io", "HTTPRoute"),
+				},
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Service",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "route in targetRefs and core-group Service in targetSelectors",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("gateway.networking.k8s.io", "HTTPRoute"),
+				},
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Group: new(gwapiv1.Group("")),
+						Kind:  "Service",
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "backend in targetRefs and default-group Service in targetSelectors",
+			refs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					ref("", "Service"),
 				},
 				TargetSelectors: []egv1a1.TargetSelector{
 					{
