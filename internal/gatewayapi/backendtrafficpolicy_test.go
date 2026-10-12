@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -3164,66 +3165,80 @@ func TestApplyGatewayPolicyToMergedClusterUseClientProtocol(t *testing.T) {
 	}
 }
 
-func TestIsBackendTarget(t *testing.T) {
+func TestIsBackendGroupKind(t *testing.T) {
 	tests := []struct {
-		name  string
-		group gwapiv1.Group
-		kind  gwapiv1.Kind
-		want  bool
+		name string
+		gk   schema.GroupKind
+		want bool
 	}{
 		{
-			name:  "core Service",
-			group: "",
-			kind:  gwapiv1.Kind(gwapiresource.KindService),
-			want:  true,
+			name: "core Service",
+			gk:   schema.GroupKind{Group: "", Kind: gwapiresource.KindService},
+			want: true,
 		},
 		{
-			name:  "Service in the Gateway API group is not a backend",
-			group: gwapiv1.GroupName,
-			kind:  gwapiv1.Kind(gwapiresource.KindService),
-			want:  false,
+			name: "Service in the Gateway API group is not a backend",
+			gk:   schema.GroupKind{Group: gwapiv1.GroupName, Kind: gwapiresource.KindService},
+			want: false,
 		},
 		{
-			name:  "ServiceImport in the multicluster group",
-			group: GroupMultiClusterService,
-			kind:  gwapiv1.Kind(gwapiresource.KindServiceImport),
-			want:  true,
+			name: "ServiceImport in the multicluster group",
+			gk:   schema.GroupKind{Group: GroupMultiClusterService, Kind: gwapiresource.KindServiceImport},
+			want: true,
 		},
 		{
-			name:  "ServiceImport in the core group is not a backend",
-			group: "",
-			kind:  gwapiv1.Kind(gwapiresource.KindServiceImport),
-			want:  false,
+			name: "ServiceImport in the core group is not a backend",
+			gk:   schema.GroupKind{Group: "", Kind: gwapiresource.KindServiceImport},
+			want: false,
 		},
 		{
-			name:  "Backend in the Envoy Gateway group",
-			group: egv1a1.GroupName,
-			kind:  gwapiv1.Kind(gwapiresource.KindBackend),
-			want:  true,
+			name: "Backend in the Envoy Gateway group",
+			gk:   schema.GroupKind{Group: egv1a1.GroupName, Kind: gwapiresource.KindBackend},
+			want: true,
 		},
 		{
-			name:  "Backend without a group is not a backend",
-			group: "",
-			kind:  gwapiv1.Kind(gwapiresource.KindBackend),
-			want:  false,
+			name: "Backend without a group is not a backend",
+			gk:   schema.GroupKind{Group: "", Kind: gwapiresource.KindBackend},
+			want: false,
 		},
 		{
-			name:  "Gateway",
-			group: gwapiv1.GroupName,
-			kind:  gwapiv1.Kind(gwapiresource.KindGateway),
-			want:  false,
+			name: "Gateway",
+			gk:   schema.GroupKind{Group: gwapiv1.GroupName, Kind: gwapiresource.KindGateway},
+			want: false,
 		},
 		{
-			name:  "HTTPRoute",
-			group: gwapiv1.GroupName,
-			kind:  gwapiv1.Kind(gwapiresource.KindHTTPRoute),
-			want:  false,
+			name: "HTTPRoute",
+			gk:   schema.GroupKind{Group: gwapiv1.GroupName, Kind: gwapiresource.KindHTTPRoute},
+			want: false,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			target := policyTargetReferenceWithSectionName{Group: tc.group, Kind: tc.kind}
-			require.Equal(t, tc.want, isBackendTarget(target))
+			require.Equal(t, tc.want, isBackendGroupKind(tc.gk))
+		})
+	}
+}
+
+func TestTargetSelectorGroupKind(t *testing.T) {
+	tests := []struct {
+		name     string
+		selector egv1a1.TargetSelector
+		want     schema.GroupKind
+	}{
+		{
+			name:     "omitted group defaults to the Gateway API group",
+			selector: egv1a1.TargetSelector{Kind: "HTTPRoute"},
+			want:     schema.GroupKind{Group: gwapiv1.GroupName, Kind: "HTTPRoute"},
+		},
+		{
+			name:     "explicit group is kept",
+			selector: egv1a1.TargetSelector{Group: new(gwapiv1.Group("")), Kind: "Service"},
+			want:     schema.GroupKind{Group: "", Kind: "Service"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, targetSelectorGroupKind(tc.selector))
 		})
 	}
 }

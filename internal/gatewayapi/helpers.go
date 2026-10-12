@@ -1167,24 +1167,26 @@ func isListener(target policyTargetReferenceWithSectionName) bool {
 	return target.Kind == resource.KindGateway && target.SectionName != nil
 }
 
-// isBackendTarget reports whether target's group and kind together are a Service, ServiceImport, or
-// Backend, i.e. the target is a backend, not a Gateway/ListenerSet/xRoute or an unrelated resource.
-func isBackendTarget(target policyTargetReferenceWithSectionName) bool {
-	switch target.Kind {
-	case gwapiv1.Kind(resource.KindService):
-		return target.Group == ""
-	case gwapiv1.Kind(resource.KindServiceImport):
-		return target.Group == GroupMultiClusterService
-	case gwapiv1.Kind(resource.KindBackend):
-		return target.Group == egv1a1.GroupName
-	default:
-		return false
-	}
+// backendGroupKinds are the group and kind pairs a BackendTrafficPolicy can target as a backend.
+var backendGroupKinds = []schema.GroupKind{
+	{Group: "", Kind: resource.KindService},
+	{Group: GroupMultiClusterService, Kind: resource.KindServiceImport},
+	{Group: egv1a1.GroupName, Kind: resource.KindBackend},
 }
 
-// selectorTargetRef returns the group and kind a target selector refers to.
-func selectorTargetRef(selector egv1a1.TargetSelector) policyTargetReferenceWithSectionName {
-	return policyTargetReferenceWithSectionName{Group: ptr.Deref(selector.Group, gwapiv1.GroupName), Kind: selector.Kind}
+// isBackendGroupKind reports whether gk is a Service, ServiceImport, or Backend, i.e. a backend, not a
+// Gateway/ListenerSet/xRoute or an unrelated resource.
+func isBackendGroupKind(gk schema.GroupKind) bool {
+	return slices.Contains(backendGroupKinds, gk)
+}
+
+func targetRefGroupKind(target policyTargetReferenceWithSectionName) schema.GroupKind {
+	return schema.GroupKind{Group: string(target.Group), Kind: string(target.Kind)}
+}
+
+// targetSelectorGroupKind returns the group and kind a target selector refers to.
+func targetSelectorGroupKind(selector egv1a1.TargetSelector) schema.GroupKind {
+	return schema.GroupKind{Group: string(ptr.Deref(selector.Group, gwapiv1.GroupName)), Kind: string(selector.Kind)}
 }
 
 func isListenerSet(target policyTargetReferenceWithSectionName) bool {
