@@ -29,7 +29,8 @@ func TestLabelValue(t *testing.T) {
 
 	other := strings.Repeat("b", 64)
 	require.NotEqual(t, LabelValue(long), LabelValue(other))
-	require.Equal(t, LabelValue(long), LabelValue(long))
+	again := LabelValue(long)
+	require.Equal(t, got, again)
 }
 
 func TestGetHashedName(t *testing.T) {
