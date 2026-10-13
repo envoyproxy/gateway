@@ -39,6 +39,12 @@ const (
 	RedisTLSClientKeyEnvVar = "REDIS_TLS_CLIENT_KEY"
 	// RedisTLSClientKeyFilename is the redis client key file.
 	RedisTLSClientKeyFilename = "/redis-certs/tls.key"
+	// RedisTLSCACertEnvVar is the redis tls CA cert.
+	RedisTLSCACertEnvVar = "REDIS_TLS_CACERT"
+	// RedisTLSCACertFilename is the redis tls CA cert file.
+	RedisTLSCACertFilename = "/redis-ca-certs/ca.crt"
+	// RedisTLSCACertVolumeName is the volume holding the redis CA cert.
+	RedisTLSCACertVolumeName = "redis-ca-certs"
 	// RuntimeRootEnvVar is the runtime root.
 	RuntimeRootEnvVar = "RUNTIME_ROOT"
 	// RuntimeSubdirectoryEnvVar is the runtime subdirectory.
@@ -246,6 +252,16 @@ func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		})
 	}
 
+	if rateLimit.Backend.Redis != nil &&
+		rateLimit.Backend.Redis.TLS != nil &&
+		rateLimit.Backend.Redis.TLS.CACertificateRef != nil {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      RedisTLSCACertVolumeName,
+			MountPath: "/redis-ca-certs",
+			ReadOnly:  true,
+		})
+	}
+
 	return resource.ExpectedContainerVolumeMounts(rateLimitDeployment.Container, volumeMounts)
 }
 
@@ -265,6 +281,30 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 				},
 			},
 		})
+	}
+
+	if rateLimit.Backend.Redis != nil &&
+		rateLimit.Backend.Redis.TLS != nil &&
+		rateLimit.Backend.Redis.TLS.CACertificateRef != nil {
+		ref := rateLimit.Backend.Redis.TLS.CACertificateRef
+		volume := corev1.Volume{Name: RedisTLSCACertVolumeName}
+		switch string(ref.Kind) {
+		case "ConfigMap":
+			volume.VolumeSource = corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: string(ref.Name)},
+					DefaultMode:          new(int32(420)),
+				},
+			}
+		case "Secret":
+			volume.VolumeSource = corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  string(ref.Name),
+					DefaultMode: new(int32(420)),
+				},
+			}
+		}
+		volumes = append(volumes, volume)
 	}
 
 	volumes = append(volumes, corev1.Volume{
@@ -411,6 +451,12 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 				},
 			}...)
 		}
+		if rateLimit.Backend.Redis.TLS.CACertificateRef != nil {
+			env = append(env, corev1.EnvVar{
+				Name:  RedisTLSCACertEnvVar,
+				Value: RedisTLSCACertFilename,
+			})
+		}
 	}
 
 	if enablePrometheus(rateLimit) {
@@ -507,8 +553,26 @@ func Validate(ctx context.Context, client client.Client, gateway *egv1a1.EnvoyGa
 	}
 
 	if redis.TLS != nil && redis.TLS.CertificateRef != nil {
-		_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, redis.TLS.CertificateRef, namespace)
-		return err
+		if _, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, redis.TLS.CertificateRef, namespace); err != nil {
+			return err
+		}
+	}
+
+	if redis.TLS != nil && redis.TLS.CACertificateRef != nil {
+		ref := redis.TLS.CACertificateRef
+		key := types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}
+		switch string(ref.Kind) {
+		case "ConfigMap":
+			if err := client.Get(ctx, key, &corev1.ConfigMap{}); err != nil {
+				return fmt.Errorf("failed to get ConfigMap %s in namespace %s: %w", ref.Name, namespace, err)
+			}
+		case "Secret":
+			if err := client.Get(ctx, key, &corev1.Secret{}); err != nil {
+				return fmt.Errorf("failed to get Secret %s in namespace %s: %w", ref.Name, namespace, err)
+			}
+		default:
+			return fmt.Errorf("unsupported kind %q for redis tls caCertificateRef; only ConfigMap and Secret are supported", ref.Kind)
+		}
 	}
 
 	return nil
