@@ -31,17 +31,15 @@ extensionServerPolicies:
       group: gateway.networking.k8s.io
       kind: GatewayClass
       name: envoy-gateway-class
-      sectionName: http1
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: GatewayClass
         name: envoy-gateway-class
-        sectionName: http1
       conditions:
       - lastTransitionTime: null
-        message: No section name http1 found for GatewayClass envoy-gateway-class
+        message: No listeners found for GatewayClass envoy-gateway-class
         reason: TargetNotFound
         status: "False"
         type: Accepted

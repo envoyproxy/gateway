@@ -63,7 +63,7 @@ listenerSets:
     parentRef:
       name: gateway-2
     listeners:
-    # Shares its name with gateway-2's own listener; a GatewayClass sectionName must not match it.
+    # A GatewayClass target covers listeners contributed by a ListenerSet too.
     - name: http3
       protocol: HTTP
       port: 83
@@ -93,19 +93,7 @@ extensionServerPolicies:
       group: gateway.networking.k8s.io
       name: envoy-gateway-class
       sectionName: http3
-    data: "attached only to the http3 listener across the merged GatewayClass"
-- apiVersion: foo.example.io/v1alpha1
-  kind: Bar
-  metadata:
-    name: test3
-    namespace: envoy-gateway
-  spec:
-    targetRef:
-      kind: GatewayClass
-      group: gateway.networking.k8s.io
-      name: envoy-gateway-class
-      sectionName: http-unknown
-    data: "sectionName matches no listener, so it must fail with TargetNotFound"
+    data: "sectionName is not supported on a GatewayClass target, so it must fail with Invalid"
 - apiVersion: foo.example.io/v1alpha1
   kind: Bar
   metadata:

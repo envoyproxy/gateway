@@ -24,5 +24,4 @@ extensionServerPolicies:
       kind: GatewayClass
       group: gateway.networking.k8s.io
       name: envoy-gateway-class
-      sectionName: http1
     data: "no Gateways exist under the merged GatewayClass, so it must fail with TargetNotFound"

@@ -532,6 +532,22 @@ func (t *Translator) processExtensionServerPolicyForGatewayClass(
 
 	ancestorRef := getAncestorRefForGatewayClassPolicy(currTarget.Name, currTarget.SectionName)
 
+	// Gateway API defines sectionName for kinds such as Gateway and Service, not GatewayClass. On a
+	// GatewayClass it could only mean "same-named listeners on whichever Gateways belong to the
+	// class", a set that changes as Gateways are added and that the policy alone doesn't make
+	// clear, so reject it and point to a Gateway target instead.
+	if currTarget.SectionName != nil {
+		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
+		resolveErr := &status.PolicyResolveError{
+			Reason: gwapiv1.PolicyReasonInvalid,
+			Message: fmt.Sprintf("sectionName is not supported when targeting a %s; target a Gateway with sectionName %s instead",
+				resource.KindGatewayClass, string(*currTarget.SectionName)),
+		}
+		status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
+		policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+		return
+	}
+
 	if !t.MergeGateways {
 		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
 		resolveErr := &status.PolicyResolveError{
@@ -548,9 +564,7 @@ func (t *Translator) processExtensionServerPolicyForGatewayClass(
 	found := false
 	gwXdsIR, ok := xdsIR[string(t.GatewayClassName)]
 	if ok {
-		// Resolve the targeted listeners through each merged Gateway, as a Gateway-kind target does, so
-		// a sectionName only matches the Gateways' own listeners and never same-named listeners that a
-		// ListenerSet contributes.
+		// Resolve the targeted listeners through each merged Gateway, as a Gateway-kind target does.
 		listenerNames := sets.New[string]()
 		for _, gateway := range gatewayMap {
 			for _, listener := range gatewayPolicyTargetListeners(gateway.GatewayContext, currTarget) {
@@ -566,10 +580,6 @@ func (t *Translator) processExtensionServerPolicyForGatewayClass(
 	// extension server via ExtensionServerPolicies.
 	if !found {
 		message := fmt.Sprintf("No listeners found for %s %s", resource.KindGatewayClass, currTarget.Name)
-		if currTarget.SectionName != nil {
-			message = fmt.Sprintf("No section name %s found for %s %s",
-				string(*currTarget.SectionName), resource.KindGatewayClass, currTarget.Name)
-		}
 		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
 		resolveErr := &status.PolicyResolveError{
 			Reason:  gwapiv1.PolicyReasonTargetNotFound,
