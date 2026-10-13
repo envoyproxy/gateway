@@ -921,15 +921,20 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	}
 
 	// Protocol-specific validation: some BTP fields are HTTP-only and have no
-	// effect when targeting TCP/TLS/UDP routes or a GRPCRoute.
+	// effect when targeting TCP/TLS/UDP routes or a GRPCRoute. Emit a warning so
+	// the user is informed, but continue translation — other fields (e.g. routingType)
+	// are still valid and must be applied.
 	if err := validateBackendTrafficPolicyForRoute(policy, string(targetedRoute.GetRouteType())); err != nil {
-		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-			ancestorRefs,
-			t.GatewayControllerName,
-			policy.Generation,
-			status.Error2ConditionMsg(err),
-		)
-		return
+		for _, ancestorRef := range ancestorRefs {
+			status.SetWarningForPolicyAncestor(&policy.Status,
+				ancestorRef,
+				t.GatewayControllerName,
+				status.PolicyReasonUnsupportedField,
+				err.Error(),
+				policy.Generation,
+			)
+		}
+		// do NOT return — translation continues so other fields remain effective
 	}
 
 	if policy.Spec.MergeType == nil {
@@ -2987,11 +2992,11 @@ func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeK
 	switch routeKind {
 	case resource.KindGRPCRoute:
 		if p.Spec.HTTP1 != nil {
-			return fmt.Errorf("http1 is not supported when targeting a GRPCRoute (gRPC always uses HTTP/2)")
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
 		}
 	case resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
 		if p.Spec.HTTP1 != nil {
-			return fmt.Errorf("http1 is not supported when targeting a %s", routeKind)
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a %s", routeKind)
 		}
 	}
 	return nil

@@ -21,9 +21,15 @@ backendTrafficPolicies:
         sectionName: tcp
       conditions:
       - lastTransitionTime: null
-        message: Http1 is not supported when targeting a TCPRoute.
-        reason: Invalid
-        status: "False"
+        message: HTTP/1 settings have no effect when targeting a TCPRoute; spec.targetRef
+          is deprecated, use spec.targetRefs instead
+        reason: Warnings
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -48,9 +54,15 @@ backendTrafficPolicies:
         sectionName: udp
       conditions:
       - lastTransitionTime: null
-        message: Http1 is not supported when targeting a UDPRoute.
-        reason: Invalid
-        status: "False"
+        message: HTTP/1 settings have no effect when targeting a UDPRoute; spec.targetRef
+          is deprecated, use spec.targetRefs instead
+        reason: Warnings
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -75,9 +87,15 @@ backendTrafficPolicies:
         sectionName: tls
       conditions:
       - lastTransitionTime: null
-        message: Http1 is not supported when targeting a TLSRoute.
-        reason: Invalid
-        status: "False"
+        message: HTTP/1 settings have no effect when targeting a TLSRoute; spec.targetRef
+          is deprecated, use spec.targetRefs instead
+        reason: Warnings
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -102,10 +120,15 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Http1 is not supported when targeting a GRPCRoute (gRPC always uses
-          HTTP/2).
-        reason: Invalid
-        status: "False"
+        message: HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always
+          uses HTTP/2); spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: Warnings
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
@@ -496,7 +519,14 @@ xdsIR:
           kind: GRPCRoute
           name: grpc-app-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-grpc
+            namespace: default
         name: grpcroute/default/grpc-app-1/rule/0/match/-1/*
+        traffic:
+          http1:
+            enableTrailers: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -557,6 +587,10 @@ xdsIR:
             kind: TLSRoute
             name: tls-app-1
             namespace: default
+            policies:
+            - kind: BackendTrafficPolicy
+              name: policy-tls
+              namespace: default
           name: tlsroute/default/tls-app-1/rule/-1
           settings:
           - addressType: IP
@@ -575,6 +609,10 @@ xdsIR:
           kind: TLSRoute
           name: tls-app-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-tls
+            namespace: default
         name: tlsroute/default/tls-app-1
         tls:
           inspector:

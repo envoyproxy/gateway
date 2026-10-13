@@ -3709,7 +3709,7 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 			routeKind:   gwapiresource.KindGRPCRoute,
 			spec:        egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
 			wantErr:     true,
-			errContains: "http1",
+			errContains: "HTTP/1",
 		},
 		{
 			name:      "GRPCRoute with http2 is allowed",
@@ -3730,7 +3730,7 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 			routeKind:   gwapiresource.KindTCPRoute,
 			spec:        egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
 			wantErr:     true,
-			errContains: "http1",
+			errContains: "HTTP/1",
 		},
 		{
 			name:      "TCPRoute without http1 is allowed",
@@ -3744,7 +3744,7 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 			routeKind:   gwapiresource.KindTLSRoute,
 			spec:        egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
 			wantErr:     true,
-			errContains: "http1",
+			errContains: "HTTP/1",
 		},
 		// UDPRoute: http1 is rejected
 		{
@@ -3752,7 +3752,7 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 			routeKind:   gwapiresource.KindUDPRoute,
 			spec:        egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
 			wantErr:     true,
-			errContains: "http1",
+			errContains: "HTTP/1",
 		},
 		{
 			name:      "UDPRoute without http1 is allowed",

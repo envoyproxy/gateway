@@ -30,6 +30,10 @@ const (
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
+
+	// PolicyReasonUnsupportedField is used with the "Warning" condition when a policy field
+	// has no effect on the targeted route kind (e.g. http1 settings on a GRPCRoute).
+	PolicyReasonUnsupportedField gwapiv1.PolicyConditionReason = "UnsupportedField"
 )
 
 const (

@@ -1335,7 +1335,7 @@ spec:
 
                   Behavior when targeting route kinds that do not use HTTP/1:
                     - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
-                      directly results in a TranslationError status condition on the policy.
+                      directly adds a Warning condition on the policy; the field is ignored.
                     - Gateway / ListenerSet / sectionName targets: this field is silently
                       ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
                       beneath that target; no warning is emitted.
