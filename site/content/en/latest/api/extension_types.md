@@ -421,6 +421,9 @@ BackendHTTP1Settings provides HTTP/1 configuration for backend connections.
 Setting this field to an empty value (http1: {}), or configuring any of its members,
 forces explicit HTTP/1 for backend connections.
 
+This type has no effect on backends that always use gRPC (HTTP/2). See the HTTP1
+field comment on ClusterSettings for the full list of unsupported targets.
+
 _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
@@ -507,7 +510,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic.<br />Not supported for backends that exclusively use gRPC (HTTP/2):<br />  - Direct attachment to a GRPCRoute is rejected at admission.<br />  - When attached to a Gateway, a specific listener via sectionName, or a<br />    ListenerSet, this field is silently ignored for any GRPCRoute destinations<br />    beneath that target.<br />  - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry<br />    access log/metrics, tracing providers) reject this field on their own<br />    BackendSettings via separate validation rules. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 
 
@@ -643,7 +646,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic.<br />Not supported for backends that exclusively use gRPC (HTTP/2):<br />  - Direct attachment to a GRPCRoute is rejected at admission.<br />  - When attached to a Gateway, a specific listener via sectionName, or a<br />    ListenerSet, this field is silently ignored for any GRPCRoute destinations<br />    beneath that target.<br />  - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry<br />    access log/metrics, tracing providers) reject this field on their own<br />    BackendSettings via separate validation rules. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />This field can only be set when targeting xRoute or backend (Service/ServiceImport/Backend)<br />resources, and is required when targeting a backend.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
@@ -1199,7 +1202,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic.<br />Not supported for backends that exclusively use gRPC (HTTP/2):<br />  - Direct attachment to a GRPCRoute is rejected at admission.<br />  - When attached to a Gateway, a specific listener via sectionName, or a<br />    ListenerSet, this field is silently ignored for any GRPCRoute destinations<br />    beneath that target.<br />  - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry<br />    access log/metrics, tracing providers) reject this field on their own<br />    BackendSettings via separate validation rules. |
 
 
 #### ClusterTranslationConfig

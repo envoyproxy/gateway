@@ -5486,6 +5486,27 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"http1 is not supported when targeting a GRPCRoute, which always uses gRPC (HTTP/2)"},
 		},
 		{
+			desc: "http1 rejected when targetSelectors contains kind GRPCRoute",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Kind:        gwapiv1.Kind("GRPCRoute"),
+								MatchLabels: map[string]string{"app": "grpc-svc"},
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HTTP1: &egv1a1.BackendHTTP1Settings{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported when targeting a GRPCRoute, which always uses gRPC (HTTP/2)"},
+		},
+		{
 			desc: "http1 allowed when targeting an HTTPRoute",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -5495,6 +5516,27 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								Group: gwapiv1.Group("gateway.networking.k8s.io"),
 								Kind:  gwapiv1.Kind("HTTPRoute"),
 								Name:  gwapiv1.ObjectName("http-route"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HTTP1: &egv1a1.BackendHTTP1Settings{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "http1 allowed when targetSelectors targets HTTPRoute",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Kind:        gwapiv1.Kind("HTTPRoute"),
+								MatchLabels: map[string]string{"app": "http-svc"},
 							},
 						},
 					},

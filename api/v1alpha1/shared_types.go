@@ -705,6 +705,15 @@ type ClusterSettings struct {
 	// When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
 	// this field takes precedence for backend (upstream) traffic.
 	//
+	// Not supported for backends that exclusively use gRPC (HTTP/2):
+	//   - Direct attachment to a GRPCRoute is rejected at admission.
+	//   - When attached to a Gateway, a specific listener via sectionName, or a
+	//     ListenerSet, this field is silently ignored for any GRPCRoute destinations
+	//     beneath that target.
+	//   - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+	//     access log/metrics, tracing providers) reject this field on their own
+	//     BackendSettings via separate validation rules.
+	//
 	// +optional
 	HTTP1 *BackendHTTP1Settings `json:"http1,omitempty"`
 }
@@ -712,6 +721,9 @@ type ClusterSettings struct {
 // BackendHTTP1Settings provides HTTP/1 configuration for backend connections.
 // Setting this field to an empty value (http1: {}), or configuring any of its members,
 // forces explicit HTTP/1 for backend connections.
+//
+// This type has no effect on backends that always use gRPC (HTTP/2). See the HTTP1
+// field comment on ClusterSettings for the full list of unsupported targets.
 type BackendHTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
 	// +optional

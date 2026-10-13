@@ -25956,6 +25956,15 @@ spec:
                   HTTP1 provides HTTP/1 configuration for backend connections.
                   When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                   this field takes precedence for backend (upstream) traffic.
+
+                  Not supported for backends that exclusively use gRPC (HTTP/2):
+                    - Direct attachment to a GRPCRoute is rejected at admission.
+                    - When attached to a Gateway, a specific listener via sectionName, or a
+                      ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                      beneath that target.
+                    - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                      access log/metrics, tracing providers) reject this field on their own
+                      BackendSettings via separate validation rules.
                 properties:
                   enableTrailers:
                     description: EnableTrailers defines if HTTP/1 trailers should
@@ -28624,9 +28633,10 @@ spec:
                 && !has(self.timeout.http.streamIdleTimeout))'
             - message: http1 is not supported when targeting a GRPCRoute, which always
                 uses gRPC (HTTP/2)
-              rule: '!has(self.http1) || (!has(self.targetRef) || self.targetRef.kind
+              rule: '!has(self.http1) || ((!has(self.targetRef) || self.targetRef.kind
                 != ''GRPCRoute'') && (!has(self.targetRefs) || !self.targetRefs.exists(ref,
-                ref.kind == ''GRPCRoute''))'
+                ref.kind == ''GRPCRoute'')) && (!has(self.targetSelectors) || !self.targetSelectors.exists(sel,
+                sel.kind == ''GRPCRoute'')))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&
@@ -32436,6 +32446,15 @@ spec:
                             HTTP1 provides HTTP/1 configuration for backend connections.
                             When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                             this field takes precedence for backend (upstream) traffic.
+
+                            Not supported for backends that exclusively use gRPC (HTTP/2):
+                              - Direct attachment to a GRPCRoute is rejected at admission.
+                              - When attached to a Gateway, a specific listener via sectionName, or a
+                                ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                beneath that target.
+                              - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                access log/metrics, tracing providers) reject this field on their own
+                                BackendSettings via separate validation rules.
                           properties:
                             enableTrailers:
                               description: EnableTrailers defines if HTTP/1 trailers
@@ -47540,6 +47559,15 @@ spec:
                                               HTTP1 provides HTTP/1 configuration for backend connections.
                                               When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                                               this field takes precedence for backend (upstream) traffic.
+
+                                              Not supported for backends that exclusively use gRPC (HTTP/2):
+                                                - Direct attachment to a GRPCRoute is rejected at admission.
+                                                - When attached to a Gateway, a specific listener via sectionName, or a
+                                                  ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                                  beneath that target.
+                                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                                  access log/metrics, tracing providers) reject this field on their own
+                                                  BackendSettings via separate validation rules.
                                             properties:
                                               enableTrailers:
                                                 description: EnableTrailers defines
@@ -49254,6 +49282,15 @@ spec:
                                               HTTP1 provides HTTP/1 configuration for backend connections.
                                               When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                                               this field takes precedence for backend (upstream) traffic.
+
+                                              Not supported for backends that exclusively use gRPC (HTTP/2):
+                                                - Direct attachment to a GRPCRoute is rejected at admission.
+                                                - When attached to a Gateway, a specific listener via sectionName, or a
+                                                  ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                                  beneath that target.
+                                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                                  access log/metrics, tracing providers) reject this field on their own
+                                                  BackendSettings via separate validation rules.
                                             properties:
                                               enableTrailers:
                                                 description: EnableTrailers defines
@@ -51351,6 +51388,15 @@ spec:
                                         HTTP1 provides HTTP/1 configuration for backend connections.
                                         When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                                         this field takes precedence for backend (upstream) traffic.
+
+                                        Not supported for backends that exclusively use gRPC (HTTP/2):
+                                          - Direct attachment to a GRPCRoute is rejected at admission.
+                                          - When attached to a Gateway, a specific listener via sectionName, or a
+                                            ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                            beneath that target.
+                                          - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                            access log/metrics, tracing providers) reject this field on their own
+                                            BackendSettings via separate validation rules.
                                       properties:
                                         enableTrailers:
                                           description: EnableTrailers defines if HTTP/1
@@ -53180,6 +53226,15 @@ spec:
                                   HTTP1 provides HTTP/1 configuration for backend connections.
                                   When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                                   this field takes precedence for backend (upstream) traffic.
+
+                                  Not supported for backends that exclusively use gRPC (HTTP/2):
+                                    - Direct attachment to a GRPCRoute is rejected at admission.
+                                    - When attached to a Gateway, a specific listener via sectionName, or a
+                                      ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                      beneath that target.
+                                    - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                      access log/metrics, tracing providers) reject this field on their own
+                                      BackendSettings via separate validation rules.
                                 properties:
                                   enableTrailers:
                                     description: EnableTrailers defines if HTTP/1
@@ -56719,6 +56774,15 @@ spec:
                               HTTP1 provides HTTP/1 configuration for backend connections.
                               When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                               this field takes precedence for backend (upstream) traffic.
+
+                              Not supported for backends that exclusively use gRPC (HTTP/2):
+                                - Direct attachment to a GRPCRoute is rejected at admission.
+                                - When attached to a Gateway, a specific listener via sectionName, or a
+                                  ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                  beneath that target.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers) reject this field on their own
+                                  BackendSettings via separate validation rules.
                             properties:
                               enableTrailers:
                                 description: EnableTrailers defines if HTTP/1 trailers
@@ -58292,6 +58356,15 @@ spec:
                               HTTP1 provides HTTP/1 configuration for backend connections.
                               When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                               this field takes precedence for backend (upstream) traffic.
+
+                              Not supported for backends that exclusively use gRPC (HTTP/2):
+                                - Direct attachment to a GRPCRoute is rejected at admission.
+                                - When attached to a Gateway, a specific listener via sectionName, or a
+                                  ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                  beneath that target.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers) reject this field on their own
+                                  BackendSettings via separate validation rules.
                             properties:
                               enableTrailers:
                                 description: EnableTrailers defines if HTTP/1 trailers
@@ -60196,6 +60269,15 @@ spec:
                                     HTTP1 provides HTTP/1 configuration for backend connections.
                                     When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                                     this field takes precedence for backend (upstream) traffic.
+
+                                    Not supported for backends that exclusively use gRPC (HTTP/2):
+                                      - Direct attachment to a GRPCRoute is rejected at admission.
+                                      - When attached to a Gateway, a specific listener via sectionName, or a
+                                        ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                        beneath that target.
+                                      - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                        access log/metrics, tracing providers) reject this field on their own
+                                        BackendSettings via separate validation rules.
                                   properties:
                                     enableTrailers:
                                       description: EnableTrailers defines if HTTP/1
@@ -62188,6 +62270,15 @@ spec:
                               HTTP1 provides HTTP/1 configuration for backend connections.
                               When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
                               this field takes precedence for backend (upstream) traffic.
+
+                              Not supported for backends that exclusively use gRPC (HTTP/2):
+                                - Direct attachment to a GRPCRoute is rejected at admission.
+                                - When attached to a Gateway, a specific listener via sectionName, or a
+                                  ListenerSet, this field is silently ignored for any GRPCRoute destinations
+                                  beneath that target.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers) reject this field on their own
+                                  BackendSettings via separate validation rules.
                             properties:
                               enableTrailers:
                                 description: EnableTrailers defines if HTTP/1 trailers
