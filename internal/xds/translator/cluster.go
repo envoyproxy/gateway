@@ -494,15 +494,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		var err error
-		var upstreamHTTP2, upstreamNegotiated bool
-		switch {
-		case args.useClientProtocol, forceHTTP1UpstreamProtocol:
-		case requiresHTTP2Options:
-			upstreamHTTP2 = true
-		case requiresHTTP1Options:
-		case requiresAutoHTTPConfig:
-			upstreamNegotiated = true
-		}
+		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
+		upstreamNegotiated := requiresAutoHTTPConfig && !requiresHTTP2Options &&
+			!requiresHTTP1Options && !forceHTTP1UpstreamProtocol && !args.useClientProtocol
 		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog,
 			args.settings, upstreamHTTP2, upstreamNegotiated)
 		if err != nil {
