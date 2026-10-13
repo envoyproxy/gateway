@@ -336,6 +336,17 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 }
 
 // builtinBackendGroupKinds are the backendRef group/kinds Envoy Gateway resolves itself.
+//
+// They can't be registered as extension backend resources. Extension backends are matched by
+// group and kind, and an unset backendRef group means the core group, so registering one of these
+// would not add a backend type: it would take over every backendRef of that kind in the cluster.
+// Each of those backendRefs would then skip Envoy Gateway's backendRef validation and endpoint
+// resolution (EndpointSlices, service routing, IP family, backend merging, ...) and be handed to
+// the extension instead, and the provider would forward every object of that kind to the
+// extension on each reconcile. Extensions that need to adjust these backends should use the xDS
+// translator hooks (e.g. the Cluster hook) on the clusters Envoy Gateway generates.
+//
+// See https://github.com/envoyproxy/gateway/issues/10255.
 var builtinBackendGroupKinds = map[egv1a1.GroupVersionKind]struct{}{
 	{Group: "", Kind: "Service"}:                            {},
 	{Group: "multicluster.x-k8s.io", Kind: "ServiceImport"}: {},

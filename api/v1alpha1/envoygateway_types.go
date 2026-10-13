@@ -874,6 +874,13 @@ type ExtensionManager struct {
 	// backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)
 	// that are not natively supported by Envoy Gateway.
 	//
+	// The backend kinds Envoy Gateway resolves itself (core Service,
+	// multicluster.x-k8s.io/ServiceImport and gateway.envoyproxy.io/Backend) are not allowed:
+	// backendRefs are matched by group and kind, so listing one of them would hand every backendRef
+	// of that kind in the cluster to the extension, bypassing Envoy Gateway's own validation and
+	// endpoint resolution for it. Use the xDS translator hooks to adjust the clusters Envoy Gateway
+	// generates for those backends instead.
+	//
 	// +optional
 	BackendResources []GroupVersionKind `json:"backendResources,omitempty"`
 
