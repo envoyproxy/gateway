@@ -539,6 +539,60 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			caseName: "redis-tls-ca-configmap",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: new("redis.redis.svc:6379"),
+						TLS: &egv1a1.RedisTLSSettings{
+							CACertificateRef: &gwapiv1.LocalObjectReference{
+								Kind: "ConfigMap",
+								Name: "redis-ca",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			caseName: "redis-tls-ca-secret",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: new("redis.redis.svc:6379"),
+						TLS: &egv1a1.RedisTLSSettings{
+							CACertificateRef: &gwapiv1.LocalObjectReference{
+								Kind: "Secret",
+								Name: "redis-ca",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			caseName: "redis-tls-ca-and-client-cert",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: new("redis.redis.svc:6379"),
+						TLS: &egv1a1.RedisTLSSettings{
+							CertificateRef: &gwapiv1.SecretObjectReference{
+								Name: "ratelimit-cert",
+							},
+							CACertificateRef: &gwapiv1.LocalObjectReference{
+								Kind: "ConfigMap",
+								Name: "redis-ca",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			caseName: "redis-url-secret-ref",
 			rateLimit: &egv1a1.RateLimit{
 				Backend: egv1a1.RateLimitDatabaseBackend{
@@ -1103,4 +1157,54 @@ func TestValidateRedisSettings(t *testing.T) {
 			},
 		}), ns))
 	})
+}
+
+func TestValidateRedisTLSCACertificateRef(t *testing.T) {
+	const ns = "envoy-gateway-system"
+
+	caRefGW := func(ref *gwapiv1.LocalObjectReference) *egv1a1.EnvoyGateway {
+		return &egv1a1.EnvoyGateway{
+			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+				RateLimit: &egv1a1.RateLimit{
+					Backend: egv1a1.RateLimitDatabaseBackend{
+						Type: egv1a1.RedisBackendType,
+						Redis: &egv1a1.RateLimitRedisSettings{
+							URL: new("redis.redis.svc:6379"),
+							TLS: &egv1a1.RedisTLSSettings{
+								CACertificateRef: ref,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	cases := []struct {
+		name      string
+		ref       *gwapiv1.LocalObjectReference
+		expectErr bool
+	}{
+		{name: "configmap present", ref: &gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "redis-ca-cm"}, expectErr: false},
+		{name: "secret present", ref: &gwapiv1.LocalObjectReference{Kind: "Secret", Name: "redis-ca-secret"}, expectErr: false},
+		{name: "configmap missing", ref: &gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "absent"}, expectErr: true},
+		{name: "secret missing", ref: &gwapiv1.LocalObjectReference{Kind: "Secret", Name: "absent"}, expectErr: true},
+		// A Secret named redis-ca-secret exists, but the ref asks for a ConfigMap of that name.
+		{name: "kind mismatch", ref: &gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "redis-ca-secret"}, expectErr: true},
+		{name: "unsupported kind", ref: &gwapiv1.LocalObjectReference{Kind: "Pod", Name: "redis-ca-cm"}, expectErr: true},
+		{name: "no ca ref", ref: nil, expectErr: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "redis-ca-cm", Namespace: ns}}
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "redis-ca-secret", Namespace: ns}}
+			c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(cm, secret).Build()
+			err := Validate(context.Background(), c, caRefGW(tc.ref), ns)
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

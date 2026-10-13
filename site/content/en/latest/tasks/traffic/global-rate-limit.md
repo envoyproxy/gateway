@@ -1793,6 +1793,7 @@ limit kubernetes resources settings. such as `replicas` is 1, requests resources
 like container `image`, `securityContext`, `env` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
 
 * `tls.certificateRef` set the client certificate for redis server TLS connections.
+* `tls.caCertificateRef` references a ConfigMap or Secret that holds the CA certificate (in the key `ca.crt`) used to verify the redis server certificate. Use it when the redis server certificate is signed by a private CA.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -1844,6 +1845,9 @@ data:
           tls:
             certificateRef:
               name: ratelimit-cert
+            caCertificateRef:
+              kind: ConfigMap
+              name: redis-ca
 EOF
 ```
 
@@ -1898,6 +1902,9 @@ data:
           tls:
             certificateRef:
               name: ratelimit-cert
+            caCertificateRef:
+              kind: ConfigMap
+              name: redis-ca
 ```
 
 {{% /tab %}}

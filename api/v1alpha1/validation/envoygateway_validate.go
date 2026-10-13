@@ -246,6 +246,13 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return fmt.Errorf("exactly one of ratelimit redis url or urlRef must be set")
 	}
 
+	if redis.TLS != nil && redis.TLS.CACertificateRef != nil {
+		ref := redis.TLS.CACertificateRef
+		if ref.Group != "" || (ref.Kind != "ConfigMap" && ref.Kind != "Secret") {
+			return fmt.Errorf("ratelimit redis tls caCertificateRef must be a ConfigMap or Secret in the core API group")
+		}
+	}
+
 	if hasURLRef {
 		ref := redis.URLRef.SecretKeyRef
 		if ref == nil || ref.Name == "" || ref.Key == "" {

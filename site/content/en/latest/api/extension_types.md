@@ -5955,6 +5955,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
+| `caCertificateRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | CACertificateRef contains a reference to a Kubernetes ConfigMap or Secret that<br />holds the certificate of the Certificate Authority used as a trust anchor to<br />validate the certificate presented by the Redis server. The CA certificate must<br />be stored in a key named `ca.crt`.<br />If unspecified, the system trust store is used. |
 
 
 #### RedisURLSource
