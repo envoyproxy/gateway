@@ -494,11 +494,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		var err error
-		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
+		upstreamHTTP2Pinned := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
 		upstreamNegotiated := requiresAutoHTTPConfig && !requiresHTTP2Options &&
 			!requiresHTTP1Options && !forceHTTP1UpstreamProtocol && !args.useClientProtocol
 		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog,
-			args.settings, upstreamHTTP2, upstreamNegotiated)
+			args.settings, upstreamHTTP2Pinned, upstreamNegotiated)
 		if err != nil {
 			return nil, err
 		}
@@ -639,7 +639,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 }
 
 func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog,
-	settings []*ir.DestinationSetting, upstreamHTTP2, upstreamNegotiated bool,
+	settings []*ir.DestinationSetting, upstreamHTTP2Pinned, upstreamNegotiated bool,
 ) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
@@ -672,7 +672,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		}
 		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
 		hcProtocol := ptr.Deref(healthcheck.HTTP.Protocol, egv1a1.HTTPHealthCheckProtocolAuto)
-		httpChecker.CodecClientType = buildHealthCheckCodecClientType(hcProtocol, upstreamHTTP2)
+		httpChecker.CodecClientType = buildHealthCheckCodecClientType(hcProtocol, upstreamHTTP2Pinned)
 		// A cluster that negotiates its upstream protocol through ALPN lets its health
 		// checks negotiate theirs the same way, unless a protocol was configured explicitly.
 		hcNegotiate := upstreamNegotiated && hcProtocol == egv1a1.HTTPHealthCheckProtocolAuto
@@ -727,7 +727,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 }
 
 // buildHealthCheckCodecClientType returns the codec of HTTP health check requests.
-func buildHealthCheckCodecClientType(protocol egv1a1.HTTPHealthCheckProtocol, upstreamHTTP2 bool) xdstype.CodecClientType {
+func buildHealthCheckCodecClientType(protocol egv1a1.HTTPHealthCheckProtocol, upstreamHTTP2Pinned bool) xdstype.CodecClientType {
 	// The explicitly configured protocol.
 	switch protocol {
 	case egv1a1.HTTPHealthCheckProtocolHTTP1:
@@ -737,7 +737,7 @@ func buildHealthCheckCodecClientType(protocol egv1a1.HTTPHealthCheckProtocol, up
 	}
 
 	// The protocol is not explicitly configured, so the health check follows the protocol of the backend.
-	if upstreamHTTP2 {
+	if upstreamHTTP2Pinned {
 		return xdstype.CodecClientType_HTTP2
 	}
 	return xdstype.CodecClientType_HTTP1
