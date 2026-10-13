@@ -114,7 +114,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routesWithBackends, errs, unacceptedRules := processRouteRulesForListeners(parentRef,
+		routesWithBackends, errs, unacceptedRules := processRouteRulesForListeners(httpRoute, parentRef,
 			func(parent *RouteParentContext) ([]*httpRouteWithBackendDestinations, []status.Error, []int) {
 				return t.processHTTPRouteRules(httpRoute, parent, resources, xdsIR)
 			})
@@ -217,22 +217,32 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-// routeRuleListeners preserves reference validation even when no listener accepts a parent.
-func routeRuleListeners(parent *RouteParentContext) []*ListenerContext {
-	if len(parent.listeners) == 0 {
+// routeRuleListeners returns the parent listeners whose hostnames intersect the route.
+// Listeners without an intersection never carry the route, so their rule validation
+// must not reach the parent status. Reference validation is preserved through a nil
+// listener when no listener accepts the parent.
+func routeRuleListeners(route RouteContext, parent *RouteParentContext) []*ListenerContext {
+	listeners := make([]*ListenerContext, 0, len(parent.listeners))
+	for _, listener := range parent.listeners {
+		if len(computeHosts(GetHostnames(route), listener)) == 0 {
+			continue
+		}
+		listeners = append(listeners, listener)
+	}
+	if len(listeners) == 0 {
 		return []*ListenerContext{nil}
 	}
-	return parent.listeners
+	return listeners
 }
 
 // processRouteRulesForListeners builds fresh destinations, weights and filters per listener,
 // then aggregates validation once on the original parent status.
-func processRouteRulesForListeners(parent *RouteParentContext, process func(*RouteParentContext) ([]*httpRouteWithBackendDestinations, []status.Error, []int)) (map[*ListenerContext][]*httpRouteWithBackendDestinations, []status.Error, []int) {
+func processRouteRulesForListeners(route RouteContext, parent *RouteParentContext, process func(*RouteParentContext) ([]*httpRouteWithBackendDestinations, []status.Error, []int)) (map[*ListenerContext][]*httpRouteWithBackendDestinations, []status.Error, []int) {
 	routes := make(map[*ListenerContext][]*httpRouteWithBackendDestinations)
 	var errs status.TypedErrorCollector
 	seen := sets.New[string]()
 	unaccepted := sets.NewInt()
-	for _, listener := range routeRuleListeners(parent) {
+	for _, listener := range routeRuleListeners(route, parent) {
 		perListener := *parent
 		perListener.listener = listener
 		r, errors, failed := process(&perListener)
@@ -1466,7 +1476,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routesWithBackends, errs, unacceptedRules := processRouteRulesForListeners(parentRef,
+		routesWithBackends, errs, unacceptedRules := processRouteRulesForListeners(grpcRoute, parentRef,
 			func(parent *RouteParentContext) ([]*httpRouteWithBackendDestinations, []status.Error, []int) {
 				return t.processGRPCRouteRules(grpcRoute, parent, resources, xdsIR)
 			})
@@ -2375,7 +2385,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		destName := irRouteDestinationName(tlsRoute, -1 /*rule index*/)
 		routeRuleMetadata := buildResourceMetadata(tlsRoute, nil)
 		gatewayCtx := parentRef.GetGateway()
-		for _, listener := range routeRuleListeners(parentRef) {
+		for _, listener := range routeRuleListeners(tlsRoute, parentRef) {
 			parent := *parentRef
 			parent.listener = listener
 			parentRef := &parent
@@ -2642,7 +2652,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		destName := irRouteDestinationName(udpRoute, -1 /*rule index*/)
 		routeRuleMetadata := buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name)
 		gatewayCtx := parentRef.GetGateway()
-		for _, listener := range routeRuleListeners(parentRef) {
+		for _, listener := range routeRuleListeners(udpRoute, parentRef) {
 			parent := *parentRef
 			parent.listener = listener
 			parentRef := &parent
@@ -2824,7 +2834,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		destName := irRouteDestinationName(tcpRoute, -1 /*rule index*/)
 		routeRuleMetadata := buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name)
 		gatewayCtx := parentRef.GetGateway()
-		for _, listener := range routeRuleListeners(parentRef) {
+		for _, listener := range routeRuleListeners(tcpRoute, parentRef) {
 			parent := *parentRef
 			parent.listener = listener
 			parentRef := &parent
