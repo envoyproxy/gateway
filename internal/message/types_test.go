@@ -25,9 +25,7 @@ func TestXdsWithContextEqual(t *testing.T) {
 	xdsIR := &ir.Xds{
 		HTTP: []*ir.HTTPListener{
 			{
-				CoreListenerDetails: ir.CoreListenerDetails{
-					Name: fmt.Sprintf("default/%s/listener-0", "gwName"),
-				},
+				Name: fmt.Sprintf("default/%s/listener-0", "gwName"),
 				Routes: []*ir.HTTPRoute{
 					{
 						Name: "route-0",

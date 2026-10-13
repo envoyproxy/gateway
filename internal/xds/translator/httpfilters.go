@@ -196,7 +196,7 @@ func (o OrderedHTTPFilters) Swap(i, j int) {
 func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPosition) []*hcmv3.HttpFilter {
 	// Sort the filters in the default order.
 	orderedFilters := make(OrderedHTTPFilters, len(filters))
-	for i := 0; i < len(filters); i++ {
+	for i := range filters {
 		orderedFilters[i] = newOrderedHTTPFilter(filters[i])
 	}
 
@@ -204,12 +204,12 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 
 	// Use a linked list to sort the filters in the custom order.
 	l := list.New()
-	for i := 0; i < len(orderedFilters); i++ {
+	for i := range orderedFilters {
 		l.PushBack(orderedFilters[i].filter)
 	}
 
 	// Sort the filters in the custom order.
-	for i := 0; i < len(filterOrder); i++ {
+	for i := range filterOrder {
 		var (
 			// The filter name in the filterOrder is the filter type.
 			// For example, "envoy.filters.http.oauth2".

@@ -220,11 +220,11 @@ func getCLIClient() (kube.CLIClient, error) {
 }
 
 func marshalEnvoyProxyConfig(configDump aggregatedConfigDump, output string) ([]byte, error) {
-	configDumpMap := make(map[string]map[string]interface{})
+	configDumpMap := make(map[string]map[string]any)
 	for ns, nsConfigs := range configDump {
-		configDumpMap[ns] = make(map[string]interface{})
+		configDumpMap[ns] = make(map[string]any)
 		for pod, podConfigs := range nsConfigs {
-			var newConfig interface{}
+			var newConfig any
 			if err := json.Unmarshal([]byte(protojson.MarshalOptions{Multiline: false}.Format(podConfigs)), &newConfig); err != nil {
 				return nil, err
 			}

@@ -48,7 +48,7 @@ func (eg EnvoyGatewayResource) CheckRBAC(_ context.Context, _ tbcollect.Collecto
 	return nil
 }
 
-func (eg EnvoyGatewayResource) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, error) {
+func (eg EnvoyGatewayResource) Collect(_ chan<- any) (tbcollect.CollectorResult, error) {
 	ctx := context.Background()
 	output := tbcollect.NewResult()
 	client, err := kubernetes.NewForConfig(eg.ClientConfig)

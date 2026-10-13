@@ -56,27 +56,23 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 				},
 			},
 			expect: &corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ConfigMap",
-					APIVersion: "v1",
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+				Namespace:  "test",
+				Name:       "envoy-test-9f86d081",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
+					gatewayapi.OwningGatewayNameLabel:      "test",
 				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "envoy-test-9f86d081",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "test",
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "GatewayClass",
-							Name:       "envoy-gateway-class",
-							UID:        "foo.bar",
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "GatewayClass",
+						Name:       "envoy-gateway-class",
+						UID:        "foo.bar",
 					},
 				},
 				Data: map[string]string{
@@ -104,41 +100,35 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 				},
 			},
 			current: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "envoy-test",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "test",
-					},
+				Namespace: "test",
+				Name:      "envoy-test",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
+					gatewayapi.OwningGatewayNameLabel:      "test",
 				},
 				Data: map[string]string{"foo": "bar"},
 			},
 			expect: &corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ConfigMap",
-					APIVersion: "v1",
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+				Namespace:  "test",
+				Name:       "envoy-test-9f86d081",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
+					gatewayapi.OwningGatewayNameLabel:      "test",
 				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "envoy-test-9f86d081",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "test",
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "GatewayClass",
-							Name:       "envoy-gateway-class",
-							UID:        "foo.bar",
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "GatewayClass",
+						Name:       "envoy-gateway-class",
+						UID:        "foo.bar",
 					},
 				},
 				Data: map[string]string{
@@ -168,28 +158,24 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			},
 			gatewayNamespaceMode: true,
 			expect: &corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ConfigMap",
-					APIVersion: "v1",
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+				Namespace:  "ns1",
+				Name:       "gateway-1",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "ns1",
+					gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					gatewayapi.GatewayNameLabel:            "gateway-1",
 				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "gateway-1",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "ns1",
-						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
-						gatewayapi.GatewayNameLabel:            "gateway-1",
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "Gateway",
-							Name:       "gateway-1",
-							UID:        "foo.bar",
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "Gateway",
+						Name:       "gateway-1",
+						UID:        "foo.bar",
 					},
 				},
 				Data: map[string]string{
@@ -235,10 +221,8 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			err = kube.createOrUpdateConfigMap(ctx, r)
 			require.NoError(t, err)
 			actual := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: tc.expect.Namespace,
-					Name:      tc.expect.Name,
-				},
+				Namespace: tc.expect.Namespace,
+				Name:      tc.expect.Name,
 			}
 			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 
@@ -262,20 +246,16 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 		{
 			name: "delete configmap",
 			current: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.ControllerNamespace,
-					Name:      "envoy-test",
-				},
+				Namespace: cfg.ControllerNamespace,
+				Name:      "envoy-test",
 			},
 			expect: true,
 		},
 		{
 			name: "configmap not found",
 			current: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.ControllerNamespace,
-					Name:      "foo",
-				},
+				Namespace: cfg.ControllerNamespace,
+				Name:      "foo",
 			},
 			expect: true,
 		},
@@ -299,10 +279,8 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			r, err := proxy.NewResourceRender(ctx, kube, infra)
 			require.NoError(t, err)
 			cm := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.ControllerNamespace,
-					Name:      r.Name(),
-				},
+				Namespace: kube.ControllerNamespace,
+				Name:      r.Name(),
 			}
 			err = kube.Client.Delete(ctx, cm)
 			require.NoError(t, err)

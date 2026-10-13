@@ -171,22 +171,18 @@ func TestWatchesNamespaces(t *testing.T) {
 		{
 			name: "nil provider",
 			eg: &EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					Provider: nil,
-				},
+				Provider: nil,
 			},
 			expected: false,
 		},
 		{
 			name: "non-kubernetes provider",
 			eg: &EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					Provider: &EnvoyGatewayProvider{
-						Type: ProviderTypeCustom,
-						Custom: &EnvoyGatewayCustomProvider{
-							Resource: EnvoyGatewayResourceProvider{
-								Type: ResourceProviderTypeFile,
-							},
+				Provider: &EnvoyGatewayProvider{
+					Type: ProviderTypeCustom,
+					Custom: &EnvoyGatewayCustomProvider{
+						Resource: EnvoyGatewayResourceProvider{
+							Type: ResourceProviderTypeFile,
 						},
 					},
 				},
@@ -196,14 +192,10 @@ func TestWatchesNamespaces(t *testing.T) {
 		{
 			name: "kubernetes provider with nil watch",
 			eg: &EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					Provider: &EnvoyGatewayProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-								Watch: nil,
-							},
-						},
+				Provider: &EnvoyGatewayProvider{
+					Type: ProviderTypeKubernetes,
+					Kubernetes: &EnvoyGatewayKubernetesProvider{
+						Watch: nil,
 					},
 				},
 			},
@@ -212,15 +204,11 @@ func TestWatchesNamespaces(t *testing.T) {
 		{
 			name: "kubernetes provider with namespace selector watch mode",
 			eg: &EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					Provider: &EnvoyGatewayProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-								Watch: &KubernetesWatchMode{
-									Type: KubernetesWatchModeTypeNamespaceSelector,
-								},
-							},
+				Provider: &EnvoyGatewayProvider{
+					Type: ProviderTypeKubernetes,
+					Kubernetes: &EnvoyGatewayKubernetesProvider{
+						Watch: &KubernetesWatchMode{
+							Type: KubernetesWatchModeTypeNamespaceSelector,
 						},
 					},
 				},
@@ -230,16 +218,12 @@ func TestWatchesNamespaces(t *testing.T) {
 		{
 			name: "kubernetes provider with namespaces watch mode but empty namespaces",
 			eg: &EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					Provider: &EnvoyGatewayProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-								Watch: &KubernetesWatchMode{
-									Type:       KubernetesWatchModeTypeNamespaces,
-									Namespaces: []string{},
-								},
-							},
+				Provider: &EnvoyGatewayProvider{
+					Type: ProviderTypeKubernetes,
+					Kubernetes: &EnvoyGatewayKubernetesProvider{
+						Watch: &KubernetesWatchMode{
+							Type:       KubernetesWatchModeTypeNamespaces,
+							Namespaces: []string{},
 						},
 					},
 				},
@@ -249,16 +233,12 @@ func TestWatchesNamespaces(t *testing.T) {
 		{
 			name: "kubernetes provider with namespaces watch mode and namespaces set",
 			eg: &EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					Provider: &EnvoyGatewayProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyGatewayKubernetesProvider{
-							EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-								Watch: &KubernetesWatchMode{
-									Type:       KubernetesWatchModeTypeNamespaces,
-									Namespaces: []string{"ns-a", "ns-b"},
-								},
-							},
+				Provider: &EnvoyGatewayProvider{
+					Type: ProviderTypeKubernetes,
+					Kubernetes: &EnvoyGatewayKubernetesProvider{
+						Watch: &KubernetesWatchMode{
+							Type:       KubernetesWatchModeTypeNamespaces,
+							Namespaces: []string{"ns-a", "ns-b"},
 						},
 					},
 				},
@@ -268,19 +248,15 @@ func TestWatchesNamespaces(t *testing.T) {
 		{
 			name: "custom kubernetes resource provider with namespaces watch mode and namespaces set",
 			eg: &EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					Provider: &EnvoyGatewayProvider{
-						Type: ProviderTypeCustom,
-						Custom: &EnvoyGatewayCustomProvider{
-							Resource: EnvoyGatewayResourceProvider{
-								Type: ResourceProviderTypeKubernetes,
-								Kubernetes: &EnvoyGatewayKubernetesCustomProvider{
-									EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-										Watch: &KubernetesWatchMode{
-											Type:       KubernetesWatchModeTypeNamespaces,
-											Namespaces: []string{"ns-a"},
-										},
-									},
+				Provider: &EnvoyGatewayProvider{
+					Type: ProviderTypeCustom,
+					Custom: &EnvoyGatewayCustomProvider{
+						Resource: EnvoyGatewayResourceProvider{
+							Type: ResourceProviderTypeKubernetes,
+							Kubernetes: &EnvoyGatewayKubernetesCustomProvider{
+								Watch: &KubernetesWatchMode{
+									Type:       KubernetesWatchModeTypeNamespaces,
+									Namespaces: []string{"ns-a"},
 								},
 							},
 						},
@@ -316,9 +292,7 @@ func TestGetKubernetesConfiguration(t *testing.T) {
 			provider: EnvoyGatewayProvider{
 				Type: ProviderTypeKubernetes,
 				Kubernetes: &EnvoyGatewayKubernetesProvider{
-					EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-						Watch: &KubernetesWatchMode{Type: KubernetesWatchModeTypeNamespaces},
-					},
+					Watch: &KubernetesWatchMode{Type: KubernetesWatchModeTypeNamespaces},
 				},
 			},
 			expected: EnvoyGatewayKubernetesConfiguration{
@@ -346,9 +320,7 @@ func TestGetKubernetesConfiguration(t *testing.T) {
 					Resource: EnvoyGatewayResourceProvider{
 						Type: ResourceProviderTypeKubernetes,
 						Kubernetes: &EnvoyGatewayKubernetesCustomProvider{
-							EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
-								Watch: &KubernetesWatchMode{Type: KubernetesWatchModeTypeNamespaceSelector},
-							},
+							Watch: &KubernetesWatchMode{Type: KubernetesWatchModeTypeNamespaceSelector},
 						},
 					},
 				},
@@ -401,9 +373,7 @@ func TestGetKubernetesInfrastructureConfiguration(t *testing.T) {
 			provider: EnvoyGatewayProvider{
 				Type: ProviderTypeKubernetes,
 				Kubernetes: &EnvoyGatewayKubernetesProvider{
-					EnvoyGatewayKubernetesInfrastructureConfiguration: EnvoyGatewayKubernetesInfrastructureConfiguration{
-						Deploy: deploy,
-					},
+					Deploy: deploy,
 				},
 			},
 			expected: EnvoyGatewayKubernetesInfrastructureConfiguration{Deploy: deploy},

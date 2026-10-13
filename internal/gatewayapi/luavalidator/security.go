@@ -142,7 +142,7 @@ func normalizedPath(value string) string {
 }
 
 func containsTraversal(value string) bool {
-	for _, segment := range strings.Split(strings.ReplaceAll(value, `\`, "/"), "/") {
+	for segment := range strings.SplitSeq(strings.ReplaceAll(value, `\`, "/"), "/") {
 		if segment == "." || segment == ".." {
 			return true
 		}

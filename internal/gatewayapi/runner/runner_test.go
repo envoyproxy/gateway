@@ -500,9 +500,7 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	}
 
 	r := &Runner{
-		Config: Config{
-			Server: *cfg,
-		},
+		Server: *cfg,
 	}
 
 	// Test loadTLSConfig with host mode

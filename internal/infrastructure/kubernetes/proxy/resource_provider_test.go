@@ -442,12 +442,10 @@ func TestDeployment(t *testing.T) {
 					Volumes: []corev1.Volume{
 						{
 							Name: "certs",
-							VolumeSource: corev1.VolumeSource{
-								// #nosec G101 - This is a test secret name, not a credential
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  "custom-envoy-cert",
-									DefaultMode: new(int32(420)),
-								},
+							// #nosec G101 - This is a test secret name, not a credential
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  "custom-envoy-cert",
+								DefaultMode: new(int32(420)),
 							},
 						},
 					},
@@ -556,10 +554,8 @@ func TestDeployment(t *testing.T) {
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "custom-libs",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
+							Name:     "custom-libs",
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
 					},
 				},
@@ -788,10 +784,8 @@ func TestDeployment(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-							Deploy: &egv1a1.KubernetesDeployMode{
-								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-							},
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1029,12 +1023,10 @@ func TestDaemonSet(t *testing.T) {
 					Volumes: []corev1.Volume{
 						{
 							Name: "certs",
-							VolumeSource: corev1.VolumeSource{
-								// #nosec G101 - This is a test secret name, not a credential
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  "custom-envoy-cert",
-									DefaultMode: new(int32(420)),
-								},
+							// #nosec G101 - This is a test secret name, not a credential
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  "custom-envoy-cert",
+								DefaultMode: new(int32(420)),
 							},
 						},
 					},
@@ -1228,10 +1220,8 @@ func TestDaemonSet(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-							Deploy: &egv1a1.KubernetesDeployMode{
-								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-							},
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1452,10 +1442,8 @@ func TestService(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-							Deploy: &egv1a1.KubernetesDeployMode{
-								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-							},
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1529,10 +1517,8 @@ func TestConfigMap(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-							Deploy: &egv1a1.KubernetesDeployMode{
-								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-							},
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1604,10 +1590,8 @@ func TestServiceAccount(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-							Deploy: &egv1a1.KubernetesDeployMode{
-								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-							},
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1745,10 +1729,8 @@ func TestPDB(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-							Deploy: &egv1a1.KubernetesDeployMode{
-								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-							},
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -1898,10 +1880,8 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeKubernetes,
 					Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-						EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-							Deploy: &egv1a1.KubernetesDeployMode{
-								Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-							},
+						Deploy: &egv1a1.KubernetesDeployMode{
+							Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 						},
 					},
 				}
@@ -2063,10 +2043,8 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 		Type: egv1a1.ProviderTypeKubernetes,
 		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-			EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-				Deploy: &egv1a1.KubernetesDeployMode{
-					Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
-				},
+			Deploy: &egv1a1.KubernetesDeployMode{
+				Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 			},
 		},
 	}

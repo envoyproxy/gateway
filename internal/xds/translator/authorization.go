@@ -594,7 +594,7 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 		}
 
 		// A nested claim is represented as a dot-separated string, e.g., "user.email".
-		for _, segment := range strings.Split(claim.Name, ".") {
+		for segment := range strings.SplitSeq(claim.Name, ".") {
 			path = append(path, &networkinput.DynamicMetadataInput_PathSegment{
 				Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
 					Key: segment,

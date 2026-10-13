@@ -13,7 +13,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -31,17 +30,13 @@ const (
 
 func newSecret(secretType corev1.SecretType, name, namespace string, data map[string][]byte) corev1.Secret {
 	return corev1.Secret{
-		Type: secretType,
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"control-plane": "envoy-gateway",
-			},
+		Type:       secretType,
+		Kind:       "Secret",
+		APIVersion: "v1",
+		Name:       name,
+		Namespace:  namespace,
+		Labels: map[string]string{
+			"control-plane": "envoy-gateway",
 		},
 		Data: data,
 	}

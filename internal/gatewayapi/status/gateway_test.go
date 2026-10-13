@@ -263,7 +263,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 				gw: &gwapiv1.Gateway{},
 				// 20 node addresses
 				nodeAddresses: func() (addr NodeAddresses) {
-					for i := 0; i < 20; i++ {
+					for i := range 20 {
 						addr.IPv4 = append(addr.IPv4, strconv.Itoa(i))
 					}
 					return addr
@@ -281,7 +281,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			// Only the first 16 addresses should be set.
 			wantAddresses: func() (addr []gwapiv1.GatewayStatusAddress) {
-				for i := 0; i < 16; i++ {
+				for i := range 16 {
 					addr = append(addr, gwapiv1.GatewayStatusAddress{
 						Type:  new(gwapiv1.IPAddressType),
 						Value: strconv.Itoa(i),

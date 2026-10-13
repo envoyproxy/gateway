@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -112,7 +111,7 @@ func newTestQueue(after, maxHold time.Duration) (*debouncingQueue, *fakeQueue, *
 	return q, inner, clock
 }
 
-var testRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "gatewayclass-controller"}}
+var testRequest = reconcile.Request{Name: "gatewayclass-controller"}
 
 func TestDebouncingQueue(t *testing.T) {
 	t.Run("holds a single add for the quiet period", func(t *testing.T) {
@@ -195,7 +194,7 @@ func TestDebouncingQueue(t *testing.T) {
 		// ever open. Should another enqueue path ever appear, it must lose
 		// debouncing rather than lose reconciles.
 		q, inner, clock := newTestQueue(100*time.Millisecond, 10*time.Second)
-		other := reconcile.Request{NamespacedName: types.NamespacedName{Name: "other"}}
+		other := reconcile.Request{Name: "other"}
 
 		q.Add(testRequest)
 		q.Add(other)

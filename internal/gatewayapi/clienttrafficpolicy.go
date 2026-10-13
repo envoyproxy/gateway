@@ -415,8 +415,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					if policyTargetsLS {
 						prefix := lsPrefix(ls)
 						for _, claimedSection := range claimedSections[gatewayKey].UnsortedList() {
-							if strings.HasPrefix(claimedSection, prefix) {
-								overridingSections = append(overridingSections, strings.TrimPrefix(claimedSection, prefix))
+							if after, ok := strings.CutPrefix(claimedSection, prefix); ok {
+								overridingSections = append(overridingSections, after)
 							}
 						}
 					} else {

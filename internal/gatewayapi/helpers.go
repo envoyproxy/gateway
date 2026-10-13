@@ -70,8 +70,9 @@ func NamespacePtr(name string) *gwapiv1.Namespace {
 	return &namespace
 }
 
+//go:fix inline
 func FromNamespacesPtr(fromNamespaces gwapiv1.FromNamespaces) *gwapiv1.FromNamespaces {
-	return &fromNamespaces
+	return new(fromNamespaces)
 }
 
 func SectionNamePtr(name string) *gwapiv1.SectionName {

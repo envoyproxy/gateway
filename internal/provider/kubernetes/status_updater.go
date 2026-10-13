@@ -209,7 +209,7 @@ func (u *UpdateWriter) Send(ctx context.Context, update Update) {
 //	BackendTLSPolicy
 //	EnvoyExtensionPolicy
 //	Unstructured (for server extension policies)
-func isStatusEqual(objA, objB interface{}) bool {
+func isStatusEqual(objA, objB any) bool {
 	opts := cmp.Options{
 		cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
 		cmpopts.IgnoreMapEntries(func(k string, _ any) bool {
@@ -331,7 +331,7 @@ func isStatusEqual(objA, objB interface{}) bool {
 //	BackendTLSPolicy
 //	EnvoyExtensionPolicy
 //	Unstructured (for Extension Policies)
-func KindOf(obj interface{}) string {
+func KindOf(obj any) string {
 	var kind string
 	switch o := obj.(type) {
 	case *gwapiv1.GatewayClass:

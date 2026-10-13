@@ -91,11 +91,9 @@ func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 // EnvoyGatewaySuite is the conformance suite configuration for the Gateway API.
 func EnvoyGatewaySuite(gatewayNamespaceMode, standardChannel bool) suite.ConformanceOptions {
 	return suite.ConformanceOptions{
-		ConfigurableOptions: suite.ConfigurableOptions{
-			SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
-			ExemptFeatures:    meshFeatures(),
-			SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
-		},
+		SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
+		ExemptFeatures:    meshFeatures(),
+		SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
 	}
 }
 

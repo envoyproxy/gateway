@@ -38,11 +38,9 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 			name: "ready endpoint included",
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eps-1",
-						Namespace: ns,
-						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
-					},
+					Name:      "eps-1",
+					Namespace: ns,
+					Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					Endpoints: []discoveryv1.Endpoint{
 						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
@@ -54,11 +52,9 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 			name: "nil Ready treated as ready (k8s backward compat)",
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eps-1",
-						Namespace: ns,
-						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
-					},
+					Name:      "eps-1",
+					Namespace: ns,
+					Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					Endpoints: []discoveryv1.Endpoint{
 						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: nil}},
 					},
@@ -70,11 +66,9 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 			name: "not-ready endpoint excluded",
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eps-1",
-						Namespace: ns,
-						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
-					},
+					Name:      "eps-1",
+					Namespace: ns,
+					Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					Endpoints: []discoveryv1.Endpoint{
 						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(false)}},
 					},
@@ -86,11 +80,9 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 			name: "endpoint with empty NodeName excluded",
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eps-1",
-						Namespace: ns,
-						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
-					},
+					Name:      "eps-1",
+					Namespace: ns,
+					Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					Endpoints: []discoveryv1.Endpoint{
 						{NodeName: new(""), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 						{NodeName: nil, Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
@@ -103,22 +95,18 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 			name: "duplicate nodes across multiple EndpointSlices deduplicated",
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eps-1",
-						Namespace: ns,
-						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
-					},
+					Name:      "eps-1",
+					Namespace: ns,
+					Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					Endpoints: []discoveryv1.Endpoint{
 						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 						{NodeName: new("node2"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eps-2",
-						Namespace: ns,
-						Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
-					},
+					Name:      "eps-2",
+					Namespace: ns,
+					Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
 					Endpoints: []discoveryv1.Endpoint{
 						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
@@ -130,11 +118,9 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 			name: "EndpointSlice for different service ignored",
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eps-other",
-						Namespace: ns,
-						Labels:    map[string]string{discoveryv1.LabelServiceName: "other-svc"},
-					},
+					Name:      "eps-other",
+					Namespace: ns,
+					Labels:    map[string]string{discoveryv1.LabelServiceName: "other-svc"},
 					Endpoints: []discoveryv1.Endpoint{
 						{NodeName: new("node1"), Conditions: discoveryv1.EndpointConditions{Ready: new(true)}},
 					},
@@ -154,7 +140,7 @@ func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
 
 			r := &gatewayAPIReconciler{client: fakeClient}
 
-			svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: svcName, Namespace: ns}}
+			svc := &corev1.Service{Name: svcName, Namespace: ns}
 			got, err := r.envoyEndpointNodeNamesForService(context.Background(), svc)
 			require.NoError(t, err)
 

@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -40,37 +39,35 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 
 func TestCTPClusterSettingsIndex(t *testing.T) {
 	gateway1 := &GatewayContext{
-		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway-1"}},
+		Gateway: &gwapiv1.Gateway{Namespace: "default", Name: "gateway-1"},
 	}
 	gateway2 := &GatewayContext{
-		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway-2"}},
+		Gateway: &gwapiv1.Gateway{Namespace: "default", Name: "gateway-2"},
 	}
 	gateway3 := &GatewayContext{
-		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway-3"}},
+		Gateway: &gwapiv1.Gateway{Namespace: "default", Name: "gateway-3"},
 	}
 	lsSection := &gwapiv1.ListenerSet{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ls-section"},
-		Spec:       gwapiv1.ListenerSetSpec{ParentRef: gwapiv1.ParentGatewayReference{Name: "gateway-1"}},
+		Namespace: "default", Name: "ls-section",
+		Spec: gwapiv1.ListenerSetSpec{ParentRef: gwapiv1.ParentGatewayReference{Name: "gateway-1"}},
 	}
 	lsWide := &gwapiv1.ListenerSet{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ls-wide"},
-		Spec:       gwapiv1.ListenerSetSpec{ParentRef: gwapiv1.ParentGatewayReference{Name: "gateway-1"}},
+		Namespace: "default", Name: "ls-wide",
+		Spec: gwapiv1.ListenerSetSpec{ParentRef: gwapiv1.ParentGatewayReference{Name: "gateway-1"}},
 	}
 	sectionName := gwapiv1.SectionName("http-1")
 	lsSectionName := gwapiv1.SectionName("ls-http")
 
 	ctps := []*egv1a1.ClientTrafficPolicy{
 		{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-listener"},
+			Namespace: "default", Name: "ctp-listener",
 			Spec: egv1a1.ClientTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.GroupName,
-								Kind:  resource.KindGateway,
-								Name:  "gateway-1",
-							},
+							Group:       gwapiv1.GroupName,
+							Kind:        resource.KindGateway,
+							Name:        "gateway-1",
 							SectionName: &sectionName,
 						},
 					},
@@ -79,16 +76,14 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-gateway-wide"},
+			Namespace: "default", Name: "ctp-gateway-wide",
 			Spec: egv1a1.ClientTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.GroupName,
-								Kind:  resource.KindGateway,
-								Name:  "gateway-3",
-							},
+							Group: gwapiv1.GroupName,
+							Kind:  resource.KindGateway,
+							Name:  "gateway-3",
 						},
 					},
 				},
@@ -96,16 +91,14 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-ls-listener"},
+			Namespace: "default", Name: "ctp-ls-listener",
 			Spec: egv1a1.ClientTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.GroupName,
-								Kind:  resource.KindListenerSet,
-								Name:  "ls-section",
-							},
+							Group:       gwapiv1.GroupName,
+							Kind:        resource.KindListenerSet,
+							Name:        "ls-section",
 							SectionName: &lsSectionName,
 						},
 					},
@@ -114,16 +107,14 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-ls-wide"},
+			Namespace: "default", Name: "ctp-ls-wide",
 			Spec: egv1a1.ClientTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.GroupName,
-								Kind:  resource.KindListenerSet,
-								Name:  "ls-wide",
-							},
+							Group: gwapiv1.GroupName,
+							Kind:  resource.KindListenerSet,
+							Name:  "ls-wide",
 						},
 					},
 				},
@@ -131,16 +122,14 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-listener-oldest-accepted"},
+			Namespace: "default", Name: "ctp-listener-oldest-accepted",
 			Spec: egv1a1.ClientTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.GroupName,
-								Kind:  resource.KindGateway,
-								Name:  "gateway-2",
-							},
+							Group:       gwapiv1.GroupName,
+							Kind:        resource.KindGateway,
+							Name:        "gateway-2",
 							SectionName: &sectionName,
 						},
 					},
@@ -148,16 +137,14 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-listener-younger-conflicting"},
+			Namespace: "default", Name: "ctp-listener-younger-conflicting",
 			Spec: egv1a1.ClientTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.GroupName,
-								Kind:  resource.KindGateway,
-								Name:  "gateway-2",
-							},
+							Group:       gwapiv1.GroupName,
+							Kind:        resource.KindGateway,
+							Name:        "gateway-2",
 							SectionName: &sectionName,
 						},
 					},
@@ -166,32 +153,28 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-ls-wide-oldest-accepted"},
+			Namespace: "default", Name: "ctp-ls-wide-oldest-accepted",
 			Spec: egv1a1.ClientTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.GroupName,
-								Kind:  resource.KindListenerSet,
-								Name:  "ls-wide-oldest",
-							},
+							Group: gwapiv1.GroupName,
+							Kind:  resource.KindListenerSet,
+							Name:  "ls-wide-oldest",
 						},
 					},
 				},
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ctp-ls-wide-younger-conflicting"},
+			Namespace: "default", Name: "ctp-ls-wide-younger-conflicting",
 			Spec: egv1a1.ClientTrafficPolicySpec{
 				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.GroupName,
-								Kind:  resource.KindListenerSet,
-								Name:  "ls-wide-oldest",
-							},
+							Group: gwapiv1.GroupName,
+							Kind:  resource.KindListenerSet,
+							Name:  "ls-wide-oldest",
 						},
 					},
 				},
@@ -201,8 +184,8 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 	}
 
 	lsWideOldest := &gwapiv1.ListenerSet{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "ls-wide-oldest"},
-		Spec:       gwapiv1.ListenerSetSpec{ParentRef: gwapiv1.ParentGatewayReference{Name: "gateway-2"}},
+		Namespace: "default", Name: "ls-wide-oldest",
+		Spec: gwapiv1.ListenerSetSpec{ParentRef: gwapiv1.ParentGatewayReference{Name: "gateway-2"}},
 	}
 
 	gwDirectListener := func(name string) *ListenerContext {
@@ -266,7 +249,7 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Scheme":              false,
 	}
 
-	actualFields := structFieldNames(reflect.TypeOf(egv1a1.ClientTrafficPolicySpec{}), map[string]bool{"PolicyTargetReferences": true})
+	actualFields := structFieldNames(reflect.TypeFor[egv1a1.ClientTrafficPolicySpec](), map[string]bool{"PolicyTargetReferences": true})
 
 	for _, name := range actualFields {
 		want, ok := expected[name]

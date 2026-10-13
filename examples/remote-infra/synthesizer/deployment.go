@@ -25,15 +25,11 @@ func (is *InfraSynthesizer) GetDeployment(ctx context.Context, ir *Infra) (*apps
 	labels := ir.Proxy.Metadata.Labels
 
 	return &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deployment",
-			APIVersion: "apps/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      resourceName(ir),
-			Namespace: is.Namespace,
-			Labels:    labels,
-		},
+		Kind:       "Deployment",
+		APIVersion: "apps/v1",
+		Name:       resourceName(ir),
+		Namespace:  is.Namespace,
+		Labels:     labels,
 		Spec: appsv1.DeploymentSpec{
 			Replicas: new(int32(1)),
 			Selector: &metav1.LabelSelector{
@@ -140,12 +136,10 @@ func (is *InfraSynthesizer) GetDeploymentContainers(ctx context.Context, ir *Inf
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   "/ready",
-						Port:   readinessPort,
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/ready",
+					Port:   readinessPort,
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -153,12 +147,10 @@ func (is *InfraSynthesizer) GetDeploymentContainers(ctx context.Context, ir *Inf
 				FailureThreshold: 30,
 			},
 			ReadinessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   "/ready",
-						Port:   readinessPort,
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/ready",
+					Port:   readinessPort,
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    5,
@@ -166,12 +158,10 @@ func (is *InfraSynthesizer) GetDeploymentContainers(ctx context.Context, ir *Inf
 				FailureThreshold: 1,
 			},
 			LivenessProbe: &corev1.Probe{
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path:   "/ready",
-						Port:   readinessPort,
-						Scheme: corev1.URISchemeHTTP,
-					},
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/ready",
+					Port:   readinessPort,
+					Scheme: corev1.URISchemeHTTP,
 				},
 				TimeoutSeconds:   1,
 				PeriodSeconds:    10,
@@ -189,11 +179,9 @@ func (is *InfraSynthesizer) GetDeploymentVolumes() []corev1.Volume {
 	return []corev1.Volume{
 		{
 			Name: "certs",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName:  "envoy",
-					DefaultMode: new(int32(420)),
-				},
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  "envoy",
+				DefaultMode: new(int32(420)),
 			},
 		},
 	}

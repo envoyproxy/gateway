@@ -90,10 +90,8 @@ func TestHandlePprof(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Server{
 				EnvoyGateway: &egv1a1.EnvoyGateway{
-					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-						Admin: &egv1a1.EnvoyGatewayAdmin{
-							EnablePprof: tt.enablePprof,
-						},
+					Admin: &egv1a1.EnvoyGatewayAdmin{
+						EnablePprof: tt.enablePprof,
 					},
 				},
 				Logger: logging.DefaultLogger(nil, egv1a1.LogLevelInfo),

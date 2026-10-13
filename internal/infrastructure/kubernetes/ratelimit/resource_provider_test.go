@@ -241,9 +241,7 @@ func TestPDB(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-						RateLimitPDB: tc.pdb,
-					},
+					RateLimitPDB: tc.pdb,
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -546,8 +544,8 @@ func TestDeployment(t *testing.T) {
 					Redis: &egv1a1.RateLimitRedisSettings{
 						URLRef: &egv1a1.RedisURLSource{
 							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "ratelimit-redis-redisstd"},
-								Key:                  "REDIS_ENDPOINT",
+								Name: "ratelimit-redis-redisstd",
+								Key:  "REDIS_ENDPOINT",
 							},
 						},
 					},
@@ -653,11 +651,9 @@ func TestDeployment(t *testing.T) {
 					Volumes: []corev1.Volume{
 						{
 							Name: "certs",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  "custom-cert",
-									DefaultMode: new(int32(420)),
-								},
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  "custom-cert",
+								DefaultMode: new(int32(420)),
 							},
 						},
 					},
@@ -837,10 +833,8 @@ func TestDeployment(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-						RateLimitDeployment: tc.deploy,
-						RateLimitHpa:        tc.hpa,
-					},
+					RateLimitDeployment: tc.deploy,
+					RateLimitHpa:        tc.hpa,
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -946,10 +940,8 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
-						RateLimitHpa:        tc.rateLimitHpa,
-						RateLimitDeployment: tc.rateLimitDeployment,
-					},
+					RateLimitHpa:        tc.rateLimitHpa,
+					RateLimitDeployment: tc.rateLimitDeployment,
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -997,16 +989,14 @@ func TestValidateRedisURLRef(t *testing.T) {
 
 	urlRefGW := func(name, key string) *egv1a1.EnvoyGateway {
 		return &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				RateLimit: &egv1a1.RateLimit{
-					Backend: egv1a1.RateLimitDatabaseBackend{
-						Type: egv1a1.RedisBackendType,
-						Redis: &egv1a1.RateLimitRedisSettings{
-							URLRef: &egv1a1.RedisURLSource{
-								SecretKeyRef: &corev1.SecretKeySelector{
-									LocalObjectReference: corev1.LocalObjectReference{Name: name},
-									Key:                  key,
-								},
+			RateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URLRef: &egv1a1.RedisURLSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								Name: name,
+								Key:  key,
 							},
 						},
 					},
@@ -1034,8 +1024,8 @@ func TestValidateRedisURLRef(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			existing := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "redis-conn", Namespace: ns},
-				Data:       tc.secretData,
+				Name: "redis-conn", Namespace: ns,
+				Data: tc.secretData,
 			}
 			c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(existing).Build()
 			err := Validate(context.Background(), c, urlRefGW(tc.refName, tc.refKey), ns)
@@ -1053,12 +1043,10 @@ func TestValidateRedisSettings(t *testing.T) {
 
 	redisGW := func(redis *egv1a1.RateLimitRedisSettings) *egv1a1.EnvoyGateway {
 		return &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				RateLimit: &egv1a1.RateLimit{
-					Backend: egv1a1.RateLimitDatabaseBackend{
-						Type:  egv1a1.RedisBackendType,
-						Redis: redis,
-					},
+			RateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type:  egv1a1.RedisBackendType,
+					Redis: redis,
 				},
 			},
 		}
@@ -1081,8 +1069,8 @@ func TestValidateRedisSettings(t *testing.T) {
 		err := Validate(context.Background(), c, redisGW(&egv1a1.RateLimitRedisSettings{
 			URLRef: &egv1a1.RedisURLSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: "redis-conn"},
-					Key:                  "REDIS_ENDPOINT",
+					Name: "redis-conn",
+					Key:  "REDIS_ENDPOINT",
 				},
 			},
 		}), ns)
@@ -1091,9 +1079,9 @@ func TestValidateRedisSettings(t *testing.T) {
 
 	t.Run("tls certificateRef", func(t *testing.T) {
 		certSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "redis-cert", Namespace: ns},
-			Type:       corev1.SecretTypeTLS,
-			Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
+			Name: "redis-cert", Namespace: ns,
+			Type: corev1.SecretTypeTLS,
+			Data: map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
 		}
 		c := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(certSecret).Build()
 		require.NoError(t, Validate(context.Background(), c, redisGW(&egv1a1.RateLimitRedisSettings{

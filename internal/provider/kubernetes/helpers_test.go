@@ -21,9 +21,7 @@ import (
 
 func TestGatewaysOfClass(t *testing.T) {
 	gc := &gwapiv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-		},
+		Name: "test",
 	}
 	testCases := []struct {
 		name   string
@@ -34,19 +32,15 @@ func TestGatewaysOfClass(t *testing.T) {
 			name: "no matching gateways",
 			gws: []gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: "test",
-					},
+					Name:      "test",
+					Namespace: "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: gwapiv1.ObjectName("no-match"),
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: "test",
-					},
+					Name:      "test",
+					Namespace: "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: gwapiv1.ObjectName("no-match2"),
 					},
@@ -58,19 +52,15 @@ func TestGatewaysOfClass(t *testing.T) {
 			name: "one of two matching gateways",
 			gws: []gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: "test",
-					},
+					Name:      "test",
+					Namespace: "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: gwapiv1.ObjectName(gc.Name),
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test2",
-						Namespace: "test",
-					},
+					Name:      "test2",
+					Namespace: "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: gwapiv1.ObjectName("no-match"),
 					},
@@ -82,19 +72,15 @@ func TestGatewaysOfClass(t *testing.T) {
 			name: "two of two matching gateways",
 			gws: []gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: "test",
-					},
+					Name:      "test",
+					Namespace: "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: gwapiv1.ObjectName(gc.Name),
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test2",
-						Namespace: "test",
-					},
+					Name:      "test2",
+					Namespace: "test",
 					Spec: gwapiv1.GatewaySpec{
 						GatewayClassName: gwapiv1.ObjectName(gc.Name),
 					},
@@ -137,9 +123,7 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 		{
 			name: "gatewayclass accepted condition",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 				},
@@ -157,9 +141,7 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 		{
 			name: "gatewayclass not accepted condition",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 				},
@@ -177,9 +159,7 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 		{
 			name: "no gatewayclass accepted condition type",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gwapiv1.GatewayController(egv1a1.GatewayControllerName),
 				},
@@ -236,10 +216,8 @@ func TestRefsEnvoyProxy(t *testing.T) {
 		{
 			name: "valid envoyproxy parameters ref",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
+				Name:      "test",
+				Namespace: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: "test",
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -255,10 +233,8 @@ func TestRefsEnvoyProxy(t *testing.T) {
 		{
 			name: "unspecified parameters ref",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
+				Name:      "test",
+				Namespace: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: "test",
 				},
@@ -268,10 +244,8 @@ func TestRefsEnvoyProxy(t *testing.T) {
 		{
 			name: "unsupported group parameters ref",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
+				Name:      "test",
+				Namespace: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: "test",
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -287,10 +261,8 @@ func TestRefsEnvoyProxy(t *testing.T) {
 		{
 			name: "unsupported group parameters ref",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
+				Name:      "test",
+				Namespace: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: "test",
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -306,10 +278,8 @@ func TestRefsEnvoyProxy(t *testing.T) {
 		{
 			name: "unsupported group parameters ref",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
+				Name:      "test",
+				Namespace: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: "test",
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -325,10 +295,8 @@ func TestRefsEnvoyProxy(t *testing.T) {
 		{
 			name: "empty parameters ref name",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
+				Name:      "test",
+				Namespace: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: "test",
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -344,10 +312,8 @@ func TestRefsEnvoyProxy(t *testing.T) {
 		{
 			name: "unspecified parameters ref namespace",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
+				Name:      "test",
+				Namespace: "test",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: "test",
 					ParametersRef: &gwapiv1.ParametersReference{
@@ -386,9 +352,7 @@ func TestClassAccepted(t *testing.T) {
 		{
 			name: "gatewayclass accepted",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gc",
-				},
+				Name: "test-gc",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 				},
@@ -406,9 +370,7 @@ func TestClassAccepted(t *testing.T) {
 		{
 			name: "gatewayclass not accepted",
 			gc: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gc",
-				},
+				Name: "test-gc",
 				Spec: gwapiv1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 				},
@@ -440,7 +402,7 @@ func TestClassAccepted(t *testing.T) {
 func TestTransformConfigMapData(t *testing.T) {
 	testCases := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected map[string]string
 	}{
 		{
@@ -451,20 +413,16 @@ func TestTransformConfigMapData(t *testing.T) {
 		{
 			name: "non-configmap object",
 			input: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 			},
 			expected: nil,
 		},
 		{
 			name: "configmap with single key - no filtering",
 			input: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Data: map[string]string{
 					"key1": "value1",
 				},
@@ -476,10 +434,8 @@ func TestTransformConfigMapData(t *testing.T) {
 		{
 			name: "configmap with cached keys only",
 			input: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Data: map[string]string{
 					gatewayapi.JWKSConfigMapKey:         "jwks-data",
 					gatewayapi.LuaConfigMapKey:          "lua-data",
@@ -495,10 +451,8 @@ func TestTransformConfigMapData(t *testing.T) {
 		{
 			name: "configmap with cached and non-cached keys",
 			input: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Data: map[string]string{
 					gatewayapi.JWKSConfigMapKey:         "jwks-data",
 					gatewayapi.LuaConfigMapKey:          "lua-data",
@@ -517,10 +471,8 @@ func TestTransformConfigMapData(t *testing.T) {
 		{
 			name: "configmap with only non-cached keys",
 			input: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Data: map[string]string{
 					"unwanted-key-1": "unwanted-value-1",
 					"unwanted-key-2": "unwanted-value-2",
@@ -534,10 +486,8 @@ func TestTransformConfigMapData(t *testing.T) {
 		{
 			name: "configmap with CACertKey and CRLKey",
 			input: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Data: map[string]string{
 					gatewayapi.CACertKey: "ca-cert-data",
 					gatewayapi.CRLKey:    "crl-data",
@@ -553,10 +503,8 @@ func TestTransformConfigMapData(t *testing.T) {
 		{
 			name: "configmap with non-expected key first",
 			input: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Data: map[string]string{
 					"unwanted-key":              "unwanted-value",
 					gatewayapi.JWKSConfigMapKey: "jwks-data",

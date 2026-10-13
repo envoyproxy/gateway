@@ -53,7 +53,7 @@ func TestTranslatePhaseSpans(t *testing.T) {
 			{Routes: []*ir.HTTPRoute{{Name: "route-3"}}},
 		},
 		EnvoyPatchPolicies: []*ir.EnvoyPatchPolicy{
-			{EnvoyPatchPolicyStatus: ir.EnvoyPatchPolicyStatus{Name: "policy", Status: &gwapiv1.PolicyStatus{}}},
+			{Name: "policy", Status: &gwapiv1.PolicyStatus{}},
 		},
 	})
 	parent.End()

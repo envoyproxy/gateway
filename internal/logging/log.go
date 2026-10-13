@@ -85,7 +85,7 @@ func (l Logger) WithName(name string) Logger {
 
 // WithValues returns a new Logger instance with additional key/value pairs.
 // See Info for documentation on how key/value pairs work.
-func (l Logger) WithValues(keysAndValues ...interface{}) Logger {
+func (l Logger) WithValues(keysAndValues ...any) Logger {
 	l.Logger = l.Logger.WithValues(keysAndValues...)
 	return l
 }
@@ -99,7 +99,7 @@ func (l Logger) WithTrace(ctx context.Context) Logger {
 		return l
 	}
 
-	fields := []interface{}{
+	fields := []any{
 		"trace_id", sc.TraceID().String(),
 		"span_id", sc.SpanID().String(),
 	}
