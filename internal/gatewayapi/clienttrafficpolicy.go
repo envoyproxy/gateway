@@ -51,13 +51,9 @@ func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec, ctpHTTP
 	if spec == nil {
 		return false
 	}
-	h := spec.HTTP1
-	if h == nil {
-		return false
-	}
-	// Of the flat fields, only these three also configure backend HTTP/1 protocol settings; the rest
-	// (DisableSafeMaxConnectionDuration, IgnoredUpgradeTypes) are client connection only.
-	return !ctpHTTP1ClientScopeOnly && (h.EnableTrailers != nil || h.PreserveHeaderCase != nil || h.HTTP10 != nil)
+	// Any http1 block — even one with only client-scoped fields — completely replaces whatever a
+	// gateway-wide CTP set on that listener, so treat the entire http1 presence as cluster-affecting.
+	return !ctpHTTP1ClientScopeOnly && spec.HTTP1 != nil
 }
 
 // CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy

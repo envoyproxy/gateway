@@ -19219,9 +19219,10 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
-                        - message: http1 is not supported for tracing backends, which
-                            always use gRPC.
-                          rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
+                        - message: http1 is not supported for OpenTelemetry tracing
+                            backends, which use gRPC.
+                          rule: self.type != 'OpenTelemetry' || !has(self.backendSettings)
+                            || !has(self.backendSettings.http1)
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
