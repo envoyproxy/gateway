@@ -71,7 +71,10 @@ var HTTP1ProperCaseWordsTest = suite.ConformanceTest{
 	},
 }
 
-func acceptClientTrafficPolicy(t *testing.T, suite *suite.ConformanceTestSuite, policy types.NamespacedName, gwNN types.NamespacedName) {
+func acceptClientTrafficPolicy(
+	t *testing.T, suite *suite.ConformanceTestSuite,
+	policy, gwNN types.NamespacedName,
+) {
 	t.Helper()
 	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -82,7 +85,10 @@ func acceptClientTrafficPolicy(t *testing.T, suite *suite.ConformanceTestSuite, 
 	ClientTrafficPolicyMustBeAccepted(t, suite.Client, policy, suite.ControllerName, ancestorRef)
 }
 
-func requireHeaderNames(t *testing.T, suite *suite.ConformanceTestSuite, addr, path string, want, reject []string) {
+func requireHeaderNames(
+	t *testing.T, suite *suite.ConformanceTestSuite,
+	addr, path string, want, reject []string,
+) {
 	t.Helper()
 	var last string
 	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(context.Context) (bool, error) {
@@ -133,7 +139,7 @@ func readHTTP1HeaderNames(addr, path, host string) (int, []string, string, error
 	if err = conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return 0, nil, "", err
 	}
-	if _, err = io.WriteString(conn, fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", path, host)); err != nil {
+	if _, err = fmt.Fprintf(conn, "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", path, host); err != nil {
 		return 0, nil, "", err
 	}
 
