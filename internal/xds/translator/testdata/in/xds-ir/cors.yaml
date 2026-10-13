@@ -26,6 +26,7 @@ http:
           safeRegex: "*.example.com"
         - name: foo.bar.com
           exact: foo.bar.com
+        - safeRegex: 'https://preview-[0-9]+\.example\.com(:8443)?'
         allowMethods:
         - GET
         - POST

@@ -1415,6 +1415,8 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 			clientCertDetails.Subject = &wrapperspb.BoolValue{Value: true}
 		case egv1a1.XFCCCertDataURI:
 			clientCertDetails.Uri = true
+		case egv1a1.XFCCCertDataIssuer:
+			clientCertDetails.Issuer = true
 		}
 	}
 

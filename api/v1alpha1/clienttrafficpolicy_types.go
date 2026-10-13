@@ -141,6 +141,11 @@ type HeaderSettings struct {
 	// +optional
 	DisableRateLimitHeaders *bool `json:"disableRateLimitHeaders,omitempty"`
 
+	// DisableRetryAfterHeader configures Envoy Proxy to omit the "Retry-After" response header
+	// on rate-limited 429 responses.
+	// +optional
+	DisableRetryAfterHeader *bool `json:"disableRetryAfterHeader,omitempty"`
+
 	// XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.
 	//
 	// x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate
@@ -290,7 +295,7 @@ type XForwardedClientCert struct {
 	//
 	// This field is only applicable when the mode is set to `AppendForward` or
 	// `SanitizeSet` and the client connection is mTLS.
-	// +kubebuilder:validation:MaxItems=5
+	// +kubebuilder:validation:MaxItems=6
 	// +optional
 	CertDetailsToAdd []XFCCCertData `json:"certDetailsToAdd,omitempty"`
 }
@@ -318,7 +323,7 @@ const (
 )
 
 // XFCCCertData specifies the fields in the client certificate to be forwarded in the XFCC header.
-// +kubebuilder:validation:Enum=Subject;Cert;Chain;DNS;URI
+// +kubebuilder:validation:Enum=Subject;Cert;Chain;DNS;URI;Issuer
 type XFCCCertData string
 
 const (
@@ -332,6 +337,8 @@ const (
 	XFCCCertDataDNS XFCCCertData = "DNS"
 	// XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.
 	XFCCCertDataURI XFCCCertData = "URI"
+	// XFCCCertDataIssuer is the Issuer field of the current client certificate.
+	XFCCCertDataIssuer XFCCCertData = "Issuer"
 )
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.

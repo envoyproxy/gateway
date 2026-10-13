@@ -602,6 +602,10 @@ between the Envoy Proxy listener and the backend service.
 
 BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 
+Backend-targeted BackendTrafficPolicy (Service/ServiceImport/Backend targets) only applies to
+a backend that resolves into a merged Envoy cluster (requires the MergeBackends EnvoyProxy
+feature). A backend that never merges for any reason does not get the policy applied.
+
 _Appears in:_
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 
@@ -620,7 +624,7 @@ _Appears in:_
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
-| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />This field can only be set when targeting xRoute or backend (Service/ServiceImport/Backend)<br />resources, and is required when targeting a backend.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `bandwidthLimit` | _[BandwidthLimitSpec](#bandwidthlimitspec)_ |  false  |  | BandwidthLimit allows the user to limit the bandwidth of traffic<br />sent to and received from the backend. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
@@ -830,6 +834,31 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `quality` | _integer_ |  false  |  | Quality controls the main compression speed-density lever, from 0 to 11.<br />The higher the quality, the slower the compression. If not set, defaults to 3. |
+| `encoderMode` | _[BrotliEncoderMode](#brotliencodermode)_ |  false  |  | EncoderMode tunes the encoder for a specific input.<br />If not set, defaults to Default. |
+| `windowBits` | _integer_ |  false  |  | WindowBits represents the base two logarithm of the compressor's window size,<br />from 10 to 24. Larger window results in better compression at the expense of<br />memory usage. If not set, defaults to 18. |
+| `inputBlockBits` | _integer_ |  false  |  | InputBlockBits represents the base two logarithm of the compressor's input block<br />size, from 16 to 24. Larger input block results in better compression at the<br />expense of memory usage. If not set, defaults to 24. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of the compressor's next output buffer, from<br />4096 to 65536. If not set, defaults to 4096. |
+| `disableLiteralContextModeling` | _boolean_ |  false  |  | DisableLiteralContextModeling disables the "literal context modeling" format<br />feature. This flag is a "decoding-speed vs compression ratio" trade-off.<br />If not set, defaults to false. |
+
+
+#### BrotliEncoderMode
+
+_Underlying type:_ _string_
+
+BrotliEncoderMode defines the modes to tune the Brotli encoder for a specific input.
+
+_Appears in:_
+- [BrotliCompressor](#brotlicompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` | BrotliEncoderModeDefault is the default encoder mode.<br /> | 
+| `Generic` | BrotliEncoderModeGeneric tunes the encoder for any input.<br /> | 
+| `Text` | BrotliEncoderModeText tunes the encoder for UTF-8 formatted text input.<br /> | 
+| `Font` | BrotliEncoderModeFont tunes the encoder for WOFF 2.0 font input.<br /> | 
 
 
 #### CELExpression
@@ -868,11 +897,29 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `allowOrigins` | _[Origin](#origin) array_ |  false  |  | AllowOrigins defines the origins that are allowed to make requests.<br />It specifies the allowed origins in the Access-Control-Allow-Origin CORS response header.<br />The value "*" allows any origin to make requests. |
+| `allowOriginRegexes` | _[CORSOriginRegex](#corsoriginregex) array_ |  false  |  | AllowOriginRegexes defines regular expressions that are matched against the Origin header.<br />It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.<br />An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes. |
 | `allowMethods` | _string array_ |  false  |  | AllowMethods defines the methods that are allowed to make requests.<br />It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..<br />The value "*" allows any method to be used. |
 | `allowHeaders` | _string array_ |  false  |  | AllowHeaders defines the headers that are allowed to be sent with requests.<br />It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..<br />The value "*" allows any header to be sent. |
 | `exposeHeaders` | _string array_ |  false  |  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
 | `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
+
+
+#### CORSOriginRegex
+
+_Underlying type:_ _string_
+
+CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+including the scheme and the port if present.
+The regex string must adhere to the syntax documented in
+https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+which is not supported.
+A regular expression that matches the literal string "*" is rejected.
+The value "*" in AllowOrigins allows any origin.
+
+_Appears in:_
+- [CORS](#cors)
+
 
 
 #### CSRF
@@ -2624,6 +2671,7 @@ _Appears in:_
 | `port` | _integer_ |  false  | 80 | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  |  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
 | `retry` | _[ExtensionServiceRetry](#extensionserviceretry)_ |  false  |  | Retry defines the retry policy for to use when errors are encountered in communication with<br />the extension service. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | Timeout is the maximum duration of a single call to the extension service,<br />including the time spent waiting for the connection to become ready and<br />any retries. When the timeout is exceeded the call fails with<br />DEADLINE_EXCEEDED, which lets ExtensionManager.FailOpen take effect when the<br />extension service is unreachable.<br />If unset, calls have no deadline and block until the extension service<br />becomes reachable. |
 
 
 #### ExtensionServiceRetry
@@ -3049,6 +3097,24 @@ _Appears in:_
 | `kind` | _string_ |  true  |  |  |
 
 
+#### GzipCompressionStrategy
+
+_Underlying type:_ _string_
+
+GzipCompressionStrategy defines the zlib compression strategies supported by the Gzip compressor.
+
+_Appears in:_
+- [GzipCompressor](#gzipcompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` | GzipCompressionStrategyDefault is the default zlib compression strategy,<br />suitable for most of the content.<br /> | 
+| `Filtered` | GzipCompressionStrategyFiltered is a compression strategy for data produced<br />by a filter or predictor.<br /> | 
+| `HuffmanOnly` | GzipCompressionStrategyHuffmanOnly is a compression strategy that only uses<br />Huffman encoding.<br /> | 
+| `RLE` | GzipCompressionStrategyRLE is a compression strategy that limits match<br />distances to one (run-length encoding), designed for image data.<br /> | 
+| `Fixed` | GzipCompressionStrategyFixed is a compression strategy that prevents the<br />use of dynamic Huffman codes.<br /> | 
+
+
 #### GzipCompressor
 
 
@@ -3060,6 +3126,13 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/c
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `compressionLevel` | _integer_ |  false  |  | CompressionLevel sets the zlib compression level, from 1 (fastest compression,<br />lowest compression ratio) to 9 (slowest compression, best compression ratio).<br />If not set, Envoy uses the zlib default level, which is equivalent to level 6. |
+| `compressionStrategy` | _[GzipCompressionStrategy](#gzipcompressionstrategy)_ |  false  |  | CompressionStrategy selects the zlib compression strategy, which is directly<br />related to the characteristics of the content. Most of the time "Default" is<br />the best choice. If not set, defaults to Default. |
+| `memoryLevel` | _integer_ |  false  |  | MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.<br />Higher values use more memory, but are faster and produce better compression<br />results. If not set, defaults to 5. |
+| `windowBits` | _integer_ |  false  |  | WindowBits represents the base two logarithm of the compressor's window size,<br />from 9 to 15. Larger window results in better compression at the expense of<br />memory usage. If not set, defaults to 12, which will produce a 4096 bytes window. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.<br />If not set, defaults to 4096. |
 
 
 #### HTTP10Settings
@@ -3567,6 +3640,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  |  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
 | `disableRateLimitHeaders` | _boolean_ |  false  |  | DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers<br />when rate limiting is enabled. |
+| `disableRetryAfterHeader` | _boolean_ |  false  |  | DisableRetryAfterHeader configures Envoy Proxy to omit the "Retry-After" response header<br />on rate-limited 429 responses. |
 | `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  |  | XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.<br />x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate<br />information of part or all of the clients or proxies that a request has flowed through,<br />on its way from the client to the server.<br />Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.<br />If not set, the default behavior is sanitizing the XFCC header. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  |  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
 | `preserveXRequestID` | _boolean_ |  false  |  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />Defaults to false and cannot be combined with RequestID.<br />Deprecated: use RequestID=PreserveOrGenerate instead |
@@ -3908,7 +3982,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `provider` | _string_ |  true  |  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`. |
+| `provider` | _string_ |  true  |  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`, or,<br />when `mergeType` is set, in the parent `SecurityPolicy` this policy is<br />merged into. |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  |  | Claims are the claims in a JWT token.<br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
 | `scopes` | _[JWTScope](#jwtscope) array_ |  false  |  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br />The value of the scopes field should be a space delimited string that is expected in the<br />scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
@@ -7218,6 +7292,7 @@ _Appears in:_
 | `Chain` | XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.<br /> | 
 | `DNS` | XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.<br /> | 
 | `URI` | XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.<br /> | 
+| `Issuer` | XFCCCertDataIssuer is the Issuer field of the current client certificate.<br /> | 
 
 
 #### XFCCForwardMode
@@ -7318,6 +7393,31 @@ _Appears in:_
 | `weightedZones` | _[WeightedZoneConfig](#weightedzoneconfig) array_ |  false  |  | WeightedZones configures weight-based traffic distribution across locality zones.<br />Traffic is distributed proportionally based on the sum of all zone weights. |
 
 
+#### ZstdCompressionStrategy
+
+_Underlying type:_ _string_
+
+ZstdCompressionStrategy defines the compression strategies supported by the Zstd compressor.
+The higher the value of the selected strategy, the more complex it is, resulting in stronger
+and slower compression.
+
+_Appears in:_
+- [ZstdCompressor](#zstdcompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` |  | 
+| `Fast` |  | 
+| `DFast` |  | 
+| `Greedy` |  | 
+| `Lazy` |  | 
+| `Lazy2` |  | 
+| `BTLazy2` |  | 
+| `BTOpt` |  | 
+| `BTUltra` |  | 
+| `BTUltra2` |  | 
+
+
 #### ZstdCompressor
 
 
@@ -7329,5 +7429,11 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/c
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `compressionLevel` | _integer_ |  false  |  | CompressionLevel sets the compression parameters according to the pre-defined<br />zstd compression level table, from 1 to 22. Note that the exact compression<br />parameters are dynamically determined, depending on both compression level and<br />source content size (when known). If not set, defaults to 3. |
+| `enableChecksum` | _boolean_ |  false  |  | EnableChecksum specifies whether a 32-bits checksum of the content is written<br />at the end of the frame. If not set, defaults to false. |
+| `strategy` | _[ZstdCompressionStrategy](#zstdcompressionstrategy)_ |  false  |  | Strategy selects the zstd compression strategy. The higher the value of the<br />selected strategy, the more complex it is, resulting in stronger and slower<br />compression. If not set, defaults to Default. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of the compressor's next output buffer, from<br />4096 to 65536. If not set, defaults to 4096. |
 
 

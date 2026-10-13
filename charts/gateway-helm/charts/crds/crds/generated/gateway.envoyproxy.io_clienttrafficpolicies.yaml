@@ -259,6 +259,11 @@ spec:
                       DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
                       when rate limiting is enabled.
                     type: boolean
+                  disableRetryAfterHeader:
+                    description: |-
+                      DisableRetryAfterHeader configures Envoy Proxy to omit the "Retry-After" response header
+                      on rate-limited 429 responses.
+                    type: boolean
                   earlyRequestHeaders:
                     description: |-
                       EarlyRequestHeaders defines settings for early request header modification, before envoy performs
@@ -1076,8 +1081,9 @@ spec:
                           - Chain
                           - DNS
                           - URI
+                          - Issuer
                           type: string
-                        maxItems: 5
+                        maxItems: 6
                         type: array
                       mode:
                         description: |-
