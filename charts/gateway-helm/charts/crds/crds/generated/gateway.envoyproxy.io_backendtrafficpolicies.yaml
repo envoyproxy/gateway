@@ -3998,6 +3998,11 @@ spec:
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.timeout)
                 || !has(self.timeout.http) || (!has(self.timeout.http.requestTimeout)
                 && !has(self.timeout.http.streamIdleTimeout))'
+            - message: http1 is not supported when targeting a GRPCRoute, which always
+                uses gRPC (HTTP/2)
+              rule: '!has(self.http1) || (!has(self.targetRef) || self.targetRef.kind
+                != ''GRPCRoute'') && (!has(self.targetRefs) || !self.targetRefs.exists(ref,
+                ref.kind == ''GRPCRoute''))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&
