@@ -705,52 +705,8 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 
 func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
 	deprecatedFields := make(map[string]status.DeprecatedField)
-	if ep.Spec.LuaValidation != nil {
-		deprecatedFields["spec.luaValidation"] = deprecatedField("spec.lua.validationType")
-	}
-
-	// host/port are only checked through host: port carries a CRD default, so it is always set.
-	if telemetry := ep.Spec.Telemetry; telemetry != nil {
-		if telemetry.Tracing != nil {
-			addDeprecatedBackendClusterFields(deprecatedFields, "spec.telemetry.tracing.provider",
-				&telemetry.Tracing.Provider.BackendCluster, telemetry.Tracing.Provider.Host)
-		}
-		if telemetry.Metrics != nil {
-			for i, sink := range telemetry.Metrics.Sinks {
-				if sink.OpenTelemetry != nil {
-					addDeprecatedBackendClusterFields(deprecatedFields, fmt.Sprintf("spec.telemetry.metrics.sinks[%d].openTelemetry", i),
-						&sink.OpenTelemetry.BackendCluster, sink.OpenTelemetry.Host)
-				}
-			}
-		}
-		if telemetry.AccessLog != nil {
-			for i, setting := range telemetry.AccessLog.Settings {
-				for j, sink := range setting.Sinks {
-					path := fmt.Sprintf("spec.telemetry.accessLog.settings[%d].sinks[%d]", i, j)
-					if sink.OpenTelemetry != nil {
-						addDeprecatedBackendClusterFields(deprecatedFields, path+".openTelemetry",
-							&sink.OpenTelemetry.BackendCluster, sink.OpenTelemetry.Host)
-					}
-					if sink.ALS != nil {
-						addDeprecatedBackendClusterFields(deprecatedFields, path+".als", &sink.ALS.BackendCluster, nil)
-					}
-				}
-			}
-		}
-	}
-
+	validation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec)
 	return deprecatedFields
-}
-
-// addDeprecatedBackendClusterFields records the deprecated host and backendRef fields of a
-// telemetry sink at path, both of which are replaced by backendRefs.
-func addDeprecatedBackendClusterFields(deprecatedFields map[string]status.DeprecatedField, path string, cluster *egv1a1.BackendCluster, host *string) {
-	if host != nil {
-		deprecatedFields[path+".host"] = deprecatedFieldScheduledForRemoval(path + ".backendRefs")
-	}
-	if cluster.BackendRef != nil {
-		deprecatedFields[path+".backendRef"] = deprecatedFieldScheduledForRemoval(path + ".backendRefs")
-	}
 }
 
 // disabledPatchFieldsUsedInEnvoyProxy returns the Kubernetes resource `patch`

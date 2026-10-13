@@ -174,8 +174,12 @@ envoyExtensionPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
+        message: 'spec.extProc[0].backendSettings.loadBalancer.consistentHash.header
+          is deprecated and will be removed in v1.11, use spec.extProc[0].backendSettings.loadBalancer.consistentHash.headers
+          instead; spec.extProc[0].backendSettings.loadBalancer.consistentHash.type:
+          Header is deprecated and will be removed in v1.11, use spec.extProc[0].backendSettings.loadBalancer.consistentHash.type:
+          Headers instead; spec.targetRef is deprecated and will be removed in v1.11,
+          use spec.targetRefs instead'
         reason: DeprecatedField
         status: "True"
         type: Warning

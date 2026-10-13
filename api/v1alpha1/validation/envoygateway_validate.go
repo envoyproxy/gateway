@@ -7,7 +7,9 @@ package validation
 
 import (
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -103,6 +105,13 @@ func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
 	if p := eg.Provider; p != nil && p.Custom != nil && p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Remote != nil {
 		warnings = append(warnings, warnExtensionServiceHost("provider.custom.infrastructure.remote.service", p.Custom.Infrastructure.Remote.Service)...)
 	}
+	// The default EnvoyProxy spec isn't an EnvoyProxy resource, so it has no status to carry a
+	// DeprecatedField warning; surface its deprecated fields at startup instead.
+	envoyProxyFields := make(map[string]DeprecatedField)
+	AddDeprecatedEnvoyProxySpecFields(envoyProxyFields, "envoyProxy", eg.EnvoyProxy)
+	for _, path := range slices.Sorted(maps.Keys(envoyProxyFields)) {
+		warnings = append(warnings, envoyProxyFields[path].Message(path))
+	}
 	return warnings
 }
 
@@ -112,7 +121,8 @@ func warnExtensionServiceHost(path string, svc *egv1a1.ExtensionService) []strin
 	if svc == nil || svc.Host == "" {
 		return nil
 	}
-	return []string{fmt.Sprintf("%[1]s.host and %[1]s.port are deprecated and will be removed in v1.11, use %[1]s.fqdn, %[1]s.ip or %[1]s.unix instead", path)}
+	return []string{fmt.Sprintf("%[1]s.host and %[1]s.port are deprecated and will be removed in %[2]s, use %[1]s.fqdn, %[1]s.ip or %[1]s.unix instead",
+		path, DeprecatedFieldsRemovalRelease)}
 }
 
 func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {

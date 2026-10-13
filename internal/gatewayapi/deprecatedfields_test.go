@@ -58,10 +58,34 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 		}, deprecatedFieldsUsedInSecurityPolicy(policy))
 	})
 
+	t.Run("consistent hash header in nested backendSettings", func(t *testing.T) {
+		policy := &egv1a1.SecurityPolicy{}
+		policy.Spec.ExtAuth = &egv1a1.ExtAuth{GRPC: &egv1a1.GRPCExtAuthService{BackendCluster: egv1a1.BackendCluster{
+			BackendRefs: []egv1a1.BackendRef{{}},
+			BackendSettings: &egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{
+				LoadBalancer: &egv1a1.LoadBalancer{ConsistentHash: &egv1a1.ConsistentHash{
+					Type:   egv1a1.HeaderConsistentHashType,
+					Header: &egv1a1.Header{Name: "x-user"},
+				}},
+			}},
+		}}}
+		require.Equal(t, map[string]status.DeprecatedField{
+			"spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.type: Header": removed(
+				"spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.type: Headers"),
+			"spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.header": removed(
+				"spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.headers"),
+		}, deprecatedFieldsUsedInSecurityPolicy(policy))
+	})
+
 	t.Run("EnvoyProxy telemetry sinks", func(t *testing.T) {
 		host := "otel-collector.monitoring.svc"
 		ep := &egv1a1.EnvoyProxy{}
 		ep.Spec.Telemetry = &egv1a1.ProxyTelemetry{
+			Tracing: &egv1a1.ProxyTracing{Provider: egv1a1.TracingProvider{BackendCluster: egv1a1.BackendCluster{
+				BackendSettings: &egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{
+					LoadBalancer: &egv1a1.LoadBalancer{ConsistentHash: &egv1a1.ConsistentHash{Type: egv1a1.HeaderConsistentHashType}},
+				}},
+			}}},
 			Metrics: &egv1a1.ProxyMetrics{Sinks: []egv1a1.ProxyMetricSink{
 				{OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{Host: &host, Port: 4317}},
 			}},
@@ -73,6 +97,8 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 			}},
 		}
 		require.Equal(t, map[string]status.DeprecatedField{
+			"spec.telemetry.tracing.provider.backendSettings.loadBalancer.consistentHash.type: Header": removed(
+				"spec.telemetry.tracing.provider.backendSettings.loadBalancer.consistentHash.type: Headers"),
 			"spec.telemetry.metrics.sinks[0].openTelemetry.host":           removed("spec.telemetry.metrics.sinks[0].openTelemetry.backendRefs"),
 			"spec.telemetry.accessLog.settings[0].sinks[0].als.backendRef": removed("spec.telemetry.accessLog.settings[0].sinks[0].als.backendRefs"),
 			"spec.telemetry.accessLog.settings[0].sinks[1].openTelemetry.host": removed(
