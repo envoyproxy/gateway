@@ -785,6 +785,10 @@ func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype
 	switch {
 	case negotiate:
 		return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{h2, http11}}
+	// With use_alpn_protocol off, Envoy runs the configured codec no matter what ALPN
+	// negotiates, while the backend picks its protocol from the ALPN result. Offering
+	// only the codec's protocol is what keeps the two sides on the same one; offering
+	// nothing lands most backends on HTTP/1.1 and breaks an HTTP/2 probe.
 	case codec == xdstype.CodecClientType_HTTP2:
 		return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{h2}}
 	default:
