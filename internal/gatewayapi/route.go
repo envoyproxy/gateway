@@ -3409,7 +3409,7 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 // isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources
 func (t *Translator) isCustomBackendResource(group *gwapiv1.Group, kind string) bool {
 	groupStr := GroupDerefOr(group, "")
-	for _, gk := range t.ExtensionGroupKinds {
+	for _, gk := range t.ExtensionBackendGroupKinds {
 		if gk.Group == groupStr && gk.Kind == kind {
 			return true
 		}

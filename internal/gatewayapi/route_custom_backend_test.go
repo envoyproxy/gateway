@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -52,8 +53,8 @@ func TestProcessDestinationCustomBackendWithBuiltinKind(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			translator := &Translator{
-				ExtensionGroupKinds: []schema.GroupKind{{Group: customGroup, Kind: resource.KindService}},
-				TranslatorContext:   &TranslatorContext{},
+				ExtensionBackendGroupKinds: []schema.GroupKind{{Group: customGroup, Kind: resource.KindService}},
+				TranslatorContext:          &TranslatorContext{},
 			}
 			route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
@@ -122,4 +123,69 @@ func TestBuiltinDestinationSettingMissingObject(t *testing.T) {
 			require.Equal(t, gwapiv1.RouteConditionResolvedRefs, err.Type())
 		})
 	}
+}
+
+// TestProcessDestinationBuiltinKindAsExtensionResource covers a built-in backend kind registered
+// as an extension resource (ExtensionManager.Resources, e.g. for use as an extensionRef filter)
+// rather than a backend resource: backendRefs to it must still use the built-in resolver.
+func TestProcessDestinationBuiltinKindAsExtensionResource(t *testing.T) {
+	translator := &Translator{
+		ExtensionGroupKinds: []schema.GroupKind{{Group: "", Kind: resource.KindService}},
+		TranslatorContext:   &TranslatorContext{},
+	}
+	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+	}}
+	parentRef := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{Name: "gateway"}}
+	backendRef := BackendRefWithFilters{BackendRef: &gwapiv1.BackendRef{
+		BackendObjectReference: gwapiv1.BackendObjectReference{
+			Name: "missing",
+			Port: new(gwapiv1.PortNumber(8080)),
+		},
+	}}
+
+	ds, unstructuredRef, err := translator.processDestination("dest", backendRef, parentRef, route,
+		&resource.Resources{}, nil, nil, nil)
+	require.NotNil(t, ds)
+	require.False(t, ds.IsCustomBackend)
+	require.Nil(t, unstructuredRef)
+	require.Error(t, err)
+	require.Equal(t, gwapiv1.RouteReasonBackendNotFound, err.Reason())
+	// Reported by the built-in backendRef validation, not the custom backend lookup.
+	require.EqualError(t, err, "service default/missing not found")
+}
+
+// TestProcessDestinationCustomBackendKind covers a custom backend resource of kind Backend in its
+// own group: it must not be looked up as an Envoy Gateway Backend for Backend TLS settings.
+func TestProcessDestinationCustomBackendKind(t *testing.T) {
+	const customGroup = "custom.example.io"
+
+	customBackend := unstructured.Unstructured{}
+	customBackend.SetAPIVersion(customGroup + "/v1")
+	customBackend.SetKind(egv1a1.KindBackend)
+	customBackend.SetNamespace("default")
+	customBackend.SetName("custom")
+
+	translator := &Translator{
+		ExtensionBackendGroupKinds: []schema.GroupKind{{Group: customGroup, Kind: egv1a1.KindBackend}},
+		TranslatorContext:          &TranslatorContext{},
+	}
+	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+	}}
+	parentRef := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{Name: "gateway"}}
+	backendRef := BackendRefWithFilters{BackendRef: &gwapiv1.BackendRef{
+		BackendObjectReference: gwapiv1.BackendObjectReference{
+			Group: new(gwapiv1.Group(customGroup)),
+			Kind:  new(gwapiv1.Kind(egv1a1.KindBackend)),
+			Name:  "custom",
+		},
+	}}
+
+	ds, unstructuredRef, err := translator.processDestination("dest", backendRef, parentRef, route,
+		&resource.Resources{ExtensionRefFilters: []unstructured.Unstructured{customBackend}}, nil, nil, nil)
+	require.NoError(t, err)
+	require.True(t, ds.IsCustomBackend)
+	require.NotNil(t, unstructuredRef)
+	require.Equal(t, "custom", unstructuredRef.Object.GetName())
 }

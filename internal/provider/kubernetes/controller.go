@@ -723,8 +723,33 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		nn := types.NamespacedName{Namespace: backendNs, Name: backendName}
 		var endpointSliceLabelKey string
 		var endpointSliceIndex string
-		switch backendRefKind {
-		case resource.KindService:
+		// Custom backend resources are matched by group and kind, and must be handled before the
+		// kind switch: an extension can register a kind that collides with a built-in one in its
+		// own group (e.g. custom.example.io/Service).
+		switch {
+		case r.isCustomBackendResource(backendRef.Group, backendRefKind):
+			// Handle custom backend resources defined in extension manager
+			resourceMappings.allAssociatedNamespaces.Insert(string(*backendRef.Namespace))
+			key := utils.NamespacedNameWithGroupKind{
+				NamespacedName: types.NamespacedName{
+					Namespace: string(*backendRef.Namespace),
+					Name:      string(backendRef.Name),
+				},
+				GroupKind: schema.GroupKind{
+					Group: gatewayapi.GroupDerefOr(backendRef.Group, ""),
+					Kind:  backendRefKind,
+				},
+			}
+			if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
+				resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
+				if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; exists {
+					resourceMappings.extensionRefFilters[key] = extRefFilter
+					gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
+					logger.Info("added custom backend resource to resource tree")
+				}
+			}
+
+		case backendRefKind == resource.KindService:
 			service := new(corev1.Service)
 			err := r.client.Get(ctx, nn, service)
 			if err != nil {
@@ -744,7 +769,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
 			endpointSliceIndex = serviceEndpointSliceIndex
 
-		case resource.KindServiceImport:
+		case backendRefKind == resource.KindServiceImport:
 			serviceImport := new(mcsapiv1a1.ServiceImport)
 			err := r.client.Get(ctx, nn, serviceImport)
 			if err != nil {
@@ -765,7 +790,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 			endpointSliceIndex = serviceImportEndpointSliceIndex
 
-		case egv1a1.KindBackend:
+		case backendRefKind == egv1a1.KindBackend:
 			if r.backendAPIDisabled() {
 				logger.V(6).Info("skipping Backend processing as Backend API is disabled.")
 				continue
@@ -826,29 +851,6 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 						r.log.Error(err,
 							"failed to process ClientTLS secret for Backend",
 							"backend", backend, "clientCertificateRef", certRef.Name)
-					}
-				}
-			}
-		default:
-			// Handle custom backend resources defined in extension manager
-			if r.isCustomBackendResource(backendRef.Group, backendRefKind) {
-				resourceMappings.allAssociatedNamespaces.Insert(string(*backendRef.Namespace))
-				key := utils.NamespacedNameWithGroupKind{
-					NamespacedName: types.NamespacedName{
-						Namespace: string(*backendRef.Namespace),
-						Name:      string(backendRef.Name),
-					},
-					GroupKind: schema.GroupKind{
-						Group: string(*backendRef.Group),
-						Kind:  backendRefKind,
-					},
-				}
-				if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
-					resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
-					if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; exists {
-						resourceMappings.extensionRefFilters[key] = extRefFilter
-						gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
-						logger.Info("added custom backend resource to resource tree")
 					}
 				}
 			}
