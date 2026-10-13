@@ -3694,3 +3694,86 @@ func TestRejectBackendTargetSelectors(t *testing.T) {
 	require.Len(t, ancestor.Conditions, 1)
 	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
 }
+
+func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
+	tests := []struct {
+		name        string
+		routeKind   string
+		spec        egv1a1.BackendTrafficPolicySpec
+		wantErr     bool
+		errContains string
+	}{
+		// GRPCRoute: http1 is rejected, everything else is allowed
+		{
+			name:        "GRPCRoute with http1 is rejected",
+			routeKind:   gwapiresource.KindGRPCRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
+			wantErr:     true,
+			errContains: "http1",
+		},
+		{
+			name:      "GRPCRoute with http2 is allowed",
+			routeKind: gwapiresource.KindGRPCRoute,
+			spec:      egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP2: &egv1a1.HTTP2Settings{}}}},
+			wantErr:   false,
+		},
+		// HTTPRoute: http1 is allowed
+		{
+			name:      "HTTPRoute with http1 is allowed",
+			routeKind: gwapiresource.KindHTTPRoute,
+			spec:      egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
+			wantErr:   false,
+		},
+		// TCPRoute: http1 is rejected
+		{
+			name:        "TCPRoute with http1 is rejected",
+			routeKind:   gwapiresource.KindTCPRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
+			wantErr:     true,
+			errContains: "http1",
+		},
+		{
+			name:      "TCPRoute without http1 is allowed",
+			routeKind: gwapiresource.KindTCPRoute,
+			spec:      egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}}}},
+			wantErr:   false,
+		},
+		// TLSRoute: http1 is rejected
+		{
+			name:        "TLSRoute with http1 is rejected",
+			routeKind:   gwapiresource.KindTLSRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
+			wantErr:     true,
+			errContains: "http1",
+		},
+		// UDPRoute: http1 is rejected
+		{
+			name:        "UDPRoute with http1 is rejected",
+			routeKind:   gwapiresource.KindUDPRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}}},
+			wantErr:     true,
+			errContains: "http1",
+		},
+		{
+			name:      "UDPRoute without http1 is allowed",
+			routeKind: gwapiresource.KindUDPRoute,
+			spec:      egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{LoadBalancer: &egv1a1.LoadBalancer{}}}},
+			wantErr:   false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			policy := &egv1a1.BackendTrafficPolicy{Spec: tc.spec}
+			err := validateBackendTrafficPolicyForRoute(policy, tc.routeKind)
+			if tc.wantErr {
+				require.Error(t, err)
+				if tc.errContains != "" {
+					require.Contains(t, err.Error(), tc.errContains)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

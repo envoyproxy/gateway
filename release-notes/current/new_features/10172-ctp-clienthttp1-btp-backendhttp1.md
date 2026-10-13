@@ -4,8 +4,11 @@ on upstream backend connections, including `enableTrailers` and `preserveHeaderC
 takes precedence for backend traffic. Setting `http1: {}` (empty) forces explicit HTTP/1 on the
 upstream cluster.
 
-This field is not supported for gRPC destinations: attaching a `BackendTrafficPolicy` with `http1`
-directly to a `GRPCRoute` is rejected at admission. When the policy targets a `Gateway`, a specific listener via `sectionName`, or a
-`ListenerSet`, `http1` is silently ignored for any `GRPCRoute` destinations beneath that target.
-gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry access log/metrics, and
-tracing providers) reject `http1` on their own `backendSettings` via separate validation rules.
+When targeting a GRPCRoute, TCPRoute, TLSRoute, or UDPRoute directly via `targetRef`, `targetRefs`,
+or `targetSelectors`, the policy is rejected with a `TranslationError` condition since those route
+kinds do not use HTTP/1. When attached to a broader target (Gateway, ListenerSet, or a specific
+listener via `sectionName`), `http1` is silently ignored for any GRPCRoute, TCPRoute, TLSRoute, or
+UDPRoute destinations beneath that target and still applies to HTTPRoute destinations. For gRPC-only
+external service backends (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry access log/metrics/tracing),
+`http1` on their own `BackendSettings` is rejected at admission by existing validations on
+those types.
