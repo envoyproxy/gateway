@@ -22,6 +22,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -912,7 +913,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 							{
 								Name:   new("wasm-filter"),
 								RootID: new("my_root_id"),
-								Code: egv1a1.WasmCodeSource{
+								Code: &egv1a1.WasmCodeSource{
 									Type: egv1a1.ImageWasmCodeSourceType,
 									Image: &egv1a1.ImageWasmCodeSource{
 										URL: "https://example.com/testwasm:v1.0.0",
@@ -1241,6 +1242,10 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 	sampleServiceImportBackendRef := test.GetServiceImportBackendRef(types.NamespacedName{Name: "imported-service"}, 80)
+	// MCS implementations such as Cilium ClusterMesh label a ServiceImport's
+	// EndpointSlices with both the derived Service and the ServiceImport name.
+	dualLabelledEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "derived-service", false)
+	dualLabelledEndpointSlice.Labels[mcsapiv1a1.LabelServiceName] = "imported-service"
 
 	testCases := []struct {
 		name          string
@@ -1287,6 +1292,26 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceImportBackendRef, ""),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "imported-service", true),
+			expect:        true,
+		},
+		{
+			name: "endpointslice labelled with both names, route references the Service",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", test.GetServiceBackendRef(types.NamespacedName{Name: "derived-service"}, 80), ""),
+			},
+			endpointSlice: dualLabelledEndpointSlice,
+			expect:        true,
+		},
+		{
+			name: "endpointslice labelled with both names, route references the ServiceImport",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceImportBackendRef, ""),
+			},
+			endpointSlice: dualLabelledEndpointSlice,
 			expect:        true,
 		},
 		{
