@@ -3148,6 +3148,21 @@ _Appears in:_
 | `useDefaultHost` | _boolean_ |  false  |  | UseDefaultHost specifies whether a default Host header should be injected<br />into HTTP/1.0 requests that do not include one.<br />When set to true, Envoy Gateway injects the hostname associated with the<br />listener or route into the request, in the following order:<br />  1. If the targeted listener has a non-wildcard hostname, use that hostname.<br />  2. If there is exactly one HTTPRoute with a non-wildcard hostname under<br />     the targeted listener, use that hostname.<br /> Note: Setting this field to true without a non-wildcard hostname makes the<br />ClientTrafficPolicy invalid. |
 
 
+#### HTTP1HeaderKeyFormat
+
+_Underlying type:_ _string_
+
+HTTP1HeaderKeyFormat defines how Envoy formats HTTP/1 header names when it
+serializes them onto the wire.
+
+_Appears in:_
+- [HTTP1Settings](#http1settings)
+
+| Value | Description |
+| ----- | ----------- |
+| `ProperCaseWords` | HTTP1HeaderKeyFormatProperCaseWords capitalizes the first letter and any<br />letter following a special character. For example, "location" is sent as<br />"Location" and "content-type" is sent as "Content-Type".<br />Envoy applies this when it writes the header, including headers that Envoy<br />itself creates in lowercase.<br /> | 
+
+
 #### HTTP1Settings
 
 
@@ -3160,7 +3175,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
-| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
+| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers.<br />PreserveHeaderCase keeps the case of headers that already carry one. It does<br />not change headers that Envoy creates in lowercase.<br />PreserveHeaderCase and HeaderKeyFormat are mutually exclusive. |
+| `headerKeyFormat` | _[HTTP1HeaderKeyFormat](#http1headerkeyformat)_ |  false  |  | HeaderKeyFormat defines how Envoy formats HTTP/1 header names on the wire.<br />ProperCaseWords capitalizes the first letter and any letter after a special<br />character. This includes headers that Envoy adds itself.<br />When unset, Envoy lowercases header names.<br />Envoy Gateway applies the format on the listener HTTP/1 codec and on HTTP/1<br />requests sent to backends for routes on that listener.<br />HeaderKeyFormat and PreserveHeaderCase are mutually exclusive. |
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 | `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
 | `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |

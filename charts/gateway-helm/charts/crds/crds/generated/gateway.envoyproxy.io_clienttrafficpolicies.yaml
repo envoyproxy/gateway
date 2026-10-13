@@ -1116,6 +1116,18 @@ spec:
                     description: EnableTrailers defines if HTTP/1 trailers should
                       be proxied by Envoy.
                     type: boolean
+                  headerKeyFormat:
+                    description: |-
+                      HeaderKeyFormat defines how Envoy formats HTTP/1 header names on the wire.
+                      ProperCaseWords capitalizes the first letter and any letter after a special
+                      character. This includes headers that Envoy adds itself.
+                      When unset, Envoy lowercases header names.
+                      Envoy Gateway applies the format on the listener HTTP/1 codec and on HTTP/1
+                      requests sent to backends for routes on that listener.
+                      HeaderKeyFormat and PreserveHeaderCase are mutually exclusive.
+                    enum:
+                    - ProperCaseWords
+                    type: string
                   http10:
                     description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
                       requests.
@@ -1175,8 +1187,15 @@ spec:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
                       By default, Envoy will lowercase all the headers.
+                      PreserveHeaderCase keeps the case of headers that already carry one. It does
+                      not change headers that Envoy creates in lowercase.
+                      PreserveHeaderCase and HeaderKeyFormat are mutually exclusive.
                     type: boolean
                 type: object
+                x-kubernetes-validations:
+                - message: preserveHeaderCase and headerKeyFormat are mutually exclusive
+                  rule: '!(has(self.headerKeyFormat) && has(self.preserveHeaderCase)
+                    && self.preserveHeaderCase == true)'
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:

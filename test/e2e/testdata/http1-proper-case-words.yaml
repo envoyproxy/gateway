@@ -1,0 +1,90 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: http1-proper-case-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http1-proper-case-ctp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: http1-proper-case-gateway
+  http1:
+    headerKeyFormat: ProperCaseWords
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http1-proper-case-words
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: http1-proper-case-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /http1-proper-case
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: x-added-by-route
+                value: "1"
+        - type: RequestRedirect
+          requestRedirect:
+            statusCode: 302
+            hostname: example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: http1-default-header-case-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http1-default-header-case
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: http1-default-header-case-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /http1-default-case
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: x-added-by-route
+                value: "1"
+        - type: RequestRedirect
+          requestRedirect:
+            statusCode: 302
+            hostname: example.com

@@ -23,7 +23,6 @@ import (
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	hcfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/health_check/event_sinks/file/v3"
-	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
@@ -1121,7 +1120,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
 	requiresHTTP1Options := args.http1Settings != nil &&
-		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
+		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HeaderKeyFormat != "" || args.http1Settings.HTTP10 != nil)
 
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
 		args.admissionControl != nil
@@ -1591,16 +1590,8 @@ func buildHTTP1Settings(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	http1Opts := &corev3.Http1ProtocolOptions{}
 	if opts != nil {
 		http1Opts.EnableTrailers = opts.EnableTrailers
-		if opts.PreserveHeaderCase {
-			preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
-			http1Opts.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
-				HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
-					StatefulFormatter: &corev3.TypedExtensionConfig{
-						Name:        "preserve_case",
-						TypedConfig: preservecaseAny,
-					},
-				},
-			}
+		if format := http1HeaderKeyFormat(opts); format != nil {
+			http1Opts.HeaderKeyFormat = format
 		}
 		if opts.HTTP10 != nil {
 			http1Opts.AcceptHttp_10 = true
