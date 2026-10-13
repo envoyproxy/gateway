@@ -1465,6 +1465,58 @@ func TestGetExtensionManagers(t *testing.T) {
 	})
 }
 
+func TestValidateExtensionBackendResources(t *testing.T) {
+	testCases := []struct {
+		name    string
+		gvk     egv1a1.GroupVersionKind
+		wantErr string
+	}{
+		{
+			name: "custom kind",
+			gvk:  egv1a1.GroupVersionKind{Group: "storage.example.io", Version: "v1", Kind: "S3Backend"},
+		},
+		{
+			name: "custom Service kind in a non-core group",
+			gvk:  egv1a1.GroupVersionKind{Group: "custom.example.io", Version: "v1", Kind: "Service"},
+		},
+		{
+			name:    "core Service",
+			gvk:     egv1a1.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
+			wantErr: "extension backendResources must not include the built-in backend kind Service",
+		},
+		{
+			name:    "ServiceImport",
+			gvk:     egv1a1.GroupVersionKind{Group: "multicluster.x-k8s.io", Version: "v1alpha1", Kind: "ServiceImport"},
+			wantErr: "extension backendResources must not include the built-in backend kind ServiceImport.multicluster.x-k8s.io",
+		},
+		{
+			name:    "Envoy Gateway Backend",
+			gvk:     egv1a1.GroupVersionKind{Group: egv1a1.GroupName, Version: "v1alpha1", Kind: egv1a1.KindBackend},
+			wantErr: "extension backendResources must not include the built-in backend kind Backend.gateway.envoyproxy.io",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			em := &egv1a1.ExtensionManager{
+				BackendResources: []egv1a1.GroupVersionKind{tc.gvk},
+				Hooks: &egv1a1.ExtensionHooks{
+					XDSTranslator: &egv1a1.XDSTranslatorHooks{Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute}},
+				},
+				Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{
+					FQDN: &egv1a1.FQDNEndpoint{Hostname: "extension.default.svc", Port: 8080},
+				}},
+			}
+			err := validateEnvoyGatewayExtensionManager(em)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, tc.wantErr)
+		})
+	}
+}
+
 func TestWarnEnvoyGateway(t *testing.T) {
 	eg := egv1a1.DefaultEnvoyGateway()
 
