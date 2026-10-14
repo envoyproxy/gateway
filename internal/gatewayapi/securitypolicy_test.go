@@ -1472,6 +1472,169 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	require.True(t, hasParentFalseCondition(policy))
 }
 
+func Test_SecurityPolicy_TCPRoute_UnsupportedAllow_setsWarning(t *testing.T) {
+	tr := &Translator{
+		GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+	}
+
+	tcpRoute := &TCPRouteContext{
+		TCPRoute: &gwapiv1.TCPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "tcp-route",
+			},
+			Spec: gwapiv1.TCPRouteSpec{
+				CommonRouteSpec: gwapiv1.CommonRouteSpec{
+					ParentRefs: []gwapiv1.ParentReference{
+						{Name: "test-gateway"},
+					},
+				},
+				Rules: []gwapiv1.TCPRouteRule{
+					{
+						BackendRefs: []gwapiv1.BackendRef{
+							{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Name: "test-service",
+									Port: new(gwapiv1.PortNumber(80)),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+		Spec: gwapiv1.GatewaySpec{
+			Listeners: []gwapiv1.Listener{
+				{
+					Name:     "tcp",
+					Protocol: gwapiv1.TCPProtocolType,
+					Port:     8080,
+				},
+			},
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+	gtwCtx.ResetListeners()
+
+	parentRef := tcpRoute.Spec.ParentRefs[0]
+	parentCtx := &RouteParentContext{
+		ParentReference: &parentRef,
+		TCPRoute:        tcpRoute.TCPRoute,
+	}
+	parentCtx.SetListeners(gtwCtx.listeners...)
+	tcpRoute.SetRouteParentContext(parentRef, parentCtx)
+
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-with-method"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+				},
+				Operation: &egv1a1.Operation{
+					Methods: []gwapiv1.HTTPMethod{"GET"},
+				},
+			},
+			{
+				Name:   new("allow-cidr"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{"192.168.0.0/16"},
+				},
+			},
+		},
+	}
+
+	target := policyTargetReferenceWithSectionName{
+		Group:     gwapiv1.Group(gwapiv1.GroupVersion.Group),
+		Kind:      resource.KindTCPRoute,
+		Name:      "tcp-route",
+		Namespace: "default",
+	}
+
+	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{
+		{
+			Kind:      string(resource.KindTCPRoute),
+			Name:      "tcp-route",
+			Namespace: "default",
+		}: {
+			RouteContext: tcpRoute,
+		},
+	}
+
+	resources := resource.NewResources()
+	tcpRouteIR := &ir.TCPRoute{Name: "tcp-route"}
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRouteIR},
+				},
+			},
+		},
+	}
+
+	trContext := &TranslatorContext{}
+	trContext.SetServices(resources.Services)
+	tr.TranslatorContext = trContext
+
+	tr.processSecurityPolicyForRoute(
+		resources,
+		xdsIR,
+		routeMap,
+		make(map[types.NamespacedName]*policyListenerSetTargetContext),
+		make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy),
+		make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy),
+		newPolicyScopeGraph(),
+		newPolicyScopeGraph(),
+		policy,
+		target,
+	)
+
+	// The unsupported Allow rule must not appear in the translated TCP IR.
+	require.NotNil(t, tcpRouteIR.Authorization)
+	require.Len(t, tcpRouteIR.Authorization.Rules, 1)
+	require.Equal(t, "allow-cidr", tcpRouteIR.Authorization.Rules[0].Name)
+	require.Len(t, tcpRouteIR.Authorization.Rules[0].Principal.ClientCIDRs, 1)
+	require.Equal(
+		t,
+		"192.168.0.0/16",
+		tcpRouteIR.Authorization.Rules[0].Principal.ClientCIDRs[0].CIDR,
+	)
+
+	// The policy ancestor must receive the unsupported-rule warning.
+	require.NotEmpty(t, policy.Status.Ancestors)
+
+	var warning bool
+	for _, ancestor := range policy.Status.Ancestors {
+		for _, condition := range ancestor.Conditions {
+			if condition.Type == string(egv1a1.PolicyConditionWarning) {
+				warning = true
+				require.Equal(
+					t,
+					string(egv1a1.PolicyReasonUnsupportedAuthorizationRule),
+					condition.Reason,
+				)
+				require.Contains(t, condition.Message, "allow-with-method")
+			}
+		}
+	}
+	require.True(t, warning, "expected UnsupportedAuthorizationRule warning")
+}
+
 // --- non-TCP branch: malformed CIDR should return err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
@@ -2666,6 +2829,41 @@ func TestFilterAuthorizationForTCP(t *testing.T) {
 			},
 		},
 	}))
+}
+
+func TestFilterAuthorizationForTCP_UnsupportedAllowRule(t *testing.T) {
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("allow-with-method"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{
+						"10.0.0.0/8",
+					},
+				},
+				Operation: &egv1a1.Operation{
+					Methods: []gwapiv1.HTTPMethod{"GET"},
+				},
+			},
+			{
+				Name:   new("allow-cidr"),
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{
+						"192.168.0.0/16",
+					},
+				},
+			},
+		},
+	}
+
+	skipped := filterAuthorizationForTCP(policy)
+
+	require.Equal(t, []string{"allow-with-method"}, skipped)
+	require.Len(t, policy.Spec.Authorization.Rules, 1)
+	require.Equal(t, "allow-cidr", *policy.Spec.Authorization.Rules[0].Name)
 }
 
 func TestTranslateSecurityPolicyForListeners_HTTPOnlyDoesNotFailForTCPIncompatibleDeny(t *testing.T) {

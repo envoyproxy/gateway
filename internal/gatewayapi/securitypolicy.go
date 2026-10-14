@@ -537,9 +537,51 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
-		// No merging - use existing translation logic
-		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil); err != nil {
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+		routePolicy := policy
+
+		if currTarget.Kind == resource.KindTCPRoute && policy.Spec.Authorization != nil {
+			policyCopy := *policy
+			authorizationCopy := *policy.Spec.Authorization
+			authorizationCopy.Rules = append(
+				[]egv1a1.AuthorizationRule(nil),
+				policy.Spec.Authorization.Rules...,
+			)
+			policyCopy.Spec.Authorization = &authorizationCopy
+
+			skipped := filterAuthorizationForTCP(&policyCopy)
+			routePolicy = &policyCopy
+
+			if len(skipped) > 0 {
+				message := fmt.Sprintf(
+					"Authorization rules skipped for TCP listeners: %s",
+					strings.Join(skipped, ", "),
+				)
+
+				for _, ancestorRef := range ancestorRefs {
+					status.SetWarningForPolicyAncestor(
+						&policy.Status,
+						ancestorRef,
+						t.GatewayControllerName,
+						egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+						message,
+						policy.Generation,
+					)
+				}
+			}
+
+		}
+
+		if err := t.translateSecurityPolicyForRoute(
+			routePolicy,
+			&securityPolicyOwners{},
+			targetedRoute,
+			currTarget,
+			resources,
+			xdsIR,
+			nil,
+		); err != nil {
+			status.SetTranslationErrorForPolicyAncestors(
+				&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
 				policy.Generation,
@@ -617,8 +659,48 @@ func (t *Translator) processSecurityPolicyForRoute(
 						authorizationCopy.Rules = append([]egv1a1.AuthorizationRule(nil), parentPolicy.Spec.Authorization.Rules...)
 						parentCopy.Spec.Authorization = &authorizationCopy
 					}
-					filterAuthorizationForTCP(&parentCopy)
+					skipped := filterAuthorizationForTCP(&parentCopy)
 					mergeParent = &parentCopy
+
+					if len(skipped) > 0 {
+						message := fmt.Sprintf(
+							"Authorization rules skipped for TCP listeners: %s",
+							strings.Join(skipped, ", "),
+						)
+
+						var parentAncestorRef gwapiv1.ParentReference
+
+						switch parentScope.Kind {
+						case policyScopeKindGateway:
+							parentAncestorRef = getAncestorRefForPolicy(
+								parentScope.NamespacedName, nil,
+							)
+						case policyScopeKindGatewayListener:
+							sectionName := parentScope.SectionName
+							parentAncestorRef = getAncestorRefForPolicy(
+								parentScope.NamespacedName, &sectionName,
+							)
+						case policyScopeKindListenerSet:
+							parentAncestorRef = getAncestorRefForListenerSetPolicy(
+								parentScope.NamespacedName, nil,
+							)
+						case policyScopeKindListenerSetListener:
+							sectionName := parentScope.SectionName
+							parentAncestorRef = getAncestorRefForListenerSetPolicy(
+								parentScope.NamespacedName, &sectionName,
+							)
+						}
+
+						status.SetWarningForPolicyAncestor(
+							&parentPolicy.Status,
+							&parentAncestorRef,
+							t.GatewayControllerName,
+							egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+							message,
+							parentPolicy.Generation,
+						)
+					}
+
 				}
 
 				mergedPolicy, owners, err := mergeSecurityPolicy(policy, mergeParent)
@@ -1035,6 +1117,16 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
+func isAuthorizationRuleSupportedOnTCP(rule *egv1a1.AuthorizationRule) bool {
+	return rule.Operation == nil &&
+		rule.CEL == nil &&
+		rule.Principal != nil &&
+		rule.Principal.JWT == nil &&
+		len(rule.Principal.Headers) == 0 &&
+		len(rule.Principal.ClientIPGeoLocations) == 0 &&
+		len(rule.Principal.ClientCIDRs) > 0
+}
+
 func filterAuthorizationForTCP(policy *egv1a1.SecurityPolicy) []string {
 	if policy.Spec.Authorization == nil {
 		return nil
@@ -1044,13 +1136,7 @@ func filterAuthorizationForTCP(policy *egv1a1.SecurityPolicy) []string {
 	rules := make([]egv1a1.AuthorizationRule, 0, len(policy.Spec.Authorization.Rules))
 
 	for _, rule := range policy.Spec.Authorization.Rules {
-		incompatible := rule.Operation != nil ||
-			rule.CEL != nil ||
-			rule.Principal == nil ||
-			rule.Principal.JWT != nil ||
-			len(rule.Principal.Headers) > 0 ||
-			len(rule.Principal.ClientIPGeoLocations) > 0 ||
-			len(rule.Principal.ClientCIDRs) == 0
+		incompatible := !isAuthorizationRuleSupportedOnTCP(&rule)
 
 		if incompatible && rule.Action == egv1a1.AuthorizationActionAllow {
 			if rule.Name != nil {
@@ -1497,14 +1583,37 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						continue
 					}
 
+					// Only authorization for TCP.
+					if policy.Spec.Authorization == nil {
+						continue
+					}
+
+					var unsupportedDeny bool
+					for _, rule := range policy.Spec.Authorization.Rules {
+						if rule.Action == egv1a1.AuthorizationActionDeny &&
+							!isAuthorizationRuleSupportedOnTCP(&rule) {
+							unsupportedDeny = true
+							break
+						}
+					}
+
+					if unsupportedDeny {
+						// Fail closed: an unsupported Deny rule must never be ignored.
+						r.Authorization = &ir.Authorization{
+							DefaultAction: egv1a1.AuthorizationActionDeny,
+						}
+						continue
+					}
+
 					if r.Authorization != nil {
 						continue
 					}
-					// Only authorization for TCP
+
 					if authorization != nil {
 						authCopy := *authorization
 						r.Authorization = &authCopy
 					}
+
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
