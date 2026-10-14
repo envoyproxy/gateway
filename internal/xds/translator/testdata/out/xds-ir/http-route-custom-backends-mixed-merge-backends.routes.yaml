@@ -1,0 +1,18 @@
+- ignorePortInHostMatching: true
+  name: custom-backends-mixed-merge-backends-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: custom-backends-mixed-merge-backends-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /mixed
+      name: mixed-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: service/default/service-1/8080/http
+            weight: 1

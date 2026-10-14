@@ -1,0 +1,58 @@
+# Same rule as http-route-custom-backends-mixed.yaml, but with MergeBackends enabled: the Service
+# merges into a shared BackendCluster (BackendClusterRefs) while the custom backend stays a per-route
+# Setting with no endpoints. The rule now has two cluster sources, so it takes the weighted-clusters
+# path, where the custom backend's Setting gets no weighted entry.
+backendClusters:
+- metadata:
+    kind: Service
+    name: service-1
+    namespace: default
+    sectionName: "8080"
+  name: service/default/service-1/8080/http
+  setting:
+    addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8080
+    metadata:
+      kind: Service
+      name: service-1
+      namespace: default
+      sectionName: "8080"
+    name: service/default/service-1/8080/http
+    protocol: HTTP
+http:
+- name: "custom-backends-mixed-merge-backends-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "mixed-route"
+    hostname: "*"
+    pathMatch:
+      prefix: "/mixed"
+    destination:
+      name: "mixed-route-dest"
+      backendClusterRefs:
+      - name: service/default/service-1/8080/http
+        weight: 1
+      settings:
+      - isCustomBackend: true
+        name: "mixed-route-dest/backend/1"
+        weight: 1
+    extensionRefs:
+    - object:
+        apiVersion: inference.networking.x-k8s.io/v1alpha2
+        kind: InferencePool
+        metadata:
+          name: inference-pool
+        spec:
+          targetPortNumber: 8000
+          selector:
+            app: vllm-llama3-8b-instruct
+          extensionRef:
+            name: vllm-llama3-8b-instruct-epp
