@@ -1184,12 +1184,6 @@ func isGatewayClass(target policyTargetReferenceWithSectionName) bool {
 	return target.Kind == resource.KindGatewayClass && target.SectionName == nil
 }
 
-func isGatewayClassListener(target policyTargetReferenceWithSectionName) bool {
-	// If the target is a gatewayclass and the section name is not nil, then it targets a listener by name
-	// across all Gateways merged under that GatewayClass.
-	return target.Kind == resource.KindGatewayClass && target.SectionName != nil
-}
-
 // isBackendTargetKind reports whether target's kind is Service, ServiceImport, or Backend -
 // i.e. the target is a backend, not a Gateway/ListenerSet/xRoute.
 func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {

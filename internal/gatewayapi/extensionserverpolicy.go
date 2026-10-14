@@ -186,7 +186,7 @@ func (t *Translator) ProcessExtensionServerPolicies(
 			resolveGatewayClassTargetsFromSelectors(targetRefsList[i].TargetSelectors, resources.GatewayClass),
 			resolvePolicyTargetsFromReferences(targetRefsList[i], ""))
 		for _, currTarget := range targetRefs {
-			if isGatewayClass(currTarget) || isGatewayClassListener(currTarget) {
+			if currTarget.Kind == resource.KindGatewayClass {
 				t.processExtensionServerPolicyForGatewayClass(xdsIR, gatewayMap, getOrInitPolicy(i), currTarget)
 			}
 		}
