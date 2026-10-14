@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: custom-backends-mixed-no-merge-backends-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: custom-backends-mixed-no-merge-backends-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /mixed
+      name: mixed-route
+      route:
+        cluster: mixed-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -1,0 +1,15 @@
+- clusterName: mixed-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: mixed-route-dest/backend/0
+  - loadBalancingWeight: 1
+    locality:
+      region: mixed-route-dest/backend/1
