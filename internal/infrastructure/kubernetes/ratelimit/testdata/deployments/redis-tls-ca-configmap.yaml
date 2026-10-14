@@ -150,9 +150,6 @@ spec:
         - mountPath: /etc/statsd-exporter
           name: statsd-exporter-config
           readOnly: true
-        - mountPath: /redis-certs
-          name: redis-certs
-          readOnly: true
         - mountPath: /redis-ca-certs
           name: redis-ca-certs
           readOnly: true

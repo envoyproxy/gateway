@@ -244,7 +244,7 @@ func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 		})
 	}
 
-	if rateLimit.Backend.Redis.TLS != nil {
+	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "redis-certs",
 			MountPath: "/redis-certs",
