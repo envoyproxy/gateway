@@ -2189,7 +2189,7 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
+		(len(r.Settings) > 1 && (r.HasPreferLocalZone() || r.HasCustomBackend())) ||
 		r.HasMixedUpstreamProtocolRequirements() ||
 		r.HasMixedAutoSNISettings()
 }
@@ -2272,6 +2272,15 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	}
 
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
+}
+
+func (r *RouteDestination) HasCustomBackend() bool {
+	for _, s := range r.Settings {
+		if s.IsCustomBackend {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {

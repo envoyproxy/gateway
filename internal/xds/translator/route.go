@@ -366,7 +366,9 @@ func buildXdsWeightedRouteAction(destination *ir.RouteDestination, backendIndex 
 
 	// Each Setting gets its own weighted entry, using its own Weight.
 	for _, destinationSetting := range destination.Settings {
-		if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
+		if len(destinationSetting.Endpoints) > 0 ||
+			destinationSetting.IsDynamicResolver || // Dynamic resolver has no endpoints
+			destinationSetting.IsCustomBackend {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
 				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},

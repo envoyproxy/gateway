@@ -1,14 +1,16 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: mixed-route-dest/backend/1
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -20,7 +22,6 @@
             localityWeightedLbConfig: {}
   name: mixed-route-dest/backend/1
   perConnectionBufferLimitBytes: 32768
-  type: EDS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024

@@ -106,6 +106,7 @@ const (
 	EndpointTypeDNS EndpointType = iota
 	EndpointTypeStatic
 	EndpointTypeDynamicResolver
+	EndpointTypeNone
 )
 
 var (
@@ -131,6 +132,10 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	// since there's no Mixed AddressType among all the DestinationSettings.
 	if settings == nil {
 		return EndpointTypeStatic
+	}
+
+	if settings[0].IsCustomBackend {
+		return EndpointTypeNone
 	}
 
 	if settings[0].IsDynamicResolver {

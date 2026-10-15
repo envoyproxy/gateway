@@ -1370,6 +1370,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		// Dynamic resolver has no endpoints
 		// This assignment is not necessary, but it is added for clarity.
 		xdsCluster.LoadAssignment = nil
+	case EndpointTypeNone:
+		// Custom backend has no endpoints
+		// This assignment is not necessary, but it is added for clarity.
+		xdsCluster.LoadAssignment = nil
 	}
 
 	if err := processExtensionPostClusterHook(xdsCluster, args.unstructuredRefs, args.extensionMgr); err != nil {
