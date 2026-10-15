@@ -749,24 +749,11 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex, geoIPHeaders)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex, geoIPHeaders, http3Enabled)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
 			continue
-		}
-
-		// Done before the extension hook so the extension sees the complete route.
-		switch {
-		// A route proxying over upstream HTTP/3 strips the backend's alt-svc in the header mutation filter.
-		case routeUsesUpstreamHTTP3(httpRoute, t.backendIndex):
-			if err = patchRouteWithUpstreamHTTP3AltSvc(xdsRoute, httpListener, http3Enabled); err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-		// Advertise the listener's HTTP/3 port so clients can switch to QUIC.
-		case http3Enabled:
-			xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, buildHTTP3AltSvcHeader(http3AdvertisedPort(httpListener)))
 		}
 
 		// Check if an extension want to modify the route we just generated
@@ -779,6 +766,18 @@ func (t *Translator) addRouteToRouteConfig(
 			} else {
 				t.Logger.Error(err, "Extension Manager PostRoute failure")
 			}
+		}
+
+		if http3Enabled {
+			advertisedPort := httpListener.ExternalPort
+			if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
+				advertisedPort = *httpListener.HTTP3.AdvertisedPort
+			}
+			http3AltSvcHeader := buildHTTP3AltSvcHeader(advertisedPort)
+			if xdsRoute.ResponseHeadersToAdd == nil {
+				xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
+			}
+			xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, http3AltSvcHeader)
 		}
 		vHost.Routes = append(vHost.Routes, xdsRoute)
 
@@ -954,27 +953,12 @@ func findHCMinFilterChain(filterChain *listenerv3.FilterChain) (*hcmv3.HttpConne
 	return nil, errors.New("http connection manager not found")
 }
 
-const altSvcHeader = "alt-svc"
-
-// http3AdvertisedPort is the port clients are told to use for HTTP/3: the advertised
-// port from the ClientTrafficPolicy when set, else the listener's external port.
-func http3AdvertisedPort(httpListener *ir.HTTPListener) uint32 {
-	if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
-		return *httpListener.HTTP3.AdvertisedPort
-	}
-	return httpListener.ExternalPort
-}
-
-func http3AltSvcValue(port uint32) string {
-	return fmt.Sprintf(`h3=":%d"; ma=86400`, port)
-}
-
 func buildHTTP3AltSvcHeader(port uint32) *corev3.HeaderValueOption {
 	return &corev3.HeaderValueOption{
 		Append: &wrapperspb.BoolValue{Value: true},
 		Header: &corev3.HeaderValue{
-			Key:   altSvcHeader,
-			Value: http3AltSvcValue(port),
+			Key:   "alt-svc",
+			Value: strings.Join([]string{fmt.Sprintf(`%s=":%d"; ma=86400`, "h3", port)}, ", "),
 		},
 	}
 }
