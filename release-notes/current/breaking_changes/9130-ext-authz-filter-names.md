@@ -1,0 +1,1 @@
+The listener-level `ext_authz` HTTP filters are no longer named after the `SecurityPolicy` (`envoy.filters.http.ext_authz/<policy>`). They are now named by a hash of their filter-level settings, and their authorization service moved to the route's `typed_per_filter_config`. An `EnvoyPatchPolicy` that targets an `ext_authz` filter by its old name must be updated.

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -36,8 +37,11 @@ var _ httpFilter = &extAuth{}
 
 // patchHCM builds and appends the ext_authz Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
-// Note: this method creates an ext_authz filter for each route that contains an ExtAuthz config.
-// The filter is disabled by default. It is enabled on the route level.
+// Note: routes share one disabled ext_authz filter per distinct set of
+// filter-level settings. Each route enables its filter and supplies its own
+// authorization service through ExtAuthzPerRoute.CheckSettings, so creating or
+// deleting a SecurityPolicy changes routes only and does not update the
+// listener, which would drain its connections.
 func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
 
@@ -54,16 +58,13 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 			continue
 		}
 
-		// Only generates one OAuth2 Envoy filter for each unique name.
-		// For example, if there are two routes under the same gateway with the
-		// same OIDC config, only one OAuth2 filter will be generated.
-		if hcmContainsFilter(mgr, extAuthFilterName(route.Security.ExtAuth)) {
-			continue
-		}
-
 		filter, err := buildHCMExtAuthFilter(route.Security.ExtAuth)
 		if err != nil {
 			errs = errors.Join(errs, err)
+			continue
+		}
+
+		if hcmContainsFilter(mgr, filter.Name) {
 			continue
 		}
 
@@ -73,9 +74,9 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 	return errs
 }
 
-// buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
+// buildHCMExtAuthFilter returns the shared ext_authz HTTP filter for the provided IR ExtAuth.
 func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
-	extAuthProto, err := extAuthConfig(extAuth)
+	filterName, extAuthProto, _, err := splitExtAuthConfig(extAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +86,7 @@ func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name:     extAuthFilterName(extAuth),
+		Name:     filterName,
 		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: extAuthAny,
@@ -93,8 +94,59 @@ func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-func extAuthFilterName(extAuth *ir.ExtAuth) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, extAuth.Name)
+// extAuthPlaceholderCluster backs the service of the shared ext_authz filters.
+// Every route that enables one of those filters overrides the service, so a
+// request reaches this cluster only if Envoy cannot build the route's client,
+// and then fails like any unreachable authorization service.
+const extAuthPlaceholderCluster = "ext-authz/placeholder"
+
+// splitExtAuthConfig splits the ext_authz config for extAuth into the
+// listener-level filter and the route-level CheckSettings that carry the
+// authorization service and context extensions. The filter is named by a hash
+// of its content, so policies that differ only in their service share it.
+func splitExtAuthConfig(extAuth *ir.ExtAuth) (string, *extauthv3.ExtAuthz, *extauthv3.CheckSettings, error) {
+	config, err := extAuthConfig(extAuth)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	checkSettings := &extauthv3.CheckSettings{
+		ContextExtensions: convertContextExtensions(extAuth.ContextExtensions),
+	}
+	// The filter keeps the service type, because Envoy derives filter-level
+	// behavior such as allowed request headers and body encoding from it.
+	switch services := config.Services.(type) {
+	case *extauthv3.ExtAuthz_HttpService:
+		checkSettings.ServiceOverride = &extauthv3.CheckSettings_HttpService{HttpService: services.HttpService}
+		config.Services = &extauthv3.ExtAuthz_HttpService{
+			HttpService: &extauthv3.HttpService{
+				ServerUri: &corev3.HttpUri{
+					Uri: "http://127.0.0.1:1",
+					HttpUpstreamType: &corev3.HttpUri_Cluster{
+						Cluster: extAuthPlaceholderCluster,
+					},
+					Timeout: durationpb.New(defaultExtServiceRequestTimeout),
+				},
+			},
+		}
+	case *extauthv3.ExtAuthz_GrpcService:
+		checkSettings.ServiceOverride = &extauthv3.CheckSettings_GrpcService{GrpcService: services.GrpcService}
+		config.Services = &extauthv3.ExtAuthz_GrpcService{
+			GrpcService: &corev3.GrpcService{
+				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
+						ClusterName: extAuthPlaceholderCluster,
+					},
+				},
+			},
+		}
+	}
+
+	hash, err := protoHash(config)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, hash), config, checkSettings, nil
 }
 
 func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
@@ -260,6 +312,17 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 	}
 
 	var errs error
+	if slices.ContainsFunc(routes, routeContainsExtAuth) {
+		errs = errors.Join(errs, addXdsCluster(tCtx, &xdsClusterArgs{
+			name: extAuthPlaceholderCluster,
+			settings: []*ir.DestinationSetting{{
+				Name:      destinationSettingName(extAuthPlaceholderCluster),
+				Weight:    new(uint32(1)),
+				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, "127.0.0.1", 1, false, nil)},
+			}},
+			endpointType: EndpointTypeStatic,
+		}))
+	}
 	for _, route := range routes {
 		if !routeContainsExtAuth(route) {
 			continue
@@ -299,13 +362,13 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 	if irRoute.Security == nil || irRoute.Security.ExtAuth == nil {
 		return nil
 	}
-	filterName := extAuthFilterName(irRoute.Security.ExtAuth)
-	contextExtensions := convertContextExtensions(irRoute.Security.ExtAuth.ContextExtensions)
+	filterName, _, checkSettings, err := splitExtAuthConfig(irRoute.Security.ExtAuth)
+	if err != nil {
+		return err
+	}
 	if err := enableFilterOnRoute(route, filterName, &extauthv3.ExtAuthzPerRoute{
 		Override: &extauthv3.ExtAuthzPerRoute_CheckSettings{
-			CheckSettings: &extauthv3.CheckSettings{
-				ContextExtensions: contextExtensions,
-			},
+			CheckSettings: checkSettings,
 		},
 	}); err != nil {
 		return err

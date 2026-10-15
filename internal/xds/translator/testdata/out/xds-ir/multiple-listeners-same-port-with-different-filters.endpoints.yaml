@@ -22,6 +22,18 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
+- clusterName: ext-authz/placeholder
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 127.0.0.1
+            portValue: 1
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: ext-authz/placeholder/backend/-1
 - clusterName: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
   endpoints:
   - lbEndpoints:
