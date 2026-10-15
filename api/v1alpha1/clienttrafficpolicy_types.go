@@ -129,7 +129,6 @@ type ClientTrafficPolicySpec struct {
 // HeaderSettings provides configuration options for headers on the listener.
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.preserveXRequestID) && has(self.requestID))",message="preserveXRequestID and requestID cannot both be set."
-// +kubebuilder:validation:XValidation:rule="has(self.serverName) ? (has(self.serverHeaderTransformation) && self.serverHeaderTransformation in ['Overwrite', 'AppendIfAbsent']) : true",message="serverName can only be set when serverHeaderTransformation is Overwrite or AppendIfAbsent."
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
 	// and responses.
@@ -211,22 +210,30 @@ type HeaderSettings struct {
 	// +optional
 	MaxRequestHeaderLimit *resource.Quantity `json:"maxRequestHeaderLimit,omitempty"`
 
-	// ServerHeaderTransformation determines how the Server response header is handled,
-	// mapping to the Envoy `server_header_transformation` HTTP connection manager setting.
-	// Defaults to PassThrough, which hides Envoy from the Server header.
+	// ServerHeader configures how the Server response header is handled.
+	// If not set, the Server header is passed through untouched, which hides Envoy from it.
 	//
 	// +optional
-	ServerHeaderTransformation *ServerHeaderTransformation `json:"serverHeaderTransformation,omitempty"`
+	ServerHeader *ServerHeader `json:"serverHeader,omitempty"`
+}
 
-	// ServerName is the value written to the Server response header, mapping to the Envoy
+// ServerHeader configures how the Server response header is handled.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.value) ? self.type in ['Overwrite', 'AppendIfAbsent'] : true",message="value can only be set when type is Overwrite or AppendIfAbsent."
+type ServerHeader struct {
+	// Type determines how the Server response header is handled, mapping to the Envoy
+	// `server_header_transformation` HTTP connection manager setting.
+	Type ServerHeaderTransformation `json:"type"`
+
+	// Value is the value written to the Server response header, mapping to the Envoy
 	// `server_name` HTTP connection manager setting. It only takes effect when
-	// ServerHeaderTransformation is set to Overwrite or AppendIfAbsent.
+	// Type is set to Overwrite or AppendIfAbsent.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern="^[!-~]([ \t!-~]*[!-~])?$"
 	// +optional
-	ServerName *string `json:"serverName,omitempty"`
+	Value *string `json:"value,omitempty"`
 }
 
 // ServerHeaderTransformation determines how the Server response header is handled.
@@ -235,10 +242,10 @@ type ServerHeaderTransformation string
 
 const (
 	// ServerHeaderTransformationOverwrite overwrites any Server header with the configured
-	// ServerName.
+	// Value.
 	ServerHeaderTransformationOverwrite ServerHeaderTransformation = "Overwrite"
 	// ServerHeaderTransformationAppendIfAbsent sets the Server header to the configured
-	// ServerName if the response does not already carry one.
+	// Value if the response does not already carry one.
 	ServerHeaderTransformationAppendIfAbsent ServerHeaderTransformation = "AppendIfAbsent"
 	// ServerHeaderTransformationPassThrough leaves the Server header untouched. This is the
 	// default.

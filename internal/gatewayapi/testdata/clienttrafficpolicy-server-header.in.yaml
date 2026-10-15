@@ -36,8 +36,9 @@ clientTrafficPolicies:
       name: target-gateway-1
     spec:
       headers:
-        serverHeaderTransformation: Overwrite
-        serverName: envoy-gateway
+        serverHeader:
+          type: Overwrite
+          value: envoy-gateway
       targetRefs:
         - group: gateway.networking.k8s.io
           kind: Gateway
@@ -49,7 +50,8 @@ clientTrafficPolicies:
       name: target-gateway-2
     spec:
       headers:
-        serverHeaderTransformation: PassThrough
+        serverHeader:
+          type: PassThrough
       targetRefs:
         - group: gateway.networking.k8s.io
           kind: Gateway

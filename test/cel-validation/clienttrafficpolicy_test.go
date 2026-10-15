@@ -956,15 +956,17 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					Headers: &egv1a1.HeaderSettings{
-						ServerHeaderTransformation: new(egv1a1.ServerHeaderTransformationOverwrite),
-						ServerName:                 new("envoy-gateway"),
+						ServerHeader: &egv1a1.ServerHeader{
+							Type:  egv1a1.ServerHeaderTransformationOverwrite,
+							Value: new("envoy-gateway"),
+						},
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: "serverName without an overwriting server header transformation",
+			desc: "server header value without an overwriting type",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Name = "ctp-headers"
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
@@ -978,15 +980,17 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					Headers: &egv1a1.HeaderSettings{
-						ServerHeaderTransformation: new(egv1a1.ServerHeaderTransformationPassThrough),
-						ServerName:                 new("envoy-gateway"),
+						ServerHeader: &egv1a1.ServerHeader{
+							Type:  egv1a1.ServerHeaderTransformationPassThrough,
+							Value: new("envoy-gateway"),
+						},
 					},
 				}
 			},
 			wantErrors: []string{
 				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-headers\" is invalid:",
-				"spec.headers: Invalid value:",
-				": serverName can only be set when serverHeaderTransformation is Overwrite or AppendIfAbsent.",
+				"spec.headers.serverHeader: Invalid value:",
+				": value can only be set when type is Overwrite or AppendIfAbsent.",
 			},
 		},
 		{
@@ -1012,7 +1016,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.headers.serverName in body should match",
+				"spec.headers.serverHeader.value in body should match",
 			},
 		},
 	}

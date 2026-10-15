@@ -735,13 +735,13 @@ Only one `ClientTrafficPolicy` can set `maxRequestHeaderLimit` per Envoy listene
 
 This feature allows you to configure how the `Server` response header is handled, mapping to the Envoy [`server_header_transformation`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-server-header-transformation) and [`server_name`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-server-name) HTTP connection manager settings.
 
-`serverHeaderTransformation` accepts:
+`serverHeader.type` accepts:
 
-- `Overwrite`: always write `serverName` to the `Server` header.
-- `AppendIfAbsent`: write `serverName` only when the response does not already carry a `Server` header.
+- `Overwrite`: always write `serverHeader.value` to the `Server` header.
+- `AppendIfAbsent`: write `serverHeader.value` only when the response does not already carry a `Server` header.
 - `PassThrough`: leave the `Server` header untouched. This is the default, which keeps Envoy hidden from the `Server` header.
 
-`serverName` only takes effect with `Overwrite` or `AppendIfAbsent`.
+`serverHeader.value` only takes effect with `Overwrite` or `AppendIfAbsent`.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -758,8 +758,9 @@ spec:
       kind: Gateway
       name: eg
   headers:
-    serverHeaderTransformation: Overwrite
-    serverName: my-gateway
+    serverHeader:
+      type: Overwrite
+      value: my-gateway
 EOF
 ```
 
@@ -779,8 +780,9 @@ spec:
       kind: Gateway
       name: eg
   headers:
-    serverHeaderTransformation: Overwrite
-    serverName: my-gateway
+    serverHeader:
+      type: Overwrite
+      value: my-gateway
 ```
 
 {{% /tab %}}

@@ -1024,25 +1024,36 @@ spec:
                     - Generate
                     - Disable
                     type: string
-                  serverHeaderTransformation:
+                  serverHeader:
                     description: |-
-                      ServerHeaderTransformation determines how the Server response header is handled,
-                      mapping to the Envoy `server_header_transformation` HTTP connection manager setting.
-                      Defaults to PassThrough, which hides Envoy from the Server header.
-                    enum:
-                    - Overwrite
-                    - AppendIfAbsent
-                    - PassThrough
-                    type: string
-                  serverName:
-                    description: |-
-                      ServerName is the value written to the Server response header, mapping to the Envoy
-                      `server_name` HTTP connection manager setting. It only takes effect when
-                      ServerHeaderTransformation is set to Overwrite or AppendIfAbsent.
-                    maxLength: 256
-                    minLength: 1
-                    pattern: "^[!-~]([ \t!-~]*[!-~])?$"
-                    type: string
+                      ServerHeader configures how the Server response header is handled.
+                      If not set, the Server header is passed through untouched, which hides Envoy from it.
+                    properties:
+                      type:
+                        description: |-
+                          Type determines how the Server response header is handled, mapping to the Envoy
+                          `server_header_transformation` HTTP connection manager setting.
+                        enum:
+                        - Overwrite
+                        - AppendIfAbsent
+                        - PassThrough
+                        type: string
+                      value:
+                        description: |-
+                          Value is the value written to the Server response header, mapping to the Envoy
+                          `server_name` HTTP connection manager setting. It only takes effect when
+                          Type is set to Overwrite or AppendIfAbsent.
+                        maxLength: 256
+                        minLength: 1
+                        pattern: "^[!-~]([ \t!-~]*[!-~])?$"
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: value can only be set when type is Overwrite or AppendIfAbsent.
+                      rule: 'has(self.value) ? self.type in [''Overwrite'', ''AppendIfAbsent'']
+                        : true'
                   withUnderscoresAction:
                     description: |-
                       WithUnderscoresAction configures the action to take when an HTTP header with underscores
@@ -1108,11 +1119,6 @@ spec:
                 x-kubernetes-validations:
                 - message: preserveXRequestID and requestID cannot both be set.
                   rule: '!(has(self.preserveXRequestID) && has(self.requestID))'
-                - message: serverName can only be set when serverHeaderTransformation
-                    is Overwrite or AppendIfAbsent.
-                  rule: 'has(self.serverName) ? (has(self.serverHeaderTransformation)
-                    && self.serverHeaderTransformation in [''Overwrite'', ''AppendIfAbsent''])
-                    : true'
               healthCheck:
                 description: HealthCheck provides configuration for determining whether
                   the HTTP/HTTPS listener is healthy.

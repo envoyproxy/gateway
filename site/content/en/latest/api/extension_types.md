@@ -3649,8 +3649,7 @@ _Appears in:_
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
 | `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header set by clients can be normalized. |
 | `maxRequestHeaderLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxRequestHeaderLimit provides configuration for the maximum size of the<br />request headers allowed for incoming connections, mapping to the Envoy<br />`max_request_headers_kb` HTTP connection manager setting. Requests whose<br />headers exceed this limit receive a 431 (Request Header Fields Too Large)<br />response. The value is rounded up to the nearest KiB, must be at least 1Ki,<br />and cannot exceed 8192Ki (the maximum Envoy supports).<br />For example, 60Ki, 96Ki, 128Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 60Ki bytes. |
-| `serverHeaderTransformation` | _[ServerHeaderTransformation](#serverheadertransformation)_ |  false  |  | ServerHeaderTransformation determines how the Server response header is handled,<br />mapping to the Envoy `server_header_transformation` HTTP connection manager setting.<br />Defaults to PassThrough, which hides Envoy from the Server header. |
-| `serverName` | _string_ |  false  |  | ServerName is the value written to the Server response header, mapping to the Envoy<br />`server_name` HTTP connection manager setting. It only takes effect when<br />ServerHeaderTransformation is set to Overwrite or AppendIfAbsent. |
+| `serverHeader` | _[ServerHeader](#serverheader)_ |  false  |  | ServerHeader configures how the Server response header is handled.<br />If not set, the Server header is passed through untouched, which hides Envoy from it. |
 
 
 #### HeaderWriteAction
@@ -6411,6 +6410,21 @@ _Appears in:_
 | `authorization` | _[Authorization](#authorization)_ |  false  |  | Authorization defines the authorization configuration. |
 
 
+#### ServerHeader
+
+
+
+ServerHeader configures how the Server response header is handled.
+
+_Appears in:_
+- [HeaderSettings](#headersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[ServerHeaderTransformation](#serverheadertransformation)_ |  true  |  | Type determines how the Server response header is handled, mapping to the Envoy<br />`server_header_transformation` HTTP connection manager setting. |
+| `value` | _string_ |  false  |  | Value is the value written to the Server response header, mapping to the Envoy<br />`server_name` HTTP connection manager setting. It only takes effect when<br />Type is set to Overwrite or AppendIfAbsent. |
+
+
 #### ServerHeaderTransformation
 
 _Underlying type:_ _string_
@@ -6418,12 +6432,12 @@ _Underlying type:_ _string_
 ServerHeaderTransformation determines how the Server response header is handled.
 
 _Appears in:_
-- [HeaderSettings](#headersettings)
+- [ServerHeader](#serverheader)
 
 | Value | Description |
 | ----- | ----------- |
-| `Overwrite` | ServerHeaderTransformationOverwrite overwrites any Server header with the configured<br />ServerName.<br /> | 
-| `AppendIfAbsent` | ServerHeaderTransformationAppendIfAbsent sets the Server header to the configured<br />ServerName if the response does not already carry one.<br /> | 
+| `Overwrite` | ServerHeaderTransformationOverwrite overwrites any Server header with the configured<br />Value.<br /> | 
+| `AppendIfAbsent` | ServerHeaderTransformationAppendIfAbsent sets the Server header to the configured<br />Value if the response does not already carry one.<br /> | 
 | `PassThrough` | ServerHeaderTransformationPassThrough leaves the Server header untouched. This is the<br />default.<br /> | 
 
 
