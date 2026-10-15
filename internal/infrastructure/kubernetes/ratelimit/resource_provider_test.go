@@ -851,6 +851,17 @@ func TestDeployment(t *testing.T) {
 	}
 }
 
+func TestRateLimitImageRepositoryPreservesLinkedTag(t *testing.T) {
+	containerSpec := &egv1a1.KubernetesContainerSpec{
+		Image:           new("docker.io/envoyproxy/ratelimit:pinned"),
+		ImageRepository: new("private.registry/envoyproxy/ratelimit"),
+	}
+
+	image, err := resolveRateLimitImage(containerSpec)
+	require.NoError(t, err)
+	require.Equal(t, "private.registry/envoyproxy/ratelimit:pinned", image)
+}
+
 func TestHorizontalPodAutoscaler(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)

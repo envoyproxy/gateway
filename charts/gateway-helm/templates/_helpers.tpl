@@ -221,10 +221,13 @@ provider:
   kubernetes:
     {{- if $renderRateLimit }}
     rateLimitDeployment:
-      {{- /* Only render the image field if an override or global registry is set, otherwise let the Go binary default handle it */}}
-      {{- if or .Values.global.imageRegistry .Values.global.images.ratelimit.image }}
+      {{- /* Use imageRepository when the image is not overridden so runtime defaulting keeps the linked tag. */}}
+      {{- if .Values.global.images.ratelimit.image }}
       container:
         image: {{ include "eg.ratelimit.image" . }}
+      {{- else if .Values.global.imageRegistry }}
+      container:
+        imageRepository: {{ printf "%s/%s" .Values.global.imageRegistry "envoyproxy/ratelimit" }}
       {{- end }}
       {{- if (or .Values.global.imagePullSecrets .Values.global.images.ratelimit.pullSecrets) }}
       pod:

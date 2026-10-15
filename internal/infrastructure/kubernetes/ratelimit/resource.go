@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/containers/image/v5/docker/reference"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -142,7 +143,12 @@ func rateLimitLabels() map[string]string {
 // expectedRateLimitContainers returns expected rateLimit containers.
 func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
 	namespace string,
-) []corev1.Container {
+) ([]corev1.Container, error) {
+	image, err := resolveRateLimitImage(rateLimitDeployment.Container)
+	if err != nil {
+		return nil, err
+	}
+
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "grpc",
@@ -162,7 +168,7 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 	containers := []corev1.Container{
 		{
 			Name:            InfraName,
-			Image:           *rateLimitDeployment.Container.Image,
+			Image:           image,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
 				"/bin/ratelimit",
@@ -216,7 +222,30 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 		},
 	}
 
-	return containers
+	return containers, nil
+}
+
+func resolveRateLimitImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, error) {
+	if containerSpec == nil || containerSpec.Image == nil || *containerSpec.Image == "" {
+		return "", fmt.Errorf("rate limit container image is not set")
+	}
+
+	image := *containerSpec.Image
+	if containerSpec.ImageRepository == nil || *containerSpec.ImageRepository == "" {
+		return image, nil
+	}
+
+	imageRef, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse rate limit image %q: %w", image, err)
+	}
+
+	taggedImage, ok := imageRef.(reference.Tagged)
+	if !ok {
+		return "", fmt.Errorf("rate limit image %q has no tag to use with imageRepository", image)
+	}
+
+	return fmt.Sprintf("%s:%s", *containerSpec.ImageRepository, taggedImage.Tag()), nil
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.

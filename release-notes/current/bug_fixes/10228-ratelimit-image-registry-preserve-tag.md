@@ -1,0 +1,1 @@
+Fixed the Helm chart's global image registry override replacing a build-linked Envoy ratelimit image tag with `master`. The override now changes the repository while retaining the tag linked into the Envoy Gateway binary.
