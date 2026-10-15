@@ -109,7 +109,11 @@ type OIDC struct {
 	// the client and reject the logout request otherwise. If the default value is not registered,
 	// set an explicit uri here, or set disabled to true to omit the parameter altogether.
 	//
+	// When a route's SecurityPolicy with a mergeType of StrategicMerge sets this field, the
+	// route's block replaces the parent's block rather than merging into it.
+	//
 	// +optional
+	// +patchStrategy=replace
 	PostLogoutRedirect *OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty" patchStrategy:"replace"`
 
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
@@ -302,7 +306,9 @@ type OIDCPostLogoutRedirect struct {
 	// not need the user redirected back after the logout completes. In that case the user is left
 	// on a page controlled by the provider.
 	//
-	// Setting this to false is equivalent to leaving disabled unset.
+	// Setting this to false on its own sends the default post logout redirect URI, the same as
+	// leaving postLogoutRedirect unset. A route block that sets only false does not inherit the
+	// parent's uri.
 	//
 	// +optional
 	Disabled *bool `json:"disabled,omitempty"`

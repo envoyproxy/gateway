@@ -660,6 +660,13 @@ The logout itself still completes — Envoy Gateway clears its cookies and the p
 session — but because the provider is not told where to send the user, the browser is left on a page
 controlled by the provider rather than returning to your application.
 
+To override the post logout redirect URI set by a parent policy on a route, set `postLogoutRedirect` on
+the route's policy with `mergeType: StrategicMerge`. The route's block replaces the parent's, so
+`disabled: true` on the route turns off the parent's `uri`. A route that omits `postLogoutRedirect`
+inherits the parent's setting. A route block that sets only `disabled: false` does not inherit the
+parent's `uri`; Envoy uses its default URI instead. With `mergeType: JSONMerge`, the fields merge key by
+key, so setting `disabled: true` on a route that inherits a `uri` from its parent is rejected.
+
 `uri` cannot be set together with `disabled: true`. `postLogoutRedirect` has no effect when no end
 session endpoint is configured or discovered, because in that case Envoy Gateway does not redirect to
 the provider at all.
