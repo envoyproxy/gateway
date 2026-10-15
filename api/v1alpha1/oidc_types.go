@@ -109,9 +109,6 @@ type OIDC struct {
 	// the client and reject the logout request otherwise. If the default value is not registered,
 	// set an explicit uri here, or set disabled to true to omit the parameter altogether.
 	//
-	// When a route's SecurityPolicy with a mergeType of StrategicMerge sets this field, the
-	// route's block replaces the parent's block rather than merging into it.
-	//
 	// +optional
 	// +patchStrategy=replace
 	PostLogoutRedirect *OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty" patchStrategy:"replace"`
