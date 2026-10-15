@@ -8,6 +8,7 @@ package validation
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -285,7 +286,8 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 
 	if len(eg.ExtensionManagers) > 0 {
 		names := make(map[string]struct{})
-		for i, em := range eg.ExtensionManagers {
+		for i := range eg.ExtensionManagers {
+			em := &eg.ExtensionManagers[i]
 			if em.Name == "" {
 				return fmt.Errorf("extension manager at index %d: name is required", i)
 			}
@@ -293,7 +295,7 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 				return fmt.Errorf("extension manager at index %d: duplicate name %q", i, em.Name)
 			}
 			names[em.Name] = struct{}{}
-			if err := validateEnvoyGatewayExtensionManager(&eg.ExtensionManagers[i]); err != nil {
+			if err := validateEnvoyGatewayExtensionManager(em); err != nil {
 				return fmt.Errorf("extension manager %q: %w", em.Name, err)
 			}
 		}
@@ -314,6 +316,11 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 
 	if len(extensionManager.Hooks.XDSTranslator.Pre) == 0 && len(extensionManager.Hooks.XDSTranslator.Post) == 0 {
 		return fmt.Errorf("registered extension has no hooks specified")
+	}
+
+	if len(extensionManager.SecretResources) > 0 &&
+		!slices.Contains(extensionManager.Hooks.XDSTranslator.Post, egv1a1.XDSSecret) {
+		return fmt.Errorf("secretResources requires the %s hook to be registered", egv1a1.XDSSecret)
 	}
 
 	err := validateExtensionService(extensionManager.Service)
