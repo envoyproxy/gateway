@@ -61,6 +61,17 @@ func (*headerMutation) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListene
 	return nil
 }
 
+const altSvcHeader = "alt-svc"
+
+// http3AdvertisedPort is the port clients are told to use for HTTP/3: the advertised
+// port from the ClientTrafficPolicy when set, else the listener's external port.
+func http3AdvertisedPort(httpListener *ir.HTTPListener) uint32 {
+	if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
+		return *httpListener.HTTP3.AdvertisedPort
+	}
+	return httpListener.ExternalPort
+}
+
 // upstreamHTTP3AltSvcFilterName names a header mutation filter instance of its own, so it never
 // collides with the one carrying ClientTrafficPolicy response header mutations.
 var upstreamHTTP3AltSvcFilterName = perRouteFilterName(egv1a1.EnvoyFilterHeaderMutation, "upstream_http3")
@@ -105,13 +116,7 @@ func patchRouteWithUpstreamHTTP3AltSvc(route *routev3.Route, irListener *ir.HTTP
 	if http3Enabled {
 		mutations = append(mutations, &mutation_rulesv3.HeaderMutation{
 			Action: &mutation_rulesv3.HeaderMutation_Append{
-				Append: &corev3.HeaderValueOption{
-					Header: &corev3.HeaderValue{
-						Key:   altSvcHeader,
-						Value: http3AltSvcValue(http3AdvertisedPort(irListener)),
-					},
-					AppendAction: corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD,
-				},
+				Append: buildHTTP3AltSvcHeader(http3AdvertisedPort(irListener)),
 			},
 		})
 	}

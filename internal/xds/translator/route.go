@@ -45,7 +45,7 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex, geoIPHeaders []string) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex, geoIPHeaders []string, http3Enabled bool) (*routev3.Route, error) {
 	connectMatch := httpRoute.Traffic.HasConnectUpgrade()
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
@@ -168,6 +168,12 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	}
 	if err := patchRouteWithAlternateProtocolsCache(router, httpRoute, backendIndex); err != nil {
 		return nil, err
+	}
+	// A route proxying over upstream HTTP/3 strips the backend's alt-svc in the header mutation filter.
+	if routeUsesUpstreamHTTP3(httpRoute, backendIndex) {
+		if err := patchRouteWithUpstreamHTTP3AltSvc(router, httpListener, http3Enabled); err != nil {
+			return nil, err
+		}
 	}
 
 	return router, nil
