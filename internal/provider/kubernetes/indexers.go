@@ -242,14 +242,14 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 					Name:      string(filter.ExtensionRef.Name),
 				}.String()] = struct{}{}
 			}
-			for _, backendRef := range rule.BackendRefs {
-				for _, filter := range backendRef.Filters {
-					if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
-						httpRouteFilterRefs[types.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String()] = struct{}{}
-					}
+		}
+		for _, backendRef := range rule.BackendRefs {
+			for _, filter := range backendRef.Filters {
+				if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+					httpRouteFilterRefs[types.NamespacedName{
+						Namespace: httproute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
+					}.String()] = struct{}{}
 				}
 			}
 		}
