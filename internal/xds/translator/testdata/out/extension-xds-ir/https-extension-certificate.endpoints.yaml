@@ -1,0 +1,48 @@
+- clusterName: app-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway.extension:
+            hook: applied
+    loadBalancingWeight: 1
+    locality:
+      region: app-route-dest/backend/0
+- clusterName: mixed-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway.extension:
+            hook: applied
+    loadBalancingWeight: 1
+    locality:
+      region: mixed-route-dest/backend/0
+- clusterName: ok-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway.extension:
+            hook: applied
+    loadBalancingWeight: 1
+    locality:
+      region: ok-route-dest/backend/0

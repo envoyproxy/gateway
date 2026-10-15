@@ -461,6 +461,22 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	}
 
 	for _, httpListener := range httpListeners {
+		// Resolve extension-provided certificates once, before anything is built. A listener whose
+		// certificates are all extension-resolved and none resolved has nothing to serve, so it is
+		// left out rather than emitted without a certificate, which Envoy would reject along with
+		// every other filter chain sharing its port. Listeners without extension certificates are
+		// never skipped here.
+		certResolutions, resolveErr := t.resolveExtensionCertificates(httpListener.TLS, httpListener.Metadata)
+		if resolveErr != nil {
+			errs = errors.Join(errs, resolveErr)
+			continue
+		}
+		if allExtensionCertificatesUnresolved(httpListener.TLS, certResolutions) {
+			t.Logger.Info("skipping listener: none of its extension certificates resolved",
+				"listener", httpListener.Name)
+			continue
+		}
+
 		var (
 			http3Enabled                       bool
 			tcpXDSListener                     *listenerv3.Listener // TCP Listener for HTTP1/HTTP2 traffic
@@ -547,12 +563,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addHCM {
-			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, httpListener.Connection); err != nil {
+			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, httpListener.Connection, certResolutions); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
+				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection, certResolutions); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -970,6 +986,18 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	var errs, err error
 
 	for _, tcpListener := range tcpListeners {
+		// Resolve extension-provided certificates; skip the listener if none resolved.
+		certResolutions, resolveErr := t.resolveExtensionCertificates(tcpListener.TLS, tcpListener.Metadata)
+		if resolveErr != nil {
+			errs = errors.Join(errs, resolveErr)
+			continue
+		}
+		if allExtensionCertificatesUnresolved(tcpListener.TLS, certResolutions) {
+			t.Logger.Info("skipping listener: none of its extension certificates resolved",
+				"listener", tcpListener.Name)
+			continue
+		}
+
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
@@ -1051,6 +1079,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				route,
 				singleClusterDestinationName(route.Destination),
 				accesslog,
+				certResolutions,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1080,6 +1109,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				emptyRoute,
 				emptyClusterName,
 				accesslog,
+				certResolutions,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
