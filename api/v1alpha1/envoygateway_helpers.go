@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -399,13 +400,6 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 
 	if r.Kubernetes == nil {
 		r.Kubernetes = DefaultEnvoyGatewayKubeProvider()
-		if r.Kubernetes.LeaderElection == nil {
-			r.Kubernetes.LeaderElection = DefaultLeaderElection()
-		}
-		if r.Kubernetes.Client == nil {
-			r.Kubernetes.Client = DefaultKubernetesClient()
-		}
-		return r.Kubernetes
 	}
 
 	if r.Kubernetes.LeaderElection == nil {
@@ -427,7 +421,12 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	if r.Kubernetes.ShutdownManager == nil {
-		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: new(defaultShutdownManagerImage)}
+		r.Kubernetes.ShutdownManager = &ShutdownManager{}
+	}
+
+	if r.Kubernetes.ShutdownManager.Image == nil ||
+		strings.TrimSpace(*r.Kubernetes.ShutdownManager.Image) == "" {
+		r.Kubernetes.ShutdownManager.Image = new(defaultShutdownManagerImage)
 	}
 
 	return r.Kubernetes

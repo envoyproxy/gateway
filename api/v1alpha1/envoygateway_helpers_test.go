@@ -488,3 +488,61 @@ func TestEnvoyProxyPatchRuntimeFlag(t *testing.T) {
 		})
 	}
 }
+
+func TestGetEnvoyGatewayKubeProviderShutdownManagerImage(t *testing.T) {
+	tests := []struct {
+		name          string
+		image         *string
+		expectedImage string
+		nilKubernetes bool
+	}{
+		{
+			name:          "nil image gets default",
+			image:         nil,
+			expectedImage: defaultShutdownManagerImage,
+		},
+		{
+			name:          "empty image gets default",
+			image:         new(""),
+			expectedImage: defaultShutdownManagerImage,
+		},
+		{
+			name:          "whitespace image gets default",
+			image:         new("   "),
+			expectedImage: defaultShutdownManagerImage,
+		},
+		{
+			name:          "custom image is preserved",
+			image:         new("example.com/custom:1.0"),
+			expectedImage: "example.com/custom:1.0",
+		},
+		{
+			name:          "nil Kubernetes configuration gets defaults",
+			nilKubernetes: true,
+			expectedImage: defaultShutdownManagerImage,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			provider := EnvoyGatewayProvider{
+				Type: ProviderTypeKubernetes,
+			}
+
+			if !tt.nilKubernetes {
+				provider.Kubernetes = &EnvoyGatewayKubernetesProvider{
+					ShutdownManager: &ShutdownManager{
+						Image: tt.image,
+					},
+				}
+			}
+
+			result := provider.GetEnvoyGatewayKubeProvider()
+
+			require.NotNil(t, result)
+			require.NotNil(t, result.ShutdownManager)
+			require.NotNil(t, result.ShutdownManager.Image)
+			assert.Equal(t, tt.expectedImage, *result.ShutdownManager.Image)
+		})
+	}
+}
