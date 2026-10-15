@@ -2144,7 +2144,9 @@ spec:
                     v8 is used as the VM runtime for the Wasm extensions.
                   properties:
                     code:
-                      description: Code is the Wasm code for the extension.
+                      description: |-
+                        Code is the Wasm code for the extension.
+                        When omitted, Name must match a module in EnvoyProxy.spec.wasmModules.
                       properties:
                         http:
                           description: |-
@@ -2369,7 +2371,6 @@ spec:
                           - enum:
                             - HTTP
                             - Image
-                            - ConfigMap
                           description: |-
                             Type is the type of the source of the Wasm code.
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
@@ -2417,6 +2418,10 @@ spec:
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
                         If not specified, EG will generate a unique name for the Wasm extension.
+
+                        When Code is omitted, Name is required and must match a module registered
+                        in EnvoyProxy.spec.wasmModules.
+                      maxLength: 253
                       type: string
                     rootID:
                       description: |-
@@ -2426,9 +2431,11 @@ spec:
 
                         Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
                       type: string
-                  required:
-                  - code
                   type: object
+                  x-kubernetes-validations:
+                  - message: either code must be set, or name must be set and match
+                      the wasmModules name pattern
+                    rule: has(self.code) || (has(self.name) && self.name.matches('^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$'))
                 maxItems: 16
                 type: array
             type: object
