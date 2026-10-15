@@ -1,0 +1,188 @@
+{{template "base.html" .}}
+
+{{define "gateway-services-content"}}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">{{.Title}}</h1>
+        <button class="btn btn-secondary" onclick="GatewayServices.load()">Refresh</button>
+    </div>
+    <div class="card-body">
+        <p>Manage backend services (service table). Each service produces one Backend and one HTTPRoute when route files are generated.</p>
+        <div id="gw-auth" style="margin: 1rem 0;">
+            <label>Bearer token:
+                <input type="password" id="gw-token" placeholder="paste token" style="min-width: 320px;">
+            </label>
+            <label style="margin-left: 1rem;">Tenant:
+                <input type="text" id="gw-tenant" placeholder="tenant" style="min-width: 160px;">
+            </label>
+            <button class="btn btn-secondary" onclick="GatewayAuth.save()">Save</button>
+            <span id="gw-token-status"></span>
+        </div>
+        <div id="gw-message"></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Create / Update Service</h2>
+    </div>
+    <div class="card-body">
+        <form id="gw-service-form" onsubmit="GatewayServices.submit(event)">
+            <input type="hidden" id="svc-id">
+            <div class="gw-form-grid">
+                <label>Name<input type="text" id="svc-name" required placeholder="parking"></label>
+                <label>Cluster<input type="text" id="svc-cluster" required placeholder="V1"></label>
+                <label>Internal LB (hostname)<input type="text" id="svc-lb" required placeholder="internal-elb.amazonaws.com"></label>
+                <label>Port<input type="number" id="svc-port" required min="1" max="65535" placeholder="5050"></label>
+            </div>
+            <div style="margin-top: 1rem;">
+                <button type="submit" class="btn">Save</button>
+                <button type="button" class="btn btn-secondary" onclick="GatewayServices.resetForm()">Clear</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Services</h2>
+    </div>
+    <div class="card-body">
+        <table class="data-table" id="gw-services-table">
+            <thead>
+                <tr><th>ID</th><th>Name</th><th>Cluster</th><th>Internal LB</th><th>Port</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="gw-services-body">
+                <tr><td colspan="6">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// Shared token + fetch helpers for the gateway management pages.
+window.GatewayAuth = {
+    key: 'gatewayToken',
+    tenantKey: 'gatewayTenant',
+    get: function() { return sessionStorage.getItem(this.key) || ''; },
+    getTenant: function() { return sessionStorage.getItem(this.tenantKey) || ''; },
+    save: function() {
+        const v = document.getElementById('gw-token').value.trim();
+        if (v) { sessionStorage.setItem(this.key, v); }
+        const t = document.getElementById('gw-tenant');
+        if (t) { sessionStorage.setItem(this.tenantKey, t.value.trim()); }
+        this.refreshStatus();
+    },
+    refreshStatus: function() {
+        const el = document.getElementById('gw-token-status');
+        if (el) { el.textContent = this.get() ? ' token set' : ' no token'; }
+        const t = document.getElementById('gw-tenant');
+        if (t && !t.value) { t.value = this.getTenant(); }
+    },
+    headers: function(extra) {
+        const h = Object.assign({
+            'Authorization': 'Bearer ' + this.get(),
+            'x_auth_request_type': 'jwt_operator'
+        }, extra || {});
+        const tenant = this.getTenant();
+        if (tenant) { h['x_gmp_tenant'] = tenant; }
+        return h;
+    }
+};
+
+window.GatewayUtil = {
+    icons: {
+        edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
+        trash: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'
+    },
+    message: function(text, isError) {
+        const el = document.getElementById('gw-message');
+        if (!el) { return; }
+        el.textContent = text;
+        el.style.color = isError ? '#c0392b' : '#27ae60';
+    },
+    async handle(resp) {
+        if (resp.status === 204) { return null; }
+        const body = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+            throw new Error((body && body.message) ? body.message : ('HTTP ' + resp.status));
+        }
+        return body;
+    }
+};
+
+window.GatewayServices = {
+    async load() {
+        try {
+            const resp = await fetch('/api/gateway/services', { headers: GatewayAuth.headers() });
+            const data = await GatewayUtil.handle(resp);
+            this.render(data || []);
+        } catch (e) { GatewayUtil.message('Failed to load services: ' + e.message, true); }
+    },
+    render(services) {
+        const body = document.getElementById('gw-services-body');
+        if (!services.length) { body.innerHTML = '<tr><td colspan="6">No services</td></tr>'; return; }
+        body.innerHTML = services.map(s =>
+            '<tr>' +
+            '<td>' + s.id + '</td>' +
+            '<td>' + s.name + '</td>' +
+            '<td>' + s.cluster + '</td>' +
+            '<td>' + s.internal_lb + '</td>' +
+            '<td>' + s.port + '</td>' +
+            '<td>' +
+            '<button class="btn-icon" title="Edit" aria-label="Edit" onclick=\'GatewayServices.edit(' + JSON.stringify(s) + ')\'>' + GatewayUtil.icons.edit + '</button> ' +
+            '<button class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete" onclick="GatewayServices.remove(' + s.id + ')">' + GatewayUtil.icons.trash + '</button>' +
+            '</td></tr>'
+        ).join('');
+    },
+    edit(s) {
+        document.getElementById('svc-id').value = s.id;
+        document.getElementById('svc-name').value = s.name;
+        document.getElementById('svc-cluster').value = s.cluster;
+        document.getElementById('svc-lb').value = s.internal_lb;
+        document.getElementById('svc-port').value = s.port;
+    },
+    resetForm() {
+        document.getElementById('gw-service-form').reset();
+        document.getElementById('svc-id').value = '';
+    },
+    async submit(event) {
+        event.preventDefault();
+        const id = document.getElementById('svc-id').value;
+        const payload = {
+            name: document.getElementById('svc-name').value.trim(),
+            cluster: document.getElementById('svc-cluster').value.trim(),
+            internal_lb: document.getElementById('svc-lb').value.trim(),
+            port: parseInt(document.getElementById('svc-port').value, 10)
+        };
+        const url = id ? '/api/gateway/services?id=' + id : '/api/gateway/services';
+        const method = id ? 'PUT' : 'POST';
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: GatewayAuth.headers({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(payload)
+            });
+            await GatewayUtil.handle(resp);
+            GatewayUtil.message('Service saved', false);
+            this.resetForm();
+            this.load();
+        } catch (e) { GatewayUtil.message('Save failed: ' + e.message, true); }
+    },
+    async remove(id) {
+        if (!confirm('Delete service ' + id + ' and all its routes?')) { return; }
+        try {
+            const resp = await fetch('/api/gateway/services?id=' + id, { method: 'DELETE', headers: GatewayAuth.headers() });
+            await GatewayUtil.handle(resp);
+            GatewayUtil.message('Service deleted', false);
+            this.load();
+        } catch (e) { GatewayUtil.message('Delete failed: ' + e.message, true); }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    GatewayAuth.refreshStatus();
+    GatewayServices.load();
+});
+</script>
+{{end}}

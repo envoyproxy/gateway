@@ -1,0 +1,25 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+provider:
+  type: Custom
+  custom:
+    resource:
+      type: File
+      file:
+        paths: ["/etc/envoy-gateway/routes"]
+    infrastructure:
+      type: Host
+      host: {}
+admin:
+  address:
+    port: 19000
+    host: 0.0.0.0
+  enablePprof: true
+logging:
+  level:
+    default: info
+extensionApis:
+  enableBackend: true
+  enableLua: true

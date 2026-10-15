@@ -27,6 +27,7 @@ func TestTemplateLoading(t *testing.T) {
 		{"config_dump.html", "config-dump-content", "current configuration state"},
 		{"stats.html", "stats-content", "Envoy Gateway statistics"},
 		{"pprof.html", "pprof-content", "Performance profiling"},
+		{"gateway.html", "gateway-content", "Manage clusters, backend services, path routes"},
 	}
 
 	for _, tc := range testCases {

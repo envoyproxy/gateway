@@ -1,0 +1,71 @@
+{
+  "family": "gmp-envoy-gateway",
+  "networkMode": "bridge",
+  "containerDefinitions": [
+    {
+      "name": "gmp-envoy-gateway",
+      "image": "%DOCKER_REPO%/gmp-envoy-gateway:%REVISION%",
+      "cpu": 512,
+      "memory": 1024,
+      "dependsOn": [
+        { "containerName": "log_router", "condition": "START" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awsfirelens",
+        "options": {
+          "AWS_Region": "eu-central-1",
+          "Suppress_Type_Name": "On",
+          "Port": "443",
+          "Host": "%OPENSEARCH_URL%",
+          "Index": "gmp-dev-envoy-gateway-%Y.%m.%d-%H.00",
+          "tls": "On",
+          "AWS_Auth": "On",
+          "Name": "es",
+          "Buffer_Size": "32MB"
+        }
+      },
+      "portMappings": [
+        { "containerPort": 8888, "hostPort": 0 },
+        { "containerPort": 19000, "hostPort": 0 }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "eg-routes",
+          "containerPath": "/etc/envoy-gateway/routes"
+        }
+      ],
+      "secrets": [
+        { "name": "DB_HOST", "valueFrom": "%SECRET_STORE_ARN%:DB_HOST::" },
+        { "name": "DB_USERNAME", "valueFrom": "%SECRET_STORE_ARN%:DB_USERNAME::" },
+        { "name": "DB_PASSWORD", "valueFrom": "%SECRET_STORE_ARN%:DB_PASSWORD::" },
+        { "name": "AUTH_URL", "valueFrom": "%SECRET_STORE_ARN%:AUTH_URL::" },
+        { "name": "REDIS_URL", "valueFrom": "%SECRET_STORE_ARN%:REDIS_URL::" }
+      ],
+      "essential": true
+    },
+    {
+      "essential": false,
+      "name": "log_router",
+      "image": "%FLUENTBIT_IMAGE%",
+      "cpu": 64,
+      "memory": 128,
+      "firelensConfiguration": {
+        "type": "fluentbit",
+        "options": {
+          "config-file-type": "file",
+          "config-file-value": "/extra.conf"
+        }
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "eg-routes",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "%EFS_ID%",
+        "rootDirectory": "/envoy-gateway/routes"
+      }
+    }
+  ],
+  "executionRoleArn": "%EXECUTION_ROLE_ARN%"
+}

@@ -45,6 +45,10 @@ type Provider struct {
 
 	// errors is the notifier used to send async errors to the main control loop.
 	errors message.RunnerErrorNotifier
+
+	// reloadCh receives external reload signals (e.g. from the admin reload API
+	// or the Redis pub/sub subscriber) that trigger a full re-read from disk.
+	reloadCh chan struct{}
 }
 
 func New(ctx context.Context, svr *config.Server, resources *message.ProviderResources, errors message.RunnerErrorNotifier) (*Provider, error) {
@@ -71,11 +75,18 @@ func New(ctx context.Context, svr *config.Server, resources *message.ProviderRes
 		status:       statusHandler,
 		envoyGateway: svr.EnvoyGateway,
 		errors:       errors,
+		reloadCh:     make(chan struct{}, 1),
 	}, nil
 }
 
 func (p *Provider) Type() egv1a1.ProviderType {
 	return egv1a1.ProviderTypeCustom
+}
+
+// ReloadCh returns the channel that triggers a full config reload when a value
+// is sent on it. The admin reload API and the Redis subscriber use this.
+func (p *Provider) ReloadCh() chan struct{} {
+	return p.reloadCh
 }
 
 func (p *Provider) Start(ctx context.Context) error {
@@ -135,6 +146,12 @@ func (p *Provider) Start(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
+		case <-p.reloadCh:
+			p.logger.Info("reload triggered externally (admin API or redis subscriber)")
+			if err := p.store.ReloadAll(ctx, curFiles.UnsortedList(), curDirs.UnsortedList(), p.envoyGateway); err != nil {
+				p.logger.Error(err, "error when reloading resources via external trigger")
+				p.errors.Store(err)
+			}
 		case event := <-aggCh:
 			// Ignore the irrelevant event.
 			if event.Has(fsnotify.Chmod) {

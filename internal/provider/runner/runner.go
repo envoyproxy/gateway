@@ -27,10 +27,19 @@ type Config struct {
 
 type Runner struct {
 	Config
+	// reloadCh is populated when a file provider is started; it lets external
+	// components (admin reload API, Redis subscriber) trigger a config reload.
+	reloadCh chan struct{}
 }
 
 func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
+}
+
+// ReloadCh returns the file provider's reload channel, or nil when the provider
+// is not file-based. It is only valid after Start() has been called.
+func (r *Runner) ReloadCh() chan struct{} {
+	return r.reloadCh
 }
 
 // Close implements Runner interface.
@@ -99,6 +108,7 @@ func (r *Runner) createCustomResourceProvider(ctx context.Context, errors messag
 		if err != nil {
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}
+		r.reloadCh = p.ReloadCh()
 		return p, err
 	case egv1a1.ResourceProviderTypeKubernetes:
 		return r.createKubernetesProvider(ctx, errors)

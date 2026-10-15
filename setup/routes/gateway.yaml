@@ -1,0 +1,110 @@
+# EnvoyProxy config: reorder Lua filter to run before ExtAuth
+# Default order: ExtAuth(6) → Lua(13). We need: Lua → ExtAuth
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gmp-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  filterOrder:
+    - name: envoy.filters.http.lua
+      before: envoy.filters.http.ext_authz
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: gmp-gateway
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: gmp-proxy-config
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gmp-gateway
+spec:
+  gatewayClassName: gmp-gateway
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8888
+---
+# Allow headers with underscores (e.g. x_gmp_tenant)
+# Envoy rejects them by default with 400 Bad Request
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: allow-underscore-headers
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gmp-gateway
+  headers:
+    withUnderscoresAction: Allow
+---
+# go-authentication backend for ExtAuth
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: go-authentication
+spec:
+  endpoints:
+    - ip:
+        address: 127.0.0.1
+        port: 5120
+---
+# External Authentication - every request is validated by go-authentication first
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: gmp-ext-auth
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gmp-gateway
+  extAuth:
+    http:
+      backendRef:
+        group: gateway.envoyproxy.io
+        kind: Backend
+        name: go-authentication
+      pathOverride: /v1/auth/check
+      headersToBackend:
+        - x_gmp_authz_key
+    headersToExtAuth:
+      - authorization
+      - x-api-key
+      - x_gmp_tenant
+      - x-date
+      - x_gmp_correlation_id
+      - x_auth_request_type
+      - method
+      - path
+    timeout: 120s
+    failOpen: false
+---
+# Lua extension to inject original request method and path as headers
+# Runs before ExtAuth so go-authentication can verify HMAC signatures
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: inject-original-request-info
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gmp-gateway
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(handle)
+          handle:headers():add("method", handle:headers():get(":method"))
+          local full_path = handle:headers():get(":path")
+          handle:headers():add("path", string.match(full_path, "([^?]*)"))
+        end

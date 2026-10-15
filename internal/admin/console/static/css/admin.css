@@ -730,6 +730,53 @@ body {
     background-color: #f8f9fa;
 }
 
+/* Data tables (gateway services/routes) with visible grid lines */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    border: 1px solid #ced4da;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #ced4da;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.data-table thead th {
+    background-color: #f1f3f5;
+    font-weight: 600;
+    color: #495057;
+    white-space: nowrap;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+.data-table tbody tr:hover {
+    background-color: #eef4ff;
+}
+
+/* Right-align the leading numeric id column */
+.data-table th:first-child,
+.data-table td:first-child {
+    text-align: right;
+    width: 1%;
+    white-space: nowrap;
+    color: #6c757d;
+}
+
+/* Center the trailing actions column */
+.data-table th:last-child,
+.data-table td:last-child {
+    text-align: center;
+    white-space: nowrap;
+}
+
 /* Buttons */
 .btn {
     display: inline-block;
@@ -753,6 +800,103 @@ body {
 
 .btn-secondary:hover {
     background-color: #545b62;
+}
+
+/* Minimal icon-only buttons (table row actions) - no background */
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 0.2rem 0.35rem;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.65;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.btn-icon:hover {
+    opacity: 1;
+    transform: scale(1.15);
+    background: none;
+}
+
+.btn-icon svg {
+    display: block;
+    pointer-events: none;
+}
+
+.btn-icon-danger:hover {
+    color: #dc3545;
+}
+
+/* Gateway tabs */
+.tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 1.5rem;
+}
+
+.tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: 0.6rem 1.1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #6c757d;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab:hover {
+    color: #007bff;
+}
+
+.tab.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+}
+
+.tab-panel[hidden] {
+    display: none;
+}
+
+/* Gateway form grids: label stacked above a full-width input, aligned columns */
+.gw-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem 1.5rem;
+}
+
+.gw-form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.gw-form-grid input,
+.gw-form-grid select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: #333;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.gw-form-grid input:focus,
+.gw-form-grid select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 /* Info boxes */

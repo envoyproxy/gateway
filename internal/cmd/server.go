@@ -196,29 +196,34 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		return err
 	}
 
+	// Start the Traces and Provider runners first.
+	// The provider runner must start before the others because:
+	//  1. It creates the Kubernetes client needed by the infra manager runner.
+	//  2. For file providers, Start() populates the reload channel the admin
+	//     server uses for the reload API and Redis subscriber.
+	earlyRunners := []Runner{
+		traces.New(cfg),
+		providerrunner.New(&providerrunner.Config{
+			Server:            *cfg,
+			ProviderResources: channels.pResources,
+			RunnerErrors:      runnerErrors,
+		}),
+	}
+	for _, r := range earlyRunners {
+		if err = startRunner(ctx, cfg, r); err != nil {
+			return err
+		}
+	}
+
+	// Extract the file provider's reload channel (nil for non-file providers).
+	var reloadCh chan struct{}
+	if pr, ok := earlyRunners[1].(*providerrunner.Runner); ok {
+		reloadCh = pr.ReloadCh()
+	}
+
 	runners := []struct {
 		runner Runner
 	}{
-		{
-			// Start the Traces Server
-			runner: traces.New(cfg),
-		},
-		{
-			// Start the Provider Service
-			// It fetches the resources from the configured provider type
-			// and publishes it.
-			// It also subscribes to status resources and once it receives
-			// a status resource back, it writes it out.
-			//
-			// Important: order matters here: the provider runner must be started before the infra manager runner because
-			// the provider runner creates the Kubernetes client that is needed by the infra manager runner to reconcile
-			// the Envoy Proxy and the rate limit infra resources.
-			runner: providerrunner.New(&providerrunner.Config{
-				Server:            *cfg,
-				ProviderResources: channels.pResources,
-				RunnerErrors:      runnerErrors,
-			}),
-		},
 		{
 			// Start the GatewayAPI Translator Runner
 			// It subscribes to the provider resources, translates it to xDS IR
@@ -257,11 +262,13 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		},
 		{
 			// Start the Admin Server
-			// It provides admin endpoints including pprof for debugging.
+			// It provides admin endpoints including pprof for debugging, the
+			// gateway route-management APIs, and the reload API/subscriber.
 			runner: admin.New(&admin.Config{
 				Server:            *cfg,
 				ProviderResources: channels.pResources,
 				RunnerErrors:      runnerErrors,
+				ReloadCh:          reloadCh,
 			}),
 		},
 		{
@@ -271,7 +278,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		},
 	}
 
-	// Start all runners
+	// Start remaining runners
 	for _, r := range runners {
 		if err = startRunner(ctx, cfg, r.runner); err != nil {
 			return err
@@ -299,6 +306,11 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	channels.xdsIR.Close()
 
 	cfg.Logger.Info("runners are shutting down")
+	for _, r := range earlyRunners {
+		if err := r.Close(); err != nil {
+			cfg.Logger.Error(err, "failed to close runner", "name", r.Name())
+		}
+	}
 	for _, r := range runners {
 		if err := r.runner.Close(); err != nil {
 			cfg.Logger.Error(err, "failed to close runner", "name", r.runner.Name())

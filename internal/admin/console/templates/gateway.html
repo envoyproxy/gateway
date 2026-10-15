@@ -1,0 +1,503 @@
+{{template "base.html" .}}
+
+{{define "gateway-content"}}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">{{.Title}}</h1>
+    </div>
+    <div class="card-body">
+        <p>Manage clusters, backend services, path routes, and generate Envoy route files. API calls are authorized by go-authentication.</p>
+        <div id="gw-auth" style="margin: 1rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;">
+            <label>Bearer token:
+                <input type="password" id="gw-token" style="min-width: 320px;">
+            </label>
+            <button class="btn btn-secondary" onclick="GatewayAuth.save()">Save</button>
+            <span id="gw-token-status"></span>
+        </div>
+        <div id="gw-message"></div>
+    </div>
+</div>
+
+<div class="tabs">
+    <button class="tab active" data-tab="clusters" onclick="GatewayTabs.show('clusters')">Clusters</button>
+    <button class="tab" data-tab="services" onclick="GatewayTabs.show('services')">Services</button>
+    <button class="tab" data-tab="routes" onclick="GatewayTabs.show('routes')">Routes</button>
+    <button class="tab" data-tab="generate" onclick="GatewayTabs.show('generate')">Generate</button>
+</div>
+
+<!-- ============================ CLUSTERS ============================ -->
+<div id="tab-clusters" class="tab-panel">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Create / Update Cluster</h2>
+        </div>
+        <div class="card-body">
+            <p>One internal load balancer per AWS cluster. All services share it and are reached at <code>internal_lb : service.port</code>.</p>
+            <form id="gw-cluster-form" onsubmit="GatewayClusters.submit(event)">
+                <input type="hidden" id="cl-id">
+                <div class="gw-form-grid">
+                    <label>Name<input type="text" id="cl-name" required></label>
+                    <label>Internal LB (hostname)<input type="text" id="cl-lb" required></label>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="GatewayClusters.resetForm()">Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Clusters</h2>
+            <button class="btn btn-secondary" onclick="GatewayClusters.load()">Refresh</button>
+        </div>
+        <div class="card-body">
+            <table class="data-table">
+                <thead>
+                    <tr><th>ID</th><th>Name</th><th>Internal LB</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="gw-clusters-body">
+                    <tr><td colspan="4">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================ SERVICES ============================ -->
+<div id="tab-services" class="tab-panel" hidden>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Create / Update Service</h2>
+        </div>
+        <div class="card-body">
+            <p>A logical backend service and the port it listens on. The backend host comes from the cluster at generation time.</p>
+            <form id="gw-service-form" onsubmit="GatewayServices.submit(event)">
+                <input type="hidden" id="svc-id">
+                <div class="gw-form-grid">
+                    <label>Name<input type="text" id="svc-name" required></label>
+                    <label>Port<input type="number" id="svc-port" required min="1" max="65535"></label>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="GatewayServices.resetForm()">Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Services</h2>
+            <button class="btn btn-secondary" onclick="GatewayServices.load()">Refresh</button>
+        </div>
+        <div class="card-body">
+            <table class="data-table">
+                <thead>
+                    <tr><th>ID</th><th>Name</th><th>Port</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="gw-services-body">
+                    <tr><td colspan="4">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================ ROUTES ============================ -->
+<div id="tab-routes" class="tab-panel" hidden>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Create / Update Route</h2>
+        </div>
+        <div class="card-body">
+            <p>Each route becomes one path match inside its service's generated HTTPRoute.</p>
+            <form id="gw-route-form" onsubmit="GatewayRoutes.submit(event)">
+                <input type="hidden" id="route-id">
+                <div class="gw-form-grid">
+                    <label>Service<select id="route-service" required></select></label>
+                    <label>Path<input type="text" id="route-path" required></label>
+                    <label>Match type<select id="route-match">
+                        <option value="Exact">Exact</option>
+                        <option value="PathPrefix">PathPrefix</option>
+                    </select></label>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="GatewayRoutes.resetForm()">Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Routes</h2>
+            <label>Filter by service:
+                <select id="route-filter" onchange="GatewayRoutes.load()">
+                    <option value="">All</option>
+                </select>
+            </label>
+            <button class="btn btn-secondary" onclick="GatewayRoutes.load()">Refresh</button>
+        </div>
+        <div class="card-body">
+            <table class="data-table">
+                <thead>
+                    <tr><th>ID</th><th>Service</th><th>Path</th><th>Match type</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="gw-routes-body">
+                    <tr><td colspan="5">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================ GENERATE ============================ -->
+<div id="tab-generate" class="tab-panel" hidden>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Generate Route Files</h2>
+        </div>
+        <div class="card-body">
+            <p>Generate Envoy route files for the selected cluster. Files are written to the routes directory and a reload signal is broadcast to the other tasks via Redis.</p>
+            <div style="margin: 1rem 0; display: flex; align-items: center; gap: 0.75rem;">
+                <label>Cluster
+                    <select id="gen-cluster" style="min-width: 160px;"></select>
+                </label>
+                <button class="btn" onclick="GatewayGenerate.run()">Generate</button>
+                <button class="btn btn-secondary" onclick="GatewayGenerate.copy()">Copy YAML</button>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Generated YAML</h2>
+        </div>
+        <div class="card-body">
+            <pre id="gen-output" style="max-height: 600px; overflow: auto; background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 4px;">(nothing generated yet)</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+// ---- Shared auth (token + tenant) ----
+window.GatewayAuth = {
+    key: 'gatewayToken',
+    tenant: 'gmp',
+    get: function() { return sessionStorage.getItem(this.key) || ''; },
+    save: function() {
+        const v = document.getElementById('gw-token').value.trim();
+        if (v) { sessionStorage.setItem(this.key, v); }
+        this.refreshStatus();
+        GatewayUtil.message('Saved', false);
+    },
+    refreshStatus: function() {
+        const el = document.getElementById('gw-token-status');
+        if (el) { el.textContent = this.get() ? 'token set' : 'no token'; }
+    },
+    headers: function(extra) {
+        return Object.assign({
+            'Authorization': 'Bearer ' + this.get(),
+            'x_auth_request_type': 'jwt_operator',
+            'x_gmp_tenant': this.tenant
+        }, extra || {});
+    }
+};
+
+// ---- Shared helpers ----
+window.GatewayUtil = {
+    icons: {
+        edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
+        trash: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'
+    },
+    message: function(text, isError) {
+        const el = document.getElementById('gw-message');
+        if (!el) { return; }
+        el.textContent = text;
+        el.style.color = isError ? '#c0392b' : '#27ae60';
+    },
+    async handle(resp) {
+        if (resp.status === 204) { return null; }
+        const body = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+            throw new Error((body && body.message) ? body.message : ('HTTP ' + resp.status));
+        }
+        return body;
+    }
+};
+
+// ---- Clusters ----
+window.GatewayClusters = {
+    async load() {
+        try {
+            const resp = await fetch('/api/gateway/clusters', { headers: GatewayAuth.headers() });
+            const data = await GatewayUtil.handle(resp);
+            this.render(data || []);
+        } catch (e) { GatewayUtil.message('Failed to load clusters: ' + e.message, true); }
+    },
+    render(clusters) {
+        const body = document.getElementById('gw-clusters-body');
+        if (!clusters.length) { body.innerHTML = '<tr><td colspan="4">No clusters</td></tr>'; return; }
+        body.innerHTML = clusters.map(c =>
+            '<tr>' +
+            '<td>' + c.id + '</td>' +
+            '<td>' + c.name + '</td>' +
+            '<td>' + c.internal_lb + '</td>' +
+            '<td>' +
+            '<button class="btn-icon" title="Edit" aria-label="Edit" onclick=\'GatewayClusters.edit(' + JSON.stringify(c) + ')\'>' + GatewayUtil.icons.edit + '</button> ' +
+            '<button class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete" onclick="GatewayClusters.remove(' + c.id + ')">' + GatewayUtil.icons.trash + '</button>' +
+            '</td></tr>'
+        ).join('');
+    },
+    edit(c) {
+        document.getElementById('cl-id').value = c.id;
+        document.getElementById('cl-name').value = c.name;
+        document.getElementById('cl-lb').value = c.internal_lb;
+    },
+    resetForm() {
+        document.getElementById('gw-cluster-form').reset();
+        document.getElementById('cl-id').value = '';
+    },
+    async submit(event) {
+        event.preventDefault();
+        const id = document.getElementById('cl-id').value;
+        const payload = {
+            name: document.getElementById('cl-name').value.trim(),
+            internal_lb: document.getElementById('cl-lb').value.trim()
+        };
+        const url = id ? '/api/gateway/clusters?id=' + id : '/api/gateway/clusters';
+        const method = id ? 'PUT' : 'POST';
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: GatewayAuth.headers({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(payload)
+            });
+            await GatewayUtil.handle(resp);
+            GatewayUtil.message('Cluster saved', false);
+            this.resetForm();
+            this.load();
+        } catch (e) { GatewayUtil.message('Save failed: ' + e.message, true); }
+    },
+    async remove(id) {
+        if (!confirm('Delete cluster ' + id + '?')) { return; }
+        try {
+            const resp = await fetch('/api/gateway/clusters?id=' + id, { method: 'DELETE', headers: GatewayAuth.headers() });
+            await GatewayUtil.handle(resp);
+            GatewayUtil.message('Cluster deleted', false);
+            this.load();
+        } catch (e) { GatewayUtil.message('Delete failed: ' + e.message, true); }
+    }
+};
+
+// ---- Services ----
+window.GatewayServices = {
+    async load() {
+        try {
+            const resp = await fetch('/api/gateway/services', { headers: GatewayAuth.headers() });
+            const data = await GatewayUtil.handle(resp);
+            this.render(data || []);
+        } catch (e) { GatewayUtil.message('Failed to load services: ' + e.message, true); }
+    },
+    render(services) {
+        const body = document.getElementById('gw-services-body');
+        if (!services.length) { body.innerHTML = '<tr><td colspan="4">No services</td></tr>'; return; }
+        body.innerHTML = services.map(s =>
+            '<tr>' +
+            '<td>' + s.id + '</td>' +
+            '<td>' + s.name + '</td>' +
+            '<td>' + s.port + '</td>' +
+            '<td>' +
+            '<button class="btn-icon" title="Edit" aria-label="Edit" onclick=\'GatewayServices.edit(' + JSON.stringify(s) + ')\'>' + GatewayUtil.icons.edit + '</button> ' +
+            '<button class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete" onclick="GatewayServices.remove(' + s.id + ')">' + GatewayUtil.icons.trash + '</button>' +
+            '</td></tr>'
+        ).join('');
+    },
+    edit(s) {
+        document.getElementById('svc-id').value = s.id;
+        document.getElementById('svc-name').value = s.name;
+        document.getElementById('svc-port').value = s.port;
+    },
+    resetForm() {
+        document.getElementById('gw-service-form').reset();
+        document.getElementById('svc-id').value = '';
+    },
+    async submit(event) {
+        event.preventDefault();
+        const id = document.getElementById('svc-id').value;
+        const payload = {
+            name: document.getElementById('svc-name').value.trim(),
+            port: parseInt(document.getElementById('svc-port').value, 10)
+        };
+        const url = id ? '/api/gateway/services?id=' + id : '/api/gateway/services';
+        const method = id ? 'PUT' : 'POST';
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: GatewayAuth.headers({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(payload)
+            });
+            await GatewayUtil.handle(resp);
+            GatewayUtil.message('Service saved', false);
+            this.resetForm();
+            this.load();
+        } catch (e) { GatewayUtil.message('Save failed: ' + e.message, true); }
+    },
+    async remove(id) {
+        if (!confirm('Delete service ' + id + ' and all its routes?')) { return; }
+        try {
+            const resp = await fetch('/api/gateway/services?id=' + id, { method: 'DELETE', headers: GatewayAuth.headers() });
+            await GatewayUtil.handle(resp);
+            GatewayUtil.message('Service deleted', false);
+            this.load();
+        } catch (e) { GatewayUtil.message('Delete failed: ' + e.message, true); }
+    }
+};
+
+// ---- Routes ----
+window.GatewayRoutes = {
+    services: {},
+    async loadServices() {
+        const resp = await fetch('/api/gateway/services', { headers: GatewayAuth.headers() });
+        const data = await GatewayUtil.handle(resp) || [];
+        this.services = {};
+        data.forEach(s => { this.services[s.id] = s; });
+        const formSel = document.getElementById('route-service');
+        const filterSel = document.getElementById('route-filter');
+        const prevFilter = filterSel.value;
+        const opts = data.map(s => '<option value="' + s.id + '">' + s.name + '</option>').join('');
+        formSel.innerHTML = opts;
+        filterSel.innerHTML = '<option value="">All</option>' + opts;
+        filterSel.value = prevFilter;
+    },
+    async load() {
+        try {
+            const filter = document.getElementById('route-filter').value;
+            await this.loadServices();
+            const url = '/api/gateway/routes' + (filter ? ('?service_id=' + filter) : '');
+            const resp = await fetch(url, { headers: GatewayAuth.headers() });
+            const data = await GatewayUtil.handle(resp);
+            this.render(data || []);
+        } catch (e) { GatewayUtil.message('Failed to load routes: ' + e.message, true); }
+    },
+    serviceName(id) {
+        const s = this.services[id];
+        return s ? s.name : id;
+    },
+    render(routes) {
+        const body = document.getElementById('gw-routes-body');
+        if (!routes.length) { body.innerHTML = '<tr><td colspan="5">No routes</td></tr>'; return; }
+        body.innerHTML = routes.map(r =>
+            '<tr>' +
+            '<td>' + r.id + '</td>' +
+            '<td>' + this.serviceName(r.service_id) + '</td>' +
+            '<td>' + r.path + '</td>' +
+            '<td>' + r.match_type + '</td>' +
+            '<td>' +
+            '<button class="btn-icon" title="Edit" aria-label="Edit" onclick=\'GatewayRoutes.edit(' + JSON.stringify(r) + ')\'>' + GatewayUtil.icons.edit + '</button> ' +
+            '<button class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete" onclick="GatewayRoutes.remove(' + r.id + ')">' + GatewayUtil.icons.trash + '</button>' +
+            '</td></tr>'
+        ).join('');
+    },
+    edit(r) {
+        document.getElementById('route-id').value = r.id;
+        document.getElementById('route-service').value = r.service_id;
+        document.getElementById('route-path').value = r.path;
+        document.getElementById('route-match').value = r.match_type;
+    },
+    resetForm() {
+        document.getElementById('gw-route-form').reset();
+        document.getElementById('route-id').value = '';
+    },
+    async submit(event) {
+        event.preventDefault();
+        const id = document.getElementById('route-id').value;
+        const payload = {
+            service_id: parseInt(document.getElementById('route-service').value, 10),
+            path: document.getElementById('route-path').value.trim(),
+            match_type: document.getElementById('route-match').value
+        };
+        const url = id ? '/api/gateway/routes?id=' + id : '/api/gateway/routes';
+        const method = id ? 'PUT' : 'POST';
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: GatewayAuth.headers({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(payload)
+            });
+            await GatewayUtil.handle(resp);
+            GatewayUtil.message('Route saved', false);
+            this.resetForm();
+            this.load();
+        } catch (e) { GatewayUtil.message('Save failed: ' + e.message, true); }
+    },
+    async remove(id) {
+        if (!confirm('Delete route ' + id + '?')) { return; }
+        try {
+            const resp = await fetch('/api/gateway/routes?id=' + id, { method: 'DELETE', headers: GatewayAuth.headers() });
+            await GatewayUtil.handle(resp);
+            GatewayUtil.message('Route deleted', false);
+            this.load();
+        } catch (e) { GatewayUtil.message('Delete failed: ' + e.message, true); }
+    }
+};
+
+// ---- Generate ----
+window.GatewayGenerate = {
+    async loadClusters() {
+        try {
+            const resp = await fetch('/api/gateway/clusters', { headers: GatewayAuth.headers() });
+            const data = await GatewayUtil.handle(resp) || [];
+            const sel = document.getElementById('gen-cluster');
+            sel.innerHTML = data.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
+        } catch (e) { GatewayUtil.message('Failed to load clusters: ' + e.message, true); }
+    },
+    async run() {
+        const cluster = document.getElementById('gen-cluster').value;
+        if (!cluster) { GatewayUtil.message('Select a cluster first (create one in the Clusters tab)', true); return; }
+        try {
+            const resp = await fetch('/api/gateway/generate?cluster=' + encodeURIComponent(cluster), {
+                method: 'POST',
+                headers: GatewayAuth.headers()
+            });
+            if (!resp.ok) {
+                const body = await resp.json().catch(() => ({}));
+                throw new Error((body && body.message) ? body.message : ('HTTP ' + resp.status));
+            }
+            const yaml = await resp.text();
+            document.getElementById('gen-output').textContent = yaml;
+            GatewayUtil.message('Generated and reload broadcast for cluster ' + cluster, false);
+        } catch (e) { GatewayUtil.message('Generate failed: ' + e.message, true); }
+    },
+    copy() {
+        const text = document.getElementById('gen-output').textContent;
+        navigator.clipboard.writeText(text).then(
+            () => GatewayUtil.message('Copied to clipboard', false),
+            () => GatewayUtil.message('Copy failed', true)
+        );
+    }
+};
+
+// ---- Tabs ----
+window.GatewayTabs = {
+    show(name) {
+        document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = (p.id !== 'tab-' + name); });
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+        if (location.hash !== '#' + name) { history.replaceState(null, '', '#' + name); }
+        this.loadTab(name);
+    },
+    loadTab(name) {
+        if (name === 'clusters') { GatewayClusters.load(); }
+        else if (name === 'services') { GatewayServices.load(); }
+        else if (name === 'routes') { GatewayRoutes.load(); }
+        else if (name === 'generate') { GatewayGenerate.loadClusters(); }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    GatewayAuth.refreshStatus();
+    const initial = (location.hash || '#clusters').substring(1);
+    const valid = ['clusters', 'services', 'routes', 'generate'];
+    GatewayTabs.show(valid.indexOf(initial) >= 0 ? initial : 'clusters');
+});
+</script>
+{{end}}

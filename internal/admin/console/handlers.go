@@ -42,6 +42,14 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/config_dump", h.handleConfigDump)
 	mux.HandleFunc("/stats", h.handleStats)
 
+	// Gateway route-management UI (single tabbed page). The API calls it makes
+	// are protected by the auth middleware; the page itself is served without auth.
+	mux.HandleFunc("/gateway", h.handleGateway)
+	// Back-compat redirects for the old per-page URLs.
+	mux.HandleFunc("/gateway/services", h.redirectToGateway("services"))
+	mux.HandleFunc("/gateway/routes", h.redirectToGateway("routes"))
+	mux.HandleFunc("/gateway/generate", h.redirectToGateway("generate"))
+
 	// API endpoints
 	mux.HandleFunc("/api/info", h.handleAPIInfo)
 	mux.HandleFunc("/api/server_info", h.handleAPIServerInfo)
@@ -170,6 +178,32 @@ func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleGateway serves the single tabbed gateway management page.
+func (h *Handler) handleGateway(w http.ResponseWriter, r *http.Request) {
+	h.renderSimplePage(w, r, "gateway.html", "Gateway")
+}
+
+// redirectToGateway redirects an old per-page URL to the matching tab.
+func (h *Handler) redirectToGateway(tab string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/gateway#"+tab, http.StatusFound)
+	}
+}
+
+// renderSimplePage renders a GET-only page that only needs a Title.
+func (h *Handler) renderSimplePage(w http.ResponseWriter, r *http.Request, tmpl, title string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	data := struct{ Title string }{Title: title}
+	if err := h.renderTemplate(w, tmpl, data); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("Internal server error"))
+		return
+	}
+}
+
 // renderTemplate renders a template with the given data
 func (h *Handler) renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) error {
 	if len(h.templates) == 0 {
@@ -200,6 +234,7 @@ func (h *Handler) loadTemplates() error {
 		"config_dump.html": "config-dump-content",
 		"stats.html":       "stats-content",
 		"pprof.html":       "pprof-content",
+		"gateway.html":     "gateway-content",
 	}
 
 	// Create individual templates for each page
