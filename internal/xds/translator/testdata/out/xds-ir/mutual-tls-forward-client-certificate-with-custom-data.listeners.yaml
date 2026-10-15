@@ -281,6 +281,7 @@
           cert: true
           chain: true
           dns: true
+          issuer: true
           subject: true
           uri: true
         statPrefix: https-10005
