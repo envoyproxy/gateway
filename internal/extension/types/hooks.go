@@ -60,4 +60,29 @@ type XDSHookClient interface {
 	// The list of clusters, secrets, listeners, and routes returned by the extension are used as the final list of all these resources
 	// PostTranslateModifyHook is always executed when an extension is loaded
 	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error)
+
+	// ResolveSecretHook asks an extension how Envoy should obtain a secret that was referenced
+	// from a kind registered in ExtensionManager.SecretResources.
+	ResolveSecretHook(*SecretContext) (*SecretResolution, error)
+}
+
+// SecretContext identifies the secret reference being resolved.
+type SecretContext struct {
+	// Secret is the resource that was referenced.
+	Secret *unstructured.Unstructured
+
+	GatewayNamespace string
+	GatewayName      string
+
+	ListenerName string
+}
+
+// SecretResolution is how Envoy should obtain one secret.
+type SecretResolution struct {
+	SdsSecretConfig *tls.SdsSecretConfig
+
+	// FailureReason and FailureMessage describe a resolution failure. When FailureReason is
+	// set the secret is treated as unresolved.
+	FailureReason  string
+	FailureMessage string
 }
