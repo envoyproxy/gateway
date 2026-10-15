@@ -303,9 +303,7 @@ type OIDCPostLogoutRedirect struct {
 	// not need the user redirected back after the logout completes. In that case the user is left
 	// on a page controlled by the provider.
 	//
-	// Setting this to false on its own sends the default post logout redirect URI, the same as
-	// leaving postLogoutRedirect unset. A route block that sets only false does not inherit the
-	// parent's uri.
+	// Setting this to false is equivalent to leaving disabled unset.
 	//
 	// +optional
 	Disabled *bool `json:"disabled,omitempty"`
