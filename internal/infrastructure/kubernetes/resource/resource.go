@@ -9,8 +9,37 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/containers/image/v5/docker/reference"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+// WithImageRegistry replaces an image's registry while preserving its repository, tag, and digest.
+func WithImageRegistry(image, registry string) (string, error) {
+	imageRef, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return "", err
+	}
+
+	repository, err := reference.WithName(registry + "/" + reference.Path(imageRef))
+	if err != nil {
+		return "", err
+	}
+
+	if taggedImage, ok := imageRef.(reference.Tagged); ok {
+		repository, err = reference.WithTag(repository, taggedImage.Tag())
+		if err != nil {
+			return "", err
+		}
+	}
+	if digestedImage, ok := imageRef.(reference.Digested); ok {
+		repository, err = reference.WithDigest(repository, digestedImage.Digest())
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return repository.String(), nil
+}
 
 // GetSelector returns a label selector used to select resources
 // based on the provided labels.

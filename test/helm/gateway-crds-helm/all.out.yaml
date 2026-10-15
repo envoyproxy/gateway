@@ -35535,18 +35535,27 @@ spec:
                                 type: array
                               image:
                                 description: |-
-                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
-                                  This field is mutually exclusive with ImageRepository.
+                                  Image specifies the container image to be used including a tag, instead of the default image.
+                                  This field can be set with ImageRegistry, but is mutually exclusive with ImageRepository.
                                 type: string
                                 x-kubernetes-validations:
                                 - message: Image must include a tag and allowed characters
                                     only (e.g., 'repo:tag').
                                   rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?(/[a-zA-Z0-9._/-]+)?(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')
+                              imageRegistry:
+                                description: |-
+                                  ImageRegistry specifies the registry to use for the container image while preserving its repository, tag, and digest.
+                                  This field can be set with Image, but is mutually exclusive with ImageRepository.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: ImageRegistry must be a registry host with
+                                    an optional port.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
                                   The default tag will be used.
-                                  This field is mutually exclusive with Image.
+                                  This field is mutually exclusive with Image and ImageRegistry.
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
@@ -35887,8 +35896,10 @@ spec:
                                 type: array
                             type: object
                             x-kubernetes-validations:
-                            - message: Either image or imageRepository can be set.
-                              rule: '!has(self.image) || !has(self.imageRepository)'
+                            - message: ImageRepository cannot be set with Image or
+                                ImageRegistry.
+                              rule: '!has(self.imageRepository) || (!has(self.image)
+                                && !has(self.imageRegistry))'
                           name:
                             description: |-
                               Name of the daemonSet.
@@ -39654,18 +39665,27 @@ spec:
                                 type: array
                               image:
                                 description: |-
-                                  Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
-                                  This field is mutually exclusive with ImageRepository.
+                                  Image specifies the container image to be used including a tag, instead of the default image.
+                                  This field can be set with ImageRegistry, but is mutually exclusive with ImageRepository.
                                 type: string
                                 x-kubernetes-validations:
                                 - message: Image must include a tag and allowed characters
                                     only (e.g., 'repo:tag').
                                   rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?(/[a-zA-Z0-9._/-]+)?(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')
+                              imageRegistry:
+                                description: |-
+                                  ImageRegistry specifies the registry to use for the container image while preserving its repository, tag, and digest.
+                                  This field can be set with Image, but is mutually exclusive with ImageRepository.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: ImageRegistry must be a registry host with
+                                    an optional port.
+                                  rule: self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?$')
                               imageRepository:
                                 description: |-
                                   ImageRepository specifies the container image repository to be used without specifying a tag.
                                   The default tag will be used.
-                                  This field is mutually exclusive with Image.
+                                  This field is mutually exclusive with Image and ImageRegistry.
                                 type: string
                                 x-kubernetes-validations:
                                 - message: ImageRepository must contain only allowed
@@ -40006,8 +40026,10 @@ spec:
                                 type: array
                             type: object
                             x-kubernetes-validations:
-                            - message: Either image or imageRepository can be set.
-                              rule: '!has(self.image) || !has(self.imageRepository)'
+                            - message: ImageRepository cannot be set with Image or
+                                ImageRegistry.
+                              rule: '!has(self.imageRepository) || (!has(self.image)
+                                && !has(self.imageRegistry))'
                           initContainers:
                             description: |-
                               List of initialization containers belonging to the pod.

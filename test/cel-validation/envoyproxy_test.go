@@ -2117,6 +2117,43 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid: image registry set for default image",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRegistry: new("registry.internal:5000"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: image and image registry set",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									Image:         new("quay.io/acme/envoy:v1.2.3"),
+									ImageRegistry: new("registry.internal"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid: imageRepository with ip and port",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -2187,7 +2224,44 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Either image or imageRepository can be set."},
+			wantErrors: []string{"ImageRepository cannot be set with Image or ImageRegistry."},
+		},
+		{
+			desc: "invalid: imageRepository and image registry set",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRegistry:   new("registry.internal"),
+									ImageRepository: new("envoyproxy/envoy"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"ImageRepository cannot be set with Image or ImageRegistry."},
+		},
+		{
+			desc: "invalid: image registry contains a repository path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Container: &egv1a1.KubernetesContainerSpec{
+									ImageRegistry: new("registry.internal/acme"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"ImageRegistry must be a registry host with an optional port."},
 		},
 		{
 			desc: "invalid: image ends with colon",

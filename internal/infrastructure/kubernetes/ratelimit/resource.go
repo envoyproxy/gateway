@@ -232,7 +232,15 @@ func resolveRateLimitImage(containerSpec *egv1a1.KubernetesContainerSpec) (strin
 
 	image := *containerSpec.Image
 	if containerSpec.ImageRepository == nil || *containerSpec.ImageRepository == "" {
-		return image, nil
+		if containerSpec.ImageRegistry == nil || *containerSpec.ImageRegistry == "" {
+			return image, nil
+		}
+
+		resolvedImage, err := resource.WithImageRegistry(image, *containerSpec.ImageRegistry)
+		if err != nil {
+			return "", fmt.Errorf("failed to apply image registry %q to rate limit image %q: %w", *containerSpec.ImageRegistry, image, err)
+		}
+		return resolvedImage, nil
 	}
 
 	imageRef, err := reference.ParseNormalizedNamed(image)
@@ -245,7 +253,12 @@ func resolveRateLimitImage(containerSpec *egv1a1.KubernetesContainerSpec) (strin
 		return "", fmt.Errorf("rate limit image %q has no tag to use with imageRepository", image)
 	}
 
-	return fmt.Sprintf("%s:%s", *containerSpec.ImageRepository, taggedImage.Tag()), nil
+	resolvedImage := fmt.Sprintf("%s:%s", *containerSpec.ImageRepository, taggedImage.Tag())
+	if digestedImage, ok := imageRef.(reference.Digested); ok {
+		resolvedImage += "@" + digestedImage.Digest().String()
+	}
+
+	return resolvedImage, nil
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.

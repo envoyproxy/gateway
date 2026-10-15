@@ -18,7 +18,7 @@ global:
       # -- Pull secrets for the Envoy Gateway control plane Deployment.
       pullSecrets: []
     ratelimit:
-      # -- Full image for the Envoy ratelimit deployment. If unset, the image linked into the envoy-gateway binary is used; global.imageRegistry overrides its registry while preserving the linked tag.
+      # -- Full image for the Envoy ratelimit deployment. If unset, the image linked into the envoy-gateway binary is used; global.imageRegistry overrides its registry while preserving its repository, tag, and digest.
       image: ""
       # Specify image pull policy if an image override is configured.
       pullPolicy: ""

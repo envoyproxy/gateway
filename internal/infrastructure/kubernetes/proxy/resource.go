@@ -579,12 +579,18 @@ func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, e
 		return fmt.Sprintf("%s:%s", repo, tag), nil
 	}
 
-	image := ptr.Deref(containerSpec.Image, "")
-	if image != "" {
+	image := ptr.Deref(containerSpec.Image, egv1a1.DefaultEnvoyProxyImage)
+	registry := ptr.Deref(containerSpec.ImageRegistry, "")
+	if registry == "" {
 		return image, nil
 	}
 
-	return egv1a1.DefaultEnvoyProxyImage, nil
+	resolvedImage, err := resource.WithImageRegistry(image, registry)
+	if err != nil {
+		return "", fmt.Errorf("failed to apply image registry %q to image %q: %w", registry, image, err)
+	}
+
+	return resolvedImage, nil
 }
 
 // getImageTag parses a Docker/OCI image reference and returns the tag if present.

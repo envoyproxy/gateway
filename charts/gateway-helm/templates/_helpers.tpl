@@ -221,13 +221,13 @@ provider:
   kubernetes:
     {{- if $renderRateLimit }}
     rateLimitDeployment:
-      {{- /* Use imageRepository when the image is not overridden so runtime defaulting keeps the linked tag. */}}
+      {{- /* Use imageRegistry when the image is not overridden so runtime defaulting keeps the linked image. */}}
       {{- if .Values.global.images.ratelimit.image }}
       container:
         image: {{ include "eg.ratelimit.image" . }}
       {{- else if .Values.global.imageRegistry }}
       container:
-        imageRepository: {{ printf "%s/%s" .Values.global.imageRegistry "envoyproxy/ratelimit" }}
+        imageRegistry: {{ .Values.global.imageRegistry }}
       {{- end }}
       {{- if (or .Values.global.imagePullSecrets .Values.global.images.ratelimit.pullSecrets) }}
       pod:

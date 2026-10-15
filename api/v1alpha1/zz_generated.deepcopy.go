@@ -5636,6 +5636,11 @@ func (in *KubernetesContainerSpec) DeepCopyInto(out *KubernetesContainerSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.ImageRegistry != nil {
+		in, out := &in.ImageRegistry, &out.ImageRegistry
+		*out = new(string)
+		**out = **in
+	}
 	if in.ImageRepository != nil {
 		in, out := &in.ImageRepository, &out.ImageRepository
 		*out = new(string)

@@ -42,9 +42,9 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            imageRepository: private.registry/envoyproxy/ratelimit
+            imageRegistry: private.registry
         shutdownManager:
-          image: docker.io/envoyproxy/gateway:v0.0.0-latest
+          image: private.registry/envoyproxy/gateway:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -461,8 +461,8 @@ spec:
           value: gateway-helm
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway:v0.0.0-latest
-        imagePullPolicy: 
+        image: private.registry/envoyproxy/gateway:latest
+        imagePullPolicy: IfNotPresent
         startupProbe:
           failureThreshold: 30
           httpGet:
@@ -762,8 +762,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: docker.io/envoyproxy/gateway:v0.0.0-latest
-        imagePullPolicy: 
+        image: private.registry/envoyproxy/gateway:latest
+        imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false

@@ -4007,8 +4007,9 @@ _Appears in:_
 | `env` | _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core) array_ |  false  |  | List of environment variables to set in the container. |
 | `resources` | _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcerequirements-v1-core)_ |  false  |  | Resources required by this container.<br />More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
 | `securityContext` | _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#securitycontext-v1-core)_ |  false  |  | SecurityContext defines the security options the container should be run with.<br />If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
-| `image` | _string_ |  false  |  | Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.<br />This field is mutually exclusive with ImageRepository. |
-| `imageRepository` | _string_ |  false  |  | ImageRepository specifies the container image repository to be used without specifying a tag.<br />The default tag will be used.<br />This field is mutually exclusive with Image. |
+| `image` | _string_ |  false  |  | Image specifies the container image to be used including a tag, instead of the default image.<br />This field can be set with ImageRegistry, but is mutually exclusive with ImageRepository. |
+| `imageRegistry` | _string_ |  false  |  | ImageRegistry specifies the registry to use for the container image while preserving its repository, tag, and digest.<br />This field can be set with Image, but is mutually exclusive with ImageRepository. |
+| `imageRepository` | _string_ |  false  |  | ImageRepository specifies the container image repository to be used without specifying a tag.<br />The default tag will be used.<br />This field is mutually exclusive with Image and ImageRegistry. |
 | `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core) array_ |  false  |  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
 
 

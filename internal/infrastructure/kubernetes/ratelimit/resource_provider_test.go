@@ -851,15 +851,45 @@ func TestDeployment(t *testing.T) {
 	}
 }
 
-func TestRateLimitImageRepositoryPreservesLinkedTag(t *testing.T) {
-	containerSpec := &egv1a1.KubernetesContainerSpec{
-		Image:           new("docker.io/envoyproxy/ratelimit:pinned"),
-		ImageRepository: new("private.registry/envoyproxy/ratelimit"),
+func TestResolveRateLimitImage(t *testing.T) {
+	tests := []struct {
+		name          string
+		containerSpec *egv1a1.KubernetesContainerSpec
+		want          string
+	}{
+		{
+			name: "image repository preserves linked tag and digest",
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Image:           new("quay.io/acme/ratelimit:pinned@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+				ImageRepository: new("private.registry/acme/ratelimit"),
+			},
+			want: "private.registry/acme/ratelimit:pinned@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		},
+		{
+			name: "image registry preserves linked repository, tag, and digest",
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Image:         new("quay.io/acme/ratelimit:pinned@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+				ImageRegistry: new("registry.internal"),
+			},
+			want: "registry.internal/acme/ratelimit:pinned@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		},
+		{
+			name: "image registry preserves default repository and tag",
+			containerSpec: &egv1a1.KubernetesContainerSpec{
+				Image:         new("docker.io/envoyproxy/ratelimit:master"),
+				ImageRegistry: new("registry.internal:5000"),
+			},
+			want: "registry.internal:5000/envoyproxy/ratelimit:master",
+		},
 	}
 
-	image, err := resolveRateLimitImage(containerSpec)
-	require.NoError(t, err)
-	require.Equal(t, "private.registry/envoyproxy/ratelimit:pinned", image)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			image, err := resolveRateLimitImage(tc.containerSpec)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, image)
+		})
+	}
 }
 
 func TestHorizontalPodAutoscaler(t *testing.T) {

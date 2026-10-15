@@ -241,7 +241,7 @@ type KubernetesPodSpec struct {
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
-// +kubebuilder:validation:XValidation:rule="!has(self.image) || !has(self.imageRepository)",message="Either image or imageRepository can be set."
+// +kubebuilder:validation:XValidation:rule="!has(self.imageRepository) || (!has(self.image) && !has(self.imageRegistry))",message="ImageRepository cannot be set with Image or ImageRegistry."
 type KubernetesContainerSpec struct {
 	// List of environment variables to set in the container.
 	//
@@ -263,16 +263,23 @@ type KubernetesContainerSpec struct {
 	// +optional
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 
-	// Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.
-	// This field is mutually exclusive with ImageRepository.
+	// Image specifies the container image to be used including a tag, instead of the default image.
+	// This field can be set with ImageRegistry, but is mutually exclusive with ImageRepository.
 	//
 	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?(/[a-zA-Z0-9._/-]+)?(:[a-zA-Z0-9._-]+)?(@sha256:[a-z0-9]+)?$')",message="Image must include a tag and allowed characters only (e.g., 'repo:tag')."
 	// +optional
 	Image *string `json:"image,omitempty"`
 
+	// ImageRegistry specifies the registry to use for the container image while preserving its repository, tag, and digest.
+	// This field can be set with Image, but is mutually exclusive with ImageRepository.
+	//
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?$')",message="ImageRegistry must be a registry host with an optional port."
+	// +optional
+	ImageRegistry *string `json:"imageRegistry,omitempty"`
+
 	// ImageRepository specifies the container image repository to be used without specifying a tag.
 	// The default tag will be used.
-	// This field is mutually exclusive with Image.
+	// This field is mutually exclusive with Image and ImageRegistry.
 	//
 	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-zA-Z0-9._-]+(:[0-9]+)?[a-zA-Z0-9._/-]+$')",message="ImageRepository must contain only allowed characters and must not include a tag."
 	// +optional
