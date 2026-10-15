@@ -724,8 +724,8 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 		od.SplitExternalLocalOriginErrors = *outlierDetection.SplitExternalLocalOriginErrors
 	}
 
-	// An explicit zero is meaningful (no host may be ejected), so only an unset value falls back
-	// to Envoy's default.
+	// Preserve an explicitly configured 0% limit; only an unset value falls back to Envoy's
+	// 10% default.
 	if outlierDetection.MaxEjectionPercent != nil {
 		od.MaxEjectionPercent = wrapperspb.UInt32(*outlierDetection.MaxEjectionPercent)
 	}
