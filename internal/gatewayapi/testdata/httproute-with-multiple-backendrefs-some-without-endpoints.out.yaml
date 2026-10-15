@@ -130,6 +130,12 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
+        message: 'Failed to process route rule 1 backendRef 2: service default/service-not-exist
+          not found.'
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: |-
           Failed to find endpoints: no ready endpoints for the related Service default/service-with-no-endpoints.
           Failed to find endpoints: no ready endpoints for the related Service default/service-with-no-endpoints.
@@ -138,12 +144,6 @@ httpRoutes:
         reason: EndpointsNotFound
         status: "False"
         type: BackendsAvailable
-      - lastTransitionTime: null
-        message: 'Failed to process route rule 1 backendRef 2: service default/service-not-exist
-          not found.'
-        reason: BackendNotFound
-        status: "False"
-        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
