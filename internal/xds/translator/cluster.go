@@ -109,6 +109,7 @@ const (
 	EndpointTypeDNS EndpointType = iota
 	EndpointTypeStatic
 	EndpointTypeDynamicResolver
+	EndpointTypeNone
 )
 
 var (
@@ -134,6 +135,10 @@ func buildEndpointType(settings []*ir.DestinationSetting) EndpointType {
 	// since there's no Mixed AddressType among all the DestinationSettings.
 	if settings == nil {
 		return EndpointTypeStatic
+	}
+
+	if settings[0].IsCustomBackend {
+		return EndpointTypeNone
 	}
 
 	if settings[0].IsDynamicResolver {
@@ -565,6 +570,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				},
 			}},
 		}
+	case EndpointTypeNone:
+		// A custom backend has no endpoints of its own: it gets a STATIC cluster with an empty load
+		// assignment, which the extension's cluster hook is expected to replace. If there is no hook,
+		// or it fails open, this is still a valid cluster with no hosts.
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC}
 	case EndpointTypeStatic:
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
@@ -1568,12 +1578,18 @@ func buildBackandConnectionBufferLimitBytes(bc *ir.BackendConnection) *wrappers.
 }
 
 type ExtraArgs struct {
-	metrics           *ir.Metrics
-	http1Settings     *ir.HTTP1Settings
-	http2Settings     *ir.HTTP2Settings
-	ipFamily          *egv1a1.IPFamily
-	statName          *string
-	extensionMgr      *extensionTypes.Manager
+	metrics       *ir.Metrics
+	http1Settings *ir.HTTP1Settings
+	http2Settings *ir.HTTP2Settings
+	ipFamily      *egv1a1.IPFamily
+	statName      *string
+	extensionMgr  *extensionTypes.Manager
+	// unstructuredRefs are the extension resources passed to the extension's PostClusterModifyHook
+	// for the cluster being built. They are scoped to that cluster (see clusterExtensionResources),
+	// not the whole route: route-level resources such as extensionRef filters are passed to every
+	// cluster of the route, while a custom backend resource is only passed to the cluster built from
+	// its own backendRef. ExtraArgs is shared across a route's clusters, so it must be set before
+	// each cluster is built. Empty means the hook is not called.
 	unstructuredRefs  []*unstructured.Unstructured
 	logger            logging.Logger
 	traffic           *ir.ClusterTrafficFeatures

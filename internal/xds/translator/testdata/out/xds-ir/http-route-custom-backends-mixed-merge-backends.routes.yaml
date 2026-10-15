@@ -14,5 +14,7 @@
         - upgradeType: websocket
         weightedClusters:
           clusters:
+          - name: mixed-route-dest/backend/1
+            weight: 1
           - name: service/default/service-1/8080/http
             weight: 1

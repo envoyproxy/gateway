@@ -341,13 +341,16 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				}
 			}
 
-			if unstructuredRef != nil {
-				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
-			}
-
 			// skip backendRefs with weight 0 as they do not affect the traffic distribution
 			if backendDest.ds.Weight != nil && *backendDest.ds.Weight == 0 {
 				continue
+			}
+
+			// only add the custom backend resource after the weight check, so a weight-0 custom
+			// backend never reaches the extension hooks: it has no cluster of its own, and its
+			// resource would otherwise be passed to the cluster of every other backendRef in the rule.
+			if unstructuredRef != nil {
+				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
 			}
 
 			// check if there is a dynamic resolver in the backendRefs
@@ -2981,9 +2984,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			}
 
 			return &ir.DestinationSetting{
-				Name:            name,
-				Weight:          &weight,
-				IsCustomBackend: true,
+				Name:             name,
+				Weight:           &weight,
+				IsCustomBackend:  true,
+				CustomBackendRef: unstructuredRef,
 			}, unstructuredRef, nil
 		}
 	}

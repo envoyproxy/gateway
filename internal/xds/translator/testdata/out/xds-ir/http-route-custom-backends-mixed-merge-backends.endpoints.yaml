@@ -1,8 +1,3 @@
-- clusterName: mixed-route-dest/backend/1
-  endpoints:
-  - loadBalancingWeight: 1
-    locality:
-      region: mixed-route-dest/backend/1
 - clusterName: service/default/service-1/8080/http
   endpoints:
   - lbEndpoints:

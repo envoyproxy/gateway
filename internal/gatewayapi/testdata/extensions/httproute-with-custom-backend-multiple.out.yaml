@@ -206,10 +206,14 @@ xdsIR:
             namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
-          - isCustomBackend: true
+          - customBackendRef:
+              name: storage.example.io/s3backend/default/s3-backend-1
+            isCustomBackend: true
             name: httproute/default/httproute-1/rule/0/backend/0
             weight: 1
-          - isCustomBackend: true
+          - customBackendRef:
+              name: storage.example.io/s3backend/default/s3-backend-2
+            isCustomBackend: true
             name: httproute/default/httproute-1/rule/0/backend/1
             weight: 1
         extensionRefs:
@@ -233,10 +237,14 @@ xdsIR:
             namespace: default
           name: httproute/default/httproute-1/rule/1
           settings:
-          - isCustomBackend: true
+          - customBackendRef:
+              name: storage.example.io/s3backend/default/s3-backend-3
+            isCustomBackend: true
             name: httproute/default/httproute-1/rule/1/backend/0
             weight: 1
-          - isCustomBackend: true
+          - customBackendRef:
+              name: storage.example.io/s3backend/default/s3-backend-4
+            isCustomBackend: true
             name: httproute/default/httproute-1/rule/1/backend/1
             weight: 1
         extensionRefs:

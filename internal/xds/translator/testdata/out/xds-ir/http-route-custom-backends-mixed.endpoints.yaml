@@ -1,4 +1,4 @@
-- clusterName: mixed-route-dest
+- clusterName: mixed-route-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -10,6 +10,3 @@
     loadBalancingWeight: 1
     locality:
       region: mixed-route-dest/backend/0
-  - loadBalancingWeight: 1
-    locality:
-      region: mixed-route-dest/backend/1
