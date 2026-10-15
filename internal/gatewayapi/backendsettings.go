@@ -25,7 +25,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
-func translateTrafficFeatures(policy *egv1a1.BackendSettings) (*ir.TrafficFeatures, error) {
+// translateExtServiceBackendSettings converts the BackendSettings of a non-route backend, such as
+// the ext-service clusters of SecurityPolicy and EnvoyExtensionPolicy or the EnvoyProxy telemetry
+// sinks, into traffic features.
+func translateExtServiceBackendSettings(policy *egv1a1.BackendSettings) (*ir.TrafficFeatures, error) {
 	if policy == nil {
 		return nil, nil
 	}
@@ -72,6 +75,13 @@ func translateTrafficFeatures(policy *egv1a1.BackendSettings) (*ir.TrafficFeatur
 		return nil, err
 	} else {
 		ret.HTTP2 = h2
+	}
+
+	// HTTP/3 is only supported for route backends. The ext-service clusters built from
+	// these settings are driven by Envoy's async client, which never records alt-svc, so
+	// the default Auto mode could never take effect here.
+	if policy.HTTP3 != nil {
+		return nil, errors.New("http3 is only supported for route backends")
 	}
 
 	var err error

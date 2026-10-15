@@ -166,6 +166,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
 		return nil, err
 	}
+	if err := patchRouteWithAlternateProtocolsCache(router, httpRoute, backendIndex); err != nil {
+		return nil, err
+	}
 
 	return router, nil
 }
