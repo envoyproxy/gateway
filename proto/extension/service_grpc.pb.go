@@ -30,6 +30,7 @@ const (
 	EnvoyGatewayExtension_PostClusterModify_FullMethodName      = "/envoygateway.extension.EnvoyGatewayExtension/PostClusterModify"
 	EnvoyGatewayExtension_PostEndpointsModify_FullMethodName    = "/envoygateway.extension.EnvoyGatewayExtension/PostEndpointsModify"
 	EnvoyGatewayExtension_PostTranslateModify_FullMethodName    = "/envoygateway.extension.EnvoyGatewayExtension/PostTranslateModify"
+	EnvoyGatewayExtension_ResolveSecret_FullMethodName          = "/envoygateway.extension.EnvoyGatewayExtension/ResolveSecret"
 )
 
 // EnvoyGatewayExtensionClient is the client API for EnvoyGatewayExtension service.
@@ -68,6 +69,13 @@ type EnvoyGatewayExtensionClient interface {
 	// The lists returned by the extension are used as the final lists of clusters, secrets, listeners, and routes.
 	// This hook is executed when an extension is loaded and has subscribed to the post-translation hook.
 	PostTranslateModify(ctx context.Context, in *PostTranslateModifyRequest, opts ...grpc.CallOption) (*PostTranslateModifyResponse, error)
+	// ResolveSecret asks an extension how Envoy should obtain a secret that was referenced
+	// from a kind registered in ExtensionManager.SecretResources.
+	//
+	// It is invoked once per such secret and returns the SdsSecretConfig to place on the
+	// consuming resource. Unlike the other hooks, resolution is not chained: only the extension
+	// that registered the referenced group and kind is consulted.
+	ResolveSecret(ctx context.Context, in *ResolveSecretRequest, opts ...grpc.CallOption) (*ResolveSecretResponse, error)
 }
 
 type envoyGatewayExtensionClient struct {
@@ -138,6 +146,16 @@ func (c *envoyGatewayExtensionClient) PostTranslateModify(ctx context.Context, i
 	return out, nil
 }
 
+func (c *envoyGatewayExtensionClient) ResolveSecret(ctx context.Context, in *ResolveSecretRequest, opts ...grpc.CallOption) (*ResolveSecretResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveSecretResponse)
+	err := c.cc.Invoke(ctx, EnvoyGatewayExtension_ResolveSecret_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EnvoyGatewayExtensionServer is the server API for EnvoyGatewayExtension service.
 // All implementations must embed UnimplementedEnvoyGatewayExtensionServer
 // for forward compatibility.
@@ -174,6 +192,13 @@ type EnvoyGatewayExtensionServer interface {
 	// The lists returned by the extension are used as the final lists of clusters, secrets, listeners, and routes.
 	// This hook is executed when an extension is loaded and has subscribed to the post-translation hook.
 	PostTranslateModify(context.Context, *PostTranslateModifyRequest) (*PostTranslateModifyResponse, error)
+	// ResolveSecret asks an extension how Envoy should obtain a secret that was referenced
+	// from a kind registered in ExtensionManager.SecretResources.
+	//
+	// It is invoked once per such secret and returns the SdsSecretConfig to place on the
+	// consuming resource. Unlike the other hooks, resolution is not chained: only the extension
+	// that registered the referenced group and kind is consulted.
+	ResolveSecret(context.Context, *ResolveSecretRequest) (*ResolveSecretResponse, error)
 	mustEmbedUnimplementedEnvoyGatewayExtensionServer()
 }
 
@@ -201,6 +226,9 @@ func (UnimplementedEnvoyGatewayExtensionServer) PostEndpointsModify(context.Cont
 }
 func (UnimplementedEnvoyGatewayExtensionServer) PostTranslateModify(context.Context, *PostTranslateModifyRequest) (*PostTranslateModifyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostTranslateModify not implemented")
+}
+func (UnimplementedEnvoyGatewayExtensionServer) ResolveSecret(context.Context, *ResolveSecretRequest) (*ResolveSecretResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveSecret not implemented")
 }
 func (UnimplementedEnvoyGatewayExtensionServer) mustEmbedUnimplementedEnvoyGatewayExtensionServer() {}
 func (UnimplementedEnvoyGatewayExtensionServer) testEmbeddedByValue()                               {}
@@ -331,6 +359,24 @@ func _EnvoyGatewayExtension_PostTranslateModify_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EnvoyGatewayExtension_ResolveSecret_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveSecretRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EnvoyGatewayExtensionServer).ResolveSecret(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EnvoyGatewayExtension_ResolveSecret_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EnvoyGatewayExtensionServer).ResolveSecret(ctx, req.(*ResolveSecretRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EnvoyGatewayExtension_ServiceDesc is the grpc.ServiceDesc for EnvoyGatewayExtension service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -361,6 +407,10 @@ var EnvoyGatewayExtension_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PostTranslateModify",
 			Handler:    _EnvoyGatewayExtension_PostTranslateModify_Handler,
+		},
+		{
+			MethodName: "ResolveSecret",
+			Handler:    _EnvoyGatewayExtension_ResolveSecret_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
