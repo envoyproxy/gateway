@@ -1004,8 +1004,10 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					Headers: &egv1a1.HeaderSettings{
-						ServerHeaderTransformation: new(egv1a1.ServerHeaderTransformationOverwrite),
-						ServerName:                 new("envoy gateway"),
+						ServerHeader: &egv1a1.ServerHeader{
+							Type:  egv1a1.ServerHeaderTransformationOverwrite,
+							Value: new(" envoy-gateway"),
+						},
 					},
 				}
 			},
