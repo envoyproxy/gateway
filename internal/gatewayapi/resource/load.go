@@ -67,10 +67,13 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 		extFilter
 		extPolicy
 		extBackend
+		extSecret
 	)
 	extGVKMap := map[string]extCategory{}
 	if envoyGateway != nil {
-		for _, em := range envoyGateway.GetExtensionManagers() {
+		extensionManagers := envoyGateway.GetExtensionManagers()
+		for i := range extensionManagers {
+			em := &extensionManagers[i]
 			for _, gvk := range em.Resources {
 				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
 				extGVKMap[key] = extFilter
@@ -78,6 +81,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 			for _, gvk := range em.PolicyResources {
 				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
 				extGVKMap[key] = extPolicy
+			}
+			for _, gvk := range em.SecretResources {
+				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+				extGVKMap[key] = extSecret
 			}
 			for _, gvk := range em.BackendResources {
 				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
@@ -151,6 +158,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 					resources.ExtensionRefFilters = append(resources.ExtensionRefFilters, *un)
 				case extPolicy:
 					resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+				case extSecret:
+					resources.ExtensionSecrets = append(resources.ExtensionSecrets, *un)
 				}
 				return nil
 			}
