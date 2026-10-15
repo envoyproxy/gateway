@@ -17,7 +17,7 @@ require (
 	github.com/klauspost/compress v1.20.1
 	github.com/miekg/dns v1.1.73
 	github.com/moby/go-archive v0.2.0
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
 	github.com/prometheus/common v0.72.0
 	github.com/quic-go/quic-go v0.59.0
