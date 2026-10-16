@@ -2,7 +2,7 @@
 title: "HTTP3"
 ---
 
-This task will help you get started using HTTP3 using EG. It has two parts: HTTP/3 between the client
+This task will help you get started using HTTP3 using EG. EG supports HTTP/3 between the client
 and the Gateway, and HTTP/3 between the Gateway and the backend. The two are configured separately
 and can be used on their own or together.
 This task uses a self-signed CA, so it should be used for testing and demonstration purposes only.
@@ -154,10 +154,7 @@ Hence we need external loadbalancer to test this feature out.
 
 ## HTTP/3 to Backends
 
-HTTP/3 to the backend is enabled with the `http3` field of a [BackendTrafficPolicy][]. It is only
-supported there: setting `http3` in the `backendSettings` of a SecurityPolicy, EnvoyExtensionPolicy
-or EnvoyProxy is rejected, since the control-plane clusters those build never learn that a server
-speaks HTTP/3.
+HTTP/3 to the backend is enabled with the `http3` field of a [BackendTrafficPolicy][].
 
 ### Prerequisites
 
