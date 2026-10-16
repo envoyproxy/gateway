@@ -1043,23 +1043,23 @@ func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, b
 func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
 	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
 
-	var kind, svcName string
+	// A slice may carry both service-name labels (e.g. Cilium ClusterMesh MCS
+	// slices), so file it under every backend it belongs to.
 	for _, slice := range slices {
 		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
-			kind = resource.KindService
-			svcName = name
-		} else if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
-			kind = resource.KindServiceImport
-			svcName = name
-		} else {
-			continue
+			t.addEndpointSliceForBackend(resource.KindService, name, slice)
 		}
-
-		key := backendServiceKey{
-			kind:      kind,
-			namespace: slice.Namespace,
-			name:      svcName,
+		if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
+			t.addEndpointSliceForBackend(resource.KindServiceImport, name, slice)
 		}
-		t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 	}
+}
+
+func (t *TranslatorContext) addEndpointSliceForBackend(kind, svcName string, slice *discoveryv1.EndpointSlice) {
+	key := backendServiceKey{
+		kind:      kind,
+		namespace: slice.Namespace,
+		name:      svcName,
+	}
+	t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 }

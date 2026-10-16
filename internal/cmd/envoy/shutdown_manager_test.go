@@ -11,6 +11,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -45,6 +47,54 @@ func setupFakeEnvoyStats(t *testing.T, content string) *http.Server {
 	}()
 
 	return s
+}
+
+func TestClearShutdownReadyFile(t *testing.T) {
+	cases := []struct {
+		name    string
+		setup   func(t *testing.T) string
+		cleared bool
+	}{
+		{
+			name: "file does not exist",
+			setup: func(t *testing.T) string {
+				return filepath.Join(t.TempDir(), "shutdown-ready")
+			},
+			cleared: true,
+		},
+		{
+			name: "stale file exists",
+			setup: func(t *testing.T) string {
+				path := filepath.Join(t.TempDir(), "shutdown-ready")
+				require.NoError(t, os.WriteFile(path, []byte("stale"), 0o600))
+				return path
+			},
+			cleared: true,
+		},
+		{
+			name: "removal failure is logged, not fatal",
+			setup: func(t *testing.T) string {
+				path := filepath.Join(t.TempDir(), "shutdown-ready")
+				require.NoError(t, os.Mkdir(path, 0o700))
+				require.NoError(t, os.WriteFile(filepath.Join(path, "child"), []byte("x"), 0o600))
+				return path
+			},
+			cleared: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := tc.setup(t)
+			clearShutdownReadyFile(path)
+			_, err := os.Stat(path)
+			if tc.cleared {
+				require.True(t, os.IsNotExist(err))
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestGetTotalConnections(t *testing.T) {
