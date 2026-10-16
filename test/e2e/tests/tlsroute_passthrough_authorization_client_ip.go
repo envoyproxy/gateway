@@ -63,6 +63,8 @@ var TLSRouteAuthzWithClientIP = suite.ConformanceTest{
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "tls-backend-authorization-blocked-security-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "tls-backend-authorization-allowed-security-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
 
+		WaitForGatewayPodsReady(t, suite.Client, gwNN)
+
 		t.Run("blocked client IP cannot connect to blocked.example.com", func(t *testing.T) {
 			testTLSRouteConnectionBlocked(t, gwAddr, "blocked.example.com")
 			verifyRBACStats(t, promClient, false, "tls-passthrough-8443")

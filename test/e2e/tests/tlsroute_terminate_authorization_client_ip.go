@@ -55,6 +55,8 @@ var TLSRouteTerminateAuthzWithClientIP = suite.ConformanceTest{
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "tls-terminate-authorization-blocked-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
 		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "tls-terminate-authorization-allowed-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
 
+		WaitForGatewayPodsReady(t, suite.Client, gwNN)
+
 		t.Run("blocked client IP cannot connect to blocked-terminate.example.com", func(t *testing.T) {
 			testTLSRouteConnectionBlocked(t, gwAddr, "blocked-terminate.example.com")
 			verifyRBACStats(t, promClient, false, "tls-terminate-8443")
