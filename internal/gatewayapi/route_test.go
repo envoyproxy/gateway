@@ -1033,4 +1033,15 @@ func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
 		require.Nil(t, err)
 		require.Equal(t, "my-session", sp.Cookie.Name)
 	})
+
+	t.Run("empty explicit sessionName is rejected", func(t *testing.T) {
+		for _, route := range []RouteContext{httpRoute("default", "route-1"), grpcRoute("default", "route-1")} {
+			for _, spType := range []gwapiv1.SessionPersistenceType{gwapiv1.CookieBasedSessionPersistence, gwapiv1.HeaderBasedSessionPersistence} {
+				sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new(""), Type: new(spType)}, route, 0)
+				require.Nil(t, sp)
+				require.NotNil(t, err)
+				require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, err.Reason())
+			}
+		}
+	})
 }

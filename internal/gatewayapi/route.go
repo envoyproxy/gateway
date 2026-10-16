@@ -1817,7 +1817,8 @@ func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteCont
 	}
 
 	var sessionName string
-	if sp.SessionName == nil {
+	switch {
+	case sp.SessionName == nil:
 		// SessionName is optional on the gateway-api, but envoy requires it
 		// so we generate the one here.
 
@@ -1828,7 +1829,14 @@ func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteCont
 		destName := irRouteDestinationName(route, ruleIdx)
 		sum := sha256.Sum256([]byte(destName))
 		sessionName = strings.ReplaceAll(destName, "/", "-") + "-" + hex.EncodeToString(sum[:4])
-	} else {
+	case *sp.SessionName == "":
+		// The CRD only bounds the maximum length, but envoy rejects an empty
+		// cookie or header name, which would fail the whole xDS update.
+		return nil, status.NewRouteStatusError(
+			errors.New("sessionName must not be empty"),
+			gwapiv1.RouteReasonUnsupportedValue,
+		)
+	default:
 		sessionName = *sp.SessionName
 	}
 
