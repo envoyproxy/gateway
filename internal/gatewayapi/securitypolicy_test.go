@@ -1532,8 +1532,9 @@ func Test_SecurityPolicy_TCPRoute_UnsupportedAllow_setsWarning(t *testing.T) {
 	parentCtx.SetListeners(gtwCtx.listeners...)
 	tcpRoute.SetRouteParentContext(parentRef, parentCtx)
 
-	policy := sp("default", "test-policy")
-	policy.Spec.Authorization = &egv1a1.Authorization{
+	// Parent Gateway policy contains an unsupported Allow rule.
+	parentPolicy := sp("default", "gateway-policy")
+	parentPolicy.Spec.Authorization = &egv1a1.Authorization{
 		Rules: []egv1a1.AuthorizationRule{
 			{
 				Name:   new("allow-with-method"),
@@ -1545,6 +1546,14 @@ func Test_SecurityPolicy_TCPRoute_UnsupportedAllow_setsWarning(t *testing.T) {
 					Methods: []gwapiv1.HTTPMethod{"GET"},
 				},
 			},
+		},
+	}
+
+	// Route policy enables merging and contributes a supported CIDR rule.
+	policy := sp("default", "test-policy")
+	policy.Spec.MergeType = new(egv1a1.StrategicMerge)
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
 			{
 				Name:   new("allow-cidr"),
 				Action: egv1a1.AuthorizationActionAllow,
@@ -1591,12 +1600,21 @@ func Test_SecurityPolicy_TCPRoute_UnsupportedAllow_setsWarning(t *testing.T) {
 	trContext.SetServices(resources.Services)
 	tr.TranslatorContext = trContext
 
+	gatewayPolicyMap := map[NamespacedNameWithSection]*egv1a1.SecurityPolicy{
+		{
+			NamespacedName: types.NamespacedName{
+				Namespace: "default",
+				Name:      "test-gateway",
+			},
+		}: parentPolicy,
+	}
+
 	tr.processSecurityPolicyForRoute(
 		resources,
 		xdsIR,
 		routeMap,
 		make(map[types.NamespacedName]*policyListenerSetTargetContext),
-		make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy),
+		gatewayPolicyMap,
 		make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy),
 		newPolicyScopeGraph(),
 		newPolicyScopeGraph(),
@@ -1604,7 +1622,7 @@ func Test_SecurityPolicy_TCPRoute_UnsupportedAllow_setsWarning(t *testing.T) {
 		target,
 	)
 
-	// The unsupported Allow rule must not appear in the translated TCP IR.
+	// The unsupported parent rule must not appear in the translated TCP IR.
 	require.NotNil(t, tcpRouteIR.Authorization)
 	require.Len(t, tcpRouteIR.Authorization.Rules, 1)
 	require.Equal(t, "allow-cidr", tcpRouteIR.Authorization.Rules[0].Name)
@@ -1615,24 +1633,20 @@ func Test_SecurityPolicy_TCPRoute_UnsupportedAllow_setsWarning(t *testing.T) {
 		tcpRouteIR.Authorization.Rules[0].Principal.ClientCIDRs[0].CIDR,
 	)
 
-	// The policy ancestor must receive the unsupported-rule warning.
-	require.NotEmpty(t, policy.Status.Ancestors)
+	// The warning must be recorded against the parent Gateway policy.
+	require.NotEmpty(t, parentPolicy.Status.Ancestors)
 
 	var warning bool
-	for _, ancestor := range policy.Status.Ancestors {
+	for _, ancestor := range parentPolicy.Status.Ancestors {
 		for _, condition := range ancestor.Conditions {
-			if condition.Type == string(egv1a1.PolicyConditionWarning) {
+			if condition.Type == string(egv1a1.PolicyConditionWarning) &&
+				condition.Reason == string(egv1a1.PolicyReasonUnsupportedAuthorizationRule) {
 				warning = true
-				require.Equal(
-					t,
-					string(egv1a1.PolicyReasonUnsupportedAuthorizationRule),
-					condition.Reason,
-				)
 				require.Contains(t, condition.Message, "allow-with-method")
 			}
 		}
 	}
-	require.True(t, warning, "expected UnsupportedAuthorizationRule warning")
+	require.True(t, warning, "expected UnsupportedAuthorizationRule warning on parent policy")
 }
 
 // --- non-TCP branch: malformed CIDR should return err -> SetTranslationErrorForPolicyAncestors(...) + return
@@ -2864,6 +2878,28 @@ func TestFilterAuthorizationForTCP_UnsupportedAllowRule(t *testing.T) {
 	require.Equal(t, []string{"allow-with-method"}, skipped)
 	require.Len(t, policy.Spec.Authorization.Rules, 1)
 	require.Equal(t, "allow-cidr", *policy.Spec.Authorization.Rules[0].Name)
+}
+
+func TestFilterAuthorizationForTCP_UnnamedUnsupportedAllowRule(t *testing.T) {
+	policy := sp("default", "test-policy")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Action: egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+				},
+				Operation: &egv1a1.Operation{
+					Methods: []gwapiv1.HTTPMethod{"GET"},
+				},
+			},
+		},
+	}
+
+	skipped := filterAuthorizationForTCP(policy)
+
+	require.Equal(t, []string{"rule at index 0"}, skipped)
+	require.Empty(t, policy.Spec.Authorization.Rules)
 }
 
 func TestTranslateSecurityPolicyForListeners_HTTPOnlyDoesNotFailForTCPIncompatibleDeny(t *testing.T) {

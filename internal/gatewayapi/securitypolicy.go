@@ -716,6 +716,25 @@ func (t *Translator) processSecurityPolicyForRoute(
 					continue
 				}
 
+				if currTarget.Kind == resource.KindTCPRoute {
+					skipped := filterAuthorizationForTCP(mergedPolicy)
+					if len(skipped) > 0 {
+						message := fmt.Sprintf(
+							"Authorization rules skipped for TCP listeners: %s",
+							strings.Join(skipped, ", "),
+						)
+
+						status.SetWarningForPolicyAncestor(
+							&policy.Status,
+							&ancestorRef,
+							t.GatewayControllerName,
+							egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+							message,
+							policy.Generation,
+						)
+					}
+				}
+
 				if err := validator(mergedPolicy); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -1135,13 +1154,15 @@ func filterAuthorizationForTCP(policy *egv1a1.SecurityPolicy) []string {
 	var skipped []string
 	rules := make([]egv1a1.AuthorizationRule, 0, len(policy.Spec.Authorization.Rules))
 
-	for _, rule := range policy.Spec.Authorization.Rules {
+	for i, rule := range policy.Spec.Authorization.Rules {
 		incompatible := !isAuthorizationRuleSupportedOnTCP(&rule)
 
 		if incompatible && rule.Action == egv1a1.AuthorizationActionAllow {
+			name := fmt.Sprintf("rule at index %d", i)
 			if rule.Name != nil {
-				skipped = append(skipped, *rule.Name)
+				name = *rule.Name
 			}
+			skipped = append(skipped, name)
 			continue
 		}
 
@@ -1597,15 +1618,19 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						}
 					}
 
-					if unsupportedDeny {
-						// Fail closed: an unsupported Deny rule must never be ignored.
-						r.Authorization = &ir.Authorization{
-							DefaultAction: egv1a1.AuthorizationActionDeny,
-						}
+					if r.Authorization != nil {
 						continue
 					}
 
-					if r.Authorization != nil {
+					if unsupportedDeny {
+						r.Authorization = &ir.Authorization{
+							DefaultAction: egv1a1.AuthorizationActionDeny,
+						}
+
+						errs = errors.Join(
+							errs,
+							fmt.Errorf("authorization deny rule cannot be enforced on TCP listeners"),
+						)
 						continue
 					}
 
