@@ -636,12 +636,54 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				if parentPolicy == nil {
-					// No parent policy found, fall back to current policy
-					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
+					// No parent policy found, fall back to current policy.
+					// TCP routes still need protocol-specific authorization filtering.
+					routePolicy := policy
+
+					if currTarget.Kind == resource.KindTCPRoute && policy.Spec.Authorization != nil {
+						policyCopy := *policy
+						authorizationCopy := *policy.Spec.Authorization
+						authorizationCopy.Rules = append(
+							[]egv1a1.AuthorizationRule(nil),
+							policy.Spec.Authorization.Rules...,
+						)
+						policyCopy.Spec.Authorization = &authorizationCopy
+
+						skipped := filterAuthorizationForTCP(&policyCopy)
+						routePolicy = &policyCopy
+
+						if len(skipped) > 0 {
+							message := fmt.Sprintf(
+								"Authorization rules skipped for TCP listeners: %s",
+								strings.Join(skipped, ", "),
+							)
+
+							status.SetWarningForPolicyAncestor(
+								&policy.Status,
+								&ancestorRef,
+								t.GatewayControllerName,
+								egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+								message,
+								policy.Generation,
+							)
+						}
+					}
+
+					if err := t.translateSecurityPolicyForRoute(
+						routePolicy,
+						&securityPolicyOwners{},
+						targetedRoute,
+						currTarget,
+						resources,
+						xdsIR,
+						listener,
+					); err != nil {
+						status.SetConditionForPolicyAncestor(
+							&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+							gwapiv1.PolicyConditionAccepted,
+							metav1.ConditionFalse,
 							egv1a1.PolicyReasonInvalid,
 							status.Error2ConditionMsg(err),
 							policy.Generation,
