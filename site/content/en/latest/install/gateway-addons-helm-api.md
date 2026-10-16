@@ -265,7 +265,7 @@ An Add-ons Helm chart for Envoy Gateway
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[4].each.type | string | `"Gauge"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[4].help | string | `"status condition"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[4].name | string | `"status"` |  |
-| prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[5].each.info.labelsFromPath.features | list | `[]` |  |
+| prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[5].each.info.labelsFromPath.features[0] | string | `"name"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[5].each.info.path[0] | string | `"status"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[5].each.info.path[1] | string | `"supportedFeatures"` |  |
 | prometheus.kube-state-metrics.customResourceState.config.spec.resources[1].metrics[5].each.type | string | `"Info"` |  |
