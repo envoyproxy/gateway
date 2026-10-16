@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -1512,7 +1514,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.GRPCBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, false)
+			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, rule.SessionPersistence != nil)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
@@ -1820,8 +1822,12 @@ func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteCont
 		// so we generate the one here.
 
 		// We generate a unique session name per route.
-		// `/` isn't allowed in the header key, so we just replace it with `-`.
-		sessionName = strings.ReplaceAll(irRouteDestinationName(route, ruleIdx), "/", "-")
+		// `/` isn't allowed in the header key, so we replace it with `-`. That
+		// replacement alone is ambiguous (e.g. a-b/c and a/b-c), so a short hash
+		// of the original name is appended to keep names collision-free.
+		destName := irRouteDestinationName(route, ruleIdx)
+		sum := sha256.Sum256([]byte(destName))
+		sessionName = strings.ReplaceAll(destName, "/", "-") + "-" + hex.EncodeToString(sum[:4])
 	} else {
 		sessionName = *sp.SessionName
 	}
