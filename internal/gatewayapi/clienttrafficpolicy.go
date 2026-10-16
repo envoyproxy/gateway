@@ -725,8 +725,6 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		}
 	}
 
-	udpIR := gwXdsIR.GetUDPListener(irListenerName)
-
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
 		keepalive     *ir.TCPKeepalive
@@ -886,9 +884,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		tcpIR.Timeout = timeout
 	}
 
+	udpIR := gwXdsIR.GetUDPListener(irListenerName)
 	if udpIR != nil {
 		// Only an invalid UDP timeout stops it from being applied. Errors from the other fields are
-		// still reported on the policy. Unlike TCP, the route is kept since UDP only uses the timeout.
+		// still reported on the policy. Keep the UDPRoute since the timeout can use its default.
 		udpTimeout, udpErr := buildUDPClientTimeout(policy.Spec.Timeout)
 		if udpErr == nil && udpTimeout != nil {
 			udpIR.Timeout = &ir.ClientTimeout{UDP: udpTimeout}
