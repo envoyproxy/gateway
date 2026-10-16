@@ -1,3 +1,4 @@
+# Translate the UDP listener idle timeout into idle_timeout on the Envoy UDP proxy filter.
 udp:
 - name: "udp-route"
   address: "::"
