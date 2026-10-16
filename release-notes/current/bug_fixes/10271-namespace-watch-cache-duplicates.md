@@ -1,0 +1,1 @@
+Fixed the Kubernetes provider's cache scope being random on each start when `watch.type` is `Namespaces`, which could leave the controller unable to become Ready or unable to see its own namespace's Secrets and ConfigMaps in Gateway Namespace Mode; the Helm chart now also grants EndpointSlice read in the controller namespace for this mode.
