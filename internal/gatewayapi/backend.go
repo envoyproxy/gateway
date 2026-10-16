@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -40,6 +41,32 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolic
 	return res
 }
 
+// isKubernetesServiceBackend reports whether the Backend points at a Kubernetes Service.
+func isKubernetesServiceBackend(backend *egv1a1.Backend) bool {
+	return backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeKubernetesService
+}
+
+// kubernetesServiceBackendRef returns the Service backendRef of a KubernetesService Backend.
+// Callers must make sure Spec.KubernetesService is set.
+func kubernetesServiceBackendRef(backend *egv1a1.Backend) gwapiv1.BackendObjectReference {
+	return gwapiv1.BackendObjectReference{
+		Name: backend.Spec.KubernetesService.Name,
+		Port: new(gwapiv1.PortNumber(backend.Spec.KubernetesService.Port)),
+	}
+}
+
+// validateKubernetesServiceBackend checks the Service of a KubernetesService Backend,
+// the same way a Service backendRef is checked.
+func (t *Translator) validateKubernetesServiceBackend(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
+	if backend.Spec.KubernetesService == nil {
+		return status.NewRouteStatusError(
+			fmt.Errorf("kubernetesService must be specified when type is KubernetesService"),
+			status.RouteReasonInvalidBackendRef,
+		)
+	}
+	return t.validateBackendRefService(kubernetesServiceBackendRef(backend), backend.Namespace, protocol)
+}
+
 func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy, runningOnHost bool) status.Error {
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		if len(backend.Spec.Endpoints) > 0 {
@@ -48,6 +75,13 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.Back
 				status.RouteReasonInvalidBackendRef,
 			)
 		}
+	}
+
+	if isKubernetesServiceBackend(backend) && len(backend.Spec.Endpoints) > 0 {
+		return status.NewRouteStatusError(
+			fmt.Errorf("KubernetesService type cannot have endpoints specified"),
+			status.RouteReasonInvalidBackendRef,
+		)
 	}
 
 	// Validate CACert is specified if InsecureSkipVerify is false
@@ -103,6 +137,10 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 				case endpoint.IP != nil:
 					ports[strconv.Itoa(int(endpoint.IP.Port))] = false
 				}
+			}
+			// A KubernetesService Backend has no endpoints, so its Service port is the only one to check.
+			if isKubernetesServiceBackend(backend) && backend.Spec.KubernetesService != nil {
+				ports[strconv.Itoa(int(backend.Spec.KubernetesService.Port))] = false
 			}
 
 			for _, policy := range backendTLSPolicies {

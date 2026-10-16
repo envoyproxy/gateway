@@ -730,6 +730,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		nn := types.NamespacedName{Namespace: backendNs, Name: backendName}
 		var endpointSliceLabelKey string
 		var endpointSliceIndex string
+		endpointSliceName := string(backendRef.Name)
 		switch backendRefKind {
 		case resource.KindService:
 			service := new(corev1.Service)
@@ -792,6 +793,30 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					gwcResource.Backends = append(gwcResource.Backends, backend)
 					logger.Info("added Backend to resource tree")
 				}
+			}
+
+			// A KubernetesService Backend gets its endpoints from the Service it points at, so the
+			// Service and its EndpointSlices are added the same way a Service backendRef adds them.
+			if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeKubernetesService && backend.Spec.KubernetesService != nil {
+				svcNN := types.NamespacedName{Namespace: backend.Namespace, Name: string(backend.Spec.KubernetesService.Name)}
+				service := new(corev1.Service)
+				if err := r.client.Get(ctx, svcNN, service); err != nil {
+					if isTransientError(err) {
+						return err
+					}
+					logger.Error(err, "failed to get Service of KubernetesService Backend")
+				} else {
+					resourceMappings.allAssociatedNamespaces.Insert(service.Namespace)
+					svcKey := utils.NamespacedName(service).String()
+					if !resourceMappings.allAssociatedServices.Has(svcKey) {
+						resourceMappings.allAssociatedServices.Insert(svcKey)
+						gwcResource.Services = append(gwcResource.Services, service)
+						logger.Info("added Service of KubernetesService Backend to resource tree")
+					}
+				}
+				endpointSliceLabelKey = discoveryv1.LabelServiceName
+				endpointSliceIndex = serviceEndpointSliceIndex
+				endpointSliceName = svcNN.Name
 			}
 
 			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
@@ -869,11 +894,11 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			}
 			if r.endpointSliceIndexEnabled() {
 				opts = append(opts, client.MatchingFields{
-					endpointSliceIndex: string(backendRef.Name),
+					endpointSliceIndex: endpointSliceName,
 				})
 			} else {
 				opts = append(opts, client.MatchingLabels{
-					endpointSliceLabelKey: string(backendRef.Name),
+					endpointSliceLabelKey: endpointSliceName,
 				})
 			}
 			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {

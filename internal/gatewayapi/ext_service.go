@@ -123,7 +123,10 @@ func (t *Translator) processExtServiceDestination(
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol)
+		ds, err = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, gtwCtx.envoyProxy, nil)
+		if err != nil {
+			return nil, err
+		}
 		// Dynamic resolver destinations are not supported for none-route destinations
 		if ds.IsDynamicResolver {
 			return nil, errors.New("dynamic resolver destinations are not supported")

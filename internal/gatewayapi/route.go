@@ -2927,7 +2927,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol)
+		ds, err = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
+		if err != nil {
+			return emptyDS, nil, err
+		}
 	default:
 		// Handle custom backend resources defined in extension manager
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
@@ -3491,19 +3494,18 @@ func (t *Translator) processBackendDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	defaultProtocol ir.AppProtocol,
-) *ir.DestinationSetting {
+	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
+) (*ir.DestinationSetting, status.Error) {
 	var dstAddrType *ir.DestinationAddressType
-	protocol := defaultProtocol
-	forceHTTP1Upstream := false
 
-	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
-	for _, ap := range backend.Spec.AppProtocols {
-		protocol = resolveBackendProtocol(string(ap), protocol)
-		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
-		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
+	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeKubernetesService {
+		return t.processKubernetesServiceBackendDestinationSetting(name, backend, defaultProtocol, envoyProxy, btpRoutingType)
 	}
+
+	protocol, forceHTTP1Upstream := resolveBackendAppProtocols(backend, defaultProtocol)
+	addrTypeMap := make(map[ir.DestinationAddressType]int)
 
 	ds := &ir.DestinationSetting{Name: name}
 
@@ -3512,7 +3514,7 @@ func (t *Translator) processBackendDestinationSetting(
 		ds.IsDynamicResolver = true
 		ds.Protocol = protocol
 		ds.ForceHTTP1Upstream = forceHTTP1Upstream
-		return ds
+		return ds, nil
 	}
 
 	dstEndpoints := make([]*ir.DestinationEndpoint, 0, len(backend.Spec.Endpoints))
@@ -3572,7 +3574,51 @@ func (t *Translator) processBackendDestinationSetting(
 
 	ds.Metadata = buildResourceMetadata(backend, nil)
 
-	return ds
+	return ds, nil
+}
+
+// processKubernetesServiceBackendDestinationSetting translates a KubernetesService Backend
+// into the same endpoints a Service backendRef would get, then layers the Backend settings on top.
+func (t *Translator) processKubernetesServiceBackendDestinationSetting(
+	name string,
+	backend *egv1a1.Backend,
+	defaultProtocol ir.AppProtocol,
+	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
+) (*ir.DestinationSetting, status.Error) {
+	ds, err := t.processServiceDestinationSetting(name, kubernetesServiceBackendRef(backend), backend.Namespace,
+		defaultProtocol, envoyProxy, btpRoutingType)
+	if err != nil {
+		return nil, err
+	}
+
+	// The Backend appProtocols take precedence over the appProtocol of the Service port.
+	if len(backend.Spec.AppProtocols) > 0 {
+		ds.Protocol, ds.ForceHTTP1Upstream = resolveBackendAppProtocols(backend, defaultProtocol)
+	}
+
+	ds.IPFamily = getServiceIPFamily(t.GetService(backend.Namespace, string(backend.Spec.KubernetesService.Name)))
+	ds.Metadata = buildResourceMetadata(backend, nil)
+
+	if ptr.Deref(backend.Spec.Fallback, false) {
+		ds.Priority = new(uint32(1))
+	}
+
+	return ds, nil
+}
+
+// resolveBackendAppProtocols returns the upstream protocol and whether to force HTTP/1.1
+// from the appProtocols of a Backend, starting from the route's default protocol.
+func resolveBackendAppProtocols(backend *egv1a1.Backend, defaultProtocol ir.AppProtocol) (ir.AppProtocol, bool) {
+	protocol := defaultProtocol
+	forceHTTP1Upstream := false
+	for _, ap := range backend.Spec.AppProtocols {
+		protocol = resolveBackendProtocol(string(ap), protocol)
+		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
+	}
+	return protocol, forceHTTP1Upstream
 }
 
 // resolveBackendProtocol computes the upstream ir.AppProtocol for a backend from the
