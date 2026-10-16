@@ -183,6 +183,22 @@ func (c *ControllerResourcesContext) StoredAtTime() time.Time {
 	return c.StoredAt
 }
 
+// SortEndpointSlices sorts EndpointSlices by creation timestamp, then
+// namespace/name. It is shared with the provider's endpoint fast path
+// publisher, which must derive endpoints in the same order as a full
+// translation.
+func SortEndpointSlices(endpointSlices []*discoveryv1.EndpointSlice) {
+	sort.Slice(endpointSlices, func(i, j int) bool {
+		if endpointSlices[i].CreationTimestamp.Equal(&endpointSlices[j].CreationTimestamp) {
+			if endpointSlices[i].Namespace != endpointSlices[j].Namespace {
+				return endpointSlices[i].Namespace < endpointSlices[j].Namespace
+			}
+			return endpointSlices[i].Name < endpointSlices[j].Name
+		}
+		return endpointSlices[i].CreationTimestamp.Before(&endpointSlices[j].CreationTimestamp)
+	})
+}
+
 // DeepCopy creates a new ControllerResourcesContext.
 // The Context field is preserved (not deep copied) since contexts are meant to be passed around.
 func (c *ControllerResourcesContext) DeepCopy() *ControllerResourcesContext {
@@ -376,15 +392,7 @@ func (r *Resources) Sort() {
 	})
 
 	// Sort EndpointSlices by creation timestamp, then namespace/name
-	sort.Slice(r.EndpointSlices, func(i, j int) bool {
-		if r.EndpointSlices[i].CreationTimestamp.Equal(&r.EndpointSlices[j].CreationTimestamp) {
-			if r.EndpointSlices[i].Namespace != r.EndpointSlices[j].Namespace {
-				return r.EndpointSlices[i].Namespace < r.EndpointSlices[j].Namespace
-			}
-			return r.EndpointSlices[i].Name < r.EndpointSlices[j].Name
-		}
-		return r.EndpointSlices[i].CreationTimestamp.Before(&r.EndpointSlices[j].CreationTimestamp)
-	})
+	SortEndpointSlices(r.EndpointSlices)
 
 	// Sort Secrets by creation timestamp, then namespace/name
 	sort.Slice(r.Secrets, func(i, j int) bool {

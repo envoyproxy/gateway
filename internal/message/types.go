@@ -12,6 +12,7 @@ import (
 
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel/trace"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -26,6 +27,12 @@ type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources with trace context.
 	GatewayAPIResources watchable.Map[string, *resource.ControllerResourcesContext]
+
+	// EndpointUpdates is a map from a backend key (EndpointUpdate.Key()) to the
+	// backend's current EndpointSlices, published by the provider for the
+	// endpoint fast path. Only written when the EndpointFastPath runtime flag
+	// is enabled.
+	EndpointUpdates watchable.Map[string, *EndpointUpdate]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -74,6 +81,10 @@ func (p *ProviderResources) GetResourcesKey() string {
 
 func (p *ProviderResources) Close() {
 	p.GatewayAPIResources.Close()
+	// EndpointUpdates is deliberately not closed: it is written from informer
+	// event handlers that are not synchronized with this Close, and a Store on
+	// a closed watchable.Map panics. Its subscribers terminate through their
+	// own subscription contexts instead.
 	p.GatewayAPIStatuses.Close()
 	p.PolicyStatuses.Close()
 	p.ExtensionStatuses.Close()
@@ -275,6 +286,65 @@ func (x *InfraIRWithContext) Equal(other *InfraIRWithContext) bool {
 	return reflect.DeepEqual(x.Infra, other.Infra)
 }
 
+// EndpointUpdate carries the current set of EndpointSlices for one backend
+// (Service or ServiceImport). It is published by the provider whenever the
+// backend's endpoints change and consumed by the xDS runner's endpoint fast
+// path.
+type EndpointUpdate struct {
+	// Kind is the backend kind: Service or ServiceImport.
+	Kind string
+	// Namespace of the backend.
+	Namespace string
+	// Name of the backend.
+	Name string
+	// EndpointSlices is the full current set of EndpointSlices for the
+	// backend, so each update is self-contained under coalescing.
+	EndpointSlices []*discoveryv1.EndpointSlice
+}
+
+// BackendKey returns the EndpointUpdates map key identifying a backend. It is
+// the single definition of that format: the provider keys published updates by
+// it, the xDS runner indexes endpoint contexts by it, and the reconcile prunes
+// retained updates by it — they must agree.
+func BackendKey(kind, namespace, name string) string {
+	return kind + "/" + namespace + "/" + name
+}
+
+// Key returns the watchable map key for this update's backend.
+func (e *EndpointUpdate) Key() string {
+	return BackendKey(e.Kind, e.Namespace, e.Name)
+}
+
+// DeepCopy creates a new EndpointUpdate.
+func (e *EndpointUpdate) DeepCopy() *EndpointUpdate {
+	if e == nil {
+		return nil
+	}
+	out := &EndpointUpdate{
+		Kind:      e.Kind,
+		Namespace: e.Namespace,
+		Name:      e.Name,
+	}
+	if e.EndpointSlices != nil {
+		out.EndpointSlices = make([]*discoveryv1.EndpointSlice, len(e.EndpointSlices))
+		for i, s := range e.EndpointSlices {
+			out.EndpointSlices[i] = s.DeepCopy()
+		}
+	}
+	return out
+}
+
+// Equal compares two EndpointUpdates.
+func (e *EndpointUpdate) Equal(other *EndpointUpdate) bool {
+	if e == nil || other == nil {
+		return e == other
+	}
+	return e.Kind == other.Kind &&
+		e.Namespace == other.Namespace &&
+		e.Name == other.Name &&
+		reflect.DeepEqual(e.EndpointSlices, other.EndpointSlices)
+}
+
 // InfraIR message
 type InfraIR struct {
 	watchable.Map[string, *InfraIRWithContext]
@@ -285,6 +355,9 @@ type MessageName string
 const (
 	// XDSIRMessageName is a message containing xds-ir translated from provider-resources
 	XDSIRMessageName MessageName = "xds-ir"
+	// EndpointSlicesMessageName is a message containing a backend's EndpointSlices,
+	// published by the provider for the endpoint fast path
+	EndpointSlicesMessageName MessageName = "endpointslices"
 	// InfraIRMessageName is a message containing infra-ir translated from provider-resources
 	InfraIRMessageName MessageName = "infra-ir"
 	// ProviderResourcesMessageName is a message containing gw-api and envoy gateway resources from the provider

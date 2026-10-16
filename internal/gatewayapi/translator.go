@@ -140,6 +140,11 @@ type Translator struct {
 	// sharing a single system_ca_certificates secret. Disabled by default (shared secret used).
 	PerResourceSystemCASecret bool
 
+	// EndpointFastPathEnabled records the endpoint source on EndpointSlice-backed
+	// destination settings so the xDS runner can re-resolve endpoint updates
+	// without a full translation.
+	EndpointFastPathEnabled bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 
