@@ -768,7 +768,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 
-		if http3Enabled {
+		// A route proxying over upstream HTTP/3 adds this header in its header mutation filter
+		// instead, after the alternate protocols cache filter has run, so the cache never
+		// records the gateway's own alt-svc as the backend's.
+		if http3Enabled && !routeUsesUpstreamHTTP3(httpRoute, t.backendIndex) {
 			advertisedPort := httpListener.ExternalPort
 			if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
 				advertisedPort = *httpListener.HTTP3.AdvertisedPort
