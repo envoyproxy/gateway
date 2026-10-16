@@ -4004,6 +4004,7 @@ _Appears in:_
 | `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  |  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers<br />For examples, following config:<br />The claim must be of type; string, int, double, bool. Array type claims are not supported |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers generated from the claim are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  |  | ExtractFrom defines different ways to extract the JWT token from HTTP request.<br />If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema<br />or access_token from query parameters. |
+| `clockSkew` | _integer_ |  false  |  | ClockSkew defines the tolerance, in seconds, applied when validating<br />time-based claims such as "exp" and "nbf". If not specified, Envoy's<br />default of 60 seconds is used.<br />Note that Envoy treats a value of 0 as "not specified" and applies its<br />60 second default, so 0 is rejected here instead of being silently<br />ignored. The smallest tolerance that can be expressed is 1 second. |
 
 
 #### JWTScope

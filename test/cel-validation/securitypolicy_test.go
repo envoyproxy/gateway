@@ -1588,6 +1588,66 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "jwt with clockSkew",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:      "example",
+								ClockSkew: new(uint32(300)),
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			// Envoy treats clock_skew_seconds == 0 as "not specified" and
+			// applies its 60 second default, so 0 must not be accepted here.
+			desc: "jwt with clockSkew 0",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:      "example",
+								ClockSkew: new(uint32(0)),
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.jwt.providers[0].clockSkew in body should be greater than or equal to 1",
+			},
+		},
+		{
 			desc: "valueRef type of localJWKS without valueRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{

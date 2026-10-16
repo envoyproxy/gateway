@@ -1496,6 +1496,11 @@ type JWTProvider struct {
 	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
 	// or access_token from query parameters.
 	ExtractFrom *egv1a1.JWTExtractor `json:"extractFrom,omitempty"`
+
+	// ClockSkew defines the tolerance, in seconds, applied when validating
+	// time-based claims such as "exp" and "nbf". Nil keeps Envoy's default of
+	// 60 seconds; Envoy ignores an explicit 0, hence the 1 second minimum.
+	ClockSkew *uint32 `json:"clockSkew,omitempty"`
 }
 
 // RemoteJWKSBackend holds the configuration for a remote JWKS backend.

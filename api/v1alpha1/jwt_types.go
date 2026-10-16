@@ -107,6 +107,18 @@ type JWTProvider struct {
 	//
 	// +optional
 	ExtractFrom *JWTExtractor `json:"extractFrom,omitempty"`
+
+	// ClockSkew defines the tolerance, in seconds, applied when validating
+	// time-based claims such as "exp" and "nbf". If not specified, Envoy's
+	// default of 60 seconds is used.
+	//
+	// Note that Envoy treats a value of 0 as "not specified" and applies its
+	// 60 second default, so 0 is rejected here instead of being silently
+	// ignored. The smallest tolerance that can be expressed is 1 second.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	ClockSkew *uint32 `json:"clockSkew,omitempty"`
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.

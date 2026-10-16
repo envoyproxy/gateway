@@ -4195,6 +4195,18 @@ spec:
                               rule: (has(self.claim) && !has(self.claimPath)) || (!has(self.claim)
                                 && has(self.claimPath))
                           type: array
+                        clockSkew:
+                          description: |-
+                            ClockSkew defines the tolerance, in seconds, applied when validating
+                            time-based claims such as "exp" and "nbf". If not specified, Envoy's
+                            default of 60 seconds is used.
+
+                            Note that Envoy treats a value of 0 as "not specified" and applies its
+                            60 second default, so 0 is rejected here instead of being silently
+                            ignored. The smallest tolerance that can be expressed is 1 second.
+                          format: int32
+                          minimum: 1
+                          type: integer
                         extractFrom:
                           description: |-
                             ExtractFrom defines different ways to extract the JWT token from HTTP request.
