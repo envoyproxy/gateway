@@ -886,13 +886,13 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 
 	udpIR := gwXdsIR.GetUDPListener(irListenerName)
 	if udpIR != nil {
-		// Only an invalid UDP timeout stops it from being applied. Errors from the other fields are
-		// still reported on the policy. Keep the UDPRoute since the timeout can use its default.
+		// Ignore errors from settings that do not apply to UDP.
+		// Keep the UDPRoute since the timeout can use its default.
 		udpTimeout, udpErr := buildUDPClientTimeout(policy.Spec.Timeout)
 		if udpErr == nil && udpTimeout != nil {
 			udpIR.Timeout = &ir.ClientTimeout{UDP: udpTimeout}
 		}
-		return errs
+		return perr.WithMessage(udpErr, "Timeout")
 	}
 
 	return nil
