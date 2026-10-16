@@ -330,7 +330,29 @@ You should now expect 200 response status and also see that source IP was preser
 
 ### Configure Client IP Detection
 
-This example configures the number of hops from the right side of the X-Forwarded-For (XFF) to trust when determining the origin client's IP address and determines whether or not `x-forwarded-proto` headers will be trusted. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for for details.
+Envoy determines an original client address for every request and uses it wherever a client IP is needed: the
+`downstream_remote_address` field of the proxy access log, client IP [authorization](../../security/restrict-ip-access/),
+rate limiting, [GeoIP](../../security/geoip-authorization/), and the `x-envoy-external-address` header it sends to the backend.
+Without a `ClientTrafficPolicy`, Envoy trusts no proxies: the client is the peer of the downstream TCP connection, which behind
+a load balancer is the load balancer itself. Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+for details.
+
+`spec.clientIPDetection.xForwardedFor` tells Envoy which `X-Forwarded-For` (XFF) entries to believe. There are two ways to say
+which hops are trusted. Pick the one that matches your topology; they cannot be combined.
+
+#### Trust a fixed number of hops
+
+Use `numTrustedHops` when a known number of trusted proxies sits in front of Envoy and each appends the client address to XFF.
+A single cloud load balancer in front of the Gateway is `numTrustedHops: 1`. With `numTrustedHops: N`:
+
+- The client address is the Nth address from the right end of the XFF header as it arrived. If the header has fewer than N
+  entries, or N is 0, Envoy uses the downstream connection address.
+- Envoy appends the downstream connection address to XFF before forwarding the request.
+- Envoy sets `x-envoy-external-address` to the client address, so backends can read one value instead of parsing XFF.
+- Envoy keeps the `x-forwarded-proto` header sent by the trusted hops. With 0 hops it sets the header from the connection.
+- Envoy removes `x-envoy-*` internal headers sent by the client, so a client cannot inject its own `x-envoy-external-address`.
+
+This example configures two trusted hops.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -387,7 +409,7 @@ kubectl get clienttrafficpolicies.gateway.envoyproxy.io http-client-ip-detection
 Policy has been accepted.
 ```
 
-Curl the example app through Envoy proxy:
+Curl the example app through Envoy proxy, sending an XFF header as two upstream proxies would have left it:
 
 ```shell
 curl -v http://$GATEWAY_HOST/get \
@@ -396,24 +418,8 @@ curl -v http://$GATEWAY_HOST/get \
   -H "X-Forwarded-For: 1.1.1.1,2.2.2.2"
 ```
 
-If `numTrustedHops` is set to N, the client IP is taken from the Nth address from the right end of the XFF header. In this example,
-we set `numTrustedHops` to 2, so the client IP will be taken from the second rightmost address in the XFF header.
-
-To stop Envoy Gateway from automatically appending the downstream client address to `X-Forwarded-For`,
-set `spec.clientIPDetection.xForwardedFor.disableXForwardedForAppend: true` in the same `ClientTrafficPolicy`.
-This only disables the automatic append behavior and does not remove or sanitize an incoming
-`X-Forwarded-For` header.
-
-```yaml
-spec:
-  clientIPDetection:
-    xForwardedFor:
-      numTrustedHops: 2
-      disableXForwardedForAppend: true
-```
-
-You should expect 200 response status, see that `X-Forwarded-Proto` was preserved and `X-Envoy-External-Address` was set to the
-second rightmost address in the `X-Forwarded-For` header:
+You should expect a 200 response. `X-Forwarded-Proto` is preserved, `X-Envoy-External-Address` is set to `1.1.1.1`, the second
+address from the right end of `X-Forwarded-For`, and Envoy has appended the address it saw the connection come from:
 
 ```shell
 *   Trying [::1]:8888...
@@ -468,6 +474,100 @@ Handling connection for 8888
  "pod": "backend-58d58f745-8psnc"
 * Connection #0 to host localhost left intact
 }
+```
+
+#### Trust proxies by address range
+
+Use `trustedCIDRs` when the number of hops varies but the address ranges of the trusted proxies are known, for example a
+load balancer with several nodes in one VPC. Envoy evaluates XFF from right to left and skips every address inside a trusted
+range; the first address outside them is the client. If every address is trusted, the leftmost one is used. The downstream
+connection address itself must be inside a trusted range, otherwise it is the client.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http-client-ip-detection
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  clientIPDetection:
+    xForwardedFor:
+      trustedCIDRs:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http-client-ip-detection
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  clientIPDetection:
+    xForwardedFor:
+      trustedCIDRs:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Envoy implements this mode with its `xff` original IP detection extension, which does not let Envoy act as the trusted
+edge. The detected address is used for the access log, authorization, rate limiting and GeoIP, but Envoy does not set
+`x-envoy-external-address` in this mode and does not remove `x-envoy-*` headers sent by the client. If your backends need
+the client address in a header, use `numTrustedHops`.
+
+Verify the detected address through the proxy access log, whose `downstream_remote_address` field carries it:
+
+```shell
+curl -s http://$GATEWAY_HOST/get \
+  -H "Host: www.example.com" \
+  -H "X-Forwarded-For: 1.1.1.1,10.0.0.5"
+kubectl logs -n envoy-gateway-system deploy/${ENVOY_DEPLOYMENT} -c envoy --tail=1 | jq '{downstream_remote_address, "x-forwarded-for"}'
+```
+
+With the connection arriving from an address inside `10.0.0.0/8`, `10.0.0.5` is skipped as a trusted hop and `1.1.1.1` is the client:
+
+```json
+{
+  "downstream_remote_address": "1.1.1.1:0",
+  "x-forwarded-for": "1.1.1.1,10.0.0.5,10.244.0.1"
+}
+```
+
+#### Disable appending to X-Forwarded-For
+
+To stop Envoy from appending the downstream connection address to `X-Forwarded-For`, set
+`spec.clientIPDetection.xForwardedFor.disableXForwardedForAppend: true` alongside either `numTrustedHops` or `trustedCIDRs`.
+This only disables the automatic append behavior. It does not remove or sanitize an incoming `X-Forwarded-For` header, and it
+does not change which address is detected as the client.
+
+```yaml
+spec:
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 2
+      disableXForwardedForAppend: true
 ```
 
 ### Enable HTTP Request Received Timeout

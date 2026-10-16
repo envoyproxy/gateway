@@ -19,20 +19,16 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
         normalizePath: true
-        originalIpDetectionExtensions:
-        - name: envoy.extensions.http.original_ip_detection.xff
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig
-            skipXffAppend: true
-            xffNumTrustedHops: 1
         rds:
           configSource:
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
+        skipXffAppend: true
         statPrefix: http-8081
-        useRemoteAddress: false
+        useRemoteAddress: true
+        xffNumTrustedHops: 2
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
@@ -162,4 +158,113 @@
     name: fourth-listener
   maxConnectionsToAcceptPerSocketEvent: 1
   name: fourth-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 8085
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: fifth-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-8085
+        useRemoteAddress: true
+        xffNumTrustedHops: 1
+    name: fifth-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: fifth-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 8086
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: sixth-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-8086
+        useRemoteAddress: true
+    name: sixth-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: sixth-listener
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 8087
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        normalizePath: true
+        originalIpDetectionExtensions:
+        - name: envoy.extensions.http.original_ip_detection.xff
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.http.original_ip_detection.xff.v3.XffConfig
+            skipXffAppend: true
+            xffTrustedCidrs:
+              cidrs:
+              - addressPrefix: 10.0.0.0
+                prefixLen: 8
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: seventh-listener
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-8087
+        useRemoteAddress: false
+    name: seventh-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: seventh-listener
   perConnectionBufferLimitBytes: 32768

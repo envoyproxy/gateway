@@ -33,7 +33,6 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	protobuf "google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
@@ -138,8 +137,10 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 	return out
 }
 
-// xffNumTrustedHops returns the number of hops to be configured in proxy
-// Need to decrement number of hops configured by EGW user by 1 for backward compatibility
+// xffNumTrustedHops returns the hop count for Envoy components that read X-Forwarded-For
+// themselves, such as the geoip filter's xff_config. Those count hops the way the xff
+// original IP detection extension does, where N trusted hops selects the (N+1)th address from
+// the right, so the user's "Nth address from the right" is decremented by one.
 // See for more: https://github.com/envoyproxy/envoy/issues/34241
 func xffNumTrustedHops(clientIPDetection *ir.ClientIPDetectionSettings) uint32 {
 	if clientIPDetection != nil && clientIPDetection.XForwardedFor != nil &&
@@ -149,64 +150,87 @@ func xffNumTrustedHops(clientIPDetection *ir.ClientIPDetectionSettings) uint32 {
 	return 0
 }
 
-func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettings) []*corev3.TypedExtensionConfig {
-	// Return early if settings are nil
-	if clientIPDetection == nil {
-		return nil
+// clientIPDetection holds the HTTP connection manager settings that control how Envoy
+// determines the original client address.
+type clientIPDetection struct {
+	useRemoteAddress  bool
+	xffNumTrustedHops uint32
+	skipXffAppend     bool
+	extensions        []*corev3.TypedExtensionConfig
+}
+
+// buildClientIPDetection translates the ClientIPDetection settings into connection manager
+// settings.
+//
+// Envoy only acts as the trusted edge when use_remote_address is true: that is the only mode
+// in which it sets x-envoy-external-address to the detected client address, removes the
+// x-envoy-* internal headers a client may have sent, and applies the configured x-request-id
+// policy to external requests. The xff original IP detection extension requires
+// use_remote_address to be false, so NumTrustedHops is configured through the connection
+// manager's own xff_num_trusted_hops field, which has the same "Nth address from the right"
+// semantics. The extension is only used for the detection modes the connection manager has
+// no native field for: a custom header, or trusted CIDRs.
+func buildClientIPDetection(settings *ir.ClientIPDetectionSettings) clientIPDetection {
+	out := clientIPDetection{useRemoteAddress: true}
+	if settings == nil {
+		return out
 	}
 
-	var extensionConfig []*corev3.TypedExtensionConfig
-
-	// Custom header extension
-	if clientIPDetection.CustomHeader != nil {
-		var rejectWithStatus *typev3.HttpStatus
-		if ptr.Deref(clientIPDetection.CustomHeader.FailClosed, false) {
-			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
-		}
-
-		customHeaderConfigAny, _ := proto.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
-			HeaderName:       clientIPDetection.CustomHeader.Name,
-			RejectWithStatus: rejectWithStatus,
-
-			AllowExtensionToSetAddressAsTrusted: true,
-		})
-
-		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
-			Name:        "envoy.extensions.http.original_ip_detection.custom_header",
-			TypedConfig: customHeaderConfigAny,
-		})
-	} else if clientIPDetection.XForwardedFor != nil {
-		var xffHeaderConfigAny *anypb.Any
-		skipXffAppend := ptr.Deref(clientIPDetection.XForwardedFor.DisableXForwardedForAppend, false)
-		if clientIPDetection.XForwardedFor.TrustedCIDRs != nil {
-			trustedCidrs := make([]*corev3.CidrRange, 0)
-			for _, cidr := range clientIPDetection.XForwardedFor.TrustedCIDRs {
-				ip, nw, _ := net.ParseCIDR(string(cidr))
-				prefixLen, _ := nw.Mask.Size()
-				trustedCidrs = append(trustedCidrs, &corev3.CidrRange{
-					AddressPrefix: ip.String(),
-					PrefixLen:     wrapperspb.UInt32(uint32(prefixLen)),
-				})
-			}
-			xffHeaderConfigAny, _ = proto.ToAnyWithValidation(&xffv3.XffConfig{
-				XffTrustedCidrs: &xffv3.XffTrustedCidrs{
-					Cidrs: trustedCidrs,
-				},
-				SkipXffAppend: wrapperspb.Bool(skipXffAppend),
-			})
-		} else if clientIPDetection.XForwardedFor.NumTrustedHops != nil {
-			xffHeaderConfigAny, _ = proto.ToAnyWithValidation(&xffv3.XffConfig{
-				XffNumTrustedHops: xffNumTrustedHops(clientIPDetection),
-				SkipXffAppend:     wrapperspb.Bool(skipXffAppend),
-			})
-		}
-		extensionConfig = append(extensionConfig, &corev3.TypedExtensionConfig{
-			Name:        "envoy.extensions.http.original_ip_detection.xff",
-			TypedConfig: xffHeaderConfigAny,
-		})
+	switch {
+	case settings.CustomHeader != nil:
+		out.useRemoteAddress = false
+		out.extensions = []*corev3.TypedExtensionConfig{customHeaderIPDetectionExtension(settings.CustomHeader)}
+	case settings.XForwardedFor != nil && settings.XForwardedFor.TrustedCIDRs != nil:
+		out.useRemoteAddress = false
+		out.extensions = []*corev3.TypedExtensionConfig{xffTrustedCIDRsIPDetectionExtension(settings.XForwardedFor)}
+	case settings.XForwardedFor != nil && settings.XForwardedFor.NumTrustedHops != nil:
+		out.xffNumTrustedHops = *settings.XForwardedFor.NumTrustedHops
+		out.skipXffAppend = ptr.Deref(settings.XForwardedFor.DisableXForwardedForAppend, false)
 	}
 
-	return extensionConfig
+	return out
+}
+
+func customHeaderIPDetectionExtension(settings *egv1a1.CustomHeaderExtensionSettings) *corev3.TypedExtensionConfig {
+	var rejectWithStatus *typev3.HttpStatus
+	if ptr.Deref(settings.FailClosed, false) {
+		rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
+	}
+
+	customHeaderConfigAny, _ := proto.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
+		HeaderName:       settings.Name,
+		RejectWithStatus: rejectWithStatus,
+
+		AllowExtensionToSetAddressAsTrusted: true,
+	})
+
+	return &corev3.TypedExtensionConfig{
+		Name:        "envoy.extensions.http.original_ip_detection.custom_header",
+		TypedConfig: customHeaderConfigAny,
+	}
+}
+
+func xffTrustedCIDRsIPDetectionExtension(settings *egv1a1.XForwardedForSettings) *corev3.TypedExtensionConfig {
+	trustedCidrs := make([]*corev3.CidrRange, 0, len(settings.TrustedCIDRs))
+	for _, cidr := range settings.TrustedCIDRs {
+		ip, nw, _ := net.ParseCIDR(string(cidr))
+		prefixLen, _ := nw.Mask.Size()
+		trustedCidrs = append(trustedCidrs, &corev3.CidrRange{
+			AddressPrefix: ip.String(),
+			PrefixLen:     wrapperspb.UInt32(uint32(prefixLen)),
+		})
+	}
+	xffHeaderConfigAny, _ := proto.ToAnyWithValidation(&xffv3.XffConfig{
+		XffTrustedCidrs: &xffv3.XffTrustedCidrs{
+			Cidrs: trustedCidrs,
+		},
+		SkipXffAppend: wrapperspb.Bool(ptr.Deref(settings.DisableXForwardedForAppend, false)),
+	})
+
+	return &corev3.TypedExtensionConfig{
+		Name:        "envoy.extensions.http.original_ip_detection.xff",
+		TypedConfig: xffHeaderConfigAny,
+	}
 }
 
 // buildXdsTCPListener creates a xds Listener resource
@@ -365,13 +389,7 @@ func (t *Translator) addHCMToXDSListener(
 		return err
 	}
 
-	// HTTP filter configuration
-	// Client IP detection
-	useRemoteAddress := true
-	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
-	if originalIPDetectionExtensions != nil {
-		useRemoteAddress = false
-	}
+	clientIP := buildClientIPDetection(irListener.ClientIPDetection)
 	statPrefix := hcmStatPrefix(irListener, t.xdsNameSchemeV2())
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
@@ -391,8 +409,10 @@ func (t *Translator) addHCMToXDSListener(
 		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
 		Http2ProtocolOptions: http2ProtocolOptions(irListener.HTTP2),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress:              &wrapperspb.BoolValue{Value: useRemoteAddress},
-		OriginalIpDetectionExtensions: originalIPDetectionExtensions,
+		UseRemoteAddress:              &wrapperspb.BoolValue{Value: clientIP.useRemoteAddress},
+		XffNumTrustedHops:             clientIP.xffNumTrustedHops,
+		SkipXffAppend:                 clientIP.skipXffAppend,
+		OriginalIpDetectionExtensions: clientIP.extensions,
 		// normalize paths according to RFC 3986
 		NormalizePath:                &wrapperspb.BoolValue{Value: true},
 		MergeSlashes:                 irListener.Path.MergeSlashes,

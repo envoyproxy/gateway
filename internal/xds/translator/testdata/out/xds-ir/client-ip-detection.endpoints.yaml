@@ -46,3 +46,39 @@
     loadBalancingWeight: 1
     locality:
       region: fourth-route-dest/backend/0
+- clusterName: fifth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.5.5.5
+            portValue: 8085
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: fifth-route-dest/backend/0
+- clusterName: sixth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 6.6.6.6
+            portValue: 8086
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: sixth-route-dest/backend/0
+- clusterName: seventh-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8087
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: seventh-route-dest/backend/0
