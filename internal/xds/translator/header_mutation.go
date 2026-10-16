@@ -109,11 +109,11 @@ func (t *Translator) patchHCMWithUpstreamHTTP3AltSvc(mgr *hcmv3.HttpConnectionMa
 //
 // TODO: replace with the filter's own strip option once Envoy supports it, see
 // https://github.com/envoyproxy/envoy/issues/48169.
-func patchRouteWithUpstreamHTTP3AltSvc(route *routev3.Route, irListener *ir.HTTPListener, http3Enabled bool) error {
+func patchRouteWithUpstreamHTTP3AltSvc(route *routev3.Route, irListener *ir.HTTPListener, downstreamHTTP3Enabled bool) error {
 	mutations := []*mutation_rulesv3.HeaderMutation{{
 		Action: &mutation_rulesv3.HeaderMutation_Remove{Remove: altSvcHeader},
 	}}
-	if http3Enabled {
+	if downstreamHTTP3Enabled {
 		mutations = append(mutations, &mutation_rulesv3.HeaderMutation{
 			Action: &mutation_rulesv3.HeaderMutation_Append{
 				Append: buildHTTP3AltSvcHeader(http3AdvertisedPort(irListener)),
