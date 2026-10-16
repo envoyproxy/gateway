@@ -725,13 +725,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		}
 	}
 
-	var udpIR *ir.UDPListener
-	for _, udp := range gwXdsIR.UDP {
-		if udp.Name == irListenerName {
-			udpIR = udp
-			break
-		}
-	}
+	udpIR := gwXdsIR.GetUDPListener(irListenerName)
 
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
@@ -893,13 +887,13 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 	}
 
 	if udpIR != nil {
-		// An invalid policy is reported without being applied. Unlike TCP, the route is kept:
-		// UDP listeners only use the timeout, so dropping traffic wouldn't protect anything.
-		if errs != nil {
-			return errs
+		// Only an invalid UDP timeout stops it from being applied. Errors from the other fields are
+		// still reported on the policy. Unlike TCP, the route is kept since UDP only uses the timeout.
+		udpTimeout, udpErr := buildUDPClientTimeout(policy.Spec.Timeout)
+		if udpErr == nil && udpTimeout != nil {
+			udpIR.Timeout = &ir.ClientTimeout{UDP: udpTimeout}
 		}
-
-		udpIR.Timeout = timeout
+		return errs
 	}
 
 	return nil
@@ -1018,19 +1012,29 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
-	if clientTimeout.UDP != nil {
-		irUDPTimeout := &ir.UDPClientTimeout{}
-		if clientTimeout.UDP.IdleTimeout != nil {
-			d, err := time.ParseDuration(string(*clientTimeout.UDP.IdleTimeout))
-			if err != nil {
-				return nil, fmt.Errorf("invalid UDP IdleTimeout value %s", *clientTimeout.UDP.IdleTimeout)
-			}
-			irUDPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
-		}
-		irClientTimeout.UDP = irUDPTimeout
+	irUDPTimeout, err := buildUDPClientTimeout(clientTimeout)
+	if err != nil {
+		return nil, err
 	}
+	irClientTimeout.UDP = irUDPTimeout
 
 	return irClientTimeout, nil
+}
+
+func buildUDPClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.UDPClientTimeout, error) {
+	if clientTimeout == nil || clientTimeout.UDP == nil {
+		return nil, nil
+	}
+
+	irUDPTimeout := &ir.UDPClientTimeout{}
+	if clientTimeout.UDP.IdleTimeout != nil {
+		d, err := time.ParseDuration(string(*clientTimeout.UDP.IdleTimeout))
+		if err != nil {
+			return nil, fmt.Errorf("invalid UDP IdleTimeout value %s", *clientTimeout.UDP.IdleTimeout)
+		}
+		irUDPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
+	}
+	return irUDPTimeout, nil
 }
 
 func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSettings, httpIR *ir.HTTPListener) {

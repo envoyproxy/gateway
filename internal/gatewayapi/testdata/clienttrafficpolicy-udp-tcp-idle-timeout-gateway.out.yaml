@@ -292,7 +292,5 @@ xdsIR:
             weight: 1
         name: udproute/default/udproute-1
       timeout:
-        tcp:
-          idleTimeout: 10s
         udp:
           idleTimeout: 30s

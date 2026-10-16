@@ -185,3 +185,6 @@ xdsIR:
             protocol: UDP
             weight: 1
         name: udproute/default/udproute-1
+      timeout:
+        udp:
+          idleTimeout: 30s
