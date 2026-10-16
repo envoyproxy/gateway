@@ -171,6 +171,7 @@ http:
       - Chain
       - Cert
       - URI
+      - Issuer
   tls:
     alpnProtocols:
     - h2

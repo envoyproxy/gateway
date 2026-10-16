@@ -37,6 +37,20 @@ Together, these layers create a system that's:
 - Standardized and familiar
 - Ready for the future
 
+## Reference Architecture
+
+The diagram below shows these layers in a cluster.
+
+![Envoy Gateway reference architecture: platform and app teams apply resources to the Kubernetes API server; the Envoy Gateway controller watches them and configures the Envoy Proxy fleet and the optional rate limit service over xDS; client traffic goes through the Envoy Service to the proxies and then to the backends, with optional ext auth / ext proc calls and a user-provided Redis for rate limiting](/img/envoy-gateway-reference-architecture.png)
+
+- Platform and application teams declare the desired state with [Gateway API](gateway-api.md) resources and Envoy Gateway policies, for example with `kubectl` or a GitOps tool.
+- The Envoy Gateway Controller watches these resources through the Kubernetes API, translates them into Envoy configuration and writes their status back.
+- By default, Envoy Gateway provisions one Envoy Proxy fleet per Gateway (per GatewayClass when `mergeGateways` is enabled), with the Service that exposes it, in the Envoy Gateway namespace (`envoy-gateway-system` by default), or in each Gateway's namespace with [Gateway Namespace Mode](../tasks/operations/gateway-namespace-mode.md). The fleet is a Deployment by default, customizable with the `EnvoyProxy` resource, and the proxies get their configuration from Envoy Gateway over xDS (gRPC).
+- Client traffic enters through that Service and is routed by Envoy to the backends selected by the routes. Envoy can also call optional external authorization (ext auth) or external processing (ext proc) services.
+- When global rate limiting is enabled in the Envoy Gateway configuration, Envoy Gateway also deploys a [rate limit service](../tasks/traffic/global-rate-limit.md) and configures it over xDS; it is backed by a Redis instance that you provide.
+
+For the internal components of the control plane, see the [System Design](/community/design/system-design/) document.
+
 ## Resources
 
 ![](/img/envoy-gateway-resources-overview.png)

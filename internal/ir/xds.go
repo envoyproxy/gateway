@@ -974,6 +974,11 @@ type HeaderSettings struct {
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimit
 	DisableRateLimitHeaders bool `json:"disableRateLimitHeaders,omitempty" yaml:"disableRateLimitHeaders,omitempty"`
 
+	// DisableRetryAfterHeader controls if a "Retry-After" header is added to rate-limited 429 responses.
+	// The default is to emit this header.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimit
+	DisableRetryAfterHeader bool `json:"disableRetryAfterHeader,omitempty" yaml:"disableRetryAfterHeader,omitempty"`
+
 	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
 	XForwardedClientCert *XForwardedClientCert `json:"xForwardedClientCert,omitempty" yaml:"xForwardedClientCert,omitempty"`
@@ -1196,6 +1201,15 @@ type Compression struct {
 	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 	// MinContentLength defines the minimum response size in bytes to apply compression.
 	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
+	// Gzip holds the custom settings for the Gzip compressor library.
+	// It is only set when Type is Gzip and at least one setting is specified.
+	Gzip *egv1a1.GzipCompressor `json:"gzip,omitempty" yaml:"gzip,omitempty"`
+	// Brotli holds the custom settings for the Brotli compressor library.
+	// It is only set when Type is Brotli and at least one setting is specified.
+	Brotli *egv1a1.BrotliCompressor `json:"brotli,omitempty" yaml:"brotli,omitempty"`
+	// Zstd holds the custom settings for the Zstd compressor library.
+	// It is only set when Type is Zstd and at least one setting is specified.
+	Zstd *egv1a1.ZstdCompressor `json:"zstd,omitempty" yaml:"zstd,omitempty"`
 }
 
 // ClusterTrafficFeatures holds the TrafficFeatures fields that translate to Envoy cluster (CDS)
@@ -1548,6 +1562,10 @@ type OIDC struct {
 
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
+
+	// PostLogoutRedirect configures the `post_logout_redirect_uri` parameter sent to the OIDC
+	// Provider's end session endpoint. If nil, Envoy's default is used.
+	PostLogoutRedirect *egv1a1.OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty"`
 
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
@@ -4198,11 +4216,14 @@ type Wasm struct {
 	// during the initialization or the execution of the Wasm extension.
 	FailOpen bool `json:"failOpen"`
 
-	// Code is the HTTP Wasm code source.
-	// Envoy only supports HTTP Wasm code source. EG downloads the Wasm code from the
-	// original URL(either an HTTP URL or an OCI image) and serves it through the
-	// local HTTP server.
+	// Code is the HTTP Wasm code source when the module is served by the EG HTTP
+	// server (HTTP/Image sources downloaded by the control plane).
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+
+	// Path is the absolute filesystem path to the Wasm module on the Envoy proxy
+	// when policy code is omitted and name matches EnvoyProxy.spec.wasmModules.
+	// Mutually exclusive with Code.
+	Path string `json:"path,omitempty"`
 
 	// HostKeys is a list of keys for environment variables from the host envoy process
 	// that should be passed into the Wasm VM.
