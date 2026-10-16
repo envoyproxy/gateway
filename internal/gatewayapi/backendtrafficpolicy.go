@@ -2082,11 +2082,19 @@ func translateBackendHTTP1Settings(s *egv1a1.BackendHTTP1Settings) *ir.HTTP1Sett
 	}
 }
 
+// appendTrafficPolicyMetadata records the policy on the route once. A policy with mergeType is
+// applied once per listener of each parentRef, so a route whose parentRefs reach the same
+// listener twice is applied twice.
 func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.BackendTrafficPolicy) {
 	if md == nil || policy == nil {
 		return
 	}
-
+	for _, p := range md.Policies {
+		if p != nil && p.Kind == egv1a1.KindBackendTrafficPolicy &&
+			p.Name == policy.Name && p.Namespace == policy.Namespace {
+			return
+		}
+	}
 	md.Policies = append(md.Policies, &ir.PolicyMetadata{
 		Kind:      egv1a1.KindBackendTrafficPolicy,
 		Name:      policy.Name,
