@@ -1,3 +1,5 @@
+# A Gateway-scoped ClientTrafficPolicy applies independent TCP (10s) and UDP (30s)
+# idle timeouts to listeners sharing the same port.
 clientTrafficPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: ClientTrafficPolicy

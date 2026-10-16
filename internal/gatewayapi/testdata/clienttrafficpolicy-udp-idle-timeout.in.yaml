@@ -1,3 +1,4 @@
+# A listener-scoped ClientTrafficPolicy applies a 30s idle timeout to the UDP listener.
 clientTrafficPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: ClientTrafficPolicy
