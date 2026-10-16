@@ -51,32 +51,6 @@
             responseMutations:
             - remove: alt-svc
     - match:
-        path: /fqdn-route
-      name: fqdn-route
-      route:
-        cluster: httproute/default/http3-fqdn/rule/0
-        upgradeConfigs:
-        - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.header_mutation/upstream_http3:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
-          mutations:
-            responseMutations:
-            - remove: alt-svc
-    - match:
-        path: /no-sni-route
-      name: no-sni-route
-      route:
-        cluster: httproute/default/http3-no-sni/rule/0
-        upgradeConfigs:
-        - upgradeType: websocket
-      typedPerFilterConfig:
-        envoy.filters.http.header_mutation/upstream_http3:
-          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
-          mutations:
-            responseMutations:
-            - remove: alt-svc
-    - match:
         path: /alpn-route
       name: alpn-route
       route:

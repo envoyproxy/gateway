@@ -39,7 +39,8 @@ backendTrafficPolicies:
     name: btp-gateway-http3
     namespace: envoy-gateway
   spec:
-    http3: {}
+    http3:
+      mode: Always
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -52,6 +53,13 @@ backendTrafficPolicies:
         name: gateway-1
         namespace: envoy-gateway
       conditions:
+      - lastTransitionTime: null
+        message: 'HTTP/3 is disabled because HTTP/3 requires TLS to the backend, configured
+          with a BackendTLSPolicy or the Backend''s spec.tls, for these backends:
+          [service/default/service-2/8080/http]'
+        reason: UnsupportedHTTP3Backend
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -111,6 +119,8 @@ httpRoutes:
     rules:
     - backendRefs:
       - name: service-1
+        port: 8080
+      - name: service-2
         port: 8080
       matches:
       - path:
@@ -230,7 +240,26 @@ xdsIR:
           sni: example.com
       traffic:
         http3:
-          mode: Auto
+          mode: Always
+    - metadata:
+        kind: Service
+        name: service-2
+        namespace: default
+        sectionName: "8080"
+      name: service/default/service-2/8080/http
+      setting:
+        addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: service/default/service-2/8080/http
+        protocol: HTTP
+      traffic: {}
     caCertificates:
     - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCiAgICAgICAgTUlJREp6Q0NBZytnQXdJQkFnSVVBbDZVS0l1S216dGU4MWNsbHo1UGZkTjJJbEl3RFFZSktvWklodmNOQVFFTAogICAgICAgIEJRQXdJekVRTUE0R0ExVUVBd3dIYlhsamFXVnVkREVQTUEwR0ExVUVDZ3dHYTNWaVpXUmlNQjRYRFRJek1UQXcKICAgICAgICBNakExTkRFMU4xb1hEVEkwTVRBd01UQTFOREUxTjFvd0l6RVFNQTRHQTFVRUF3d0hiWGxqYVdWdWRERVBNQTBHCiAgICAgICAgQTFVRUNnd0dhM1ZpWldSaU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBd1NUYwogICAgICAgIDF5ajhIVzYybnlua0ZiWG80VlhLdjJqQzBQTTdkUFZreTg3RndlWmNUS0xvV1FWUFFFMnAya0xESzZPRXN6bU0KICAgICAgICB5eXIreHhXdHlpdmVyZW1yV3FuS2tOVFloTGZZUGhnUWtjemliN2VVYWxtRmpVYmhXZEx2SGFrYkVnQ29kbjNiCiAgICAgICAga3o1N21JblgyVnBpRE9LZzRreUhmaXVYV3BpQnFyQ3gwS05McHhvM0RFUWNGY3NRVGVUSHpoNDc1MkdWMDRSVQogICAgICAgIFRpL0dFV3l6SXNsNFJnN3RHdEF3bWNJUGdVTlVmWTJRMzkwRkdxZEg0YWhuK213LzZhRmJXMzFXNjNkOVlKVnEKICAgICAgICBpb3lPVmNhTUlwTTVCL2M3UWM4U3VoQ0kxWUdoVXlnNGNSSExFdzVWdGlraW95RTNYMDRrbmEzalFBajU0WWJSCiAgICAgICAgYnBFaGMzNWFwS0xCMjFIT1VRSURBUUFCbzFNd1VUQWRCZ05WSFE0RUZnUVV5dmwwVkk1dkpWU3VZRlh1N0I0OAogICAgICAgIDZQYk1FQW93SHdZRFZSMGpCQmd3Rm9BVXl2bDBWSTV2SlZTdVlGWHU3QjQ4NlBiTUVBb3dEd1lEVlIwVEFRSC8KICAgICAgICBCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFNTHhyZ0ZWTXVOUnEyd0F3Y0J0N1NuTlI1Q2Z6CiAgICAgICAgMk12WHE1RVVtdWF3SVVpOWthWWp3ZFZpRFJFR1NqazdKVzE3dmw1NzZIakRrZGZSd2k0RTI4U3lkUkluWmY2SgogICAgICAgIGk4SFpjWjdjYUg2RHhSMzM1ZmdIVnpMaTVOaVRjZS9Pak5CUXpRMk1KWFZEZDhEQm1HNWZ5YXRKaU9KUTRiV0UKICAgICAgICBBN0ZsUDBSZFAzQ08zR1dFME01aVhPQjJtMXFXa0UyZXlPNFVIdndUcU5RTGRyZEFYZ0RRbGJhbTllNEJHM0dnCiAgICAgICAgZC82dGhBa1dEYnQvUU5UK0VKSERDdmhEUktoMVJ1R0h5ZytZKy9uZWJUV1dyRldza3RScmJPb0hDWmlDcFhJMQogICAgICAgIDNlWEU2bnQwWWtndER4RzIyS3FuaHBBZzlnVVNzMmhsaG94eXZrenlGMG11Nk5oUGx3QWducTcrL1E9PQogICAgICAgIC0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
       digest: sha256-60fcccf80101fc7798549e146b6dd5580002df9a540d06967e78b56a92fbc57c
@@ -275,6 +304,8 @@ xdsIR:
           backendClusterRefs:
           - name: service/default/service-1/8080/http
             weight: 1
+          - name: service/default/service-2/8080/http
+            weight: 1
           metadata:
             kind: HTTPRoute
             name: http-route-1
@@ -299,7 +330,7 @@ xdsIR:
           prefix: /rule-1
         traffic:
           http3:
-            mode: Auto
+            mode: Always
       - destination:
           backendClusterRefs:
           - name: service/default/service-1/8080/http
@@ -328,7 +359,7 @@ xdsIR:
           prefix: /rule-2
         traffic:
           http3:
-            mode: Auto
+            mode: Always
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
