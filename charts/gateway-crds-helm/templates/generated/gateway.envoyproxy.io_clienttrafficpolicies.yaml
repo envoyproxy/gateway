@@ -184,12 +184,13 @@ spec:
                         type: string
                       maxConnectionDurationJitter:
                         description: |-
-                          MaxConnectionDurationJitter extends each connection's MaxConnectionDuration by a random
-                          amount of up to this percentage of the duration. It keeps connections opened at the same
-                          time from all expiring together. Requires MaxConnectionDuration. If not specified, no jitter is added.
+                          MaxConnectionDurationJitter adds a random extra amount of time to each connection's
+                          MaxConnectionDuration, up to this percentage of that duration. This keeps connections
+                          opened together from expiring at the same moment. Requires MaxConnectionDuration.
+                          If not specified, no jitter is added.
                         format: int32
                         maximum: 100
-                        minimum: 0
+                        minimum: 1
                         type: integer
                       maxRequestsPerConnection:
                         description: |-
