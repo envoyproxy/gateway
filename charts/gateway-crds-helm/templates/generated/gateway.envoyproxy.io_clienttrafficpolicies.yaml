@@ -190,7 +190,7 @@ spec:
                           If not specified, no jitter is added.
                         format: int32
                         maximum: 100
-                        minimum: 1
+                        minimum: 0
                         type: integer
                       maxRequestsPerConnection:
                         description: |-
