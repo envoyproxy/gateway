@@ -1,4 +1,4 @@
-# Reuse the Caddy deployment from upstream-http3.yaml, but isolate the mixed-mode
+# Reuse the Envoy backend from upstream-http3.yaml, but isolate the mixed-mode
 # route and its Auto backend cache so other routes cannot seed HTTP/3 discovery.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

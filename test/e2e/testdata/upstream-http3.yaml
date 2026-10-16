@@ -1,7 +1,6 @@
-# An HTTP/3 capable backend. Caddy enables HTTP/3 by default for TLS-enabled sites,
-# so it listens for QUIC on the same port it serves HTTPS on. The site is a catch-all
-# rather than a named one because the request still carries the client's Host header,
-# not the backend's hostname.
+# An HTTP/3 capable backend: a standalone Envoy serving HTTPS and QUIC on the same port.
+# Every request gets a direct response that reports the protocol it arrived over in the
+# x-protocol header, and the TCP side advertises HTTP/3 through alt-svc.
 #
 # openssl req -x509 -sha256 -nodes -days 36500 -newkey rsa:2048 \
 #   -subj '/O=example Inc./CN=h3-backend.gateway-conformance-infra.svc.cluster.local' \
@@ -54,17 +53,106 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: h3-backend-caddyfile
+  name: h3-backend-envoy
   namespace: gateway-conformance-infra
 data:
-  Caddyfile: |
-    {
-      auto_https off
-    }
-    :8443 {
-      tls /etc/tls/tls.crt /etc/tls/tls.key
-      respond "{http.request.proto}"
-    }
+  envoy.yaml: |
+    static_resources:
+      listeners:
+        - name: https
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 8443
+          filter_chains:
+            - transport_socket:
+                name: envoy.transport_sockets.tls
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+                  common_tls_context:
+                    alpn_protocols: [h2, http/1.1]
+                    tls_certificates:
+                      - certificate_chain:
+                          filename: /etc/tls/tls.crt
+                        private_key:
+                          filename: /etc/tls/tls.key
+              filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: https
+                    codec_type: AUTO
+                    route_config:
+                      virtual_hosts:
+                        - name: backend
+                          domains: ["*"]
+                          response_headers_to_add:
+                            - header:
+                                key: alt-svc
+                                value: h3=":8443"; ma=86400
+                            - header:
+                                key: x-protocol
+                                value: "%PROTOCOL%"
+                          routes:
+                            - match:
+                                prefix: /
+                              direct_response:
+                                status: 200
+                                body:
+                                  inline_string: ok
+                    http_filters:
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        - name: quic
+          address:
+            socket_address:
+              protocol: UDP
+              address: 0.0.0.0
+              port_value: 8443
+          udp_listener_config:
+            quic_options: {}
+          filter_chains:
+            - transport_socket:
+                name: envoy.transport_sockets.quic
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicDownstreamTransport
+                  downstream_tls_context:
+                    common_tls_context:
+                      tls_certificates:
+                        - certificate_chain:
+                            filename: /etc/tls/tls.crt
+                          private_key:
+                            filename: /etc/tls/tls.key
+              filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: quic
+                    codec_type: HTTP3
+                    http3_protocol_options: {}
+                    route_config:
+                      virtual_hosts:
+                        - name: backend
+                          domains: ["*"]
+                          response_headers_to_add:
+                            - header:
+                                key: alt-svc
+                                value: h3=":8443"; ma=86400
+                            - header:
+                                key: x-protocol
+                                value: "%PROTOCOL%"
+                          routes:
+                            - match:
+                                prefix: /
+                              direct_response:
+                                status: 200
+                                body:
+                                  inline_string: ok
+                    http_filters:
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -84,9 +172,14 @@ spec:
         version: v1
     spec:
       containers:
-        - name: caddy
-          image: caddy:2.8-alpine
+        - name: envoy
+          image: docker.io/envoyproxy/envoy:distroless-v1.40.0
           imagePullPolicy: IfNotPresent
+          args:
+            - --config-path
+            - /etc/envoy/envoy.yaml
+            - --log-level
+            - warn
           ports:
             - name: https
               containerPort: 8443
@@ -100,15 +193,15 @@ spec:
             tcpSocket:
               port: 8443
           volumeMounts:
-            - name: caddyfile
-              mountPath: /etc/caddy
+            - name: envoy-config
+              mountPath: /etc/envoy
             - name: tls
               mountPath: /etc/tls
               readOnly: true
       volumes:
-        - name: caddyfile
+        - name: envoy-config
           configMap:
-            name: h3-backend-caddyfile
+            name: h3-backend-envoy
         - name: tls
           secret:
             secretName: h3-backend-tls
@@ -213,7 +306,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: upstream-http3-auto
-  # Auto reaches HTTP/3 the long way round: the first request goes over TCP, Caddy's
+  # Auto reaches HTTP/3 the long way round: the first request goes over TCP, the backend's
   # response advertises h3 through alt-svc, and only then does Envoy race QUIC. Early
   # requests are therefore expected to be HTTP/1.1 or HTTP/2.
   http3:
