@@ -170,10 +170,17 @@ Secrets in the ListenerSet's namespace, so application teams manage their own ce
 
 ### Listener conflicts
 
-The tuple of port, protocol, and hostname must be unique across the Gateway and all of its ListenerSets. On
-conflict, listeners defined on the Gateway itself take precedence over ListenerSet listeners, and among ListenerSet
-listeners the first in processing order wins. Conflicted listeners report `Accepted: False` in the ListenerSet
-status.
+Every listener needs a unique combination of port, protocol, and hostname across the Gateway and all of its
+ListenerSets. When two listeners clash, the Gateway's own listeners win, and among ListenerSet listeners the
+first in processing order wins.
+
+Listeners that share a port also need compatible protocols, even if their hostnames differ. HTTPS and TLS can
+share a port, and UDP can share a port with anything. If the protocols clash, the Gateway's own protocol wins.
+If only ListenerSets use the port, the first listener sets the protocol, unless a single ListenerSet mixes
+incompatible protocols on one port, in which case all of its listeners on that port are rejected.
+
+Rejected listeners report `Conflicted: True` in the status, and ListenerSet listeners also get `Accepted: False`
+and `Programmed: False`.
 
 ## Comparison with Merged Gateways
 
