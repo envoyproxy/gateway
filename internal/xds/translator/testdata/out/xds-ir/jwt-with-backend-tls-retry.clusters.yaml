@@ -54,7 +54,7 @@
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   loadAssignment:
-    clusterName: securitypolicy/default/policy-for-route/jwt/0
+    clusterName: jwks/102c4be2079ae13f
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -66,17 +66,17 @@
         metadata:
           filterMetadata:
             envoy.transport_socket_match:
-              name: securitypolicy/default/policy-for-route/jwt/0/tls/0
+              name: jwks/102c4be2079ae13f/tls/0
       loadBalancingWeight: 1
       locality:
-        region: securitypolicy/default/policy-for-route/jwt/0/backend/0
+        region: jwks/102c4be2079ae13f/backend/0
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
-  name: securitypolicy/default/policy-for-route/jwt/0
+  name: jwks/102c4be2079ae13f
   outlierDetection:
     baseEjectionTime: 160s
     consecutive5xx: 5
@@ -93,8 +93,8 @@
       commonTlsContext: {}
   transportSocketMatches:
   - match:
-      name: securitypolicy/default/policy-for-route/jwt/0/tls/0
-    name: securitypolicy/default/policy-for-route/jwt/0/tls/0
+      name: jwks/102c4be2079ae13f/tls/0
+    name: jwks/102c4be2079ae13f/tls/0
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
