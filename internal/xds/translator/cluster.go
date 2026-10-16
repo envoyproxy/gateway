@@ -41,6 +41,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	peak_ewmav3alpha "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/load_balancing_policies/peak_ewma/v3alpha"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -487,6 +488,12 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			return nil, err
 		}
 		cluster.LoadBalancingPolicy = backendUtilizationPolicy
+	case args.loadBalancer.PeakEwma != nil:
+		peakEwmaPolicy, err := buildPeakEwmaLoadBalancingPolicy(args.loadBalancer)
+		if err != nil {
+			return nil, err
+		}
+		cluster.LoadBalancingPolicy = peakEwmaPolicy
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
@@ -1686,6 +1693,8 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 		fallbackType = ir.ConsistentHashLoadBalancer
 	case loadBalancer.BackendUtilization != nil:
 		fallbackType = ir.BackendUtilizationLoadBalancer
+	case loadBalancer.PeakEwma != nil:
+		fallbackType = ir.PeakEwmaLoadBalancer
 	default:
 		// Default to LeastRequest if no specific type is set
 		fallbackType = ir.LeastRequestLoadBalancer
@@ -1696,6 +1705,8 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 	var err error
 	if fallbackType == ir.BackendUtilizationLoadBalancer {
 		fallbackPolicy, err = buildBackendUtilizationLoadBalancingPolicy(loadBalancer)
+	} else if fallbackType == ir.PeakEwmaLoadBalancer {
+		fallbackPolicy, err = buildPeakEwmaLoadBalancingPolicy(loadBalancer)
 	} else {
 		fallbackPolicy, err = buildFallbackLoadBalancingPolicy(fallbackType)
 	}
@@ -1787,6 +1798,63 @@ func buildBackendUtilizationLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (
 	// per-zone weights from the EDS ClusterLoadAssignment.
 	wrrLocality := &wrr_localityv3.WrrLocality{
 		EndpointPickingPolicy: cswrrPolicy,
+	}
+	typedWrrLocality, err := proto.ToAnyWithValidation(wrrLocality)
+	if err != nil {
+		return nil, err
+	}
+	return &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.wrr_locality",
+				TypedConfig: typedWrrLocality,
+			},
+		}},
+	}, nil
+}
+
+func buildPeakEwmaLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*clusterv3.LoadBalancingPolicy, error) {
+	if loadBalancer == nil || loadBalancer.PeakEwma == nil {
+		return nil, fmt.Errorf("peak ewma load balancer config is required")
+	}
+
+	pe := &peak_ewmav3alpha.PeakEwma{}
+	v := loadBalancer.PeakEwma
+	if v.DecayTime != nil && v.DecayTime.Duration > 0 {
+		pe.DecayTime = durationpb.New(v.DecayTime.Duration)
+	}
+	if v.AggregationInterval != nil && v.AggregationInterval.Duration > 0 {
+		pe.AggregationInterval = durationpb.New(v.AggregationInterval.Duration)
+	}
+	if v.MaxSamplesPerHost != nil {
+		pe.MaxSamplesPerHost = wrapperspb.UInt32(*v.MaxSamplesPerHost)
+	}
+	if v.DefaultRtt != nil && v.DefaultRtt.Duration > 0 {
+		pe.DefaultRtt = durationpb.New(v.DefaultRtt.Duration)
+	}
+	if v.PenaltyValue != nil {
+		pe.PenaltyValue = wrapperspb.Double(*v.PenaltyValue)
+	}
+	typedPe, err := proto.ToAnyWithValidation(pe)
+	if err != nil {
+		return nil, err
+	}
+	peakEwmaPolicy := &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.peak_ewma",
+				TypedConfig: typedPe,
+			},
+		}},
+	}
+	if len(loadBalancer.WeightedZones) == 0 {
+		return peakEwmaPolicy, nil
+	}
+
+	// PeakEwma has no LocalityLbConfig field, so wrap it in wrr_locality to honor
+	// per-zone weights from the EDS ClusterLoadAssignment.
+	wrrLocality := &wrr_localityv3.WrrLocality{
+		EndpointPickingPolicy: peakEwmaPolicy,
 	}
 	typedWrrLocality, err := proto.ToAnyWithValidation(wrrLocality)
 	if err != nil {

@@ -15,10 +15,12 @@ import (
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' ? has(self.backendUtilization) : !has(self.backendUtilization)",message="If LoadBalancer type is BackendUtilization, backendUtilization field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'PeakEwma' ? has(self.peakEwma) : !has(self.peakEwma)",message="If LoadBalancer type is PeakEwma, peakEwma field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? has(self.dynamicModule) : !has(self.dynamicModule)",message="If LoadBalancer type is DynamicModule, dynamicModule field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash', 'DynamicModule'] ? !has(self.slowStart) : true",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash', 'PeakEwma', 'DynamicModule'] ? !has(self.slowStart) : true",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers."
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not supported for ConsistentHash load balancers. Use weightedZones instead."
 // +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not currently supported for BackendUtilization load balancers. Only WeightedZones can be used with BackendUtilization."
+// +kubebuilder:validation:XValidation:rule="self.type == 'PeakEwma' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not currently supported for PeakEwma load balancers. Only WeightedZones can be used with PeakEwma."
 // +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? !has(self.zoneAware) : true",message="ZoneAware routing is not supported for DynamicModule load balancers."
 // +kubebuilder:validation:XValidation:rule="has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) && has(self.zoneAware.weightedZones)) : true",message="ZoneAware PreferLocal and WeightedZones cannot be specified together."
 // +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? !has(self.endpointOverride) : true",message="EndpointOverride is not supported for DynamicModule load balancers."
@@ -30,6 +32,7 @@ type LoadBalancer struct {
 	// "Random",
 	// "RoundRobin",
 	// "BackendUtilization",
+	// "PeakEwma",
 	// "DynamicModule".
 	//
 	// +unionDiscriminator
@@ -45,6 +48,12 @@ type LoadBalancer struct {
 	//
 	// +optional
 	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty"`
+
+	// PeakEwma defines the configuration when the load balancer type is
+	// set to PeakEwma.
+	//
+	// +optional
+	PeakEwma *PeakEwma `json:"peakEwma,omitempty"`
 
 	// DynamicModule defines the configuration when the load balancer type is
 	// set to DynamicModule. The referenced module must be registered in the
@@ -76,7 +85,7 @@ type LoadBalancer struct {
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
-// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;BackendUtilization;DynamicModule
+// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;BackendUtilization;PeakEwma;DynamicModule
 type LoadBalancerType string
 
 const (
@@ -90,6 +99,8 @@ const (
 	RoundRobinLoadBalancerType LoadBalancerType = "RoundRobin"
 	// BackendUtilizationLoadBalancerType load balancer policy.
 	BackendUtilizationLoadBalancerType LoadBalancerType = "BackendUtilization"
+	// PeakEwmaLoadBalancerType load balancer policy.
+	PeakEwmaLoadBalancerType LoadBalancerType = "PeakEwma"
 	// DynamicModuleLoadBalancerType load balancer policy.
 	// +notImplementedHide
 	DynamicModuleLoadBalancerType LoadBalancerType = "DynamicModule"
@@ -269,6 +280,85 @@ type OutOfBandReporting struct {
 	// +kubebuilder:validation:Pattern=`^[^\x00\n\r]*$`
 	// +optional
 	Authority *string `json:"authority,omitempty"`
+}
+
+// PeakEwma defines configuration for Envoy's Peak EWMA (Exponentially Weighted Moving Average)
+// load balancing policy. This policy implements a latency-aware variant of the Power of Two
+// Choices (P2C) algorithm. It selects the best host from two randomly chosen candidates based
+// on a cost function: `Cost = RTT_peak_ewma * (active_requests + 1)`.
+//
+// The Peak EWMA algorithm automatically routes traffic away from slow or overloaded hosts,
+// adapts to changing host performance without manual configuration, and provides low-latency
+// request routing with O(1) host selection complexity.
+//
+// RTT measurements are automatically collected from HTTP request timing and used to update
+// the EWMA for each host. This provides real-time performance feedback for routing decisions.
+//
+// See Envoy contrib proto: envoy.contrib.envoy.extensions.load_balancing_policies.peak_ewma.v3alpha.PeakEwma
+type PeakEwma struct {
+	// DecayTime specifies the time window over which latency observations are considered
+	// relevant. After this duration, older measurements have exponentially decayed to half
+	// their original weight.
+	//
+	// This parameter directly relates to the time duration over which you want to observe
+	// latency trends.
+	//
+	// If not specified, defaults to 10 seconds (following Finagle's default).
+	//
+	// +optional
+	DecayTime *gwapiv1.Duration `json:"decayTime,omitempty"`
+
+	// AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+	// to the main thread. This controls the frequency of cross-thread synchronization for the
+	// per-thread aggregation model.
+	//
+	// A shorter interval provides more up-to-date cross-worker information but increases
+	// synchronization overhead. A longer interval reduces overhead but may cause workers
+	// to operate with staler information about other workers' latency observations.
+	//
+	// If not specified, defaults to 100 milliseconds.
+	//
+	// +optional
+	AggregationInterval *gwapiv1.Duration `json:"aggregationInterval,omitempty"`
+
+	// MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+	// thread before overwriting the oldest samples. This bounds memory usage while allowing
+	// burst traffic handling.
+	//
+	// Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+	// Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+	//
+	// If not specified, defaults to 1,000 samples per host per worker.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxSamplesPerHost *uint32 `json:"maxSamplesPerHost,omitempty"`
+
+	// DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+	// This provides a baseline for cost calculations until actual measurements are available.
+	//
+	// This value is critical for initial load balancing decisions when hosts first join
+	// the cluster or when RTT measurements are temporarily unavailable. It should reflect
+	// the expected baseline latency for your environment.
+	//
+	// If not specified, defaults to 10 milliseconds.
+	//
+	// +optional
+	DefaultRtt *gwapiv1.Duration `json:"defaultRtt,omitempty"`
+
+	// PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+	// calculations. This is used when a host has no RTT measurements or is unhealthy,
+	// ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+	//
+	// The penalty should be significantly higher than any realistic RTT-based cost to ensure
+	// hosts with unknown performance are strongly deprioritized while still allowing them to
+	// receive traffic if no better alternatives exist.
+	//
+	// If not specified, defaults to 1,000,000.0 (1 million).
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	PenaltyValue *float64 `json:"penaltyValue,omitempty"`
 }
 
 // DynamicModuleLBPolicy configures a custom load balancing algorithm

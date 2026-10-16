@@ -417,6 +417,40 @@ func buildLoadBalancer(policy *egv1a1.BackendSettings) (*ir.LoadBalancer, error)
 				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
+	case egv1a1.PeakEwmaLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			PeakEwma: &ir.PeakEwma{},
+		}
+		peakEwma := policy.LoadBalancer.PeakEwma
+		if peakEwma != nil {
+			if peakEwma.DecayTime != nil {
+				d, err := time.ParseDuration(string(*peakEwma.DecayTime))
+				if err != nil {
+					return nil, fmt.Errorf("invalid DecayTime value %s: %w", *peakEwma.DecayTime, err)
+				}
+				lb.PeakEwma.DecayTime = ir.MetaV1DurationPtr(d)
+			}
+			if peakEwma.AggregationInterval != nil {
+				d, err := time.ParseDuration(string(*peakEwma.AggregationInterval))
+				if err != nil {
+					return nil, fmt.Errorf("invalid AggregationInterval value %s: %w", *peakEwma.AggregationInterval, err)
+				}
+				lb.PeakEwma.AggregationInterval = ir.MetaV1DurationPtr(d)
+			}
+			if peakEwma.MaxSamplesPerHost != nil {
+				lb.PeakEwma.MaxSamplesPerHost = peakEwma.MaxSamplesPerHost
+			}
+			if peakEwma.DefaultRtt != nil {
+				d, err := time.ParseDuration(string(*peakEwma.DefaultRtt))
+				if err != nil {
+					return nil, fmt.Errorf("invalid DefaultRtt value %s: %w", *peakEwma.DefaultRtt, err)
+				}
+				lb.PeakEwma.DefaultRtt = ir.MetaV1DurationPtr(d)
+			}
+			if peakEwma.PenaltyValue != nil {
+				lb.PeakEwma.PenaltyValue = peakEwma.PenaltyValue
+			}
+		}
 	}
 
 	// Add ZoneAware loadbalancer settings
