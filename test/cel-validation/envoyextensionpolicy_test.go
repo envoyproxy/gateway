@@ -32,6 +32,30 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 	}
 
 	sectionName := gwapiv1a2.SectionName("foo")
+	dynamicModuleTarget := func() egv1a1.PolicyTargetReferences {
+		return egv1a1.PolicyTargetReferences{
+			TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Group: "gateway.networking.k8s.io",
+					Kind:  "Gateway",
+					Name:  "eg",
+				},
+			},
+		}
+	}
+	dynamicModuleBackendSettings := func(settings *egv1a1.ClusterSettings) egv1a1.EnvoyExtensionPolicySpec {
+		return egv1a1.EnvoyExtensionPolicySpec{
+			DynamicModule: []egv1a1.DynamicModule{{
+				Name: "module",
+				Backends: []egv1a1.ExtensionBackend{{
+					Name:            "backend",
+					BackendRef:      gwapiv1.BackendObjectReference{Name: "service", Port: new(gwapiv1.PortNumber(8080))},
+					BackendSettings: settings,
+				}},
+			}},
+			PolicyTargetReferences: dynamicModuleTarget(),
+		}
+	}
 
 	cases := []struct {
 		desc         string
@@ -1331,6 +1355,67 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "DynamicModule with duplicate backend name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule: []egv1a1.DynamicModule{{
+						Name: "module",
+						Backends: []egv1a1.ExtensionBackend{
+							{Name: "backend", BackendRef: gwapiv1.BackendObjectReference{Name: "service-a", Port: new(gwapiv1.PortNumber(8080))}},
+							{Name: "backend", BackendRef: gwapiv1.BackendObjectReference{Name: "service-b", Port: new(gwapiv1.PortNumber(8080))}},
+						},
+					}},
+					PolicyTargetReferences: dynamicModuleTarget(),
+				}
+			},
+			wantErrors: []string{"spec.dynamicModule[0].backends[1]: Duplicate value:"},
+		},
+		{
+			desc: "DynamicModule with valid backend settings",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = dynamicModuleBackendSettings(&egv1a1.ClusterSettings{
+					LoadBalancer: &egv1a1.LoadBalancer{Type: egv1a1.RandomLoadBalancerType},
+					Timeout:      &egv1a1.Timeout{TCP: &egv1a1.TCPTimeout{ConnectTimeout: new(gwapiv1.Duration("2s"))}},
+				})
+			},
+		},
+		{
+			desc: "DynamicModule with backend request timeout",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = dynamicModuleBackendSettings(&egv1a1.ClusterSettings{
+					Timeout: &egv1a1.Timeout{HTTP: &egv1a1.HTTPTimeout{RequestTimeout: new(gwapiv1.Duration("2s"))}},
+				})
+			},
+		},
+		{
+			desc: "DynamicModule with backend stream idle timeout",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = dynamicModuleBackendSettings(&egv1a1.ClusterSettings{
+					Timeout: &egv1a1.Timeout{HTTP: &egv1a1.HTTPTimeout{StreamIdleTimeout: new(gwapiv1.Duration("2s"))}},
+				})
+			},
+		},
+		{
+			desc: "DynamicModule with too many backends",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				backends := make([]egv1a1.ExtensionBackend, 17)
+				for i := range backends {
+					backends[i] = egv1a1.ExtensionBackend{
+						Name: fmt.Sprintf("backend-%d", i),
+						BackendRef: gwapiv1.BackendObjectReference{
+							Name: gwapiv1.ObjectName(fmt.Sprintf("service-%d", i)),
+							Port: new(gwapiv1.PortNumber(8080)),
+						},
+					}
+				}
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule:          []egv1a1.DynamicModule{{Name: "module", Backends: backends}},
+					PolicyTargetReferences: dynamicModuleTarget(),
+				}
+			},
+			wantErrors: []string{"spec.dynamicModule[0].backends: Too many:"},
 		},
 		{
 			desc: "target selectors without targetRefs or targetRef",
