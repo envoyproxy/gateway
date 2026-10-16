@@ -93,6 +93,25 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-btls
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'HTTP/3 is disabled because HTTP/3 requires TLS to the backend, configured
+          with a BackendTLSPolicy or the Backend''s spec.tls, for these routes: [envoy-gateway/httproute-plaintext-backend]'
+        reason: UnsupportedHTTP3Backend
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -207,7 +226,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 3
+    - attachedRoutes: 4
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -316,6 +335,9 @@ httpRoutes:
     parentRefs:
     - name: gateway-btls
       namespace: envoy-gateway
+    - name: gateway-btls
+      namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
       - name: plaintext-backend
@@ -342,6 +364,22 @@ httpRoutes:
       parentRef:
         name: gateway-btls
         namespace: envoy-gateway
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-btls
+        namespace: envoy-gateway
+        sectionName: http
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
@@ -509,6 +547,41 @@ xdsIR:
         pathMatch:
           distinct: false
           exact: /plaintext-merge
+          name: ""
+        traffic: {}
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-plaintext-backend
+            namespace: envoy-gateway
+          name: httproute/envoy-gateway/httproute-plaintext-backend/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.12
+              port: 8080
+            metadata:
+              kind: Service
+              name: plaintext-backend
+              namespace: backends
+              sectionName: "8080"
+            name: httproute/envoy-gateway/httproute-plaintext-backend/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-plaintext-backend
+          namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-http3-no-tls
+            namespace: envoy-gateway
+        name: httproute/envoy-gateway/httproute-plaintext-backend/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          exact: /plaintext
           name: ""
         traffic: {}
       - destination:
