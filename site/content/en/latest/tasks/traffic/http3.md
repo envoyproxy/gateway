@@ -2,18 +2,26 @@
 title: "HTTP3"
 ---
 
-This task will help you get started using HTTP3 using EG.
+This task will help you get started using HTTP3 using EG. It has two parts: HTTP/3 between the client
+and the Gateway, and HTTP/3 between the Gateway and the backend. The two are configured separately
+and can be used on their own or together.
 This task uses a self-signed CA, so it should be used for testing and demonstration purposes only.
 
-## Prerequisites
+## HTTP/3 to Clients
+
+HTTP/3 to clients is enabled with the `http3` field of a [ClientTrafficPolicy][]. The Gateway then
+listens for QUIC on the HTTPS listener's port and advertises HTTP/3 to clients with an `alt-svc`
+response header.
+
+### Prerequisites
 
 - OpenSSL to generate TLS assets.
 
-## Installation
+### Installation
 
 {{< boilerplate prerequisites >}}
 
-## TLS Certificates
+### TLS Certificates
 
 Generate the certificates and keys used by the Gateway to terminate client TLS connections.
 
@@ -55,6 +63,8 @@ kubectl patch gateway eg --type=json --patch '
           name: example-cert
   '
 ```
+
+### Enabling HTTP/3
 
 Apply the following [ClientTrafficPolicy][] to enable HTTP3
 
@@ -113,7 +123,7 @@ Verify the [Gateway][] status:
 kubectl get gateway/eg -o yaml
 ```
 
-## Testing
+### Testing
 
 {{< tabpane text=true >}}
 {{% tab header="With External LoadBalancer Support" %}}
@@ -142,13 +152,14 @@ Hence we need external loadbalancer to test this feature out.
 {{% /tab %}}
 {{< /tabpane >}}
 
-## HTTP/3 to the Backend
+## HTTP/3 to Backends
 
-Everything above configures HTTP/3 between the client and the Gateway. HTTP/3 to the backend is
-configured separately, with the `http3` field of a [BackendTrafficPolicy][]. It is only supported
-there: setting `http3` in the `backendSettings` of a SecurityPolicy, EnvoyExtensionPolicy or
-EnvoyProxy is rejected, since the control-plane clusters those build never learn that a server
+HTTP/3 to the backend is enabled with the `http3` field of a [BackendTrafficPolicy][]. It is only
+supported there: setting `http3` in the `backendSettings` of a SecurityPolicy, EnvoyExtensionPolicy
+or EnvoyProxy is rejected, since the control-plane clusters those build never learn that a server
 speaks HTTP/3.
+
+### Prerequisites
 
 QUIC always runs over TLS, so the backend must already be configured with TLS through a
 [BackendTLSPolicy][] or a [Backend][] resource's `spec.tls`. When a BackendTrafficPolicy enables
@@ -157,7 +168,14 @@ be resolved, HTTP/3 is left off for that route, the rest of the policy still app
 reports a `Warning` condition naming the route. HTTP/3 comes back on its own once the route's
 backends are all resolved and configured with TLS.
 
-There are two modes:
+HTTP/3 requires a verified backend. A backend with `insecureSkipVerify` is left off HTTP/3 with
+a `Warning` condition on the policy. Configure the backend's CA instead, through a
+BackendTLSPolicy or the Backend's `tls.caCertificateRefs`.
+
+### Enabling HTTP/3
+
+Apply a [BackendTrafficPolicy][] with `http3` set to the routes whose backends speak HTTP/3. There
+are two modes, `Auto` and `Always`:
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -172,6 +190,8 @@ spec:
   http3:
     mode: Auto
 ```
+
+### Auto Mode
 
 `Auto` is the default. Envoy uses HTTP/3 only for backends that advertise support for it through an
 `alt-svc` response header. It caches that advertisement, then races a QUIC connection against a TCP
@@ -192,14 +212,7 @@ the Gateway's own `alt-svc` when the listener has HTTP/3 enabled. Do not remove 
 HTTPRoute `ResponseHeaderModifier` filter: that runs before the advertisement is recorded, so
 `Auto` mode would never discover the backend's HTTP/3 support.
 
-HTTP/3 requires a verified backend. A backend with `insecureSkipVerify` is left off HTTP/3 with
-a `Warning` condition on the policy. Configure the backend's CA instead, through a
-BackendTLSPolicy or the Backend's `tls.caCertificateRefs`.
-
-The EnvoyProxy `backendTLS.alpnProtocols` setting is not applied to a cluster using HTTP/3. Envoy
-offers that list on the QUIC handshake too, where only `h3` is valid, so the cluster offers no ALPN
-list of its own: QUIC negotiates `h3` and the cluster's TCP connections fall back to `h2` and
-`http/1.1`. The policy reports a `Warning` condition naming the cluster.
+### Always Mode
 
 `Always` sends every request over HTTP/3 and never falls back to TCP. Use it only where the backend
 is known to speak HTTP/3 and UDP is known to work, since there is no recovery if QUIC fails. Active
@@ -208,15 +221,22 @@ with an active `healthCheck` must also accept TCP on the same port, or every end
 unhealthy while QUIC traffic still works. Passive health checks observe the QUIC traffic itself and
 are unaffected.
 
-Note that `http3` cannot be combined with `useClientProtocol` or `proxyProtocol`: the first would
-have Envoy pick the upstream protocol from the downstream request, and PROXY protocol is a TCP
-preamble with no QUIC equivalent. A policy that sets both is rejected at admission. HTTP/3 is also
-left off, with the same `Warning` condition, for backends that declare an HTTP/2 or gRPC
-`appProtocol`, since those ask for a protocol HTTP/3 cannot provide.
+### Limitations
+
+The EnvoyProxy `backendTLS.alpnProtocols` setting is not applied to a cluster using HTTP/3. Envoy
+offers that list on the QUIC handshake too, where only `h3` is valid, so the cluster offers no ALPN
+list of its own: QUIC negotiates `h3` and the cluster's TCP connections fall back to `h2` and
+`http/1.1`. The policy reports a `Warning` condition naming the cluster.
+
+`http3` cannot be combined with `useClientProtocol` or `proxyProtocol`: the first would have Envoy
+pick the upstream protocol from the downstream request, and PROXY protocol is a TCP preamble with
+no QUIC equivalent. A policy that sets both is rejected at admission. HTTP/3 is also left off, with
+the same `Warning` condition, for backends that declare an HTTP/2 or gRPC `appProtocol`, since
+those ask for a protocol HTTP/3 cannot provide.
 
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[Secret]: https://kubernetes.io/docs/concepts/configuration/secret/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Backend]: ../../../api/extension_types#backend
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/
-[Secret]: https://kubernetes.io/docs/concepts/configuration/secret/
