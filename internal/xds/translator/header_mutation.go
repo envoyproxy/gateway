@@ -113,6 +113,8 @@ func patchRouteWithUpstreamHTTP3AltSvc(route *routev3.Route, irListener *ir.HTTP
 	mutations := []*mutation_rulesv3.HeaderMutation{{
 		Action: &mutation_rulesv3.HeaderMutation_Remove{Remove: altSvcHeader},
 	}}
+	// If the listener is also configured to advertise HTTP/3 to clients, re-append the gateway's
+	// own alt-svc after the router has stripped the backend's alt-svc.
 	if downstreamHTTP3Enabled {
 		mutations = append(mutations, &mutation_rulesv3.HeaderMutation{
 			Action: &mutation_rulesv3.HeaderMutation_Append{
