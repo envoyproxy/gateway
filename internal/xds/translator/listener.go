@@ -493,6 +493,11 @@ func (t *Translator) addHCMToXDSListener(
 		if connLimit.MaxConnectionDuration != nil {
 			mgr.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(connLimit.MaxConnectionDuration.Duration)
 			mgr.Http1SafeMaxConnectionDuration = !ptr.Deref(irListener.HTTP1, ir.HTTP1Settings{}).DisableSafeMaxConnectionDuration
+			if connLimit.MaxConnectionDurationJitter != nil {
+				mgr.CommonHttpProtocolOptions.MaxConnectionDurationJitter = &typev3.Percent{
+					Value: float64(*connLimit.MaxConnectionDurationJitter),
+				}
+			}
 		}
 		if connLimit.MaxRequestsPerConnection != nil {
 			mgr.CommonHttpProtocolOptions.MaxRequestsPerConnection = wrapperspb.UInt32(*connLimit.MaxRequestsPerConnection)

@@ -9,6 +9,7 @@ clientTrafficPolicies:
       connectionLimit:
         closeDelay: 10s
         maxConnectionDuration: 300s
+        maxConnectionDurationJitter: 20
         maxRequestsPerConnection: 100
         maxStreamDuration: 200s
         value: 3
@@ -309,6 +310,7 @@ xdsIR:
         limit:
           closeDelay: 10s
           maxConnectionDuration: 5m0s
+          maxConnectionDurationJitter: 20
           maxRequestsPerConnection: 100
           maxStreamDuration: 3m20s
           value: 3

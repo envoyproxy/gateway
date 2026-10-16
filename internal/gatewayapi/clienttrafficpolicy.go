@@ -1440,6 +1440,10 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			irConnectionLimit.MaxConnectionDuration = ir.MetaV1DurationPtr(d)
 		}
 
+		if connection.ConnectionLimit.MaxConnectionDurationJitter != nil {
+			irConnectionLimit.MaxConnectionDurationJitter = connection.ConnectionLimit.MaxConnectionDurationJitter
+		}
+
 		if connection.ConnectionLimit.MaxRequestsPerConnection != nil {
 			irConnectionLimit.MaxRequestsPerConnection = connection.ConnectionLimit.MaxRequestsPerConnection
 		}
