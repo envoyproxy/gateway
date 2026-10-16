@@ -1,1 +1,1 @@
-SecurityPolicy authorization rules with `operation` on a TCPRoute are now rejected with a translation error, because the operation was previously ignored and the rule matched more traffic than written.
+SecurityPolicy authorization rules with `operation` on a TCPRoute are now rejected with a translation error.
