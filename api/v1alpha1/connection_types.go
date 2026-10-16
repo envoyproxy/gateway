@@ -138,7 +138,7 @@ type ConnectionLimit struct {
 	// opened together from expiring at the same moment. Requires MaxConnectionDuration.
 	// If not specified, no jitter is added.
 	//
-	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	// +optional
 	MaxConnectionDurationJitter *uint32 `json:"maxConnectionDurationJitter,omitempty"`
