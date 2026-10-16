@@ -22,11 +22,7 @@ Please follow the example [Multi-tenancy](#multi-tenancy).
 
 {{% alert title="Recommendation" color="primary" %}}
 
-The `mergeGateways` feature was introduced before the Gateway API supported [ListenerSet][]. For splitting listeners
-across multiple resources, prefer [ListenerSet][]: it is the Gateway API-native mechanism, it removes the
-single-Gateway 64-listener limit, and it enables a delegated management model where a platform team owns the Gateway
-and application teams define ports, hostnames, and TLS certificates in their own ListenerSets, suitable for
-high-scale, multi-tenant environments. See the [ListenerSet user guide][] and [issue 1230][] for details.
+The `mergeGateways` feature was introduced before the Gateway API supported [ListenerSet][]. For splitting listeners across multiple resources, prefer [ListenerSet][]. See the [ListenerSets guide][] for usage and a detailed comparison with merged Gateways.
 
 {{% /alert %}}
 
@@ -671,7 +667,8 @@ Handling connection for 8889
 
 {{% alert title="Recommendation" color="primary" %}}
 
-For new deployments, consider using [ListenerSet][] instead of `mergeGateways`.
+For new deployments, consider using [ListenerSet][] instead of `mergeGateways`. See the [ListenerSets guide][]
+for a usage guide and a detailed comparison.
 
 {{% /alert %}}
 
@@ -1099,6 +1096,5 @@ curl --header "Host: www.merged3.com" http://$GATEWAY_HOST:8082/example3
 [Gateway Namespace Mode]: ./gateway-namespace-mode
 [issue1231]: https://github.com/envoyproxy/gateway/issues/1231
 [issue2629]: https://github.com/envoyproxy/gateway/issues/2629
-[issue 1230]: https://github.com/envoyproxy/gateway/issues/1230
 [ListenerSet]: https://gateway-api.sigs.k8s.io/reference/api-types/listenerset/
-[ListenerSet user guide]: https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/
+[ListenerSets guide]: ../../traffic/listener-sets
