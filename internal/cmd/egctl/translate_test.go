@@ -343,6 +343,11 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, out, got)
 			var fn string
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+			// The supported features list is derived from the Gateway API module and
+			// covered by the status package tests, keep it out of the golden files.
+			if got.GatewayClass != nil {
+				got.GatewayClass.Status.SupportedFeatures = nil
+			}
 
 			if tc.output == jsonOutput {
 				fn = tc.name + "." + resourceType + ".json"
@@ -358,13 +363,6 @@ func TestTranslate(t *testing.T) {
 			}
 			want := &TranslationResult{}
 			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
-
-			// Supported features are dynamic, instead of hard-coding them in the output files
-			// we define them here.
-			// Disabled until GatewayClass.Status.SupportedFeatures is stable
-			// if want.GatewayClass != nil {
-			//	want.GatewayClass.Status.SupportedFeatures = status.GatewaySupportedFeatures
-			// }
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),

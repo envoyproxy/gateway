@@ -131,7 +131,7 @@ func TestFileProvider(t *testing.T) {
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions", "SupportedFeatures"),
 			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
@@ -155,7 +155,7 @@ func TestFileProvider(t *testing.T) {
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions", "SupportedFeatures"),
 			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
@@ -179,7 +179,7 @@ func TestFileProvider(t *testing.T) {
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions", "SupportedFeatures"),
 			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
@@ -204,7 +204,7 @@ func TestFileProvider(t *testing.T) {
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions", "SupportedFeatures"),
 			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
@@ -233,14 +233,14 @@ func TestFileProvider(t *testing.T) {
 		want1 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want1)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want1, resources1, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+		testutil.CmpResources(t, want1, resources1, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions", "SupportedFeatures"),
 			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 
 		resources2 := pResources.GetResourcesByGatewayClass("eg-2")
 		want2 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.2.yaml", want2)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want2, resources2, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+		testutil.CmpResources(t, want2, resources2, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions", "SupportedFeatures"),
 			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
