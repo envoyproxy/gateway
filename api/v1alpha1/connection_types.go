@@ -133,11 +133,12 @@ type ConnectionLimit struct {
 	//
 	// +optional
 	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
-	// MaxConnectionDurationJitter extends each connection's MaxConnectionDuration by a random
-	// amount of up to this percentage of the duration. It keeps connections opened at the same
-	// time from all expiring together. Requires MaxConnectionDuration. If not specified, no jitter is added.
+	// MaxConnectionDurationJitter adds a random extra amount of time to each connection's
+	// MaxConnectionDuration, up to this percentage of that duration. This keeps connections
+	// opened together from expiring at the same moment. Requires MaxConnectionDuration.
+	// If not specified, no jitter is added.
 	//
-	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +optional
 	MaxConnectionDurationJitter *uint32 `json:"maxConnectionDurationJitter,omitempty"`
