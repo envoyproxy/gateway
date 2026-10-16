@@ -1368,10 +1368,13 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 				return nil, nil, err
 			}
 		case resource.KindBackend:
-			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP, true); err != nil {
 				return nil, nil, err
 			}
-			ds = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
+			ds, err = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy, nil)
+			if err != nil {
+				return nil, nil, err
+			}
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")

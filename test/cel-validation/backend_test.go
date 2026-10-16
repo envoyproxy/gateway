@@ -286,6 +286,58 @@ func TestBackend(t *testing.T) {
 			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver", "KubernetesService"`},
 		},
 		{
+			desc: "kubernetes service ok",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeKubernetesService),
+					KubernetesService: &egv1a1.KubernetesServiceReference{
+						Name: "svc-1",
+						Port: 8080,
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "kubernetes service without kubernetesService",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{Type: new(egv1a1.BackendTypeKubernetesService)}
+			},
+			wantErrors: []string{"kubernetesService must be specified if and only if type is KubernetesService"},
+		},
+		{
+			desc: "kubernetesService without kubernetes service type",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeEndpoints),
+					KubernetesService: &egv1a1.KubernetesServiceReference{
+						Name: "svc-1",
+						Port: 8080,
+					},
+					Endpoints: []egv1a1.BackendEndpoint{{
+						FQDN: &egv1a1.FQDNEndpoint{Hostname: "example.com", Port: 80},
+					}},
+				}
+			},
+			wantErrors: []string{"kubernetesService must be specified if and only if type is KubernetesService"},
+		},
+		{
+			desc: "kubernetes service with endpoints",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeKubernetesService),
+					KubernetesService: &egv1a1.KubernetesServiceReference{
+						Name: "svc-1",
+						Port: 8080,
+					},
+					Endpoints: []egv1a1.BackendEndpoint{{
+						FQDN: &egv1a1.FQDNEndpoint{Hostname: "example.com", Port: 80},
+					}},
+				}
+			},
+			wantErrors: []string{"KubernetesService type cannot have endpoints specified"},
+		},
+		{
 			desc: "dynamic resolver ok",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{

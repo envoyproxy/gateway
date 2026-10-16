@@ -64,7 +64,7 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, rou
 			return err
 		}
 	case egv1a1.KindBackend:
-		if err := t.validateBackendRefBackend(backendRef.BackendObjectReference, resources, backendNamespace, false); err != nil {
+		if err := t.validateBackendRefBackend(backendRef.BackendObjectReference, resources, backendNamespace, protocol, false); err != nil {
 			return err
 		}
 	}
@@ -267,7 +267,7 @@ func (t *Translator) validateBackendServiceImport(
 func (t *Translator) validateBackendRefBackend(
 	backendRef gwapiv1.BackendObjectReference,
 	resources *resource.Resources,
-	backendNamespace string, allowUDS bool,
+	backendNamespace string, protocol corev1.Protocol, allowUDS bool,
 ) status.Error {
 	if !t.BackendEnabled {
 		return status.NewRouteStatusError(
@@ -286,6 +286,12 @@ func (t *Translator) validateBackendRefBackend(
 
 	if err := validateBackend(backend, resources.BackendTLSPolicies, t.RunningOnHost); err != nil {
 		return err
+	}
+
+	if isKubernetesServiceBackend(backend) {
+		if err := t.validateKubernetesServiceBackend(backend, protocol); err != nil {
+			return err
+		}
 	}
 
 	for _, bep := range backend.Spec.Endpoints {
@@ -1465,6 +1471,11 @@ func (t *Translator) validateExtServiceBackendReference(
 		// Dynamic resolver backend is not supported for EG policies
 		if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 			return fmt.Errorf("dynamic resolver backend %s/%s is not supported", backendNamespace, backendRef.Name)
+		}
+		if isKubernetesServiceBackend(backend) {
+			if err := t.validateKubernetesServiceBackend(backend, corev1.ProtocolTCP); err != nil {
+				return err
+			}
 		}
 	}
 

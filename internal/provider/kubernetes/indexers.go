@@ -47,6 +47,7 @@ const (
 	serviceImportEndpointSliceIndex  = "serviceImportEndpointSliceIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
+	serviceBackendIndex              = "serviceBackendIndex"
 	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
@@ -1072,7 +1073,25 @@ func addBackendIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.Backend{}, serviceBackendIndex, serviceBackendIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// serviceBackendIndexFunc indexes KubernetesService Backends by the Service they point at.
+func serviceBackendIndexFunc(rawObj client.Object) []string {
+	backend := rawObj.(*egv1a1.Backend)
+	if backend.Spec.Type == nil || *backend.Spec.Type != egv1a1.BackendTypeKubernetesService || backend.Spec.KubernetesService == nil {
+		return nil
+	}
+	return []string{
+		types.NamespacedName{
+			Namespace: backend.Namespace,
+			Name:      string(backend.Spec.KubernetesService.Name),
+		}.String(),
+	}
 }
 
 func configMapBackendIndexFunc(rawObj client.Object) []string {
