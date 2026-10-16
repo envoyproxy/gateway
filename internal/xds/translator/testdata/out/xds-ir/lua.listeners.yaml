@@ -15,43 +15,43 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.lua/0
+          name: envoy.filters.http.lua/000
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/1
+          name: envoy.filters.http.lua/001
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/2
+          name: envoy.filters.http.lua/002
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/3
+          name: envoy.filters.http.lua/003
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/4
+          name: envoy.filters.http.lua/004
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/5
+          name: envoy.filters.http.lua/005
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/6
+          name: envoy.filters.http.lua/006
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/7
+          name: envoy.filters.http.lua/007
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/8
+          name: envoy.filters.http.lua/008
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
-          name: envoy.filters.http.lua/9
+          name: envoy.filters.http.lua/009
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - name: envoy.filters.http.router

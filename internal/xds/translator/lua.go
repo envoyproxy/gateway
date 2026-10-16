@@ -7,7 +7,7 @@ package translator
 
 import (
 	"errors"
-	"strconv"
+	"fmt"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -98,9 +98,9 @@ func buildHCMLuaFilter(slot int) (*hcmv3.HttpFilter, error) {
 }
 
 // luaFilterName returns the name of the HCM Lua filter serving the given slot. The
-// trailing index orders the filters within the HCM, see newOrderedHTTPFilter.
+// zero-padded index keeps names in slot order when sorted, see newOrderedHTTPFilter.
 func luaFilterName(slot int) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterLua, strconv.Itoa(slot))
+	return perRouteFilterName(egv1a1.EnvoyFilterLua, fmt.Sprintf("%03d", slot))
 }
 
 // routeContainsLua returns true if Luas exists for the provided route.

@@ -13,7 +13,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/0:
+        envoy.filters.http.lua/000:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sharedVmId: envoyextensionpolicy/default/policy-for-foo/lua/0
           sourceCode:
@@ -27,7 +27,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/0:
+        envoy.filters.http.lua/000:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sharedVmId: envoyextensionpolicy/default/policy-for-foo/lua/0
           sourceCode:
@@ -45,13 +45,13 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/0:
+        envoy.filters.http.lua/000:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sharedVmId: envoyextensionpolicy/default/policy-for-bar/lua/0
           sourceCode:
             inlineString: function envoy_on_request(request_handle) request_handle:logInfo('bar')
               end
-        envoy.filters.http.lua/1:
+        envoy.filters.http.lua/001:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sharedVmId: envoyextensionpolicy/default/policy-for-bar/lua/1
           sourceCode:
