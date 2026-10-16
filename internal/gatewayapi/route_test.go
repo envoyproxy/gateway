@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -1015,8 +1014,8 @@ func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
 		require.Regexp(t, `^httproute-default-route-1-rule-0-[0-9a-f]{8}$`, cookieName(t, httpRoute("default", "route-1"), 0))
 	})
 
-	t.Run("stable across calls", func(t *testing.T) {
-		require.Equal(t, cookieName(t, grpcRoute("default", "route-1"), 0), cookieName(t, grpcRoute("default", "route-1"), 0))
+	t.Run("deterministic", func(t *testing.T) {
+		require.Equal(t, "grpcroute-default-route-1-rule-0-5f436ad0", cookieName(t, grpcRoute("default", "route-1"), 0))
 	})
 
 	t.Run("namespace/name pairs that flatten identically do not collide", func(t *testing.T) {
@@ -1030,7 +1029,7 @@ func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
 	})
 
 	t.Run("explicit sessionName is used verbatim", func(t *testing.T) {
-		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: ptr.To("my-session")}, httpRoute("default", "route-1"), 0)
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new("my-session")}, httpRoute("default", "route-1"), 0)
 		require.Nil(t, err)
 		require.Equal(t, "my-session", sp.Cookie.Name)
 	})
