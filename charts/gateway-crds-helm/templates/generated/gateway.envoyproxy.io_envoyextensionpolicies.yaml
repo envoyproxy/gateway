@@ -1820,6 +1820,8 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http3 is only supported for route backends
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                 maxItems: 16
                 type: array
               lua:

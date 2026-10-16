@@ -33306,6 +33306,8 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http3 is only supported for route backends
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                 maxItems: 16
                 type: array
               lua:
@@ -48347,6 +48349,8 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: http3 is only supported for route backends
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
@@ -50094,6 +50098,8 @@ spec:
                                     - message: either resources or resourceAttributes
                                         can be set, not both
                                       rule: '!has(self.resources) || !has(self.resourceAttributes)'
+                                    - message: http3 is only supported for route backends
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -52174,6 +52180,8 @@ spec:
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                   f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                   : true'
+                              - message: http3 is only supported for route backends
+                                rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -54059,6 +54067,8 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
+                        - message: http3 is only supported for route backends
+                          rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
@@ -57439,6 +57449,8 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: http3 is only supported for route backends
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -59046,6 +59058,8 @@ spec:
                         ''gateway.envoyproxy.io'')) : true'
                     - message: only one of path or pathOverride can be specified
                       rule: '!(has(self.path) && has(self.pathOverride))'
+                    - message: http3 is only supported for route backends
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                   includeRouteMetadata:
                     description: |-
                       IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
@@ -60957,6 +60971,8 @@ spec:
                           - message: HTTPStatusCodes is not supported.
                             rule: has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)?
                               !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true
+                          - message: http3 is only supported for route backends
+                            rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                       required:
                       - name
                       type: object
@@ -62986,6 +63002,8 @@ spec:
                     - message: HTTPStatusCodes is not supported.
                       rule: has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)?
                         !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true
+                    - message: http3 is only supported for route backends
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                   redirectURL:
                     description: |-
                       The redirect URL to be used in the OIDC

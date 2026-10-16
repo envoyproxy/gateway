@@ -77,13 +77,6 @@ func translateExtServiceBackendSettings(policy *egv1a1.BackendSettings) (*ir.Tra
 		ret.HTTP2 = h2
 	}
 
-	// HTTP/3 is only supported for route backends. The ext-service clusters built from
-	// these settings are driven by Envoy's async client, which never records alt-svc, so
-	// the default Auto mode could never take effect here.
-	if policy.HTTP3 != nil {
-		return nil, errors.New("http3 is only supported for route backends")
-	}
-
 	var err error
 	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
 		return nil, err
