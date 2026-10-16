@@ -2827,6 +2827,211 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"spec.wasmModules[0].source.local.path in body should be at least 1 chars long"},
 		},
+		{
+			desc: "valid: wasmModules with HTTP source",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "http-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.HTTPWasmModuleSourceType),
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL:    "https://example.com/filter.wasm",
+									SHA256: new("a1f0b78b8c1bf5aaa6c8da9a4a5b2c6b3a0f3c1d0c1e2f3a4b5c6d7e8f9a0b1c"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: wasmModules with Image source and pullPolicy",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "image-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.ImageWasmModuleSourceType),
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://ghcr.io/example/filter:v1.0.0",
+									PullSecretRef: &gwapiv1.SecretObjectReference{
+										Name: "pull-secret",
+									},
+								},
+								PullPolicy: new(egv1a1.ImagePullPolicyAlways),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: wasmModules with Local, HTTP and Image sources",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "local-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+							},
+						},
+						{
+							Name: "http-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.HTTPWasmModuleSourceType),
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL:    "https://example.com/filter.wasm",
+									SHA256: new("a1f0b78b8c1bf5aaa6c8da9a4a5b2c6b3a0f3c1d0c1e2f3a4b5c6d7e8f9a0b1c"),
+								},
+							},
+						},
+						{
+							Name: "image-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.ImageWasmModuleSourceType),
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://ghcr.io/example/filter:v1.0.0",
+									PullSecretRef: &gwapiv1.SecretObjectReference{
+										Name: "pull-secret",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: wasmModules HTTP type without http field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "http-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.HTTPWasmModuleSourceType),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is HTTP, http field needs to be set."},
+		},
+		{
+			desc: "invalid: wasmModules Image type without image field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "image-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.ImageWasmModuleSourceType),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Image, image field needs to be set."},
+		},
+		{
+			desc: "invalid: wasmModules Local type with http field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "local-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL:    "https://example.com/filter.wasm",
+									SHA256: new("a1f0b78b8c1bf5aaa6c8da9a4a5b2c6b3a0f3c1d0c1e2f3a4b5c6d7e8f9a0b1c"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is HTTP, http field needs to be set."},
+		},
+		{
+			desc: "invalid: wasmModules HTTP type with local field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "http-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.HTTPWasmModuleSourceType),
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL:    "https://example.com/filter.wasm",
+									SHA256: new("a1f0b78b8c1bf5aaa6c8da9a4a5b2c6b3a0f3c1d0c1e2f3a4b5c6d7e8f9a0b1c"),
+								},
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is not Local, local field must not be set."},
+		},
+		{
+			desc: "invalid: wasmModules Local type with pullPolicy",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "local-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+								PullPolicy: new(egv1a1.ImagePullPolicyAlways),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"pullPolicy is only supported for HTTP and Image sources."},
+		},
+		{
+			desc: "invalid: wasmModules Image pullSecretRef with non-Secret kind",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "image-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.ImageWasmModuleSourceType),
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://ghcr.io/example/filter:v1.0.0",
+									PullSecretRef: &gwapiv1.SecretObjectReference{
+										Kind: new(gwapiv1.Kind("ConfigMap")),
+										Name: "pull-secret",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only support Secret kind."},
+		},
 	}
 
 	for _, tc := range cases {

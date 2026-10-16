@@ -207,6 +207,10 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		require.NoError(t, err)
 		err = cli.List(context.Background(), &egv1a1.EnvoyProxyList{}, client.MatchingFields{secretEnvoyProxyIndex: "any"})
 		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.EnvoyProxyList{}, client.MatchingFields{configMapEnvoyProxyIndex: "any"})
+		require.NoError(t, err)
+		err = cli.List(context.Background(), &egv1a1.EnvoyProxyList{}, client.MatchingFields{clusterTrustBundleEnvoyProxyIndex: "any"})
+		require.NoError(t, err)
 	})
 
 	t.Run("BackendTrafficPolicy index", func(t *testing.T) {

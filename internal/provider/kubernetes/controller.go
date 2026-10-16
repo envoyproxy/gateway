@@ -408,6 +408,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
+		// The default spec's Wasm module refs resolve in the controller namespace.
+		if gwcResource.EnvoyProxyDefaultSpec != nil {
+			if err := r.processWasmModuleRefs(ctx, gwcResource.EnvoyProxyDefaultSpec,
+				egv1a1.KindEnvoyGateway, r.namespace, "", gwcResourceMapping, gwcResource); err != nil {
+				gcLogger.Error(err, "transient error processing Wasm module refs for the default EnvoyProxy spec")
+				return reconcile.Result{}, err
+			}
+		}
+
 		// process envoy gateway secret refs
 		if err := r.processEnvoyProxySecretRef(ctx, gwcResource); err != nil {
 			if isTransientError(err) {
@@ -3142,6 +3151,9 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 	// It will be recomputed by the gateway-api layer
 	ep.Status = egv1a1.EnvoyProxyStatus{}
 	r.processEnvoyProxy(ep, resourceMap)
+	if err := r.processWasmModuleRefs(ctx, &ep.Spec, egv1a1.KindEnvoyProxy, ep.Namespace, ep.Name, resourceMap, resourceTree); err != nil {
+		return err
+	}
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
@@ -3181,7 +3193,40 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 	// It will be recomputed by the gateway-api layer
 	ep.Status = egv1a1.EnvoyProxyStatus{}
 	r.processEnvoyProxy(ep, resourceMap)
+	if err := r.processWasmModuleRefs(ctx, &ep.Spec, egv1a1.KindEnvoyProxy, ep.Namespace, ep.Name, resourceMap, resourceTree); err != nil {
+		return err
+	}
 	resourceTree.EnvoyProxyForGatewayClass = ep
+	return nil
+}
+
+// processWasmModuleRefs adds the pull secrets and CA certificates of the remote
+// Wasm modules registered on an EnvoyProxy spec to the resourceTree. ownerNS is
+// the namespace the spec belongs to; only refs in it are fetched, since the
+// translator rejects the rest. Only transient errors are returned; the
+// translator reports missing objects.
+func (r *gatewayAPIReconciler) processWasmModuleRefs(
+	ctx context.Context,
+	spec *egv1a1.EnvoyProxySpec,
+	ownerKind, ownerNS, ownerName string,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+) error {
+	for _, ref := range wasmModuleObjectRefs(spec) {
+		kind := gatewayapi.KindDerefOr(ref.Kind, resource.KindSecret)
+		if kind != resource.KindClusterTrustBundle &&
+			gatewayapi.NamespaceDerefOr(ref.Namespace, ownerNS) != ownerNS {
+			continue
+		}
+		if err := r.processSecretObjectRef(ctx, resourceMap, resourceTree,
+			ownerKind, ownerNS, ownerName, ref, kind); err != nil {
+			if isTransientError(err) {
+				return err
+			}
+			r.log.Error(err, "failed to process Wasm module ref",
+				"kind", ownerKind, "namespace", ownerNS, "name", ownerName, "ref", ref.Name)
+		}
+	}
 	return nil
 }
 

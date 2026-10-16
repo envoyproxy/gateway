@@ -2147,6 +2147,10 @@ spec:
                       description: |-
                         Code is the Wasm code for the extension.
                         When omitted, Name must match a module in EnvoyProxy.spec.wasmModules.
+
+                        Deprecated: Register the module in EnvoyProxy.spec.wasmModules and
+                        reference it by wasm[].name instead. This field will be removed in a
+                        future release.
                       properties:
                         http:
                           description: |-
@@ -2419,8 +2423,9 @@ spec:
                         It's also used for logging/debugging.
                         If not specified, EG will generate a unique name for the Wasm extension.
 
-                        When Code is omitted, Name is required and must match a module registered
-                        in EnvoyProxy.spec.wasmModules.
+                        To use a module registered in EnvoyProxy.spec.wasmModules, omit Code and
+                        set Name to the registered module name. This is the recommended way to
+                        configure a Wasm extension.
                       maxLength: 253
                       type: string
                     rootID:
