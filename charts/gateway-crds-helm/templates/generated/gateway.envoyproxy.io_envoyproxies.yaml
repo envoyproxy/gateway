@@ -15351,6 +15351,13 @@ spec:
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
                         type: string
+                      enableCircuitBreakerRemainingStats:
+                        description: |-
+                          EnableCircuitBreakerRemainingStats enables Envoy's circuit breaker `remaining_*` gauges,
+                          which expose the number of resources remaining before each circuit breaker opens.
+                          Enabling this adds 5 additional gauges per cluster, see:
+                          https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats#circuit-breakers-statistics
+                        type: boolean
                       enableGRPCStats:
                         description: |-
                           EnableGRPCStats enables the gRPC stats filter on listeners.

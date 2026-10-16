@@ -1,0 +1,1 @@
+Added `enableCircuitBreakerRemainingStats` to `EnvoyProxy` telemetry metrics, enabling Envoy's circuit breaker `track_remaining` field so that the `remaining_*` gauges report how much headroom is left before a circuit breaker opens.
