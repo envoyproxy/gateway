@@ -630,6 +630,8 @@ type BackendRef struct {
 // BackendCluster contains all the configuration required for configuring access
 // to a backend. This can include multiple endpoints, and settings that apply for
 // managing the connection to all these endpoints.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.backendSettings) || !has(self.backendSettings.http3)",message="http3 is only supported for route backends"
 type BackendCluster struct {
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.

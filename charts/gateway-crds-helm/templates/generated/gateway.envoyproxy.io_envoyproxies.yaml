@@ -13526,6 +13526,8 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: http3 is only supported for route backends
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
@@ -15273,6 +15275,8 @@ spec:
                                     - message: either resources or resourceAttributes
                                         can be set, not both
                                       rule: '!has(self.resources) || !has(self.resourceAttributes)'
+                                    - message: http3 is only supported for route backends
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -17353,6 +17357,8 @@ spec:
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                   f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                   : true'
+                              - message: http3 is only supported for route backends
+                                rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -19238,6 +19244,8 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
+                        - message: http3 is only supported for route backends
+                          rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
