@@ -152,8 +152,6 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 		}
 	}
 	for snapshot := range subscription {
-		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
-
 		for _, update := range coalesceUpdates(l, snapshot.Updates) {
 			handleWithCrashRecovery(l, handle, Update[K, V]{
 				Key:    update.Key,
