@@ -10,7 +10,6 @@ package tests
 import (
 	"context"
 	"fmt"
-	"io"
 	nethttp "net/http"
 	"testing"
 	"time"
@@ -60,10 +59,10 @@ var UpstreamHTTP3Test = suite.ConformanceTest{
 		)
 		require.NoError(t, err)
 
-		// The backend is Caddy rather than the conformance echo server, because the echo
-		// server does not speak HTTP/3. It answers with the protocol it served the request
-		// over, so the conformance response comparison (which expects a JSON CapturedRequest)
-		// does not apply and the status code and body are checked directly.
+		// The backend is a standalone Envoy rather than the conformance echo server, because
+		// the echo server does not speak HTTP/3. It reports the protocol it served the request
+		// over in the x-protocol header, so the conformance response comparison (which expects
+		// a JSON CapturedRequest) does not apply and the status code and header are checked directly.
 		// The alt-svc header is also returned: the backend sends one that names its own
 		// port, and it must not reach the client. The Gateway listener here is plain HTTP, so
 		// the response must carry no alt-svc at all.
@@ -77,14 +76,10 @@ var UpstreamHTTP3Test = suite.ConformanceTest{
 				return 0, "", nil, err
 			}
 			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return 0, "", nil, err
-			}
-			return resp.StatusCode, string(body), resp.Header.Values("Alt-Svc"), nil
+			return resp.StatusCode, resp.Header.Get("X-Protocol"), resp.Header.Values("Alt-Svc"), nil
 		}
 
-		// The body is what proves the protocol: a cluster that fell back to TCP answers 200
+		// The header is what proves the protocol: a cluster that fell back to TCP answers 200
 		// just the same, and Envoy's upstream_cx_http3_total counts QUIC attempts, failed
 		// ones included. Both routes share one Backend and differ only in the mode their
 		// BackendTrafficPolicy sets, so the counter is still read per cluster to confirm the
@@ -98,7 +93,7 @@ var UpstreamHTTP3Test = suite.ConformanceTest{
 			err := wait.PollUntilContextTimeout(ctx, time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 				// Auto only switches to QUIC once a response has advertised alt-svc, so keep
 				// sending requests rather than expecting the first one to be HTTP/3.
-				code, body, altSvc, err := getResponse(address, path)
+				code, proto, altSvc, err := getResponse(address, path)
 				if err != nil {
 					tlog.Logf(t, "request to %s failed: %v", path, err)
 					return false, nil
@@ -112,8 +107,8 @@ var UpstreamHTTP3Test = suite.ConformanceTest{
 				if len(altSvc) > 0 {
 					return false, fmt.Errorf("response from %s forwarded the backend's alt-svc header: %v", path, altSvc)
 				}
-				if body != "HTTP/3.0" {
-					tlog.Logf(t, "request to %s was served over %q, want HTTP/3.0", path, body)
+				if proto != "HTTP/3" {
+					tlog.Logf(t, "request to %s was served over %q, want HTTP/3", path, proto)
 					return false, nil
 				}
 
