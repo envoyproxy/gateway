@@ -8,7 +8,9 @@ package translator
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -215,7 +217,7 @@ func buildJWTProvider(irProvider *ir.JWTProvider) (*jwtauthnv3.JwtProvider, erro
 
 		jwks := irProvider.RemoteJWKS
 		if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
-			jwksCluster = jwks.Destination.Name
+			jwksCluster = jwksDestination(jwks).Name
 		} else {
 			cluster, err := url2Cluster(jwks.URI)
 			if err != nil {
@@ -453,11 +455,12 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 
 			// If the remote JWKS has a destination, use it.
 			if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
+				dest := jwksDestination(jwks)
 				if err := createExtServiceXDSCluster(
-					jwks.Destination, jwks.Traffic, tCtx); err != nil {
+					dest, jwks.Traffic, tCtx); err != nil {
 					errs = errors.Join(errs, err)
 				}
-				if err := processClientCertificates(tCtx, jwks.Destination.Settings); err != nil {
+				if err := processClientCertificates(tCtx, dest.Settings); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			} else {
@@ -515,4 +518,50 @@ func buildJwtFromHeaders(headers []egv1a1.JWTHeaderExtractor) []*jwtauthnv3.JwtH
 	}
 
 	return jwtHeaders
+}
+
+// jwksDestination returns the destination a remote JWKS is fetched from,
+// renamed after its content.
+//
+// The Gateway API translator names the destination after the SecurityPolicy,
+// so two policies that fetch keys from the same backend would get different
+// clusters, and therefore different JWT providers. Every new policy would then
+// change the listener's jwt_authn filter and drain its connections. Naming the
+// destination by its backends, TLS and traffic settings lets identical JWKS
+// sources share one cluster and one provider.
+func jwksDestination(jwks *ir.RemoteJWKS) *ir.RouteDestination {
+	// A backend is identified by its metadata (kind, namespace, name and port)
+	// rather than by its endpoints, so pods of a JWKS Service restarting update
+	// the cluster's endpoints instead of renaming the cluster. TLS secrets are
+	// referenced by name; their PrivateBytes are redacted in JSON.
+	keySettings := make([]*ir.DestinationSetting, 0, len(jwks.Destination.Settings))
+	for _, ds := range jwks.Destination.Settings {
+		k := ds.DeepCopy()
+		k.Name = ""
+		if k.Metadata != nil {
+			k.Metadata.Annotations = nil
+			k.Endpoints = nil
+		}
+		keySettings = append(keySettings, k)
+	}
+	key, err := json.Marshal(struct {
+		Settings []*ir.DestinationSetting
+		Traffic  *ir.TrafficFeatures
+	}{keySettings, jwks.Traffic})
+	if err != nil {
+		// Unreachable for IR types; the policy-based name is still correct, just not shared.
+		return jwks.Destination
+	}
+	sum := sha256.Sum256(key)
+
+	// The destination's own metadata and stat name describe the policy, which
+	// a shared cluster cannot carry.
+	dest := jwks.Destination.DeepCopy()
+	dest.Name = "jwks/" + hex.EncodeToString(sum[:8])
+	dest.StatName = nil
+	dest.Metadata = nil
+	for i, ds := range dest.Settings {
+		ds.Name = fmt.Sprintf("%s/backend/%d", dest.Name, i)
+	}
+	return dest
 }

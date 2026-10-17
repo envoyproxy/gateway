@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              foobar_14d5b09b29e54e96:
+              foobar_71d88e242479d903:
                 audiences:
                 - foo.bar.com
                 claimToHeaders:
@@ -36,7 +36,7 @@
                     failedRefetchDuration: 30s
                   cacheDuration: 300s
                   httpUri:
-                    cluster: securitypolicy/default/policy-for-route/jwt/0
+                    cluster: jwks/102c4be2079ae13f
                     timeout: 5s
                     uri: https://foo.bar.com/jwt/public-key/jwks.json
                   retryPolicy:
@@ -46,8 +46,8 @@
                       maxInterval: 5s
                     retryOn: 5xx,gateway-error,reset
             requirementMap:
-              foobar_d74de7564544aa48:
-                providerName: foobar_14d5b09b29e54e96
+              foobar_0bbe49ec791e9ee7:
+                providerName: foobar_71d88e242479d903
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
