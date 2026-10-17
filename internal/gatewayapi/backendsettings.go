@@ -428,12 +428,18 @@ func buildLoadBalancer(policy *egv1a1.BackendSettings) (*ir.LoadBalancer, error)
 				if err != nil {
 					return nil, fmt.Errorf("invalid DecayTime value %s: %w", *peakEwma.DecayTime, err)
 				}
+				if d <= 0 {
+					return nil, fmt.Errorf("DecayTime must be a positive duration, got %s", *peakEwma.DecayTime)
+				}
 				lb.PeakEwma.DecayTime = ir.MetaV1DurationPtr(d)
 			}
 			if peakEwma.AggregationInterval != nil {
 				d, err := time.ParseDuration(string(*peakEwma.AggregationInterval))
 				if err != nil {
 					return nil, fmt.Errorf("invalid AggregationInterval value %s: %w", *peakEwma.AggregationInterval, err)
+				}
+				if d <= 0 {
+					return nil, fmt.Errorf("AggregationInterval must be a positive duration, got %s", *peakEwma.AggregationInterval)
 				}
 				lb.PeakEwma.AggregationInterval = ir.MetaV1DurationPtr(d)
 			}
@@ -444,6 +450,9 @@ func buildLoadBalancer(policy *egv1a1.BackendSettings) (*ir.LoadBalancer, error)
 				d, err := time.ParseDuration(string(*peakEwma.DefaultRtt))
 				if err != nil {
 					return nil, fmt.Errorf("invalid DefaultRtt value %s: %w", *peakEwma.DefaultRtt, err)
+				}
+				if d <= 0 {
+					return nil, fmt.Errorf("DefaultRtt must be a positive duration, got %s", *peakEwma.DefaultRtt)
 				}
 				lb.PeakEwma.DefaultRtt = ir.MetaV1DurationPtr(d)
 			}
