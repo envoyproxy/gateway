@@ -479,3 +479,64 @@ func (t *Translator) getOrCreateExtensionResource(
 	}
 	return &ir.UnstructuredRef{Name: name}
 }
+
+// extensionRefKey identifies an extension resource by group, kind, namespace and name.
+type extensionRefKey struct {
+	Group     string
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+// ExtensionRefIndex locates extension resources (extensionRef filters and custom backends) in
+// resources.ExtensionRefFilters, so routes can find the resource they reference without scanning
+// them all and re-reading each resource's fields.
+type ExtensionRefIndex struct {
+	// valid maps each resource to its position. When several resources share a key, the first wins.
+	valid map[extensionRefKey]int
+	// malformed maps the kind, namespace and name of each resource whose apiVersion has no
+	// group/version separator (so it has no group) to the position of the first such resource.
+	malformed map[extensionRefKey]int
+}
+
+// BuildExtensionRefIndex indexes resources by group, kind, namespace and name.
+func BuildExtensionRefIndex(resources []unstructured.Unstructured) ExtensionRefIndex {
+	idx := ExtensionRefIndex{
+		valid:     make(map[extensionRefKey]int, len(resources)),
+		malformed: map[extensionRefKey]int{},
+	}
+	for i := range resources {
+		res := &resources[i]
+		key := extensionRefKey{Kind: res.GetKind(), Namespace: res.GetNamespace(), Name: res.GetName()}
+		group, _, ok := strings.Cut(res.GetAPIVersion(), "/")
+		target := idx.valid
+		if ok {
+			key.Group = group
+		} else {
+			target = idx.malformed
+		}
+		if _, exists := target[key]; !exists {
+			target[key] = i
+		}
+	}
+	return idx
+}
+
+// getExtensionRef returns a copy of the extension resource with the given group, kind, namespace
+// and name, or nil if there is none. It returns a copy of the list element, as callers register
+// it with getOrCreateExtensionResource and later phases may update it in place.
+//
+// malformed reports that a resource with the same kind, namespace and name but an apiVersion with
+// no group comes before any match in resources.ExtensionRefFilters (or that there is no match).
+func (t *Translator) getExtensionRef(resources *resource.Resources, group, kind, namespace, name string) (res *unstructured.Unstructured, malformed bool) {
+	i, found := t.ExtensionRefIndex.valid[extensionRefKey{Group: group, Kind: kind, Namespace: namespace, Name: name}]
+	j, hasMalformed := t.ExtensionRefIndex.malformed[extensionRefKey{Kind: kind, Namespace: namespace, Name: name}]
+	if hasMalformed && (!found || j < i) {
+		return nil, true
+	}
+	if !found {
+		return nil, false
+	}
+	r := resources.ExtensionRefFilters[i]
+	return &r, false
+}

@@ -3412,22 +3412,12 @@ func (t *Translator) processBackendExtensions(
 	gwIR *ir.Xds,
 	gatewayCtx *GatewayContext,
 ) *ir.UnstructuredRef { // This list of resources will be empty unless an extension is loaded (and introduces resources)
-	for _, res := range resources.ExtensionRefFilters {
-		if res.GetKind() == string(*backendRef.Kind) && res.GetName() == string(backendRef.Name) && res.GetNamespace() == backendNamespace {
-			apiVers := res.GetAPIVersion()
-			// To get only the group we cut off the version.
-			// This could be a one liner but just to be safe we check that the APIVersion is properly formatted
-			idx := strings.IndexByte(apiVers, '/')
-			if idx != -1 {
-				group := apiVers[:idx]
-				if group == string(*backendRef.Group) {
-					res := res // Capture loop variable
-					return t.getOrCreateExtensionResource(gwIR, gatewayCtx, &res)
-				}
-			}
-		}
+	// A resource with a malformed apiVersion is treated as not found, as it has no group to match.
+	res, _ := t.getExtensionRef(resources, GroupDerefOr(backendRef.Group, ""), KindDerefOr(backendRef.Kind, ""), backendNamespace, string(backendRef.Name))
+	if res == nil {
+		return nil
 	}
-	return nil
+	return t.getOrCreateExtensionResource(gwIR, gatewayCtx, res)
 }
 
 func (t *Translator) getTargetBackendReference(

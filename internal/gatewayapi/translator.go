@@ -339,6 +339,7 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	translatorContext.SetClusterTrustBundles(resources.ClusterTrustBundles)
 	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
 	translatorContext.BackendTLSPolicyIndex = BuildBackendTLSPolicyIndex(resources.BackendTLSPolicies)
+	translatorContext.ExtensionRefIndex = BuildExtensionRefIndex(resources.ExtensionRefFilters)
 
 	t.TranslatorContext = translatorContext
 

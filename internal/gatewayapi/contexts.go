@@ -967,6 +967,10 @@ type TranslatorContext struct {
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 	BackendTLSPolicyIndex   BackendTLSPolicyIndex
+	// ExtensionRefIndex is held by value, unlike the policy indexes above: it only holds maps, so
+	// copying it is cheap and shares the entries, and its zero value is an empty index whose
+	// lookups find nothing instead of panicking when a context is built without it.
+	ExtensionRefIndex ExtensionRefIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {
