@@ -266,6 +266,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				var (
 					err                 error
 					http3WarningMessage string
+					http3PPWarning      string
 				)
 				for _, l := range gateway.listeners {
 					// Find IR
@@ -282,6 +283,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							httpIR := gwXdsIR.GetHTTPListener(irListenerName(l))
 							if shouldDisableHTTP3ForClientValidation(policy, httpIR) {
 								http3WarningMessage = disabledHTTP3WarningMessage([]string{string(l.Name)})
+							}
+							if shouldDisableHTTP3ForProxyProtocol(policy, httpIR) {
+								http3PPWarning = disabledHTTP3ForProxyProtocolWarningMessage([]string{string(l.Name)})
 							}
 							err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 						}
@@ -306,6 +310,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				if http3WarningMessage != "" {
 					status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
 						status.PolicyReasonUnsupportedHTTP3ClientValidation, http3WarningMessage, policy.Generation)
+				}
+				if http3PPWarning != "" {
+					status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+						status.PolicyReasonUnsupportedHTTP3ProxyProtocol, http3PPWarning, policy.Generation)
 				}
 
 				// Check for deprecated fields and set warning if any are found
@@ -453,8 +461,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 					// Translate sections that have not yet been targeted
 					var (
-						errs                   error
-						http3DisabledListeners []string
+						errs                     error
+						http3DisabledListeners   []string
+						http3PPDisabledListeners []string
 					)
 					for _, l := range gateway.listeners {
 						if policyTargetsLS && !listenersBelongToLS(l, ls) {
@@ -487,6 +496,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
 								http3DisabledListeners = append(http3DisabledListeners, string(l.Name))
 							}
+							if shouldDisableHTTP3ForProxyProtocol(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
+								http3PPDisabledListeners = append(http3PPDisabledListeners, string(l.Name))
+							}
 							if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 								errs = errors.Join(errs, err)
 							}
@@ -516,6 +528,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					if len(http3DisabledListeners) > 0 {
 						status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
 							status.PolicyReasonUnsupportedHTTP3ClientValidation, disabledHTTP3WarningMessage(http3DisabledListeners), policy.Generation)
+					}
+					if len(http3PPDisabledListeners) > 0 {
+						status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+							status.PolicyReasonUnsupportedHTTP3ProxyProtocol, disabledHTTP3ForProxyProtocolWarningMessage(http3PPDisabledListeners), policy.Generation)
 					}
 
 					// Check for deprecated fields and set warning if any are found
@@ -679,6 +695,15 @@ func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, h
 	return true
 }
 
+// shouldDisableHTTP3ForProxyProtocol checks if HTTP/3 should be disabled for a listener
+// because the proxy protocol listener filter is not supported on QUIC (UDP) listeners.
+func shouldDisableHTTP3ForProxyProtocol(policy *egv1a1.ClientTrafficPolicy, httpIR *ir.HTTPListener) bool {
+	if httpIR == nil || httpIR.TLS == nil || policy.Spec.HTTP3 == nil {
+		return false
+	}
+	return policy.Spec.ProxyProtocol != nil || ptr.Deref(policy.Spec.EnableProxyProtocol, false)
+}
+
 func disabledHTTP3WarningMessage(listenerNames []string) string {
 	if len(listenerNames) == 0 {
 		return ""
@@ -693,6 +718,24 @@ func disabledHTTP3WarningMessage(listenerNames []string) string {
 
 	return fmt.Sprintf(
 		"HTTP/3 was disabled for %s because Envoy does not support downstream client TLS validation over QUIC",
+		target,
+	)
+}
+
+func disabledHTTP3ForProxyProtocolWarningMessage(listenerNames []string) string {
+	if len(listenerNames) == 0 {
+		return ""
+	}
+
+	target := fmt.Sprintf("listener %q", listenerNames[0])
+
+	if len(listenerNames) > 1 {
+		sort.Strings(listenerNames)
+		target = fmt.Sprintf("listeners %v", listenerNames)
+	}
+
+	return fmt.Sprintf(
+		"HTTP/3 was disabled for %s because the proxy protocol listener filter is not supported on QUIC listeners",
 		target,
 	)
 }
@@ -800,7 +843,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		}
 
 		// enable http3 if set and TLS is enabled
-		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil && !shouldDisableHTTP3ForClientValidation(policy, httpIR) {
+		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil && !shouldDisableHTTP3ForClientValidation(policy, httpIR) && !shouldDisableHTTP3ForProxyProtocol(policy, httpIR) {
 			http3 := &ir.HTTP3Settings{}
 			if policy.Spec.HTTP3.AdvertisedPort != nil {
 				http3.AdvertisedPort = new(uint32(*policy.Spec.HTTP3.AdvertisedPort))
