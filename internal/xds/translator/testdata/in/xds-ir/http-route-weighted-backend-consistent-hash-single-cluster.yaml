@@ -1,0 +1,37 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  # A weighted split across two backendRefs to the same destination (no per-backendRef
+  # filters, so the split collapses into a single cluster expressed as weighted
+  # localities) combined with a ConsistentHash load balancer. Locality weighted load
+  # balancing must be enabled on the Maglev policy so the configured weights are
+  # honored instead of being silently ignored.
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          headers:
+          - name: x-user-id
+    destination:
+      name: "first-route-dest"
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: "1.1.1.1"
+          port: 50001
+        weight: 5
+        name: "first-route-dest/backend/0"
+      - addressType: IP
+        endpoints:
+        - host: "2.2.2.2"
+          port: 50002
+        weight: 95
+        name: "first-route-dest/backend/1"
