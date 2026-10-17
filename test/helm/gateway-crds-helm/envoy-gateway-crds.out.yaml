@@ -2306,6 +2306,16 @@ spec:
                         description: PreferLocalZone configures zone-aware routing
                           to prefer sending traffic to the local locality zone.
                         properties:
+                          failTrafficOnPanic:
+                            description: |-
+                              FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                              cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                              drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                              across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                              requests instead, applying backpressure to clients and giving the backend room to
+                              recover.
+                              Defaults to false.
+                            type: boolean
                           force:
                             description: |-
                               ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -8726,6 +8736,16 @@ spec:
                                     routing to prefer sending traffic to the local
                                     locality zone.
                                   properties:
+                                    failTrafficOnPanic:
+                                      description: |-
+                                        FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                        cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                        drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                        across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                        requests instead, applying backpressure to clients and giving the backend room to
+                                        recover.
+                                        Defaults to false.
+                                      type: boolean
                                     force:
                                       description: |-
                                         ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -23837,6 +23857,16 @@ spec:
                                                       sending traffic to the local
                                                       locality zone.
                                                     properties:
+                                                      failTrafficOnPanic:
+                                                        description: |-
+                                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                          requests instead, applying backpressure to clients and giving the backend room to
+                                                          recover.
+                                                          Defaults to false.
+                                                        type: boolean
                                                       force:
                                                         description: |-
                                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -25531,6 +25561,16 @@ spec:
                                                       sending traffic to the local
                                                       locality zone.
                                                     properties:
+                                                      failTrafficOnPanic:
+                                                        description: |-
+                                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                          requests instead, applying backpressure to clients and giving the backend room to
+                                                          recover.
+                                                          Defaults to false.
+                                                        type: boolean
                                                       force:
                                                         description: |-
                                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -27596,6 +27636,16 @@ spec:
                                                 zone-aware routing to prefer sending
                                                 traffic to the local locality zone.
                                               properties:
+                                                failTrafficOnPanic:
+                                                  description: |-
+                                                    FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                    cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                    drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                    across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                    requests instead, applying backpressure to clients and giving the backend room to
+                                                    recover.
+                                                    Defaults to false.
+                                                  type: boolean
                                                 force:
                                                   description: |-
                                                     ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -29399,6 +29449,16 @@ spec:
                                           routing to prefer sending traffic to the
                                           local locality zone.
                                         properties:
+                                          failTrafficOnPanic:
+                                            description: |-
+                                              FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                              cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                              drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                              across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                              requests instead, applying backpressure to clients and giving the backend room to
+                                              recover.
+                                              Defaults to false.
+                                            type: boolean
                                           force:
                                             description: |-
                                               ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -32914,6 +32974,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -34468,6 +34538,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -36362,6 +36442,16 @@ spec:
                                             zone-aware routing to prefer sending traffic
                                             to the local locality zone.
                                           properties:
+                                            failTrafficOnPanic:
+                                              description: |-
+                                                FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                requests instead, applying backpressure to clients and giving the backend room to
+                                                recover.
+                                                Defaults to false.
+                                              type: boolean
                                             force:
                                               description: |-
                                                 ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -38379,6 +38469,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
