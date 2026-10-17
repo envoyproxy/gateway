@@ -1,0 +1,1 @@
+Reduced the cost of checking cross-namespace references during reconciliation by looking up ReferenceGrants only in the target namespace, instead of listing every ReferenceGrant for the target kind across the cluster.
