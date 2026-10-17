@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -900,6 +901,93 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
+		},
+		{
+			name: "prometheus compression without minContentLength",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type: egv1a1.GzipCompressorType,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength of 1 byte",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("1")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength at the uint32 limit",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("4294967295")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength overflowing uint32",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("4Gi")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
 		},
 	}
 
