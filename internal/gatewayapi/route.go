@@ -3213,6 +3213,10 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 		}
 		return nil, err
 	}
+	if httpFiltersContext.RedirectResponse != nil && httpFiltersContext.RedirectResponse.Path != nil &&
+		httpFiltersContext.RedirectResponse.Path.RegexMatchReplace != nil {
+		return nil, errors.New("HTTPRouteFilter redirect is not supported on backendRefs")
+	}
 	applyHTTPFiltersContextToDestinationFilters(httpFiltersContext, &destFilters)
 
 	return &destFilters, nil
