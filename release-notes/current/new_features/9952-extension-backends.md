@@ -1,0 +1,1 @@
+Added named backend dependencies to EnvoyExtensionPolicy for Lua, Wasm and dynamic module HTTP callouts, with optional backend connection settings and alias bindings exposed through static route metadata.

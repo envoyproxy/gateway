@@ -659,7 +659,17 @@ func (r *gatewayAPIReconciler) validateServiceImportForReconcile(obj client.Obje
 	}
 
 	nsName := utils.NamespacedName(svcImport)
-	return r.isRouteReferencingBackend(&nsName)
+	if r.isRouteReferencingBackend(&nsName) {
+		return true
+	}
+
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // isRouteReferencingBackend returns true if the backend(service and serviceImport) is referenced by any of the xRoutes

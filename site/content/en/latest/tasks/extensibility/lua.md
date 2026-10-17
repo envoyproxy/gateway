@@ -357,3 +357,7 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [AdmissionControl]: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
 [AuditLog]: https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
+
+## Backend dependencies
+
+Declare HTTP callout dependencies with [extension backend bindings](../extension-backends/).
