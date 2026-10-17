@@ -98,6 +98,10 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	// the remaining filters is skipped when rejected early
 	// Important: After adding new filter types, don't forget to modify the validation rule of the EnvoyFilter type in the API
 	switch {
+	case filter.Name == filters.DownstreamProtocolFilterName:
+		// Runs before any other filter so that the route returning 421 for misdirected requests is
+		// selected before other filters act on the route.
+		order = -1
 	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
 		order = 0
 	case isFilterType(filter, egv1a1.EnvoyFilterHealthCheck):
