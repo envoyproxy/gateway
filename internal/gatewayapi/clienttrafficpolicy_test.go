@@ -258,6 +258,7 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Headers":             false,
 		"Timeout":             false,
 		"Connection":          false,
+		"TCP":                 false,
 		"HTTP1":               true,
 		"HTTP2":               false,
 		"HTTP3":               false,

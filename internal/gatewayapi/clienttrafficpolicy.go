@@ -882,9 +882,20 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		tcpIR.ProxyProtocol = proxyProtocol
 		tcpIR.TLS = tlsConfig
 		tcpIR.Timeout = timeout
+		tcpIR.TCP = buildIRTCPSettings(policy.Spec.TCP)
 	}
 
 	return nil
+}
+
+func buildIRTCPSettings(tcpSettings *egv1a1.TCPSettings) *ir.TCPSettings {
+	if tcpSettings == nil {
+		return nil
+	}
+
+	return &ir.TCPSettings{
+		EnableActiveDrain: ptr.Deref(tcpSettings.EnableActiveDrain, false),
+	}
 }
 
 func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error) {

@@ -735,6 +735,7 @@ func (t *Translator) addXdsTCPFilterChain(
 		accesslog,
 		tcpListener.Timeout,
 		tcpListener.Connection,
+		tcpListener.TCP,
 	)
 	if err != nil {
 		return err
@@ -777,6 +778,7 @@ func buildTCPFilterChain(
 	accesslog *ir.AccessLog,
 	timeout *ir.ClientTimeout,
 	connection *ir.ClientConnection,
+	tcpSettings *ir.TCPSettings,
 ) (*listenerv3.FilterChain, error) {
 	var filters []*listenerv3.Filter
 
@@ -828,6 +830,9 @@ func buildTCPFilterChain(
 	}
 	if timeout != nil && timeout.TCP != nil && timeout.TCP.IdleTimeout != nil {
 		mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
+	}
+	if tcpSettings != nil && tcpSettings.EnableActiveDrain {
+		mgr.CheckDrainClose = wrapperspb.Bool(true)
 	}
 	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
 		filters = append(filters, mgrf)
