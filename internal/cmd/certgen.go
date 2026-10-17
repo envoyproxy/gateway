@@ -204,6 +204,7 @@ func outputCertsForLocal(localPath string, certs *crypto.Certificates) error {
 		return err
 	}
 
+	// dummy changes
 	if err := file.WriteDir(certs.OIDCHMACSecret, path.Join(localPath, "envoy-oidc-hmac"), "hmac-secret"); err != nil {
 		return err
 	}
