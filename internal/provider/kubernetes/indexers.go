@@ -309,6 +309,13 @@ func backendEnvoyProxyTelemetryIndexFunc(rawObj client.Object) []string {
 func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
 	ep := rawObj.(*egv1a1.EnvoyProxy)
 	var secretReferences []string
+	for _, ref := range dynamicModulePullSecretRefs(ep) {
+		secretReferences = append(secretReferences,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+				Name:      string(ref.Name),
+			}.String())
+	}
 	if ep.Spec.BackendTLS != nil {
 		if ep.Spec.BackendTLS.ClientCertificateRef != nil {
 			if *ep.Spec.BackendTLS.ClientCertificateRef.Kind == resource.KindSecret {
@@ -321,6 +328,18 @@ func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return secretReferences
+}
+
+// dynamicModulePullSecretRefs returns the pull secrets of the dynamic modules
+// from OCI images registered in the EnvoyProxy.
+func dynamicModulePullSecretRefs(ep *egv1a1.EnvoyProxy) []gwapiv1.SecretObjectReference {
+	var refs []gwapiv1.SecretObjectReference
+	for _, dm := range ep.Spec.DynamicModules {
+		if dm.Source.Image != nil && dm.Source.Image.PullSecretRef != nil && refsSecret(dm.Source.Image.PullSecretRef) {
+			refs = append(refs, *dm.Source.Image.PullSecretRef)
+		}
+	}
+	return refs
 }
 
 func accessLogRefs(ep *egv1a1.EnvoyProxy) []string {
