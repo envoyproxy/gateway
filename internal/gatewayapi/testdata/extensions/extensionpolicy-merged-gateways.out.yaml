@@ -1,0 +1,399 @@
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: gateway-a-https-listener
+    namespace: envoy-gateway
+  spec:
+    data: attached to gateway-a/https only
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-a
+      sectionName: https
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-a
+        namespace: envoy-gateway
+        sectionName: https
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: gateway-a-all-listeners
+    namespace: envoy-gateway
+  spec:
+    data: attached to gateway-a/http and gateway-a/https only
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-a
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-a
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-a
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: a.example.com
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: a.example.com
+      name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: tls-secret-example-com
+        mode: Terminate
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: https
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-b
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: b.example.com
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: b.example.com
+      name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: tls-secret-example-com
+        mode: Terminate
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: https
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway-class:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeGateways: true
+        status: {}
+      listeners:
+      - name: envoy-gateway/gateway-a/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      - name: envoy-gateway/gateway-a/https
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway-class
+      namespace: ""
+xdsIR:
+  envoy-gateway-class:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    extensionResources:
+    - name: foo.example.io/bar/envoy-gateway/gateway-a-https-listener
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: gateway-a-https-listener
+          namespace: envoy-gateway
+        spec:
+          data: attached to gateway-a/https only
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-a
+            sectionName: https
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-a
+              namespace: envoy-gateway
+              sectionName: https
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - name: foo.example.io/bar/envoy-gateway/gateway-a-all-listeners
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: gateway-a-all-listeners
+          namespace: envoy-gateway
+        spec:
+          data: attached to gateway-a/http and gateway-a/https only
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-a
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-a
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionServerPolicies:
+    - name: foo.example.io/bar/envoy-gateway/gateway-a-https-listener
+    - name: foo.example.io/bar/envoy-gateway/gateway-a-all-listeners
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-class-3b1df594
+          sectionName: "8080"
+        name: envoy-gateway-class
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-class-3b1df594
+            sectionName: "8080"
+          name: envoy-gateway-class
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/gateway-a-all-listeners
+      externalPort: 80
+      hostnames:
+      - a.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-a
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-a/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/gateway-a-https-listener
+      - name: foo.example.io/bar/envoy-gateway/gateway-a-all-listeners
+      externalPort: 443
+      hostnames:
+      - a.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-a
+        namespace: envoy-gateway
+        sectionName: https
+      name: envoy-gateway/gateway-a/https
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMyRENDQWNBQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5UQTBNakV3T1RFd05ETmFGdzB6TlRBMApNVGt3T1RFd05ETmFNRGN4RmpBVUJnTlZCQU1NRFNvdVpYaGhiWEJzWlM1amIyMHhIVEFiQmdOVkJBb01GR1Y0CllXMXdiR1VnYjNKbllXNXBlbUYwYVc5dU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0MKQVFFQXY0anl4TUh1YzQzMHdvWkk4M1JSMXVxU2gvbm9MVWVPdDZnMkNKaFVFYXNaeUNOMzN3bFRRRDE0SEhkSwpOb1k4SThWd1pOZFZCNGpjRzlnb3dDVmVQY3lqRzZPaGl1aUZNWnU2NzV6dWZEWnRlRTNEY3lTbFgrY2lSbVZZCkNuSmk3QkV3NlJMUUJ0bVV6WGxtYmRpVXE5djJwalVBL2R3ZnRLRHRZTHFrVytvTSt5MWg3cjRJV0JVK2RVcU0KcGtTem5VSCtKN1JoRkFsdytmRWlVSFRLemlCMkVtdjc3Mi91bS96NHdMWnJIeWNGbmc4L1FCM0JIUktXVTV4eQp3bWNTQ2xrVlMvWWNpMFVXcnR2eGhwck9wTUhQUGR2QkZ2M2NaWGNpUUJjb0ZNcGxsQzV0UURvdWJ0dEV1d3JpCi8rVktKWkUrSVl4ei9YeUd3Y3dJRnIzWG13SURBUUFCTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBU3VLaE8KcGtwL1VSclphbEU0OUlnc0xkN3hSTlBhREVkQ1RWZ3Qvc3praUhnSDB1NDBVaVV6KzVzaDRpdlJOazRqTm1zRwprb3FwQlBVS3pvVmtrSTcxUWQ4bHh1VzF2dkxZMXVvM0RIS2svdDFpUWVZWWpERlk3YzUxVG1BT015WUdKTlhxCi9EbW84UWgzaFB1RnI3a29kUjBLSkJyc0RsMEhoWVBjUnpWOW1sQ2lrU1B4THJGTUNwZGx0QUw2UEprSVpucUgKc1g5dEtVZk1uYW5jMkpHZTZVTDE1ODBEV2xQTUcrMU1qRElCVXdxWWYzaWNKb0NYclAwbzNmckRKcTE2VnpidApkalRtVGswakx1bGkvQ2JCZzh4dWp4emo4bmRPcVNkd05kd091OWoxSmZ2Q0I1RjZ4S0VTenowOVo5TzlOZUM5CjMrd1pLTlRSOXVEdDRKNksKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+          name: envoy-gateway/tls-secret-example-com
+          privateKey: '[redacted]'
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - b.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-b
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-b/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      externalPort: 443
+      hostnames:
+      - b.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-b
+        namespace: envoy-gateway
+        sectionName: https
+      name: envoy-gateway/gateway-b/https
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMyRENDQWNBQ0FRQXdEUVlKS29aSWh2Y05BUUVMQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkoKYm1NdU1SUXdFZ1lEVlFRRERBdGxlR0Z0Y0d4bExtTnZiVEFlRncweU5UQTBNakV3T1RFd05ETmFGdzB6TlRBMApNVGt3T1RFd05ETmFNRGN4RmpBVUJnTlZCQU1NRFNvdVpYaGhiWEJzWlM1amIyMHhIVEFiQmdOVkJBb01GR1Y0CllXMXdiR1VnYjNKbllXNXBlbUYwYVc5dU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0MKQVFFQXY0anl4TUh1YzQzMHdvWkk4M1JSMXVxU2gvbm9MVWVPdDZnMkNKaFVFYXNaeUNOMzN3bFRRRDE0SEhkSwpOb1k4SThWd1pOZFZCNGpjRzlnb3dDVmVQY3lqRzZPaGl1aUZNWnU2NzV6dWZEWnRlRTNEY3lTbFgrY2lSbVZZCkNuSmk3QkV3NlJMUUJ0bVV6WGxtYmRpVXE5djJwalVBL2R3ZnRLRHRZTHFrVytvTSt5MWg3cjRJV0JVK2RVcU0KcGtTem5VSCtKN1JoRkFsdytmRWlVSFRLemlCMkVtdjc3Mi91bS96NHdMWnJIeWNGbmc4L1FCM0JIUktXVTV4eQp3bWNTQ2xrVlMvWWNpMFVXcnR2eGhwck9wTUhQUGR2QkZ2M2NaWGNpUUJjb0ZNcGxsQzV0UURvdWJ0dEV1d3JpCi8rVktKWkUrSVl4ei9YeUd3Y3dJRnIzWG13SURBUUFCTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBU3VLaE8KcGtwL1VSclphbEU0OUlnc0xkN3hSTlBhREVkQ1RWZ3Qvc3praUhnSDB1NDBVaVV6KzVzaDRpdlJOazRqTm1zRwprb3FwQlBVS3pvVmtrSTcxUWQ4bHh1VzF2dkxZMXVvM0RIS2svdDFpUWVZWWpERlk3YzUxVG1BT015WUdKTlhxCi9EbW84UWgzaFB1RnI3a29kUjBLSkJyc0RsMEhoWVBjUnpWOW1sQ2lrU1B4THJGTUNwZGx0QUw2UEprSVpucUgKc1g5dEtVZk1uYW5jMkpHZTZVTDE1ODBEV2xQTUcrMU1qRElCVXdxWWYzaWNKb0NYclAwbzNmckRKcTE2VnpidApkalRtVGswakx1bGkvQ2JCZzh4dWp4emo4bmRPcVNkd05kd091OWoxSmZ2Q0I1RjZ4S0VTenowOVo5TzlOZUM5CjMrd1pLTlRSOXVEdDRKNksKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+          name: envoy-gateway/tls-secret-example-com
+          privateKey: '[redacted]'
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

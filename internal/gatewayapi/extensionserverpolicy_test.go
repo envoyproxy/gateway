@@ -14,6 +14,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -383,4 +384,149 @@ func mergeAncestorsForExtensionServerPolicies(aggregatedPolicy, newPolicy *unstr
 	newStatus := ExtServerPolicyStatusAsPolicyStatus(newPolicy)
 	aggStatus.Ancestors = append(aggStatus.Ancestors, newStatus.Ancestors...)
 	aggregatedPolicy.Object["status"] = PolicyStatusToUnstructured(aggStatus)
+}
+
+func TestTranslateExtServerPolicyForGateway(t *testing.T) {
+	// Each Gateway has one listener of each IR kind, plus one listener that is
+	// not in the IR, as happens when a listener fails validation.
+	newGateway := func(name string) *GatewayContext {
+		gw := &GatewayContext{Gateway: &gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: name},
+			Spec: gwapiv1.GatewaySpec{
+				GatewayClassName: "envoy-gateway-class",
+				Listeners: []gwapiv1.Listener{
+					{Name: "http", Protocol: gwapiv1.HTTPProtocolType, Port: 80},
+					{Name: "https", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
+					{Name: "tcp", Protocol: gwapiv1.TCPProtocolType, Port: 9000},
+					{Name: "udp", Protocol: gwapiv1.UDPProtocolType, Port: 9001},
+					{Name: "invalid", Protocol: gwapiv1.HTTPProtocolType, Port: 8080},
+				},
+			},
+		}}
+		gw.ResetListeners()
+		return gw
+	}
+	// addToIR adds an IR listener for each Gateway listener except "invalid",
+	// named as ProcessListeners names them.
+	addToIR := func(x *ir.Xds, gw *GatewayContext) {
+		for _, l := range gw.listeners {
+			core := ir.CoreListenerDetails{Name: irListenerName(l)}
+			switch {
+			case l.Name == "invalid":
+			case l.Protocol == gwapiv1.TCPProtocolType:
+				x.TCP = append(x.TCP, &ir.TCPListener{CoreListenerDetails: core})
+			case l.Protocol == gwapiv1.UDPProtocolType:
+				x.UDP = append(x.UDP, &ir.UDPListener{CoreListenerDetails: core})
+			default:
+				x.HTTP = append(x.HTTP, &ir.HTTPListener{CoreListenerDetails: core})
+			}
+		}
+	}
+	// withPolicy returns the names of the IR listeners that carry an ExtensionRef.
+	withPolicy := func(xdsIR resource.XdsIRMap) []string {
+		var names []string
+		for _, x := range xdsIR {
+			var listeners []*ir.CoreListenerDetails
+			for _, l := range x.HTTP {
+				listeners = append(listeners, &l.CoreListenerDetails)
+			}
+			for _, l := range x.TCP {
+				listeners = append(listeners, &l.CoreListenerDetails)
+			}
+			for _, l := range x.UDP {
+				listeners = append(listeners, &l.CoreListenerDetails)
+			}
+			for _, l := range listeners {
+				if len(l.ExtensionRefs) > 0 {
+					names = append(names, l.Name)
+				}
+			}
+		}
+		return names
+	}
+	section := func(name string) *gwapiv1.SectionName {
+		s := gwapiv1.SectionName(name)
+		return &s
+	}
+	allOfGatewayA := []string{
+		"envoy-gateway/gateway-a/http", "envoy-gateway/gateway-a/https",
+		"envoy-gateway/gateway-a/tcp", "envoy-gateway/gateway-a/udp",
+	}
+
+	tests := []struct {
+		name          string
+		mergeGateways bool
+		sectionName   *gwapiv1.SectionName
+		wantFound     bool
+		want          []string
+	}{
+		{
+			name:          "merged gateways, whole gateway",
+			mergeGateways: true,
+			wantFound:     true,
+			want:          allOfGatewayA,
+		},
+		{
+			name:          "merged gateways, one listener",
+			mergeGateways: true,
+			sectionName:   section("https"),
+			wantFound:     true,
+			want:          []string{"envoy-gateway/gateway-a/https"},
+		},
+		{
+			name:          "merged gateways, listener not in the IR",
+			mergeGateways: true,
+			sectionName:   section("invalid"),
+		},
+		{
+			name:      "separate gateways, whole gateway",
+			wantFound: true,
+			want:      allOfGatewayA,
+		},
+		{
+			name:        "separate gateways, one listener",
+			sectionName: section("udp"),
+			wantFound:   true,
+			want:        []string{"envoy-gateway/gateway-a/udp"},
+		},
+		{
+			name:        "separate gateways, unknown listener",
+			sectionName: section("missing"),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{
+				GatewayClassName:  "envoy-gateway-class",
+				MergeGateways:     tc.mergeGateways,
+				TranslatorContext: &TranslatorContext{},
+			}
+			gwA, gwB := newGateway("gateway-a"), newGateway("gateway-b")
+			xdsIR := resource.XdsIRMap{}
+			for _, gw := range []*GatewayContext{gwA, gwB} {
+				key := tr.getIRKey(gw.Gateway)
+				if xdsIR[key] == nil {
+					xdsIR[key] = &ir.Xds{}
+				}
+				addToIR(xdsIR[key], gw)
+			}
+			policy := &unstructured.Unstructured{Object: map[string]any{
+				"apiVersion": "foo.example.io/v1alpha1",
+				"kind":       "Bar",
+				"metadata":   map[string]any{"namespace": "envoy-gateway", "name": "policy"},
+			}}
+			target := policyTargetReferenceWithSectionName{
+				Group:       gwapiv1.GroupName,
+				Kind:        "Gateway",
+				Name:        "gateway-a",
+				Namespace:   "envoy-gateway",
+				SectionName: tc.sectionName,
+			}
+
+			found := tr.translateExtServerPolicyForGateway(policy, gwA, target, xdsIR)
+
+			require.Equal(t, tc.wantFound, found)
+			require.ElementsMatch(t, tc.want, withPolicy(xdsIR))
+		})
+	}
 }
