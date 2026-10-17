@@ -279,7 +279,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-http
             namespace: default
-          name: httproute/default/httproute-http/rule/0
+          name: httproute/default/httproute-http/rule/0/listener/envoy-gateway/gateway-1/http
           settings:
           - endpoints:
             - host: 1.1.1.1
@@ -289,7 +289,7 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-http/rule/0/backend/0
+            name: httproute/default/httproute-http/rule/0/backend/0/listener/envoy-gateway/gateway-1/http
             protocol: HTTP
             weight: 1
         hostname: '*'

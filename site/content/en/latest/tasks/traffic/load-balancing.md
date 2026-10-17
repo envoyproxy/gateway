@@ -17,6 +17,37 @@ Additionally, Envoy Gateway supports **Endpoint Override** functionality that al
 Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their desired load balancing polices.
 This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource. If `loadBalancer` is not specified in [BackendTrafficPolicy][], the default load balancing policy is `Least Request`.
 
+## Listener-scoped backend routing
+
+A `BackendTrafficPolicy` can select Service ClusterIP routing with `routingType: Service`,
+or EndpointSlice routing with `routingType: Endpoint`. To override routing for one
+Gateway or ListenerSet listener, set `targetRefs[].sectionName` to that listener's name.
+The override applies to routes attached to that listener even when their
+`parentRefs[].sectionName` is omitted. Other listeners retain their own effective
+routing policy. HTTP and gRPC request mirrors also use the listener's routing policy.
+
+Listener routing is resolved before backend cluster merging, so listeners with
+incompatible routing do not share the same backend cluster. Headless Services
+continue to use endpoint routing.
+
+### Generated cluster names
+
+When a listener changes the effective Service or Endpoint routing mode relative to
+its route/Gateway policy, inline cluster names gain a `/listener/` suffix followed
+by the listener identity. For a Gateway listener the identity is
+`<gateway-namespace>/<gateway-name>/<listener-name>`; for a ListenerSet listener it is
+`<gateway-namespace>/<gateway-name>/<listenerset-namespace>/<listenerset-name>/<listener-name>`.
+This also applies to inline per-backend clusters and request-mirror clusters.
+Shared backend clusters keep their existing naming scheme. A higher-priority
+route or rule policy that removes the routing difference does not add this suffix.
+
+If an EnvoyPatchPolicy or Extension Server selects cluster or endpoint resources
+by name, inspect the generated xDS configuration and update those selectors and
+any cluster references in patched route actions. A previous name may still select
+an unaffected listener's cluster, so a successful patch alone does not prove that
+it reaches every intended listener. GRPCRoute request mirrors after the first
+rule also use the actual rule index instead of `rule/0` in their cluster names.
+
 ## Prerequisites
 
 ### Install Envoy Gateway

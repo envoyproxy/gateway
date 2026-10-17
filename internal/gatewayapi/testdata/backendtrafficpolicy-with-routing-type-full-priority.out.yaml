@@ -401,7 +401,7 @@ xdsIR:
             kind: HTTPRoute
             name: httproute-2
             namespace: default
-          name: httproute/default/httproute-2/rule/0
+          name: httproute/default/httproute-2/rule/0/listener/envoy-gateway/gateway-1/http
           settings:
           - addressType: IP
             endpoints:
@@ -412,7 +412,7 @@ xdsIR:
               name: service-3
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
+            name: httproute/default/httproute-2/rule/0/backend/0/listener/envoy-gateway/gateway-1/http
             protocol: HTTP
             weight: 1
         hostname: '*'

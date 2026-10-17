@@ -1,0 +1,62 @@
+namespaces:
+- metadata: {name: default}
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata: {name: gateway-1, namespace: default}
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: listener-1
+      protocol: HTTP
+      port: 9081
+    - name: listener-2
+      protocol: HTTP
+      port: 9082
+services:
+- apiVersion: v1
+  kind: Service
+  metadata: {name: backend, namespace: default}
+  spec:
+    clusterIP: 10.96.0.7
+    ports:
+    - {name: backend, port: 8080, targetPort: 8080, protocol: TCP}
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: backend-1
+    namespace: default
+    labels: {kubernetes.io/service-name: backend}
+  addressType: IPv4
+  ports:
+  - {name: backend, port: 8080, protocol: TCP}
+  endpoints:
+  - addresses: [10.0.0.7]
+    conditions: {ready: true}
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata: {name: gateway-routing, namespace: default}
+  spec:
+    targetRefs:
+    - {group: gateway.networking.k8s.io, kind: Gateway, name: gateway-1}
+    routingType: Endpoint
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata: {name: listener-routing, namespace: default}
+  spec:
+    targetRefs:
+    - {group: gateway.networking.k8s.io, kind: Gateway, name: gateway-1, sectionName: listener-1}
+    routingType: Service
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata: {name: route-1, namespace: default}
+  spec:
+    parentRefs:
+    - {name: gateway-1}
+    rules:
+    - name: rule-1
+      backendRefs:
+      - {name: backend, port: 8080}
