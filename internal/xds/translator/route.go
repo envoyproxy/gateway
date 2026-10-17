@@ -666,12 +666,17 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 
 	for _, policy := range mirrorPolicies {
 		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
-			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+			rmp := &routev3.RouteAction_RequestMirrorPolicy{
 				Cluster:         policy.Destination.Name,
 				RuntimeFraction: mp,
+			}
+			if policy.HostRewrite != nil && *policy.HostRewrite != "" {
+				rmp.HostRewriteLiteral = *policy.HostRewrite
+			} else {
 				// We don't need to append the shadow host suffix as the mirror policy already uses a different cluster which is enough to distinguish the mirrored traffic
-				DisableShadowHostSuffixAppend: true,
-			})
+				rmp.DisableShadowHostSuffixAppend = true
+			}
+			xdsMirrorPolicies = append(xdsMirrorPolicies, rmp)
 		}
 	}
 
