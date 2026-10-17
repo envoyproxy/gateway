@@ -157,7 +157,7 @@ func (r *statusSubscriptionRunnable) Start(ctx context.Context) error {
 
 // newGatewayAPIController
 func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *config.Server, su Updater,
-	resources *message.ProviderResources,
+	resources *message.ProviderResources, store *kubernetesProviderStore,
 ) error {
 	// Gather additional resources to watch from registered extensions
 	var extServerPoliciesGVKs []schema.GroupVersionKind
@@ -187,7 +187,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		resources:            resources,
 		subscriptions:        &subscriptions{},
 		extGVKs:              extGVKs,
-		store:                newProviderStore(),
+		store:                store,
 		envoyGateway:         cfg.EnvoyGateway,
 		mergeGateways:        sets.New[string](),
 		extServerPolicies:    extServerPoliciesGVKs,
@@ -618,6 +618,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 	}
+
+	r.applyAWSZoneIDs(gwcResources)
 
 	// Sort before storing to:
 	// 1. ensure identical resources are not retranslated
@@ -2702,10 +2704,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
+	// Watch Nodes for locality changes and Gateway addresses exposed by NodePort Services.
 	// Node creation/deletion and ExternalIP updates would require update in the Gateway
 	nPredicates := []predicate.TypedPredicate[*corev1.Node]{
-		predicate.TypedGenerationChangedPredicate[*corev1.Node]{},
+		r.nodePredicate(),
 		predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
 			return r.handleNode(node)
 		}),
