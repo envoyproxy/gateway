@@ -12,6 +12,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -72,6 +73,23 @@ func SetTranslationErrorForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, a
 func SetTranslationErrorForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, errMsg string) {
 	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1.PolicyReasonInvalid, errMsg, generation)
+}
+
+// SetMergeResultForPolicyAncestor reports the results of merging a route policy with its
+// parent policies on the listeners of one route parentRef: the errors as Accepted=False,
+// and the parent policies it merged with as Merged.
+func SetMergeResultForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64,
+	errMsgs, mergedWith sets.Set[string],
+) {
+	if errMsgs.Len() > 0 {
+		SetTranslationErrorForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation,
+			strings.Join(sets.List(errMsgs), "; "))
+	}
+	if mergedWith.Len() > 0 {
+		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+			egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
+			"Merged with policy "+strings.Join(sets.List(mergedWith), ", "), generation)
+	}
 }
 
 // SetAcceptedForPolicyAncestors sets accepted conditions for each ancestor reference if it is unset.
