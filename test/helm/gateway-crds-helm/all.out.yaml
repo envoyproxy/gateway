@@ -46488,6 +46488,14 @@ spec:
                 description: Shutdown defines configuration for graceful envoy shutdown
                   process.
                 properties:
+                  drainStrategy:
+                    description: |-
+                      DrainStrategy defines how Envoy drains listener connections during the graceful drain process.
+                      If unspecified, defaults to "Immediate".
+                    enum:
+                    - Gradual
+                    - Immediate
+                    type: string
                   drainTimeout:
                     description: |-
                       DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.

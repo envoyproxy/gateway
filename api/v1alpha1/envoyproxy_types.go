@@ -631,7 +631,24 @@ type ShutdownConfig struct {
 	//
 	// +optional
 	MinDrainDuration *gwapiv1.Duration `json:"minDrainDuration,omitempty"`
+	// DrainStrategy defines how Envoy drains listener connections during the graceful drain process.
+	// If unspecified, defaults to "Immediate".
+	//
+	// +optional
+	DrainStrategy *DrainStrategy `json:"drainStrategy,omitempty"`
 }
+
+// DrainStrategy defines the strategy Envoy uses to drain listener connections.
+//
+// +kubebuilder:validation:Enum=Gradual;Immediate
+type DrainStrategy string
+
+const (
+	// DrainStrategyGradual drains connections gradually over the drain timeout.
+	DrainStrategyGradual DrainStrategy = "Gradual"
+	// DrainStrategyImmediate drains all connections as soon as the drain process starts.
+	DrainStrategyImmediate DrainStrategy = "Immediate"
+)
 
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyHpa) && !has(self.envoyDaemonSet)) || (!has(self.envoyHpa) && has(self.envoyDaemonSet))) || (!has(self.envoyHpa) && !has(self.envoyDaemonSet))",message="cannot use envoyHpa if envoyDaemonSet is used"
