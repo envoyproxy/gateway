@@ -22,6 +22,10 @@ type ClientConnection struct {
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	// Default: 32768 bytes.
 	//
+	// This setting belongs to the listener socket, which is shared by every Gateway
+	// listener on the same address and port, so it applies to all of them. If more
+	// than one of those listeners configures it, the first one wins.
+	//
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
@@ -41,6 +45,10 @@ type ClientConnection struct {
 	// per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over
 	// this threshold will be accepted in later event loop iterations.
 	// Defaults to 1 and can be disabled by setting to 0 for allowing unlimited accepted connections.
+	//
+	// This setting belongs to the listener socket, which is shared by every Gateway
+	// listener on the same address and port, so it applies to all of them. If more
+	// than one of those listeners configures it, the first one wins.
 	//
 	// +optional
 	// +kubebuilder:default=1
