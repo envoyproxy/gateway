@@ -29,6 +29,7 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 		"testdata/httproute-to-backend-ip.yaml",
 		"testdata/httproute-to-backend-fqdn-http2.yaml",
 		"testdata/httproute-to-backend-fqdn-tls.yaml",
+		"testdata/httproute-to-backend-kubernetes-service.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("of type FQDN", func(t *testing.T) {
@@ -101,6 +102,46 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/backend-fqdn-http2",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("of type KubernetesService", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "httproute-to-backend-kubernetes-service", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-kubernetes-service", Namespace: ns})
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/backend-kubernetes-service",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("of type KubernetesService with HTTP2 appProtocols", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "httproute-to-backend-kubernetes-service-http2", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-kubernetes-service-http2", Namespace: ns})
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/backend-kubernetes-service-http2",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
