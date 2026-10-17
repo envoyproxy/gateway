@@ -34,6 +34,7 @@ type hookClientEntry struct {
 	failOpen          bool
 	resourceGKSet     sets.Set[schema.GroupKind] // used for per-extension resource filtering in PostRouteModifyHook, PostClusterModifyHook
 	policyGKSet       sets.Set[schema.GroupKind] // used for per-extension policy filtering in PostRouteModifyHook, PostHTTPListenerModifyHook, PostTranslateModifyHook
+	secretGKSet       sets.Set[schema.GroupKind] // used to pick the owning extension in ResolveSecretHook
 	translationConfig *egv1a1.TranslationConfig  // used for per-extension resource-type gating in PostTranslateModifyHook
 }
 
@@ -232,4 +233,35 @@ func filterPoliciesByGK(policies []*ir.UnstructuredRef, gkSet sets.Set[schema.Gr
 		}
 	}
 	return filtered
+}
+
+// ResolveSecretHook resolves one secret through the extension that
+// registered its group and kind. This hook deliberately does not chain. The owning extension is identified by the referenced
+// resource's group and kind.
+func (c *compositeXDSHookClient) ResolveSecretHook(secretCtx *types.SecretContext) (*types.SecretResolution, error) {
+	if secretCtx == nil || secretCtx.Secret == nil {
+		return nil, fmt.Errorf("a secret resource is required to resolve a secret")
+	}
+
+	gk := secretCtx.Secret.GroupVersionKind().GroupKind()
+
+	for _, entry := range c.entries {
+		// An entry with no declared secret kinds is not a secret provider.
+		if entry.secretGKSet == nil || !entry.secretGKSet.Has(gk) {
+			continue
+		}
+
+		resolution, err := entry.client.ResolveSecretHook(secretCtx)
+		if err != nil {
+			// A secret kind is owned by a single extension, so this loop matches at
+			// most one entry: return immediately rather than continuing like the chaining hooks.
+			if entry.failOpen {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
+		}
+		return resolution, nil
+	}
+
+	return nil, fmt.Errorf("no extension registered secret kind %s", gk.String())
 }

@@ -3793,6 +3793,11 @@ func (in *ExtensionManager) DeepCopyInto(out *ExtensionManager) {
 		*out = make([]GroupVersionKind, len(*in))
 		copy(*out, *in)
 	}
+	if in.SecretResources != nil {
+		in, out := &in.SecretResources, &out.SecretResources
+		*out = make([]GroupVersionKind, len(*in))
+		copy(*out, *in)
+	}
 	if in.Hooks != nil {
 		in, out := &in.Hooks, &out.Hooks
 		*out = new(ExtensionHooks)
