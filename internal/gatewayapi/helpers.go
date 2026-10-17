@@ -27,6 +27,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -1635,4 +1636,15 @@ func getOverriddenTargetsMessageForRoute(
 		return fmt.Sprintf("these route rules: %v", routes)
 	}
 	return ""
+}
+
+// deprecatedField describes a deprecated field replaced by replacement, with no planned removal.
+func deprecatedField(replacement string) status.DeprecatedField {
+	return status.DeprecatedField{Replacement: replacement}
+}
+
+// deprecatedFieldScheduledForRemoval describes a deprecated field replaced by replacement that is
+// scheduled for removal in status.DeprecatedFieldsRemovalRelease.
+func deprecatedFieldScheduledForRemoval(replacement string) status.DeprecatedField {
+	return status.DeprecatedField{Replacement: replacement, RemovedIn: status.DeprecatedFieldsRemovalRelease}
 }

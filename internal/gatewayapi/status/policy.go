@@ -7,6 +7,8 @@ package status
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 
@@ -16,6 +18,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 const (
@@ -99,14 +102,14 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRe
 }
 
 // SetDeprecatedFieldsWarningForPolicyAncestors sets deprecated fields warning conditions for each ancestor reference.
-func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]DeprecatedField) {
 	for _, ancestorRef := range ancestorRefs {
 		SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation, deprecatedFields)
 	}
 }
 
 // SetDeprecatedFieldsWarningForPolicyAncestor sets a deprecated fields warning condition for a specific ancestor reference.
-func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]DeprecatedField) {
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
 }
 
@@ -210,30 +213,25 @@ func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 	policyStatus.Ancestors = append(policyStatus.Ancestors[:worst], policyStatus.Ancestors[worst+1:]...)
 }
 
+// DeprecatedFieldsRemovalRelease is the release that removes the deprecated fields tracked in
+// https://github.com/envoyproxy/gateway/issues/10211.
+const DeprecatedFieldsRemovalRelease = validation.DeprecatedFieldsRemovalRelease
+
+// DeprecatedField describes the replacement for a deprecated field.
+type DeprecatedField = validation.DeprecatedField
+
 // buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
-func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
+func buildDeprecationWarningMessage(deprecatedFields map[string]DeprecatedField) string {
 	if len(deprecatedFields) == 0 {
 		return ""
 	}
 
 	// Sort the keys to ensure deterministic message ordering
-	keys := make([]string, 0, len(deprecatedFields))
-	for k := range deprecatedFields {
-		keys = append(keys, k)
+	messages := make([]string, 0, len(deprecatedFields))
+	for _, path := range slices.Sorted(maps.Keys(deprecatedFields)) {
+		messages = append(messages, deprecatedFields[path].Message(path))
 	}
-	sort.Strings(keys)
-
-	var builder strings.Builder
-	for i, deprecated := range keys {
-		if i > 0 {
-			builder.WriteString("; ")
-		}
-		builder.WriteString(deprecated)
-		builder.WriteString(" is deprecated, use ")
-		builder.WriteString(deprecatedFields[deprecated])
-		builder.WriteString(" instead")
-	}
-	return builder.String()
+	return strings.Join(messages, "; ")
 }
 
 // MergedConditionMessage builds the status message for a Merged condition, naming the

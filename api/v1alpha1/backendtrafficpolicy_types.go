@@ -110,7 +110,7 @@ type BackendTrafficPolicySpec struct {
 
 	// The compression config for the http streams.
 	//
-	// Deprecated: Use Compressor instead.
+	// Deprecated: Use Compressor instead. This field will be removed in v1.11.
 	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge

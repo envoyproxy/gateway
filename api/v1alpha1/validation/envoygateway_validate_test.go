@@ -1509,6 +1509,48 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			},
 			expected: nil,
 		},
+		{
+			name: "extension service host is set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						Service: &egv1a1.ExtensionService{Host: "extension.default.svc", Port: 8080},
+					},
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{
+							FQDN: &egv1a1.FQDNEndpoint{Hostname: "extension.default.svc", Port: 8080},
+						}}},
+						{Service: &egv1a1.ExtensionService{Host: "extension.default.svc", Port: 8080}},
+					},
+				},
+			},
+			expected: []string{
+				"extensionManager.service.host and extensionManager.service.port are deprecated and will be removed in v1.11, use extensionManager.service.fqdn, extensionManager.service.ip or extensionManager.service.unix instead",
+				"extensionManagers[1].service.host and extensionManagers[1].service.port are deprecated and will be removed in v1.11, use extensionManagers[1].service.fqdn, extensionManagers[1].service.ip or extensionManagers[1].service.unix instead",
+			},
+		},
+		{
+			name: "default envoyProxy uses deprecated fields",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					EnvoyProxy: &egv1a1.EnvoyProxySpec{
+						Telemetry: &egv1a1.ProxyTelemetry{
+							Tracing: &egv1a1.ProxyTracing{Provider: egv1a1.TracingProvider{
+								Host: new("otel-collector.monitoring.svc"),
+								Port: 4317,
+							}},
+						},
+					},
+				},
+			},
+			expected: []string{
+				"envoyProxy.telemetry.tracing.provider.host is deprecated and will be removed in v1.11, use envoyProxy.telemetry.tracing.provider.backendRefs instead",
+			},
+		},
 	}
 
 	for _, tc := range testCases {

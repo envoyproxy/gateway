@@ -11823,7 +11823,7 @@ spec:
                                           BackendRef references a Kubernetes object that represents the
                                           backend server to which the authorization request will be sent.
 
-                                          Deprecated: Use BackendRefs instead.
+                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                         properties:
                                           group:
                                             default: ""
@@ -12918,7 +12918,7 @@ spec:
                                                     description: |-
                                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                                      Deprecated: use Headers instead
+                                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                                     properties:
                                                       name:
                                                         description: Name of the header
@@ -13517,7 +13517,7 @@ spec:
                                           BackendRef references a Kubernetes object that represents the
                                           backend server to which the authorization request will be sent.
 
-                                          Deprecated: Use BackendRefs instead.
+                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                         properties:
                                           group:
                                             default: ""
@@ -14612,7 +14612,7 @@ spec:
                                                     description: |-
                                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                                      Deprecated: use Headers instead
+                                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                                     properties:
                                                       name:
                                                         description: Name of the header
@@ -15176,14 +15176,14 @@ spec:
                                         description: |-
                                           Host define the extension service hostname.
 
-                                          Deprecated: Use BackendRefs instead.
+                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                         type: string
                                       port:
                                         default: 4317
                                         description: |-
                                           Port defines the port the extension service is exposed on.
 
-                                          Deprecated: Use BackendRefs instead.
+                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                         format: int32
                                         minimum: 0
                                         type: integer
@@ -15622,7 +15622,7 @@ spec:
                                     BackendRef references a Kubernetes object that represents the
                                     backend server to which the authorization request will be sent.
 
-                                    Deprecated: Use BackendRefs instead.
+                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                   properties:
                                     group:
                                       default: ""
@@ -16683,7 +16683,7 @@ spec:
                                               description: |-
                                                 Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                                Deprecated: use Headers instead
+                                                Deprecated: use Headers instead. This field will be removed in v1.11.
                                               properties:
                                                 name:
                                                   description: Name of the header
@@ -17229,14 +17229,14 @@ spec:
                                   description: |-
                                     Host define the service hostname.
 
-                                    Deprecated: Use BackendRefs instead.
+                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                   type: string
                                 port:
                                   default: 4317
                                   description: |-
                                     Port defines the port the service is exposed on.
 
-                                    Deprecated: Use BackendRefs instead.
+                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                   format: int32
                                   maximum: 65535
                                   minimum: 0
@@ -17439,7 +17439,7 @@ spec:
                               BackendRef references a Kubernetes object that represents the
                               backend server to which the authorization request will be sent.
 
-                              Deprecated: Use BackendRefs instead.
+                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                             properties:
                               group:
                                 default: ""
@@ -18490,7 +18490,7 @@ spec:
                                         description: |-
                                           Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                          Deprecated: use Headers instead
+                                          Deprecated: use Headers instead. This field will be removed in v1.11.
                                         properties:
                                           name:
                                             description: Name of the header to hash.
@@ -18982,7 +18982,7 @@ spec:
                             description: |-
                               Host define the provider service hostname.
 
-                              Deprecated: Use BackendRefs instead.
+                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                             type: string
                           openTelemetry:
                             description: OpenTelemetry defines the OpenTelemetry tracing
@@ -19086,7 +19086,7 @@ spec:
                             description: |-
                               Port defines the port the provider service is exposed on.
 
-                              Deprecated: Use BackendRefs instead.
+                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                             format: int32
                             minimum: 0
                             type: integer

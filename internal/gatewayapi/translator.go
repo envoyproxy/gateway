@@ -703,12 +703,9 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 	return nil
 }
 
-func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
-	deprecatedFields := make(map[string]string)
-	if ep.Spec.LuaValidation != nil {
-		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
-	}
-
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
+	validation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec)
 	return deprecatedFields
 }
 
