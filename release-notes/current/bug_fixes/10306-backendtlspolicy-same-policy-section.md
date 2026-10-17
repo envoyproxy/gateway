@@ -1,0 +1,1 @@
+Fixed a BackendTLSPolicy that lists both a whole Service and one of its ports in `targetRefs` not applying to that port when another, newer BackendTLSPolicy also targets the port. The newer policy was used for the port's traffic even though its status reported it as `Conflicted` with the older one. The older policy now applies, matching its status.
