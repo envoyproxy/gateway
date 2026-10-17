@@ -23,7 +23,7 @@ For these reasons, the Backend API is disabled by default in Envoy Gateway confi
 ## Restrictions
 
 The Backend API is currently supported only in the following BackendReferences:
-- [HTTPRoute]: IP and FQDN endpoints
+- [HTTPRoute]: IP and FQDN endpoints, and a Kubernetes Service in the same namespace (`type: KubernetesService`)
 - [TLSRoute]: IP and FQDN endpoints
 - [Envoy Extension Policy] (ExtProc): IP, FQDN and unix domain socket endpoints
 - [Security Policy]: IP and FQDN endpoints for the OIDC providers
@@ -35,6 +35,27 @@ The Backend API supports attachment the following policies:
 Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range and the localhost hostname are forbidden.
 
 Envoy Gateway does not manage the lifecycle of unix domain sockets referenced by the Backend resource. Envoy Gateway admins are responsible for creating and mounting the sockets into the envoy proxy pod. The latter can be achieved by patching the envoy deployment using the [EnvoyProxy][] resource.
+
+## Kubernetes Service Backends
+
+A `Backend` with `type: KubernetesService` points at a `Service` in the same namespace. Envoy Gateway discovers the endpoints from the Service's EndpointSlices, the same way it does for a `Service` backendRef, so pod-level load balancing, session persistence, health checking, endpoint draining and zone-aware routing still apply. Backend settings such as `tls` and `appProtocols` are layered on top.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: foo-mtls
+  namespace: foo
+spec:
+  type: KubernetesService
+  kubernetesService:
+    name: foo-svc
+    port: 5001
+  appProtocols:
+    - gateway.envoyproxy.io/h2c
+```
+
+The `appProtocols` on the Backend take precedence over the `appProtocol` of the Service port. The `endpoints` field must not be set for this type.
 
 ## Quickstart
 
