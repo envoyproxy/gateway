@@ -70,6 +70,10 @@ const (
 	// PolicyReasonDeprecatedField is used with the "Warning" condition when the policy
 	// uses deprecated fields that should be migrated to newer alternatives.
 	PolicyReasonDeprecatedField gwapiv1.PolicyConditionReason = "DeprecatedField"
+
+	// PolicyReasonUnsupportedAuthorizationRule is used with the "Warning" condition when
+	// an authorization rule cannot be enforced on TCP listeners.
+	PolicyReasonUnsupportedAuthorizationRule gwapiv1.PolicyConditionReason = "UnsupportedAuthorizationRule"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
