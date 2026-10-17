@@ -112,8 +112,14 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: Build multiarch binaries
-        run: make build-multiarch
-
+        run: |
+          # Extract the release-pinned ratelimit image from values.tmpl.yaml
+          # Use a fallback if the grep fails or returns empty
+          RATELIMIT_IMAGE=$(grep -m1 'image: "docker.io/envoyproxy/ratelimit:' charts/gateway-helm/values.tmpl.yaml | sed 's/.*image: "\(.*\)"/\1/' || true)
+          if [ -z "$RATELIMIT_IMAGE" ]; then
+            RATELIMIT_IMAGE="docker.io/envoyproxy/ratelimit:master"
+          fi
+          make build-multiarch TAG=${{ env.release_tag }} RATELIMIT_IMAGE=$RATELIMIT_IMAGE SHUTDOWN_MANAGER_IMAGE=docker.io/envoyproxy/gateway:${{ env.release_tag }}
       - name: Build and push multiarch image
         run: make image.multiarch.setup image.push.multiarch TAG=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway
 

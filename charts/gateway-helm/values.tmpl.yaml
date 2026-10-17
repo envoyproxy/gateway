@@ -1,6 +1,6 @@
 # Global settings
 global:
-  # If set, these take highest precedence and change envoyGateway, envoyProxy, and ratelimit's container registry and pull secrets.
+  # If set, these take highest precedence for configured images and pull secrets.
   # -- Global override for image registry
   imageRegistry: ""
   # -- Global override for image pull secrets
@@ -18,11 +18,10 @@ global:
       # -- Pull secrets for the Envoy Gateway control plane Deployment.
       pullSecrets: []
     ratelimit:
-      # This is the full image name including the hub, repo, and tag.
-      image: "docker.io/envoyproxy/ratelimit:master"
-      # Specify image pull policy if default behavior isn't desired.
-      # Default behavior: latest images will be Always else IfNotPresent.
-      pullPolicy: IfNotPresent
+      # -- Full image for the Envoy ratelimit deployment. If unset, the image linked into the envoy-gateway binary is used; global.imageRegistry overrides its registry while preserving its repository, tag, and digest.
+      image: ""
+      # Specify image pull policy if an image override is configured.
+      pullPolicy: ""
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
     envoyProxy:

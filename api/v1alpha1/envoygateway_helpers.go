@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -367,7 +368,7 @@ func (e *EnvoyGateway) GetEnvoyGatewayProvider() *EnvoyGatewayProvider {
 func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
 	return &EnvoyGatewayKubernetesProvider{
 		EnvoyGatewayKubernetesInfrastructureConfiguration: EnvoyGatewayKubernetesInfrastructureConfiguration{
-			RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
+			RateLimitDeployment: DefaultKubernetesDeployment(defaultRateLimitImage),
 		},
 	}
 }
@@ -399,13 +400,6 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 
 	if r.Kubernetes == nil {
 		r.Kubernetes = DefaultEnvoyGatewayKubeProvider()
-		if r.Kubernetes.LeaderElection == nil {
-			r.Kubernetes.LeaderElection = DefaultLeaderElection()
-		}
-		if r.Kubernetes.Client == nil {
-			r.Kubernetes.Client = DefaultKubernetesClient()
-		}
-		return r.Kubernetes
 	}
 
 	if r.Kubernetes.LeaderElection == nil {
@@ -417,17 +411,22 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {
-		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(DefaultRateLimitImage)
+		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(defaultRateLimitImage)
 	}
 
-	r.Kubernetes.RateLimitDeployment.defaultKubernetesDeploymentSpec(DefaultRateLimitImage)
+	r.Kubernetes.RateLimitDeployment.defaultKubernetesDeploymentSpec(defaultRateLimitImage)
 
 	if r.Kubernetes.RateLimitHpa != nil {
 		r.Kubernetes.RateLimitHpa.setDefault()
 	}
 
 	if r.Kubernetes.ShutdownManager == nil {
-		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: new(DefaultShutdownManagerImage)}
+		r.Kubernetes.ShutdownManager = &ShutdownManager{}
+	}
+
+	if r.Kubernetes.ShutdownManager.Image == nil ||
+		strings.TrimSpace(*r.Kubernetes.ShutdownManager.Image) == "" {
+		r.Kubernetes.ShutdownManager.Image = new(defaultShutdownManagerImage)
 	}
 
 	return r.Kubernetes
