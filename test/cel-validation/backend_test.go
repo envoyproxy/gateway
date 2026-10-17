@@ -265,6 +265,20 @@ func TestBackend(t *testing.T) {
 			},
 		},
 		{
+			desc: "no endpoints with default type",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{}
+			},
+			wantErrors: []string{"endpoints must be specified when type is Endpoints"},
+		},
+		{
+			desc: "no endpoints with Endpoints type",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{Type: new(egv1a1.BackendTypeEndpoints)}
+			},
+			wantErrors: []string{"endpoints must be specified when type is Endpoints"},
+		},
+		{
 			desc: "invalid type",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{Type: new(egv1a1.BackendType("FOO"))}

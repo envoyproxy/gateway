@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
@@ -40,6 +41,11 @@ const (
 
 // ShutdownManager serves shutdown manager process for Envoy proxies.
 func ShutdownManager(readyTimeout time.Duration) error {
+	// Clear a shutdown ready marker left behind by a previous drain, e.g.
+	// after a container restart within the same pod, where the emptyDir
+	// backing /tmp persists for the pod's lifetime.
+	clearShutdownReadyFile(ShutdownReadyFile)
+
 	// Setup HTTP handler
 	handler := http.NewServeMux()
 	handler.HandleFunc(ShutdownManagerHealthCheckPath, func(_ http.ResponseWriter, _ *http.Request) {})
@@ -82,6 +88,24 @@ func ShutdownManager(readyTimeout time.Duration) error {
 	// Wait until done
 	<-c
 	return nil
+}
+
+// clearShutdownReadyFile removes a stale shutdown ready file if one exists,
+// ensuring a fresh drain sequence is required after each (re)start.
+func clearShutdownReadyFile(readyFile string) {
+	_, err := os.Stat(readyFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logger.Error(err, "error checking for stale shutdown ready file")
+		}
+		return
+	}
+
+	if err := os.Remove(readyFile); err != nil {
+		logger.Error(err, "error removing stale shutdown ready file")
+	} else {
+		logger.Info("removed stale shutdown ready file")
+	}
 }
 
 // shutdownReadyHandler handles the endpoint used by a preStop hook on the Envoy
@@ -208,8 +232,9 @@ func postEnvoyAdminAPI(path string) error {
 	return nil
 }
 
+// getTotalConnections returns the number of active downstream connections, including UDP proxy sessions.
 func getTotalConnections(port int) (*int, error) {
-	return getDownstreamCXActive(port)
+	return getActiveConnectionsAndUDPSessions(port)
 }
 
 // Define struct to decode JSON response into; expecting a single stat in the response in the format:
@@ -223,7 +248,7 @@ type envoyStatsResponse struct {
 
 func getStatsFromEnvoyStatsEndpoint(port int, statFilter string) (*envoyStatsResponse, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s//stats?filter=%s&format=json",
-		net.JoinHostPort("localhost", strconv.Itoa(port)), statFilter))
+		net.JoinHostPort("localhost", strconv.Itoa(port)), url.QueryEscape(statFilter)))
 	if err != nil {
 		return nil, err
 	}
@@ -249,13 +274,14 @@ func getStatsFromEnvoyStatsEndpoint(port int, statFilter string) (*envoyStatsRes
 	return r, nil
 }
 
-// getDownstreamCXActive retrieves the total number of open connections from Envoy's listener downstream_cx_active stat
-func getDownstreamCXActive(port int) (*int, error) {
-	// Send request to Envoy admin API to retrieve listener.\.$.downstream_cx_active stat
-	statFilter := "^listener\\..*\\.downstream_cx_active$"
+// getActiveConnectionsAndUDPSessions retrieves the total number of open downstream connections and
+// UDP proxy sessions. UDP listeners have no connections, so their traffic only shows up in the
+// UDP proxy's downstream_sess_active stat.
+func getActiveConnectionsAndUDPSessions(port int) (*int, error) {
+	statFilter := "^(listener\\..*\\.downstream_cx_active|udp\\..*\\.downstream_sess_active)$"
 	r, err := getStatsFromEnvoyStatsEndpoint(port, statFilter)
 	if err != nil {
-		return nil, fmt.Errorf("error getting listener downstream_cx_active stat: %w", err)
+		return nil, fmt.Errorf("error getting active connection and UDP session stats: %w", err)
 	}
 
 	totalConnection := filterDownstreamCXActive(r)

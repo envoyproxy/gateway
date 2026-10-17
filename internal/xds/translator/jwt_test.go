@@ -13,6 +13,7 @@ import (
 	jwtauthnv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/jwt_authn/v3"
 	"github.com/stretchr/testify/require"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -69,9 +70,57 @@ func TestJWTAuthnDeduplicatesIdenticalRouteProviders(t *testing.T) {
 	}
 }
 
+func TestBuildJWTProviderClaimToHeaders(t *testing.T) {
+	irProvider := &ir.JWTProvider{
+		Name:   "test-jwt",
+		Issuer: "https://issuer.example.com/",
+		RemoteJWKS: &ir.RemoteJWKS{
+			URI: "https://issuer.example.com/keys",
+		},
+		ClaimToHeaders: []egv1a1.ClaimToHeader{
+			{
+				Header: "X-Sub",
+				Claim:  "sub",
+			},
+			{
+				Header:    "X-Tenant-Name",
+				ClaimPath: []string{"https://auth.sitecorecloud.io/claims/tenant_name"},
+			},
+			{
+				Header:    "X-Nested-Claim",
+				ClaimPath: []string{"a.b", "c.d"},
+			},
+		},
+	}
+
+	jwtProvider, err := buildJWTProvider(irProvider)
+	require.NoError(t, err)
+	require.Len(t, jwtProvider.GetClaimToHeaders(), 3)
+
+	byHeader := make(map[string]*jwtauthnv3.JwtClaimToHeader, len(jwtProvider.GetClaimToHeaders()))
+	for _, c := range jwtProvider.GetClaimToHeaders() {
+		byHeader[c.GetHeaderName()] = c
+	}
+
+	sub := byHeader["X-Sub"]
+	require.Equal(t, "sub", sub.GetClaimName())
+	require.Empty(t, sub.GetClaimPath())
+
+	tenant := byHeader["X-Tenant-Name"]
+	require.Empty(t, tenant.GetClaimName())
+	require.Len(t, tenant.GetClaimPath(), 1)
+	require.Equal(t, "https://auth.sitecorecloud.io/claims/tenant_name", tenant.GetClaimPath()[0].GetKey())
+
+	nested := byHeader["X-Nested-Claim"]
+	require.Empty(t, nested.GetClaimName())
+	require.Len(t, nested.GetClaimPath(), 2)
+	require.Equal(t, "a.b", nested.GetClaimPath()[0].GetKey())
+	require.Equal(t, "c.d", nested.GetClaimPath()[1].GetKey())
+}
+
+// Build a JWT config with many long provider names so the joined,
+// human-readable prefix would exceed the length guard if left unbounded.
 func TestJWTAuthnNamesAreBounded(t *testing.T) {
-	// Build a JWT config with many long provider names so the joined,
-	// human-readable prefix would exceed the length guard if left unbounded.
 	providers := make([]ir.JWTProvider, 0, 50)
 	for i := 0; i < 50; i++ {
 		providers = append(providers, ir.JWTProvider{

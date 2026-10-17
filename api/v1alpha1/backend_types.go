@@ -150,6 +150,7 @@ type KubernetesServiceReference struct {
 
 // BackendSpec describes the desired state of BackendSpec.
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.endpoints)",message="DynamicResolver type cannot have endpoints specified"
+// +kubebuilder:validation:XValidation:rule="self.type != 'Endpoints' || has(self.endpoints)",message="endpoints must be specified when type is Endpoints"
 // +kubebuilder:validation:XValidation:rule="self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname) && self.tls.autoSNIFromEndpointHostname)",message="DynamicResolver type cannot use autoSNIFromEndpointHostname"
 // +kubebuilder:validation:XValidation:rule="self.type != 'KubernetesService' || !has(self.endpoints)",message="KubernetesService type cannot have endpoints specified"
 // +kubebuilder:validation:XValidation:rule="self.type != 'KubernetesService' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname) && self.tls.autoSNIFromEndpointHostname)",message="KubernetesService type cannot use autoSNIFromEndpointHostname"

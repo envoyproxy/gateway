@@ -159,6 +159,7 @@ func (t *Translator) processExtServiceDestination(
 		},
 		resources,
 		gtwCtx,
+		nil,
 	)
 	if err != nil {
 		return nil, err
