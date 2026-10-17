@@ -586,7 +586,10 @@ func irExtensionResourceName(key *ExtensionResourceKey) string {
 	return fmt.Sprintf("%s/%s/%s/%s", strings.ToLower(key.Group), strings.ToLower(key.Kind), key.Namespace, key.Name)
 }
 
-func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
+func irRuleName(policyNamespace, policyName string, ruleIndex int, ruleName *string) string {
+	if ruleName != nil && *ruleName != "" {
+		return fmt.Sprintf("%s/%s/rule/%s", policyNamespace, policyName, *ruleName)
+	}
 	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
 }
 
