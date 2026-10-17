@@ -339,17 +339,20 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 				// If extensions are loaded, pass their supported groups/kinds to the translator
 				if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
-					var extGKs []schema.GroupKind
+					var extGKs, extBackendGKs []schema.GroupKind
 					for _, em := range extensions {
 						for _, gvk := range em.Resources {
 							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 						}
 						// Include backend resources in extension group kinds for custom backend support
 						for _, gvk := range em.BackendResources {
-							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+							gk := schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}
+							extGKs = append(extGKs, gk)
+							extBackendGKs = append(extBackendGKs, gk)
 						}
 					}
 					t.ExtensionGroupKinds = extGKs
+					t.ExtensionBackendGroupKinds = extBackendGKs
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR.

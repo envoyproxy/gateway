@@ -586,6 +586,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					{Group: "storage.example.io", Kind: "S3Backend"},
 					{Group: "compute.example.io", Kind: "LambdaBackend"},
 				},
+				ExtensionBackendGroupKinds: []schema.GroupKind{
+					{Group: "storage.example.io", Kind: "S3Backend"},
+					{Group: "compute.example.io", Kind: "LambdaBackend"},
+				},
 				MergeGateways: IsMergeGatewaysEnabled(resources),
 				Logger:        logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}

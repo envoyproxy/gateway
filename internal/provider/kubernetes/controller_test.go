@@ -215,6 +215,17 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 		},
 	}
 
+	customService := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "custom.example.io/v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"name":      "custom-service",
+				"namespace": "default",
+			},
+		},
+	}
+
 	testCases := []struct {
 		name                    string
 		extBackendGVKs          []schema.GroupVersionKind
@@ -276,6 +287,28 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 				}: *lambdaBackend,
 			},
 			expectedExtFiltersCount: 2,
+			expectedNamespaces:      []string{"default"},
+		},
+		{
+			name: "process custom backend whose kind collides with a built-in kind",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "custom.example.io", Version: "v1", Kind: "Service"},
+			},
+			backendRefs: []gwapiv1.BackendObjectReference{
+				{
+					Group:     new(gwapiv1.Group("custom.example.io")),
+					Kind:      new(gwapiv1.Kind("Service")),
+					Name:      "custom-service",
+					Namespace: new(gwapiv1.Namespace("default")),
+				},
+			},
+			existingExtFilters: map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{
+				{
+					NamespacedName: types.NamespacedName{Namespace: "default", Name: "custom-service"},
+					GroupKind:      schema.GroupKind{Group: "custom.example.io", Kind: "Service"},
+				}: *customService,
+			},
+			expectedExtFiltersCount: 1,
 			expectedNamespaces:      []string{"default"},
 		},
 		{

@@ -101,7 +101,10 @@ func (t *Translator) applyBackendTLSSetting(
 	)
 
 	// If the backendRef is a Backend resource, we need to check if it has TLS settings.
-	if KindDerefOr(backendRef.Kind, resource.KindService) == egv1a1.KindBackend {
+	// A custom backend resource in another group can also be of kind Backend; it isn't an
+	// Envoy Gateway Backend, so it has no Backend TLS settings to look up.
+	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
+	if backendKind == egv1a1.KindBackend && !t.isCustomBackendResource(backendRef.Group, backendKind) {
 		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend == nil {
 			return nil, fmt.Errorf("backend %s not found", backendRef.Name)

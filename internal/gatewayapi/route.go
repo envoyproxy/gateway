@@ -2858,7 +2858,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
-	if !t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
+	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
+	// Extension backend resources are matched by group and kind, so they must be dispatched to the
+	// extension even when their kind collides with a built-in one (e.g. custom.example.io/Service).
+	isCustomBackend := t.isCustomBackendResource(backendRef.Group, backendKind)
+	if !isCustomBackend {
 		err = t.validateBackendRef(backendRefContext, route, resources, backendNamespace, routeType)
 		{
 			// Empty DS means the backend is invalid and an error to fail the associated route.
@@ -2909,13 +2913,34 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
 	}
 
-	switch KindDerefOr(backendRef.Kind, resource.KindService) {
-	case resource.KindServiceImport:
+	switch {
+	case isCustomBackend:
+		// Handle custom backend resources defined in extension manager
+		// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
+		unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources, gwIR, gatewayCtx)
+
+		// Check if the custom backend resource was found
+		if unstructuredRef == nil {
+			return emptyDS, nil, status.NewRouteStatusError(
+				fmt.Errorf("custom backend %s %s/%s not found",
+					backendKind,
+					backendNamespace,
+					backendRef.Name),
+				gwapiv1.RouteReasonBackendNotFound,
+			).WithType(gwapiv1.RouteConditionResolvedRefs)
+		}
+
+		return &ir.DestinationSetting{
+			Name:            name,
+			Weight:          &weight,
+			IsCustomBackend: true,
+		}, unstructuredRef, nil
+	case backendKind == resource.KindServiceImport:
 		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
 		}
-	case resource.KindService:
+	case backendKind == resource.KindService:
 		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
@@ -2923,35 +2948,8 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		svc := t.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
-	case egv1a1.KindBackend:
+	case backendKind == egv1a1.KindBackend:
 		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol)
-	default:
-		// Handle custom backend resources defined in extension manager
-		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
-			// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
-			var gwIR *ir.Xds
-			if gatewayCtx != nil {
-				gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
-			}
-			unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources, gwIR, gatewayCtx)
-
-			// Check if the custom backend resource was found
-			if unstructuredRef == nil {
-				return emptyDS, nil, status.NewRouteStatusError(
-					fmt.Errorf("custom backend %s %s/%s not found",
-						KindDerefOr(backendRef.Kind, resource.KindService),
-						backendNamespace,
-						backendRef.Name),
-					gwapiv1.RouteReasonBackendNotFound,
-				).WithType(gwapiv1.RouteConditionResolvedRefs)
-			}
-
-			return &ir.DestinationSetting{
-				Name:            name,
-				Weight:          &weight,
-				IsCustomBackend: true,
-			}, unstructuredRef, nil
-		}
 	}
 
 	ds.TLS = tls
@@ -3023,6 +3021,13 @@ func (t *Translator) processServiceImportDestinationSetting(
 	)
 
 	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
+	// validateBackendRef normally rejects a missing ServiceImport, but it is skipped for
+	// group/kinds allowlisted as extension backends, so check again before dereferencing.
+	if serviceImport == nil {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("service import %s/%s not found", backendNamespace, backendRef.Name),
+			gwapiv1.RouteReasonBackendNotFound)
+	}
 	var servicePort mcsapiv1a1.ServicePort
 	for _, port := range serviceImport.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -3085,6 +3090,14 @@ func (t *Translator) processServiceDestinationSetting(
 	protocol := defaultProtocol
 
 	service := t.GetService(backendNamespace, string(backendRef.Name))
+	// validateBackendRef normally rejects a missing Service, but it is skipped for group/kinds
+	// allowlisted as extension backends (e.g. a Service kind in a non-core group), so check
+	// again before dereferencing.
+	if service == nil {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("service %s/%s not found", backendNamespace, string(backendRef.Name)),
+			gwapiv1.RouteReasonBackendNotFound)
+	}
 	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
 	// translated into a valid backend.
 	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
@@ -3396,7 +3409,7 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 // isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources
 func (t *Translator) isCustomBackendResource(group *gwapiv1.Group, kind string) bool {
 	groupStr := GroupDerefOr(group, "")
-	for _, gk := range t.ExtensionGroupKinds {
+	for _, gk := range t.ExtensionBackendGroupKinds {
 		if gk.Group == groupStr && gk.Kind == kind {
 			return true
 		}
