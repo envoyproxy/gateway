@@ -97,7 +97,8 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.HTTP2 != nil ||
 		spec.DNS != nil ||
 		spec.AdmissionControl != nil ||
-		spec.UseClientProtocol != nil
+		spec.UseClientProtocol != nil ||
+		spec.HTTP1 != nil
 }
 
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
@@ -919,6 +920,23 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		return
 	}
 
+	// Protocol-specific validation: some BTP fields are HTTP-only and have no
+	// effect when targeting TCP/TLS/UDP routes or a GRPCRoute. Emit a warning so
+	// the user is informed, but continue translation — other fields (e.g. routingType)
+	// are still valid and must be applied.
+	if err := validateBackendTrafficPolicyForRoute(policy, string(targetedRoute.GetRouteType())); err != nil {
+		for _, ancestorRef := range ancestorRefs {
+			status.SetWarningForPolicyAncestor(&policy.Status,
+				ancestorRef,
+				t.GatewayControllerName,
+				status.PolicyReasonUnsupportedField,
+				err.Error(),
+				policy.Generation,
+			)
+		}
+		// do NOT return — translation continues so other fields remain effective
+	}
+
 	if policy.Spec.MergeType == nil {
 		// Set conditions for translation error if it got any
 		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil); err != nil {
@@ -1709,6 +1727,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		rbbl        *uint64
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
+		h1          *ir.HTTP1Settings
 		err, errs   error
 	)
 
@@ -1790,6 +1809,8 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 
 	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
 
+	h1 = translateBackendHTTP1Settings(policy.Spec.HTTP1)
+
 	return &ir.TrafficFeatures{
 		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
 			LoadBalancer:      lb,
@@ -1801,6 +1822,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 			TCPKeepalive:      ka,
 			BackendConnection: bc,
 			HTTP2:             h2,
+			HTTP1:             h1,
 			DNS:               ds,
 		},
 		RateLimit:              rl,
@@ -1970,6 +1992,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 			}
 
 			r.Traffic = tf.DeepCopy()
+
 			if localTo, err := buildBackendSettingsTimeout(&policy.Spec.BackendSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
@@ -2045,6 +2068,17 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeat
 		// merged cluster must not advertise settings it cannot honor.
 		bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
 		bc.UseClientProtocol = useClientProtocol
+	}
+}
+
+// translateBackendHTTP1Settings converts BTP BackendHTTP1Settings to the IR representation.
+func translateBackendHTTP1Settings(s *egv1a1.BackendHTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	return &ir.HTTP1Settings{
+		EnableTrailers:     ptr.Deref(s.EnableTrailers, false),
+		PreserveHeaderCase: ptr.Deref(s.PreserveHeaderCase, false),
 	}
 }
 
@@ -2955,4 +2989,23 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	}
 
 	return &statName
+}
+
+// validateBackendTrafficPolicyForRoute returns an error when the policy carries
+// http1 settings that are silently ignored for the given route kind:
+//
+//   - GRPCRoute: http1 is meaningless (gRPC always uses HTTP/2).
+//   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 has no effect.
+func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeKind string) error {
+	switch routeKind {
+	case resource.KindGRPCRoute:
+		if p.Spec.HTTP1 != nil {
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
+		}
+	case resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
+		if p.Spec.HTTP1 != nil {
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a %s", routeKind)
+		}
+	}
+	return nil
 }

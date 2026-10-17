@@ -1120,8 +1120,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresCommonHTTPOptions := hasTimeoutArgs(args) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
-	requiresHTTP1Options := args.http1Settings != nil &&
-		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
+	requiresHTTP1Options := args.http1Settings != nil
 
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
 		args.admissionControl != nil
@@ -1601,10 +1600,6 @@ func buildHTTP1Settings(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 					},
 				},
 			}
-		}
-		if opts.HTTP10 != nil {
-			http1Opts.AcceptHttp_10 = true
-			http1Opts.DefaultHostForHttp_10 = ptr.Deref(opts.HTTP10.DefaultHost, "")
 		}
 	}
 

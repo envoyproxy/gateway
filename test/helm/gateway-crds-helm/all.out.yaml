@@ -25951,6 +25951,32 @@ spec:
                         type: boolean
                     type: object
                 type: object
+              http1:
+                description: |-
+                  HTTP1 provides HTTP/1 configuration for backend connections.
+                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                  this field takes precedence for backend (upstream) traffic.
+
+                  Behavior when targeting route kinds that do not use HTTP/1:
+                    - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                      directly adds a Warning condition on the policy; the field is ignored.
+                    - Gateway / ListenerSet / sectionName targets: this field is silently
+                      ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                      beneath that target; no warning is emitted.
+                    - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                      access log/metrics, tracing providers): rejected at admission on their
+                      own BackendSettings via separate validation rules.
+                properties:
+                  enableTrailers:
+                    description: EnableTrailers defines if HTTP/1 trailers should
+                      be proxied by Envoy.
+                    type: boolean
+                  preserveHeaderCase:
+                    description: |-
+                      PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                      By default, Envoy will lowercase all the headers.
+                    type: boolean
+                type: object
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
@@ -30063,12 +30089,23 @@ spec:
                       Has no effect unless maxConnectionDuration is set.
                     type: boolean
                   enableTrailers:
-                    description: EnableTrailers defines if HTTP/1 trailers should
-                      be proxied by Envoy.
+                    description: |-
+                      EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                   http10:
-                    description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
-                      requests.
+                    description: |-
+                      HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+
+                      Note: this field currently forces explicit HTTP/1 for backend connections when other
+                      backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.
+                      In a future release it will no longer force explicit HTTP/1 on backend connections.
+                      Use BackendTrafficPolicy.http1: {} to force HTTP/1 on a backend cluster explicitly.
                     properties:
                       useDefaultHost:
                         description: |-
@@ -30125,6 +30162,12 @@ spec:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
                       By default, Envoy will lowercase all the headers.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                 type: object
               http2:
@@ -32393,6 +32436,32 @@ spec:
                                   type: boolean
                               type: object
                           type: object
+                        http1:
+                          description: |-
+                            HTTP1 provides HTTP/1 configuration for backend connections.
+                            When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                            this field takes precedence for backend (upstream) traffic.
+
+                            Behavior when targeting route kinds that do not use HTTP/1:
+                              - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                directly adds a Warning condition on the policy; the field is ignored.
+                              - Gateway / ListenerSet / sectionName targets: this field is silently
+                                ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                beneath that target; no warning is emitted.
+                              - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                access log/metrics, tracing providers): rejected at admission on their
+                                own BackendSettings via separate validation rules.
+                          properties:
+                            enableTrailers:
+                              description: EnableTrailers defines if HTTP/1 trailers
+                                should be proxied by Envoy.
+                              type: boolean
+                            preserveHeaderCase:
+                              description: |-
+                                PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                By default, Envoy will lowercase all the headers.
+                              type: boolean
+                          type: object
                         http2:
                           description: HTTP2 provides HTTP/2 configuration for backend
                             connections.
@@ -33262,6 +33331,9 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http1 is not supported for ExtProc backends, which always
+                      use gRPC.
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                 maxItems: 16
                 type: array
               lua:
@@ -47478,6 +47550,33 @@ spec:
                                                     type: boolean
                                                 type: object
                                             type: object
+                                          http1:
+                                            description: |-
+                                              HTTP1 provides HTTP/1 configuration for backend connections.
+                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                              this field takes precedence for backend (upstream) traffic.
+
+                                              Behavior when targeting route kinds that do not use HTTP/1:
+                                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                                  directly adds a Warning condition on the policy; the field is ignored.
+                                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                                  beneath that target; no warning is emitted.
+                                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                                  access log/metrics, tracing providers): rejected at admission on their
+                                                  own BackendSettings via separate validation rules.
+                                            properties:
+                                              enableTrailers:
+                                                description: EnableTrailers defines
+                                                  if HTTP/1 trailers should be proxied
+                                                  by Envoy.
+                                                type: boolean
+                                              preserveHeaderCase:
+                                                description: |-
+                                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                                  By default, Envoy will lowercase all the headers.
+                                                type: boolean
+                                            type: object
                                           http2:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
@@ -48276,6 +48375,9 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: http1 is not supported for ALS backends,
+                                        which always use gRPC.
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
@@ -49172,6 +49274,33 @@ spec:
                                                     type: boolean
                                                 type: object
                                             type: object
+                                          http1:
+                                            description: |-
+                                              HTTP1 provides HTTP/1 configuration for backend connections.
+                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                              this field takes precedence for backend (upstream) traffic.
+
+                                              Behavior when targeting route kinds that do not use HTTP/1:
+                                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                                  directly adds a Warning condition on the policy; the field is ignored.
+                                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                                  beneath that target; no warning is emitted.
+                                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                                  access log/metrics, tracing providers): rejected at admission on their
+                                                  own BackendSettings via separate validation rules.
+                                            properties:
+                                              enableTrailers:
+                                                description: EnableTrailers defines
+                                                  if HTTP/1 trailers should be proxied
+                                                  by Envoy.
+                                                type: boolean
+                                              preserveHeaderCase:
+                                                description: |-
+                                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                                  By default, Envoy will lowercase all the headers.
+                                                type: boolean
+                                            type: object
                                           http2:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
@@ -50001,6 +50130,9 @@ spec:
                                     - message: either resources or resourceAttributes
                                         can be set, not both
                                       rule: '!has(self.resources) || !has(self.resourceAttributes)'
+                                    - message: http1 is not supported for OpenTelemetry
+                                        access log backends, which always use gRPC.
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -51249,6 +51381,32 @@ spec:
                                               type: boolean
                                           type: object
                                       type: object
+                                    http1:
+                                      description: |-
+                                        HTTP1 provides HTTP/1 configuration for backend connections.
+                                        When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                        this field takes precedence for backend (upstream) traffic.
+
+                                        Behavior when targeting route kinds that do not use HTTP/1:
+                                          - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                            directly adds a Warning condition on the policy; the field is ignored.
+                                          - Gateway / ListenerSet / sectionName targets: this field is silently
+                                            ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                            beneath that target; no warning is emitted.
+                                          - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                            access log/metrics, tracing providers): rejected at admission on their
+                                            own BackendSettings via separate validation rules.
+                                      properties:
+                                        enableTrailers:
+                                          description: EnableTrailers defines if HTTP/1
+                                            trailers should be proxied by Envoy.
+                                          type: boolean
+                                        preserveHeaderCase:
+                                          description: |-
+                                            PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                            By default, Envoy will lowercase all the headers.
+                                          type: boolean
+                                      type: object
                                     http2:
                                       description: HTTP2 provides HTTP/2 configuration
                                         for backend connections.
@@ -52059,6 +52217,9 @@ spec:
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                   f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                   : true'
+                              - message: http1 is not supported for OpenTelemetry
+                                  metrics backends, which always use gRPC.
+                                rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -53059,6 +53220,32 @@ spec:
                                         type: boolean
                                     type: object
                                 type: object
+                              http1:
+                                description: |-
+                                  HTTP1 provides HTTP/1 configuration for backend connections.
+                                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                  this field takes precedence for backend (upstream) traffic.
+
+                                  Behavior when targeting route kinds that do not use HTTP/1:
+                                    - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                      directly adds a Warning condition on the policy; the field is ignored.
+                                    - Gateway / ListenerSet / sectionName targets: this field is silently
+                                      ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                      beneath that target; no warning is emitted.
+                                    - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                      access log/metrics, tracing providers): rejected at admission on their
+                                      own BackendSettings via separate validation rules.
+                                properties:
+                                  enableTrailers:
+                                    description: EnableTrailers defines if HTTP/1
+                                      trailers should be proxied by Envoy.
+                                    type: boolean
+                                  preserveHeaderCase:
+                                    description: |-
+                                      PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                      By default, Envoy will lowercase all the headers.
+                                    type: boolean
+                                type: object
                               http2:
                                 description: HTTP2 provides HTTP/2 configuration for
                                   backend connections.
@@ -53922,6 +54109,10 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
+                        - message: http1 is not supported for OpenTelemetry tracing
+                            backends, which use gRPC.
+                          rule: self.type != 'OpenTelemetry' || !has(self.backendSettings)
+                            || !has(self.backendSettings.http1)
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
@@ -56578,6 +56769,32 @@ spec:
                                     type: boolean
                                 type: object
                             type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
+                            type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
@@ -57281,6 +57498,9 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: http1 is not supported for gRPC ExtAuth backends, which
+                        always use gRPC.
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                   headersToExtAuth:
                     description: |-
                       HeadersToExtAuth defines the client request headers that will be included
@@ -58131,6 +58351,32 @@ spec:
                                       origin.
                                     type: boolean
                                 type: object
+                            type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
                             type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
@@ -60019,6 +60265,32 @@ spec:
                                             and local origin.
                                           type: boolean
                                       type: object
+                                  type: object
+                                http1:
+                                  description: |-
+                                    HTTP1 provides HTTP/1 configuration for backend connections.
+                                    When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                    this field takes precedence for backend (upstream) traffic.
+
+                                    Behavior when targeting route kinds that do not use HTTP/1:
+                                      - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                        directly adds a Warning condition on the policy; the field is ignored.
+                                      - Gateway / ListenerSet / sectionName targets: this field is silently
+                                        ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                        beneath that target; no warning is emitted.
+                                      - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                        access log/metrics, tracing providers): rejected at admission on their
+                                        own BackendSettings via separate validation rules.
+                                  properties:
+                                    enableTrailers:
+                                      description: EnableTrailers defines if HTTP/1
+                                        trailers should be proxied by Envoy.
+                                      type: boolean
+                                    preserveHeaderCase:
+                                      description: |-
+                                        PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                        By default, Envoy will lowercase all the headers.
+                                      type: boolean
                                   type: object
                                 http2:
                                   description: HTTP2 provides HTTP/2 configuration
@@ -62042,6 +62314,32 @@ spec:
                                       origin.
                                     type: boolean
                                 type: object
+                            type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
                             type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend

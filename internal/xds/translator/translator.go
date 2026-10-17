@@ -144,6 +144,39 @@ func (t *Translator) xdsNameSchemeV2() bool {
 	return t.RuntimeFlags.IsEnabled(egv1a1.XDSNameSchemeV2)
 }
 
+// clusterHTTP1Settings returns the http1 settings to seed into backend clusters.
+// When ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly is enabled, returns nil —
+// CTP http1 fields apply to the client connection only and must not configure backend
+// HTTP/1 protocol settings. Remove this method when that runtime flag is removed.
+// Listener-only fields (HTTP10, IgnoredUpgradeTypes, DisableSafeMaxConnectionDuration)
+// are stripped unconditionally. A non-nil return value — even with no fields set —
+// acts as a sentinel that forces explicit HTTP/1 protocol selection on the cluster
+// and prevents autoConfig from negotiating HTTP/2 via ALPN on TLS backends.
+// nil is returned only when no cluster-relevant field was set and no HTTP10 sentinel
+// is needed (i.e. HTTP10 was also absent).
+func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	if t.RuntimeFlags != nil && t.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly) {
+		return nil
+	}
+	// Strip all listener-only fields; keep only cluster-relevant ones.
+	// HTTP10 is downstream-only (accept_http_10 / default_host_for_http_10 are not
+	// used by the upstream codec), but its presence means the CTP explicitly selected
+	// HTTP/1 — preserve that intent by returning a non-nil (possibly empty) struct.
+	stripped := ir.HTTP1Settings{
+		EnableTrailers:     s.EnableTrailers,
+		PreserveHeaderCase: s.PreserveHeaderCase,
+	}
+	hasHTTP10 := s.HTTP10 != nil
+	if !stripped.EnableTrailers && !stripped.PreserveHeaderCase && !hasHTTP10 {
+		// Only listener-only fields were set; no cluster-level action needed.
+		return nil
+	}
+	return &stripped
+}
+
 type GlobalRateLimitSettings struct {
 	// ServiceURL is the URL of the global
 	// rate limit service.
@@ -793,7 +826,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 			ea := &ExtraArgs{
 				metrics:          metrics,
-				http1Settings:    httpListener.HTTP1,
+				http1Settings:    t.clusterHTTP1Settings(httpListener.HTTP1),
 				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
 				statName:         httpRoute.Destination.StatName,
 				unstructuredRefs: extensionResources,

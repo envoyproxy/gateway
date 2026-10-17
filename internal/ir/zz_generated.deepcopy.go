@@ -1133,6 +1133,11 @@ func (in *ClusterTrafficFeatures) DeepCopyInto(out *ClusterTrafficFeatures) {
 		*out = new(HTTP2Settings)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.HTTP1 != nil {
+		in, out := &in.HTTP1, &out.HTTP1
+		*out = new(HTTP1Settings)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.DNS != nil {
 		in, out := &in.DNS, &out.DNS
 		*out = new(DNS)

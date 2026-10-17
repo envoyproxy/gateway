@@ -151,6 +151,11 @@ type Translator struct {
 	// fields configured on EnvoyProxy's Kubernetes provider settings.
 	EnvoyProxyPatchDisabled bool
 
+	// CTPHTTP1ClientScopeOnly is true when the ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+	// runtime flag is enabled. When true, CTP http1 fields (enableTrailers, preserveHeaderCase, http10)
+	// apply to client connections only and no longer seed backend HTTP/1 protocol settings.
+	CTPHTTP1ClientScopeOnly bool
+
 	// LuaEnvoyExtensionPolicyDisabled when the Lua EnvoyExtensionPolicy feature is disabled.
 	LuaEnvoyExtensionPolicyDisabled bool
 
@@ -375,6 +380,7 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 		resources.ReferenceGrants,
 		t.GetNamespace,
 		t.anyGatewayHasMergeBackendsEnabled(acceptedGateways),
+		t.CTPHTTP1ClientScopeOnly,
 	)
 	phases.End()
 
