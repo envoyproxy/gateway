@@ -656,6 +656,22 @@ func (r *gatewayAPIReconciler) loadGatewayClassStatusToDelete() sets.Set[types.N
 }
 
 func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *resource.Resources) error {
+	// The default EnvoyProxySpec from the EnvoyGateway configuration has no namespace of its own,
+	// so its clientCertificateRef is resolved in the controller namespace.
+	if defaultSpec := gwcResource.EnvoyProxyDefaultSpec; defaultSpec != nil && defaultSpec.BackendTLS != nil && defaultSpec.BackendTLS.ClientCertificateRef != nil {
+		if certRef := defaultSpec.BackendTLS.ClientCertificateRef; refsSecret(certRef) {
+			if err := r.processSecretRef(
+				ctx,
+				newResourceMapping(),
+				gwcResource,
+				resource.KindGateway,
+				r.namespace,
+				resource.KindEnvoyProxy,
+				*certRef); err != nil {
+				return err
+			}
+		}
+	}
 	if gwcResource.EnvoyProxyForGatewayClass == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef == nil {
 		return nil
 	}
