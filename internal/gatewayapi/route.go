@@ -2901,7 +2901,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			SectionName: parentRef.SectionName,
 			Port:        parentRef.Port,
 		},
-		resources,
 		gatewayCtx,
 		gwIR,
 	)

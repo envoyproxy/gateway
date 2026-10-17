@@ -921,6 +921,7 @@ type TranslatorContext struct {
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
+	BackendTLSPolicyIndex   BackendTLSPolicyIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {

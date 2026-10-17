@@ -66,7 +66,6 @@ func (t *Translator) translateExtServiceBackendRefs(
 			pnn,
 			policy.GetObjectKind().GroupVersionKind().Kind,
 			protocol,
-			resources,
 			gtwCtx,
 		); err != nil {
 			return nil, err
@@ -97,7 +96,6 @@ func (t *Translator) processExtServiceDestination(
 	policyNamespacedName types.NamespacedName,
 	policyKind string,
 	protocol ir.AppProtocol,
-	resources *resource.Resources,
 	gtwCtx *GatewayContext,
 ) (*ir.DestinationSetting, error) {
 	var (
@@ -154,7 +152,6 @@ func (t *Translator) processExtServiceDestination(
 			Namespace: new(gwapiv1.Namespace(policyNamespacedName.Namespace)),
 			Name:      gwapiv1.ObjectName(policyNamespacedName.Name),
 		},
-		resources,
 		gtwCtx,
 		nil,
 	)
