@@ -729,6 +729,32 @@ type RateLimit struct {
 	// Telemetry defines telemetry configuration for RateLimit.
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+
+	// Service holds configuration for how Envoy connects to the rate limit service.
+	//
+	// +optional
+	Service *RateLimitService `json:"service,omitempty"`
+}
+
+// RateLimitService defines configuration for how Envoy connects to the rate limit service.
+type RateLimitService struct {
+	// BackendSettings holds configuration for managing the connection to the rate limit
+	// service, such as circuit breakers, timeouts, health checks, and load balancing.
+	// ProxyProtocol is not supported, since the managed rate limit service doesn't accept it.
+	// HTTP active health checks are not supported, since the managed rate limit service only
+	// serves its HTTP health endpoint as plaintext; use GRPC or TCP instead. For the same reason,
+	// active health check overrides are not supported.
+	//
+	// +optional
+	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
+}
+
+// GetBackendSettings returns the rate limit service backend settings, or nil if unset.
+func (r *RateLimit) GetBackendSettings() *ClusterSettings {
+	if r == nil || r.Service == nil {
+		return nil
+	}
+	return r.Service.BackendSettings
 }
 
 type RateLimitTelemetry struct {
