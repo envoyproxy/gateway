@@ -3232,6 +3232,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `hostname` | _string_ |  false  |  | Hostname defines the HTTP Host header used for active HTTP health checks.<br />Host selection uses this order: this field, the associated Backend endpoint<br />hostname if available, then the effective Route hostname. |
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
+| `protocol` | _[HTTPHealthCheckProtocol](#httphealthcheckprotocol)_ |  false  | Auto | Protocol is the HTTP protocol that active health check requests are sent with.<br />Defaults to Auto, which uses the same protocol as regular requests to the backend:<br />  - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,<br />    `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a<br />    GRPCRoute.<br />  - The protocol negotiated through ALPN for a TLS backend that negotiates it,<br />    with HTTP1 as the fallback when nothing is negotiated.<br />  - HTTP1 otherwise.<br />Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than<br />the application, for example a backend that serves HTTP/1.1 traffic but only<br />accepts HTTP/2 health checks. An explicit protocol is always used as is. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
 | `retriableStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | RetriableStatuses defines a list of HTTP response statuses considered retriable.<br />Responses matching these statuses count towards the unhealthy threshold but<br />do not result in the host being considered immediately unhealthy.<br />The expected statuses take precedence for any range overlaps with this field. |
@@ -3389,6 +3390,23 @@ _Appears in:_
 | `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. The value may contain<br />Envoy substitution format operators such as "%REQ(x-foo)%", which are<br />evaluated per request.<br />See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators |
 | `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Add | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Add. |
 | `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether the header is still written when its<br />value is empty. This matters for values produced by substitution<br />formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at<br />request time. Envoy drops such headers by default; set this to true to<br />keep them with an empty value.<br />When unset, it defaults to true only if the configured value itself is<br />the empty string, so a literal empty header is always written. |
+
+
+#### HTTPHealthCheckProtocol
+
+_Underlying type:_ _string_
+
+HTTPHealthCheckProtocol specifies the HTTP protocol used to send active HTTP
+health check requests to the backend.
+
+_Appears in:_
+- [HTTPActiveHealthChecker](#httpactivehealthchecker)
+
+| Value | Description |
+| ----- | ----------- |
+| `Auto` | HTTPHealthCheckProtocolAuto derives the health check protocol from the effective<br />upstream protocol of the backend.<br /> | 
+| `HTTP1` | HTTPHealthCheckProtocolHTTP1 sends health check requests using HTTP/1.1.<br /> | 
+| `HTTP2` | HTTPHealthCheckProtocolHTTP2 sends health check requests using HTTP/2.<br /> | 
 
 
 #### HTTPHostnameModifier

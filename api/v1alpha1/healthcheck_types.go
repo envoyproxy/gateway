@@ -197,6 +197,24 @@ type HTTPActiveHealthChecker struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024
 	Path string `json:"path" yaml:"path"`
+	// Protocol is the HTTP protocol that active health check requests are sent with.
+	//
+	// Defaults to Auto, which uses the same protocol as regular requests to the backend:
+	//
+	//   - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+	//     `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+	//     GRPCRoute.
+	//   - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+	//     with HTTP1 as the fallback when nothing is negotiated.
+	//   - HTTP1 otherwise.
+	//
+	// Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+	// the application, for example a backend that serves HTTP/1.1 traffic but only
+	// accepts HTTP/2 health checks. An explicit protocol is always used as is.
+	//
+	// +kubebuilder:default=Auto
+	// +optional
+	Protocol *HTTPHealthCheckProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	// Method defines the HTTP method used for health checking.
 	// Defaults to GET
 	// +kubebuilder:validation:MaxLength=16
@@ -219,6 +237,21 @@ type HTTPActiveHealthChecker struct {
 	// +optional
 	RequestBody *ActiveHealthCheckPayload `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
 }
+
+// HTTPHealthCheckProtocol specifies the HTTP protocol used to send active HTTP
+// health check requests to the backend.
+// +kubebuilder:validation:Enum=Auto;HTTP1;HTTP2
+type HTTPHealthCheckProtocol string
+
+const (
+	// HTTPHealthCheckProtocolAuto derives the health check protocol from the effective
+	// upstream protocol of the backend.
+	HTTPHealthCheckProtocolAuto HTTPHealthCheckProtocol = "Auto"
+	// HTTPHealthCheckProtocolHTTP1 sends health check requests using HTTP/1.1.
+	HTTPHealthCheckProtocolHTTP1 HTTPHealthCheckProtocol = "HTTP1"
+	// HTTPHealthCheckProtocolHTTP2 sends health check requests using HTTP/2.
+	HTTPHealthCheckProtocolHTTP2 HTTPHealthCheckProtocol = "HTTP2"
+)
 
 // TCPActiveHealthChecker defines the settings of tcp health check.
 type TCPActiveHealthChecker struct {
