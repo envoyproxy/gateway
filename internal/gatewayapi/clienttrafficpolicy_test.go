@@ -9,8 +9,10 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	kresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -485,6 +487,75 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 				require.NoError(t, err)
 			}
 			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// UDP ignores connection settings but must still report errors in its own timeout.
+func TestTranslateUDPClientTrafficPolicyErrors(t *testing.T) {
+	cases := []struct {
+		name       string
+		udpTimeout *gwapiv1.Duration
+		tcpTimeout *gwapiv1.Duration
+		wantError  string
+	}{
+		{
+			name:       "valid UDP timeout ignores invalid connection settings",
+			udpTimeout: new(gwapiv1.Duration("30s")),
+		},
+		{
+			name: "default UDP timeout ignores invalid connection settings",
+		},
+		{
+			name:       "invalid UDP timeout is reported even with invalid TCP timeout",
+			udpTimeout: new(gwapiv1.Duration("invalid-udp")),
+			tcpTimeout: new(gwapiv1.Duration("invalid-tcp")),
+			wantError:  "Timeout: invalid UDP IdleTimeout value invalid-udp",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &GatewayContext{
+				Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway"}},
+			}
+			listener := &ListenerContext{
+				Listener: &gwapiv1.Listener{Name: "udp", Protocol: gwapiv1.UDPProtocolType, Port: 80},
+				gateway:  gateway,
+			}
+			route := &ir.UDPRoute{Name: "udp-route"}
+			udpIR := &ir.UDPListener{
+				CoreListenerDetails: ir.CoreListenerDetails{Name: irListenerName(listener)},
+				Route:               route,
+			}
+			policy := &egv1a1.ClientTrafficPolicy{
+				Spec: egv1a1.ClientTrafficPolicySpec{
+					Connection: &egv1a1.ClientConnection{BufferLimit: new(kresource.MustParse("8Gi"))},
+				},
+			}
+			if tc.udpTimeout != nil || tc.tcpTimeout != nil {
+				policy.Spec.Timeout = &egv1a1.ClientTimeout{
+					UDP: &egv1a1.UDPClientTimeout{IdleTimeout: tc.udpTimeout},
+					TCP: &egv1a1.TCPClientTimeout{IdleTimeout: tc.tcpTimeout},
+				}
+			}
+			translator := &Translator{}
+			xdsIR := resource.XdsIRMap{
+				translator.getIRKey(gateway.Gateway): &ir.Xds{UDP: []*ir.UDPListener{udpIR}},
+			}
+			err := translator.translateClientTrafficPolicyForListener(policy, listener, xdsIR, nil, nil)
+			if tc.wantError != "" {
+				require.EqualError(t, err, tc.wantError)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Same(t, route, udpIR.Route)
+			if tc.udpTimeout != nil && tc.wantError == "" {
+				require.NotNil(t, udpIR.Timeout)
+				require.NotNil(t, udpIR.Timeout.UDP)
+				require.Equal(t, ir.MetaV1DurationPtr(30*time.Second), udpIR.Timeout.UDP.IdleTimeout)
+			} else {
+				require.Nil(t, udpIR.Timeout)
+			}
 		})
 	}
 }
