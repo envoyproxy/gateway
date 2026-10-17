@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	peak_ewmav3alpha "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/load_balancing_policies/peak_ewma/v3alpha"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -699,4 +700,233 @@ func TestBackendClusterTranslatorAsClusterArgsAppliesTraffic(t *testing.T) {
 	args := BackendClusterTranslator{}.asClusterArgs("backend-1", nil, &ExtraArgs{traffic: traffic}, nil)
 
 	require.Equal(t, circuitBreaker, args.circuitBreaker)
+}
+
+
+func TestBuildClusterWithPeakEwma(t *testing.T) {
+	decayTime := 15 * time.Second
+	aggInterval := 200 * time.Millisecond
+	maxSamples := uint32(2000)
+	defaultRtt := 5 * time.Millisecond
+	penalty := 500000.0
+
+	args := &xdsClusterArgs{
+		name:         "test-cluster-peakewma",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			PeakEwma: &ir.PeakEwma{
+				DecayTime:           ir.MetaV1DurationPtr(decayTime),
+				AggregationInterval: ir.MetaV1DurationPtr(aggInterval),
+				MaxSamplesPerHost:   &maxSamples,
+				DefaultRtt:          ir.MetaV1DurationPtr(defaultRtt),
+				PenaltyValue:        &penalty,
+			},
+		},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.NotNil(t, policy)
+	require.NotNil(t, policy.TypedExtensionConfig)
+	require.Equal(t, "envoy.load_balancing_policies.peak_ewma", policy.TypedExtensionConfig.Name)
+	require.NotNil(t, policy.TypedExtensionConfig.TypedConfig)
+	require.Equal(t,
+		"type.googleapis.com/envoy.extensions.load_balancing_policies.peak_ewma.v3alpha.PeakEwma",
+		policy.TypedExtensionConfig.TypedConfig.TypeUrl,
+	)
+
+	pe := &peak_ewmav3alpha.PeakEwma{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(pe)
+	require.NoError(t, err)
+	require.Equal(t, durationpb.New(decayTime), pe.DecayTime)
+	require.Equal(t, durationpb.New(aggInterval), pe.AggregationInterval)
+	require.Equal(t, wrapperspb.UInt32(maxSamples), pe.MaxSamplesPerHost)
+	require.Equal(t, durationpb.New(defaultRtt), pe.DefaultRtt)
+	require.Equal(t, wrapperspb.Double(penalty), pe.PenaltyValue)
+}
+
+func TestBuildClusterWithPeakEwmaDefaults(t *testing.T) {
+	args := &xdsClusterArgs{
+		name:         "test-cluster-peakewma-defaults",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			PeakEwma: &ir.PeakEwma{},
+		},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.peak_ewma", policy.TypedExtensionConfig.Name)
+
+	pe := &peak_ewmav3alpha.PeakEwma{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(pe)
+	require.NoError(t, err)
+	// All fields unset, relying on Envoy defaults
+	require.Nil(t, pe.DecayTime)
+	require.Nil(t, pe.AggregationInterval)
+	require.Nil(t, pe.MaxSamplesPerHost)
+	require.Nil(t, pe.DefaultRtt)
+	require.Nil(t, pe.PenaltyValue)
+}
+
+func TestBuildClusterWithPeakEwmaWeightedZones(t *testing.T) {
+	decayTime := 10 * time.Second
+
+	args := &xdsClusterArgs{
+		name:         "test-cluster-peakewma-wz",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{
+				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
+				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
+			},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			PeakEwma: &ir.PeakEwma{
+				DecayTime: ir.MetaV1DurationPtr(decayTime),
+			},
+			WeightedZones: []ir.WeightedZoneConfig{
+				{Zone: "us-east-1a", Weight: 80},
+				{Zone: "us-east-1b", Weight: 20},
+			},
+		},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	// The top-level policy should be wrr_locality
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.wrr_locality", policy.TypedExtensionConfig.Name)
+
+	wrrLocality := &wrr_localityv3.WrrLocality{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(wrrLocality)
+	require.NoError(t, err)
+	require.NotNil(t, wrrLocality.EndpointPickingPolicy)
+	require.Len(t, wrrLocality.EndpointPickingPolicy.Policies, 1)
+	childPolicy := wrrLocality.EndpointPickingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.peak_ewma", childPolicy.TypedExtensionConfig.Name)
+
+	pe := &peak_ewmav3alpha.PeakEwma{}
+	err = childPolicy.TypedExtensionConfig.TypedConfig.UnmarshalTo(pe)
+	require.NoError(t, err)
+	require.Equal(t, durationpb.New(decayTime), pe.DecayTime)
+}
+
+func TestBuildClusterWithEndpointOverridePeakEwma(t *testing.T) {
+	args := &xdsClusterArgs{
+		name:         "test-cluster-eo-peakewma",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			PeakEwma: &ir.PeakEwma{
+				DecayTime: ir.MetaV1DurationPtr(10 * time.Second),
+			},
+			EndpointOverride: &ir.EndpointOverride{
+				ExtractFrom: []ir.EndpointOverrideExtractFrom{{
+					Header: new("x-fallback-host"),
+				}},
+			},
+		},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.override_host", policy.TypedExtensionConfig.Name)
+
+	overrideHost := &override_hostv3.OverrideHost{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(overrideHost)
+	require.NoError(t, err)
+
+	// Verify fallback policy is PeakEwma
+	require.NotNil(t, overrideHost.FallbackPolicy)
+	require.Len(t, overrideHost.FallbackPolicy.Policies, 1)
+	fallbackPolicy := overrideHost.FallbackPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.peak_ewma", fallbackPolicy.TypedExtensionConfig.Name)
+
+	pe := &peak_ewmav3alpha.PeakEwma{}
+	err = fallbackPolicy.TypedExtensionConfig.TypedConfig.UnmarshalTo(pe)
+	require.NoError(t, err)
+	require.Equal(t, durationpb.New(10*time.Second), pe.DecayTime)
+}
+
+func TestBuildPeakEwmaLoadBalancingPolicy(t *testing.T) {
+	decayTime := 20 * time.Second
+	aggInterval := 500 * time.Millisecond
+	maxSamples := uint32(500)
+	defaultRtt := 25 * time.Millisecond
+	penalty := 99999.0
+
+	lb := &ir.LoadBalancer{
+		PeakEwma: &ir.PeakEwma{
+			DecayTime:           ir.MetaV1DurationPtr(decayTime),
+			AggregationInterval: ir.MetaV1DurationPtr(aggInterval),
+			MaxSamplesPerHost:   &maxSamples,
+			DefaultRtt:          ir.MetaV1DurationPtr(defaultRtt),
+			PenaltyValue:        &penalty,
+		},
+	}
+
+	policy, err := buildPeakEwmaLoadBalancingPolicy(lb)
+	require.NoError(t, err)
+	require.NotNil(t, policy)
+	require.Len(t, policy.Policies, 1)
+
+	p := policy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.peak_ewma", p.TypedExtensionConfig.Name)
+
+	pe := &peak_ewmav3alpha.PeakEwma{}
+	err = p.TypedExtensionConfig.TypedConfig.UnmarshalTo(pe)
+	require.NoError(t, err)
+	require.Equal(t, durationpb.New(decayTime), pe.DecayTime)
+	require.Equal(t, durationpb.New(aggInterval), pe.AggregationInterval)
+	require.Equal(t, wrapperspb.UInt32(maxSamples), pe.MaxSamplesPerHost)
+	require.Equal(t, durationpb.New(defaultRtt), pe.DefaultRtt)
+	require.Equal(t, wrapperspb.Double(penalty), pe.PenaltyValue)
+}
+
+func TestBuildPeakEwmaLoadBalancingPolicyNil(t *testing.T) {
+	_, err := buildPeakEwmaLoadBalancingPolicy(nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "peak ewma load balancer config is required")
+
+	_, err = buildPeakEwmaLoadBalancingPolicy(&ir.LoadBalancer{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "peak ewma load balancer config is required")
 }

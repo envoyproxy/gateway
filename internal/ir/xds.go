@@ -3417,6 +3417,8 @@ type LoadBalancer struct {
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
 	// BackendUtilization load balancer policy
 	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty" yaml:"backendUtilization,omitempty"`
+	// PeakEwma load balancer policy
+	PeakEwma *PeakEwma `json:"peakEwma,omitempty" yaml:"peakEwma,omitempty"`
 	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 	// WeightedZones defines explicit weight-based traffic distribution across locality zones.
@@ -3445,6 +3447,9 @@ func (l *LoadBalancer) Validate() error {
 		matchCount++
 	}
 	if l.BackendUtilization != nil {
+		matchCount++
+	}
+	if l.PeakEwma != nil {
 		matchCount++
 	}
 	if matchCount != 1 {
@@ -3497,6 +3502,16 @@ type OutOfBandReporting struct {
 	Port *int32 `json:"port,omitempty" yaml:"port,omitempty"`
 	// Authority overrides the :authority header on the out-of-band gRPC stream.
 	Authority *string `json:"authority,omitempty" yaml:"authority,omitempty"`
+}
+
+// PeakEwma load balancer settings
+// +k8s:deepcopy-gen=true
+type PeakEwma struct {
+	DecayTime           *metav1.Duration `json:"decayTime,omitempty" yaml:"decayTime,omitempty"`
+	AggregationInterval *metav1.Duration `json:"aggregationInterval,omitempty" yaml:"aggregationInterval,omitempty"`
+	MaxSamplesPerHost   *uint32          `json:"maxSamplesPerHost,omitempty" yaml:"maxSamplesPerHost,omitempty"`
+	DefaultRtt          *metav1.Duration `json:"defaultRtt,omitempty" yaml:"defaultRtt,omitempty"`
+	PenaltyValue        *float64         `json:"penaltyValue,omitempty" yaml:"penaltyValue,omitempty"`
 }
 
 // ConsistentHash load balancer settings
@@ -4394,4 +4409,6 @@ const (
 	ConsistentHashLoadBalancer LoadBalancerType = "ConsistentHash"
 	// BackendUtilizationLoadBalancer is the backend utilization load balancer type.
 	BackendUtilizationLoadBalancer LoadBalancerType = "BackendUtilization"
+	// PeakEwmaLoadBalancer is the Peak EWMA load balancer type.
+	PeakEwmaLoadBalancer LoadBalancerType = "PeakEwma"
 )
