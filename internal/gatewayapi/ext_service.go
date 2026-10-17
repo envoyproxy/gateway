@@ -43,12 +43,13 @@ func (t *Translator) translateExtServiceBackendRefs(
 	ds := make([]*ir.DestinationSetting, 0, len(backendRefs))
 
 	pnn := utils.NamespacedName(policy)
-	destName := irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index)
+	policyKind := kindOf(policy)
+	destName := irIndexedExtServiceDestinationName(pnn, policyKind, configType, index)
 	for i, backendRef := range backendRefs {
 		if err = t.validateExtServiceBackendReference(
 			&backendRef.BackendObjectReference,
 			policy.GetNamespace(),
-			policy.GetObjectKind().GroupVersionKind().Kind,
+			policyKind,
 			resources); err != nil {
 			return nil, err
 		}
@@ -64,7 +65,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 			settingName,
 			&backendRef,
 			pnn,
-			policy.GetObjectKind().GroupVersionKind().Kind,
+			policyKind,
 			protocol,
 			resources,
 			gtwCtx,

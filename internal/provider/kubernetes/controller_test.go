@@ -7,8 +7,10 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,6 +31,7 @@ import (
 	discoveryfake "k8s.io/client-go/discovery/fake"
 	clientgotesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -3420,4 +3424,330 @@ func TestCRDExistsWithClient(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, exists)
 	})
+}
+
+// TestProcessPoliciesSkipDeepCopyOnList covers listing with client.UnsafeDisableDeepCopy: the
+// listed item then shares its nested Spec/Status memory with the informer cache, so processing
+// must leave the cached object untouched. The List interceptor below stands in for the informer
+// cache, filling the list with apimeta.SetList exactly as controller-runtime's CacheReader.List
+// does when the option is set.
+func TestProcessPoliciesSkipDeepCopyOnList(t *testing.T) {
+	const ns = "default"
+
+	targetRefs := func() []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+		return []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Group: gwapiv1.Group(gwapiv1.GroupName),
+					Kind:  gwapiv1.Kind(resource.KindGateway),
+					Name:  gwapiv1.ObjectName("gw-1"),
+				},
+			},
+		}
+	}
+	ancestorStatus := func() gwapiv1.PolicyStatus {
+		return gwapiv1.PolicyStatus{
+			Ancestors: []gwapiv1.PolicyAncestorStatus{
+				{
+					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-1")},
+					ControllerName: gwapiv1.GatewayController("test-controller"),
+				},
+			},
+		}
+	}
+
+	type testCase struct {
+		name         string
+		newCached    func() client.Object
+		newList      func() client.ObjectList
+		process      func(r *gatewayAPIReconciler, ctx context.Context, tree *resource.Resources, rm *resourceMappings) error
+		treeEntries  func(tree *resource.Resources) []client.Object
+		wantGVK      schema.GroupVersionKind
+		mutateNested func(item client.Object)
+		statusOf     func(obj client.Object) gwapiv1.PolicyStatus
+	}
+
+	cases := []testCase{
+		{
+			name: "EnvoyPatchPolicy",
+			newCached: func() client.Object {
+				return &egv1a1.EnvoyPatchPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
+					Spec: egv1a1.EnvoyPatchPolicySpec{
+						Type: egv1a1.JSONPatchEnvoyPatchType,
+						TargetRef: gwapiv1.LocalPolicyTargetReference{
+							Group: gwapiv1.Group(gwapiv1.GroupName),
+							Kind:  gwapiv1.Kind(resource.KindGateway),
+							Name:  gwapiv1.ObjectName("gw-1"),
+						},
+						JSONPatches: []egv1a1.EnvoyJSONPatchConfig{
+							{
+								Type:      egv1a1.ClusterEnvoyResourceType,
+								Name:      "cluster-1",
+								Operation: egv1a1.JSONPatchOperation{Op: "add"},
+							},
+						},
+					},
+					Status: ancestorStatus(),
+				}
+			},
+			newList: func() client.ObjectList { return &egv1a1.EnvoyPatchPolicyList{} },
+			process: func(r *gatewayAPIReconciler, ctx context.Context, tree *resource.Resources, rm *resourceMappings) error {
+				return r.processEnvoyPatchPolicies(ctx, tree, rm)
+			},
+			treeEntries: func(tree *resource.Resources) []client.Object {
+				out := make([]client.Object, len(tree.EnvoyPatchPolicies))
+				for i, p := range tree.EnvoyPatchPolicies {
+					out[i] = p
+				}
+				return out
+			},
+			wantGVK: egv1a1.GroupVersion.WithKind(egv1a1.KindEnvoyPatchPolicy),
+			mutateNested: func(item client.Object) {
+				item.(*egv1a1.EnvoyPatchPolicy).Spec.JSONPatches[0].Name = "mutated"
+			},
+			statusOf: func(obj client.Object) gwapiv1.PolicyStatus {
+				return obj.(*egv1a1.EnvoyPatchPolicy).Status
+			},
+		},
+		{
+			name: "ClientTrafficPolicy",
+			newCached: func() client.Object {
+				return &egv1a1.ClientTrafficPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
+					Spec: egv1a1.ClientTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRefs: targetRefs()},
+					},
+					Status: ancestorStatus(),
+				}
+			},
+			newList: func() client.ObjectList { return &egv1a1.ClientTrafficPolicyList{} },
+			process: func(r *gatewayAPIReconciler, ctx context.Context, tree *resource.Resources, rm *resourceMappings) error {
+				return r.processClientTrafficPolicies(ctx, tree, rm)
+			},
+			treeEntries: func(tree *resource.Resources) []client.Object {
+				out := make([]client.Object, len(tree.ClientTrafficPolicies))
+				for i, p := range tree.ClientTrafficPolicies {
+					out[i] = p
+				}
+				return out
+			},
+			wantGVK: egv1a1.GroupVersion.WithKind(egv1a1.KindClientTrafficPolicy),
+			mutateNested: func(item client.Object) {
+				item.(*egv1a1.ClientTrafficPolicy).Spec.TargetRefs[0].Name = "mutated"
+			},
+			statusOf: func(obj client.Object) gwapiv1.PolicyStatus {
+				return obj.(*egv1a1.ClientTrafficPolicy).Status
+			},
+		},
+		{
+			name: "BackendTrafficPolicy",
+			newCached: func() client.Object {
+				return &egv1a1.BackendTrafficPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRefs: targetRefs()},
+					},
+					Status: ancestorStatus(),
+				}
+			},
+			newList: func() client.ObjectList { return &egv1a1.BackendTrafficPolicyList{} },
+			process: func(r *gatewayAPIReconciler, ctx context.Context, tree *resource.Resources, rm *resourceMappings) error {
+				return r.processBackendTrafficPolicies(ctx, tree, rm)
+			},
+			treeEntries: func(tree *resource.Resources) []client.Object {
+				out := make([]client.Object, len(tree.BackendTrafficPolicies))
+				for i, p := range tree.BackendTrafficPolicies {
+					out[i] = p
+				}
+				return out
+			},
+			wantGVK: egv1a1.GroupVersion.WithKind(egv1a1.KindBackendTrafficPolicy),
+			mutateNested: func(item client.Object) {
+				item.(*egv1a1.BackendTrafficPolicy).Spec.TargetRefs[0].Name = "mutated"
+			},
+			statusOf: func(obj client.Object) gwapiv1.PolicyStatus {
+				return obj.(*egv1a1.BackendTrafficPolicy).Status
+			},
+		},
+		{
+			name: "SecurityPolicy",
+			newCached: func() client.Object {
+				return &egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRefs: targetRefs()},
+					},
+					Status: ancestorStatus(),
+				}
+			},
+			newList: func() client.ObjectList { return &egv1a1.SecurityPolicyList{} },
+			process: func(r *gatewayAPIReconciler, ctx context.Context, tree *resource.Resources, rm *resourceMappings) error {
+				return r.processSecurityPolicies(ctx, tree, rm)
+			},
+			treeEntries: func(tree *resource.Resources) []client.Object {
+				out := make([]client.Object, len(tree.SecurityPolicies))
+				for i, p := range tree.SecurityPolicies {
+					out[i] = p
+				}
+				return out
+			},
+			wantGVK: egv1a1.GroupVersion.WithKind(egv1a1.KindSecurityPolicy),
+			mutateNested: func(item client.Object) {
+				item.(*egv1a1.SecurityPolicy).Spec.TargetRefs[0].Name = "mutated"
+			},
+			statusOf: func(obj client.Object) gwapiv1.PolicyStatus {
+				return obj.(*egv1a1.SecurityPolicy).Status
+			},
+		},
+		{
+			name: "BackendTLSPolicy",
+			newCached: func() client.Object {
+				return &gwapiv1.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
+					Spec: gwapiv1.BackendTLSPolicySpec{
+						TargetRefs: targetRefs(),
+					},
+					Status: ancestorStatus(),
+				}
+			},
+			newList: func() client.ObjectList { return &gwapiv1.BackendTLSPolicyList{} },
+			process: func(r *gatewayAPIReconciler, ctx context.Context, tree *resource.Resources, rm *resourceMappings) error {
+				return r.processBackendTLSPolicies(ctx, tree, rm)
+			},
+			treeEntries: func(tree *resource.Resources) []client.Object {
+				out := make([]client.Object, len(tree.BackendTLSPolicies))
+				for i, p := range tree.BackendTLSPolicies {
+					out[i] = p
+				}
+				return out
+			},
+			wantGVK: schema.GroupVersionKind{
+				Group:   gwapiv1.GroupVersion.Group,
+				Version: gwapiv1.GroupVersion.Version,
+				Kind:    resource.KindBackendTLSPolicy,
+			},
+			mutateNested: func(item client.Object) {
+				item.(*gwapiv1.BackendTLSPolicy).Spec.TargetRefs[0].Name = "mutated"
+			},
+			statusOf: func(obj client.Object) gwapiv1.PolicyStatus {
+				return obj.(*gwapiv1.BackendTLSPolicy).Status
+			},
+		},
+		{
+			name: "EnvoyExtensionPolicy",
+			newCached: func() client.Object {
+				return &egv1a1.EnvoyExtensionPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
+					Spec: egv1a1.EnvoyExtensionPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRefs: targetRefs()},
+					},
+					Status: ancestorStatus(),
+				}
+			},
+			newList: func() client.ObjectList { return &egv1a1.EnvoyExtensionPolicyList{} },
+			process: func(r *gatewayAPIReconciler, ctx context.Context, tree *resource.Resources, rm *resourceMappings) error {
+				return r.processEnvoyExtensionPolicies(ctx, tree, rm)
+			},
+			treeEntries: func(tree *resource.Resources) []client.Object {
+				out := make([]client.Object, len(tree.EnvoyExtensionPolicies))
+				for i, p := range tree.EnvoyExtensionPolicies {
+					out[i] = p
+				}
+				return out
+			},
+			wantGVK: egv1a1.GroupVersion.WithKind(egv1a1.KindEnvoyExtensionPolicy),
+			mutateNested: func(item client.Object) {
+				item.(*egv1a1.EnvoyExtensionPolicy).Spec.TargetRefs[0].Name = "mutated"
+			},
+			statusOf: func(obj client.Object) gwapiv1.PolicyStatus {
+				return obj.(*egv1a1.EnvoyExtensionPolicy).Status
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Run("reconcile leaves cached policy unchanged", func(t *testing.T) {
+				// TypeMeta stays unset: real typed cache objects have it cleared.
+				cached := tc.newCached()
+				snapshot := cached.DeepCopyObject().(client.Object)
+
+				sawUnsafeDisableDeepCopy := false
+				fakeClient := fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(ctx context.Context, cli client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+							if reflect.TypeOf(list) != reflect.TypeOf(tc.newList()) {
+								return cli.List(ctx, list, opts...)
+							}
+							listOpts := (&client.ListOptions{}).ApplyOptions(opts)
+							if listOpts.UnsafeDisableDeepCopy == nil || !*listOpts.UnsafeDisableDeepCopy {
+								return fmt.Errorf("expected List for %T to use client.UnsafeDisableDeepCopy", list)
+							}
+							sawUnsafeDisableDeepCopy = true
+							// SetList copies the cached struct by value into list.Items.
+							return apimeta.SetList(list, []runtime.Object{cached})
+						},
+					}).
+					Build()
+
+				r := &gatewayAPIReconciler{
+					log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+					client: fakeClient,
+				}
+				tree := resource.NewResources()
+				rm := newResourceMapping()
+
+				require.NoError(t, tc.process(r, t.Context(), tree, rm))
+				require.True(t, sawUnsafeDisableDeepCopy, "List interceptor for %T was never invoked", tc.newList())
+
+				// Reconcile sorts before storing, still inside the List->Store window.
+				tree.Sort()
+
+				entries := tc.treeEntries(tree)
+				require.Len(t, entries, 1)
+				// TypeMeta is not written onto listed items; consumers resolve the Kind from
+				// the scheme instead (gatewayapi.kindOf).
+				require.Equal(t, schema.GroupVersionKind{}, entries[0].GetObjectKind().GroupVersionKind())
+				gvk, err := apiutil.GVKForObject(entries[0], envoygateway.GetScheme())
+				require.NoError(t, err)
+				require.Equal(t, tc.wantGVK, gvk)
+				require.Equal(t, gwapiv1.PolicyStatus{}, tc.statusOf(entries[0]))
+
+				require.Equal(t, snapshot, cached,
+					"reconciling must not mutate the cached policy's nested Spec/Status")
+
+				// Negative control: a nested write must reach the cached object, proving the
+				// fixture really shares memory.
+				tc.mutateNested(entries[0])
+				require.NotEqual(t, snapshot, cached,
+					"nested write on the listed item was not observed on the cached object; the test fixture does not share memory like the real informer cache")
+			})
+
+			t.Run("list error is wrapped", func(t *testing.T) {
+				listErr := errors.New("boom")
+				fakeClient := fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithInterceptorFuncs(interceptor.Funcs{
+						List: func(ctx context.Context, cli client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+							if reflect.TypeOf(list) != reflect.TypeOf(tc.newList()) {
+								return cli.List(ctx, list, opts...)
+							}
+							return listErr
+						},
+					}).
+					Build()
+
+				r := &gatewayAPIReconciler{
+					log:    logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+					client: fakeClient,
+				}
+
+				err := tc.process(r, t.Context(), resource.NewResources(), newResourceMapping())
+				require.Error(t, err)
+				require.ErrorIs(t, err, listErr)
+			})
+		})
+	}
 }
