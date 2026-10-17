@@ -1035,29 +1035,19 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 	}
 
 	// This list of resources will be empty unless an extension is loaded (and introduces resources)
-	for _, res := range resources.ExtensionRefFilters {
-		if res.GetKind() == string(extFilter.Kind) && res.GetName() == string(extFilter.Name) && res.GetNamespace() == filterNs {
-			apiVers := res.GetAPIVersion()
-
-			// To get only the group we cut off the version.
-			// This could be a one liner but just to be safe we check that the APIVersion is properly formatted
-			idx := strings.IndexByte(apiVers, '/')
-			if idx == -1 {
-				errMsg := fmt.Sprintf("Unable to translate APIVersion for Extension Filter: kind: %s, %s/%s", res.GetKind(), filterNs, extFilter.Name)
-				return t.processUnresolvedHTTPFilter(errMsg, filterContext)
-			}
-			group := apiVers[:idx]
-			if group == string(extFilter.Group) {
-				res := res // Capture loop variable
-				var gwIR *ir.Xds
-				gatewayCtx := filterContext.ParentRef.GetGateway()
-				if gatewayCtx != nil {
-					gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
-				}
-				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gatewayCtx, &res))
-				return nil
-			}
+	res, malformed := t.getExtensionRef(resources, string(extFilter.Group), string(extFilter.Kind), filterNs, string(extFilter.Name))
+	if malformed {
+		errMsg := fmt.Sprintf("Unable to translate APIVersion for Extension Filter: kind: %s, %s/%s", extFilter.Kind, filterNs, extFilter.Name)
+		return t.processUnresolvedHTTPFilter(errMsg, filterContext)
+	}
+	if res != nil {
+		var gwIR *ir.Xds
+		gatewayCtx := filterContext.ParentRef.GetGateway()
+		if gatewayCtx != nil {
+			gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
 		}
+		filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gatewayCtx, res))
+		return nil
 	}
 
 	// Matching filter not found, so set negative status condition.
