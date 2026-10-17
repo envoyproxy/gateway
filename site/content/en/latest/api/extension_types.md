@@ -4361,9 +4361,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization",<br />"DynamicModule". |
+| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization",<br />"PeakEwma",<br />"DynamicModule". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `backendUtilization` | _[BackendUtilization](#backendutilization)_ |  false  |  | BackendUtilization defines the configuration when the load balancer type is<br />set to BackendUtilization. |
+| `peakEwma` | _[PeakEwma](#peakewma)_ |  false  |  | PeakEwma defines the configuration when the load balancer type is<br />set to PeakEwma. |
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers. |
 | `zoneAware` | _[ZoneAware](#zoneaware)_ |  false  |  | ZoneAware defines the configuration related to the distribution of requests between locality zones. |
@@ -4385,6 +4386,7 @@ _Appears in:_
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 | `BackendUtilization` | BackendUtilizationLoadBalancerType load balancer policy.<br /> | 
+| `PeakEwma` | PeakEwmaLoadBalancerType load balancer policy.<br /> | 
 | `DynamicModule` | DynamicModuleLoadBalancerType load balancer policy.<br />+notImplementedHide<br /> | 
 
 
@@ -5032,6 +5034,36 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `escapedSlashesAction` | _[PathEscapedSlashAction](#pathescapedslashaction)_ |  false  |  | EscapedSlashesAction determines how %2f, %2F, %5c, or %5C sequences in the path URI<br />should be handled.<br />The default is UnescapeAndRedirect. |
 | `disableMergeSlashes` | _boolean_ |  false  |  | DisableMergeSlashes allows disabling the default configuration of merging adjacent<br />slashes in the path.<br />Note that slash merging is not part of the HTTP spec and is provided for convenience. |
+
+
+#### PeakEwma
+
+
+
+PeakEwma defines configuration for Envoy's Peak EWMA (Exponentially Weighted Moving Average)
+load balancing policy. This policy implements a latency-aware variant of the Power of Two
+Choices (P2C) algorithm. It selects the best host from two randomly chosen candidates based
+on a cost function: `Cost = RTT_peak_ewma * (active_requests + 1)`.
+
+The Peak EWMA algorithm automatically routes traffic away from slow or overloaded hosts,
+adapts to changing host performance without manual configuration, and provides low-latency
+request routing with O(1) host selection complexity.
+
+RTT measurements are automatically collected from HTTP request timing and used to update
+the EWMA for each host. This provides real-time performance feedback for routing decisions.
+
+See Envoy contrib proto: envoy.contrib.envoy.extensions.load_balancing_policies.peak_ewma.v3alpha.PeakEwma
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `decayTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | DecayTime specifies the time window over which latency observations are considered<br />relevant. After this duration, older measurements have exponentially decayed to half<br />their original weight.<br />This parameter directly relates to the time duration over which you want to observe<br />latency trends.<br />If not specified, defaults to 10 seconds (following Finagle's default). |
+| `aggregationInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | AggregationInterval is the interval at which EWMA data is aggregated from worker threads<br />to the main thread. This controls the frequency of cross-thread synchronization for the<br />per-thread aggregation model.<br />A shorter interval provides more up-to-date cross-worker information but increases<br />synchronization overhead. A longer interval reduces overhead but may cause workers<br />to operate with staler information about other workers' latency observations.<br />If not specified, defaults to 100 milliseconds. |
+| `maxSamplesPerHost` | _integer_ |  false  |  | MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker<br />thread before overwriting the oldest samples. This bounds memory usage while allowing<br />burst traffic handling.<br />Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker<br />Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes<br />If not specified, defaults to 1,000 samples per host per worker. |
+| `defaultRtt` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.<br />This provides a baseline for cost calculations until actual measurements are available.<br />This value is critical for initial load balancing decisions when hosts first join<br />the cluster or when RTT measurements are temporarily unavailable. It should reflect<br />the expected baseline latency for your environment.<br />If not specified, defaults to 10 milliseconds. |
+| `penaltyValue` | _float_ |  false  |  | PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost<br />calculations. This is used when a host has no RTT measurements or is unhealthy,<br />ensuring the Power of Two Choices algorithm will prefer hosts with known performance.<br />The penalty should be significantly higher than any realistic RTT-based cost to ensure<br />hosts with unknown performance are strongly deprioritized while still allowing them to<br />receive traffic if no better alternatives exist.<br />If not specified, defaults to 1,000,000.0 (1 million). |
 
 
 #### PerEndpointCircuitBreakers
