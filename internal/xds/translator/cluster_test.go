@@ -106,7 +106,7 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 		Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
 	}
 	settings := []*ir.DestinationSetting{ds}
-	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil, nil)
+	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil, nil, false)
 
 	requireCmpNoDiff(t, bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0])
 }
@@ -158,7 +158,7 @@ func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
 				Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: 8080}},
 			}}
 
-			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", settings, tc.healthCheck, nil, nil)
+			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", settings, tc.healthCheck, nil, nil, false)
 
 			require.Len(t, clusterLoadAssignment.GetEndpoints(), 1)
 			require.Len(t, clusterLoadAssignment.GetEndpoints()[0].GetLbEndpoints(), 1)

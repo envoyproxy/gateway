@@ -22,7 +22,8 @@ Currently, the following mapping of Gateway API metadata to XDS metadata are sup
 | [Route][]        | `HTTPRoute`, `GRPCRoute`                               | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |                                                                                   |
 | [Cluster][]      | `xRoute`                                               | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |                                                                                   |
 | [Cluster][]      | `EnvoyProxy`, `EnvoyExtensionPolicy`, `SecurityPolicy` | Kind, Namespace, Name, Annotations, SectionName (`spec.listener.rules.<rule>.name`) |  When a non-xRoute BackendRef is used (e.g. ext_auth, observabiltiy sink, ... )   |
-| [LBEndpoints][]  | `Service`, `ServiceImport`, `Backend`                  | Kind, Namespace, Name, Annotations, SectionName (`backendRef.port`)                 |                                                                                   |
+| [Locality Endpoints][] | `Service`, `ServiceImport`, `Backend`            | Kind, Namespace, Name, Annotations, SectionName (`backendRef.port`)                 |  Attached to each entry of the cluster load assignment's `endpoints`              |
+| [LbEndpoint][]   | `Service`, `ServiceImport`, `Backend`                  | Kind, Namespace, Name, SectionName (`backendRef.port`)                              |  Optional, requires the `LbEndpointMetadata` runtime flag, see [Per-Endpoint Backend Metadata](#per-endpoint-backend-metadata) |
 
 For example, consider the following Gateway API HTTPRoute:
 
@@ -63,6 +64,34 @@ metadata:
         sectionName: myrule
 ```
 
+## Per-Endpoint Backend Metadata
+The backend metadata described above is attached to each [Locality Endpoints][] entry (`endpoints[].metadata` in the cluster load assignment) under `envoy-gateway.resources`. Envoy Gateway can additionally attach backend metadata to each individual [LbEndpoint][] (`endpoints[].lbEndpoints[].metadata`). This is needed for Envoy features that read the upstream host's metadata, such as the `%METADATA(UPSTREAM_HOST:...)%` access log command operator, which does not see locality-level metadata. It is disabled by default, since it adds metadata to every endpoint and increases the size of the XDS configuration sent to each proxy. Enable it with the `LbEndpointMetadata` runtime flag in the [EnvoyGateway][] configuration:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+runtimeFlags:
+  enabled:
+  - LbEndpointMetadata
+```
+
+Each `lbEndpoints` entry is then annotated with the originating backend under `metadata.filter_metadata.envoy-gateway.backend`. Unlike the locality-level metadata, this contains only the kind, name, namespace and sectionName (no annotations):
+
+```yaml
+metadata:
+  filter_metadata:
+    envoy-gateway:
+      backend:
+        kind: Service
+        name: my-service
+        namespace: default
+        sectionName: "8080"
+```
+
+This allows access logs to record which backend served a request, for example with the `%METADATA(UPSTREAM_HOST:envoy-gateway:backend:name)%` command operator in an [EnvoyProxy access log format](./proxy-accesslog.md).
+
 ## Use Cases
 XDS Metadata serves multiple purposes:
 - Observability: Envoy proxy access logs can be [enriched with Gateway-API resource](./proxy-accesslog.md) context and custom annotations, creating an association with relevant Application Developers personas.
@@ -74,11 +103,13 @@ XDS Metadata serves multiple purposes:
     - [ext_proc][] extensions can access metadata using the `xds.*_metadata` [ext_proc attribute][].
   
 
+[EnvoyGateway]: ../../api/extension_types#envoygateway
 [Static Metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata
 [Virtual Host]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
 [Route]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-route
 [Cluster]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
-[LBEndpoints]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-msg-config-endpoint-v3-lbendpoint
+[Locality Endpoints]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#config-endpoint-v3-localitylbendpoints
+[LbEndpoint]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-msg-config-endpoint-v3-lbendpoint
 [Metadata Stream handle API]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#metadata
 [lua]: ../../api/extension_types#lua
 [ext_proc]: ../../api/extension_types#extproc

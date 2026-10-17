@@ -170,7 +170,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;LbEndpointMetadata
 type RuntimeFlag string
 
 const (
@@ -199,6 +199,12 @@ const (
 	// Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters
 	// where tenants can author their own EnvoyProxy resources.
 	EnvoyProxyPatch RuntimeFlag = "EnvoyProxyPatch"
+
+	// LbEndpointMetadata emits backend identity (kind, name, namespace, sectionName) as
+	// endpoint-level metadata under the envoy-gateway filter metadata namespace, so it can be
+	// referenced in access logs, e.g. %METADATA(UPSTREAM_HOST:envoy-gateway:backend:name)%.
+	// Disabled by default because it adds metadata to every endpoint, increasing xDS size.
+	LbEndpointMetadata RuntimeFlag = "LbEndpointMetadata"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
