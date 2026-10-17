@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -228,6 +229,14 @@ type routeBackendRefDestination struct {
 	backendClusterKey *BackendClusterKey
 }
 
+// removeNoEndpointsDestinations returns the destinations without the ones that have no ready endpoints.
+// Invalid, dynamic resolver and custom backend destinations are kept as they are handled separately.
+func removeNoEndpointsDestinations(destinations []routeBackendRefDestination) []routeBackendRefDestination {
+	return slices.DeleteFunc(destinations, func(d routeBackendRefDestination) bool {
+		return !d.ds.Invalid && !d.ds.IsDynamicResolver && !d.ds.IsCustomBackend && len(d.ds.Endpoints) == 0
+	})
+}
+
 // httpRouteWithBackendDestinations pairs one rule-match's ir.HTTPRoute with its rule's not-yet-resolved
 // routeBackendDestinations, deferring the final Settings/BackendClusterRefs split - and thus whether a
 // merge-eligible backend actually gets a shared cluster - to routeDestinationForListener, once a
@@ -357,6 +366,16 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			backendWeights.AddWeighted(backendDest.ds, backendDest.ds.Weight)
 
 			routeBackendDestinations = append(routeBackendDestinations, backendDest)
+		}
+
+		// When some backendRefs in the rule are available, drop the ones without ready endpoints so that traffic
+		// is redistributed to the available backends instead of returning 503 for their share.
+		// The BackendsAvailable condition is still set for the dropped backendRefs.
+		// Skip this when the rule has invalid backendRefs, as the dropped share would also go to the invalid ones
+		// and change their configured fraction.
+		if backendWeights.Valid > 0 && backendWeights.NoEndpoints > 0 && backendWeights.Invalid == 0 {
+			routeBackendDestinations = removeNoEndpointsDestinations(routeBackendDestinations)
+			backendWeights.NoEndpoints = 0
 		}
 
 		switch {
@@ -1579,6 +1598,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 						fmt.Errorf("failed to process route rule %d backendRef %d: %w", ruleIdx, i, err),
 						err.Reason(),
 					))
+					backendDest.ds.Invalid = true
 					processDestinationError = err
 				}
 			}
@@ -1597,6 +1617,16 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			backendWeights.AddWeighted(backendDest.ds, backendDest.ds.Weight)
 
 			routeBackendDestinations = append(routeBackendDestinations, backendDest)
+		}
+
+		// When some backendRefs in the rule are available, drop the ones without ready endpoints so that traffic
+		// is redistributed to the available backends instead of returning 503 for their share.
+		// The BackendsAvailable condition is still set for the dropped backendRefs.
+		// Skip this when the rule has invalid backendRefs, as the dropped share would also go to the invalid ones
+		// and change their configured fraction.
+		if backendWeights.Valid > 0 && backendWeights.NoEndpoints > 0 && backendWeights.Invalid == 0 {
+			routeBackendDestinations = removeNoEndpointsDestinations(routeBackendDestinations)
+			backendWeights.NoEndpoints = 0
 		}
 
 		switch {
