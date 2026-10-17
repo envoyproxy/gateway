@@ -29,10 +29,13 @@ type Config struct {
 type Runner struct {
 	Config
 	wg sync.WaitGroup
+	// stopped receives the error with which the provider stopped while it was
+	// still expected to run, e.g. because it lost its leader lease.
+	stopped chan error
 }
 
 func New(cfg *Config) *Runner {
-	return &Runner{Config: *cfg}
+	return &Runner{Config: *cfg, stopped: make(chan error, 1)}
 }
 
 // Close implements Runner interface.
@@ -71,14 +74,34 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	r.Logger.Info("Running provider", "type", p.Type())
 	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
-		if err := p.Start(ctx); err != nil {
-			r.Logger.Error(err, "unable to start provider")
-		}
-	}()
+	go r.run(ctx, p)
 
 	return nil
+}
+
+// run runs p until it stops. A provider that stops while ctx is live, e.g.
+// because it lost its leader lease, is reported through Wait, since Envoy
+// Gateway cannot work without its provider.
+func (r *Runner) run(ctx context.Context, p provider.Provider) {
+	defer r.wg.Done()
+	if err := p.Start(ctx); err != nil {
+		r.Logger.Error(err, "provider stopped")
+		if ctx.Err() == nil {
+			r.stopped <- err
+		}
+	}
+}
+
+// Wait blocks until ctx is done. It returns early, with the provider's error,
+// if the provider stops while ctx is live, so that the caller can stop the
+// other runners and exit.
+func (r *Runner) Wait(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return nil
+	case err := <-r.stopped:
+		return err
+	}
 }
 
 func (r *Runner) createKubernetesProvider(ctx context.Context, errors message.RunnerErrorNotifier) (*kubernetes.Provider, error) {
