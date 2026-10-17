@@ -77,4 +77,6 @@ func TestNewResource(t *testing.T) {
 	v := version.Get()
 	require.Equal(t, "envoy-gateway", attrs[semconv.ServiceNameKey])
 	require.Equal(t, v.EnvoyGatewayVersion, attrs[semconv.ServiceVersionKey])
+	require.Contains(t, attrs, gitCommitIDKey)
+	require.Equal(t, v.GitCommitID, attrs[gitCommitIDKey])
 }

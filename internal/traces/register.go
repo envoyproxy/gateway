@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -130,6 +131,9 @@ func (r *Runner) Start(ctx context.Context) error {
 	}
 }
 
+// gitCommitIDKey is the resource attribute holding the git commit Envoy Gateway was built from.
+const gitCommitIDKey = attribute.Key("envoy_gateway.git_commit_id")
+
 // newResource returns the resource attached to every span Envoy Gateway exports. It carries the
 // Envoy Gateway version and git commit, so traces can be compared across versions.
 func newResource(ctx context.Context) (*resource.Resource, error) {
@@ -138,6 +142,7 @@ func newResource(ctx context.Context) (*resource.Resource, error) {
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String("envoy-gateway"),
 			semconv.ServiceVersionKey.String(v.EnvoyGatewayVersion),
+			gitCommitIDKey.String(v.GitCommitID),
 		),
 	)
 }
