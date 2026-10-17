@@ -25,7 +25,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
-func translateTrafficFeatures(policy *egv1a1.BackendSettings) (*ir.TrafficFeatures, error) {
+// translateExtServiceBackendSettings converts the BackendSettings of a non-route backend, such as
+// the ext-service clusters of SecurityPolicy and EnvoyExtensionPolicy or the EnvoyProxy telemetry
+// sinks, into traffic features.
+func translateExtServiceBackendSettings(policy *egv1a1.BackendSettings) (*ir.TrafficFeatures, error) {
 	if policy == nil {
 		return nil, nil
 	}
