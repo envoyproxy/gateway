@@ -9,9 +9,14 @@
 package conformance
 
 import (
+	"slices"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/pkg/features"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func TestEnvoyGatewaySuite(t *testing.T) {
@@ -37,16 +42,40 @@ func TestEnvoyGatewaySuite(t *testing.T) {
 		t.Run(tc.name, func(*testing.T) {
 			got := EnvoyGatewaySuite(tc.gatewayNamespaceMode, tc.standardChannel)
 			for _, in := range tc.includedFeatures {
-				if !got.SupportedFeatures.Has(in) {
+				if !slices.Contains(got.SupportedFeatures, in) {
 					t.Fatalf("%s should be included", in)
 				}
 			}
 
 			for _, in := range tc.excludedFeatures {
-				if got.SupportedFeatures.Has(in) {
+				if slices.Contains(got.SupportedFeatures, in) {
 					t.Fatalf("%s should be excluded", in)
 				}
 			}
 		})
+	}
+}
+
+// TestAdvertisedFeaturesAreTested makes sure that every feature reported in the GatewayClass status
+// is run by the experimental conformance suite, in every mode, and has at least one test.
+func TestAdvertisedFeaturesAreTested(t *testing.T) {
+	covered := sets.New[features.FeatureName]()
+	for _, test := range tests.ConformanceTests {
+		covered.Insert(test.Features...)
+	}
+	for _, feature := range status.GatewaySupportedFeatures {
+		if !covered.Has(features.FeatureName(feature.Name)) {
+			t.Errorf("%s is reported as supported, but no conformance test requires it", feature.Name)
+		}
+	}
+
+	for _, gatewayNamespaceMode := range []bool{false, true} {
+		got := EnvoyGatewaySuite(gatewayNamespaceMode, false).SupportedFeatures
+		for _, feature := range status.GatewaySupportedFeatures {
+			if !slices.Contains(got, features.FeatureName(feature.Name)) {
+				t.Errorf("%s is reported as supported, but not tested (gatewayNamespaceMode=%t)",
+					feature.Name, gatewayNamespaceMode)
+			}
+		}
 	}
 }

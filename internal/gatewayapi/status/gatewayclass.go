@@ -14,6 +14,8 @@
 package status
 
 import (
+	"slices"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -30,10 +32,7 @@ const (
 // for the provided GatewayClass.
 func SetGatewayClassAccepted(gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) {
 	gc.Status.Conditions = MergeConditions(gc.Status.Conditions, computeGatewayClassAcceptedCondition(gc, accepted, reason, msg))
-	// Disable SupportedFeatures until the field moves from experimental to stable to avoid
-	// status failures due to changes in the datatype. This can occur because we cannot control
-	// how a CRD is installed in the cluster
-	// gc.Status.SupportedFeatures = GatewaySupportedFeatures
+	gc.Status.SupportedFeatures = slices.Clone(GatewaySupportedFeatures)
 }
 
 // computeGatewayClassAcceptedCondition computes the GatewayClass Accepted status condition.
