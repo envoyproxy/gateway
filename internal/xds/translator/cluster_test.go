@@ -79,6 +79,25 @@ func TestBuildXdsClusterDNSRefreshRateValidation(t *testing.T) {
 	require.ErrorContains(t, err, "DnsRefreshRate")
 }
 
+func TestBuildDFPDNSCacheConfig(t *testing.T) {
+	maxHosts := uint32(256)
+	tests := []struct {
+		name             string
+		dns              *ir.DNS
+		expectedMaxHosts *wrapperspb.UInt32Value
+	}{
+		{"nil dns", nil, nil},
+		{"unset max hosts", &ir.DNS{}, nil},
+		{"max hosts set", &ir.DNS{MaxHosts: &maxHosts}, wrapperspb.UInt32(256)},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := buildDFPDNSCacheConfig("dfp-cache", tc.dns, clusterv3.Cluster_V4_PREFERRED)
+			require.Equal(t, tc.expectedMaxHosts, cfg.MaxHosts)
+		})
+	}
+}
+
 func TestToCommonDNSLookupFamily(t *testing.T) {
 	tests := []struct {
 		name     string
