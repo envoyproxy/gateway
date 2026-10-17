@@ -896,14 +896,12 @@ var EndpointOverrideLoadBalancing = suite.ConformanceTest{
 
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
-			// Test that all requests go to the expected pod
-			for i := range sendRequests {
-				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-				require.NoError(t, err, "failed to get expected response")
-				require.NoError(t, http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")
-
-				actualPodName := cReq.Pod
-				require.Equal(t, expectPodName, actualPodName, "request %d: expected pod %s but got %s", i+1, expectPodName, actualPodName)
+			// The policy being accepted doesn't mean Envoy has the override config yet,
+			// so poll until all requests go to the expected pod.
+			if err := pollTrafficTest(t, suite, &req, &expectedResponse, sendRequests, 60*time.Second, func(trafficMap map[string]int) bool {
+				return trafficMap[expectPodName] == sendRequests
+			}); err != nil {
+				tlog.Errorf(t, "failed to route all requests to expected pod %s: %v", expectPodName, err)
 			}
 
 			t.Logf("All %d requests with valid override host %s routed to expected pod: %s", sendRequests, overrideHost, expectPodName)
