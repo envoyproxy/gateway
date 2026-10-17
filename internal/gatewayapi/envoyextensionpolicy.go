@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1810,6 +1811,22 @@ func (t *Translator) buildWasm(
 
 	if config.Env != nil && len(config.Env.HostKeys) > 0 {
 		wasmIR.HostKeys = config.Env.HostKeys
+	}
+
+	if ptr.Deref(config.VMSharingScope, egv1a1.WasmVMSharingScopePolicy) == egv1a1.WasmVMSharingScopeNamespace {
+		// Local module bytes distinguish VMs; remote modules need their
+		// resolved checksum because Envoy computes the key before fetching code.
+		moduleID := "local"
+		if wasmIR.Code != nil {
+			moduleID = wasmIR.Code.SHA256
+		}
+		wasmIR.VMID = fmt.Sprintf("envoyextensionpolicy/%s/wasm/%s", policy.Namespace, moduleID)
+
+		// Envoy includes the environment configuration in its VM identity. Emit
+		// equivalent host-key sets in the same order without modifying the policy.
+		wasmIR.HostKeys = slices.Clone(wasmIR.HostKeys)
+		slices.Sort(wasmIR.HostKeys)
+		wasmIR.HostKeys = slices.Compact(wasmIR.HostKeys)
 	}
 
 	return wasmIR, nil
