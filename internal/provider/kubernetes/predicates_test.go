@@ -689,12 +689,47 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			},
 		},
 	}
+	dynamicModuleEnvoyProxyConfig := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "dynamic-module-settings",
+		},
+		Spec: egv1a1.EnvoyProxySpec{
+			DynamicModules: []egv1a1.DynamicModuleEntry{{
+				Name: "image-module",
+				Source: egv1a1.DynamicModuleSource{
+					Type: new(egv1a1.ImageDynamicModuleSourceType),
+					Image: &egv1a1.ImageDynamicModuleSource{
+						URL: "registry.example.com/modules/auth:v1.0.0",
+						PullSecretRef: &gwapiv1.SecretObjectReference{
+							Kind: gatewayapi.KindPtr("Secret"),
+							Name: "dynamic-module-pull-secret",
+						},
+					},
+				},
+			}},
+		},
+	}
 	testCases := []struct {
 		name    string
 		configs []client.Object
 		secret  *corev1.Secret
 		expect  bool
 	}{
+		{
+			name: "envoy proxy references a dynamic module pull secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-secret-ref", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+					Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+					Namespace: gwapiv1.Namespace(dynamicModuleEnvoyProxyConfig.Namespace),
+					Name:      gwapiv1.ObjectName(dynamicModuleEnvoyProxyConfig.Name),
+				}),
+				dynamicModuleEnvoyProxyConfig,
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: dynamicModuleEnvoyProxyConfig.Namespace, Name: "dynamic-module-pull-secret"}),
+			expect: true,
+		},
 		{
 			name: "backend references TLS secret",
 			configs: []client.Object{

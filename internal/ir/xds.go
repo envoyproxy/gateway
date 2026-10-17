@@ -4258,6 +4258,10 @@ type DynamicModule struct {
 	// Remote is the remote source of the dynamic module shared library.
 	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 
+	// Image is the dynamic module shared library extracted from an OCI image
+	// and served by the Envoy Gateway HTTP server.
+	Image *ImageDynamicModuleSource `json:"image,omitempty"`
+
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`
 
@@ -4281,6 +4285,44 @@ type RemoteDynamicModuleSource struct {
 	URL string `json:"url"`
 
 	// SHA256 is the checksum used by Envoy to verify the downloaded module.
+	SHA256 string `json:"sha256"`
+}
+
+// ContainsWasmServedModules reports whether any route uses a module served by the
+// control-plane wasm HTTP service: a remote Wasm code source (HTTP/Image), or a
+// dynamic module from an OCI image. Name-only Wasm (path from EnvoyProxy.spec.wasmModules)
+// does not use the wasm HTTP service or its client certificate.
+func ContainsWasmServedModules(httpListeners []*HTTPListener) bool {
+	for _, httpListener := range httpListeners {
+		for _, route := range httpListener.Routes {
+			if route.EnvoyExtensions == nil {
+				continue
+			}
+			for _, w := range route.EnvoyExtensions.Wasms {
+				if w.Code != nil {
+					return true
+				}
+			}
+			for _, dm := range route.EnvoyExtensions.DynamicModules {
+				if dm.Image != nil {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// ImageDynamicModuleSource holds the information of a dynamic module extracted from an OCI image.
+// +k8s:deepcopy-gen=true
+type ImageDynamicModuleSource struct {
+	// OriginalURL is the URL of the OCI image.
+	OriginalURL string `json:"originalURL"`
+
+	// ServingURL is the URL of the dynamic module shared library served by the Envoy Gateway HTTP server.
+	ServingURL string `json:"servingURL"`
+
+	// SHA256 is the checksum of the shared library, used by Envoy to verify the downloaded module.
 	SHA256 string `json:"sha256"`
 }
 

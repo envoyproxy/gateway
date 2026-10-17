@@ -121,6 +121,32 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 }
 
 func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) {
+	if dm.Image != nil {
+		// EG serves the shared library extracted from the OCI image through the
+		// same built-in HTTP server that serves Wasm modules.
+		return &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Remote{
+				Remote: &corev3.RemoteDataSource{
+					HttpUri: &corev3.HttpUri{
+						Uri: dm.Image.ServingURL,
+						HttpUpstreamType: &corev3.HttpUri_Cluster{
+							Cluster: wasmHTTPServiceClusterName,
+						},
+						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
+					},
+					Sha256: dm.Image.SHA256,
+					RetryPolicy: &corev3.RetryPolicy{
+						NumRetries: wrapperspb.UInt32(wasmFetchNumRetries),
+						RetryBackOff: &corev3.BackoffStrategy{
+							BaseInterval: durationpb.New(wasmFetchBaseInterval),
+							MaxInterval:  durationpb.New(wasmFetchMaxInterval),
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
 	if dm.Remote != nil {
 		uc, err := url2Cluster(dm.Remote.URL)
 		if err != nil {

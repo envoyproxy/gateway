@@ -2404,6 +2404,114 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid: dynamicModules with image source",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "image-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: new(egv1a1.ImageDynamicModuleSourceType),
+								Image: &egv1a1.ImageDynamicModuleSource{
+									URL:        "oci://registry.example.com/modules/auth:v1.0.0",
+									SHA256:     new("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+									Path:       new("/usr/lib/envoy/libauth.so"),
+									PullPolicy: new(egv1a1.ImagePullPolicyAlways),
+									PullSecretRef: &gwapiv1.SecretObjectReference{
+										Kind: new(gwapiv1.Kind("Secret")),
+										Name: "pull-secret",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: dynamicModules source type Image without image field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: new(egv1a1.ImageDynamicModuleSourceType),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Image, image field needs to be set"},
+		},
+		{
+			desc: "invalid: dynamicModules source type Image with local field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type:  new(egv1a1.ImageDynamicModuleSourceType),
+								Image: &egv1a1.ImageDynamicModuleSource{URL: "registry.example.com/modules/auth:v1.0.0"},
+								Local: &egv1a1.LocalDynamicModuleSource{Path: "/usr/lib/envoy/libauth.so"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Image, local field must not be set"},
+		},
+		{
+			desc: "invalid: dynamicModules source type Remote with image field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: new(egv1a1.RemoteDynamicModuleSourceType),
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL:    "https://modules.example.com/libremote.so",
+									SHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+								},
+								Image: &egv1a1.ImageDynamicModuleSource{URL: "registry.example.com/modules/auth:v1.0.0"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Image, image field needs to be set"},
+		},
+		{
+			desc: "invalid: dynamicModules image source with invalid sha256 and pull secret kind",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: new(egv1a1.ImageDynamicModuleSourceType),
+								Image: &egv1a1.ImageDynamicModuleSource{
+									URL:    "registry.example.com/modules/auth:v1.0.0",
+									SHA256: new("not-a-sha"),
+									PullSecretRef: &gwapiv1.SecretObjectReference{
+										Kind: new(gwapiv1.Kind("ConfigMap")),
+										Name: "pull-secret",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.dynamicModules[0].source.image.sha256 in body should match",
+				"only support Secret kind.",
+			},
+		},
+		{
 			desc: "invalid: dynamicModules with empty name",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
