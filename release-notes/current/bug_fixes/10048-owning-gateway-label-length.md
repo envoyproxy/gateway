@@ -1,0 +1,1 @@
+Fixed ServiceAccount and other generated proxy infra failing to create when a Gateway name exceeded 63 characters by hashing owning-gateway-name (and related owner labels) to a Kubernetes-valid label value.

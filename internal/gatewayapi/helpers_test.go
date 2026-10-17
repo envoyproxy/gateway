@@ -14,6 +14,7 @@ package gatewayapi
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
 )
 
 func TestValidateGRPCFilterRef(t *testing.T) {
@@ -1843,4 +1845,31 @@ func structWithFieldSet[T any](fieldName string) *T {
 		panic(fmt.Sprintf("structWithFieldSet: unsupported field kind %s for field %q", field.Kind(), fieldName))
 	}
 	return specPtr
+}
+
+func TestGatewayOwnerLabels(t *testing.T) {
+	shortName := "gateway-1"
+	shortNS := "default"
+	got := GatewayOwnerLabels(shortNS, shortName)
+	require.Equal(t, shortNS, got[OwningGatewayNamespaceLabel])
+	require.Equal(t, shortName, got[OwningGatewayNameLabel])
+
+	longName := strings.Repeat("g", 64)
+	got = GatewayOwnerLabels(shortNS, longName)
+	require.Equal(t, shortNS, got[OwningGatewayNamespaceLabel])
+	require.Equal(t, utils.LabelValue(longName), got[OwningGatewayNameLabel])
+	require.NotEqual(t, longName, got[OwningGatewayNameLabel])
+	require.LessOrEqual(t, len(got[OwningGatewayNameLabel]), 63)
+}
+
+func TestGatewayClassOwnerLabel(t *testing.T) {
+	shortName := "eg"
+	got := GatewayClassOwnerLabel(shortName)
+	require.Equal(t, shortName, got[OwningGatewayClassLabel])
+
+	longName := strings.Repeat("c", 64)
+	got = GatewayClassOwnerLabel(longName)
+	require.Equal(t, utils.LabelValue(longName), got[OwningGatewayClassLabel])
+	require.NotEqual(t, longName, got[OwningGatewayClassLabel])
+	require.LessOrEqual(t, len(got[OwningGatewayClassLabel]), 63)
 }

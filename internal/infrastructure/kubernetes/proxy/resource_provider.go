@@ -292,11 +292,25 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 func (r *ResourceRender) envoyLabels(extraLabels map[string]string) map[string]string {
 	appLabels := EnvoyAppLabel()
 	if r.GatewayNamespaceMode {
-		appLabels[gatewayapi.GatewayNameLabel] = r.Name()
+		// GatewayNameLabel is written as a Kubernetes label and must stay within 63 characters.
+		appLabels[gatewayapi.GatewayNameLabel] = utils.LabelValue(r.Name())
 	}
 	maps.Copy(appLabels, extraLabels)
+	boundOwnerLabelValues(appLabels)
 
 	return appLabels
+}
+
+func boundOwnerLabelValues(labels map[string]string) {
+	for _, key := range []string{
+		gatewayapi.OwningGatewayNameLabel,
+		gatewayapi.OwningGatewayNamespaceLabel,
+		gatewayapi.OwningGatewayClassLabel,
+	} {
+		if v, ok := labels[key]; ok {
+			labels[key] = utils.LabelValue(v)
+		}
+	}
 }
 
 // Service returns the expected Service based on the provided infra.
