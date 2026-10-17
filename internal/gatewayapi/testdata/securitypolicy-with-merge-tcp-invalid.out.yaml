@@ -85,7 +85,7 @@ securityPolicies:
         sectionName: tcp
       conditions:
       - lastTransitionTime: null
-        message: Only authorization is supported for TCP (routes/listeners).
+        message: Only authorization is supported for TCP/TLS (routes/listeners).
         reason: Invalid
         status: "False"
         type: Accepted
