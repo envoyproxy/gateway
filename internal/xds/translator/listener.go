@@ -62,7 +62,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if opts == nil {
 		return nil
 	}
-	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HTTP10 == nil && len(opts.IgnoredUpgradeTypes) == 0 {
+	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HeaderKeyFormat == "" && opts.HTTP10 == nil && len(opts.IgnoredUpgradeTypes) == 0 {
 		return nil
 	}
 	// If PreserveHeaderCase is true and EnableTrailers is false then setting the EnableTrailers field to false
@@ -70,16 +70,8 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	r := &corev3.Http1ProtocolOptions{
 		EnableTrailers: opts.EnableTrailers,
 	}
-	if opts.PreserveHeaderCase {
-		preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
-		r.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
-			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
-				StatefulFormatter: &corev3.TypedExtensionConfig{
-					Name:        "preserve_case",
-					TypedConfig: preservecaseAny,
-				},
-			},
-		}
+	if format := http1HeaderKeyFormat(opts); format != nil {
+		r.HeaderKeyFormat = format
 	}
 	if opts.HTTP10 != nil {
 		r.AcceptHttp_10 = true
@@ -93,6 +85,34 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 		r.IgnoreHttp_11Upgrade = matchers
 	}
 	return r
+}
+
+// http1HeaderKeyFormat builds the HTTP/1 header name formatter.
+// header_key_format is a oneof. Translation rejects PreserveHeaderCase together
+// with HeaderKeyFormat. ProperCaseWords is used when both are set.
+func http1HeaderKeyFormat(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions_HeaderKeyFormat {
+	if opts == nil {
+		return nil
+	}
+	if opts.HeaderKeyFormat == egv1a1.HTTP1HeaderKeyFormatProperCaseWords {
+		return &corev3.Http1ProtocolOptions_HeaderKeyFormat{
+			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_ProperCaseWords_{
+				ProperCaseWords: &corev3.Http1ProtocolOptions_HeaderKeyFormat_ProperCaseWords{},
+			},
+		}
+	}
+	if opts.PreserveHeaderCase {
+		preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
+		return &corev3.Http1ProtocolOptions_HeaderKeyFormat{
+			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
+				StatefulFormatter: &corev3.TypedExtensionConfig{
+					Name:        "preserve_case",
+					TypedConfig: preservecaseAny,
+				},
+			},
+		}
+	}
+	return nil
 }
 
 func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {

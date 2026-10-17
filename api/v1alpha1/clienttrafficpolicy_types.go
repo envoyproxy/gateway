@@ -414,15 +414,43 @@ type HTTP3Settings struct {
 	AdvertisedPort *gwapiv1.PortNumber `json:"advertisedPort,omitempty"`
 }
 
+// HTTP1HeaderKeyFormat defines how Envoy formats HTTP/1 header names when it
+// serializes them onto the wire.
+// +kubebuilder:validation:Enum=ProperCaseWords
+type HTTP1HeaderKeyFormat string
+
+const (
+	// HTTP1HeaderKeyFormatProperCaseWords capitalizes the first letter and any
+	// letter following a special character. For example, "location" is sent as
+	// "Location" and "content-type" is sent as "Content-Type".
+	// Envoy applies this when it writes the header, including headers that Envoy
+	// itself creates in lowercase.
+	HTTP1HeaderKeyFormatProperCaseWords HTTP1HeaderKeyFormat = "ProperCaseWords"
+)
+
 // HTTP1Settings provides HTTP/1 configuration on the listener.
+// +kubebuilder:validation:XValidation:rule="!(has(self.headerKeyFormat) && has(self.preserveHeaderCase) && self.preserveHeaderCase == true)",message="preserveHeaderCase and headerKeyFormat are mutually exclusive"
 type HTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
 	// +optional
 	EnableTrailers *bool `json:"enableTrailers,omitempty"`
 	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
 	// By default, Envoy will lowercase all the headers.
+	// PreserveHeaderCase keeps the case of headers that already carry one. It does
+	// not change headers that Envoy creates in lowercase.
+	// PreserveHeaderCase and HeaderKeyFormat are mutually exclusive.
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
+	// HeaderKeyFormat defines how Envoy formats HTTP/1 header names on the wire.
+	// ProperCaseWords capitalizes the first letter and any letter after a special
+	// character. This includes headers that Envoy adds itself.
+	// When unset, Envoy lowercases header names.
+	// Envoy Gateway applies the format on the listener HTTP/1 codec and on HTTP/1
+	// requests sent to backends for routes on that listener.
+	// HeaderKeyFormat and PreserveHeaderCase are mutually exclusive.
+	//
+	// +optional
+	HeaderKeyFormat *HTTP1HeaderKeyFormat `json:"headerKeyFormat,omitempty"`
 	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
 	// +optional
 	HTTP10 *HTTP10Settings `json:"http10,omitempty"`

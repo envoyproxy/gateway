@@ -799,11 +799,12 @@ func (b *BackendWeights) AddWeighted(s *DestinationSetting, weight *uint32) {
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 // +k8s:deepcopy-gen=true
 type HTTP1Settings struct {
-	EnableTrailers                   bool            `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
-	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
-	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
-	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
-	IgnoredUpgradeTypes              []*StringMatch  `json:"ignoredUpgradeTypes,omitempty" yaml:"ignoredUpgradeTypes,omitempty"`
+	EnableTrailers                   bool                        `json:"enableTrailers,omitempty" yaml:"enableTrailers,omitempty"`
+	PreserveHeaderCase               bool                        `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
+	HeaderKeyFormat                  egv1a1.HTTP1HeaderKeyFormat `json:"headerKeyFormat,omitempty" yaml:"headerKeyFormat,omitempty"`
+	HTTP10                           *HTTP10Settings             `json:"http10,omitempty" yaml:"http10,omitempty"`
+	DisableSafeMaxConnectionDuration bool                        `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
+	IgnoredUpgradeTypes              []*StringMatch              `json:"ignoredUpgradeTypes,omitempty" yaml:"ignoredUpgradeTypes,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.

@@ -731,5 +731,60 @@ Request Header Fields Too Large
 Only one `ClientTrafficPolicy` can set `maxRequestHeaderLimit` per Envoy listener. When multiple plaintext (HTTP, non-TLS) listeners on the same Gateway share the same port, only a Gateway-scoped (not listener/`sectionName`-scoped) `ClientTrafficPolicy` may set this field, since Envoy Gateway collapses same-port plaintext listeners into a single Envoy listener.
 {{% /alert %}}
 
+### Format HTTP/1 header names
+
+`http1.headerKeyFormat: ProperCaseWords` maps to Envoy [`header_key_format.proper_case_words`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#config-core-v3-http1protocoloptions-headerkeyformat). Envoy capitalizes the first letter and any letter after a special character when it writes the HTTP/1 header. A header stored as `location` is sent as `Location`. A header stored as `content-type` is sent as `Content-Type`. This includes headers that Envoy adds itself, such as a redirect `Location` header.
+
+When `headerKeyFormat` is unset, Envoy lowercases header names. That is the default.
+
+`headerKeyFormat` and `preserveHeaderCase` cannot be set on the same `http1` block. `preserveHeaderCase` keeps the original case of headers that already have a case. It does not change headers that Envoy creates in lowercase.
+
+Envoy Gateway applies the format on the listener HTTP/1 codec. It also applies the format on upstream HTTP/1 connections for routes on that listener, the same way as `preserveHeaderCase`.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http1-proper-case-words
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  http1:
+    headerKeyFormat: ProperCaseWords
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http1-proper-case-words
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  http1:
+    headerKeyFormat: ProperCaseWords
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+An HTTP/1.1 client that receives a redirect from Envoy then sees `Location` and `Content-Length` on the wire, not `location` and `content-length`.
+
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

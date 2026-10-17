@@ -942,6 +942,76 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				"spec.headers.earlyRequestHeaders.mutations[0].write.action",
 			},
 		},
+		{
+			desc: "http1 proper case words",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				format := egv1a1.HTTP1HeaderKeyFormatProperCaseWords
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						HeaderKeyFormat: &format,
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "http1 proper case words with preserveHeaderCase false",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				format := egv1a1.HTTP1HeaderKeyFormatProperCaseWords
+				preserve := false
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						PreserveHeaderCase: &preserve,
+						HeaderKeyFormat:    &format,
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "http1 proper case words conflicts with preserveHeaderCase",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				format := egv1a1.HTTP1HeaderKeyFormatProperCaseWords
+				preserve := true
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						PreserveHeaderCase: &preserve,
+						HeaderKeyFormat:    &format,
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.http1: Invalid value:",
+				"preserveHeaderCase and headerKeyFormat are mutually exclusive",
+			},
+		},
 	}
 
 	for _, tc := range cases {
