@@ -1824,6 +1824,11 @@ func (in *ConnectionLimit) DeepCopyInto(out *ConnectionLimit) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.MaxConnectionDurationJitter != nil {
+		in, out := &in.MaxConnectionDurationJitter, &out.MaxConnectionDurationJitter
+		*out = new(uint32)
+		**out = **in
+	}
 	if in.MaxRequestsPerConnection != nil {
 		in, out := &in.MaxRequestsPerConnection, &out.MaxRequestsPerConnection
 		*out = new(uint32)

@@ -4095,6 +4095,8 @@ type ConnectionLimit struct {
 	// MaxConnectionDuration is the maximum amount of time a connection can remain established
 	// before being drained and/or closed.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+	// MaxConnectionDurationJitter is the percentage (0-100) of MaxConnectionDuration added as random jitter.
+	MaxConnectionDurationJitter *uint32 `json:"maxConnectionDurationJitter,omitempty" yaml:"maxConnectionDurationJitter,omitempty"`
 	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
 	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
 	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
