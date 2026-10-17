@@ -27,6 +27,60 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func TestBuildCORSOriginRegexes(t *testing.T) {
+	tr := &Translator{}
+
+	tests := []struct {
+		name        string
+		originRegex string
+		wantError   string
+	}{
+		{
+			name:        "regex is preserved",
+			originRegex: `https://preview-[0-9]+\.example\.com(:8443)?`,
+		},
+		{
+			name:        "broad regex that does not match the wildcard is preserved",
+			originRegex: "https?://.*",
+		},
+		{
+			name:        "invalid regex",
+			originRegex: "[",
+			wantError:   `regex "[" is invalid`,
+		},
+		{
+			name:        "regex matching any host allows all origins",
+			originRegex: `[^/]+`,
+			wantError:   `origin regular expression "[^/]+" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+		{
+			name:        "regex matching anything allows all origins",
+			originRegex: ".*",
+			wantError:   `origin regular expression ".*" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+		{
+			name:        "escaped wildcard allows all origins",
+			originRegex: `\*`,
+			wantError:   `origin regular expression "\\*" must not match "*", use allowOrigins with value "*" to allow all origins`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tr.buildCORS(&egv1a1.CORS{
+				AllowOriginRegexes: []egv1a1.CORSOriginRegex{egv1a1.CORSOriginRegex(tt.originRegex)},
+			})
+			if tt.wantError != "" {
+				require.ErrorContains(t, err, tt.wantError)
+				require.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, []*ir.StringMatch{{SafeRegex: &tt.originRegex}}, got.AllowOrigins)
+		})
+	}
+}
+
 func Test_wildcard2regex(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -175,6 +229,170 @@ func Test_extractRedirectPath(t *testing.T) {
 			if err == nil {
 				assert.Equalf(t, tt.want, got, "extractRedirectPath(%v)", tt.redirectURL)
 			}
+		})
+	}
+}
+
+func Test_validatePostLogoutRedirectURI(t *testing.T) {
+	tests := []struct {
+		name    string
+		uri     string
+		wantErr bool
+	}{
+		{
+			name: "https",
+			uri:  "https://www.example.com/loggedout",
+		},
+		{
+			name: "http",
+			uri:  "http://www.example.com/",
+		},
+		{
+			name: "with port",
+			uri:  "https://www.example.com:9080/loggedout",
+		},
+		{
+			name: "header value syntax",
+			uri:  "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout",
+		},
+		{
+			// Unlike extractRedirectPath, the header is not restricted to x-forwarded-proto.
+			name: "any request header as scheme",
+			uri:  "%REQ(x-scheme)%://www.example.com/loggedout",
+		},
+		{
+			name: "pseudo header as scheme",
+			uri:  "%REQ(:scheme)%://www.example.com/loggedout",
+		},
+		{
+			// Envoy rejects the whole config on a malformed command operator, so these must
+			// not reach the xDS translation.
+			name:    "empty command operator as scheme",
+			uri:     "%%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unknown command operator as scheme",
+			uri:     "%BOGUS%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator without header",
+			uri:     "%REQ()%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator missing parentheses",
+			uri:     "%REQ%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator unterminated",
+			uri:     "%REQ(x-scheme://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name: "command operators in host and path",
+			uri:  "%REQ(x-forwarded-proto)%://%REQ(:authority)%/%REQ(x-tenant)%/loggedout",
+		},
+		{
+			name: "alternate header command operator",
+			uri:  "https://%REQ(x-a?x-b)%/loggedout",
+		},
+		{
+			name: "escaped literal percent",
+			uri:  "https://www.example.com/logged%%20out",
+		},
+		{
+			// Envoy only knows %REQ()% here; any other operator would fail filter creation
+			// and NACK the whole configuration.
+			name:    "unsupported command operator in path",
+			uri:     "https://www.example.com/%BOGUS%",
+			wantErr: true,
+		},
+		{
+			name:    "unsupported command operator in host",
+			uri:     "https://%DOWNSTREAM_LOCAL_ADDRESS%/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unterminated command operator in path",
+			uri:     "https://www.example.com/%REQ(x-tenant)",
+			wantErr: true,
+		},
+		{
+			name:    "unpaired percent in path",
+			uri:     "https://www.example.com/logged%20out",
+			wantErr: true,
+		},
+		{
+			// The provider redirects to the host root, which is a valid post logout landing page.
+			name: "without path",
+			uri:  "https://www.example.com/",
+		},
+		{
+			name: "without trailing slash",
+			uri:  "https://www.example.com",
+		},
+		{
+			// URI schemes are case-insensitive, and Envoy passes the value through as-is.
+			name: "uppercase scheme",
+			uri:  "HTTPS://www.example.com/loggedout",
+		},
+		{
+			name: "truncated header command operator",
+			uri:  "https://%REQ(x-tenant):32%/loggedout",
+		},
+		{
+			name:    "truncated header command operator with non-numeric length",
+			uri:     "https://%REQ(x-tenant):abc%/loggedout",
+			wantErr: true,
+		},
+		{
+			// The provider would have nowhere to redirect to.
+			name:    "without host",
+			uri:     "https://",
+			wantErr: true,
+		},
+		{
+			name:    "without host but with path",
+			uri:     "https:///loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "relative path",
+			uri:     "/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "without scheme",
+			uri:     "www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "empty scheme",
+			uri:     "://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unsupported scheme",
+			uri:     "htttps://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			uri:     "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatePostLogoutRedirectURI(tt.uri)
+			if tt.wantErr {
+				require.Errorf(t, err, "validatePostLogoutRedirectURI(%v)", tt.uri)
+				return
+			}
+			require.NoErrorf(t, err, "validatePostLogoutRedirectURI(%v)", tt.uri)
 		})
 	}
 }
@@ -393,6 +611,65 @@ func Test_JWTProvider(t *testing.T) {
 						{
 							Header: "test",
 							Claim:  "",
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "valid security policy with jwtClaimToHeader claimPath",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header:    "X-Tenant-Name",
+							ClaimPath: []string{"https://auth.sitecorecloud.io/claims/tenant_name"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "jwtClaimToHeader with both claim and claimPath set",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header:    "test",
+							Claim:     "test",
+							ClaimPath: []string{"test"},
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "jwtClaimToHeader with neither claim nor claimPath set",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "test@test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					ClaimToHeaders: []egv1a1.ClaimToHeader{
+						{
+							Header: "test",
 						},
 					},
 				},
@@ -776,6 +1053,140 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildAuthorizationJWTProvider(t *testing.T) {
+	jwtWith := func(names ...string) *egv1a1.JWT {
+		providers := make([]egv1a1.JWTProvider, 0, len(names))
+		for _, name := range names {
+			providers = append(providers, egv1a1.JWTProvider{Name: name})
+		}
+		return &egv1a1.JWT{Providers: providers}
+	}
+	authorizationWith := func(providers ...string) *egv1a1.Authorization {
+		rules := make([]egv1a1.AuthorizationRule, 0, len(providers))
+		for _, provider := range providers {
+			rules = append(rules, egv1a1.AuthorizationRule{
+				Action:    egv1a1.AuthorizationActionAllow,
+				Principal: &egv1a1.Principal{JWT: &egv1a1.JWTPrincipal{Provider: provider}},
+			})
+		}
+		return &egv1a1.Authorization{Rules: rules}
+	}
+
+	tests := []struct {
+		name          string
+		jwt           *egv1a1.JWT
+		authorization *egv1a1.Authorization
+		wantError     bool
+	}{
+		{
+			name:          "provider defined in the same policy",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("example"),
+		},
+		{
+			name:          "no authorization rules",
+			jwt:           jwtWith("example"),
+			authorization: &egv1a1.Authorization{},
+		},
+		{
+			name: "principal without a jwt is ignored",
+			authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action:    egv1a1.AuthorizationActionAllow,
+						Principal: &egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
+					},
+				},
+			},
+		},
+		{
+			name:          "unknown provider",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("does-not-exist"),
+			wantError:     true,
+		},
+		{
+			name:          "no jwt providers at all",
+			authorization: authorizationWith("example"),
+			wantError:     true,
+		},
+		{
+			name:          "one known and one unknown provider",
+			jwt:           jwtWith("example"),
+			authorization: authorizationWith("example", "does-not-exist"),
+			wantError:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policy := &egv1a1.SecurityPolicy{
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT:           tt.jwt,
+					Authorization: tt.authorization,
+				},
+			}
+
+			translator := &Translator{}
+			_, err := translator.buildAuthorization(policy, &securityPolicyOwners{})
+			require.Equal(t, tt.wantError, err != nil, "buildAuthorization() error = %v", err)
+		})
+	}
+}
+
+// Test_OIDC_PostLogoutRedirect_Merge covers the invariant that the CRD's CEL rule cannot: CEL is
+// evaluated by the apiserver on an individual policy, but a merged policy only ever exists in
+// memory inside the translator. Merging a parent that sets uri with a route that sets disabled
+// therefore yields a policy that sets uri with disabled: true without any admission error, and
+// the translator would resolve it toward uri, silently dropping the route's intent.
+func Test_OIDC_PostLogoutRedirect_Merge(t *testing.T) {
+	oidcWith := func(plr *egv1a1.OIDCPostLogoutRedirect) *egv1a1.OIDC {
+		return &egv1a1.OIDC{PostLogoutRedirect: plr}
+	}
+	parentPolicy := func() *egv1a1.SecurityPolicy {
+		return &egv1a1.SecurityPolicy{
+			Spec: egv1a1.SecurityPolicySpec{
+				OIDC: oidcWith(&egv1a1.OIDCPostLogoutRedirect{
+					URI: ToPointer("https://www.example.com/loggedout"),
+				}),
+			},
+		}
+	}
+	routePolicy := func(mergeType *egv1a1.MergeType) *egv1a1.SecurityPolicy {
+		return &egv1a1.SecurityPolicy{
+			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: mergeType,
+				OIDC:      oidcWith(&egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)}),
+			},
+		}
+	}
+
+	// Each policy on its own passes the CEL rules, which is why admission lets both
+	// through.
+	require.NoError(t, validateSecurityPolicy(parentPolicy()))
+	require.NoError(t, validateSecurityPolicy(routePolicy(nil)))
+
+	strategicMerge := egv1a1.StrategicMerge
+	merged, _, err := mergeSecurityPolicy(routePolicy(&strategicMerge), parentPolicy())
+	require.NoError(t, err)
+
+	// Both fields survive the merge, so the merged policy must be rejected rather than silently
+	// resolved toward one of them.
+	plr := merged.Spec.OIDC.PostLogoutRedirect
+	require.NotNil(t, plr.URI, "expected the parent's uri to survive the merge")
+	require.NotNil(t, plr.Disabled, "expected the route's disabled to survive the merge")
+	require.ErrorContains(t, validateSecurityPolicy(merged),
+		"OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+
+	// disabled: false means the same as leaving it unset, so the route inherits the parent's uri.
+	routeNotDisabled := routePolicy(&strategicMerge)
+	routeNotDisabled.Spec.OIDC.PostLogoutRedirect.Disabled = ToPointer(false)
+	merged, _, err = mergeSecurityPolicy(routeNotDisabled, parentPolicy())
+	require.NoError(t, err)
+	require.Equal(t, "https://www.example.com/loggedout", *merged.Spec.OIDC.PostLogoutRedirect.URI)
+	require.NoError(t, validateSecurityPolicy(merged))
 }
 
 func ToPointer[T any](v T) *T {
