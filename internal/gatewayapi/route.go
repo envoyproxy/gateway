@@ -364,6 +364,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
+				irRoute.Redirect = nil
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
@@ -1604,11 +1605,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
-				// If the route already has a direct response or redirect configured, then it was from a filter so skip
-				// the direct response from errors.
-				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
-					continue
-				}
+				irRoute.Redirect = nil
 				irRoute.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
