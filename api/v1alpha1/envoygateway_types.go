@@ -808,6 +808,17 @@ type RedisTLSSettings struct {
 	// Currently only a Kubernetes Secret of type TLS is supported.
 	// +optional
 	CertificateRef *gwapiv1.SecretObjectReference `json:"certificateRef,omitempty"`
+
+	// CACertificateRef contains a reference to a Kubernetes ConfigMap or Secret that
+	// holds the certificate of the Certificate Authority used as a trust anchor to
+	// validate the certificate presented by the Redis server. The CA certificate must
+	// be stored in a key named `ca.crt`.
+	//
+	// If unspecified, the system trust store is used.
+	//
+	// +kubebuilder:validation:XValidation:rule="(self.group == '' && self.kind in ['ConfigMap', 'Secret'])",message="only ConfigMap and Secret in the core API group are supported"
+	// +optional
+	CACertificateRef *gwapiv1.LocalObjectReference `json:"caCertificateRef,omitempty"`
 }
 
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
