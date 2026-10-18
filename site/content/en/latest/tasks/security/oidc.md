@@ -621,6 +621,23 @@ runtimeFlags:
 From v1.40 on, Envoy reads both a single cookie and split cookies whether or not the flag
 is enabled, so turning the flag on or off doesn't end existing sessions.
 
+A browser only accepts a cookie whose name starts with `__Host-` when the cookie is set with
+`Path=/` and without a `Domain`, which stops another host on the same registrable domain from
+planting or shadowing it. The nonce and code verifier cookies are scoped to the `redirectPath`
+so a flow that never completes does not leave them behind on every request, and that path would
+make the browser drop a `__Host-` cookie. When either of those two cookies is named with the
+prefix, its path is set to `/` instead:
+
+```yaml
+  oidc:
+    cookieNames:
+      oauthNonce: "__Host-nonce"
+      codeVerifier: "__Host-code-verifier"
+```
+
+A `__Host-` cookie can't carry a `Domain`, so leave `cookieDomain` unset when a cookie name
+uses the prefix.
+
 ## Logout
 
 Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
