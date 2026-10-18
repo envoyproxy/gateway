@@ -72,8 +72,10 @@ The Helm chart for Envoy Gateway
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
+| deployment.pod.extraContainers | list | `[]` | Additional sidecar containers on the deployment definition. |
 | deployment.pod.extraVolumeMounts | list | `[]` |  |
 | deployment.pod.extraVolumes | list | `[]` |  |
+| deployment.pod.initContainers | list | `[]` | Additional init containers on the deployment definition. Also used for native sidecars (an init container with restartPolicy: Always). |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
 | deployment.pod.securityContext.fsGroup | int | `65532` |  |

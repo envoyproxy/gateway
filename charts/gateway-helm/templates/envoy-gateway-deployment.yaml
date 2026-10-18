@@ -36,6 +36,10 @@ spec:
       {{- end }}
     spec:
       automountServiceAccountToken: true
+      {{- with .Values.deployment.pod.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- with .Values.deployment.pod.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -112,6 +116,9 @@ spec:
         {{- with .Values.deployment.pod.extraVolumeMounts }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      {{- with .Values.deployment.pod.extraContainers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
