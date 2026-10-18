@@ -1,0 +1,37 @@
+{{- if and .Values.rbac .Values.rbac.aggregatedClusterRoles .Values.rbac.aggregatedClusterRoles.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: {{ include "eg.fullname" . }}-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+  {{- include "eg.labels" . | nindent 4 }}
+rules:
+{{ include "eg.rbac.aggregated.view" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: {{ include "eg.fullname" . }}-edit
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  {{- include "eg.labels" . | nindent 4 }}
+rules:
+{{ include "eg.rbac.aggregated.view" . }}
+{{ include "eg.rbac.aggregated.write" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: {{ include "eg.fullname" . }}-admin
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+  {{- include "eg.labels" . | nindent 4 }}
+rules:
+{{ include "eg.rbac.aggregated.view" . }}
+{{ include "eg.rbac.aggregated.write" . }}
+{{- end }}
