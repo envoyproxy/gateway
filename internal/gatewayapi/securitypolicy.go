@@ -962,6 +962,17 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
+	// CEL covers these on Kubernetes, but not for the file provider or for a merged policy, which
+	// can combine a parent's uri with a route's disabled: true.
+	if oidc != nil && oidc.PostLogoutRedirect != nil {
+		switch plr := oidc.PostLogoutRedirect; {
+		case plr.URI != nil && ptr.Deref(plr.Disabled, false):
+			return errors.New("OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+		case plr.URI == nil && plr.Disabled == nil:
+			return errors.New("one of OIDC.PostLogoutRedirect.uri or OIDC.PostLogoutRedirect.disabled must be set")
+		}
+	}
+
 	basicAuth := p.Spec.BasicAuth
 	if basicAuth != nil {
 		if err := validateBasicAuth(basicAuth); err != nil {
@@ -2157,6 +2168,11 @@ func (t *Translator) buildOIDC(
 	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
 	}
+	if oidc.PostLogoutRedirect != nil && oidc.PostLogoutRedirect.URI != nil {
+		if err := validatePostLogoutRedirectURI(*oidc.PostLogoutRedirect.URI); err != nil {
+			return nil, err
+		}
+	}
 	if oidc.ForwardAccessToken != nil {
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
@@ -2211,6 +2227,7 @@ func (t *Translator) buildOIDC(
 		RedirectURL:            redirectURL,
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
+		PostLogoutRedirect:     oidc.PostLogoutRedirect,
 		ForwardAccessToken:     forwardAccessToken,
 		ForwardIDTokenHeader:   forwardIDTokenHeader,
 		RefreshToken:           refreshToken,
@@ -2397,6 +2414,98 @@ func extractRedirectPath(redirectURL string) (string, error) {
 		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
 	}
 	return path, nil
+}
+
+// validatePostLogoutRedirectURI sanity-checks the post logout redirect URI. Envoy evaluates the
+// URI as a formatter string, so it may contain command operators and can't be parsed as a URL.
+// This mirrors the scheme check in extractRedirectPath, but additionally accepts a request header
+// command operator as the scheme, e.g. "%REQ(x-scheme)%://host/".
+func validatePostLogoutRedirectURI(uri string) error {
+	schemeDelimiter := strings.Index(uri, "://")
+	if schemeDelimiter <= 0 {
+		return fmt.Errorf("invalid post logout redirect URI %s: must be an absolute URI", uri)
+	}
+
+	// URI schemes are case-insensitive, see RFC 3986 section 3.1.
+	switch scheme := uri[:schemeDelimiter]; {
+	case strings.EqualFold(scheme, "http"), strings.EqualFold(scheme, "https"):
+	case isReqCommandOperator(scheme):
+		// The scheme is derived from a request header, e.g. x-forwarded-proto.
+	default:
+		return fmt.Errorf("invalid post logout redirect URI %s: scheme must be http, https, or a %%REQ(header)%% command operator", uri)
+	}
+
+	// Unlike extractRedirectPath, a path is not required: the host root is a valid landing page.
+	// The authority is, since the provider would otherwise have nowhere to redirect to.
+	authority := uri[schemeDelimiter+len("://"):]
+	if end := strings.IndexAny(authority, "/?#"); end >= 0 {
+		authority = authority[:end]
+	}
+	if authority == "" {
+		return fmt.Errorf("invalid post logout redirect URI %s: must have a host", uri)
+	}
+
+	if err := validateURICommandOperators(uri); err != nil {
+		return fmt.Errorf("invalid post logout redirect URI %s: %w", uri, err)
+	}
+	return nil
+}
+
+// validateURICommandOperators accepts only the %REQ(header)% command operator and "%%" escapes.
+// Envoy rejects the whole configuration on an unknown or malformed operator, so catching it here
+// reports the mistake on the SecurityPolicy status instead of NACKing the xDS update.
+func validateURICommandOperators(uri string) error {
+	for i := 0; i < len(uri); {
+		if uri[i] != '%' {
+			i++
+			continue
+		}
+		// "%%" is an escaped literal percent, not the start of a command operator.
+		if i+1 < len(uri) && uri[i+1] == '%' {
+			i += 2
+			continue
+		}
+		closing := strings.IndexByte(uri[i+1:], '%')
+		if closing < 0 {
+			return errors.New(`unterminated command operator, write a literal percent as "%%"`)
+		}
+		end := i + 1 + closing + 1
+		if operator := uri[i:end]; !isReqCommandOperator(operator) {
+			return fmt.Errorf("unsupported command operator %s, only %%REQ(header)%% is supported", operator)
+		}
+		i = end
+	}
+	return nil
+}
+
+// isReqCommandOperator reports whether s is an Envoy request header command operator, i.e.
+// "%REQ(header)%" or "%REQ(header):maxLength%".
+func isReqCommandOperator(s string) bool {
+	body, ok := strings.CutPrefix(s, "%REQ(")
+	if !ok {
+		return false
+	}
+	if body, ok = strings.CutSuffix(body, "%"); !ok {
+		return false
+	}
+
+	header, maxLength, closed := strings.Cut(body, ")")
+	if !closed || header == "" || strings.ContainsAny(header, "%()") {
+		return false
+	}
+	if maxLength == "" {
+		return true
+	}
+	// An optional ":maxLength" truncates the header value, e.g. "%REQ(x-tenant):32%".
+	if maxLength, ok = strings.CutPrefix(maxLength, ":"); !ok || maxLength == "" {
+		return false
+	}
+	for _, c := range maxLength {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // appendOpenidScopeIfNotExist appends the openid scope to the provided scopes
