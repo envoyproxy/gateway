@@ -702,7 +702,6 @@ func TestBackendClusterTranslatorAsClusterArgsAppliesTraffic(t *testing.T) {
 	require.Equal(t, circuitBreaker, args.circuitBreaker)
 }
 
-
 func TestBuildClusterWithPeakEwma(t *testing.T) {
 	decayTime := 15 * time.Second
 	aggInterval := 200 * time.Millisecond

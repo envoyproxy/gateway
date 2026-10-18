@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	peak_ewma_filter_v3alpha "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/filters/http/peak_ewma/v3alpha"
+	peak_ewmav3alpha "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/load_balancing_policies/peak_ewma/v3alpha"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -41,7 +43,6 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
-	peak_ewmav3alpha "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/load_balancing_policies/peak_ewma/v3alpha"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -1131,7 +1132,8 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
-		args.admissionControl != nil
+		args.admissionControl != nil ||
+		(args.loadBalancer != nil && args.loadBalancer.PeakEwma != nil)
 
 	var clusterHashPolicy []*routev3.RouteAction_HashPolicy
 	if !args.isRoute && args.loadBalancer != nil {
@@ -1289,6 +1291,14 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 		filters = append(filters, filter)
 	}
 
+	if args.loadBalancer != nil && args.loadBalancer.PeakEwma != nil {
+		filter, err := buildUpstreamPeakEwmaFilter()
+		if err != nil {
+			return nil, nil, err
+		}
+		filters = append(filters, filter)
+	}
+
 	// UpstreamCodec filter is required as the terminal filter for the upstream HTTP filters.
 	if len(filters) > 0 {
 		upstreamCodec, err := buildUpstreamCodecFilter()
@@ -1310,6 +1320,22 @@ func buildUpstreamCodecFilter() (*hcmv3.HttpFilter, error) {
 		Name: "envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec",
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: codecAny,
+		},
+	}, nil
+}
+
+// buildUpstreamPeakEwmaFilter builds the Peak EWMA upstream HTTP filter required for RTT
+// measurement samples consumed by the Peak EWMA load balancing policy.
+func buildUpstreamPeakEwmaFilter() (*hcmv3.HttpFilter, error) {
+	cfg := &peak_ewma_filter_v3alpha.PeakEwmaConfig{}
+	cfgAny, err := proto.ToAnyWithValidation(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &hcmv3.HttpFilter{
+		Name: "envoy.filters.http.peak_ewma",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: cfgAny,
 		},
 	}, nil
 }
