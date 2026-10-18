@@ -33,6 +33,10 @@ import (
 // for example are legal RFC 3986 sub-delims but are rejected here.
 var cookiePathPattern = regexp.MustCompile(`^$|^/[^\x00-\x1f\x7f ",;<>\\]*$`)
 
+// hostCookiePrefix is the RFC 6265bis cookie name prefix a browser only accepts
+// on a cookie that is set with Path=/ and without a Domain attribute.
+const hostCookiePrefix = "__Host-"
+
 func init() {
 	registerHTTPFilter(&oidc{})
 }
@@ -170,15 +174,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 						SdsConfig: makeConfigSource(),
 					},
 				},
-				CookieNames: &oauth2v3.OAuth2Credentials_CookieNames{
-					BearerToken:  fmt.Sprintf("AccessToken-%s", oidc.CookieSuffix),
-					OauthHmac:    fmt.Sprintf("OauthHMAC-%s", oidc.CookieSuffix),
-					OauthExpires: fmt.Sprintf("OauthExpires-%s", oidc.CookieSuffix),
-					IdToken:      fmt.Sprintf("IdToken-%s", oidc.CookieSuffix),
-					RefreshToken: fmt.Sprintf("RefreshToken-%s", oidc.CookieSuffix),
-					OauthNonce:   fmt.Sprintf("OauthNonce-%s", oidc.CookieSuffix),
-					CodeVerifier: fmt.Sprintf("CodeVerifier-%s", oidc.CookieSuffix),
-				},
+				CookieNames: buildCookieNames(oidc),
 			},
 			// every OIDC provider supports basic auth
 			AuthType:   oauth2v3.OAuth2Config_BASIC_AUTH,
@@ -197,8 +193,6 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 	if oidc.DefaultRefreshTokenTTL != nil {
 		oauth2.Config.DefaultRefreshTokenExpiresIn = durationpb.New(oidc.DefaultRefreshTokenTTL.Duration)
 	}
-
-	applyCookieNameOverrides(oauth2.Config.Credentials.CookieNames, oidc.CookieNameOverrides)
 
 	if oidc.CookieDomain != nil {
 		oauth2.Config.Credentials.CookieDomain = *oidc.CookieDomain
@@ -261,6 +255,22 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 	return oauth2, nil
 }
 
+// buildCookieNames returns the names of the OAuth2 cookies: the suffix-derived
+// defaults, with the user's cookieNames overrides applied.
+func buildCookieNames(oidc *ir.OIDC) *oauth2v3.OAuth2Credentials_CookieNames {
+	cookieNames := &oauth2v3.OAuth2Credentials_CookieNames{
+		BearerToken:  fmt.Sprintf("AccessToken-%s", oidc.CookieSuffix),
+		OauthHmac:    fmt.Sprintf("OauthHMAC-%s", oidc.CookieSuffix),
+		OauthExpires: fmt.Sprintf("OauthExpires-%s", oidc.CookieSuffix),
+		IdToken:      fmt.Sprintf("IdToken-%s", oidc.CookieSuffix),
+		RefreshToken: fmt.Sprintf("RefreshToken-%s", oidc.CookieSuffix),
+		OauthNonce:   fmt.Sprintf("OauthNonce-%s", oidc.CookieSuffix),
+		CodeVerifier: fmt.Sprintf("CodeVerifier-%s", oidc.CookieSuffix),
+	}
+	applyCookieNameOverrides(cookieNames, oidc.CookieNameOverrides)
+	return cookieNames
+}
+
 func applyCookieNameOverrides(cookieNames *oauth2v3.OAuth2Credentials_CookieNames, overrides *egv1a1.OIDCCookieNames) {
 	if cookieNames == nil || overrides == nil {
 		return
@@ -304,6 +314,17 @@ func buildSameSite(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSi
 	}
 }
 
+// flowCookiePath returns the path an OAuth2 flow cookie (the nonce or the PKCE
+// code verifier) is set with. The redirect path scoping gives way when the
+// cookie name carries the __Host- prefix: a browser drops such a cookie unless
+// it is set with Path=/, so no other path can work for it.
+func flowCookiePath(redirectPath, name string) string {
+	if strings.HasPrefix(name, hostCookiePrefix) {
+		return "/"
+	}
+	return redirectPath
+}
+
 // buildCookieConfigs builds the attributes Envoy sets on the OAuth2 cookies.
 func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
 	// The nonce (CSRF) and PKCE code verifier cookies only carry state for an
@@ -322,9 +343,10 @@ func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
 		redirectPath = ""
 	}
 
+	cookieNames := buildCookieNames(oidc)
 	cookieConfigs := &oauth2v3.CookieConfigs{
-		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{Path: redirectPath},
-		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{Path: redirectPath},
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{Path: flowCookiePath(redirectPath, cookieNames.OauthNonce)},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{Path: flowCookiePath(redirectPath, cookieNames.CodeVerifier)},
 	}
 
 	// Apply the user-defined SameSite policy to each cookie if it has been configured.
