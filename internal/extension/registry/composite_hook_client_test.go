@@ -302,7 +302,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		assert.Equal(t, 2, hr.CallCount)
 	})
 
-	t.Run("failOpen skipped server not counted", func(t *testing.T) {
+	t.Run("failOpen erroring server still counted", func(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{name: "ext1", client: &mockXDSHookClient{
@@ -315,10 +315,10 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		}
 		_, hr, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, nil, nil)
 		require.NoError(t, err)
-		assert.Equal(t, 1, hr.CallCount)
+		assert.Equal(t, 2, hr.CallCount)
 	})
 
-	t.Run("failClosed partial count on error", func(t *testing.T) {
+	t.Run("failClosed erroring entry counted before stop", func(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{name: "ext1", client: &mockXDSHookClient{}},
@@ -332,7 +332,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		}
 		_, hr, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, nil, nil)
 		require.Error(t, err)
-		assert.Equal(t, 1, hr.CallCount)
+		assert.Equal(t, 2, hr.CallCount)
 	})
 }
 
@@ -422,7 +422,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 		assert.Equal(t, 2, hr.CallCount)
 	})
 
-	t.Run("failOpen skipped server not counted", func(t *testing.T) {
+	t.Run("failOpen erroring server still counted", func(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{name: "ext1", client: &mockXDSHookClient{
@@ -435,10 +435,10 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 		}
 		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
 		require.NoError(t, err)
-		assert.Equal(t, 1, hr.CallCount)
+		assert.Equal(t, 2, hr.CallCount)
 	})
 
-	t.Run("failClosed partial count on error", func(t *testing.T) {
+	t.Run("failClosed erroring entry counted before stop", func(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{name: "ext1", client: &mockXDSHookClient{}},
@@ -452,7 +452,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 		}
 		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
 		require.Error(t, err)
-		assert.Equal(t, 1, hr.CallCount)
+		assert.Equal(t, 2, hr.CallCount)
 	})
 }
 
@@ -665,7 +665,7 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 		assert.Equal(t, 2, hr.CallCount)
 	})
 
-	t.Run("failOpen skipped server not counted", func(t *testing.T) {
+	t.Run("failOpen erroring server still counted", func(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{name: "ext1", client: &mockXDSHookClient{
@@ -678,10 +678,10 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 		}
 		_, hr, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
 		require.NoError(t, err)
-		assert.Equal(t, 1, hr.CallCount)
+		assert.Equal(t, 2, hr.CallCount)
 	})
 
-	t.Run("failClosed partial count on error", func(t *testing.T) {
+	t.Run("failClosed erroring entry counted before stop", func(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{name: "ext1", client: &mockXDSHookClient{}},
@@ -695,7 +695,7 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 		}
 		_, hr, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
 		require.Error(t, err)
-		assert.Equal(t, 1, hr.CallCount)
+		assert.Equal(t, 2, hr.CallCount)
 	})
 }
 

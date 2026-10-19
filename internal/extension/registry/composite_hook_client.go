@@ -49,14 +49,14 @@ func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostna
 	for _, entry := range c.entries {
 		filteredRefs := filterResourcesByGK(extensionResources, entry.resourceGKSet)
 		filteredPolicies := filterResourcesByGK(extensionPolicies, entry.policyGKSet)
-		result, _, err := entry.client.PostRouteModifyHook(current, routeHostnames, filteredRefs, filteredPolicies)
+		result, hr, err := entry.client.PostRouteModifyHook(current, routeHostnames, filteredRefs, filteredPolicies)
+		called += hr.CallCount
 		if err != nil {
 			if entry.failOpen {
 				continue
 			}
 			return nil, types.HookResult{CallCount: called}, fmt.Errorf("extension %q: %w", entry.name, err)
 		}
-		called++
 		current = result
 	}
 	return current, types.HookResult{CallCount: called}, nil
@@ -66,14 +66,14 @@ func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost
 	current := vh
 	var called int
 	for _, entry := range c.entries {
-		result, _, err := entry.client.PostVirtualHostModifyHook(current)
+		result, hr, err := entry.client.PostVirtualHostModifyHook(current)
+		called += hr.CallCount
 		if err != nil {
 			if entry.failOpen {
 				continue
 			}
 			return nil, types.HookResult{CallCount: called}, fmt.Errorf("extension %q: %w", entry.name, err)
 		}
-		called++
 		current = result
 	}
 	return current, types.HookResult{CallCount: called}, nil
@@ -99,14 +99,14 @@ func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener
 	var called int
 	for _, entry := range c.entries {
 		filtered := filterResourcesByGK(extensionResources, entry.policyGKSet)
-		result, _, err := entry.client.PostHTTPListenerModifyHook(current, filtered)
+		result, hr, err := entry.client.PostHTTPListenerModifyHook(current, filtered)
+		called += hr.CallCount
 		if err != nil {
 			if entry.failOpen {
 				continue
 			}
 			return nil, types.HookResult{CallCount: called}, fmt.Errorf("extension %q: %w", entry.name, err)
 		}
-		called++
 		current = result
 	}
 	return current, types.HookResult{CallCount: called}, nil

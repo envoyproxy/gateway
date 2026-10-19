@@ -68,8 +68,9 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 				ExtensionPolicies:  extensionPolicyBytes,
 			},
 		})
+	// The RPC was attempted; count it regardless of whether the server returned an error.
 	if err != nil {
-		return nil, types.HookResult{}, err
+		return nil, types.HookResult{CallCount: 1}, err
 	}
 
 	return resp.Route, types.HookResult{CallCount: 1}, nil
@@ -120,8 +121,9 @@ func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.Virtu
 			VirtualHost:            vh,
 			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
 		})
+	// The RPC was attempted; count it regardless of whether the server returned an error.
 	if err != nil {
-		return nil, types.HookResult{}, err
+		return nil, types.HookResult{CallCount: 1}, err
 	}
 
 	return resp.VirtualHost, types.HookResult{CallCount: 1}, nil
@@ -142,8 +144,9 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionReso
 				ExtensionResources: extensionResourceBytes,
 			},
 		})
+	// The RPC was attempted; count it regardless of whether the server returned an error.
 	if err != nil {
-		return nil, types.HookResult{}, err
+		return nil, types.HookResult{CallCount: 1}, err
 	}
 
 	return resp.Listener, types.HookResult{CallCount: 1}, nil

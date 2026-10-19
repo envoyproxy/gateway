@@ -18,8 +18,10 @@ import (
 
 // HookResult carries the outcome of a single hook invocation.
 // CallCount is the number of extension server gRPC calls actually made;
-// for a single-server client this is always 1, for a composite client it is
-// the number of entries actually invoked (skipped fail-open entries excluded).
+// for a single-server client this is 1 after the RPC is attempted or 0 for
+// pre-call serialization failures; for a composite client it is the sum of
+// CallCounts across all entries attempted, including fail-open entries that
+// errored (since the RPC was still made).
 type HookResult struct {
 	CallCount int
 }
