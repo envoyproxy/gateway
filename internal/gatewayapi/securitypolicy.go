@@ -962,8 +962,8 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
-	// CEL covers these on Kubernetes, but not for the file provider or for a merged policy, which
-	// can combine a parent's uri with a route's disabled: true.
+	// CEL covers these on Kubernetes, but not for the file provider. A JSONMerge route can still
+	// combine a parent's uri with its own disabled: true, since JSONMerge merges keys one by one.
 	if oidc != nil && oidc.PostLogoutRedirect != nil {
 		switch plr := oidc.PostLogoutRedirect; {
 		case plr.URI != nil && ptr.Deref(plr.Disabled, false):
