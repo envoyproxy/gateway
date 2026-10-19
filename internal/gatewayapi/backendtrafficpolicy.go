@@ -743,7 +743,7 @@ func allPolicyTargetRefs(policy *egv1a1.BackendTrafficPolicy) []policyTargetRefe
 	return refs
 }
 
-// classifyBackendPolicy gates backend policies by target group+kind only, so it is safe before route translation.
+// classifyBackendPolicy gates backend policies by target group+kind (refs) and kind (selectors) only, so it is safe before route translation.
 func classifyBackendPolicy(policy *egv1a1.BackendTrafficPolicy) backendPolicyRejection {
 	var hasBackendRef, hasBackendSelector, hasOther bool
 	for _, ref := range allPolicyTargetRefs(policy) {
@@ -754,7 +754,7 @@ func classifyBackendPolicy(policy *egv1a1.BackendTrafficPolicy) backendPolicyRej
 		}
 	}
 	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendGroupKind(targetSelectorGroupKind(sel)) {
+		if isBackendSelectorKind(sel.Kind) {
 			hasBackendSelector = true
 		} else {
 			hasOther = true
@@ -818,7 +818,7 @@ func backendRejectionMessage(reason backendPolicyRejection) string {
 func (t *Translator) backendSelectorMatches(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []targetRefWithTimestamp {
 	var backendSelectors []egv1a1.TargetSelector
 	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendGroupKind(targetSelectorGroupKind(sel)) {
+		if isBackendSelectorKind(sel.Kind) {
 			backendSelectors = append(backendSelectors, sel)
 		}
 	}

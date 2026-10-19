@@ -3328,26 +3328,41 @@ func TestIsBackendGroupKind(t *testing.T) {
 	}
 }
 
-func TestTargetSelectorGroupKind(t *testing.T) {
+func TestIsBackendSelectorKind(t *testing.T) {
 	tests := []struct {
-		name     string
-		selector egv1a1.TargetSelector
-		want     schema.GroupKind
+		name string
+		kind gwapiv1.Kind
+		want bool
 	}{
 		{
-			name:     "omitted group defaults to the Gateway API group",
-			selector: egv1a1.TargetSelector{Kind: "HTTPRoute"},
-			want:     schema.GroupKind{Group: gwapiv1.GroupName, Kind: "HTTPRoute"},
+			name: "Service",
+			kind: gwapiresource.KindService,
+			want: true,
 		},
 		{
-			name:     "explicit group is kept",
-			selector: egv1a1.TargetSelector{Group: new(gwapiv1.Group("")), Kind: "Service"},
-			want:     schema.GroupKind{Group: "", Kind: "Service"},
+			name: "ServiceImport",
+			kind: gwapiresource.KindServiceImport,
+			want: true,
+		},
+		{
+			name: "Backend",
+			kind: gwapiresource.KindBackend,
+			want: true,
+		},
+		{
+			name: "HTTPRoute is not a backend",
+			kind: gwapiresource.KindHTTPRoute,
+			want: false,
+		},
+		{
+			name: "Gateway is not a backend",
+			kind: gwapiresource.KindGateway,
+			want: false,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, targetSelectorGroupKind(tc.selector))
+			require.Equal(t, tc.want, isBackendSelectorKind(tc.kind))
 		})
 	}
 }
@@ -3939,14 +3954,14 @@ func TestClassifyBackendPolicy(t *testing.T) {
 			want: rejectionNone,
 		},
 		{
-			name: "route ref plus default-group Service selector is not a backend policy",
+			name: "route ref plus default-group Service selector is a selector rejection",
 			refs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					ref("gateway.networking.k8s.io", "HTTPRoute"),
 				},
 				TargetSelectors: []egv1a1.TargetSelector{defaultServiceSelector},
 			},
-			want: rejectionNone,
+			want: rejectionSelector,
 		},
 		{
 			name: "backend ref plus non-backend ref is mixed",
