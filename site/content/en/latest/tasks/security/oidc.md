@@ -583,6 +583,46 @@ explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
 
 Each cookie holds a different value, so all the resulting names must be distinct.
 
+## Large Tokens
+
+Browsers don't store a cookie larger than 4096 bytes, and they drop it without an error.
+Some OIDC providers issue access, ID or refresh tokens larger than that, for example when
+the token carries many group claims. The browser then never sends the token back, Envoy
+treats the session as missing, and the user is redirected to the OIDC provider again and
+again until the browser reports too many redirects.
+
+Set `tokenCookieChunking` to let Envoy split such a token across several cookies:
+
+```yaml
+  oidc:
+    tokenCookieChunking: {}
+```
+
+A token that fits in one cookie is still written as one cookie. A larger token is written
+as `<name>_0`, `<name>_1`, and so on, plus a `<name>_chunks` cookie that holds the count,
+for example `AccessToken-myapp_0` and `AccessToken-myapp_chunks`. Two optional fields bound
+the split:
+
+```yaml
+  oidc:
+    tokenCookieChunking:
+      maxCookieSize: 4096   # largest cookie, name and attributes included, 512 to 4096 bytes
+      maxChunks: 8          # most cookies per token, 2 to 16
+```
+
+If a token needs more than `maxChunks` cookies, Envoy fails the login with a `503` instead
+of setting cookies the browser could not send back.
+
+Chunking requires Envoy v1.40 or later, and it is off unless you set it: a proxy running an
+older Envoy, for example during an upgrade, can't read chunked cookies. Envoy reads chunked
+cookies whether or not the field is set, so removing it later keeps existing sessions.
+To turn chunking on for every route of a [Gateway], set it in a [SecurityPolicy] that
+targets the Gateway.
+
+Every chunk is sent back on each request, so several large tokens together can exceed the
+listener's request header limit, 60Ki by default. Raise it with `headers.maxRequestHeaderLimit`
+in a [ClientTrafficPolicy] if requests with a full set of chunks start failing.
+
 ## Logout
 
 Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
@@ -742,6 +782,7 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Backend]: ../../../api/extension_types#backend
