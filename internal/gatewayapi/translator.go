@@ -140,6 +140,10 @@ type Translator struct {
 	// sharing a single system_ca_certificates secret. Disabled by default (shared secret used).
 	PerResourceSystemCASecret bool
 
+	// DropBackendRefsWithoutEndpoints excludes backendRefs without ready endpoints from a route rule
+	// when at least one other backendRef in the same rule is available. Disabled by default.
+	DropBackendRefsWithoutEndpoints bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 

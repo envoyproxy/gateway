@@ -34,6 +34,7 @@ data:
       enabled:
       - XDSNameSchemeV2
       - EnvoyProxyPatch
+      - DropBackendRefsWithoutEndpoints
     telemetry:
       traces:
         sink:

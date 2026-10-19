@@ -1234,6 +1234,13 @@ func XDSNameSchemeV2() bool {
 	return DeployProfile == "xds-name-scheme-v2"
 }
 
+// DropBackendRefsWithoutEndpoints returns true if the DropBackendRefsWithoutEndpoints runtime flag is enabled
+// in the deploy profile.
+// TODO: remove this after the feature flag is removed.
+func DropBackendRefsWithoutEndpoints() bool {
+	return DeployProfile == "xds-name-scheme-v2"
+}
+
 func GetGatewayResourceNamespace() string {
 	if IsGatewayNamespaceMode() {
 		return "gateway-conformance-infra"

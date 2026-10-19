@@ -162,9 +162,13 @@ func testMixedValidAndInvalid(t *testing.T, suite *suite.ConformanceTestSuite) {
 		})
 	}
 
-	// The backendRef without endpoints is dropped, so all the requests are routed to the valid backend.
 	t.Run("MixedValidAndNoEndpoints", func(t *testing.T) {
-		runMixedValidAndNoEndpointsScenario(t, suite, gwAddr, "/mixed-valid-and-no-endpoints")
+		if DropBackendRefsWithoutEndpoints() {
+			// The backendRef without endpoints is dropped, so all the requests are routed to the valid backend.
+			runMixedValidAndNoEndpointsScenario(t, suite, gwAddr, "/mixed-valid-and-no-endpoints")
+		} else {
+			runMixedValidAndInvalidScenario(t, suite, gwAddr, "/mixed-valid-and-no-endpoints", 503)
+		}
 	})
 }
 

@@ -368,12 +368,14 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			routeBackendDestinations = append(routeBackendDestinations, backendDest)
 		}
 
-		// When some backendRefs in the rule are available, drop the ones without ready endpoints so that traffic
-		// is redistributed to the available backends instead of returning 503 for their share.
+		// When DropBackendRefsWithoutEndpoints is enabled and some backendRefs in the rule are available, drop the
+		// ones without ready endpoints so that traffic is redistributed to the available backends instead of
+		// returning 503 for their share.
 		// The BackendsAvailable condition is still set for the dropped backendRefs.
 		// Skip this when the rule has invalid backendRefs, as the dropped share would also go to the invalid ones
 		// and change their configured fraction.
-		if backendWeights.Valid > 0 && backendWeights.NoEndpoints > 0 && backendWeights.Invalid == 0 {
+		if t.DropBackendRefsWithoutEndpoints &&
+			backendWeights.Valid > 0 && backendWeights.NoEndpoints > 0 && backendWeights.Invalid == 0 {
 			routeBackendDestinations = removeNoEndpointsDestinations(routeBackendDestinations)
 			backendWeights.NoEndpoints = 0
 		}
@@ -1619,12 +1621,14 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			routeBackendDestinations = append(routeBackendDestinations, backendDest)
 		}
 
-		// When some backendRefs in the rule are available, drop the ones without ready endpoints so that traffic
-		// is redistributed to the available backends instead of returning 503 for their share.
+		// When DropBackendRefsWithoutEndpoints is enabled and some backendRefs in the rule are available, drop the
+		// ones without ready endpoints so that traffic is redistributed to the available backends instead of
+		// returning 503 for their share.
 		// The BackendsAvailable condition is still set for the dropped backendRefs.
 		// Skip this when the rule has invalid backendRefs, as the dropped share would also go to the invalid ones
 		// and change their configured fraction.
-		if backendWeights.Valid > 0 && backendWeights.NoEndpoints > 0 && backendWeights.Invalid == 0 {
+		if t.DropBackendRefsWithoutEndpoints &&
+			backendWeights.Valid > 0 && backendWeights.NoEndpoints > 0 && backendWeights.Invalid == 0 {
 			routeBackendDestinations = removeNoEndpointsDestinations(routeBackendDestinations)
 			backendWeights.NoEndpoints = 0
 		}

@@ -58,6 +58,7 @@ func TestTranslate(t *testing.T) {
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
 		EnvoyProxyPatchDisabled         bool
+		DropBackendRefsWithoutEndpoints bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -139,6 +140,10 @@ func TestTranslate(t *testing.T) {
 			name:                    "envoyproxy-patch-disabled",
 			EnvoyProxyPatchDisabled: true,
 		},
+		{
+			name:                            "httproute-with-multiple-backendrefs-some-without-endpoints",
+			DropBackendRefsWithoutEndpoints: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -166,6 +171,7 @@ func TestTranslate(t *testing.T) {
 			sdsEnabled := false
 			perResourceSystemCASecret := false
 			envoyProxyPatchDisabled := false
+			dropBackendRefsWithoutEndpoints := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -177,6 +183,7 @@ func TestTranslate(t *testing.T) {
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
 					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
+					dropBackendRefsWithoutEndpoints = config.DropBackendRefsWithoutEndpoints
 				}
 			}
 
@@ -188,6 +195,7 @@ func TestTranslate(t *testing.T) {
 				BackendEnabled:                  backendEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
+				DropBackendRefsWithoutEndpoints: dropBackendRefsWithoutEndpoints,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
 				MergeBackends:                   ResolveMergeBackendsConfig(resources),
