@@ -1487,7 +1487,7 @@ func (t *Translator) validateExtServiceBackendReference(
 			return fmt.Errorf("dynamic resolver backend %s/%s is not supported", backendNamespace, backendRef.Name)
 		}
 		if isKubernetesServiceBackend(backend) {
-			if err := t.validateBackendServiceExists(backend); err != nil {
+			if err := t.validateBackendServiceAndPortExists(backend); err != nil {
 				return err
 			}
 			if err := t.validateBackendServicePortProtocol(backend, corev1.ProtocolTCP); err != nil {

@@ -62,9 +62,9 @@ func (t *Translator) validateBackendServicePortProtocol(backend *egv1a1.Backend,
 	return validateServicePortProtocol(t.GetService(backend.Namespace, string(ref.Name)), ref, backend.Namespace, protocol)
 }
 
-// validateBackendServiceExists checks that the Service of a KubernetesService Backend exists
-// and has the referenced port. The port protocol is left to the routes that use the Backend.
-func (t *Translator) validateBackendServiceExists(backend *egv1a1.Backend) status.Error {
+// validateBackendServiceAndPortExists checks that the Service of a KubernetesService Backend exists
+// and has the referenced port.
+func (t *Translator) validateBackendServiceAndPortExists(backend *egv1a1.Backend) status.Error {
 	if !isKubernetesServiceBackend(backend) {
 		return nil
 	}
@@ -100,11 +100,16 @@ func (t *Translator) validateBackend(backend *egv1a1.Backend, backendTLSPolicies
 		}
 	}
 
-	if isKubernetesServiceBackend(backend) && len(backend.Spec.Endpoints) > 0 {
-		return status.NewRouteStatusError(
-			fmt.Errorf("KubernetesService type cannot have endpoints specified"),
-			status.RouteReasonInvalidBackendRef,
-		)
+	if isKubernetesServiceBackend(backend) {
+		if len(backend.Spec.Endpoints) > 0 {
+			return status.NewRouteStatusError(
+				fmt.Errorf("KubernetesService type cannot have endpoints specified"),
+				status.RouteReasonInvalidBackendRef,
+			)
+		}
+		if err := t.validateBackendServiceAndPortExists(backend); err != nil {
+			return err
+		}
 	}
 
 	// Validate CACert is specified if InsecureSkipVerify is false
@@ -131,7 +136,7 @@ func (t *Translator) validateBackend(backend *egv1a1.Backend, backendTLSPolicies
 			}
 		}
 	}
-	return t.validateBackendServiceExists(backend)
+	return nil
 }
 
 // validateBackendTLSSettings validates CACert is specified if InsecureSkipVerify is false
