@@ -23,6 +23,11 @@ const (
 	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
 	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
 
+	// PolicyReasonUnsupportedHTTP3Backend is used with the "Warning" condition when HTTP/3 to
+	// a backend is disabled because the backend, or another setting, cannot use QUIC, or when
+	// it stays on but a backend TLS setting that QUIC cannot carry is ignored.
+	PolicyReasonUnsupportedHTTP3Backend gwapiv1.PolicyConditionReason = "UnsupportedHTTP3Backend"
+
 	// PolicyReasonBehaviorChange is used with the "Warning" condition when a field's behavior
 	// will change in a future release. Users should prepare by migrating to the recommended alternative.
 	PolicyReasonBehaviorChange gwapiv1.PolicyConditionReason = "BehaviorChange"

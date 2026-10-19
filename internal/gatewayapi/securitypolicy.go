@@ -962,8 +962,8 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
-	// CEL covers these on Kubernetes, but not for the file provider or for a merged policy, which
-	// can combine a parent's uri with a route's disabled: true.
+	// CEL covers these on Kubernetes, but not for the file provider. A JSONMerge route can still
+	// combine a parent's uri with its own disabled: true, since JSONMerge merges keys one by one.
 	if oidc != nil && oidc.PostLogoutRedirect != nil {
 		switch plr := oidc.PostLogoutRedirect; {
 		case plr.URI != nil && ptr.Deref(plr.Disabled, false):
@@ -2021,7 +2021,7 @@ func (t *Translator) buildRemoteJWKS(
 	}
 
 	if remoteJWKS.BackendSettings != nil {
-		if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
+		if traffic, err = translateExtServiceBackendSettings(remoteJWKS.BackendSettings); err != nil {
 			return nil, err
 		}
 	}
@@ -2383,7 +2383,7 @@ func (t *Translator) buildOIDCProvider(
 		return nil, err
 	}
 
-	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(provider.BackendSettings); err != nil {
 		return nil, err
 	}
 
@@ -3013,7 +3013,7 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(backendSettings); err != nil {
 		return nil, err
 	}
 

@@ -110,7 +110,8 @@ type OIDC struct {
 	// set an explicit uri here, or set disabled to true to omit the parameter altogether.
 	//
 	// +optional
-	PostLogoutRedirect *OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty"`
+	// +patchStrategy=replace
+	PostLogoutRedirect *OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty" patchStrategy:"replace"`
 
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
