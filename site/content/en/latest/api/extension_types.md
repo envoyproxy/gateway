@@ -4662,6 +4662,7 @@ _Appears in:_
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
 | `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | CookieNames configures the names of the cookies that Envoy sets for the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />By default, every cookie is named "<Purpose>-<suffix>", where the suffix is<br />derived from the identity of this SecurityPolicy. Set "suffix" to pin that<br />suffix for all cookies at once, or set a per-cookie field to name a single<br />cookie outright. |
 | `cookieConfig` | _[OIDCCookieConfig](#oidccookieconfig)_ |  false  |  | CookieConfigs allows setting the SameSite attribute for OIDC cookies.<br />By default, its unset. |
+| `tokenCookieChunking` | _[OIDCTokenCookieChunking](#oidctokencookiechunking)_ |  false  |  | TokenCookieChunking splits an access, ID or refresh token that does not fit<br />in a single cookie across several cookies.<br />Browsers drop a cookie larger than 4096 bytes without an error. When the OIDC<br />Provider issues such a token, for example one carrying many group claims, the<br />session cookie never comes back and the user is redirected to the OIDC<br />Provider again and again. Setting this field, even to an empty object, turns<br />chunking on; a token that fits in one cookie is still written as one cookie.<br />Envoy reads chunked cookies whether or not this field is set, so removing it<br />later does not end existing sessions. Several chunked tokens together can<br />still exceed the request header size limit of the listener.<br />If not specified, token cookies are not chunked.<br />Requires Envoy v1.40 or later. |
 | `cookieDomain` | _string_ |  false  |  | The optional domain to set the access and ID token cookies on.<br />If not set, the cookies will default to the host of the request, not including the subdomains.<br />If set, the cookies will be set on the specified domain and all subdomains.<br />This means that requests to any subdomain will not require reauthentication after users log in to the parent domain. |
 | `scopes` | _string array_ |  false  |  | The OIDC scopes to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />The "openid" scope is always added to the list of scopes if not already<br />specified. |
 | `resources` | _string array_ |  false  |  | The OIDC resources to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
@@ -4798,6 +4799,22 @@ _Appears in:_
 | `authorizationEndpoint` | _string_ |  false  |  | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `tokenEndpoint` | _string_ |  false  |  | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `endSessionEndpoint` | _string_ |  false  |  | The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).<br />If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.<br />EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided. |
+
+
+#### OIDCTokenCookieChunking
+
+
+
+OIDCTokenCookieChunking defines how a token too large for one cookie is split
+across several cookies.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxCookieSize` | _integer_ |  false  |  | MaxCookieSize is the size in bytes of the largest cookie Envoy writes for a<br />token, counting the cookie name, value and attributes.<br />If not specified, defaults to 4096. |
+| `maxChunks` | _integer_ |  false  |  | MaxChunks is the largest number of cookies a single token may be split into.<br />When a token needs more, the login fails with a 503 instead of setting<br />cookies the browser cannot send back.<br />If not specified, defaults to 8. |
 
 
 #### OIDCTokenForwarding

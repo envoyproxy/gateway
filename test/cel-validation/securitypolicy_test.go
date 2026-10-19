@@ -3126,3 +3126,113 @@ func TestSecurityPolicyOIDCCookieNames(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityPolicyOIDCTokenCookieChunking(t *testing.T) {
+	ctx := context.Background()
+	baseSP := egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sp",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("Gateway"),
+						Name:  gwapiv1.ObjectName("eg"),
+					},
+				},
+			},
+			OIDC: &egv1a1.OIDC{
+				Provider: egv1a1.OIDCProvider{
+					Issuer:                "https://accounts.google.com",
+					AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+					TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+				},
+				ClientID:     new("client-id"),
+				ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+			},
+		},
+	}
+
+	cases := []struct {
+		desc       string
+		chunking   *egv1a1.OIDCTokenCookieChunking
+		wantErrors []string
+	}{
+		{
+			desc:     "empty object uses the Envoy defaults",
+			chunking: &egv1a1.OIDCTokenCookieChunking{},
+		},
+		{
+			desc: "lower bounds",
+			chunking: &egv1a1.OIDCTokenCookieChunking{
+				MaxCookieSize: new(uint32(512)),
+				MaxChunks:     new(uint32(2)),
+			},
+		},
+		{
+			desc: "upper bounds",
+			chunking: &egv1a1.OIDCTokenCookieChunking{
+				MaxCookieSize: new(uint32(4096)),
+				MaxChunks:     new(uint32(16)),
+			},
+		},
+		{
+			desc:     "maxCookieSize below 512",
+			chunking: &egv1a1.OIDCTokenCookieChunking{MaxCookieSize: new(uint32(511))},
+			wantErrors: []string{
+				"spec.oidc.tokenCookieChunking.maxCookieSize",
+				"should be greater than or equal to 512",
+			},
+		},
+		{
+			desc:     "maxCookieSize above 4096",
+			chunking: &egv1a1.OIDCTokenCookieChunking{MaxCookieSize: new(uint32(4097))},
+			wantErrors: []string{
+				"spec.oidc.tokenCookieChunking.maxCookieSize",
+				"should be less than or equal to 4096",
+			},
+		},
+		{
+			desc:     "maxChunks below 2",
+			chunking: &egv1a1.OIDCTokenCookieChunking{MaxChunks: new(uint32(1))},
+			wantErrors: []string{
+				"spec.oidc.tokenCookieChunking.maxChunks",
+				"should be greater than or equal to 2",
+			},
+		},
+		{
+			desc:     "maxChunks above 16",
+			chunking: &egv1a1.OIDCTokenCookieChunking{MaxChunks: new(uint32(17))},
+			wantErrors: []string{
+				"spec.oidc.tokenCookieChunking.maxChunks",
+				"should be less than or equal to 16",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := baseSP.DeepCopy()
+			sp.Name = fmt.Sprintf("sp-oidc-token-cookie-chunking-%v", time.Now().UnixNano())
+			sp.Spec.OIDC.TokenCookieChunking = tc.chunking
+
+			err := c.Create(ctx, sp)
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}

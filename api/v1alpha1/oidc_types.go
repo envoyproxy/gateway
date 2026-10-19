@@ -63,6 +63,24 @@ type OIDC struct {
 	// +optional
 	CookieConfig *OIDCCookieConfig `json:"cookieConfig,omitempty"`
 
+	// TokenCookieChunking splits an access, ID or refresh token that does not fit
+	// in a single cookie across several cookies.
+	//
+	// Browsers drop a cookie larger than 4096 bytes without an error. When the OIDC
+	// Provider issues such a token, for example one carrying many group claims, the
+	// session cookie never comes back and the user is redirected to the OIDC
+	// Provider again and again. Setting this field, even to an empty object, turns
+	// chunking on; a token that fits in one cookie is still written as one cookie.
+	//
+	// Envoy reads chunked cookies whether or not this field is set, so removing it
+	// later does not end existing sessions. Several chunked tokens together can
+	// still exceed the request header size limit of the listener.
+	//
+	// If not specified, token cookies are not chunked.
+	// Requires Envoy v1.40 or later.
+	// +optional
+	TokenCookieChunking *OIDCTokenCookieChunking `json:"tokenCookieChunking,omitempty"`
+
 	// The optional domain to set the access and ID token cookies on.
 	// If not set, the cookies will default to the host of the request, not including the subdomains.
 	// If set, the cookies will be set on the specified domain and all subdomains.
@@ -412,4 +430,27 @@ type OIDCCookieConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Lax;Strict;None
 	SameSite *string `json:"sameSite,omitempty"`
+}
+
+// OIDCTokenCookieChunking defines how a token too large for one cookie is split
+// across several cookies.
+type OIDCTokenCookieChunking struct {
+	// MaxCookieSize is the size in bytes of the largest cookie Envoy writes for a
+	// token, counting the cookie name, value and attributes.
+	//
+	// If not specified, defaults to 4096.
+	// +optional
+	// +kubebuilder:validation:Minimum=512
+	// +kubebuilder:validation:Maximum=4096
+	MaxCookieSize *uint32 `json:"maxCookieSize,omitempty"`
+
+	// MaxChunks is the largest number of cookies a single token may be split into.
+	// When a token needs more, the login fails with a 503 instead of setting
+	// cookies the browser cannot send back.
+	//
+	// If not specified, defaults to 8.
+	// +optional
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:Maximum=16
+	MaxChunks *uint32 `json:"maxChunks,omitempty"`
 }
