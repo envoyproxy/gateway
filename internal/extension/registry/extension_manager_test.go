@@ -475,7 +475,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, hook)
 
-			_, err = hook.PostRouteModifyHook(
+			_, _, err = hook.PostRouteModifyHook(
 				&routev3.Route{
 					Name: "test-route",
 				}, nil, nil, nil)
@@ -524,7 +524,7 @@ func Test_Integration_Timeout_UnreachableServer(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		_, err := hook.PostRouteModifyHook(&routev3.Route{Name: "test-route"}, nil, nil, nil)
+		_, _, err := hook.PostRouteModifyHook(&routev3.Route{Name: "test-route"}, nil, nil, nil)
 		done <- err
 	}()
 

@@ -54,14 +54,14 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	}
 
 	start := time.Now()
-	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
+	modifiedRoute, hookResult, err := extRouteHookClient.PostRouteModifyHook(
 		route,
 		vHost.Domains,
 		unstructuredResources,
 		unstructuredPolicies,
 	)
 	if stats != nil {
-		stats.RouteCallCount++
+		stats.RouteCallCount += int64(hookResult.CallCount)
 		stats.RouteDuration += time.Since(start)
 	}
 	if err != nil {
@@ -160,9 +160,9 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 		return nil
 	}
 	start := time.Now()
-	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
+	modifiedVH, hookResult, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
 	if stats != nil {
-		stats.VHostCallCount++
+		stats.VHostCallCount += int64(hookResult.CallCount)
 		stats.VHostDuration += time.Since(start)
 	}
 	if err != nil {
@@ -199,9 +199,9 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 			unstructuredResources[refIdx] = resolveUnstructuredRef(ref, idx)
 		}
 		start := time.Now()
-		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources)
+		modifiedListener, hookResult, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources)
 		if stats != nil {
-			stats.ListenerCallCount++
+			stats.ListenerCallCount += int64(hookResult.CallCount)
 			stats.ListenerDuration += time.Since(start)
 		}
 		if err != nil {

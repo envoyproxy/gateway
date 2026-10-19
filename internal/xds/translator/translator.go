@@ -104,7 +104,7 @@ func xdsResourceCountAttrs(tCtx *types.ResourceVersionTable) []attribute.KeyValu
 }
 
 // ExtensionHookStats accumulates extension server hook call counts and durations
-// across a single Translate() call. Zero value is ready to use.
+// across a single Translate() call. Reset at the start of every Translate() call.
 type ExtensionHookStats struct {
 	RouteCallCount    int64
 	RouteDuration     time.Duration
@@ -207,6 +207,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 	t.extensionIndex = newExtensionResourceIndex(xdsIR)
 	t.caIndex = newCACertificateIndex(xdsIR)
+	t.ExtensionStats = ExtensionHookStats{}
 
 	tCtx := new(types.ResourceVersionTable)
 
@@ -238,8 +239,6 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		attribute.Float64("extension.hook.route_duration_ms", float64(t.ExtensionStats.RouteDuration.Microseconds())/1000.0),
 		attribute.Int64("extension.hook.vhost_call_count", t.ExtensionStats.VHostCallCount),
 		attribute.Float64("extension.hook.vhost_duration_ms", float64(t.ExtensionStats.VHostDuration.Microseconds())/1000.0),
-		attribute.Int64("extension.hook.listener_call_count", t.ExtensionStats.ListenerCallCount),
-		attribute.Float64("extension.hook.listener_duration_ms", float64(t.ExtensionStats.ListenerDuration.Microseconds())/1000.0),
 	)
 	phases.End()
 
@@ -263,6 +262,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	if err := t.notifyExtensionServerAboutListeners(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	phases.SetAttributes(
+		attribute.Int64("extension.hook.listener_call_count", t.ExtensionStats.ListenerCallCount),
+		attribute.Float64("extension.hook.listener_duration_ms", float64(t.ExtensionStats.ListenerDuration.Microseconds())/1000.0),
+	)
 	phases.End()
 
 	phases.Start("XdsTranslator.processMergedBackendClusters",
