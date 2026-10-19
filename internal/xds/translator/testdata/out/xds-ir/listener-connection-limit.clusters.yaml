@@ -67,6 +67,11 @@
   name: third-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        httpProtocolOptions: {}
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
