@@ -55,17 +55,17 @@ func kubernetesServiceBackendRef(backend *egv1a1.Backend) gwapiv1.BackendObjectR
 	}
 }
 
-// validateKubernetesServicePortProtocol checks that the Service of a KubernetesService Backend has
+// validateBackendServicePortProtocol checks that the Service of a KubernetesService Backend has
 // a port with the Backend's port number and the route's protocol. The Service must already exist,
 // so run validateBackend first.
-func (t *Translator) validateKubernetesServicePortProtocol(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
+func (t *Translator) validateBackendServicePortProtocol(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
 	ref := kubernetesServiceBackendRef(backend)
 	return validateServicePortProtocol(t.GetService(backend.Namespace, string(ref.Name)), ref, backend.Namespace, protocol)
 }
 
-// validateKubernetesServiceExists checks that the Service of a KubernetesService Backend exists
+// validateBackendServiceExists checks that the Service of a KubernetesService Backend exists
 // and has the referenced port. The port protocol is left to the routes that use the Backend.
-func (t *Translator) validateKubernetesServiceExists(backend *egv1a1.Backend) status.Error {
+func (t *Translator) validateBackendServiceExists(backend *egv1a1.Backend) status.Error {
 	if !isKubernetesServiceBackend(backend) {
 		return nil
 	}
@@ -132,7 +132,7 @@ func (t *Translator) validateBackend(backend *egv1a1.Backend, backendTLSPolicies
 			}
 		}
 	}
-	return t.validateKubernetesServiceExists(backend)
+	return t.validateBackendServiceExists(backend)
 }
 
 // validateBackendTLSSettings validates CACert is specified if InsecureSkipVerify is false
