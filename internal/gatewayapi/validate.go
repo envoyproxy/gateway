@@ -284,7 +284,7 @@ func (t *Translator) validateBackendRefBackend(
 		)
 	}
 
-	if err := validateBackend(backend, resources.BackendTLSPolicies, t.RunningOnHost); err != nil {
+	if err := t.validateBackend(backend, resources.BackendTLSPolicies); err != nil {
 		return err
 	}
 

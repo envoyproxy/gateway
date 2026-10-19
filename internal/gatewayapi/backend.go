@@ -28,9 +28,7 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolic
 			status.UpdateBackendStatusAcceptedCondition(backend, false,
 				"The Backend was not accepted since Backend is not enabled in Envoy Gateway Config")
 		} else {
-			if err := validateBackend(backend, backendTLSPolicies, t.RunningOnHost); err != nil {
-				status.UpdateBackendStatusAcceptedCondition(backend, false, fmt.Sprintf("The Backend was not accepted: %s", err.Error()))
-			} else if err := t.validateKubernetesServiceExists(backend); err != nil {
+			if err := t.validateBackend(backend, backendTLSPolicies); err != nil {
 				status.UpdateBackendStatusAcceptedCondition(backend, false, fmt.Sprintf("The Backend was not accepted: %s", err.Error()))
 			} else {
 				status.UpdateBackendStatusAcceptedCondition(backend, true, "The Backend was accepted")
@@ -85,7 +83,8 @@ func (t *Translator) validateKubernetesServiceExists(backend *egv1a1.Backend) st
 	}
 	if isServiceExternalName(service) {
 		return status.NewRouteStatusError(
-			fmt.Errorf("service %s/%s is of type ExternalName, which is not supported as a backend", backend.Namespace, ref.Name),
+			fmt.Errorf("service %s/%s is of type ExternalName, which is not supported for a KubernetesService backend; "+
+				"use an Endpoints backend with an FQDN endpoint instead", backend.Namespace, ref.Name),
 			gwapiv1.RouteReasonUnsupportedValue)
 	}
 	for _, port := range service.Spec.Ports {
@@ -98,7 +97,7 @@ func (t *Translator) validateKubernetesServiceExists(backend *egv1a1.Backend) st
 		status.RouteReasonPortNotFound)
 }
 
-func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy, runningOnHost bool) status.Error {
+func (t *Translator) validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) status.Error {
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		if len(backend.Spec.Endpoints) > 0 {
 			return status.NewRouteStatusError(
@@ -122,24 +121,24 @@ func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.Back
 
 	for _, ep := range backend.Spec.Endpoints {
 		if ep.Hostname != nil {
-			routeErr := validateHostname(*ep.Hostname, "hostname", runningOnHost)
+			routeErr := validateHostname(*ep.Hostname, "hostname", t.RunningOnHost)
 			if routeErr != nil {
 				return routeErr
 			}
 		}
 		if ep.FQDN != nil {
-			routeErr := validateHostname(ep.FQDN.Hostname, "FQDN", runningOnHost)
+			routeErr := validateHostname(ep.FQDN.Hostname, "FQDN", t.RunningOnHost)
 			if routeErr != nil {
 				return routeErr
 			}
 		} else if ep.IP != nil {
-			routeErr := validateIP(ep.IP, runningOnHost)
+			routeErr := validateIP(ep.IP, t.RunningOnHost)
 			if routeErr != nil {
 				return routeErr
 			}
 		}
 	}
-	return nil
+	return t.validateKubernetesServiceExists(backend)
 }
 
 // validateBackendTLSSettings validates CACert is specified if InsecureSkipVerify is false
