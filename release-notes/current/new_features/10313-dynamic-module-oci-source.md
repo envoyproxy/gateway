@@ -1,0 +1,1 @@
+Added the `Image` source type to `EnvoyProxy.spec.dynamicModules`, which lets Envoy Gateway pull a dynamic module from an OCI image (a container image or an ORAS artifact) and serve it to Envoy, the same way Wasm modules from OCI images are served.

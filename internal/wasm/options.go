@@ -98,8 +98,24 @@ const (
 	Always       PullPolicy = 2
 )
 
+// ModuleType is the type of the module stored in the cache.
+type ModuleType int32
+
+const (
+	// ModuleTypeWasm is a Wasm module.
+	ModuleTypeWasm ModuleType = 0
+	// ModuleTypeDynamicModule is an Envoy dynamic module (a shared library).
+	ModuleTypeDynamicModule ModuleType = 1
+)
+
 // GetOptions is a struct for providing options to Get method of Cache.
 type GetOptions struct {
+	// ModuleType is the type of the module. Defaults to Wasm.
+	ModuleType ModuleType
+	// ModulePath is the path of the dynamic module shared library inside the OCI image.
+	// If empty, the image must contain exactly one shared library.
+	// Only used when ModuleType is ModuleTypeDynamicModule.
+	ModulePath      string
 	Checksum        string
 	ResourceName    string
 	ResourceVersion string

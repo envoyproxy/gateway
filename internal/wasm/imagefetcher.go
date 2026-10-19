@@ -31,6 +31,8 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"runtime"
+	"slices"
 
 	"github.com/docker/cli/cli/config/configfile"
 	dtypes "github.com/docker/cli/cli/config/types"
@@ -111,6 +113,23 @@ func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging
 // Wasm binary is not fetched immediately, but returned by `binaryFetcher` function, which is returned by PrepareFetch.
 // By this way, we can have another chance to check cache with `actualDigest` without downloading the OCI image.
 func (o *ImageFetcher) PrepareFetch(url string) (func() ([]byte, error), string, error) {
+	return o.prepareFetch(url, extractWasmBinary, nil)
+}
+
+// PrepareFetchDynamicModule is the entrypoint for fetching a dynamic module shared library from an OCI image.
+// modulePath is the path of the shared library inside the image. If it is empty,
+// the image must contain exactly one shared library.
+// Unlike a Wasm binary, a shared library is architecture specific. For a multi-platform
+// image, the linux image for the architecture Envoy Gateway runs on is used, assuming
+// that Envoy runs on the same architecture.
+// Like PrepareFetch, the binary is not fetched until the returned `binaryFetcher` is called.
+func (o *ImageFetcher) PrepareFetchDynamicModule(url, modulePath string) (func() ([]byte, error), string, error) {
+	return o.prepareFetch(url, func(img v1.Image) ([]byte, error) {
+		return extractDynamicModuleBinary(img, modulePath, maxWasmSize)
+	}, &v1.Platform{OS: "linux", Architecture: runtime.GOARCH})
+}
+
+func (o *ImageFetcher) prepareFetch(url string, extract func(v1.Image) ([]byte, error), platform *v1.Platform) (func() ([]byte, error), string, error) {
 	// name.ParseReference talks to the registry via HTTPS by default.
 	// When the user has explicitly marked the registry as insecure, parse with
 	// name.Insecure so go-containerregistry uses plain HTTP for that registry.
@@ -126,7 +145,11 @@ func (o *ImageFetcher) PrepareFetch(url string) (func() ([]byte, error), string,
 	o.logger.Info("fetching image", "image", ref.Context().RepositoryStr(),
 		"registry", ref.Context().RegistryStr(), "tag", ref.Identifier())
 
-	desc, err := remote.Get(ref, o.fetchOpts...)
+	fetchOpts := o.fetchOpts
+	if platform != nil {
+		fetchOpts = append(slices.Clone(fetchOpts), remote.WithPlatform(*platform))
+	}
+	desc, err := remote.Get(ref, fetchOpts...)
 	if err != nil {
 		err = fmt.Errorf("could not fetch manifest: %w", err)
 		return nil, "", err
@@ -142,44 +165,55 @@ func (o *ImageFetcher) PrepareFetch(url string) (func() ([]byte, error), string,
 	// Check Manifest's digest if expManifestDigest is not empty.
 	d, _ := img.Digest()
 	actualDigest := d.Hex
-	binaryFetcher := func() ([]byte, error) {
-		manifest, err := img.Manifest()
-		if err != nil {
-			return nil, fmt.Errorf("could not retrieve manifest: %w", err)
-		}
-
-		if manifest.MediaType == types.DockerManifestSchema2 {
-			// This case, assume we have docker images with "application/vnd.docker.distribution.manifest.v2+json"
-			// as the manifest media type. Note that the media type of manifest is Docker specific and
-			// all OCI images would have an empty string in .MediaType field.
-			ret, err := extractDockerImage(img)
-			if err != nil {
-				return nil, fmt.Errorf("could not extract Wasm file from the image as Docker container %w", err)
-			}
-			return ret, nil
-		}
-
-		// We try to parse it as the "compat" variant image with a single "application/vnd.oci.image.layer.v1.tar+gzip" layer.
-		ret, errCompat := extractOCIStandardImage(img)
-		if errCompat == nil {
-			return ret, nil
-		}
-
-		// Otherwise, we try to parse it as the *oci* variant image with custom artifact media types.
-		ret, errOCI := extractOCIArtifactImage(img)
-		if errOCI == nil {
-			return ret, nil
-		}
-
-		// We failed to parse the image in any format, so wrap the errors and return.
-		return nil, fmt.Errorf("the given image is in invalid format as an OCI image: %w",
-			errors.Join(err,
-				fmt.Errorf("could not parse as compat variant: %w", errCompat),
-				fmt.Errorf("could not parse as oci variant: %w", errOCI),
-			),
-		)
+	if platform != nil {
+		// Use the digest the reference resolves to, which is the digest of the
+		// image index for a multi-platform image, rather than the digest of the
+		// image selected for the platform.
+		actualDigest = desc.Digest.Hex
 	}
-	return binaryFetcher, actualDigest, err
+	binaryFetcher := func() ([]byte, error) {
+		return extract(img)
+	}
+	return binaryFetcher, actualDigest, nil
+}
+
+// extractWasmBinary extracts the Wasm binary from a "Wasm Image Specification" compatible image.
+func extractWasmBinary(img v1.Image) ([]byte, error) {
+	manifest, err := img.Manifest()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve manifest: %w", err)
+	}
+
+	if manifest.MediaType == types.DockerManifestSchema2 {
+		// This case, assume we have docker images with "application/vnd.docker.distribution.manifest.v2+json"
+		// as the manifest media type. Note that the media type of manifest is Docker specific and
+		// all OCI images would have an empty string in .MediaType field.
+		ret, err := extractDockerImage(img)
+		if err != nil {
+			return nil, fmt.Errorf("could not extract Wasm file from the image as Docker container %w", err)
+		}
+		return ret, nil
+	}
+
+	// We try to parse it as the "compat" variant image with a single "application/vnd.oci.image.layer.v1.tar+gzip" layer.
+	ret, errCompat := extractOCIStandardImage(img)
+	if errCompat == nil {
+		return ret, nil
+	}
+
+	// Otherwise, we try to parse it as the *oci* variant image with custom artifact media types.
+	ret, errOCI := extractOCIArtifactImage(img)
+	if errOCI == nil {
+		return ret, nil
+	}
+
+	// We failed to parse the image in any format, so wrap the errors and return.
+	return nil, fmt.Errorf("the given image is in invalid format as an OCI image: %w",
+		errors.Join(err,
+			fmt.Errorf("could not parse as compat variant: %w", errCompat),
+			fmt.Errorf("could not parse as oci variant: %w", errOCI),
+		),
+	)
 }
 
 // extractDockerImage extracts the Wasm binary from the

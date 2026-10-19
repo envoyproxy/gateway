@@ -1,0 +1,75 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+            dynamicModuleConfig:
+              module:
+                remote:
+                  httpUri:
+                    cluster: dynamic_module_cluster
+                    timeout: 10s
+                    uri: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/f96b8466d5317edfd8535bf53c582dce7660147b3a30a10d850e63145c5b7474.so
+                  retryPolicy:
+                    numRetries: 10
+                    retryBackOff:
+                      baseInterval: 1s
+                      maxInterval: 30s
+                  sha256: b821ee1aed2e4fad9f5bcadb72be3b364ba4d8fbdc2a5e9fa2ba6087205cfb7a
+            filterConfig:
+              '@type': type.googleapis.com/google.protobuf.StringValue
+              value: '{"authEndpoint":"https://auth.example.com"}'
+            filterName: auth-check
+        - disabled: true
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+            dynamicModuleConfig:
+              doNotClose: true
+              module:
+                remote:
+                  httpUri:
+                    cluster: dynamic_module_cluster
+                    timeout: 10s
+                    uri: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/62926588cb952f4c41fe6bcd58545bdc9f8cbfc72577cfceb7463cc5ab7642b5.so
+                  retryPolicy:
+                    numRetries: 10
+                    retryBackOff:
+                      baseInterval: 1s
+                      maxInterval: 30s
+                  sha256: 7f061b9b6477df1f87cdfff7c3ac2a73c63495c1a215204108e92fb7ca6a3663
+            filterName: ratelimit
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768
