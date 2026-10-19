@@ -68,12 +68,6 @@ func (t *Translator) validateKubernetesServiceBackend(backend *egv1a1.Backend, p
 // a port with the Backend's port number and the route's protocol. The Service must already exist,
 // so run validateBackend first.
 func (t *Translator) validateKubernetesServicePortProtocol(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
-	if backend.Spec.KubernetesService == nil {
-		return status.NewRouteStatusError(
-			fmt.Errorf("kubernetesService must be specified when type is KubernetesService"),
-			status.RouteReasonInvalidBackendRef,
-		)
-	}
 	ref := kubernetesServiceBackendRef(backend)
 	return validateServicePortProtocol(t.GetService(backend.Namespace, string(ref.Name)), ref, backend.Namespace, protocol)
 }
@@ -81,8 +75,14 @@ func (t *Translator) validateKubernetesServicePortProtocol(backend *egv1a1.Backe
 // validateKubernetesServiceExists checks that the Service of a KubernetesService Backend exists
 // and has the referenced port. The port protocol is left to the routes that use the Backend.
 func (t *Translator) validateKubernetesServiceExists(backend *egv1a1.Backend) status.Error {
-	if !isKubernetesServiceBackend(backend) || backend.Spec.KubernetesService == nil {
+	if !isKubernetesServiceBackend(backend) {
 		return nil
+	}
+	if backend.Spec.KubernetesService == nil {
+		return status.NewRouteStatusError(
+			fmt.Errorf("kubernetesService must be specified when type is KubernetesService"),
+			status.RouteReasonInvalidBackendRef,
+		)
 	}
 
 	ref := kubernetesServiceBackendRef(backend)

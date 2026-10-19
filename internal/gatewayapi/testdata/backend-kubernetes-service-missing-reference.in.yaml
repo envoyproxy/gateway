@@ -1,0 +1,8 @@
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-no-ref
+      namespace: default
+    spec:
+      type: KubernetesService

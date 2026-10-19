@@ -1,0 +1,18 @@
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-no-ref
+    namespace: default
+  spec:
+    type: KubernetesService
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: kubernetesService must be specified
+        when type is KubernetesService'
+      reason: Accepted
+      status: "False"
+      type: Invalid
+infraIR: {}
+xdsIR: {}
