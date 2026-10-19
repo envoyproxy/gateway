@@ -227,7 +227,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	return nil
 }
 
-func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []*ir.UnstructuredRef, idx extensionResourceIndex, stats *ExtensionHookStats) error {
+func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []*ir.UnstructuredRef, idx extensionResourceIndex) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -298,12 +298,7 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	}
 
 	// Call the extension hook
-	start := time.Now()
 	newClusters, newSecrets, newListeners, newRoutes, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, oldListeners, oldRoutes, policies)
-	if stats != nil {
-		stats.TranslationCallCount++
-		stats.TranslationDuration += time.Since(start)
-	}
 	if err != nil {
 		return err
 	}

@@ -106,14 +106,12 @@ func xdsResourceCountAttrs(tCtx *types.ResourceVersionTable) []attribute.KeyValu
 // ExtensionHookStats accumulates extension server hook call counts and durations
 // across a single Translate() call. Zero value is ready to use.
 type ExtensionHookStats struct {
-	RouteCallCount       int64
-	RouteDuration        time.Duration
-	VHostCallCount       int64
-	VHostDuration        time.Duration
-	ListenerCallCount    int64
-	ListenerDuration     time.Duration
-	TranslationCallCount int64
-	TranslationDuration  time.Duration
+	RouteCallCount    int64
+	RouteDuration     time.Duration
+	VHostCallCount    int64
+	VHostDuration     time.Duration
+	ListenerCallCount int64
+	ListenerDuration  time.Duration
 }
 
 // Translator translates the xDS IR into xDS resources.
@@ -311,11 +309,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	phases.Start("XdsTranslator.processExtensionPostTranslationHook",
 		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
 	)
-	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies, t.extensionIndex, &t.ExtensionStats)
-	phases.SetAttributes(
-		attribute.Int64("extension.hook.translation_call_count", t.ExtensionStats.TranslationCallCount),
-		attribute.Float64("extension.hook.translation_duration_ms", float64(t.ExtensionStats.TranslationDuration.Microseconds())/1000.0),
-	)
+	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies, t.extensionIndex)
 	phases.End()
 	if err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,

@@ -126,7 +126,7 @@ func TestProcessExtensionPostTranslationHookConfig(t *testing.T) {
 			}
 
 			// Call the function under test
-			err = processExtensionPostTranslationHook(tCtx, &mgr, []*ir.UnstructuredRef{}, nil, nil)
+			err = processExtensionPostTranslationHook(tCtx, &mgr, []*ir.UnstructuredRef{}, nil)
 			require.NoError(t, err)
 
 			// Verify the behavior based on configuration
@@ -183,7 +183,7 @@ func TestProcessExtensionPostTranslationHookResolvesPolicyRefs(t *testing.T) {
 	idx := extensionResourceIndex{"foo/ns1/policy1": policyObj}
 	nameOnlyRef := &ir.UnstructuredRef{Name: "foo/ns1/policy1"}
 
-	err = processExtensionPostTranslationHook(&types.ResourceVersionTable{}, &mgr, []*ir.UnstructuredRef{nameOnlyRef}, idx, nil)
+	err = processExtensionPostTranslationHook(&types.ResourceVersionTable{}, &mgr, []*ir.UnstructuredRef{nameOnlyRef}, idx)
 	require.NoError(t, err)
 
 	require.Len(t, mockServer.receivedPolicies, 1)
