@@ -56,8 +56,7 @@ func kubernetesServiceBackendRef(backend *egv1a1.Backend) gwapiv1.BackendObjectR
 }
 
 // validateBackendServicePortProtocol checks that the Service of a KubernetesService Backend has
-// a port with the Backend's port number and the route's protocol. The Service must already exist,
-// so run validateBackend first.
+// a port with the Backend's port number and the route's protocol.
 func (t *Translator) validateBackendServicePortProtocol(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
 	ref := kubernetesServiceBackendRef(backend)
 	return validateServicePortProtocol(t.GetService(backend.Namespace, string(ref.Name)), ref, backend.Namespace, protocol)
