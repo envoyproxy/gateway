@@ -211,6 +211,19 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 			},
 		},
 		{
+			name: "outlier detection with explicit zero max ejection percent",
+			input: &ir.OutlierDetection{
+				Interval:           ir.MetaV1DurationPtr(10 * time.Second),
+				BaseEjectionTime:   ir.MetaV1DurationPtr(30 * time.Second),
+				MaxEjectionPercent: new(uint32(0)),
+			},
+			expected: &clusterv3.OutlierDetection{
+				Interval:           durationpb.New(10 * time.Second),
+				BaseEjectionTime:   durationpb.New(30 * time.Second),
+				MaxEjectionPercent: wrapperspb.UInt32(0),
+			},
+		},
+		{
 			name: "outlier detection with failure percentage threshold",
 			input: &ir.OutlierDetection{
 				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),

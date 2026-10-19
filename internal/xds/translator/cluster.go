@@ -724,7 +724,9 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 		od.SplitExternalLocalOriginErrors = *outlierDetection.SplitExternalLocalOriginErrors
 	}
 
-	if outlierDetection.MaxEjectionPercent != nil && *outlierDetection.MaxEjectionPercent > 0 {
+	// Preserve an explicitly configured 0% limit; only an unset value falls back to Envoy's
+	// 10% default.
+	if outlierDetection.MaxEjectionPercent != nil {
 		od.MaxEjectionPercent = wrapperspb.UInt32(*outlierDetection.MaxEjectionPercent)
 	}
 
@@ -1549,7 +1551,6 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// Populate traffic features.
 	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
 
 	return clusterArgs
