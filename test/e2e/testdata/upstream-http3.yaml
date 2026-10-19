@@ -55,6 +55,7 @@ kind: ConfigMap
 metadata:
   name: h3-backend-envoy
   namespace: gateway-conformance-infra
+# Both listeners bind "::" with ipv4_compat, so the backend answers on IPv4 and IPv6 pods.
 data:
   envoy.yaml: |
     static_resources:
@@ -62,7 +63,8 @@ data:
         - name: https
           address:
             socket_address:
-              address: 0.0.0.0
+              address: "::"
+              ipv4_compat: true
               port_value: 8443
           filter_chains:
             - transport_socket:
@@ -108,7 +110,8 @@ data:
           address:
             socket_address:
               protocol: UDP
-              address: 0.0.0.0
+              address: "::"
+              ipv4_compat: true
               port_value: 8443
           udp_listener_config:
             quic_options: {}
