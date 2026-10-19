@@ -246,6 +246,16 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 		oauth2.Config.CodeVerifierTokenExpiresIn = durationpb.New(oidc.CodeVerifierTTL.Duration)
 	}
 
+	if chunking := oidc.TokenCookieChunking; chunking != nil {
+		oauth2.Config.TokenCookieChunking = &oauth2v3.TokenCookieChunking{}
+		if chunking.MaxCookieSize != nil {
+			oauth2.Config.TokenCookieChunking.MaxCookieSize = &wrappers.UInt32Value{Value: *chunking.MaxCookieSize}
+		}
+		if chunking.MaxChunks != nil {
+			oauth2.Config.TokenCookieChunking.MaxChunks = &wrappers.UInt32Value{Value: *chunking.MaxChunks}
+		}
+	}
+
 	if oidc.ForwardIDTokenHeader != nil {
 		oauth2.Config.ForwardIdToken = &oauth2v3.OAuth2TokenForwarding{
 			Header: *oidc.ForwardIDTokenHeader,

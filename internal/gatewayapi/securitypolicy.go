@@ -2235,6 +2235,7 @@ func (t *Translator) buildOIDC(
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
 		CookieDomain:           policy.Spec.OIDC.CookieDomain,
 		CookieConfig:           policy.Spec.OIDC.CookieConfig,
+		TokenCookieChunking:    policy.Spec.OIDC.TokenCookieChunking,
 		HMACSecret:             hmacData,
 		PassThroughAuthHeader:  passThroughAuthHeader,
 		DisableTokenEncryption: disableTokenEncryption,

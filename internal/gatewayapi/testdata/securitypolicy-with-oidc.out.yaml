@@ -205,6 +205,7 @@ securityPolicies:
       - openid
       - email
       - profile
+      tokenCookieChunking: {}
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -297,6 +298,9 @@ securityPolicies:
         issuer: https://accounts.google.com
       redirectURL: https://www.example.com/bar/oauth2/callback
       refreshToken: true
+      tokenCookieChunking:
+        maxChunks: 4
+        maxCookieSize: 3072
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -427,6 +431,7 @@ xdsIR:
             - openid
             - email
             - profile
+            tokenCookieChunking: {}
       - destination:
           metadata:
             kind: HTTPRoute
@@ -478,6 +483,9 @@ xdsIR:
             refreshToken: true
             scopes:
             - openid
+            tokenCookieChunking:
+              maxChunks: 4
+              maxCookieSize: 3072
       - destination:
           metadata:
             kind: HTTPRoute

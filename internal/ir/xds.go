@@ -1610,6 +1610,10 @@ type OIDC struct {
 	// +optional
 	CookieConfig *egv1a1.OIDCCookieConfig `json:"cookieConfig,omitempty"`
 
+	// TokenCookieChunking splits a token too large for one cookie across several cookies.
+	// If nil, token cookies are not chunked.
+	TokenCookieChunking *egv1a1.OIDCTokenCookieChunking `json:"tokenCookieChunking,omitempty"`
+
 	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
 	// may not be able to handle OIDC redirects and wish to directly supply a token instead.

@@ -3662,6 +3662,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = new(v1alpha1.OIDCCookieConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.TokenCookieChunking != nil {
+		in, out := &in.TokenCookieChunking, &out.TokenCookieChunking
+		*out = new(v1alpha1.OIDCTokenCookieChunking)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.DenyRedirect != nil {
 		in, out := &in.DenyRedirect, &out.DenyRedirect
 		*out = new(v1alpha1.OIDCDenyRedirect)

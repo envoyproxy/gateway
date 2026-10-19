@@ -67,6 +67,9 @@
               path:
                 exact: /foo/logout
             statPrefix: securitypolicy/default/policy-for-first-route
+            tokenCookieChunking:
+              maxChunks: 4
+              maxCookieSize: 3072
             tokenEndpoint:
               cluster: oauth_foo_com_443
               timeout: 10s
@@ -148,6 +151,7 @@
               path:
                 exact: /bar/logout
             statPrefix: securitypolicy/default/policy-for-second-route
+            tokenCookieChunking: {}
             tokenEndpoint:
               cluster: oauth_bar_com_443
               timeout: 10s
