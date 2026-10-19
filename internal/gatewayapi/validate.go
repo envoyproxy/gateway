@@ -201,22 +201,36 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef) statu
 func (t *Translator) validateBackendRefService(backendRef gwapiv1.BackendObjectReference,
 	serviceNamespace string, protocol corev1.Protocol,
 ) status.Error {
-	service := t.GetService(serviceNamespace, string(backendRef.Name))
+	service, err := t.validateServiceExists(serviceNamespace, string(backendRef.Name))
+	if err != nil {
+		return err
+	}
+	return validateServicePortProtocol(service, backendRef, serviceNamespace, protocol)
+}
+
+// validateServiceExists returns the Service a backend points at. It fails if the Service is
+// missing or is an ExternalName Service, which has no ClusterIP or EndpointSlices to route to.
+func (t *Translator) validateServiceExists(serviceNamespace, serviceName string) (*corev1.Service, status.Error) {
+	service := t.GetService(serviceNamespace, serviceName)
 	if service == nil {
-		return status.NewRouteStatusError(
-			fmt.Errorf("service %s/%s not found", serviceNamespace, string(backendRef.Name)),
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("service %s/%s not found", serviceNamespace, serviceName),
 			gwapiv1.RouteReasonBackendNotFound)
 	}
-	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
-	// translated into a valid backend.
-	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
 	if isServiceExternalName(service) {
-		return status.NewRouteStatusError(
+		return nil, status.NewRouteStatusError(
 			fmt.Errorf("Service %s/%s is of type ExternalName, which is not supported as a backend; "+
-				"use an Envoy Gateway Backend resource with an FQDN endpoint instead",
-				serviceNamespace, string(backendRef.Name)),
+				"use an Envoy Gateway Backend resource with an FQDN endpoint instead", serviceNamespace, serviceName),
 			gwapiv1.RouteReasonUnsupportedValue)
 	}
+	return service, nil
+}
+
+// validateServicePortProtocol checks that the Service has a port matching the backendRef
+// port number and protocol.
+func validateServicePortProtocol(service *corev1.Service, backendRef gwapiv1.BackendObjectReference,
+	serviceNamespace string, protocol corev1.Protocol,
+) status.Error {
 	var portFound bool
 	for _, port := range service.Spec.Ports {
 		portProtocol := getServicePortProtocol(port.Protocol)
@@ -289,7 +303,7 @@ func (t *Translator) validateBackendRefBackend(
 	}
 
 	if isKubernetesServiceBackend(backend) {
-		if err := t.validateKubernetesServiceBackend(backend, protocol); err != nil {
+		if err := t.validateKubernetesServicePort(backend, protocol); err != nil {
 			return err
 		}
 	}

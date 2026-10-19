@@ -58,13 +58,23 @@ func kubernetesServiceBackendRef(backend *egv1a1.Backend) gwapiv1.BackendObjectR
 // validateKubernetesServiceBackend checks the Service of a KubernetesService Backend,
 // the same way a Service backendRef is checked.
 func (t *Translator) validateKubernetesServiceBackend(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
+	if err := t.validateKubernetesServiceExists(backend); err != nil {
+		return err
+	}
+	return t.validateKubernetesServicePort(backend, protocol)
+}
+
+// validateKubernetesServicePort checks the port and protocol of a KubernetesService Backend's
+// Service. The Service must already exist, so run validateBackend first.
+func (t *Translator) validateKubernetesServicePort(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
 	if backend.Spec.KubernetesService == nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("kubernetesService must be specified when type is KubernetesService"),
 			status.RouteReasonInvalidBackendRef,
 		)
 	}
-	return t.validateBackendRefService(kubernetesServiceBackendRef(backend), backend.Namespace, protocol)
+	ref := kubernetesServiceBackendRef(backend)
+	return validateServicePortProtocol(t.GetService(backend.Namespace, string(ref.Name)), ref, backend.Namespace, protocol)
 }
 
 // validateKubernetesServiceExists checks that the Service of a KubernetesService Backend exists
@@ -75,17 +85,9 @@ func (t *Translator) validateKubernetesServiceExists(backend *egv1a1.Backend) st
 	}
 
 	ref := kubernetesServiceBackendRef(backend)
-	service := t.GetService(backend.Namespace, string(ref.Name))
-	if service == nil {
-		return status.NewRouteStatusError(
-			fmt.Errorf("service %s/%s not found", backend.Namespace, ref.Name),
-			gwapiv1.RouteReasonBackendNotFound)
-	}
-	if isServiceExternalName(service) {
-		return status.NewRouteStatusError(
-			fmt.Errorf("service %s/%s is of type ExternalName, which is not supported for a KubernetesService backend; "+
-				"use an Endpoints backend with an FQDN endpoint instead", backend.Namespace, ref.Name),
-			gwapiv1.RouteReasonUnsupportedValue)
+	service, err := t.validateServiceExists(backend.Namespace, string(ref.Name))
+	if err != nil {
+		return err
 	}
 	for _, port := range service.Spec.Ports {
 		if port.Port == *ref.Port {
@@ -167,10 +169,6 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 				case endpoint.IP != nil:
 					ports[strconv.Itoa(int(endpoint.IP.Port))] = false
 				}
-			}
-			// A KubernetesService Backend has no endpoints, so its Service port is the only one to check.
-			if isKubernetesServiceBackend(backend) && backend.Spec.KubernetesService != nil {
-				ports[strconv.Itoa(int(backend.Spec.KubernetesService.Port))] = false
 			}
 
 			for _, policy := range backendTLSPolicies {

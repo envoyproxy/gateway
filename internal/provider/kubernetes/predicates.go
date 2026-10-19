@@ -575,11 +575,11 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
-	if r.isServiceReferencedByBackend(&nsName) {
+	if r.isRouteReferencingBackend(&nsName) {
 		return true
 	}
 
-	if r.isRouteReferencingBackend(&nsName) {
+	if r.isServiceReferencedByBackend(&nsName) {
 		return true
 	}
 
@@ -808,11 +808,11 @@ func (r *gatewayAPIReconciler) isEndpointSliceBackendReferenced(nsName *types.Na
 		return true
 	}
 
-	if r.isServiceReferencedByBackend(nsName) {
+	if r.isRouteReferencingBackend(nsName) {
 		return true
 	}
 
-	if r.isRouteReferencingBackend(nsName) {
+	if r.isServiceReferencedByBackend(nsName) {
 		return true
 	}
 
