@@ -1136,57 +1136,76 @@ func TestBuildAuthorizationJWTProvider(t *testing.T) {
 	}
 }
 
-// Test_OIDC_PostLogoutRedirect_Merge covers the invariant that the CRD's CEL rule cannot: CEL is
-// evaluated by the apiserver on an individual policy, but a merged policy only ever exists in
-// memory inside the translator. Merging a parent that sets uri with a route that sets disabled
-// therefore yields a policy that sets uri with disabled: true without any admission error, and
-// the translator would resolve it toward uri, silently dropping the route's intent.
+// Test_OIDC_PostLogoutRedirect_Merge checks how a route's postLogoutRedirect combines with the
+// parent's. The field has a replace patch strategy, so under StrategicMerge the route's block
+// replaces the parent's. Under JSONMerge the keys merge, so the parent's uri and the route's
+// disabled: true both survive and the merged policy must be rejected.
 func Test_OIDC_PostLogoutRedirect_Merge(t *testing.T) {
-	oidcWith := func(plr *egv1a1.OIDCPostLogoutRedirect) *egv1a1.OIDC {
-		return &egv1a1.OIDC{PostLogoutRedirect: plr}
-	}
-	parentPolicy := func() *egv1a1.SecurityPolicy {
-		return &egv1a1.SecurityPolicy{
-			Spec: egv1a1.SecurityPolicySpec{
-				OIDC: oidcWith(&egv1a1.OIDCPostLogoutRedirect{
-					URI: ToPointer("https://www.example.com/loggedout"),
-				}),
-			},
-		}
-	}
-	routePolicy := func(mergeType *egv1a1.MergeType) *egv1a1.SecurityPolicy {
+	const parentURI = "https://www.example.com/loggedout"
+	policyWith := func(mergeType *egv1a1.MergeType, plr *egv1a1.OIDCPostLogoutRedirect) *egv1a1.SecurityPolicy {
 		return &egv1a1.SecurityPolicy{
 			Spec: egv1a1.SecurityPolicySpec{
 				MergeType: mergeType,
-				OIDC:      oidcWith(&egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)}),
+				OIDC:      &egv1a1.OIDC{PostLogoutRedirect: plr},
 			},
 		}
 	}
-
-	// Each policy on its own passes the CEL rules, which is why admission lets both
-	// through.
-	require.NoError(t, validateSecurityPolicy(parentPolicy()))
-	require.NoError(t, validateSecurityPolicy(routePolicy(nil)))
-
+	parentWithURI := func() *egv1a1.SecurityPolicy {
+		return policyWith(nil, &egv1a1.OIDCPostLogoutRedirect{URI: ToPointer(parentURI)})
+	}
 	strategicMerge := egv1a1.StrategicMerge
-	merged, _, err := mergeSecurityPolicy(routePolicy(&strategicMerge), parentPolicy())
-	require.NoError(t, err)
+	jsonMerge := egv1a1.JSONMerge
 
-	// Both fields survive the merge, so the merged policy must be rejected rather than silently
-	// resolved toward one of them.
-	plr := merged.Spec.OIDC.PostLogoutRedirect
-	require.NotNil(t, plr.URI, "expected the parent's uri to survive the merge")
-	require.NotNil(t, plr.Disabled, "expected the route's disabled to survive the merge")
-	require.ErrorContains(t, validateSecurityPolicy(merged),
-		"OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+	t.Run("StrategicMerge route disabled replaces parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Nil(t, plr.URI)
+		require.True(t, *plr.Disabled)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
 
-	// disabled: false means the same as leaving it unset, so the route inherits the parent's uri.
-	routeNotDisabled := routePolicy(&strategicMerge)
-	routeNotDisabled.Spec.OIDC.PostLogoutRedirect.Disabled = ToPointer(false)
-	merged, _, err = mergeSecurityPolicy(routeNotDisabled, parentPolicy())
-	require.NoError(t, err)
-	require.Equal(t, "https://www.example.com/loggedout", *merged.Spec.OIDC.PostLogoutRedirect.URI)
-	require.NoError(t, validateSecurityPolicy(merged))
+	t.Run("StrategicMerge route uri replaces parent disabled", func(t *testing.T) {
+		parent := policyWith(nil, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{URI: ToPointer("https://other.example.com/bye")})
+		merged, _, err := mergeSecurityPolicy(route, parent)
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Equal(t, "https://other.example.com/bye", *plr.URI)
+		require.Nil(t, plr.Disabled)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	t.Run("StrategicMerge route without postLogoutRedirect inherits parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, nil)
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		require.Equal(t, parentURI, *merged.Spec.OIDC.PostLogoutRedirect.URI)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	// The route's block replaces the parent's, so disabled: false alone leaves no uri and
+	// Envoy falls back to its default post logout redirect URI.
+	t.Run("StrategicMerge route disabled false does not inherit parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(false)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Nil(t, plr.URI)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	t.Run("JSONMerge route disabled with parent uri is rejected", func(t *testing.T) {
+		route := policyWith(&jsonMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.NotNil(t, plr.URI, "expected the parent's uri to survive JSONMerge")
+		require.NotNil(t, plr.Disabled, "expected the route's disabled to survive JSONMerge")
+		require.ErrorContains(t, validateSecurityPolicy(merged),
+			"OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+	})
 }
 
 func ToPointer[T any](v T) *T {
