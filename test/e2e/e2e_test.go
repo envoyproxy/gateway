@@ -60,6 +60,14 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
+	// Wasm tests are skipped until envoyproxy/envoy#48415 lands.
+	skipTests = append(skipTests,
+		tests.HTTPWasmTest.ShortName,
+		tests.WasmHTTPTLS.ShortName,
+		tests.OCIWasmTest.ShortName,
+		tests.WasmEnvoyProxyTest.ShortName,
+	)
+
 	if tests.XDSNameSchemeV2() {
 		skipTests = append(skipTests,
 			tests.EnvoyPatchPolicyTest.ShortName,
