@@ -716,7 +716,7 @@ func (t *Translator) addRouteToRouteConfig(
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
 	healthCheckLog *ir.ProxyHealthCheckLog,
-	http3Enabled bool,
+	downstreamHTTP3Enabled bool,
 ) error {
 	var (
 		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
@@ -774,7 +774,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex, geoIPHeaders)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex, geoIPHeaders, downstreamHTTP3Enabled)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
@@ -794,7 +794,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 
-		if http3Enabled {
+		// A route proxying over upstream HTTP/3 adds this header in its header mutation filter
+		// instead, after the alternate protocols cache filter has run, so the cache never
+		// records the gateway's own alt-svc as the backend's.
+		if downstreamHTTP3Enabled && !routeUsesUpstreamHTTP3(httpRoute, t.backendIndex) {
 			advertisedPort := httpListener.ExternalPort
 			if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
 				advertisedPort = *httpListener.HTTP3.AdvertisedPort
