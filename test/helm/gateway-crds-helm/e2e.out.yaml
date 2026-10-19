@@ -172,19 +172,12 @@ spec:
                   health checking, session persistence, endpoint draining and zone awareness.
                 properties:
                   name:
-                    description: |-
-                      Name is the name of the Kubernetes Service.
-
-                      Cross-namespace references are not supported yet; the Service is always resolved
-                      in the namespace of the Backend.
+                    description: Name is the name of the Kubernetes Service.
                     maxLength: 253
                     minLength: 1
                     type: string
                   port:
-                    description: |-
-                      Port is the port of the Kubernetes Service. It is matched against the Service
-                      port, not the target port of the backing pods, the same way a Service backendRef
-                      port is.
+                    description: Port is the port of the Kubernetes Service.
                     format: int32
                     maximum: 65535
                     minimum: 1

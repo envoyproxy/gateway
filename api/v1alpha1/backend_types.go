@@ -134,14 +134,9 @@ type UnixSocket struct {
 // as the Backend.
 type KubernetesServiceReference struct {
 	// Name is the name of the Kubernetes Service.
-	//
-	// Cross-namespace references are not supported yet; the Service is always resolved
-	// in the namespace of the Backend.
 	Name gwapiv1.ObjectName `json:"name"`
 
-	// Port is the port of the Kubernetes Service. It is matched against the Service
-	// port, not the target port of the backing pods, the same way a Service backendRef
-	// port is.
+	// Port is the port of the Kubernetes Service.
 	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535

@@ -303,7 +303,7 @@ func (t *Translator) validateBackendRefBackend(
 	}
 
 	if isKubernetesServiceBackend(backend) {
-		if err := t.validateKubernetesServicePort(backend, protocol); err != nil {
+		if err := t.validateKubernetesServicePortProtocol(backend, protocol); err != nil {
 			return err
 		}
 	}

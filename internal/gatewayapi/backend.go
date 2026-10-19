@@ -61,12 +61,13 @@ func (t *Translator) validateKubernetesServiceBackend(backend *egv1a1.Backend, p
 	if err := t.validateKubernetesServiceExists(backend); err != nil {
 		return err
 	}
-	return t.validateKubernetesServicePort(backend, protocol)
+	return t.validateKubernetesServicePortProtocol(backend, protocol)
 }
 
-// validateKubernetesServicePort checks the port and protocol of a KubernetesService Backend's
-// Service. The Service must already exist, so run validateBackend first.
-func (t *Translator) validateKubernetesServicePort(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
+// validateKubernetesServicePortProtocol checks that the Service of a KubernetesService Backend has
+// a port with the Backend's port number and the route's protocol. The Service must already exist,
+// so run validateBackend first.
+func (t *Translator) validateKubernetesServicePortProtocol(backend *egv1a1.Backend, protocol corev1.Protocol) status.Error {
 	if backend.Spec.KubernetesService == nil {
 		return status.NewRouteStatusError(
 			fmt.Errorf("kubernetesService must be specified when type is KubernetesService"),

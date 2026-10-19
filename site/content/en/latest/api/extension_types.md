@@ -4298,8 +4298,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _[ObjectName](#objectname)_ |  true  |  | Name is the name of the Kubernetes Service.<br />Cross-namespace references are not supported yet; the Service is always resolved<br />in the namespace of the Backend. |
-| `port` | _integer_ |  true  |  | Port is the port of the Kubernetes Service. It is matched against the Service<br />port, not the target port of the backing pods, the same way a Service backendRef<br />port is. |
+| `name` | _[ObjectName](#objectname)_ |  true  |  | Name is the name of the Kubernetes Service. |
+| `port` | _integer_ |  true  |  | Port is the port of the Kubernetes Service. |
 
 
 #### KubernetesServiceSpec
