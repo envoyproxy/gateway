@@ -30,6 +30,8 @@ func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolic
 		} else {
 			if err := validateBackend(backend, backendTLSPolicies, t.RunningOnHost); err != nil {
 				status.UpdateBackendStatusAcceptedCondition(backend, false, fmt.Sprintf("The Backend was not accepted: %s", err.Error()))
+			} else if err := t.validateKubernetesServiceExists(backend); err != nil {
+				status.UpdateBackendStatusAcceptedCondition(backend, false, fmt.Sprintf("The Backend was not accepted: %s", err.Error()))
 			} else {
 				status.UpdateBackendStatusAcceptedCondition(backend, true, "The Backend was accepted")
 			}
@@ -65,6 +67,35 @@ func (t *Translator) validateKubernetesServiceBackend(backend *egv1a1.Backend, p
 		)
 	}
 	return t.validateBackendRefService(kubernetesServiceBackendRef(backend), backend.Namespace, protocol)
+}
+
+// validateKubernetesServiceExists checks that the Service of a KubernetesService Backend exists
+// and has the referenced port. The port protocol is left to the routes that use the Backend.
+func (t *Translator) validateKubernetesServiceExists(backend *egv1a1.Backend) status.Error {
+	if !isKubernetesServiceBackend(backend) || backend.Spec.KubernetesService == nil {
+		return nil
+	}
+
+	ref := kubernetesServiceBackendRef(backend)
+	service := t.GetService(backend.Namespace, string(ref.Name))
+	if service == nil {
+		return status.NewRouteStatusError(
+			fmt.Errorf("service %s/%s not found", backend.Namespace, ref.Name),
+			gwapiv1.RouteReasonBackendNotFound)
+	}
+	if isServiceExternalName(service) {
+		return status.NewRouteStatusError(
+			fmt.Errorf("service %s/%s is of type ExternalName, which is not supported as a backend", backend.Namespace, ref.Name),
+			gwapiv1.RouteReasonUnsupportedValue)
+	}
+	for _, port := range service.Spec.Ports {
+		if port.Port == *ref.Port {
+			return nil
+		}
+	}
+	return status.NewRouteStatusError(
+		fmt.Errorf("port %d not found on service %s/%s", *ref.Port, backend.Namespace, ref.Name),
+		status.RouteReasonPortNotFound)
 }
 
 func validateBackend(backend *egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy, runningOnHost bool) status.Error {

@@ -12,10 +12,10 @@ backends:
   status:
     conditions:
     - lastTransitionTime: null
-      message: The Backend was accepted
+      message: 'The Backend was not accepted: service default/svc-missing not found'
       reason: Accepted
-      status: "True"
-      type: Accepted
+      status: "False"
+      type: Invalid
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
