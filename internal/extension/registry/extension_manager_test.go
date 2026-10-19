@@ -15,6 +15,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -484,6 +485,55 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+// Test_Integration_Timeout_UnreachableServer checks that ExtensionService.Timeout
+// bounds a hook call against an unreachable extension server. Without it,
+// waitForReady keeps the call queued until the server comes back.
+func Test_Integration_Timeout_UnreachableServer(t *testing.T) {
+	// Reserve a port, then release it so connects are refused.
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := lis.Addr().(*net.TCPAddr).Port
+	require.NoError(t, lis.Close())
+
+	mgr := &Manager{
+		extension: egv1a1.ExtensionManager{
+			Hooks: &egv1a1.ExtensionHooks{
+				XDSTranslator: &egv1a1.XDSTranslatorHooks{
+					Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+				},
+			},
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					IP: &egv1a1.IPEndpoint{
+						Address: "127.0.0.1",
+						Port:    int32(port),
+					},
+				},
+				Timeout: new(gwapiv1.Duration("500ms")),
+			},
+		},
+	}
+	t.Cleanup(mgr.CleanupHookConns)
+
+	hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSRoute)
+	require.NoError(t, err)
+	require.NotNil(t, hook)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := hook.PostRouteModifyHook(&routev3.Route{Name: "test-route"}, nil, nil, nil)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.Error(t, err)
+		require.Equal(t, codes.DeadlineExceeded, status.Code(err))
+	case <-time.After(5 * time.Second):
+		t.Fatal("PostRouteModifyHook did not return within 5s against an unreachable extension server")
 	}
 }
 

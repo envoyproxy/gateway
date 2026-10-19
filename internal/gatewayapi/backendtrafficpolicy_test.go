@@ -549,6 +549,96 @@ func TestBuildCompression(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "compressor with custom settings",
+			compressor: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+		},
+		{
+			name: "only the first compressor of each type is used",
+			compressor: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(1)),
+					},
+				},
+				{
+					Type:   egv1a1.BrotliCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{},
+				},
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(1)),
+					},
+				},
+				{
+					Type: egv1a1.BrotliCompressorType,
+				},
+			},
+		},
+		{
+			name: "only the first compression of each type is used",
+			compression: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					MinContentLength: new(resource.MustParse("100")),
+				},
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					MinContentLength: new(resource.MustParse("200")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: new(uint32(100)),
+				},
+			},
+		},
+		{
+			name: "compression settings of other compressor types are ignored",
+			compression: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{
+						Quality: new(uint32(11)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -557,6 +647,21 @@ func TestBuildCompression(t *testing.T) {
 			require.Equal(t, tc.expected, got)
 		})
 	}
+
+	t.Run("compressor settings are copied", func(t *testing.T) {
+		compressor := []*egv1a1.Compression{
+			{
+				Type: egv1a1.ZstdCompressorType,
+				Zstd: &egv1a1.ZstdCompressor{
+					CompressionLevel: new(uint32(3)),
+				},
+			},
+		}
+		got := buildCompression(nil, compressor)
+		require.Len(t, got, 1)
+		require.NotSame(t, compressor[0].Zstd, got[0].Zstd)
+		require.NotSame(t, compressor[0].Zstd.CompressionLevel, got[0].Zstd.CompressionLevel)
+	})
 }
 
 func TestBuildRateLimitRuleQueryParams(t *testing.T) {
@@ -3121,6 +3226,7 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Connection":        true,
 		"DNS":               true,
 		"HTTP2":             true,
+		"HTTP3":             true,
 		"MergeType":         false,
 		"RateLimit":         false,
 		"BandwidthLimit":    false,
@@ -3179,6 +3285,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      false,
 			"BackendConnection": false,
 			"HTTP2":             false,
+			"HTTP3":             false,
 			"DNS":               true,
 		},
 		ir.TCP: {
@@ -3191,6 +3298,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      true,
 			"BackendConnection": false,
 			"HTTP2":             false,
+			"HTTP3":             false,
 			"DNS":               true,
 		},
 		ir.HTTP: {
@@ -3203,6 +3311,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"TCPKeepalive":      true,
 			"BackendConnection": true,
 			"HTTP2":             true,
+			"HTTP3":             true,
 			"DNS":               true,
 		},
 	}
@@ -3306,10 +3415,136 @@ func TestApplyGatewayPolicyToMergedClusterDropsRouteScopedTimeout(t *testing.T) 
 }
 
 // mergedClusterForProtocol builds a minimal merged BackendCluster serving protocol.
+// mergedClusterForProtocol builds a cluster that can carry every field a merged cluster of
+// that protocol may honor; TLS is set because HTTP/3 is dropped from a plaintext backend.
 func mergedClusterForProtocol(protocol ir.AppProtocol) *ir.BackendCluster {
 	return &ir.BackendCluster{
 		Name:    "bc-1",
-		Setting: &ir.DestinationSetting{Protocol: protocol},
+		Setting: &ir.DestinationSetting{Protocol: protocol, TLS: &ir.TLSUpstreamConfig{}},
+	}
+}
+
+// TestValidateBackendHTTP3 checks that a route is judged on its route-scoped settings only:
+// merged refs are the cluster's business and unresolvable backendRefs never dial.
+func TestApplyRouteHTTP3(t *testing.T) {
+	http3 := func() *ir.TrafficFeatures {
+		return &ir.TrafficFeatures{ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			HTTP3: &ir.BackendHTTP3Settings{Mode: string(egv1a1.BackendHTTP3ModeAuto)},
+		}}
+	}
+	metadata := &ir.ResourceMetadata{Kind: "HTTPRoute", Name: "route", Namespace: "default"}
+	tlsSetting := &ir.DestinationSetting{Protocol: ir.HTTP, TLS: &ir.TLSUpstreamConfig{}}
+	plainSetting := &ir.DestinationSetting{Protocol: ir.HTTP}
+
+	tests := []struct {
+		name         string
+		route        *ir.HTTPRoute
+		wantDropped  bool
+		wantWarnings int
+	}{
+		{
+			name:  "no http3 on the route",
+			route: &ir.HTTPRoute{Metadata: metadata, Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{plainSetting}}},
+		},
+		{
+			name:  "redirect route has no destination",
+			route: &ir.HTTPRoute{Metadata: metadata, Traffic: http3()},
+		},
+		{
+			name:  "tls settings keep http3",
+			route: &ir.HTTPRoute{Metadata: metadata, Traffic: http3(), Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{tlsSetting}}},
+		},
+		{
+			name:         "plaintext setting drops http3 with a warning",
+			route:        &ir.HTTPRoute{Metadata: metadata, Traffic: http3(), Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{tlsSetting, plainSetting}}},
+			wantDropped:  true,
+			wantWarnings: 1,
+		},
+		{
+			name: "merged refs are not the route's to judge",
+			route: &ir.HTTPRoute{Metadata: metadata, Traffic: http3(), Destination: &ir.RouteDestination{BackendClusterRefs: []*ir.BackendClusterRef{
+				{Name: "service/default/plain/8080/http"},
+			}}},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			warnings := http3Warnings{}
+			applyRouteHTTP3(tc.route, warnings)
+			dropped := tc.route.Traffic != nil && tc.route.Traffic.HTTP3 == nil
+			require.Equal(t, tc.wantDropped, dropped)
+			require.Len(t, warnings, tc.wantWarnings)
+		})
+	}
+}
+
+func TestHTTP3WarningsMessage(t *testing.T) {
+	w := http3Warnings{}
+	require.Empty(t, w.message())
+
+	route := func(name, rule string) *ir.HTTPRoute {
+		return &ir.HTTPRoute{
+			Name:     "httproute/default/" + name + "/rule/" + rule + "/match/0/*",
+			Metadata: &ir.ResourceMetadata{Kind: "HTTPRoute", Namespace: "default", Name: name, SectionName: rule},
+		}
+	}
+	w.addMergedCluster(&ir.BackendCluster{Name: "service/default/svc-2/8080/http"}, []string{"reason b"})
+	w.addRoute(http3Warning{disabled: true, reason: "reason a"}, route("route-2", "0"))
+	w.addRoute(http3Warning{disabled: true, reason: "reason a"}, route("route-1", "0"))
+	// A second rule of the same HTTPRoute is listed once.
+	w.addRoute(http3Warning{disabled: true, reason: "reason a"}, route("route-1", "1"))
+	w.addRoute(http3Warning{reason: "reason c"}, route("route-3", "0"))
+	require.Equal(t,
+		"HTTP/3 is disabled because reason a, for these routes: [default/route-1 default/route-2]; "+
+			"HTTP/3 is disabled because reason b, for these backends: [service/default/svc-2/8080/http]; "+
+			"HTTP/3 ignores a setting because reason c, for these routes: [default/route-3]",
+		w.message())
+}
+
+// TestApplyGatewayPolicyToMergedClusterHTTP3 checks that a merged cluster only keeps HTTP3
+// when its backend can actually use it, and reports why otherwise.
+func TestApplyGatewayPolicyToMergedClusterHTTP3(t *testing.T) {
+	tf := &ir.TrafficFeatures{
+		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			HTTP3: &ir.BackendHTTP3Settings{Mode: string(egv1a1.BackendHTTP3ModeAuto)},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		setting     *ir.DestinationSetting
+		wantHTTP3   bool
+		wantReasons int
+	}{
+		{
+			name:      "tls http backend keeps http3",
+			setting:   &ir.DestinationSetting{Protocol: ir.HTTP, TLS: &ir.TLSUpstreamConfig{}},
+			wantHTTP3: true,
+		},
+		{
+			name:        "plaintext http backend drops http3",
+			setting:     &ir.DestinationSetting{Protocol: ir.HTTP},
+			wantReasons: 1,
+		},
+		{
+			name:        "http2 backend drops http3",
+			setting:     &ir.DestinationSetting{Protocol: ir.HTTP2, TLS: &ir.TLSUpstreamConfig{}},
+			wantReasons: 1,
+		},
+		{
+			// A TCP cluster never carries HTTP-only settings, so nothing is dropped or reported.
+			name:    "tcp backend never carries http3",
+			setting: &ir.DestinationSetting{Protocol: ir.TCP},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bc := &ir.BackendCluster{Name: "bc-1", Setting: tc.setting}
+			reasons := applyGatewayPolicyToMergedCluster(bc, tf, nil)
+			require.Len(t, reasons, tc.wantReasons)
+			require.NotNil(t, bc.Traffic)
+			require.Equal(t, tc.wantHTTP3, bc.Traffic.HTTP3 != nil)
+		})
 	}
 }
 
