@@ -286,3 +286,60 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvoyProxyDynamicModuleIndexFuncs(t *testing.T) {
+	imageModule := func(name string, image *egv1a1.ImageDynamicModuleSource) egv1a1.DynamicModuleEntry {
+		return egv1a1.DynamicModuleEntry{
+			Name: name,
+			Source: egv1a1.DynamicModuleSource{
+				Type:  new(egv1a1.ImageDynamicModuleSourceType),
+				Image: image,
+			},
+		}
+	}
+	caRef := func(kind, namespace, name string) *egv1a1.WasmCodeSourceTLSConfig {
+		ref := gwapiv1.SecretObjectReference{Name: gwapiv1.ObjectName(name)}
+		if kind != "" {
+			ref.Kind = new(gwapiv1.Kind(kind))
+		}
+		if namespace != "" {
+			ref.Namespace = new(gwapiv1.Namespace(namespace))
+		}
+		return &egv1a1.WasmCodeSourceTLSConfig{CACertificateRef: ref}
+	}
+
+	ep := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "proxy"},
+		Spec: egv1a1.EnvoyProxySpec{
+			DynamicModules: []egv1a1.DynamicModuleEntry{
+				{
+					Name: "local-module",
+					Source: egv1a1.DynamicModuleSource{
+						Local: &egv1a1.LocalDynamicModuleSource{Path: "/lib/liblocal.so"},
+					},
+				},
+				imageModule("no-tls", &egv1a1.ImageDynamicModuleSource{URL: "registry.example.com/no-tls"}),
+				imageModule("pull-secret", &egv1a1.ImageDynamicModuleSource{
+					URL:           "registry.example.com/private",
+					PullSecretRef: &gwapiv1.SecretObjectReference{Name: "pull-secret"},
+				}),
+				imageModule("ca-secret-default-kind", &egv1a1.ImageDynamicModuleSource{
+					URL: "registry.example.com/a",
+					TLS: caRef("", "", "ca-secret"),
+				}),
+				imageModule("ca-configmap", &egv1a1.ImageDynamicModuleSource{
+					URL: "registry.example.com/b",
+					TLS: caRef("ConfigMap", "other", "ca-configmap"),
+				}),
+				imageModule("ca-cluster-trust-bundle", &egv1a1.ImageDynamicModuleSource{
+					URL: "registry.example.com/c",
+					TLS: caRef("ClusterTrustBundle", "", "ca-bundle"),
+				}),
+			},
+		},
+	}
+
+	require.ElementsMatch(t, []string{"default/pull-secret", "default/ca-secret"}, secretEnvoyProxyIndexFunc(ep))
+	require.Equal(t, []string{"other/ca-configmap"}, configMapEnvoyProxyIndexFunc(ep))
+	require.Equal(t, []string{"ca-bundle"}, clusterTrustBundleEnvoyProxyIndexFunc(ep))
+}

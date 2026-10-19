@@ -678,7 +678,14 @@ func (r *gatewayAPIReconciler) loadGatewayClassStatusToDelete() sets.Set[types.N
 }
 
 func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *resource.Resources) error {
-	if gwcResource.EnvoyProxyForGatewayClass == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef == nil {
+	if gwcResource.EnvoyProxyForGatewayClass == nil {
+		return nil
+	}
+	// Missing pull secrets or CA certificates shouldn't stop the GatewayClass from being accepted,
+	// the policies using the dynamic modules report the error instead.
+	r.processEnvoyProxyDynamicModuleRefs(ctx, gwcResource.EnvoyProxyForGatewayClass, newResourceMapping(), gwcResource)
+
+	if gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef == nil {
 		return nil
 	}
 	certRef := gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef
@@ -695,6 +702,32 @@ func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, g
 		}
 	}
 	return nil
+}
+
+// processEnvoyProxyDynamicModuleRefs adds the pull secrets and the CA certificates of
+// the dynamic modules from OCI images registered in the EnvoyProxy to the resource tree.
+func (r *gatewayAPIReconciler) processEnvoyProxyDynamicModuleRefs(
+	ctx context.Context,
+	ep *egv1a1.EnvoyProxy,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+) {
+	for _, ref := range dynamicModulePullSecretRefs(ep) {
+		if err := r.processSecretRef(ctx, resourceMap, resourceTree,
+			resource.KindEnvoyProxy, ep.Namespace, ep.Name, ref); err != nil {
+			r.log.Error(err, "failed to process dynamic module pull secret for EnvoyProxy",
+				"namespace", ep.Namespace, "name", ep.Name)
+		}
+	}
+	for _, kind := range []string{resource.KindSecret, resource.KindConfigMap, resource.KindClusterTrustBundle} {
+		for _, ref := range dynamicModuleCACertRefs(ep, kind) {
+			if err := r.processSecretObjectRef(ctx, resourceMap, resourceTree,
+				resource.KindEnvoyProxy, ep.Namespace, ep.Name, ref, kind); err != nil {
+				r.log.Error(err, "failed to process dynamic module CA certificate for EnvoyProxy",
+					"namespace", ep.Namespace, "name", ep.Name)
+			}
+		}
+	}
 }
 
 // managedGatewayClasses returns a list of GatewayClass objects that are managed by the Envoy Gateway Controller.
@@ -3193,6 +3226,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 	// It will be recomputed by the gateway-api layer
 	ep.Status = egv1a1.EnvoyProxyStatus{}
 	r.processEnvoyProxy(ep, resourceMap)
+	r.processEnvoyProxyDynamicModuleRefs(ctx, ep, resourceMap, resourceTree)
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {

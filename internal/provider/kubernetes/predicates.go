@@ -313,7 +313,19 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
-	return false
+	return r.isEnvoyProxyReferencingClusterTrustBundle(ctb)
+}
+
+func (r *gatewayAPIReconciler) isEnvoyProxyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+	epList := &egv1a1.EnvoyProxyList{}
+	if err := r.client.List(context.Background(), epList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleEnvoyProxyIndex, ctb.Name),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyProxy")
+		return false
+	}
+
+	return len(epList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
@@ -409,25 +421,8 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.Names
 		return false
 	}
 
-	if len(epList.Items) == 0 {
-		return false
-	}
-
-	for i := range epList.Items {
-		ep := &epList.Items[i]
-		if ep.Spec.BackendTLS != nil {
-			if ep.Spec.BackendTLS.ClientCertificateRef != nil {
-				certRef := ep.Spec.BackendTLS.ClientCertificateRef
-				ns := gatewayapi.NamespaceDerefOr(certRef.Namespace, ep.Namespace)
-				if nsName.Name == string(certRef.Name) && nsName.Namespace == ns {
-					return true
-				}
-				continue
-			}
-		}
-	}
-
-	return false
+	// The index holds every Secret referenced by the EnvoyProxy, see secretEnvoyProxyIndexFunc.
+	return len(epList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.NamespacedName) bool {
@@ -1119,7 +1114,15 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
-	return false
+	epList := &egv1a1.EnvoyProxyList{}
+	if err := r.client.List(context.Background(), epList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapEnvoyProxyIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyProxy")
+		return false
+	}
+
+	return len(epList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingBackend(nsName *types.NamespacedName) bool {

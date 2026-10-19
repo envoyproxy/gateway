@@ -425,6 +425,33 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		expect        bool
 	}{
 		{
+			name: "envoy proxy references a dynamic module CA config map",
+			configs: []client.Object{
+				&egv1a1.EnvoyProxy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "dynamic-module-ca"},
+					Spec: egv1a1.EnvoyProxySpec{
+						DynamicModules: []egv1a1.DynamicModuleEntry{{
+							Name: "image-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: new(egv1a1.ImageDynamicModuleSourceType),
+								Image: &egv1a1.ImageDynamicModuleSource{
+									URL: "registry.example.com/modules/auth:v1.0.0",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: gatewayapi.KindPtr("ConfigMap"),
+											Name: "dynamic-module-ca",
+										},
+									},
+								},
+							},
+						}},
+					},
+				},
+			},
+			configMap: test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "dynamic-module-ca"}, make(map[string]string), make(map[string]string)),
+			expect:    true,
+		},
+		{
 			name: "references Backend TLS config map",
 			configs: []client.Object{
 				&egv1a1.Backend{
@@ -627,6 +654,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 			WithIndex(&egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex, configMapSecurityPolicyIndexFunc).
+			WithIndex(&egv1a1.EnvoyProxy{}, configMapEnvoyProxyIndex, configMapEnvoyProxyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateConfigMapForReconcile(tc.configMap)
@@ -689,12 +717,47 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			},
 		},
 	}
+	dynamicModuleEnvoyProxyConfig := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "dynamic-module-settings",
+		},
+		Spec: egv1a1.EnvoyProxySpec{
+			DynamicModules: []egv1a1.DynamicModuleEntry{{
+				Name: "image-module",
+				Source: egv1a1.DynamicModuleSource{
+					Type: new(egv1a1.ImageDynamicModuleSourceType),
+					Image: &egv1a1.ImageDynamicModuleSource{
+						URL: "registry.example.com/modules/auth:v1.0.0",
+						PullSecretRef: &gwapiv1.SecretObjectReference{
+							Kind: gatewayapi.KindPtr("Secret"),
+							Name: "dynamic-module-pull-secret",
+						},
+					},
+				},
+			}},
+		},
+	}
 	testCases := []struct {
 		name    string
 		configs []client.Object
 		secret  *corev1.Secret
 		expect  bool
 	}{
+		{
+			name: "envoy proxy references a dynamic module pull secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-secret-ref", egv1a1.GatewayControllerName, &test.GroupKindNamespacedName{
+					Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+					Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+					Namespace: gwapiv1.Namespace(dynamicModuleEnvoyProxyConfig.Namespace),
+					Name:      gwapiv1.ObjectName(dynamicModuleEnvoyProxyConfig.Name),
+				}),
+				dynamicModuleEnvoyProxyConfig,
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: dynamicModuleEnvoyProxyConfig.Namespace, Name: "dynamic-module-pull-secret"}),
+			expect: true,
+		},
 		{
 			name: "backend references TLS secret",
 			configs: []client.Object{
@@ -2443,6 +2506,35 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			expect: true,
 		},
 		{
+			name: "referenced by EnvoyProxy dynamic module",
+			configs: []client.Object{
+				gc,
+				gtw,
+				&egv1a1.EnvoyProxy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "dynamic-module-ctb"},
+					Spec: egv1a1.EnvoyProxySpec{
+						DynamicModules: []egv1a1.DynamicModuleEntry{{
+							Name: "image-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: new(egv1a1.ImageDynamicModuleSourceType),
+								Image: &egv1a1.ImageDynamicModuleSource{
+									URL: "registry.example.com/modules/auth:v1.0.0",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: gatewayapi.KindPtr("ClusterTrustBundle"),
+											Name: "fake-ctb",
+										},
+									},
+								},
+							},
+						}},
+					},
+				},
+			},
+			ctb:    ctb,
+			expect: true,
+		},
+		{
 			name: "ClusterTrustBundle not referenced",
 			configs: []client.Object{
 				gc,
@@ -2479,6 +2571,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
 			WithIndex(&gwapiv1.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
 			WithIndex(&egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc).
+			WithIndex(&egv1a1.EnvoyProxy{}, clusterTrustBundleEnvoyProxyIndex, clusterTrustBundleEnvoyProxyIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateClusterTrustBundleForReconcile(tc.ctb)

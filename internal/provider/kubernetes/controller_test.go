@@ -3421,3 +3421,148 @@ func TestCRDExistsWithClient(t *testing.T) {
 		require.True(t, exists)
 	})
 }
+
+func TestProcessEnvoyProxySecretRefDynamicModuleRefs(t *testing.T) {
+	ep := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: config.DefaultNamespace, Name: "test"},
+		Spec: egv1a1.EnvoyProxySpec{
+			DynamicModules: []egv1a1.DynamicModuleEntry{
+				{
+					Name: "image-module",
+					Source: egv1a1.DynamicModuleSource{
+						Type: new(egv1a1.ImageDynamicModuleSourceType),
+						Image: &egv1a1.ImageDynamicModuleSource{
+							URL:           "registry.example.com/modules/auth:v1.0.0",
+							PullSecretRef: &gwapiv1.SecretObjectReference{Name: "pull-secret"},
+						},
+					},
+				},
+				{
+					Name: "missing-secret-module",
+					Source: egv1a1.DynamicModuleSource{
+						Type: new(egv1a1.ImageDynamicModuleSourceType),
+						Image: &egv1a1.ImageDynamicModuleSource{
+							URL:           "registry.example.com/modules/other:v1.0.0",
+							PullSecretRef: &gwapiv1.SecretObjectReference{Name: "missing-secret"},
+						},
+					},
+				},
+				{
+					Name: "ca-secret-module",
+					Source: egv1a1.DynamicModuleSource{
+						Type: new(egv1a1.ImageDynamicModuleSourceType),
+						Image: &egv1a1.ImageDynamicModuleSource{
+							URL: "registry.example.com/modules/ca-secret:v1.0.0",
+							TLS: &egv1a1.WasmCodeSourceTLSConfig{
+								CACertificateRef: gwapiv1.SecretObjectReference{Name: "ca-secret"},
+							},
+						},
+					},
+				},
+				{
+					Name: "ca-configmap-module",
+					Source: egv1a1.DynamicModuleSource{
+						Type: new(egv1a1.ImageDynamicModuleSourceType),
+						Image: &egv1a1.ImageDynamicModuleSource{
+							URL: "registry.example.com/modules/ca-configmap:v1.0.0",
+							TLS: &egv1a1.WasmCodeSourceTLSConfig{
+								CACertificateRef: gwapiv1.SecretObjectReference{
+									Kind: gatewayapi.KindPtr(resource.KindConfigMap),
+									Name: "ca-configmap",
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: "missing-ca-module",
+					Source: egv1a1.DynamicModuleSource{
+						Type: new(egv1a1.ImageDynamicModuleSourceType),
+						Image: &egv1a1.ImageDynamicModuleSource{
+							URL: "registry.example.com/modules/missing-ca:v1.0.0",
+							TLS: &egv1a1.WasmCodeSourceTLSConfig{
+								CACertificateRef: gwapiv1.SecretObjectReference{
+									Kind: gatewayapi.KindPtr(resource.KindConfigMap),
+									Name: "missing-ca-configmap",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	secret := test.GetSecret(types.NamespacedName{Namespace: config.DefaultNamespace, Name: "pull-secret"})
+	caSecret := test.GetSecret(types.NamespacedName{Namespace: config.DefaultNamespace, Name: "ca-secret"})
+	caConfigMap := test.GetConfigMap(types.NamespacedName{Namespace: config.DefaultNamespace, Name: "ca-configmap"}, nil, map[string]string{"ca.crt": "fake-ca"})
+
+	r := &gatewayAPIReconciler{
+		log: logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(ep, secret, caSecret, caConfigMap).
+			Build(),
+	}
+
+	gwcResource := resource.NewResources()
+	gwcResource.EnvoyProxyForGatewayClass = ep
+	// A missing pull secret or CA certificate is not an error for the GatewayClass.
+	require.NoError(t, r.processEnvoyProxySecretRef(t.Context(), gwcResource))
+	require.Len(t, gwcResource.Secrets, 2)
+	require.Equal(t, secret.Name, gwcResource.Secrets[0].Name)
+	require.Equal(t, caSecret.Name, gwcResource.Secrets[1].Name)
+	require.Len(t, gwcResource.ConfigMaps, 1)
+	require.Equal(t, caConfigMap.Name, gwcResource.ConfigMaps[0].Name)
+}
+
+func TestProcessGatewayParamsRefDynamicModuleRefs(t *testing.T) {
+	ep := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway-proxy"},
+		Spec: egv1a1.EnvoyProxySpec{
+			DynamicModules: []egv1a1.DynamicModuleEntry{
+				{
+					Name: "image-module",
+					Source: egv1a1.DynamicModuleSource{
+						Type: new(egv1a1.ImageDynamicModuleSourceType),
+						Image: &egv1a1.ImageDynamicModuleSource{
+							URL:           "registry.example.com/modules/auth:v1.0.0",
+							PullSecretRef: &gwapiv1.SecretObjectReference{Name: "pull-secret"},
+							TLS: &egv1a1.WasmCodeSourceTLSConfig{
+								CACertificateRef: gwapiv1.SecretObjectReference{
+									Kind: gatewayapi.KindPtr(resource.KindConfigMap),
+									Name: "ca-configmap",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	gtw := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "gateway"}, "test-gc", 8080)
+	gtw.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{
+		ParametersRef: &gwapiv1.LocalParametersReference{
+			Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+			Kind:  egv1a1.KindEnvoyProxy,
+			Name:  ep.Name,
+		},
+	}
+	secret := test.GetSecret(types.NamespacedName{Namespace: "default", Name: "pull-secret"})
+	caConfigMap := test.GetConfigMap(types.NamespacedName{Namespace: "default", Name: "ca-configmap"}, nil, map[string]string{"ca.crt": "fake-ca"})
+
+	r := &gatewayAPIReconciler{
+		log: logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(ep, secret, caConfigMap).
+			Build(),
+	}
+
+	resourceTree := resource.NewResources()
+	require.NoError(t, r.processGatewayParamsRef(t.Context(), gtw, newResourceMapping(), resourceTree))
+	require.Len(t, resourceTree.EnvoyProxiesForGateways, 1)
+	require.Len(t, resourceTree.Secrets, 1)
+	require.Equal(t, secret.Name, resourceTree.Secrets[0].Name)
+	require.Len(t, resourceTree.ConfigMaps, 1)
+	require.Equal(t, caConfigMap.Name, resourceTree.ConfigMaps[0].Name)
+}

@@ -1719,6 +1719,7 @@ _Appears in:_
 | `type` | _[DynamicModuleSourceType](#dynamicmodulesourcetype)_ |  false  | Local | Type is the type of the source of the dynamic module code.<br />Defaults to Local. |
 | `local` | _[LocalDynamicModuleSource](#localdynamicmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
 | `remote` | _[RemoteDynamicModuleSource](#remotedynamicmodulesource)_ |  false  |  | Remote specifies a module fetched from a remote source.<br />The module binary is downloaded and cached by Envoy. |
+| `image` | _[ImageDynamicModuleSource](#imagedynamicmodulesource)_ |  false  |  | Image specifies a module extracted from an OCI image.<br />Envoy Gateway pulls the image, extracts the shared library, and serves it<br />to Envoy from its built-in HTTP server, the same way it serves Wasm modules<br />from OCI images. |
 
 
 #### DynamicModuleSourceType
@@ -1734,6 +1735,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Local` | LocalDynamicModuleSourceType specifies a module loaded from the local filesystem.<br /> | 
 | `Remote` | RemoteDynamicModuleSourceType specifies a module fetched from a remote source.<br /> | 
+| `Image` | ImageDynamicModuleSourceType specifies a module extracted from an OCI image.<br /> | 
 
 
 #### EndpointOverride
@@ -3918,6 +3920,33 @@ _Appears in:_
 | `PreferDualStack` | PreferDualStack defines the dual-stack family, degrading to the single family<br />the cluster provides instead of failing when the cluster is not dual-stack.<br /> | 
 
 
+#### ImageDynamicModuleSource
+
+
+
+ImageDynamicModuleSource defines a dynamic module extracted from an OCI image.
+
+Both container images, with the shared library as a file in one of the image
+layers, and OCI artifacts, with the shared library as a layer annotated with
+its file name (as pushed by `oras push`), are supported.
+
+For a multi-platform image, the linux image for the CPU architecture of the
+Envoy Gateway controller is used, which must match the architecture of the
+Envoy proxies.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `url` | _string_ |  true  |  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`.<br />If neither a tag nor a digest is specified, the `latest` tag is used. |
+| `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the OCI image.<br />It must match the digest of the OCI image, which is the digest of the<br />image index for a multi-platform image.<br />If not specified, Envoy Gateway will not verify the downloaded OCI image. |
+| `path` | _string_ |  false  |  | Path is the path of the dynamic module shared library (.so file) inside the image,<br />for example `/usr/lib/envoy/libmy_module.so`.<br />If not specified, the image must contain exactly one file with the `.so` extension. |
+| `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  |  | PullPolicy is the policy to use when pulling the image.<br />If not specified, the default policy is IfNotPresent, except for OCI images<br />whose tag is latest, which default to Always. |
+| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image.<br />The secret must be of type `kubernetes.io/dockerconfigjson`.<br />A secret in another namespace than the EnvoyProxy requires a ReferenceGrant. |
+| `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the OCI registry.<br />If unset, the system trust store is used.<br />A CA certificate in another namespace than the EnvoyProxy requires a ReferenceGrant. |
+
+
 #### ImagePullPolicy
 
 _Underlying type:_ _string_
@@ -3925,6 +3954,7 @@ _Underlying type:_ _string_
 ImagePullPolicy defines the policy to use when pulling an OIC image.
 
 _Appears in:_
+- [ImageDynamicModuleSource](#imagedynamicmodulesource)
 - [WasmCodeSource](#wasmcodesource)
 
 | Value | Description |
@@ -7330,6 +7360,7 @@ WasmCodeSourceTLSConfig defines the TLS configuration when connecting to the Was
 
 _Appears in:_
 - [HTTPWasmCodeSource](#httpwasmcodesource)
+- [ImageDynamicModuleSource](#imagedynamicmodulesource)
 - [ImageWasmCodeSource](#imagewasmcodesource)
 
 | Field | Type | Required | Default | Description |
