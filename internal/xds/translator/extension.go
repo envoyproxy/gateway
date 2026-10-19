@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -28,7 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager, idx extensionResourceIndex) error {
+func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager, idx extensionResourceIndex, stats *ExtensionHookStats) error {
 	// Do nothing unless there is an extension manager and the ir.HTTPRoute has extension filters
 	if em == nil || (len(irRoute.ExtensionRefs) == 0 && len(irRoute.ExtensionServerPolicies) == 0) {
 		return nil
@@ -52,12 +53,17 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 		unstructuredPolicies[refIdx] = resolveUnstructuredRef(ref, idx)
 	}
 
+	start := time.Now()
 	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
 		route,
 		vHost.Domains,
 		unstructuredResources,
 		unstructuredPolicies,
 	)
+	if stats != nil {
+		stats.RouteCallCount++
+		stats.RouteDuration += time.Since(start)
+	}
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
@@ -138,7 +144,7 @@ func processExtensionPostEndpointsHook(loadAssignment *endpointv3.ClusterLoadAss
 	return nil
 }
 
-func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager) error {
+func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager, stats *ExtensionHookStats) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -153,7 +159,12 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	if extVHHookClient == nil {
 		return nil
 	}
+	start := time.Now()
 	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
+	if stats != nil {
+		stats.VHostCallCount++
+		stats.VHostDuration += time.Since(start)
+	}
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
@@ -170,7 +181,7 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	return nil
 }
 
-func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, extensionRefs []*ir.UnstructuredRef, em *extensionTypes.Manager, idx extensionResourceIndex) error {
+func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, extensionRefs []*ir.UnstructuredRef, em *extensionTypes.Manager, idx extensionResourceIndex, stats *ExtensionHookStats) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -187,7 +198,12 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 		for refIdx, ref := range extensionRefs {
 			unstructuredResources[refIdx] = resolveUnstructuredRef(ref, idx)
 		}
+		start := time.Now()
 		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources)
+		if stats != nil {
+			stats.ListenerCallCount++
+			stats.ListenerDuration += time.Since(start)
+		}
 		if err != nil {
 			return err
 		} else if modifiedListener != nil {
@@ -211,7 +227,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	return nil
 }
 
-func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []*ir.UnstructuredRef, idx extensionResourceIndex) error {
+func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []*ir.UnstructuredRef, idx extensionResourceIndex, stats *ExtensionHookStats) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -282,7 +298,12 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	}
 
 	// Call the extension hook
+	start := time.Now()
 	newClusters, newSecrets, newListeners, newRoutes, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets, oldListeners, oldRoutes, policies)
+	if stats != nil {
+		stats.TranslationCallCount++
+		stats.TranslationDuration += time.Since(start)
+	}
 	if err != nil {
 		return err
 	}

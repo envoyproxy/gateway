@@ -683,6 +683,41 @@ func buildExtensionManagerConfig(failOpen bool) egv1a1.ExtensionManager {
 	}
 }
 
+// TestExtensionHookStatsAccumulation verifies that ExtensionStats is populated
+// after Translate() when extension hooks fire. It piggybacks on the existing
+// http-route-extension-filter testdata which has one route with one extensionRef,
+// triggering PostRoute, PostVirtualHost, and PostHTTPListener hooks.
+func TestExtensionHookStatsAccumulation(t *testing.T) {
+	x := requireXdsIRFromInputTestData(t, filepath.Join("testdata", "in", "extension-xds-ir", "http-route-extension-filter.yaml"))
+
+	ext := buildExtensionManagerConfig(false)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&ext, &testingExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
+
+	tr := &Translator{
+		GlobalRateLimit: &GlobalRateLimitSettings{
+			ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+		},
+		ExtensionManager: &extMgr,
+	}
+
+	_, err = tr.Translate(t.Context(), x)
+	require.NoError(t, err)
+
+	// The input has one route with one extensionRef: PostRoute fires once per route.
+	require.EqualValues(t, 1, tr.ExtensionStats.RouteCallCount, "expected one PostRoute call")
+	require.Positive(t, tr.ExtensionStats.RouteDuration, "PostRoute duration must be non-zero")
+
+	// PostVirtualHost fires once per virtual host (one listener → one vhost).
+	require.EqualValues(t, 1, tr.ExtensionStats.VHostCallCount, "expected one PostVHost call")
+	require.Positive(t, tr.ExtensionStats.VHostDuration, "PostVHost duration must be non-zero")
+
+	// PostHTTPListener fires once per HTTP listener.
+	require.EqualValues(t, 1, tr.ExtensionStats.ListenerCallCount, "expected one PostHTTPListener call")
+	require.Positive(t, tr.ExtensionStats.ListenerDuration, "PostHTTPListener duration must be non-zero")
+}
+
 func testName(inputFile string) string {
 	_, fileName := filepath.Split(inputFile)
 	return strings.TrimSuffix(fileName, ".yaml")

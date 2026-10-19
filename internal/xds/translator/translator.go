@@ -103,6 +103,19 @@ func xdsResourceCountAttrs(tCtx *types.ResourceVersionTable) []attribute.KeyValu
 	return append(attrs, attribute.Int("xds-resources.total.count", total))
 }
 
+// ExtensionHookStats accumulates extension server hook call counts and durations
+// across a single Translate() call. Zero value is ready to use.
+type ExtensionHookStats struct {
+	RouteCallCount       int64
+	RouteDuration        time.Duration
+	VHostCallCount       int64
+	VHostDuration        time.Duration
+	ListenerCallCount    int64
+	ListenerDuration     time.Duration
+	TranslationCallCount int64
+	TranslationDuration  time.Duration
+}
+
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
 	// ControllerNamespace is the namespace of the Gateway API controller
@@ -135,6 +148,11 @@ type Translator struct {
 	// caIndex resolves TLSCACertificate.Digest against the current Translate() call's
 	// xdsIR.CACertificates registry. Rebuilt at the start of every Translate() call.
 	caIndex caCertificateIndex
+
+	// ExtensionStats accumulates extension hook call counts and durations across a
+	// single Translate() call. Written by processExtension* functions in extension.go;
+	// read after Translate() returns to emit span attributes.
+	ExtensionStats ExtensionHookStats
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -217,6 +235,14 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	phases.SetAttributes(
+		attribute.Int64("extension.hook.route_call_count", t.ExtensionStats.RouteCallCount),
+		attribute.Float64("extension.hook.route_duration_ms", float64(t.ExtensionStats.RouteDuration.Microseconds())/1000.0),
+		attribute.Int64("extension.hook.vhost_call_count", t.ExtensionStats.VHostCallCount),
+		attribute.Float64("extension.hook.vhost_duration_ms", float64(t.ExtensionStats.VHostDuration.Microseconds())/1000.0),
+		attribute.Int64("extension.hook.listener_call_count", t.ExtensionStats.ListenerCallCount),
+		attribute.Float64("extension.hook.listener_duration_ms", float64(t.ExtensionStats.ListenerDuration.Microseconds())/1000.0),
+	)
 	phases.End()
 
 	// The TCP and UDP listeners get no phase span: they are cheap next to the HTTP
@@ -285,7 +311,11 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	phases.Start("XdsTranslator.processExtensionPostTranslationHook",
 		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
 	)
-	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies, t.extensionIndex)
+	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies, t.extensionIndex, &t.ExtensionStats)
+	phases.SetAttributes(
+		attribute.Int64("extension.hook.translation_call_count", t.ExtensionStats.TranslationCallCount),
+		attribute.Float64("extension.hook.translation_duration_ms", float64(t.ExtensionStats.TranslationDuration.Microseconds())/1000.0),
+	)
 	phases.End()
 	if err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
@@ -402,7 +432,8 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 				}
 			}
 		}
-		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager, t.extensionIndex); err != nil {
+		err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager, t.extensionIndex, &t.ExtensionStats)
+		if err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -758,7 +789,8 @@ func (t *Translator) addRouteToRouteConfig(
 
 		// Check if an extension want to modify the route we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex); err != nil {
+		err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex, &t.ExtensionStats)
+		if err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -871,7 +903,8 @@ func (t *Translator) addRouteToRouteConfig(
 	for _, vHost := range vHostList {
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
+		err = processExtensionPostVHostHook(vHost, t.ExtensionManager, &t.ExtensionStats)
+		if err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
