@@ -61,6 +61,14 @@ func (l LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 	return res, err
 }
 
+// maxBrowserCookieSize is the largest name plus value, in bytes, that browsers
+// store for one cookie. Chrome and Firefox drop a larger cookie without an error.
+const maxBrowserCookieSize = 4096
+
+// maxBrowserRedirects is how many redirects Chrome follows before it gives up with
+// "too many redirects", which is how an OIDC login loop shows up for a user.
+const maxBrowserRedirects = 20
+
 // cookieKey identifies a stored cookie. Name alone is not enough: the OAuth2
 // filter scopes the OIDC flow cookies to the redirect path while the session
 // cookies stay at "/", so the same name can legitimately exist at two paths.
@@ -74,7 +82,8 @@ type cookieKey struct {
 // It is deliberately not a full net/http/cookiejar: the OAuth2 filter marks every
 // cookie "secure" and these tests run over plain HTTP, so a spec-compliant jar
 // would store the cookies and then never send them back. It does honour Path and
-// cookie deletion, which is what the OIDC flow depends on.
+// cookie deletion, which is what the OIDC flow depends on, and like a browser it
+// ignores a cookie whose name and value exceed maxBrowserCookieSize.
 type CookieTracker struct {
 	Delegate http.RoundTripper
 	Cookies  map[cookieKey]*http.Cookie
@@ -93,6 +102,9 @@ func (c *CookieTracker) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err == nil {
 		// Track the cookies received from the server
 		for _, ck := range res.Cookies() {
+			if len(ck.Name)+len(ck.Value) > maxBrowserCookieSize {
+				continue
+			}
 			key := cookieKey{name: ck.Name, path: cookiePath(ck, req.URL.Path)}
 			if ck.MaxAge < 0 || (!ck.Expires.IsZero() && !ck.Expires.After(time.Now())) {
 				delete(c.Cookies, key)
@@ -241,11 +253,14 @@ func (o *OIDCTestClient) Get(url string, followDirection bool) (*http.Response, 
 
 // Send sends the specified request.
 func (o *OIDCTestClient) Send(req *http.Request, followRedirect bool) (*http.Response, error) {
-	o.http.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
-		if followRedirect {
-			return nil
+	o.http.CheckRedirect = func(_ *http.Request, via []*http.Request) error {
+		if !followRedirect {
+			return http.ErrUseLastResponse
 		}
-		return http.ErrUseLastResponse
+		if len(via) >= maxBrowserRedirects {
+			return fmt.Errorf("stopped after %d redirects", maxBrowserRedirects)
+		}
+		return nil
 	}
 	// #nosec G704 - This is a test client; URLs are constructed from test fixtures, not user input
 	return o.http.Do(req)

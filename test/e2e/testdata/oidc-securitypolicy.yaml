@@ -38,6 +38,24 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
+  name: http-with-oidc-chunked
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /chunked            # Protected by an OIDC client whose access token is too large for one cookie
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
   name: http-without-oidc
   namespace: gateway-conformance-infra
 spec:
@@ -156,3 +174,39 @@ spec:
       remoteJWKS:
         uri: "http://static-file-server.gateway-conformance-infra/jwt/jwks.json"
         cacheDuration: 300s
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
+  name: oidctest-chunked-secret
+data:
+  client-secret: b2lkY3Rlc3QtY2h1bmtlZC1jbGllbnQtc2VjcmV0   # base64 encoding of "oidctest-chunked-client-secret"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-test-chunked
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-oidc-chunked
+  oidc:
+    provider:
+      issuer: "https://keycloak.gateway-conformance-infra/realms/master"
+      authorizationEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
+      endSessionEndpoint: "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout"
+    clientID: "oidctest-chunked"
+    clientSecret:
+      name: "oidctest-chunked-secret"
+    redirectURL: "http://www.example.com/chunked/oauth2/callback"
+    logoutPath: "/chunked/logout"
+    postLogoutRedirect:
+      disabled: true   # omit post_logout_redirect_uri from the logout redirect
+    # Without a refresh token to fall back on, a dropped access token cookie sends the
+    # client back to the IdP in a loop, which is what chunking has to prevent.
+    refreshToken: false
+    tokenCookieChunking: {}   # split the access token across cookies, with Envoy's default limits
