@@ -35147,6 +35147,100 @@ spec:
                       description: Source defines where the dynamic module code is
                         loaded from.
                       properties:
+                        image:
+                          description: |-
+                            Image specifies a module extracted from an OCI image.
+                            Envoy Gateway pulls the image, extracts the shared library, and serves it
+                            to Envoy from its built-in HTTP server, the same way it serves Wasm modules
+                            from OCI images.
+                          properties:
+                            path:
+                              description: |-
+                                Path is the path of the dynamic module shared library (.so file) inside the image,
+                                for example `/usr/lib/envoy/libmy_module.so`.
+
+                                If not specified, the image must contain exactly one file with the `.so` extension.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                            pullPolicy:
+                              description: |-
+                                PullPolicy is the policy to use when pulling the image.
+                                If not specified, the default policy is IfNotPresent, except for OCI images
+                                whose tag is latest, which default to Always.
+                              enum:
+                              - IfNotPresent
+                              - Always
+                              type: string
+                            pullSecretRef:
+                              description: |-
+                                PullSecretRef is a reference to the secret containing the credentials to pull the image.
+                                The secret must be of type `kubernetes.io/dockerconfigjson`.
+                                A secret in another namespace than the EnvoyProxy requires a ReferenceGrant.
+                              properties:
+                                group:
+                                  default: ""
+                                  description: |-
+                                    Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                    When unspecified or empty string, core API group is inferred.
+                                  maxLength: 253
+                                  pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                  type: string
+                                kind:
+                                  default: Secret
+                                  description: Kind is kind of the referent. For example
+                                    "Secret".
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                  type: string
+                                name:
+                                  description: Name is the name of the referent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace is the namespace of the referenced object. When unspecified, the local
+                                    namespace is inferred.
+
+                                    Note that when a namespace different than the local namespace is specified,
+                                    a ReferenceGrant object is required in the referent namespace to allow that
+                                    namespace's owner to accept the reference. See the ReferenceGrant
+                                    documentation for details.
+
+                                    Support: Core
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                              x-kubernetes-validations:
+                              - message: only support Secret kind.
+                                rule: self.kind == 'Secret'
+                            sha256:
+                              description: |-
+                                SHA256 checksum that will be used to verify the OCI image.
+
+                                It must match the digest of the OCI image, which is the digest of the
+                                image index for a multi-platform image.
+
+                                If not specified, Envoy Gateway will not verify the downloaded OCI image.
+                              pattern: ^[a-f0-9]{64}$
+                              type: string
+                            url:
+                              description: |-
+                                URL is the URL of the OCI image.
+                                URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`.
+                                If neither a tag nor a digest is specified, the `latest` tag is used.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - url
+                          type: object
                         local:
                           description: |-
                             Local specifies a module loaded from the proxy's local filesystem
@@ -35190,6 +35284,7 @@ spec:
                           enum:
                           - Local
                           - Remote
+                          - Image
                           type: string
                       type: object
                       x-kubernetes-validations:
@@ -35199,6 +35294,10 @@ spec:
                         rule: self.type != 'Local' || has(self.local)
                       - message: If type is Remote, local field must not be set.
                         rule: 'self.type == ''Remote'' ? !has(self.local) : true'
+                      - message: If type is Image, image field needs to be set.
+                        rule: 'self.type == ''Image'' ? has(self.image) : !has(self.image)'
+                      - message: If type is Image, local field must not be set.
+                        rule: 'self.type == ''Image'' ? !has(self.local) : true'
                   required:
                   - name
                   - source

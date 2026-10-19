@@ -104,6 +104,12 @@ type moduleKey struct {
 
 type cacheKey struct {
 	moduleKey
+	// id identifies the module in the cache. See moduleID.
+	id string
+	// moduleType is the type of the module.
+	moduleType ModuleType
+	// modulePath is the path of the dynamic module shared library inside the OCI image.
+	modulePath string
 	// URL to download the wasm module.
 	// e.g. http://example.com/test.wasm or oci://docker.io/test:v1.0.0
 	downloadURL string
@@ -159,7 +165,27 @@ func moduleNameFromURL(fullURLStr string) string {
 	return fullURLStr
 }
 
-func getModulePath(baseDir string, mkey moduleKey) (string, error) {
+// moduleID returns the identifier of a module in the cache.
+// Wasm modules are identified by their download URL. Dynamic modules also carry
+// the path of the shared library inside the image, so that two modules extracted
+// from the same image, or a Wasm module and a dynamic module that share an image
+// reference, do not collide.
+func moduleID(downloadURL string, opts *GetOptions) string {
+	if opts.ModuleType != ModuleTypeDynamicModule {
+		return downloadURL
+	}
+	return downloadURL + "#dynamic-module:" + opts.ModulePath
+}
+
+// moduleFileExtension returns the file extension of the module in the local cache.
+func moduleFileExtension(moduleType ModuleType) string {
+	if moduleType == ModuleTypeDynamicModule {
+		return "so"
+	}
+	return "wasm"
+}
+
+func getModulePath(baseDir string, mkey moduleKey, moduleType ModuleType) (string, error) {
 	// Use sha256 checksum as the name of the module.
 	sha := sha256.Sum256([]byte(mkey.name))
 	hashedName := hex.EncodeToString(sha[:])
@@ -167,7 +193,7 @@ func getModulePath(baseDir string, mkey moduleKey) (string, error) {
 	if err := os.Mkdir(moduleDir, 0o755); err != nil && !os.IsExist(err) {
 		return "", err
 	}
-	return filepath.Join(moduleDir, fmt.Sprintf("%s.wasm", mkey.checksum)), nil
+	return filepath.Join(moduleDir, fmt.Sprintf("%s.%s", mkey.checksum, moduleFileExtension(moduleType))), nil
 }
 
 // Get returns path the local Wasm module file and its checksum.
@@ -185,10 +211,18 @@ func (c *localFileCache) Get(downloadURL string, opts *GetOptions) (localFile, c
 	}
 
 	// Construct Wasm cache key with downloading URL and provided checksum of the module.
+	id := moduleID(downloadURL, opts)
+	name := moduleNameFromURL(downloadURL)
+	if id != downloadURL {
+		name += strings.TrimPrefix(id, downloadURL)
+	}
 	key := cacheKey{
+		id:          id,
+		moduleType:  opts.ModuleType,
+		modulePath:  opts.ModulePath,
 		downloadURL: downloadURL,
 		moduleKey: moduleKey{
-			name:     moduleNameFromURL(downloadURL),
+			name:     name,
 			checksum: originalChecksum,
 		},
 		resourceName:    opts.ResourceName,
@@ -242,6 +276,10 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 		imageBinaryFetcher func() ([]byte, error)
 	)
 
+	if key.moduleType == ModuleTypeDynamicModule && u.Scheme != "oci" {
+		return nil, fmt.Errorf("unsupported dynamic module downloading URL scheme: %v", u.Scheme)
+	}
+
 	switch u.Scheme {
 	case "http", "https":
 		// Download the Wasm module with http fetcher.
@@ -259,7 +297,7 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 			isPrivate = true
 		}
 
-		imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts.PullSecret, opts.CACert)
+		imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, key, insecure, opts.PullSecret, opts.CACert)
 
 		if isPrivate {
 			e := &permissionCacheEntry{
@@ -278,7 +316,7 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 
 		if err != nil {
 			wasmRemoteFetchTotal.WithFailure(reasonManifestError).Increment()
-			return nil, fmt.Errorf("could not fetch Wasm OCI image: %w", err)
+			return nil, fmt.Errorf("could not fetch %s OCI image: %w", moduleTypeName(key.moduleType), err)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported Wasm module downloading URL scheme: %v", u.Scheme)
@@ -299,13 +337,13 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 		b, err = imageBinaryFetcher()
 		if err != nil {
 			wasmRemoteFetchTotal.WithFailure(reasonDownloadError).Increment()
-			return nil, fmt.Errorf("could not fetch Wasm binary: %w", err)
+			return nil, fmt.Errorf("could not fetch %s binary: %w", moduleTypeName(key.moduleType), err)
 		}
 	}
 
-	if !isValidWasmBinary(b) {
+	if !isValidModuleBinary(key.moduleType, b) {
 		wasmRemoteFetchTotal.WithFailure(reasonFetchError).Increment()
-		return nil, fmt.Errorf("fetched Wasm binary from %s is invalid", key.downloadURL)
+		return nil, fmt.Errorf("fetched %s binary from %s is invalid", moduleTypeName(key.moduleType), key.downloadURL)
 	}
 
 	wasmRemoteFetchTotal.WithSuccess().Increment()
@@ -317,6 +355,7 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 func (c *localFileCache) prepareFetch(
 	ctx context.Context,
 	url *url.URL,
+	key *cacheKey,
 	insecure bool,
 	pullSecret []byte,
 	caCert []byte,
@@ -332,18 +371,23 @@ func (c *localFileCache) prepareFetch(
 	if err != nil {
 		return nil, "", err
 	}
-	if binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path); err != nil {
+	if key.moduleType == ModuleTypeDynamicModule {
+		binaryFetcher, actualDigest, err = fetcher.PrepareFetchDynamicModule(url.Host+url.Path, key.modulePath)
+	} else {
+		binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path)
+	}
+	if err != nil {
 		return nil, "", err
 	}
 	return binaryFetcher, actualDigest, nil
 }
 
 func (c *localFileCache) updateChecksum(key *cacheKey) {
-	ce := c.checksums[key.downloadURL]
+	ce := c.checksums[key.id]
 	if ce == nil {
 		ce = new(checksumEntry)
 		ce.resourceVersionByResource = make(map[string]string)
-		c.checksums[key.downloadURL] = ce
+		c.checksums[key.id] = ce
 	}
 	ce.checksum = key.checksum
 	ce.resourceVersionByResource[key.resourceName] = key.resourceVersion
@@ -366,11 +410,11 @@ func (c *localFileCache) addEntry(key *cacheKey, wasmModule []byte, isPrivate bo
 	if ce, ok := c.modules[key.moduleKey]; ok {
 		// Update last touched time.
 		ce.last = time.Now()
-		ce.referencingURLs.Insert(key.downloadURL)
+		ce.referencingURLs.Insert(key.id)
 		return ce, nil
 	}
 
-	modulePath, err := getModulePath(c.CacheDir, key.moduleKey)
+	modulePath, err := getModulePath(c.CacheDir, key.moduleKey, key.moduleType)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +433,7 @@ func (c *localFileCache) addEntry(key *cacheKey, wasmModule []byte, isPrivate bo
 		checksum:        wasmChecksum,
 		size:            len(wasmModule),
 	}
-	ce.referencingURLs.Insert(key.downloadURL)
+	ce.referencingURLs.Insert(key.id)
 	c.modules[key.moduleKey] = &ce
 
 	wasmCacheEntries.Record(float64(len(c.modules)))
@@ -412,7 +456,7 @@ func (c *localFileCache) getEntry(key *cacheKey, pullPolicy PullPolicy, u *url.U
 	// If no checksum is provided, check if a wasm module with the same downloading URL has been pulled before.
 	if len(key.checksum) == 0 {
 		// If an image with the same downloading URL was pulled before, there should be a checksum of the most recently pulled image.
-		if ce, found := c.checksums[key.downloadURL]; found {
+		if ce, found := c.checksums[key.id]; found {
 			// If it is an OCI image and the tag is "latest", default pull policy is Always.
 			// Otherwise, default pull policy is IfNotPresent.
 			if pullPolicy == Unspecified {
@@ -520,4 +564,25 @@ var wasmMagicNumber = []byte{0x00, 0x61, 0x73, 0x6d}
 func isValidWasmBinary(in []byte) bool {
 	// Wasm file header is 8 bytes (magic number + version).
 	return len(in) >= 8 && bytes.Equal(in[:4], wasmMagicNumber)
+}
+
+var elfMagicNumber = []byte{0x7f, 'E', 'L', 'F'}
+
+// isValidDynamicModuleBinary checks that the binary is an ELF shared object.
+func isValidDynamicModuleBinary(in []byte) bool {
+	return len(in) >= len(elfMagicNumber) && bytes.Equal(in[:len(elfMagicNumber)], elfMagicNumber)
+}
+
+func isValidModuleBinary(moduleType ModuleType, in []byte) bool {
+	if moduleType == ModuleTypeDynamicModule {
+		return isValidDynamicModuleBinary(in)
+	}
+	return isValidWasmBinary(in)
+}
+
+func moduleTypeName(moduleType ModuleType) string {
+	if moduleType == ModuleTypeDynamicModule {
+		return "dynamic module"
+	}
+	return "Wasm"
 }

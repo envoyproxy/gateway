@@ -3421,3 +3421,49 @@ func TestCRDExistsWithClient(t *testing.T) {
 		require.True(t, exists)
 	})
 }
+
+func TestProcessEnvoyProxySecretRefDynamicModulePullSecrets(t *testing.T) {
+	ep := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: config.DefaultNamespace, Name: "test"},
+		Spec: egv1a1.EnvoyProxySpec{
+			DynamicModules: []egv1a1.DynamicModuleEntry{
+				{
+					Name: "image-module",
+					Source: egv1a1.DynamicModuleSource{
+						Type: new(egv1a1.ImageDynamicModuleSourceType),
+						Image: &egv1a1.ImageDynamicModuleSource{
+							URL:           "registry.example.com/modules/auth:v1.0.0",
+							PullSecretRef: &gwapiv1.SecretObjectReference{Name: "pull-secret"},
+						},
+					},
+				},
+				{
+					Name: "missing-secret-module",
+					Source: egv1a1.DynamicModuleSource{
+						Type: new(egv1a1.ImageDynamicModuleSourceType),
+						Image: &egv1a1.ImageDynamicModuleSource{
+							URL:           "registry.example.com/modules/other:v1.0.0",
+							PullSecretRef: &gwapiv1.SecretObjectReference{Name: "missing-secret"},
+						},
+					},
+				},
+			},
+		},
+	}
+	secret := test.GetSecret(types.NamespacedName{Namespace: config.DefaultNamespace, Name: "pull-secret"})
+
+	r := &gatewayAPIReconciler{
+		log: logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(ep, secret).
+			Build(),
+	}
+
+	gwcResource := resource.NewResources()
+	gwcResource.EnvoyProxyForGatewayClass = ep
+	// A missing pull secret is not an error for the GatewayClass.
+	require.NoError(t, r.processEnvoyProxySecretRef(t.Context(), gwcResource))
+	require.Len(t, gwcResource.Secrets, 1)
+	require.Equal(t, secret.Name, gwcResource.Secrets[0].Name)
+}
