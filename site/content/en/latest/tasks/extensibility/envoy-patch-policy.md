@@ -121,8 +121,6 @@ Because [EnvoyPatchPolicy][] relies on specific xDS resource names, it’s impor
 | **HCM StatPrefix**   | Old            | `<ApplicationProtocol>/<ContainerPort>`                                     | `http-10080`, `https-10443`     |
 |                      | V2 (HTTP)      | `http-<Port>`                                                               | `http-80`                        |
 |                      | V2 (HTTPS)     | `https-<Port>`                                                              | `https-443`                      |
-| **Cluster name**     | Old            | `httproute/<HTTPRouteNamespace>/<HTTPRouteName>/rule/<RuleIndex>`           | `httproute/default/backend/rule/0`        |
-|                      | V2             | `httproute/<HTTPRouteNamespace>/<HTTPRouteName>/rule/<RuleIndex>`           | `httproute/default/backend/rule/0`        |
 
 
 This change is gated by the XDSNameSchemeV2 runtime flag. The flag is disabled by default in v1.5 and will be enabled by default starting in v1.10.
@@ -453,7 +451,96 @@ $ curl -v --header "Host: www.example.com" http://localhost:8888/
 ...
 ```
 
-### Patch Cluster Configuration
+### Customize Cluster
+
+The following examples show how to use [EnvoyPatchPolicy][] to modify Envoy `Cluster` resources using JSONPatch semantics.
+
+#### Add an external Cluster
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: add-external-cluster
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      # Adds a new STRICT_DNS cluster named external-svc-cluster
+      name: external-svc-cluster
+      operation:
+        op: add
+        path: ""
+        value:
+          name: external-svc-cluster
+          type: STRICT_DNS
+          connect_timeout: 10s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: external-svc-cluster
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: example.external.svc
+                          port_value: 8443
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: add-external-cluster
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      # Adds a new STRICT_DNS cluster named external-svc-cluster
+      name: external-svc-cluster
+      operation:
+        op: add
+        path: ""
+        value:
+          name: external-svc-cluster
+          type: STRICT_DNS
+          connect_timeout: 10s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: external-svc-cluster
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: example.external.svc
+                          port_value: 8443
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+#### Modify load balancing on an HTTPRoute cluster
 
 * Use [EnvoyPatchPolicy][] to modify an upstream cluster generated for an HTTPRoute rule.
   This example replaces the default load balancing policy with client-side weighted round robin.
@@ -548,6 +635,75 @@ cluster configuration with [egctl x translate][]:
 ```shell
 cat examples/kubernetes/quickstart.yaml | egctl x translate --from gateway-api --to xds -t cluster -o yaml -f - | yq '.xds["default/eg"].dynamicActiveClusters[] | select(.cluster.name == "httproute/default/backend/rule/0")'
 ```
+
+#### Bind backend connections to a specific source address
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: cluster-source-bind
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      # For clusters generated from HTTPRoute, the default name is:
+      # httproute/<NAMESPACE>/<NAME>/rule/<RULE_NUMBER>
+      # e.g. httproute/default/backend/rule/0
+      name: httproute/default/backend/rule/0
+      operation:
+        op: add
+        path: "/upstream_bind_config"
+        value:
+          source_address:
+            address: 10.0.0.5
+            port_value: 0
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: cluster-source-bind
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      # For clusters generated from HTTPRoute, the default name is:
+      # httproute/<NAMESPACE>/<NAME>/rule/<RULE_NUMBER>
+      # e.g. httproute/default/backend/rule/0
+      name: httproute/default/backend/rule/0
+      operation:
+        op: add
+        path: "/upstream_bind_config"
+        value:
+          source_address:
+            address: 10.0.0.5
+            port_value: 0
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Debugging
 

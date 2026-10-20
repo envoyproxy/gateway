@@ -6,6 +6,7 @@
 package status
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -21,6 +22,11 @@ const (
 	// PolicyReasonUnsupportedHTTP3ClientValidation is used with the "Warning" condition when
 	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
 	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
+
+	// PolicyReasonUnsupportedHTTP3Backend is used with the "Warning" condition when HTTP/3 to
+	// a backend is disabled because the backend, or another setting, cannot use QUIC, or when
+	// it stays on but a backend TLS setting that QUIC cannot carry is ignored.
+	PolicyReasonUnsupportedHTTP3Backend gwapiv1.PolicyConditionReason = "UnsupportedHTTP3Backend"
 
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
@@ -233,6 +239,12 @@ func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
 		builder.WriteString(" instead")
 	}
 	return builder.String()
+}
+
+// MergedConditionMessage builds the status message for a Merged condition, naming the
+// policy that was merged with.
+func MergedConditionMessage(mergedWith metav1.Object) string {
+	return fmt.Sprintf("Merged with policy %s/%s", mergedWith.GetNamespace(), mergedWith.GetName())
 }
 
 func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {

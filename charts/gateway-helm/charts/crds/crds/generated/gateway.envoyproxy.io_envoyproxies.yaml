@@ -124,7 +124,11 @@ spec:
                       ClientCertificateRef defines the reference to a Kubernetes Secret that contains
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
-                      This secret should be located within the same namespace as the Envoy proxy resource that references it.
+                      The Secret must be in the same namespace as the EnvoyProxy or Backend resource
+                      that references it.
+                      Cross-namespace references are not supported, even with a ReferenceGrant.
+                      The ReferenceGrant requirement in the namespace field's description is inherited
+                      from the Gateway API SecretObjectReference type and does not apply to this field.
                     properties:
                       group:
                         default: ""
@@ -493,6 +497,8 @@ spec:
 
                   - envoy.filters.http.dynamic_forward_proxy
 
+                  - envoy.filters.http.alternate_protocols_cache
+
                   - envoy.filters.http.router
 
                   Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -532,6 +538,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                     before:
                       description: |-
@@ -565,6 +572,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                     name:
                       description: Name of the filter.
@@ -596,6 +604,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                   required:
                   - name
@@ -11597,7 +11606,7 @@ spec:
                             type: string
                             x-kubernetes-validations:
                             - message: loadBalancerIP must be a valid IPv4 address
-                              rule: self.matches(r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+                              rule: isIP(self) && ip(self).family() == 4
                           loadBalancerSourceRanges:
                             description: |-
                               LoadBalancerSourceRanges defines a list of allowed IP addresses which will be configured as
@@ -11606,7 +11615,9 @@ spec:
                               This field may only be set for services with type LoadBalancer and will be cleared if the type
                               is changed to any other type.
                             items:
+                              format: cidr
                               type: string
+                            maxItems: 64
                             type: array
                           name:
                             description: |-
@@ -12775,6 +12786,25 @@ spec:
                                                   Default: TerminateConnection
                                                 type: string
                                             type: object
+                                          http3:
+                                            description: |-
+                                              HTTP3 enables HTTP/3 for backend connections.
+                                              HTTP/3 always runs over TLS, so the backend must be configured
+                                              with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                              HTTP/3 is only supported for the backends of a route, through
+                                              BackendTrafficPolicy. It is rejected for the backends of other
+                                              resources, such as the external services of a SecurityPolicy
+                                              or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                            properties:
+                                              mode:
+                                                description: |-
+                                                  Mode determines when HTTP/3 is used to reach the backend.
+                                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                                enum:
+                                                - Auto
+                                                - Always
+                                                type: string
+                                            type: object
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
@@ -13429,6 +13459,9 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                        - message: proxyProtocol cannot be used together
+                                            with http3
+                                          rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -13492,6 +13525,8 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: http3 is only supported for route backends
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
@@ -14469,6 +14504,25 @@ spec:
                                                   Default: TerminateConnection
                                                 type: string
                                             type: object
+                                          http3:
+                                            description: |-
+                                              HTTP3 enables HTTP/3 for backend connections.
+                                              HTTP/3 always runs over TLS, so the backend must be configured
+                                              with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                              HTTP/3 is only supported for the backends of a route, through
+                                              BackendTrafficPolicy. It is rejected for the backends of other
+                                              resources, such as the external services of a SecurityPolicy
+                                              or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                            properties:
+                                              mode:
+                                                description: |-
+                                                  Mode determines when HTTP/3 is used to reach the backend.
+                                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                                enum:
+                                                - Auto
+                                                - Always
+                                                type: string
+                                            type: object
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
@@ -15123,6 +15177,9 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                        - message: proxyProtocol cannot be used together
+                                            with http3
+                                          rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                       headers:
                                         description: |-
                                           Headers is a list of additional headers to send with OTLP export requests.
@@ -15217,6 +15274,8 @@ spec:
                                     - message: either resources or resourceAttributes
                                         can be set, not both
                                       rule: '!has(self.resources) || !has(self.resourceAttributes)'
+                                    - message: http3 is only supported for route backends
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -15411,9 +15470,108 @@ spec:
                             properties:
                               brotli:
                                 description: The configuration for Brotli compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of the compressor's next output buffer, from
+                                      4096 to 65536. If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  disableLiteralContextModeling:
+                                    description: |-
+                                      DisableLiteralContextModeling disables the "literal context modeling" format
+                                      feature. This flag is a "decoding-speed vs compression ratio" trade-off.
+                                      If not set, defaults to false.
+                                    type: boolean
+                                  encoderMode:
+                                    description: |-
+                                      EncoderMode tunes the encoder for a specific input.
+                                      If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Generic
+                                    - Text
+                                    - Font
+                                    type: string
+                                  inputBlockBits:
+                                    description: |-
+                                      InputBlockBits represents the base two logarithm of the compressor's input block
+                                      size, from 16 to 24. Larger input block results in better compression at the
+                                      expense of memory usage. If not set, defaults to 24.
+                                    format: int32
+                                    maximum: 24
+                                    minimum: 16
+                                    type: integer
+                                  quality:
+                                    description: |-
+                                      Quality controls the main compression speed-density lever, from 0 to 11.
+                                      The higher the quality, the slower the compression. If not set, defaults to 3.
+                                    format: int32
+                                    maximum: 11
+                                    minimum: 0
+                                    type: integer
+                                  windowBits:
+                                    description: |-
+                                      WindowBits represents the base two logarithm of the compressor's window size,
+                                      from 10 to 24. Larger window results in better compression at the expense of
+                                      memory usage. If not set, defaults to 18.
+                                    format: int32
+                                    maximum: 24
+                                    minimum: 10
+                                    type: integer
                                 type: object
                               gzip:
                                 description: The configuration for GZIP compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.
+                                      If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  compressionLevel:
+                                    description: |-
+                                      CompressionLevel sets the zlib compression level, from 1 (fastest compression,
+                                      lowest compression ratio) to 9 (slowest compression, best compression ratio).
+                                      If not set, Envoy uses the zlib default level, which is equivalent to level 6.
+                                    format: int32
+                                    maximum: 9
+                                    minimum: 1
+                                    type: integer
+                                  compressionStrategy:
+                                    description: |-
+                                      CompressionStrategy selects the zlib compression strategy, which is directly
+                                      related to the characteristics of the content. Most of the time "Default" is
+                                      the best choice. If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Filtered
+                                    - HuffmanOnly
+                                    - RLE
+                                    - Fixed
+                                    type: string
+                                  memoryLevel:
+                                    description: |-
+                                      MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.
+                                      Higher values use more memory, but are faster and produce better compression
+                                      results. If not set, defaults to 5.
+                                    format: int32
+                                    maximum: 9
+                                    minimum: 1
+                                    type: integer
+                                  windowBits:
+                                    description: |-
+                                      WindowBits represents the base two logarithm of the compressor's window size,
+                                      from 9 to 15. Larger window results in better compression at the expense of
+                                      memory usage. If not set, defaults to 12, which will produce a 4096 bytes window.
+                                    format: int32
+                                    maximum: 15
+                                    minimum: 9
+                                    type: integer
                                 type: object
                               minContentLength:
                                 allOf:
@@ -15439,10 +15597,61 @@ spec:
                                 type: string
                               zstd:
                                 description: The configuration for Zstd compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of the compressor's next output buffer, from
+                                      4096 to 65536. If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  compressionLevel:
+                                    description: |-
+                                      CompressionLevel sets the compression parameters according to the pre-defined
+                                      zstd compression level table, from 1 to 22. Note that the exact compression
+                                      parameters are dynamically determined, depending on both compression level and
+                                      source content size (when known). If not set, defaults to 3.
+                                    format: int32
+                                    maximum: 22
+                                    minimum: 1
+                                    type: integer
+                                  enableChecksum:
+                                    description: |-
+                                      EnableChecksum specifies whether a 32-bits checksum of the content is written
+                                      at the end of the frame. If not set, defaults to false.
+                                    type: boolean
+                                  strategy:
+                                    description: |-
+                                      Strategy selects the zstd compression strategy. The higher the value of the
+                                      selected strategy, the more complex it is, resulting in stronger and slower
+                                      compression. If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Fast
+                                    - DFast
+                                    - Greedy
+                                    - Lazy
+                                    - Lazy2
+                                    - BTLazy2
+                                    - BTOpt
+                                    - BTUltra
+                                    - BTUltra2
+                                    type: string
                                 type: object
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: The brotli configuration is only allowed when
+                                the type is Brotli.
+                              rule: '!has(self.brotli) || self.type == ''Brotli'''
+                            - message: The gzip configuration is only allowed when
+                                the type is Gzip.
+                              rule: '!has(self.gzip) || self.type == ''Gzip'''
+                            - message: The zstd configuration is only allowed when
+                                the type is Zstd.
+                              rule: '!has(self.zstd) || self.type == ''Zstd'''
                           disable:
                             description: Disable the Prometheus endpoint.
                             type: boolean
@@ -16393,6 +16602,25 @@ spec:
                                             Default: TerminateConnection
                                           type: string
                                       type: object
+                                    http3:
+                                      description: |-
+                                        HTTP3 enables HTTP/3 for backend connections.
+                                        HTTP/3 always runs over TLS, so the backend must be configured
+                                        with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                        HTTP/3 is only supported for the backends of a route, through
+                                        BackendTrafficPolicy. It is rejected for the backends of other
+                                        resources, such as the external services of a SecurityPolicy
+                                        or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                      properties:
+                                        mode:
+                                          description: |-
+                                            Mode determines when HTTP/3 is used to reach the backend.
+                                            Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                          enum:
+                                          - Auto
+                                          - Always
+                                          type: string
+                                      type: object
                                     loadBalancer:
                                       description: |-
                                         LoadBalancer policy to apply when routing traffic from the gateway to
@@ -17027,6 +17255,9 @@ spec:
                                       && has(self.connection.preconnect.predictivePercent))
                                       && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                       && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                                  - message: proxyProtocol cannot be used together
+                                      with http3
+                                    rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                 headers:
                                   description: |-
                                     Headers is a list of additional headers to send with OTLP export requests.
@@ -17084,6 +17315,11 @@ spec:
                                   maximum: 65535
                                   minimum: 0
                                   type: integer
+                                prefix:
+                                  description: |-
+                                    Prefix configures the OpenTelemetry sink to prepend the given prefix to emitted stat names,
+                                    the full stat name will be `<prefix>.<stat_name>`.
+                                  type: string
                                 reportCountersAsDeltas:
                                   description: |-
                                     ReportCountersAsDeltas configures the OpenTelemetry sink to report
@@ -17120,6 +17356,8 @@ spec:
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                   f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                   : true'
+                              - message: http3 is only supported for route backends
+                                rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -18197,6 +18435,25 @@ spec:
                                       Default: TerminateConnection
                                     type: string
                                 type: object
+                              http3:
+                                description: |-
+                                  HTTP3 enables HTTP/3 for backend connections.
+                                  HTTP/3 always runs over TLS, so the backend must be configured
+                                  with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                  HTTP/3 is only supported for the backends of a route, through
+                                  BackendTrafficPolicy. It is rejected for the backends of other
+                                  resources, such as the external services of a SecurityPolicy
+                                  or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                properties:
+                                  mode:
+                                    description: |-
+                                      Mode determines when HTTP/3 is used to reach the backend.
+                                      Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                    enum:
+                                    - Auto
+                                    - Always
+                                    type: string
+                                type: object
                               loadBalancer:
                                 description: |-
                                   LoadBalancer policy to apply when routing traffic from the gateway to
@@ -18816,6 +19073,9 @@ spec:
                                 && has(self.connection.preconnect.predictivePercent))
                                 && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                 && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                            - message: proxyProtocol cannot be used together with
+                                http3
+                              rule: '!has(self.http3) || !has(self.proxyProtocol)'
                           host:
                             description: |-
                               Host define the provider service hostname.
@@ -18983,6 +19243,8 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
+                        - message: http3 is only supported for route backends
+                          rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
@@ -19056,6 +19318,71 @@ spec:
                         specified
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
+              wasmModules:
+                description: |-
+                  WasmModules defines the set of Wasm modules that are allowed to be used by
+                  EnvoyExtensionPolicy resources. Each entry registers a module by a logical
+                  name and a source (currently Local path).
+
+                  When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up
+                  in this list.
+
+                  The EnvoyProxy owner is responsible for ensuring Local modules are available
+                  on the proxy container's filesystem (e.g., via init containers, custom images,
+                  or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path.
+                items:
+                  description: |-
+                    WasmModuleEntry defines a Wasm module that is registered and allowed for use
+                    by EnvoyExtensionPolicy resources.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the logical name for this module. EnvoyExtensionPolicy resources
+                        reference modules by this name when wasm[].code is omitted.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                    source:
+                      description: Source defines where the Wasm module code is loaded
+                        from.
+                      properties:
+                        local:
+                          description: |-
+                            Local specifies a module loaded from the proxy's local filesystem
+                            by absolute path.
+                          properties:
+                            path:
+                              description: Path is the absolute filesystem path to
+                                the Wasm module on the Envoy proxy.
+                              maxLength: 4096
+                              minLength: 1
+                              pattern: ^/.*
+                              type: string
+                          required:
+                          - path
+                          type: object
+                        type:
+                          default: Local
+                          description: |-
+                            Type is the type of the source of the Wasm module.
+                            Defaults to Local.
+                          enum:
+                          - Local
+                          type: string
+                      type: object
+                      x-kubernetes-validations:
+                      - message: If type is Local, local field needs to be set.
+                        rule: self.type != 'Local' || has(self.local)
+                  required:
+                  - name
+                  - source
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
             type: object
             x-kubernetes-validations:
             - message: only one of luaValidation or lua may be set

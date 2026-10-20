@@ -13,6 +13,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	nvd.nist.gov \
 	github.com \
 	jwt.io \
+	presence.decionis.com \
 	githubusercontent.com \
 	example.com \
 	foo.bar.com \
@@ -40,6 +41,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	v1.2 \
 	v1.3 \
 	v1.4"
+LINKINATOR_CONCURRENCY ?= 20
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
@@ -177,7 +179,7 @@ docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-
 .PHONY: docs-check-links
 docs-check-links: $(tools/linkinator) # Check for broken links in the docs
 	@$(LOG_TARGET)
-	$(tools/linkinator) site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
+	$(tools/linkinator) site/public/ -r --concurrency $(LINKINATOR_CONCURRENCY) --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
 
 docs-markdown-lint: $(tools/markdownlint)
 	$(tools/markdownlint) -c .github/markdown_lint_config.json site/content/*

@@ -9,8 +9,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -308,4 +310,60 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.NotNil(t, tlsConfig.GetConfigForClient)
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+}
+
+// TestRunner_CloseWaitsForGoroutines asserts that Close does not return until
+// the goroutines started by Start have actually exited, rather than racing
+// with them. It verifies this by checking that the xDS config server's
+// listening port is free the instant Close returns, with no grace-period sleep.
+func TestRunner_CloseWaitsForGoroutines(t *testing.T) {
+	// Set up host-mode certs so Start can load TLS config without relying on
+	// the fixed Kubernetes cert paths under /certs.
+	configHome := t.TempDir()
+	certsDir := filepath.Join(configHome, "certs", "envoy-gateway")
+	require.NoError(t, os.MkdirAll(certsDir, 0o750))
+
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	certs, err := crypto.GenerateCerts(cfg)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(certsDir, "ca.crt"), certs.CACertificate, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(certsDir, "tls.crt"), certs.EnvoyGatewayCertificate, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(certsDir, "tls.key"), certs.EnvoyGatewayPrivateKey, 0o600))
+
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+				Type: egv1a1.InfrastructureProviderTypeHost,
+				Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
+					ConfigHome: &configHome,
+				},
+			},
+		},
+	}
+
+	xdsIR := new(message.XdsIR)
+	defer xdsIR.Close()
+
+	r := New(&Config{
+		Server:       *cfg,
+		XdsIR:        xdsIR,
+		RunnerErrors: new(message.RunnerErrors),
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	require.NoError(t, r.Start(ctx))
+
+	cancel()
+	require.NoError(t, r.Close())
+
+	// If Close returned before serveXdsConfigServer's grpc.Server had
+	// actually stopped and released the listener, this bind would fail.
+	addr := net.JoinHostPort(XdsGrpcSotwConfigServerAddress, strconv.Itoa(ratelimit.XdsGrpcSotwConfigServerPort))
+	l, err := net.Listen("tcp", addr)
+	require.NoError(t, err, "xDS config server port should be free immediately after Close returns")
+	require.NoError(t, l.Close())
 }

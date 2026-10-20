@@ -22,6 +22,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -218,7 +219,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		}
 
 		tf, err := tr.buildTrafficFeatures(policy, nil)
-		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
 	})
 
@@ -244,8 +245,107 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		require.NoError(t, err)
 
 		tf, err := tr.buildTrafficFeatures(mergedPolicy, owners)
-		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
 		require.NotNil(t, tf)
+	})
+}
+
+func TestBuildTrafficFeaturesRequestBufferMode(t *testing.T) {
+	t.Run("mode LimitOnly is allowed with httpUpgrade", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+					Mode:  new(egv1a1.RequestBufferModeLimitOnly),
+				},
+				HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+					{Type: "websocket"},
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy, nil)
+		require.NoError(t, err)
+		require.NotNil(t, tf)
+		// LimitOnly must not enable the Buffer filter, only the route-level body buffer limit.
+		require.Nil(t, tf.RequestBuffer)
+		require.Equal(t, new(uint64(1024*1024)), tf.RequestBodyBufferLimit)
+	})
+
+	t.Run("mode BufferAndLimit only sets the buffer filter", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+					Mode:  new(egv1a1.RequestBufferModeBufferAndLimit),
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy, nil)
+		require.NoError(t, err)
+		require.NotNil(t, tf)
+		require.NotNil(t, tf.RequestBuffer)
+		require.Nil(t, tf.RequestBodyBufferLimit)
+	})
+
+	t.Run("an unset mode defaults to BufferAndLimit", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy, nil)
+		require.NoError(t, err)
+		require.NotNil(t, tf)
+		require.NotNil(t, tf.RequestBuffer)
+		require.Nil(t, tf.RequestBodyBufferLimit)
+	})
+
+	t.Run("mode LimitOnly is not bound by the buffer filter uint32 ceiling", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					// Rejected under BufferAndLimit, but the route-level limit is a uint64.
+					Limit: resource.MustParse("5000Mi"),
+					Mode:  new(egv1a1.RequestBufferModeLimitOnly),
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy, nil)
+		require.NoError(t, err)
+		require.NotNil(t, tf)
+		require.Equal(t, new(uint64(5000*1024*1024)), tf.RequestBodyBufferLimit)
+	})
+
+	t.Run("an omitted limit is rejected in both modes", func(t *testing.T) {
+		for _, mode := range []*egv1a1.RequestBufferMode{
+			nil,
+			new(egv1a1.RequestBufferModeBufferAndLimit),
+			new(egv1a1.RequestBufferModeLimitOnly),
+		} {
+			tr := &Translator{}
+			policy := &egv1a1.BackendTrafficPolicy{
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					// Limit is optional in the schema, so it can reach the translator as a zero Quantity.
+					RequestBuffer: &egv1a1.RequestBuffer{Mode: mode},
+				},
+			}
+
+			tf, err := tr.buildTrafficFeatures(policy, nil)
+			require.ErrorContains(t, err, "limit value 0 is out of range, must be greater than 0")
+			require.NotNil(t, tf)
+			require.Nil(t, tf.RequestBuffer)
+			require.Nil(t, tf.RequestBodyBufferLimit)
+		}
 	})
 }
 
@@ -449,6 +549,96 @@ func TestBuildCompression(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "compressor with custom settings",
+			compressor: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+		},
+		{
+			name: "only the first compressor of each type is used",
+			compressor: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(1)),
+					},
+				},
+				{
+					Type:   egv1a1.BrotliCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{},
+				},
+				{
+					Type: egv1a1.GzipCompressorType,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(9)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+					Gzip: &egv1a1.GzipCompressor{
+						CompressionLevel: new(uint32(1)),
+					},
+				},
+				{
+					Type: egv1a1.BrotliCompressorType,
+				},
+			},
+		},
+		{
+			name: "only the first compression of each type is used",
+			compression: []*egv1a1.Compression{
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					MinContentLength: new(resource.MustParse("100")),
+				},
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					MinContentLength: new(resource.MustParse("200")),
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:             egv1a1.ZstdCompressorType,
+					ChooseFirst:      true,
+					MinContentLength: new(uint32(100)),
+				},
+			},
+		},
+		{
+			name: "compression settings of other compressor types are ignored",
+			compression: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{
+						Quality: new(uint32(11)),
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.GzipCompressorType,
+					ChooseFirst: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -457,6 +647,21 @@ func TestBuildCompression(t *testing.T) {
 			require.Equal(t, tc.expected, got)
 		})
 	}
+
+	t.Run("compressor settings are copied", func(t *testing.T) {
+		compressor := []*egv1a1.Compression{
+			{
+				Type: egv1a1.ZstdCompressorType,
+				Zstd: &egv1a1.ZstdCompressor{
+					CompressionLevel: new(uint32(3)),
+				},
+			},
+		}
+		got := buildCompression(nil, compressor)
+		require.Len(t, got, 1)
+		require.NotSame(t, compressor[0].Zstd, got[0].Zstd)
+		require.NotSame(t, compressor[0].Zstd.CompressionLevel, got[0].Zstd.CompressionLevel)
+	})
 }
 
 func TestBuildRateLimitRuleQueryParams(t *testing.T) {
@@ -1647,7 +1852,9 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 								SectionName: new(gwapiv1.SectionName("http")),
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 				{
@@ -2307,249 +2514,6 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 	}
 }
 
-func TestBTPLoadBalancerIndexIsConsistentHash(t *testing.T) {
-	consistentHashType := egv1a1.ConsistentHashLoadBalancerType
-	roundRobinType := egv1a1.RoundRobinLoadBalancerType
-
-	tests := []struct {
-		name            string
-		btps            []*egv1a1.BackendTrafficPolicy
-		gatewayLabels   map[string]string
-		referenceGrants []*gwapiv1b1.ReferenceGrant
-		gatewayNN       types.NamespacedName
-		want            bool
-	}{
-		{
-			name:      "no BTPs at all",
-			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
-			want:      false,
-		},
-		{
-			name: "gateway-level ConsistentHash counts",
-			btps: []*egv1a1.BackendTrafficPolicy{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-1"},
-					Spec: egv1a1.BackendTrafficPolicySpec{
-						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Group: "gateway.networking.k8s.io",
-										Kind:  "Gateway",
-										Name:  "gateway-1",
-									},
-								},
-							},
-						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
-						},
-					},
-				},
-			},
-			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
-			want:      true,
-		},
-		{
-			name: "gateway-level RoundRobin does not count",
-			btps: []*egv1a1.BackendTrafficPolicy{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-1"},
-					Spec: egv1a1.BackendTrafficPolicySpec{
-						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Group: "gateway.networking.k8s.io",
-										Kind:  "Gateway",
-										Name:  "gateway-1",
-									},
-								},
-							},
-						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: roundRobinType},
-						},
-					},
-				},
-			},
-			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
-			want:      false,
-		},
-		{
-			name: "route-targeted ConsistentHash is ignored (only gateway level is tracked)",
-			btps: []*egv1a1.BackendTrafficPolicy{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
-					Spec: egv1a1.BackendTrafficPolicySpec{
-						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Group: "gateway.networking.k8s.io",
-										Kind:  "HTTPRoute",
-										Name:  "route-1",
-									},
-									SectionName: SectionNamePtr("rule-1"),
-								},
-							},
-						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
-						},
-					},
-				},
-			},
-			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
-			want:      false,
-		},
-		{
-			name: "cross-namespace targetSelector keys by the target gateway's namespace, not the policy's",
-			btps: []*egv1a1.BackendTrafficPolicy{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "policy-ns", Name: "btp-selector"},
-					Spec: egv1a1.BackendTrafficPolicySpec{
-						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetSelectors: []egv1a1.TargetSelector{
-								{
-									Kind:        gwapiv1.Kind("Gateway"),
-									Namespaces:  &egv1a1.TargetSelectorNamespaces{From: egv1a1.TargetNamespaceFromAll},
-									MatchLabels: map[string]string{"app": "web"},
-								},
-							},
-						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
-						},
-					},
-				},
-			},
-			gatewayLabels: map[string]string{"app": "web"},
-			referenceGrants: []*gwapiv1b1.ReferenceGrant{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "gateway-ns", Name: "grant-btp"},
-					Spec: gwapiv1b1.ReferenceGrantSpec{
-						From: []gwapiv1b1.ReferenceGrantFrom{
-							{
-								Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-								Kind:      gwapiv1b1.Kind(egv1a1.KindBackendTrafficPolicy),
-								Namespace: gwapiv1b1.Namespace("policy-ns"),
-							},
-						},
-						To: []gwapiv1b1.ReferenceGrantTo{
-							{Group: gwapiv1b1.Group(gwapiv1.GroupName), Kind: gwapiv1b1.Kind("Gateway")},
-						},
-					},
-				},
-			},
-			gatewayNN: types.NamespacedName{Namespace: "gateway-ns", Name: "gateway-1"},
-			want:      true,
-		},
-		{
-			name: "oldest accepted gateway BTP with RoundRobin blocks a younger conflicting one with ConsistentHash",
-			btps: []*egv1a1.BackendTrafficPolicy{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-oldest-accepted"},
-					Spec: egv1a1.BackendTrafficPolicySpec{
-						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Group: "gateway.networking.k8s.io",
-										Kind:  "Gateway",
-										Name:  "gateway-1",
-									},
-								},
-							},
-						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: roundRobinType},
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-younger-conflicting"},
-					Spec: egv1a1.BackendTrafficPolicySpec{
-						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Group: "gateway.networking.k8s.io",
-										Kind:  "Gateway",
-										Name:  "gateway-1",
-									},
-								},
-							},
-						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
-						},
-					},
-				},
-			},
-			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
-			want:      false,
-		},
-		{
-			name: "oldest accepted gateway BTP with LoadBalancer unset blocks a younger conflicting one with ConsistentHash",
-			btps: []*egv1a1.BackendTrafficPolicy{
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-oldest-accepted"},
-					Spec: egv1a1.BackendTrafficPolicySpec{
-						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Group: "gateway.networking.k8s.io",
-										Kind:  "Gateway",
-										Name:  "gateway-1",
-									},
-								},
-							},
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "btp-younger-conflicting"},
-					Spec: egv1a1.BackendTrafficPolicySpec{
-						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-							TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-								{
-									LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-										Group: "gateway.networking.k8s.io",
-										Kind:  "Gateway",
-										Name:  "gateway-1",
-									},
-								},
-							},
-						},
-						ClusterSettings: egv1a1.ClusterSettings{
-							LoadBalancer: &egv1a1.LoadBalancer{Type: consistentHashType},
-						},
-					},
-				},
-			},
-			gatewayNN: types.NamespacedName{Namespace: "envoy-gateway", Name: "gateway-1"},
-			want:      false,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{
-				TypeMeta: metav1.TypeMeta{Kind: "Gateway", APIVersion: "gateway.networking.k8s.io/v1"},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: tc.gatewayNN.Namespace,
-					Name:      tc.gatewayNN.Name,
-					Labels:    tc.gatewayLabels,
-				},
-			}}
-			idx := BuildBTPIndexes(tc.btps, nil, []*GatewayContext{gwCtx}, nil, tc.referenceGrants, func(string) *corev1.Namespace { return nil }, true)
-			got := idx.LoadBalancer.IsConsistentHash(tc.gatewayNN)
-			require.Equal(t, tc.want, got)
-		})
-	}
-}
-
 func TestBtpSpecHasClusterScopedFields(t *testing.T) {
 	circuitBreakerSet := &egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}}
 	useClientProtocolTrue := true
@@ -2571,7 +2535,7 @@ func TestBtpSpecHasClusterScopedFields(t *testing.T) {
 		},
 		{
 			name: "ClusterSettings field set",
-			spec: &egv1a1.BackendTrafficPolicySpec{ClusterSettings: *circuitBreakerSet},
+			spec: &egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: *circuitBreakerSet}},
 			want: true,
 		},
 		{
@@ -2608,7 +2572,9 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 						},
 					},
 				},
-				ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: circuitBreaker},
+				BackendSettings: egv1a1.BackendSettings{
+					ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: circuitBreaker},
+				},
 			},
 		},
 	}
@@ -2819,7 +2785,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 				{
@@ -2860,7 +2828,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 				{
@@ -2918,7 +2888,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								SectionName: &ruleName,
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -2958,7 +2930,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -2998,7 +2972,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								SectionName: new(gwapiv1.SectionName("http")),
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3024,7 +3000,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3052,7 +3030,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								SectionName: &lsListenerName,
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3079,7 +3059,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3106,7 +3088,9 @@ func TestBTPClusterSettingsIndex(t *testing.T) {
 								},
 							},
 						},
-						ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						BackendSettings: egv1a1.BackendSettings{
+							ClusterSettings: egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{}},
+						},
 					},
 				},
 			},
@@ -3143,6 +3127,7 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Connection":        true,
 		"DNS":               true,
 		"HTTP2":             true,
+		"HTTP3":             true,
 		"MergeType":         false,
 		"RateLimit":         false,
 		"BandwidthLimit":    false,
@@ -3179,4 +3164,724 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 			t.Errorf("classification map has stale entry %q - field no longer exists on BackendTrafficPolicySpec", name)
 		}
 	}
+}
+
+// TestApplyGatewayPolicyToMergedClusterExhaustive locks in which cluster-scoped feature a merged
+// BackendCluster keeps per upstream protocol, so a newly added ClusterTrafficFeatures field has to
+// be classified here - and in applyGatewayPolicyToMergedCluster - rather than silently reaching the
+// cluster a udp_proxy or tcp_proxy routes to.
+//
+// The UDP and TCP expectations mirror ir.UDPRoute and ir.TCPRoute as a whole-Gateway
+// BackendTrafficPolicy populates them, which is what the same policy produces for that protocol
+// without MergeBackends.
+func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
+	expected := map[ir.AppProtocol]map[string]bool{
+		ir.UDP: {
+			"LoadBalancer":      true,
+			"ProxyProtocol":     false,
+			"HealthCheck":       false,
+			"AdmissionControl":  false,
+			"CircuitBreaker":    false,
+			"Timeout":           false,
+			"TCPKeepalive":      false,
+			"BackendConnection": false,
+			"HTTP2":             false,
+			"HTTP3":             false,
+			"DNS":               true,
+		},
+		ir.TCP: {
+			"LoadBalancer":      true,
+			"ProxyProtocol":     true,
+			"HealthCheck":       true,
+			"AdmissionControl":  false,
+			"CircuitBreaker":    true,
+			"Timeout":           true,
+			"TCPKeepalive":      true,
+			"BackendConnection": false,
+			"HTTP2":             false,
+			"HTTP3":             false,
+			"DNS":               true,
+		},
+		ir.HTTP: {
+			"LoadBalancer":      true,
+			"ProxyProtocol":     true,
+			"HealthCheck":       true,
+			"AdmissionControl":  true,
+			"CircuitBreaker":    true,
+			"Timeout":           true,
+			"TCPKeepalive":      true,
+			"BackendConnection": true,
+			"HTTP2":             true,
+			"HTTP3":             true,
+			"DNS":               true,
+		},
+	}
+
+	actualFields := structFieldNames(reflect.TypeOf(ir.ClusterTrafficFeatures{}), nil)
+
+	for protocol, byField := range expected {
+		for _, name := range actualFields {
+			want, ok := byField[name]
+			if !ok {
+				t.Fatalf("ClusterTrafficFeatures field %q has no entry for protocol %s in this test's "+
+					"classification map - decide whether a merged %s cluster may carry it (see "+
+					"applyGatewayPolicyToMergedCluster) and add it here", name, protocol, protocol)
+			}
+			t.Run(string(protocol)+"/"+name, func(t *testing.T) {
+				bc := mergedClusterForProtocol(protocol)
+				applyGatewayPolicyToMergedCluster(bc, structWithFieldSet[ir.ClusterTrafficFeatures](name), nil)
+				require.NotNil(t, bc.Traffic)
+				kept := !reflect.ValueOf(bc.Traffic).Elem().FieldByName(name).IsNil()
+				require.Equal(t, want, kept,
+					"applyGatewayPolicyToMergedCluster's behavior for field %q on a %s cluster doesn't "+
+						"match this test's classification map", name, protocol)
+			})
+		}
+
+		for name := range byField {
+			if !slices.Contains(actualFields, name) {
+				t.Errorf("classification map for protocol %s has stale entry %q - field no longer exists "+
+					"on ClusterTrafficFeatures", protocol, name)
+			}
+		}
+	}
+}
+
+// TestApplyGatewayPolicyToMergedClusterUseClientProtocol checks UseClientProtocol, which rides
+// alongside the traffic features on the BackendCluster rather than inside them: only an
+// HTTP-family cluster may carry it, since it reaches a cluster solely through ir.HTTPRoute.
+func TestApplyGatewayPolicyToMergedClusterUseClientProtocol(t *testing.T) {
+	tests := []struct {
+		protocol ir.AppProtocol
+		want     *bool
+	}{
+		{protocol: ir.UDP, want: nil},
+		{protocol: ir.TCP, want: nil},
+		{protocol: ir.HTTP, want: new(true)},
+		{protocol: ir.GRPC, want: new(true)},
+	}
+	for _, test := range tests {
+		t.Run(string(test.protocol), func(t *testing.T) {
+			bc := mergedClusterForProtocol(test.protocol)
+			// Pre-set it, so a protocol that must not carry it is seen to clear it rather than
+			// merely leave it alone.
+			bc.UseClientProtocol = new(true)
+			applyGatewayPolicyToMergedCluster(bc, &ir.ClusterTrafficFeatures{}, new(true))
+			require.Equal(t, test.want, bc.UseClientProtocol)
+		})
+	}
+}
+
+func TestIsBackendTargetKind(t *testing.T) {
+	tests := []struct {
+		name string
+		kind gwapiv1.Kind
+		want bool
+	}{
+		{name: "Service", kind: gwapiv1.Kind(gwapiresource.KindService), want: true},
+		{name: "ServiceImport", kind: gwapiv1.Kind(gwapiresource.KindServiceImport), want: true},
+		{name: "Backend", kind: gwapiv1.Kind(gwapiresource.KindBackend), want: true},
+		{name: "Gateway", kind: gwapiv1.Kind(gwapiresource.KindGateway), want: false},
+		{name: "HTTPRoute", kind: gwapiv1.Kind(gwapiresource.KindHTTPRoute), want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			target := policyTargetReferenceWithSectionName{Kind: tc.kind}
+			require.Equal(t, tc.want, isBackendTargetKind(target))
+		})
+	}
+}
+
+// TestApplyGatewayPolicyToMergedClusterDropsRouteScopedTimeout checks that the route-scoped timeout
+// members, which are never read from a cluster, stay off a merged cluster whatever its protocol.
+func TestApplyGatewayPolicyToMergedClusterDropsRouteScopedTimeout(t *testing.T) {
+	cf := &ir.ClusterTrafficFeatures{
+		Timeout: &ir.Timeout{HTTP: &ir.HTTPTimeout{
+			ClusterHTTPTimeout: ir.ClusterHTTPTimeout{
+				ConnectionIdleTimeout: new(metav1.Duration{Duration: 16 * time.Second}),
+			},
+			RequestTimeout: new(metav1.Duration{Duration: 18 * time.Second}),
+		}},
+	}
+
+	for _, protocol := range []ir.AppProtocol{ir.TCP, ir.HTTP} {
+		t.Run(string(protocol), func(t *testing.T) {
+			bc := mergedClusterForProtocol(protocol)
+			applyGatewayPolicyToMergedCluster(bc, cf, nil)
+			require.NotNil(t, bc.Traffic.Timeout.HTTP)
+			require.Equal(t, 16*time.Second, bc.Traffic.Timeout.HTTP.ConnectionIdleTimeout.Duration)
+			require.Nil(t, bc.Traffic.Timeout.HTTP.RequestTimeout)
+		})
+	}
+}
+
+// mergedClusterForProtocol builds a minimal merged BackendCluster serving protocol.
+// mergedClusterForProtocol builds a cluster that can carry every field a merged cluster of
+// that protocol may honor; TLS is set because HTTP/3 is dropped from a plaintext backend.
+func mergedClusterForProtocol(protocol ir.AppProtocol) *ir.BackendCluster {
+	return &ir.BackendCluster{
+		Name:    "bc-1",
+		Setting: &ir.DestinationSetting{Protocol: protocol, TLS: &ir.TLSUpstreamConfig{}},
+	}
+}
+
+// TestValidateBackendHTTP3 checks that a route is judged on its route-scoped settings only:
+// merged refs are the cluster's business and unresolvable backendRefs never dial.
+func TestApplyRouteHTTP3(t *testing.T) {
+	http3 := func() *ir.TrafficFeatures {
+		return &ir.TrafficFeatures{ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			HTTP3: &ir.BackendHTTP3Settings{Mode: string(egv1a1.BackendHTTP3ModeAuto)},
+		}}
+	}
+	metadata := &ir.ResourceMetadata{Kind: "HTTPRoute", Name: "route", Namespace: "default"}
+	tlsSetting := &ir.DestinationSetting{Protocol: ir.HTTP, TLS: &ir.TLSUpstreamConfig{}}
+	plainSetting := &ir.DestinationSetting{Protocol: ir.HTTP}
+
+	tests := []struct {
+		name         string
+		route        *ir.HTTPRoute
+		wantDropped  bool
+		wantWarnings int
+	}{
+		{
+			name:  "no http3 on the route",
+			route: &ir.HTTPRoute{Metadata: metadata, Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{plainSetting}}},
+		},
+		{
+			name:  "redirect route has no destination",
+			route: &ir.HTTPRoute{Metadata: metadata, Traffic: http3()},
+		},
+		{
+			name:  "tls settings keep http3",
+			route: &ir.HTTPRoute{Metadata: metadata, Traffic: http3(), Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{tlsSetting}}},
+		},
+		{
+			name:         "plaintext setting drops http3 with a warning",
+			route:        &ir.HTTPRoute{Metadata: metadata, Traffic: http3(), Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{tlsSetting, plainSetting}}},
+			wantDropped:  true,
+			wantWarnings: 1,
+		},
+		{
+			name: "merged refs are not the route's to judge",
+			route: &ir.HTTPRoute{Metadata: metadata, Traffic: http3(), Destination: &ir.RouteDestination{BackendClusterRefs: []*ir.BackendClusterRef{
+				{Name: "service/default/plain/8080/http"},
+			}}},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			warnings := http3Warnings{}
+			applyRouteHTTP3(tc.route, warnings)
+			dropped := tc.route.Traffic != nil && tc.route.Traffic.HTTP3 == nil
+			require.Equal(t, tc.wantDropped, dropped)
+			require.Len(t, warnings, tc.wantWarnings)
+		})
+	}
+}
+
+func TestHTTP3WarningsMessage(t *testing.T) {
+	w := http3Warnings{}
+	require.Empty(t, w.message())
+
+	route := func(name, rule string) *ir.HTTPRoute {
+		return &ir.HTTPRoute{
+			Name:     "httproute/default/" + name + "/rule/" + rule + "/match/0/*",
+			Metadata: &ir.ResourceMetadata{Kind: "HTTPRoute", Namespace: "default", Name: name, SectionName: rule},
+		}
+	}
+	w.addMergedCluster(&ir.BackendCluster{Name: "service/default/svc-2/8080/http"}, []string{"reason b"})
+	w.addRoute(http3Warning{disabled: true, reason: "reason a"}, route("route-2", "0"))
+	w.addRoute(http3Warning{disabled: true, reason: "reason a"}, route("route-1", "0"))
+	// A second rule of the same HTTPRoute is listed once.
+	w.addRoute(http3Warning{disabled: true, reason: "reason a"}, route("route-1", "1"))
+	w.addRoute(http3Warning{reason: "reason c"}, route("route-3", "0"))
+	require.Equal(t,
+		"HTTP/3 is disabled because reason a, for these routes: [default/route-1 default/route-2]; "+
+			"HTTP/3 is disabled because reason b, for these backends: [service/default/svc-2/8080/http]; "+
+			"HTTP/3 ignores a setting because reason c, for these routes: [default/route-3]",
+		w.message())
+}
+
+// TestApplyGatewayPolicyToMergedClusterHTTP3 checks that a merged cluster only keeps HTTP3
+// when its backend can actually use it, and reports why otherwise.
+func TestApplyGatewayPolicyToMergedClusterHTTP3(t *testing.T) {
+	tf := &ir.TrafficFeatures{
+		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
+			HTTP3: &ir.BackendHTTP3Settings{Mode: string(egv1a1.BackendHTTP3ModeAuto)},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		setting     *ir.DestinationSetting
+		wantHTTP3   bool
+		wantReasons int
+	}{
+		{
+			name:      "tls http backend keeps http3",
+			setting:   &ir.DestinationSetting{Protocol: ir.HTTP, TLS: &ir.TLSUpstreamConfig{}},
+			wantHTTP3: true,
+		},
+		{
+			name:        "plaintext http backend drops http3",
+			setting:     &ir.DestinationSetting{Protocol: ir.HTTP},
+			wantReasons: 1,
+		},
+		{
+			name:        "http2 backend drops http3",
+			setting:     &ir.DestinationSetting{Protocol: ir.HTTP2, TLS: &ir.TLSUpstreamConfig{}},
+			wantReasons: 1,
+		},
+		{
+			// A TCP cluster never carries HTTP-only settings, so nothing is dropped or reported.
+			name:    "tcp backend never carries http3",
+			setting: &ir.DestinationSetting{Protocol: ir.TCP},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bc := &ir.BackendCluster{Name: "bc-1", Setting: tc.setting}
+			reasons := applyGatewayPolicyToMergedCluster(bc, &tf.ClusterTrafficFeatures, nil)
+			require.Len(t, reasons, tc.wantReasons)
+			require.NotNil(t, bc.Traffic)
+			require.Equal(t, tc.wantHTTP3, bc.Traffic.HTTP3 != nil)
+		})
+	}
+}
+
+func TestBackendPolicyKeyFromTarget(t *testing.T) {
+	target := policyTargetReferenceWithSectionName{
+		Kind:      gwapiv1.Kind(gwapiresource.KindService),
+		Name:      gwapiv1.ObjectName("svc-1"),
+		Namespace: gwapiv1.Namespace("default"),
+	}
+	want := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	require.Equal(t, want, backendPolicyKeyFromTarget(target))
+}
+
+func TestBackendPolicyKeyFromMetadata(t *testing.T) {
+	md := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1", SectionName: "8080"}
+	want := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	require.Equal(t, want, backendPolicyKeyFromMetadata(md))
+	require.Equal(t, backendPolicyKey{}, backendPolicyKeyFromMetadata(nil))
+}
+
+func TestGatewayReferencesBackend(t *testing.T) {
+	key := backendPolicyKey{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	otherMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-2"}
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+
+	tests := []struct {
+		name string
+		x    *ir.Xds
+		want bool
+	}{
+		{name: "empty", x: &ir.Xds{}, want: false},
+		{
+			name: "matches BackendClusters",
+			x:    &ir.Xds{BackendClusters: []*ir.BackendCluster{{Metadata: otherMD}, {Metadata: matchMD}}},
+			want: true,
+		},
+		{
+			name: "matches HTTP destination setting",
+			x: &ir.Xds{HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{
+				{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: otherMD}, {Metadata: matchMD}}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "matches TCP destination setting",
+			x: &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{
+				{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: matchMD}}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "matches UDP destination setting",
+			x: &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{
+				Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: matchMD}}},
+			}}}},
+			want: true,
+		},
+		{
+			name: "no match anywhere",
+			x: &ir.Xds{
+				BackendClusters: []*ir.BackendCluster{{Metadata: otherMD}},
+				HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{
+					{Destination: &ir.RouteDestination{Settings: []*ir.DestinationSetting{{Metadata: otherMD}}}},
+				}}},
+			},
+			want: false,
+		},
+		{
+			name: "nil destinations and routes are skipped, not matched",
+			x: &ir.Xds{
+				HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{{Destination: nil}}}},
+				TCP:  []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: nil}}}},
+				UDP:  []*ir.UDPListener{{Route: nil}, {Route: &ir.UDPRoute{Destination: nil}}},
+			},
+			want: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, gatewayReferencesBackend(tc.x, key))
+		})
+	}
+}
+
+func newBackendTargetPolicy() *egv1a1.BackendTrafficPolicy {
+	return &egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"),
+					}},
+				},
+			},
+			MergeType: new(egv1a1.StrategicMerge),
+			BackendSettings: egv1a1.BackendSettings{
+				ClusterSettings: egv1a1.ClusterSettings{
+					CircuitBreaker: &egv1a1.CircuitBreaker{MaxConnections: new(int64(100))},
+				},
+			},
+		},
+	}
+}
+
+func TestProcessBackendTrafficPolicyForBackendEdgeCases(t *testing.T) {
+	// Every case targets Service/default/svc-1, whether the policy uses TargetRef or
+	// TargetRefs - the resolved target passed to processBackendTrafficPolicyForBackend is the
+	// same either way.
+	target := policyTargetReferenceWithSectionName{Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"), Namespace: gwapiv1.Namespace("default")}
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	singleSetting := []*ir.DestinationSetting{{Metadata: matchMD}}
+
+	requireEmpty := func(t *testing.T, policy *egv1a1.BackendTrafficPolicy, _ *ir.Xds) {
+		require.Empty(t, policy.Status.Ancestors)
+	}
+
+	tests := []struct {
+		name             string
+		x                *ir.Xds // nil means the gateway has no xdsIR entry at all
+		policy           *egv1a1.BackendTrafficPolicy
+		gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy // nil means none
+		check            func(t *testing.T, policy *egv1a1.BackendTrafficPolicy, x *ir.Xds)
+	}{
+		{
+			name:   "gateway with no xdsIR entry is skipped",
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "HTTP destination nil is skipped, not matched",
+			x:      &ir.Xds{HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{{Destination: nil}}}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "TCP destination nil is skipped, not matched",
+			x:      &ir.Xds{TCP: []*ir.TCPListener{{Routes: []*ir.TCPRoute{{Destination: nil}}}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "UDP listener with no route is skipped, not matched",
+			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: nil}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name:   "UDP destination nil is skipped, not matched",
+			x:      &ir.Xds{UDP: []*ir.UDPListener{{Route: &ir.UDPRoute{Destination: nil}}}},
+			policy: newBackendTargetPolicy(),
+			check:  requireEmpty,
+		},
+		{
+			name: "deprecated singular targetRef still reports a DeprecatedField warning",
+			x:    &ir.Xds{HTTP: []*ir.HTTPListener{{Routes: []*ir.HTTPRoute{{Destination: &ir.RouteDestination{Settings: singleSetting}}}}}},
+			policy: &egv1a1.BackendTrafficPolicy{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
+				Spec: egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"),
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							CircuitBreaker: &egv1a1.CircuitBreaker{MaxConnections: new(int64(100))},
+						},
+					},
+				},
+			},
+			check: func(t *testing.T, policy *egv1a1.BackendTrafficPolicy, _ *ir.Xds) {
+				require.Len(t, policy.Status.Ancestors, 1)
+				var sawWarning bool
+				for _, cond := range policy.Status.Ancestors[0].Conditions {
+					if cond.Type == string(egv1a1.PolicyConditionWarning) && cond.Reason == string(egv1a1.PolicyReasonDeprecatedField) {
+						sawWarning = true
+					}
+				}
+				require.True(t, sawWarning, "expected a DeprecatedField warning for using the deprecated singular targetRef")
+			},
+		},
+		{
+			// gwPolicy's RateLimit is route-scoped and broken; this policy's own CircuitBreaker is
+			// cluster-scoped and valid, so it must still apply despite the merge's combined error.
+			name:   "gwPolicy's broken RateLimit doesn't block this policy's cluster-scoped CircuitBreaker",
+			x:      &ir.Xds{BackendClusters: []*ir.BackendCluster{mergedClusterForProtocol(ir.HTTP)}},
+			policy: newBackendTargetPolicy(),
+			gatewayPolicyMap: map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}}: {
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-btp"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						RateLimit: &egv1a1.RateLimitSpec{Type: new(egv1a1.LocalRateLimitType)},
+					},
+				},
+			},
+			check: func(t *testing.T, _ *egv1a1.BackendTrafficPolicy, x *ir.Xds) {
+				bc := x.BackendClusters[0]
+				require.NotNil(t, bc.Traffic)
+				require.NotNil(t, bc.Traffic.CircuitBreaker)
+				require.Equal(t, uint32(100), *bc.Traffic.CircuitBreaker.MaxConnections)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}}
+			gw := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-1"}}}
+			xdsIR := gwapiresource.XdsIRMap{}
+			if tc.x != nil {
+				xdsIR[tr.getIRKey(gw.Gateway)] = tc.x
+				matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+				for _, bc := range tc.x.BackendClusters {
+					if bc.Metadata == nil {
+						bc.Metadata = matchMD
+					}
+				}
+			}
+
+			gatewayPolicyMap := tc.gatewayPolicyMap
+			if gatewayPolicyMap == nil {
+				gatewayPolicyMap = map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy{}
+			}
+
+			require.NotPanics(t, func() {
+				tr.processBackendTrafficPolicyForBackend(xdsIR, []*GatewayContext{gw},
+					gatewayPolicyMap, tc.policy, target,
+					map[backendPolicyKey]*egv1a1.BackendTrafficPolicy{})
+			})
+			tc.check(t, tc.policy, tc.x)
+		})
+	}
+}
+
+func TestProcessBackendTrafficPolicyForBackendUseClientProtocol(t *testing.T) {
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+	target := policyTargetReferenceWithSectionName{Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"), Namespace: gwapiv1.Namespace("default")}
+
+	newPolicy := func() *egv1a1.BackendTrafficPolicy {
+		return &egv1a1.BackendTrafficPolicy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-1"},
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: gwapiv1.Group(""), Kind: gwapiv1.Kind("Service"), Name: gwapiv1.ObjectName("svc-1"),
+						}},
+					},
+				},
+				MergeType:         new(egv1a1.StrategicMerge),
+				UseClientProtocol: new(true),
+			},
+		}
+	}
+
+	tests := []struct {
+		protocol ir.AppProtocol
+		want     *bool
+	}{
+		{
+			protocol: ir.HTTP,
+			want:     new(true),
+		},
+		{
+			protocol: ir.GRPC,
+			want:     new(true),
+		},
+		{
+			protocol: ir.UDP,
+			want:     nil,
+		},
+		{
+			protocol: ir.TCP,
+			want:     nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(string(test.protocol), func(t *testing.T) {
+			bc := mergedClusterForProtocol(test.protocol)
+			bc.Metadata = matchMD
+
+			tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}}
+			gw := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-1"}}}
+			xdsIR := gwapiresource.XdsIRMap{}
+			xdsIR[tr.getIRKey(gw.Gateway)] = &ir.Xds{BackendClusters: []*ir.BackendCluster{bc}}
+
+			policy := newPolicy()
+			tr.processBackendTrafficPolicyForBackend(xdsIR, []*GatewayContext{gw},
+				map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy{}, policy, target,
+				map[backendPolicyKey]*egv1a1.BackendTrafficPolicy{})
+
+			require.Equal(t, test.want, bc.UseClientProtocol)
+		})
+	}
+}
+
+// TestTranslateBackendTrafficPolicyForListenersClusterErrorIsolation is the whole-Gateway counterpart to TestProcessBackendTrafficPolicyForBackendEdgeCases' RateLimit case.
+func TestTranslateBackendTrafficPolicyForListenersClusterErrorIsolation(t *testing.T) {
+	policy := &egv1a1.BackendTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-btp"},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			RateLimit: &egv1a1.RateLimitSpec{Type: new(egv1a1.LocalRateLimitType)},
+			BackendSettings: egv1a1.BackendSettings{
+				ClusterSettings: egv1a1.ClusterSettings{
+					CircuitBreaker: &egv1a1.CircuitBreaker{MaxConnections: new(int64(100))},
+				},
+			},
+		},
+	}
+
+	bc := mergedClusterForProtocol(ir.HTTP)
+
+	tr := &Translator{GatewayControllerName: "test-controller"}
+	gw := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-1"}}}
+	xdsIR := gwapiresource.XdsIRMap{}
+	xdsIR[tr.getIRKey(gw.Gateway)] = &ir.Xds{BackendClusters: []*ir.BackendCluster{bc}}
+
+	_, errs := tr.translateBackendTrafficPolicyForListeners(policy, gw, nil, true, xdsIR)
+
+	require.Error(t, errs, "the broken RateLimit must still surface as a translation error")
+	require.NotNil(t, bc.Traffic)
+	require.NotNil(t, bc.Traffic.CircuitBreaker)
+	require.Equal(t, uint32(100), *bc.Traffic.CircuitBreaker.MaxConnections)
+}
+
+func TestPolicyHasBackendTargetSelectors(t *testing.T) {
+	tests := []struct {
+		name   string
+		policy *egv1a1.BackendTrafficPolicy
+		want   bool
+	}{
+		{
+			name:   "no target selectors",
+			policy: &egv1a1.BackendTrafficPolicy{},
+			want:   false,
+		},
+		{
+			name: "selector targets Gateway only",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Gateway")}},
+				},
+			}},
+			want: false,
+		},
+		{
+			name: "selector targets Service",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Service")}},
+				},
+			}},
+			want: true,
+		},
+		{
+			name: "selector targets ServiceImport",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("ServiceImport")}},
+				},
+			}},
+			want: true,
+		},
+		{
+			name: "selector targets Backend",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{{Kind: gwapiv1.Kind("Backend")}},
+				},
+			}},
+			want: true,
+		},
+		{
+			name: "mixed selectors, one is a backend kind",
+			policy: &egv1a1.BackendTrafficPolicy{Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{
+						{Kind: gwapiv1.Kind("HTTPRoute")},
+						{Kind: gwapiv1.Kind("Backend")},
+					},
+				},
+			}},
+			want: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.want, policyHasBackendTargetSelectors(test.policy))
+		})
+	}
+}
+
+func TestRejectBackendTargetSelectors(t *testing.T) {
+	matchingService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "svc-1", Namespace: "default", Labels: map[string]string{"pick": "me"},
+		},
+		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
+	}
+	matchMD := &ir.ResourceMetadata{Kind: "Service", Namespace: "default", Name: "svc-1"}
+
+	newPolicy := func() *egv1a1.BackendTrafficPolicy {
+		return &egv1a1.BackendTrafficPolicy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-selector"},
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetSelectors: []egv1a1.TargetSelector{
+						{Kind: gwapiv1.Kind("Service"), Group: new(gwapiv1.Group("")), MatchLabels: map[string]string{"pick": "me"}},
+					},
+				},
+				MergeType: new(egv1a1.StrategicMerge),
+			},
+		}
+	}
+
+	tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}, TranslatorContext: &TranslatorContext{}}
+	gwReferencing := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-referencing"}}}
+	gwUnrelated := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-unrelated"}}}
+
+	xdsIR := gwapiresource.XdsIRMap{}
+	xdsIR[tr.getIRKey(gwReferencing.Gateway)] = &ir.Xds{BackendClusters: []*ir.BackendCluster{{Metadata: matchMD}}}
+	xdsIR[tr.getIRKey(gwUnrelated.Gateway)] = &ir.Xds{}
+
+	resources := &gwapiresource.Resources{Services: []*corev1.Service{matchingService}}
+
+	policy := newPolicy()
+	tr.rejectBackendTargetSelectors(xdsIR, []*GatewayContext{gwReferencing, gwUnrelated}, resources, policy)
+
+	require.Len(t, policy.Status.Ancestors, 1)
+	ancestor := policy.Status.Ancestors[0]
+	require.Equal(t, "gw-referencing", string(ancestor.AncestorRef.Name))
+	require.Len(t, ancestor.Conditions, 1)
+	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
 }

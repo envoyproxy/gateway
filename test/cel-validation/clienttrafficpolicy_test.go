@@ -396,6 +396,49 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid HTTP/3 advertised port",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP3: &egv1a1.HTTP3Settings{
+						AdvertisedPort: new(gwapiv1.PortNumber(8443)),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid HTTP/3 advertised port",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP3: &egv1a1.HTTP3Settings{
+						AdvertisedPort: new(gwapiv1.PortNumber(65536)),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.http3.advertisedPort: Invalid value:",
+				"advertisedPort must be between 1 and 65535",
+			},
+		},
+		{
 			desc: "http3 enabled and ALPN protocols not set with other TLS parameters set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
@@ -793,6 +836,110 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-headers\" is invalid:",
 				"spec.headers: Invalid value:",
 				": preserveXRequestID and requestID cannot both be set.",
+			},
+		},
+		{
+			desc: "valid header mutations",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
+							Mutations: []egv1a1.HTTPHeaderMutation{
+								{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}, Action: egv1a1.HeaderWriteSet}},
+								{Remove: new("x-baz")},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "header mutation with no action set",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
+							Mutations: []egv1a1.HTTPHeaderMutation{{}},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.headers.earlyRequestHeaders.mutations[0]",
+			},
+		},
+		{
+			desc: "header mutation with more than one action set",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
+							Mutations: []egv1a1.HTTPHeaderMutation{
+								{
+									Write:  &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}},
+									Remove: new("x-baz"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.headers.earlyRequestHeaders.mutations[0]",
+			},
+		},
+		{
+			desc: "header mutation with invalid write action",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
+							Mutations: []egv1a1.HTTPHeaderMutation{
+								{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}, Action: egv1a1.HeaderWriteAction("Bogus")}},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.headers.earlyRequestHeaders.mutations[0].write.action",
 			},
 		},
 	}

@@ -111,6 +111,29 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionResources:
+    - name: storage.example.io/s3backend/default/s3-backend
+      object:
+        apiVersion: storage.example.io/v1alpha1
+        kind: S3Backend
+        metadata:
+          name: s3-backend
+          namespace: default
+        spec:
+          bucket: my-s3-bucket
+          endpoint: s3.amazonaws.com
+          region: us-west-2
+    - name: compute.example.io/lambdabackend/default/lambda-backend
+      object:
+        apiVersion: compute.example.io/v1alpha1
+        kind: LambdaBackend
+        metadata:
+          name: lambda-backend
+          namespace: default
+        spec:
+          functionName: my-function
+          qualifier: $LATEST
+          region: us-west-2
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -157,16 +180,7 @@ xdsIR:
             name: httproute/default/httproute-1/rule/1/backend/0
             weight: 1
         extensionRefs:
-        - object:
-            apiVersion: compute.example.io/v1alpha1
-            kind: LambdaBackend
-            metadata:
-              name: lambda-backend
-              namespace: default
-            spec:
-              functionName: my-function
-              qualifier: $LATEST
-              region: us-west-2
+        - name: compute.example.io/lambdabackend/default/lambda-backend
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
@@ -189,16 +203,7 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             weight: 1
         extensionRefs:
-        - object:
-            apiVersion: storage.example.io/v1alpha1
-            kind: S3Backend
-            metadata:
-              name: s3-backend
-              namespace: default
-            spec:
-              bucket: my-s3-bucket
-              endpoint: s3.amazonaws.com
-              region: us-west-2
+        - name: storage.example.io/s3backend/default/s3-backend
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:

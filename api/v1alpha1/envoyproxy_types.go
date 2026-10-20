@@ -169,6 +169,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.dynamic_forward_proxy
 	//
+	// - envoy.filters.http.alternate_protocols_cache
+	//
 	// - envoy.filters.http.router
 	//
 	// Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -228,6 +230,22 @@ type EnvoyProxySpec struct {
 	// +listMapKey=name
 	// +optional
 	DynamicModules []DynamicModuleEntry `json:"dynamicModules,omitempty"`
+
+	// WasmModules defines the set of Wasm modules that are allowed to be used by
+	// EnvoyExtensionPolicy resources. Each entry registers a module by a logical
+	// name and a source (currently Local path).
+	//
+	// When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up
+	// in this list.
+	//
+	// The EnvoyProxy owner is responsible for ensuring Local modules are available
+	// on the proxy container's filesystem (e.g., via init containers, custom images,
+	// or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path.
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	WasmModules []WasmModuleEntry `json:"wasmModules,omitempty"`
 
 	// GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet.
 	//
@@ -365,7 +383,11 @@ type BackendTLSConfig struct {
 	// ClientCertificateRef defines the reference to a Kubernetes Secret that contains
 	// the client certificate and private key for Envoy to use when connecting to
 	// backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
-	// This secret should be located within the same namespace as the Envoy proxy resource that references it.
+	// The Secret must be in the same namespace as the EnvoyProxy or Backend resource
+	// that references it.
+	// Cross-namespace references are not supported, even with a ReferenceGrant.
+	// The ReferenceGrant requirement in the namespace field's description is inherited
+	// from the Gateway API SecretObjectReference type and does not apply to this field.
 	// +optional
 	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 	TLSSettings          `json:",inline"`
@@ -388,7 +410,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy;envoy.filters.http.alternate_protocols_cache
 type EnvoyFilter string
 
 const (
@@ -473,6 +495,9 @@ const (
 
 	// EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.
 	EnvoyFilterDynamicForwardProxy EnvoyFilter = "envoy.filters.http.dynamic_forward_proxy"
+
+	// EnvoyFilterAlternateProtocolsCache defines the Envoy HTTP alternate protocols cache filter.
+	EnvoyFilterAlternateProtocolsCache EnvoyFilter = "envoy.filters.http.alternate_protocols_cache"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
@@ -802,6 +827,11 @@ const (
 	EnvoyProxyReasonInvalidParameters EnvoyProxyConditionReason = "InvalidParameters"
 
 	EnvoyProxyReasonDeprecatedField EnvoyProxyConditionReason = "DeprecatedField"
+
+	// EnvoyProxyReasonPatchDisabled indicates that one or more Kubernetes resource
+	// `patch` fields configured on this EnvoyProxy were ignored because patching is
+	// disabled in the EnvoyGateway configuration.
+	EnvoyProxyReasonPatchDisabled EnvoyProxyConditionReason = "PatchDisabled"
 )
 
 // +kubebuilder:object:root=true

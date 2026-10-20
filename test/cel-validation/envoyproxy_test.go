@@ -130,7 +130,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
-								LoadBalancerSourceRanges: []string{"1.1.1.1", "2001:db8::/32"},
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32", "2001:db8::/32"},
 							},
 						},
 					},
@@ -180,13 +180,51 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     new(egv1a1.ServiceTypeClusterIP),
-								LoadBalancerSourceRanges: []string{"1.1.1.1"},
+								LoadBalancerSourceRanges: []string{"10.0.0.0/8"},
 							},
 						},
 					},
 				}
 			},
 			wantErrors: []string{"loadBalancerSourceRanges can only be set for LoadBalancer type"},
+		},
+		{
+			desc: "loadBalancerSourceRanges-invalid-cidr",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"not-a-cidr"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"must be of type cidr"},
+		},
+		{
+			desc: "loadBalancerSourceRanges-too-many-items",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				sourceRanges := make([]string, 65)
+				for i := range sourceRanges {
+					sourceRanges[i] = "10.0.0.0/8"
+				}
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: sourceRanges,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Too many: 65: must have at most 64 items"},
 		},
 		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",
@@ -248,6 +286,23 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           new(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerIP: new("a.b.c.d"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerIP must be a valid IPv4 address"},
+		},
+		{
+			desc: "ServiceTypeLoadBalancer-with-IPv6-IP",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           new(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: new("2001:db8::68"),
 							},
 						},
 					},
@@ -2638,6 +2693,139 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
 			},
 			wantErrors: []string{},
+		},
+		// WasmModules
+		{
+			desc: "valid: wasmModules with local source",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: multiple wasmModules",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+							},
+						},
+						{
+							Name: "metrics-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/opt/wasm/metrics.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: wasmModules with empty name",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].name in body should be at least 1 chars long"},
+		},
+		{
+			desc: "invalid: wasmModules name with uppercase",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "My-Filter",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].name in body should match"},
+		},
+		{
+			desc: "invalid: wasmModules Local type without local field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name:   "security-filter",
+							Source: egv1a1.WasmModuleSource{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Local, local field needs to be set"},
+		},
+		{
+			desc: "invalid: wasmModules relative path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "relative/filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].source.local.path in body should match"},
+		},
+		{
+			desc: "invalid: wasmModules empty path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].source.local.path in body should be at least 1 chars long"},
 		},
 	}
 

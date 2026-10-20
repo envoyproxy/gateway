@@ -22,6 +22,7 @@
             - profile
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            codeVerifierTokenExpiresIn: 120s
             cookieConfigs:
               codeVerifierCookieConfig:
                 path: /foo/oauth2/callback
@@ -50,9 +51,12 @@
             csrfTokenExpiresIn: 2100s
             defaultExpiresIn: 3600s
             defaultRefreshTokenExpiresIn: 172800s
+            endSessionEndpoint: https://oauth.foo.com/logout
             forwardBearerToken: true
             forwardIdToken:
               header: X-ID-Token
+            postLogoutRedirectUri:
+              uri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/foo/loggedout'
             redirectPathMatcher:
               path:
                 exact: /foo/oauth2/callback
@@ -129,8 +133,11 @@
               stringMatch:
                 exact: foobar
             disableTokenEncryption: true
+            endSessionEndpoint: https://oauth.bar.com/logout
             forwardIdToken:
               header: Authorization
+            postLogoutRedirectUri:
+              disabled: true
             redirectPathMatcher:
               path:
                 exact: /bar/oauth2/callback
