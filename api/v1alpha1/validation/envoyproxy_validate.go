@@ -227,9 +227,13 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 				if sink.OpenTelemetry == nil {
 					err := fmt.Errorf("opentelemetry is required if the sink type is OpenTelemetry")
 					errs = append(errs, err)
-				} else if sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
-					errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry metrics backends, which use gRPC"))
 				}
+			}
+			// Check regardless of sink.Type: when sink.Type is omitted, CRD defaults are not
+			// applied to embedded EnvoyProxy templates, so processMetrics processes any non-nil
+			// sink.OpenTelemetry as gRPC, making http1 silently ignored.
+			if sink.OpenTelemetry != nil && sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
+				errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry metrics backends, which use gRPC"))
 			}
 		}
 

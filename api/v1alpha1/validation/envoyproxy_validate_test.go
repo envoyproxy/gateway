@@ -524,6 +524,32 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "should be invalid when OpenTelemetry metrics sink has http1 settings and type is omitted",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									// Type omitted: CRD default not applied in embedded EnvoyProxy templates
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendSettings: &egv1a1.BackendSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
 			name: "should be invalid when OpenTelemetry access log sink has http1 settings",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
