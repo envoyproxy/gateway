@@ -455,6 +455,139 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "should be invalid when OpenTelemetry tracing backend has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendSettings: &egv1a1.BackendSettings{
+										HTTP1: &egv1a1.BackendHTTP1Settings{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be valid when OpenTelemetry tracing backend has no http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be invalid when OpenTelemetry metrics sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendSettings: &egv1a1.BackendSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when OpenTelemetry access log sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendSettings: &egv1a1.BackendSettings{
+														HTTP1: &egv1a1.BackendHTTP1Settings{},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when ALS access log sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendSettings: &egv1a1.BackendSettings{
+														HTTP1: &egv1a1.BackendHTTP1Settings{},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
 			name: "should be valid when service patch is empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{

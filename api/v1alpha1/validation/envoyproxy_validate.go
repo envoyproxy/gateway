@@ -213,12 +213,22 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 		}
 	}
 
+	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Tracing != nil {
+		p := spec.Telemetry.Tracing.Provider
+		if p.Type == egv1a1.TracingProviderTypeOpenTelemetry &&
+			p.BackendSettings != nil && p.BackendSettings.HTTP1 != nil {
+			errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry tracing backends, which use gRPC"))
+		}
+	}
+
 	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Metrics != nil {
 		for _, sink := range spec.Telemetry.Metrics.Sinks {
 			if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
 				if sink.OpenTelemetry == nil {
 					err := fmt.Errorf("opentelemetry is required if the sink type is OpenTelemetry")
 					errs = append(errs, err)
+				} else if sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
+					errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry metrics backends, which use gRPC"))
 				}
 			}
 		}
@@ -264,6 +274,12 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 				if sink.OpenTelemetry == nil {
 					err := fmt.Errorf("unable to configure access log when using OpenTelemetry sink type but \"openTelemetry\" field being empty")
 					errs = append(errs, err)
+				} else if sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
+					errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry access log backends, which use gRPC"))
+				}
+			case egv1a1.ProxyAccessLogSinkTypeALS:
+				if sink.ALS != nil && sink.ALS.BackendSettings != nil && sink.ALS.BackendSettings.HTTP1 != nil {
+					errs = append(errs, fmt.Errorf("http1 is not supported for ALS backends, which use gRPC"))
 				}
 			}
 		}
