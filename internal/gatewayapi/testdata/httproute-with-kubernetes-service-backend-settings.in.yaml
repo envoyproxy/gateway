@@ -31,6 +31,7 @@ httpRoutes:
             - group: gateway.envoyproxy.io
               kind: Backend
               name: backend-svc
+              port: 8080
 services:
   - apiVersion: v1
     kind: Service
@@ -99,10 +100,6 @@ backends:
         - gateway.envoyproxy.io/h2c
       fallback: true
       tls:
-        caCertificateRefs:
-          - name: ca-cmap
-            group: ""
-            kind: ConfigMap
         clientCertificateRef:
           name: client-auth
           group: ""
@@ -117,3 +114,21 @@ backends:
         alpnProtocols:
           - h2
           - http/1.1
+backendTLSPolicies:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-section
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-svc
+          sectionName: "8080"
+      validation:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+        hostname: example.com

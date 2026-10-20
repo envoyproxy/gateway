@@ -1,3 +1,38 @@
+backendTLSPolicies:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: BackendTLSPolicy
+  metadata:
+    name: policy-section
+    namespace: default
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-svc
+      sectionName: "8080"
+    validation:
+      caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: ca-cmap
+      hostname: example.com
+  status:
+    ancestors:
+    - ancestorRef:
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
@@ -15,10 +50,6 @@ backends:
       alpnProtocols:
       - h2
       - http/1.1
-      caCertificateRefs:
-      - group: ""
-        kind: ConfigMap
-        name: ca-cmap
       ciphers:
       - ECDHE-RSA-AES128-GCM-SHA256
       clientCertificateRef:
@@ -93,6 +124,7 @@ httpRoutes:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-svc
+        port: 8080
       matches:
       - path:
           value: /
@@ -201,7 +233,7 @@ xdsIR:
               - http/1.1
               caCertificate:
                 digest: sha256-64034b9ddda55e2360d15ccdebc562e863f42706ce49c471256295afe1262e2f
-                name: backend-svc/default-ca
+                name: policy-section/default-ca
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               clientCertificates:

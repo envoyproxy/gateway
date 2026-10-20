@@ -166,6 +166,10 @@ func validateBackendTLSSettings(backend *egv1a1.Backend, backendTLSPolicies []*g
 					ports[strconv.Itoa(int(endpoint.IP.Port))] = false
 				}
 			}
+			// A KubernetesService Backend has no endpoints, so its Service port is the one to check.
+			if isKubernetesServiceBackend(backend) && backend.Spec.KubernetesService != nil {
+				ports[strconv.Itoa(int(backend.Spec.KubernetesService.Port))] = false
+			}
 
 			for _, policy := range backendTLSPolicies {
 				for _, target := range policy.Spec.TargetRefs {
