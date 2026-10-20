@@ -4744,6 +4744,10 @@ name of a single cookie and take precedence over Suffix.
 
 Each cookie holds a different value, so the resulting names must be distinct,
 otherwise the cookies would overwrite each other and break the OIDC flow.
+Envoy splits a token that does not fit in one cookie into "<name>_0" to
+"<name>_15" plus a "<name>_chunks" cookie, and reads those names whether or not
+tokenCookieChunking is set, so no cookie may be named like a chunk of the access,
+ID or refresh token cookie.
 
 _Appears in:_
 - [OIDC](#oidc)

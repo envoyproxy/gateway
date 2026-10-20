@@ -581,7 +581,9 @@ take precedence over `suffix`:
 Here Envoy sets `my_access_token`, and keeps the suffix for the cookies that aren't named
 explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
 
-Each cookie holds a different value, so all the resulting names must be distinct.
+Each cookie holds a different value, so all the resulting names must be distinct. Envoy also
+reserves `<name>_0` to `<name>_15` and `<name>_chunks` for the chunks of the access, ID and
+refresh token cookies (see [Large Tokens](#large-tokens)), so no other cookie can use those names.
 
 ## Large Tokens
 

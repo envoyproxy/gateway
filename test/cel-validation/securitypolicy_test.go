@@ -3135,6 +3135,71 @@ func TestSecurityPolicyOIDCCookieNames(t *testing.T) {
 				"cookie names must be unique",
 			},
 		},
+		{
+			desc: "oauthHmac named like the first chunk of the access token",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				AccessToken: new("session"),
+				OAuthHMAC:   new("session_0"),
+			},
+			wantErrors: []string{
+				"spec.oidc.cookieNames",
+				"cookie names must not collide with the chunk cookies of a token cookie",
+			},
+		},
+		{
+			desc: "oauthExpires named like the chunk count of the ID token",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				IDToken:      new("id"),
+				OAuthExpires: new("id_chunks"),
+			},
+			wantErrors: []string{
+				"spec.oidc.cookieNames",
+				"cookie names must not collide with the chunk cookies of a token cookie",
+			},
+		},
+		{
+			desc: "refreshToken named like the last chunk of the access token",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				AccessToken:  new("session"),
+				RefreshToken: new("session_15"),
+			},
+			wantErrors: []string{
+				"spec.oidc.cookieNames",
+				"cookie names must not collide with the chunk cookies of a token cookie",
+			},
+		},
+		{
+			desc: "override collides with a chunk of a token name derived from the suffix",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				Suffix:    new("app"),
+				OAuthHMAC: new("AccessToken-app_3"),
+			},
+			wantErrors: []string{
+				"spec.oidc.cookieNames",
+				"cookie names must not collide with the chunk cookies of a token cookie",
+			},
+		},
+		{
+			desc: "index beyond the 16 chunks Envoy reads",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				AccessToken: new("session"),
+				OAuthHMAC:   new("session_16"),
+			},
+		},
+		{
+			desc: "suffix after the token name that is not a chunk",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				AccessToken: new("session"),
+				OAuthHMAC:   new("session_hmac"),
+			},
+		},
+		{
+			desc: "token name that is a prefix without the separator",
+			cookieNames: &egv1a1.OIDCCookieNames{
+				AccessToken: new("session"),
+				OAuthHMAC:   new("sessions_0"),
+			},
+		},
 	}
 
 	for _, tc := range cases {

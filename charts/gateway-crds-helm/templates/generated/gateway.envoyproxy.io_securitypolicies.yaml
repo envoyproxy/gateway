@@ -6232,6 +6232,26 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-validations:
+                    - message: cookie names must not collide with the chunk cookies
+                        of a token cookie
+                      rule: '[(has(self.accessToken) ? [self.accessToken] : (has(self.suffix)
+                        ? [''AccessToken-'' + self.suffix] : [])) + (has(self.idToken)
+                        ? [self.idToken] : (has(self.suffix) ? [''IdToken-'' + self.suffix]
+                        : [])) + (has(self.refreshToken) ? [self.refreshToken] : (has(self.suffix)
+                        ? [''RefreshToken-'' + self.suffix] : []))].all(tokens, [(has(self.accessToken)
+                        ? [self.accessToken] : (has(self.suffix) ? [''AccessToken-''
+                        + self.suffix] : [])) + (has(self.oauthExpires) ? [self.oauthExpires]
+                        : (has(self.suffix) ? [''OauthExpires-'' + self.suffix] :
+                        [])) + (has(self.oauthHmac) ? [self.oauthHmac] : (has(self.suffix)
+                        ? [''OauthHMAC-'' + self.suffix] : [])) + (has(self.idToken)
+                        ? [self.idToken] : (has(self.suffix) ? [''IdToken-'' + self.suffix]
+                        : [])) + (has(self.refreshToken) ? [self.refreshToken] : (has(self.suffix)
+                        ? [''RefreshToken-'' + self.suffix] : [])) + (has(self.oauthNonce)
+                        ? [self.oauthNonce] : (has(self.suffix) ? [''OauthNonce-''
+                        + self.suffix] : [])) + (has(self.codeVerifier) ? [self.codeVerifier]
+                        : (has(self.suffix) ? [''CodeVerifier-'' + self.suffix] :
+                        []))].all(names, tokens.all(t, names.all(n, !(n.startsWith(t
+                        + ''_'') && n.substring(size(t) + 1).matches(''^(chunks|[0-9]|1[0-5])$''))))))'
                     - message: cookie names must be unique
                       rule: '[(has(self.accessToken) ? [self.accessToken] : (has(self.suffix)
                         ? [''AccessToken-'' + self.suffix] : [])) + (has(self.oauthExpires)
