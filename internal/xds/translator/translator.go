@@ -149,13 +149,11 @@ func (t *Translator) xdsNameSchemeV2() bool {
 // CTP http1 fields apply to the client connection only and must not configure backend
 // HTTP/1 protocol settings. Remove this method when that runtime flag is removed.
 // Listener-only fields (HTTP10, IgnoredUpgradeTypes, DisableSafeMaxConnectionDuration)
-// are stripped unconditionally. A non-nil return value — even with no fields set —
-// acts as a sentinel that forces explicit HTTP/1 protocol selection on the cluster
-// and prevents autoConfig from negotiating HTTP/2 via ALPN on TLS backends.
-// nil is returned only when s is nil or when the runtime flag routes HTTP/1
-// settings to clients only. When s is non-nil the returned pointer is always
-// non-nil: its presence is the sentinel that prevents buildTypedExtensionProtocolOptions
-// from falling through to requiresAutoHTTPConfig and negotiating HTTP/2 for TLS backends.
+// are stripped unconditionally. A non-nil return value acts as a sentinel that forces
+// explicit HTTP/1 protocol selection on the cluster.
+// nil is returned when s is nil, when the runtime flag applies HTTP/1 settings to
+// clients only, or when only listener-only fields are set (preserving legacy behavior
+// where those fields did not affect upstream protocol selection).
 func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings {
 	if s == nil {
 		return nil
@@ -164,12 +162,17 @@ func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings
 		return nil
 	}
 	// Strip listener-only fields; keep only cluster-relevant ones.
-	// Return a non-nil pointer even when all fields are zero — the block's
-	// presence means the user explicitly selected HTTP/1 for this backend,
-	// and the non-nil value prevents auto HTTP/2 negotiation for TLS backends.
 	stripped := ir.HTTP1Settings{
 		EnableTrailers:     s.EnableTrailers,
 		PreserveHeaderCase: s.PreserveHeaderCase,
+	}
+	// Only return a non-nil sentinel when at least one cluster-relevant field is
+	// set. If the CTP block contained only listener-only fields (e.g. ignoredUpgradeTypes,
+	// disableSafeMaxConnectionDuration) or explicitly-false trailer/case values,
+	// returning nil preserves the pre-flag behavior where those configurations did
+	// not affect upstream protocol selection.
+	if !stripped.EnableTrailers && !stripped.PreserveHeaderCase && s.HTTP10 == nil {
+		return nil
 	}
 	return &stripped
 }
