@@ -51,7 +51,7 @@ func isKubernetesServiceBackend(backend *egv1a1.Backend) bool {
 func kubernetesServiceBackendRef(backend *egv1a1.Backend) gwapiv1.BackendObjectReference {
 	return gwapiv1.BackendObjectReference{
 		Name: backend.Spec.KubernetesService.Name,
-		Port: new(gwapiv1.PortNumber(backend.Spec.KubernetesService.Port)),
+		Port: new(backend.Spec.KubernetesService.Port),
 	}
 }
 
