@@ -3152,14 +3152,14 @@ func (t *Translator) backendRefAuthority(
 	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
 	if backendKind == resource.KindBackend {
 		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
-		if backend != nil && isKubernetesServiceBackend(backend) && backend.Spec.KubernetesService != nil {
-			ref := kubernetesServiceBackendRef(backend)
-			return net.JoinHostPort(
-				fmt.Sprintf("%s.%s", ref.Name, backend.Namespace),
-				strconv.Itoa(int(*ref.Port)),
-			)
-		}
 		if backend != nil {
+			if isKubernetesServiceBackend(backend) && backend.Spec.KubernetesService != nil {
+				ref := kubernetesServiceBackendRef(backend)
+				return net.JoinHostPort(
+					fmt.Sprintf("%s.%s", ref.Name, backend.Namespace),
+					strconv.Itoa(int(*ref.Port)),
+				)
+			}
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {
 				if ep.FQDN != nil {
