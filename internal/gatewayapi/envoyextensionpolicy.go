@@ -581,8 +581,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
 
-			ancestorRef := getAncestorRefForRouteParent(targetedRoute, parentRefCtx.ParentReference)
-			status.SetMergeResultForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parentRefCtx.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
@@ -1440,7 +1439,7 @@ func (t *Translator) buildExtProc(
 			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policy.Namespace))
 	}
 
-	traffic, err := translateTrafficFeatures(extProc.BackendSettings)
+	traffic, err := translateExtServiceBackendSettings(extProc.BackendSettings)
 	if err != nil {
 		return nil, err
 	}
