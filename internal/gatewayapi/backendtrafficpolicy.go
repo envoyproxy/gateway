@@ -2623,6 +2623,7 @@ func translateRateLimitCost(cost *egv1a1.RateLimitCostSpecifier) *ir.RateLimitCo
 		ret.Format = new(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
 			cost.Metadata.Namespace, cost.Metadata.Key))
 	}
+	ret.Negative = ptr.Deref(cost.Negative, false)
 	return ret
 }
 

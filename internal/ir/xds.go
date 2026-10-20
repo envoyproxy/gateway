@@ -3173,6 +3173,8 @@ type RateLimitRule struct {
 type RateLimitCost struct {
 	Number *uint64 `json:"number,omitempty" yaml:"number,omitempty"`
 	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
+	// Negative adds the cost back to the counters instead of consuming it.
+	Negative bool `json:"negative,omitempty" yaml:"negative,omitempty"`
 }
 
 // CIDRMatch defines the match conditions on the source IP's CIDR for rate limiting.

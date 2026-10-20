@@ -234,3 +234,35 @@
                   key: envoy.lb
                   path:
                   - key: tenant_rate_limit
+    - match:
+        path: foo/bar/in-flight
+      name: in-flight-cost
+      route:
+        cluster: sixth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: first-listener
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: in-flight-cost
+                descriptorValue: in-flight-cost
+            - requestHeaders:
+                descriptorKey: rule-0-match-0
+                headerName: x-tenant-id
+            hitsAddend:
+              number: "1"
+          - actions:
+            - genericKey:
+                descriptorKey: in-flight-cost
+                descriptorValue: in-flight-cost
+            - requestHeaders:
+                descriptorKey: rule-0-match-0
+                headerName: x-tenant-id
+            applyOnStreamDone: true
+            hitsAddend:
+              isNegativeHits: true
+              number: "1"
