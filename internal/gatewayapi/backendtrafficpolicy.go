@@ -880,7 +880,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			}
 
 			// Do need a section name since the policy is targeting to a route.
-			ancestorRef := getAncestorRefForPolicy(parentNN, p.SectionName)
+			ancestorRef := getAncestorRefForRouteParent(parentNN, p)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
 				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
@@ -910,7 +910,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 			// ListenerSet-attached Route policies report status against the
 			// ListenerSet itself.
-			ancestorRef := getAncestorRefForListenerSetPolicy(parentNN, p.SectionName)
+			ancestorRef := getAncestorRefForRouteParent(parentNN, p)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
 				parentRefCtxs = append(parentRefCtxs, parentRefCtx)

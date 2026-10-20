@@ -289,6 +289,14 @@ func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {
 		return false
 	}
 
+	// Compare Port pointers
+	if (a.Port == nil) != (b.Port == nil) {
+		return false
+	}
+	if a.Port != nil && *a.Port != *b.Port {
+		return false
+	}
+
 	return true
 }
 

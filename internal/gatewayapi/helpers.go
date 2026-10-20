@@ -764,6 +764,20 @@ func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *
 	}
 }
 
+// getAncestorRefForRouteParent returns the Gateway or ListenerSet that a route parentRef refers to
+// as an ancestor reference for a policy targeting the route. It keeps the sectionName and port of
+// the parentRef, so that parentRefs to different listeners of the same parent get their own ancestors.
+func getAncestorRefForRouteParent(parentNN types.NamespacedName, parentRef gwapiv1.ParentReference) gwapiv1.ParentReference {
+	var ref gwapiv1.ParentReference
+	if parentRef.Kind != nil && *parentRef.Kind == resource.KindListenerSet {
+		ref = getAncestorRefForListenerSetPolicy(parentNN, parentRef.SectionName)
+	} else {
+		ref = getAncestorRefForPolicy(parentNN, parentRef.SectionName)
+	}
+	ref.Port = parentRef.Port
+	return ref
+}
+
 type policyTargetRouteKey struct {
 	Kind      string
 	Namespace string

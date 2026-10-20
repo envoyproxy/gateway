@@ -832,10 +832,7 @@ func (r *RouteParentContext) PolicyAncestorRef() gwapiv1.ParentReference {
 		Namespace: NamespaceDerefOr(r.Namespace, r.routeNamespace()),
 		Name:      string(r.Name),
 	}
-	if r.Kind != nil && *r.Kind == resource.KindListenerSet {
-		return getAncestorRefForListenerSetPolicy(parentNN, r.SectionName)
-	}
-	return getAncestorRefForPolicy(parentNN, r.SectionName)
+	return getAncestorRefForRouteParent(parentNN, *r.ParentReference)
 }
 
 func (r *RouteParentContext) routeNamespace() string {
