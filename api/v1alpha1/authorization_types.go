@@ -95,7 +95,7 @@ type CELExpression string
 
 // Operation specifies the operation of a request.
 //
-// +kubebuilder:validation:XValidation:rule="has(self.methods) || has(self.path)",message="at least one of methods or path must be specified"
+// +kubebuilder:validation:XValidation:rule="has(self.methods) || has(self.path) || has(self.hosts)",message="at least one of methods, path, or hosts must be specified"
 type Operation struct {
 	// Methods are the HTTP methods of the request.
 	// If multiple methods are specified, all specified methods are allowed or denied, based on the action of the rule.
@@ -111,7 +111,14 @@ type Operation struct {
 	// +optional
 	Path *PathMatch `json:"path,omitempty"`
 
-	// Other fields may be supported in the future, such as host.
+	// Hosts are the HTTP hosts of the request, matched against the :authority header.
+	// If multiple hosts are specified, the rule matches if any of the hosts match.
+	// Wildcard hostnames such as "*.example.com" are allowed.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Hosts []gwapiv1.Hostname `json:"hosts,omitempty"`
 }
 
 // Principal specifies the client identity of a request.
