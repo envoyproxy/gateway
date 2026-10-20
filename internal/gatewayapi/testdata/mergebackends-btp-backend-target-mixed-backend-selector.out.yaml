@@ -13,8 +13,7 @@ backendTrafficPolicies:
       kind: HTTPRoute
       name: http-route-1
     targetSelectors:
-    - group: ""
-      kind: Service
+    - kind: Service
       matchLabels:
         pick: me
   status:

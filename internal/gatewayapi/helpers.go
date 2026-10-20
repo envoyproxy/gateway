@@ -1194,15 +1194,15 @@ func isBackendGroupKind(gk schema.GroupKind) bool {
 	return slices.Contains(backendGroupKinds, gk)
 }
 
-// isBackendSelectorKind detects a backend target selector by kind alone: a selector's group is pinned
-// to gateway.networking.k8s.io, so it can never carry a backend group for isBackendGroupKind to match.
-func isBackendSelectorKind(kind gwapiv1.Kind) bool {
+// backendGroupForKind maps a backend kind to its real group: a selector's group is pinned to
+// gateway.networking.k8s.io, so selectors are matched by kind and given the group the kind lives in.
+func backendGroupForKind(kind gwapiv1.Kind) (string, bool) {
 	for _, gk := range backendGroupKinds {
 		if gk.Kind == string(kind) {
-			return true
+			return gk.Group, true
 		}
 	}
-	return false
+	return "", false
 }
 
 func targetRefGroupKind(target policyTargetReferenceWithSectionName) schema.GroupKind {

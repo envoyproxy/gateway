@@ -754,7 +754,7 @@ func classifyBackendPolicy(policy *egv1a1.BackendTrafficPolicy) backendPolicyRej
 		}
 	}
 	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendSelectorKind(sel.Kind) {
+		if _, ok := backendGroupForKind(sel.Kind); ok {
 			hasBackendSelector = true
 		} else {
 			hasOther = true
@@ -818,7 +818,8 @@ func backendRejectionMessage(reason backendPolicyRejection) string {
 func (t *Translator) backendSelectorMatches(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []targetRefWithTimestamp {
 	var backendSelectors []egv1a1.TargetSelector
 	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendSelectorKind(sel.Kind) {
+		if group, ok := backendGroupForKind(sel.Kind); ok {
+			sel.Group = new(gwapiv1.Group(group))
 			backendSelectors = append(backendSelectors, sel)
 		}
 	}

@@ -3328,41 +3328,47 @@ func TestIsBackendGroupKind(t *testing.T) {
 	}
 }
 
-func TestIsBackendSelectorKind(t *testing.T) {
+func TestBackendGroupForKind(t *testing.T) {
 	tests := []struct {
-		name string
-		kind gwapiv1.Kind
-		want bool
+		name      string
+		kind      gwapiv1.Kind
+		wantGroup string
+		wantOK    bool
 	}{
 		{
-			name: "Service",
-			kind: gwapiresource.KindService,
-			want: true,
+			name:      "Service",
+			kind:      gwapiresource.KindService,
+			wantGroup: "",
+			wantOK:    true,
 		},
 		{
-			name: "ServiceImport",
-			kind: gwapiresource.KindServiceImport,
-			want: true,
+			name:      "ServiceImport",
+			kind:      gwapiresource.KindServiceImport,
+			wantGroup: GroupMultiClusterService,
+			wantOK:    true,
 		},
 		{
-			name: "Backend",
-			kind: gwapiresource.KindBackend,
-			want: true,
+			name:      "Backend",
+			kind:      gwapiresource.KindBackend,
+			wantGroup: egv1a1.GroupName,
+			wantOK:    true,
 		},
 		{
-			name: "HTTPRoute is not a backend",
-			kind: gwapiresource.KindHTTPRoute,
-			want: false,
+			name:   "HTTPRoute is not a backend",
+			kind:   gwapiresource.KindHTTPRoute,
+			wantOK: false,
 		},
 		{
-			name: "Gateway is not a backend",
-			kind: gwapiresource.KindGateway,
-			want: false,
+			name:   "Gateway is not a backend",
+			kind:   gwapiresource.KindGateway,
+			wantOK: false,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, isBackendSelectorKind(tc.kind))
+			group, ok := backendGroupForKind(tc.kind)
+			require.Equal(t, tc.wantOK, ok)
+			require.Equal(t, tc.wantGroup, group)
 		})
 	}
 }
@@ -4085,7 +4091,7 @@ func TestReportRejectedBackendPolicy(t *testing.T) {
 		Spec: egv1a1.BackendTrafficPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 				TargetSelectors: []egv1a1.TargetSelector{
-					{Group: new(gwapiv1.Group("")), Kind: gwapiv1.Kind("Service"), MatchLabels: map[string]string{"pick": "me"}},
+					{Kind: gwapiv1.Kind("Service"), MatchLabels: map[string]string{"pick": "me"}},
 				},
 			},
 			MergeType: new(egv1a1.StrategicMerge),
