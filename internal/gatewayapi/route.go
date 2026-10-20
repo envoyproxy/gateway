@@ -3499,26 +3499,55 @@ func (t *Translator) processBackendDestinationSetting(
 	envoyProxy *egv1a1.EnvoyProxy,
 	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
-	var dstAddrType *ir.DestinationAddressType
-
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
-	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeKubernetesService {
-		return t.processKubernetesServiceBackendDestinationSetting(name, backend, defaultProtocol, envoyProxy, btpRoutingType)
-	}
-
 	protocol, forceHTTP1Upstream := resolveBackendAppProtocols(backend, defaultProtocol)
-	addrTypeMap := make(map[ir.DestinationAddressType]int)
 
-	ds := &ir.DestinationSetting{Name: name}
+	var ds *ir.DestinationSetting
+	if isKubernetesServiceBackend(backend) {
+		// The endpoints come from the Service, the same way a Service backendRef gets them.
+		svcDS, err := t.processServiceDestinationSetting(name, kubernetesServiceBackendRef(backend), backend.Namespace,
+			defaultProtocol, envoyProxy, btpRoutingType)
+		if err != nil {
+			return nil, err
+		}
+		ds = svcDS
+		ds.IPFamily = getServiceIPFamily(t.GetService(backend.Namespace, string(backend.Spec.KubernetesService.Name)))
+		// The Backend appProtocols take precedence over the appProtocol of the Service port.
+		if len(backend.Spec.AppProtocols) > 0 {
+			ds.Protocol = protocol
+			ds.ForceHTTP1Upstream = forceHTTP1Upstream
+		}
+	} else {
+		ds = &ir.DestinationSetting{Name: name}
 
-	// There is only one backend if it is a dynamic resolver
-	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
-		ds.IsDynamicResolver = true
+		// There is only one backend if it is a dynamic resolver
+		if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+			ds.IsDynamicResolver = true
+			ds.Protocol = protocol
+			ds.ForceHTTP1Upstream = forceHTTP1Upstream
+			return ds, nil
+		}
+
+		ds.Endpoints, ds.AddressType = backendEndpoints(backend)
 		ds.Protocol = protocol
 		ds.ForceHTTP1Upstream = forceHTTP1Upstream
-		return ds, nil
 	}
 
+	if ptr.Deref(backend.Spec.Fallback, false) {
+		// set only the secondary priority, the backend defaults to a primary priority if unset.
+		ds.Priority = new(uint32(1))
+	}
+
+	ds.Metadata = buildResourceMetadata(backend, nil)
+
+	return ds, nil
+}
+
+// backendEndpoints converts the endpoints of a Backend that lists them into IR endpoints,
+// and returns the address type shared by all of them, or MIXED or STATIC when they differ.
+func backendEndpoints(backend *egv1a1.Backend) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
+	var dstAddrType *ir.DestinationAddressType
+	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	dstEndpoints := make([]*ir.DestinationEndpoint, 0, len(backend.Spec.Endpoints))
 
 	for _, bep := range backend.Spec.Endpoints {
@@ -3562,51 +3591,7 @@ func (t *Translator) processBackendDestinationSetting(
 		}
 	}
 
-	ds.Endpoints = dstEndpoints
-	ds.AddressType = dstAddrType
-	ds.Protocol = protocol
-	ds.ForceHTTP1Upstream = forceHTTP1Upstream
-
-	if backend.Spec.Fallback != nil {
-		// set only the secondary priority, the backend defaults to a primary priority if unset.
-		if ptr.Deref(backend.Spec.Fallback, false) {
-			ds.Priority = new(uint32(1))
-		}
-	}
-
-	ds.Metadata = buildResourceMetadata(backend, nil)
-
-	return ds, nil
-}
-
-// processKubernetesServiceBackendDestinationSetting translates a KubernetesService Backend
-// into the same endpoints a Service backendRef would get, then layers the Backend settings on top.
-func (t *Translator) processKubernetesServiceBackendDestinationSetting(
-	name string,
-	backend *egv1a1.Backend,
-	defaultProtocol ir.AppProtocol,
-	envoyProxy *egv1a1.EnvoyProxy,
-	btpRoutingType *egv1a1.RoutingType,
-) (*ir.DestinationSetting, status.Error) {
-	ds, err := t.processServiceDestinationSetting(name, kubernetesServiceBackendRef(backend), backend.Namespace,
-		defaultProtocol, envoyProxy, btpRoutingType)
-	if err != nil {
-		return nil, err
-	}
-
-	// The Backend appProtocols take precedence over the appProtocol of the Service port.
-	if len(backend.Spec.AppProtocols) > 0 {
-		ds.Protocol, ds.ForceHTTP1Upstream = resolveBackendAppProtocols(backend, defaultProtocol)
-	}
-
-	ds.IPFamily = getServiceIPFamily(t.GetService(backend.Namespace, string(backend.Spec.KubernetesService.Name)))
-	ds.Metadata = buildResourceMetadata(backend, nil)
-
-	if ptr.Deref(backend.Spec.Fallback, false) {
-		ds.Priority = new(uint32(1))
-	}
-
-	return ds, nil
+	return dstEndpoints, dstAddrType
 }
 
 // resolveBackendAppProtocols returns the upstream protocol and whether to force HTTP/1.1
