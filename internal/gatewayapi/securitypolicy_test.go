@@ -1812,6 +1812,163 @@ func Test_SecurityPolicy_TCPRoute_MergedUnsupportedAllowWithoutParent_setsWarnin
 	require.True(t, warning, "expected UnsupportedAuthorizationRule warning")
 }
 
+func Test_SecurityPolicy_TCPRoute_MergedUnsupportedDeny_setsErrorOnParent(t *testing.T) {
+	tr := &Translator{
+		GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+	}
+
+	tcpRoute := &TCPRouteContext{
+		TCPRoute: &gwapiv1.TCPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "tcp-route",
+			},
+			Spec: gwapiv1.TCPRouteSpec{
+				CommonRouteSpec: gwapiv1.CommonRouteSpec{
+					ParentRefs: []gwapiv1.ParentReference{
+						{Name: "test-gateway"},
+					},
+				},
+				Rules: []gwapiv1.TCPRouteRule{
+					{
+						BackendRefs: []gwapiv1.BackendRef{
+							{
+								BackendObjectReference: gwapiv1.BackendObjectReference{
+									Name: "test-service",
+									Port: new(gwapiv1.PortNumber(80)),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	gateway := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "test-gateway",
+		},
+		Spec: gwapiv1.GatewaySpec{
+			Listeners: []gwapiv1.Listener{
+				{
+					Name:     "tcp",
+					Protocol: gwapiv1.TCPProtocolType,
+					Port:     8080,
+				},
+			},
+		},
+	}
+
+	gtwCtx := &GatewayContext{Gateway: gateway}
+	gtwCtx.ResetListeners()
+
+	parentRef := tcpRoute.Spec.ParentRefs[0]
+	parentCtx := &RouteParentContext{
+		ParentReference: &parentRef,
+		TCPRoute:        tcpRoute.TCPRoute,
+	}
+	parentCtx.SetListeners(gtwCtx.listeners...)
+	tcpRoute.SetRouteParentContext(parentRef, parentCtx)
+
+	// Parent Gateway policy contains a Deny rule that TCP cannot enforce.
+	parentPolicy := sp("default", "test-gateway")
+	parentPolicy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{
+				Name:   new("deny-with-method"),
+				Action: egv1a1.AuthorizationActionDeny,
+				Principal: &egv1a1.Principal{
+					ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+				},
+				Operation: &egv1a1.Operation{
+					Methods: []gwapiv1.HTTPMethod{"GET"},
+				},
+			},
+		},
+	}
+
+	// Route policy enables merging.
+	policy := sp("default", "test-policy")
+	policy.Spec.MergeType = new(egv1a1.StrategicMerge)
+
+	target := policyTargetReferenceWithSectionName{
+		Group:     gwapiv1.Group(gwapiv1.GroupVersion.Group),
+		Kind:      resource.KindTCPRoute,
+		Name:      "tcp-route",
+		Namespace: "default",
+	}
+
+	routeMap := map[policyTargetRouteKey]*policyRouteTargetContext{
+		{
+			Kind:      string(resource.KindTCPRoute),
+			Name:      "tcp-route",
+			Namespace: "default",
+		}: {
+			RouteContext: tcpRoute,
+		},
+	}
+
+	resources := resource.NewResources()
+	tcpRouteIR := &ir.TCPRoute{Name: "tcp-route"}
+	xdsIR := resource.XdsIRMap{
+		tr.getIRKey(gateway): &ir.Xds{
+			TCP: []*ir.TCPListener{
+				{
+					CoreListenerDetails: ir.CoreListenerDetails{
+						Name: "default/test-gateway/tcp",
+					},
+					Routes: []*ir.TCPRoute{tcpRouteIR},
+				},
+			},
+		},
+	}
+
+	trContext := &TranslatorContext{}
+	trContext.SetServices(resources.Services)
+	tr.TranslatorContext = trContext
+
+	gatewayPolicyMap := map[NamespacedNameWithSection]*egv1a1.SecurityPolicy{
+		{
+			NamespacedName: types.NamespacedName{
+				Namespace: "default",
+				Name:      "test-gateway",
+			},
+		}: parentPolicy,
+	}
+
+	tr.processSecurityPolicyForRoute(
+		resources,
+		xdsIR,
+		routeMap,
+		make(map[types.NamespacedName]*policyListenerSetTargetContext),
+		gatewayPolicyMap,
+		make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy),
+		newPolicyScopeGraph(),
+		newPolicyScopeGraph(),
+		policy,
+		target,
+	)
+
+	// The unsupported Deny must be reported against the parent policy.
+	require.NotEmpty(t, parentPolicy.Status.Ancestors)
+
+	var translationError bool
+	for _, ancestor := range parentPolicy.Status.Ancestors {
+		for _, condition := range ancestor.Conditions {
+			if condition.Type == string(gwapiv1.PolicyConditionAccepted) &&
+				condition.Status == metav1.ConditionFalse {
+				translationError = true
+				require.NotEmpty(t, condition.Message)
+			}
+		}
+	}
+
+	require.True(t, translationError,
+		"expected translation error on parent Gateway policy for unsupported TCP Deny rule")
+}
+
 // --- non-TCP branch: malformed CIDR should return err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}

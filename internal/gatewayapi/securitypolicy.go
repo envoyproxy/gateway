@@ -704,12 +704,9 @@ func (t *Translator) processSecurityPolicyForRoute(
 					skipped := filterAuthorizationForTCP(&parentCopy)
 					mergeParent = &parentCopy
 
-					if len(skipped) > 0 {
-						message := fmt.Sprintf(
-							"Authorization rules skipped for TCP listeners: %s",
-							strings.Join(skipped, ", "),
-						)
+					denyErr := unsupportedTCPDenyRule(parentPolicy)
 
+					if len(skipped) > 0 || denyErr != nil {
 						var parentAncestorRef gwapiv1.ParentReference
 
 						switch parentScope.Kind {
@@ -733,14 +730,31 @@ func (t *Translator) processSecurityPolicyForRoute(
 							)
 						}
 
-						status.SetWarningForPolicyAncestor(
-							&parentPolicy.Status,
-							&parentAncestorRef,
-							t.GatewayControllerName,
-							egv1a1.PolicyReasonUnsupportedAuthorizationRule,
-							message,
-							parentPolicy.Generation,
-						)
+						if len(skipped) > 0 {
+							message := fmt.Sprintf(
+								"Authorization rules skipped for TCP listeners: %s",
+								strings.Join(skipped, ", "),
+							)
+
+							status.SetWarningForPolicyAncestor(
+								&parentPolicy.Status,
+								&parentAncestorRef,
+								t.GatewayControllerName,
+								egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+								message,
+								parentPolicy.Generation,
+							)
+						}
+
+						if denyErr != nil {
+							status.SetTranslationErrorForPolicyAncestor(
+								&parentPolicy.Status,
+								&parentAncestorRef,
+								t.GatewayControllerName,
+								parentPolicy.Generation,
+								status.Error2ConditionMsg(denyErr),
+							)
+						}
 					}
 
 				}
@@ -1175,6 +1189,24 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func unsupportedTCPDenyRule(policy *egv1a1.SecurityPolicy) error {
+	if policy.Spec.Authorization == nil {
+		return nil
+	}
+
+	for i, rule := range policy.Spec.Authorization.Rules {
+		if rule.Action == egv1a1.AuthorizationActionDeny &&
+			!isAuthorizationRuleSupportedOnTCP(&rule) {
+			return fmt.Errorf(
+				"authorization deny rule at index %d cannot be enforced on TCP listeners",
+				i,
+			)
+		}
+	}
+
 	return nil
 }
 
