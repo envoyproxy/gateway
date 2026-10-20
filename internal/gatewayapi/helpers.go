@@ -462,11 +462,11 @@ func irStringKey(gatewayNs, gatewayName string) string {
 // The listener name format can be:
 // - Gateway: "namespace/gateway/listener"
 // - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
-// Returns "namespace/gateway" in both cases.
+// Returns "namespace/gateway/" in both cases.
 func extractGatewayNameFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
 	if len(parts) >= 2 {
-		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+		return fmt.Sprintf("%s/%s/", parts[0], parts[1])
 	}
 	// should never happen
 	return listenerName
@@ -1021,6 +1021,11 @@ func (g policyScopeGraph) GetWithDescendants(parent policyScope) sets.Set[policy
 	return result
 }
 
+// maxNamesListed bounds the names a condition message lists per kind. A policy over a large
+// fleet would otherwise push the message past the condition size limit, where truncation
+// cuts the tail; the first names are enough to point at what to fix.
+const maxNamesListed = 20
+
 // formatPolicyScopes builds a status message describing a set of scopes,
 // grouping entries by kind.
 //
@@ -1059,10 +1064,19 @@ func formatPolicyScopes(scopes sets.Set[policyScope]) string {
 	parts := make([]string, 0, len(order))
 	for _, o := range order {
 		if list, ok := byKind[o.Kind]; ok {
-			parts = append(parts, fmt.Sprintf("%s: %v", o.Label, list))
+			parts = append(parts, fmt.Sprintf("%s: %s", o.Label, formatNameList(list)))
 		}
 	}
 	return strings.Join(parts, " and ")
+}
+
+// formatNameList renders a sorted name list the way formatPolicyScopes always has, as
+// "[a b c]", keeping the first maxNamesListed names and counting the rest.
+func formatNameList(names []string) string {
+	if len(names) <= maxNamesListed {
+		return fmt.Sprintf("%v", names)
+	}
+	return fmt.Sprintf("%v and %d more", names[:maxNamesListed], len(names)-maxNamesListed)
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
