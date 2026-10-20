@@ -150,6 +150,19 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			// The client talks HTTP/1.1 to the Gateway, so only the backend-side protocol shows the h2c upstream.
+			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Fatalf("failed to capture round trip: %v", err)
+			}
+			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
+				t.Errorf("failed to compare request and response: %v", err)
+			}
+			if cReq.Protocol != "HTTP/2.0" {
+				t.Errorf("expected backend to receive HTTP/2.0, got %s", cReq.Protocol)
+			}
 		})
 
 		t.Run("of type FQDN with a backend TLS Policy", func(t *testing.T) {
