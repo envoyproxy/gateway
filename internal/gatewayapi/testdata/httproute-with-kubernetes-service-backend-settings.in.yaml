@@ -63,6 +63,27 @@ endpointSlices:
           - "10.244.0.11"
         conditions:
           ready: true
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ca-cmap
+      namespace: default
+    data:
+      ca.crt: |
+        -----BEGIN CERTIFICATE-----
+        placeholder
+        -----END CERTIFICATE-----
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: client-auth
+      namespace: default
+    type: kubernetes.io/tls
+    data:
+      tls.crt: cGxhY2Vob2xkZXI=
+      tls.key: cGxhY2Vob2xkZXI=
 backends:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
@@ -77,3 +98,22 @@ backends:
       appProtocols:
         - gateway.envoyproxy.io/h2c
       fallback: true
+      tls:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+        clientCertificateRef:
+          name: client-auth
+          group: ""
+          kind: Secret
+        sni: example.com
+        minVersion: "1.2"
+        maxVersion: "1.3"
+        ciphers:
+          - ECDHE-RSA-AES128-GCM-SHA256
+        ecdhCurves:
+          - X25519
+        alpnProtocols:
+          - h2
+          - http/1.1

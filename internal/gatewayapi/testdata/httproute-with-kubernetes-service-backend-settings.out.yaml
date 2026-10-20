@@ -11,6 +11,25 @@ backends:
     kubernetesService:
       name: svc-1
       port: 8080
+    tls:
+      alpnProtocols:
+      - h2
+      - http/1.1
+      caCertificateRefs:
+      - group: ""
+        kind: ConfigMap
+        name: ca-cmap
+      ciphers:
+      - ECDHE-RSA-AES128-GCM-SHA256
+      clientCertificateRef:
+        group: ""
+        kind: Secret
+        name: client-auth
+      ecdhCurves:
+      - X25519
+      maxVersion: "1.3"
+      minVersion: "1.2"
+      sni: example.com
     type: KubernetesService
   status:
     conditions:
@@ -118,6 +137,9 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    caCertificates:
+    - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCnBsYWNlaG9sZGVyCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+      digest: sha256-64034b9ddda55e2360d15ccdebc562e863f42706ce49c471256295afe1262e2f
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -173,6 +195,24 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/0
             priority: 1
             protocol: HTTP2
+            tls:
+              alpnProtocols:
+              - h2
+              - http/1.1
+              caCertificate:
+                digest: sha256-64034b9ddda55e2360d15ccdebc562e863f42706ce49c471256295afe1262e2f
+                name: backend-svc/default-ca
+              ciphers:
+              - ECDHE-RSA-AES128-GCM-SHA256
+              clientCertificates:
+              - certificate: cGxhY2Vob2xkZXI=
+                name: default/client-auth
+                privateKey: '[redacted]'
+              ecdhCurves:
+              - X25519
+              maxVersion: "1.3"
+              minVersion: "1.2"
+              sni: example.com
             weight: 1
         hostname: '*'
         isHTTP2: false
