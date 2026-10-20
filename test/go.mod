@@ -9,7 +9,7 @@ require (
 	fortio.org/log v1.18.3
 	github.com/andybalholm/brotli v1.2.3
 	github.com/envoyproxy/gateway v0.0.0-00010101000000-000000000000
-	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260902172201-0f2cd005953e
+	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260927022543-fc8912c55e30
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
@@ -23,7 +23,7 @@ require (
 	github.com/quic-go/quic-go v0.59.1
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/proto/otlp v1.11.1
-	golang.org/x/net v0.59.0
+	golang.org/x/net v0.60.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
@@ -35,8 +35,8 @@ require (
 	k8s.io/client-go v0.37.1
 	k8s.io/kubectl v0.37.1
 	sigs.k8s.io/controller-runtime v0.25.2
-	sigs.k8s.io/gateway-api v1.6.2
-	sigs.k8s.io/gateway-api/conformance v1.6.2
+	sigs.k8s.io/gateway-api v1.6.3
+	sigs.k8s.io/gateway-api/conformance v1.6.3
 	sigs.k8s.io/mcs-api v0.5.2
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -114,9 +114,9 @@ require (
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/ebitengine/purego v0.11.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
-	github.com/envoyproxy/go-control-plane v0.14.1-0.20260902172201-0f2cd005953e // indirect
-	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260902172201-0f2cd005953e // indirect
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260902172201-0f2cd005953e // indirect
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260927022543-fc8912c55e30 // indirect
+	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260927022543-fc8912c55e30 // indirect
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260927022543-fc8912c55e30 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
@@ -216,7 +216,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/ohler55/ojg v1.28.7 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
