@@ -195,19 +195,6 @@ func (l *ListenerContext) isFromListenerSet() bool {
 	return l.listenerSet != nil
 }
 
-// PolicyAncestorRef returns this listener as a policy status ancestorRef: the Gateway or
-// ListenerSet it belongs to, narrowed to the listener by sectionName.
-//
-// TODO: (Robin) securitypolicy.go and envoyextensionpolicy.go still derive this inline; switch them
-// to this method.
-func (l *ListenerContext) PolicyAncestorRef() gwapiv1.ParentReference {
-	if l.isFromListenerSet() {
-		lsNN := types.NamespacedName{Name: l.listenerSet.Name, Namespace: l.listenerSet.Namespace}
-		return getAncestorRefForListenerSetPolicy(lsNN, &l.Name)
-	}
-	return getAncestorRefForPolicy(utils.NamespacedName(l.gateway.Gateway), &l.Name)
-}
-
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
 	if l.isFromListenerSet() {
 		if len(kinds) > 0 {
@@ -824,9 +811,6 @@ func (r *RouteParentContext) GetGateway() *GatewayContext {
 
 // PolicyAncestorRef returns this parent as a policy status ancestorRef, with group, kind
 // and namespace always filled in.
-//
-// TODO (Robin): securitypolicy.go and envoyextensionpolicy.go still derive this inline; switch them
-// to this method.
 func (r *RouteParentContext) PolicyAncestorRef() gwapiv1.ParentReference {
 	parentNN := types.NamespacedName{
 		Namespace: NamespaceDerefOr(r.Namespace, r.routeNamespace()),
