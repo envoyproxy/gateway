@@ -497,6 +497,8 @@ spec:
 
                   - envoy.filters.http.dynamic_forward_proxy
 
+                  - envoy.filters.http.alternate_protocols_cache
+
                   - envoy.filters.http.router
 
                   Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -536,6 +538,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                     before:
                       description: |-
@@ -569,6 +572,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                     name:
                       description: Name of the filter.
@@ -600,6 +604,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.alternate_protocols_cache
                       type: string
                   required:
                   - name
@@ -12781,6 +12786,25 @@ spec:
                                                   Default: TerminateConnection
                                                 type: string
                                             type: object
+                                          http3:
+                                            description: |-
+                                              HTTP3 enables HTTP/3 for backend connections.
+                                              HTTP/3 always runs over TLS, so the backend must be configured
+                                              with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                              HTTP/3 is only supported for the backends of a route, through
+                                              BackendTrafficPolicy. It is rejected for the backends of other
+                                              resources, such as the external services of a SecurityPolicy
+                                              or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                            properties:
+                                              mode:
+                                                description: |-
+                                                  Mode determines when HTTP/3 is used to reach the backend.
+                                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                                enum:
+                                                - Auto
+                                                - Always
+                                                type: string
+                                            type: object
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
@@ -13435,6 +13459,9 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                        - message: proxyProtocol cannot be used together
+                                            with http3
+                                          rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -13498,6 +13525,8 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: http3 is only supported for route backends
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   file:
                                     description: File defines the file accesslog sink.
                                     properties:
@@ -14475,6 +14504,25 @@ spec:
                                                   Default: TerminateConnection
                                                 type: string
                                             type: object
+                                          http3:
+                                            description: |-
+                                              HTTP3 enables HTTP/3 for backend connections.
+                                              HTTP/3 always runs over TLS, so the backend must be configured
+                                              with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                              HTTP/3 is only supported for the backends of a route, through
+                                              BackendTrafficPolicy. It is rejected for the backends of other
+                                              resources, such as the external services of a SecurityPolicy
+                                              or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                            properties:
+                                              mode:
+                                                description: |-
+                                                  Mode determines when HTTP/3 is used to reach the backend.
+                                                  Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                                enum:
+                                                - Auto
+                                                - Always
+                                                type: string
+                                            type: object
                                           loadBalancer:
                                             description: |-
                                               LoadBalancer policy to apply when routing traffic from the gateway to
@@ -15129,6 +15177,9 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
+                                        - message: proxyProtocol cannot be used together
+                                            with http3
+                                          rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                       headers:
                                         description: |-
                                           Headers is a list of additional headers to send with OTLP export requests.
@@ -15223,6 +15274,8 @@ spec:
                                     - message: either resources or resourceAttributes
                                         can be set, not both
                                       rule: '!has(self.resources) || !has(self.resourceAttributes)'
+                                    - message: http3 is only supported for route backends
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -15417,9 +15470,108 @@ spec:
                             properties:
                               brotli:
                                 description: The configuration for Brotli compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of the compressor's next output buffer, from
+                                      4096 to 65536. If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  disableLiteralContextModeling:
+                                    description: |-
+                                      DisableLiteralContextModeling disables the "literal context modeling" format
+                                      feature. This flag is a "decoding-speed vs compression ratio" trade-off.
+                                      If not set, defaults to false.
+                                    type: boolean
+                                  encoderMode:
+                                    description: |-
+                                      EncoderMode tunes the encoder for a specific input.
+                                      If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Generic
+                                    - Text
+                                    - Font
+                                    type: string
+                                  inputBlockBits:
+                                    description: |-
+                                      InputBlockBits represents the base two logarithm of the compressor's input block
+                                      size, from 16 to 24. Larger input block results in better compression at the
+                                      expense of memory usage. If not set, defaults to 24.
+                                    format: int32
+                                    maximum: 24
+                                    minimum: 16
+                                    type: integer
+                                  quality:
+                                    description: |-
+                                      Quality controls the main compression speed-density lever, from 0 to 11.
+                                      The higher the quality, the slower the compression. If not set, defaults to 3.
+                                    format: int32
+                                    maximum: 11
+                                    minimum: 0
+                                    type: integer
+                                  windowBits:
+                                    description: |-
+                                      WindowBits represents the base two logarithm of the compressor's window size,
+                                      from 10 to 24. Larger window results in better compression at the expense of
+                                      memory usage. If not set, defaults to 18.
+                                    format: int32
+                                    maximum: 24
+                                    minimum: 10
+                                    type: integer
                                 type: object
                               gzip:
                                 description: The configuration for GZIP compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.
+                                      If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  compressionLevel:
+                                    description: |-
+                                      CompressionLevel sets the zlib compression level, from 1 (fastest compression,
+                                      lowest compression ratio) to 9 (slowest compression, best compression ratio).
+                                      If not set, Envoy uses the zlib default level, which is equivalent to level 6.
+                                    format: int32
+                                    maximum: 9
+                                    minimum: 1
+                                    type: integer
+                                  compressionStrategy:
+                                    description: |-
+                                      CompressionStrategy selects the zlib compression strategy, which is directly
+                                      related to the characteristics of the content. Most of the time "Default" is
+                                      the best choice. If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Filtered
+                                    - HuffmanOnly
+                                    - RLE
+                                    - Fixed
+                                    type: string
+                                  memoryLevel:
+                                    description: |-
+                                      MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.
+                                      Higher values use more memory, but are faster and produce better compression
+                                      results. If not set, defaults to 5.
+                                    format: int32
+                                    maximum: 9
+                                    minimum: 1
+                                    type: integer
+                                  windowBits:
+                                    description: |-
+                                      WindowBits represents the base two logarithm of the compressor's window size,
+                                      from 9 to 15. Larger window results in better compression at the expense of
+                                      memory usage. If not set, defaults to 12, which will produce a 4096 bytes window.
+                                    format: int32
+                                    maximum: 15
+                                    minimum: 9
+                                    type: integer
                                 type: object
                               minContentLength:
                                 allOf:
@@ -15445,10 +15597,61 @@ spec:
                                 type: string
                               zstd:
                                 description: The configuration for Zstd compressor.
+                                properties:
+                                  chunkSize:
+                                    description: |-
+                                      ChunkSize is the size in bytes of the compressor's next output buffer, from
+                                      4096 to 65536. If not set, defaults to 4096.
+                                    format: int32
+                                    maximum: 65536
+                                    minimum: 4096
+                                    type: integer
+                                  compressionLevel:
+                                    description: |-
+                                      CompressionLevel sets the compression parameters according to the pre-defined
+                                      zstd compression level table, from 1 to 22. Note that the exact compression
+                                      parameters are dynamically determined, depending on both compression level and
+                                      source content size (when known). If not set, defaults to 3.
+                                    format: int32
+                                    maximum: 22
+                                    minimum: 1
+                                    type: integer
+                                  enableChecksum:
+                                    description: |-
+                                      EnableChecksum specifies whether a 32-bits checksum of the content is written
+                                      at the end of the frame. If not set, defaults to false.
+                                    type: boolean
+                                  strategy:
+                                    description: |-
+                                      Strategy selects the zstd compression strategy. The higher the value of the
+                                      selected strategy, the more complex it is, resulting in stronger and slower
+                                      compression. If not set, defaults to Default.
+                                    enum:
+                                    - Default
+                                    - Fast
+                                    - DFast
+                                    - Greedy
+                                    - Lazy
+                                    - Lazy2
+                                    - BTLazy2
+                                    - BTOpt
+                                    - BTUltra
+                                    - BTUltra2
+                                    type: string
                                 type: object
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: The brotli configuration is only allowed when
+                                the type is Brotli.
+                              rule: '!has(self.brotli) || self.type == ''Brotli'''
+                            - message: The gzip configuration is only allowed when
+                                the type is Gzip.
+                              rule: '!has(self.gzip) || self.type == ''Gzip'''
+                            - message: The zstd configuration is only allowed when
+                                the type is Zstd.
+                              rule: '!has(self.zstd) || self.type == ''Zstd'''
                           disable:
                             description: Disable the Prometheus endpoint.
                             type: boolean
@@ -16399,6 +16602,25 @@ spec:
                                             Default: TerminateConnection
                                           type: string
                                       type: object
+                                    http3:
+                                      description: |-
+                                        HTTP3 enables HTTP/3 for backend connections.
+                                        HTTP/3 always runs over TLS, so the backend must be configured
+                                        with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                        HTTP/3 is only supported for the backends of a route, through
+                                        BackendTrafficPolicy. It is rejected for the backends of other
+                                        resources, such as the external services of a SecurityPolicy
+                                        or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                      properties:
+                                        mode:
+                                          description: |-
+                                            Mode determines when HTTP/3 is used to reach the backend.
+                                            Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                          enum:
+                                          - Auto
+                                          - Always
+                                          type: string
+                                      type: object
                                     loadBalancer:
                                       description: |-
                                         LoadBalancer policy to apply when routing traffic from the gateway to
@@ -17033,6 +17255,9 @@ spec:
                                       && has(self.connection.preconnect.predictivePercent))
                                       && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                       && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                                  - message: proxyProtocol cannot be used together
+                                      with http3
+                                    rule: '!has(self.http3) || !has(self.proxyProtocol)'
                                 headers:
                                   description: |-
                                     Headers is a list of additional headers to send with OTLP export requests.
@@ -17131,6 +17356,8 @@ spec:
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                   f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                   : true'
+                              - message: http3 is only supported for route backends
+                                rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                             type:
                               default: OpenTelemetry
                               description: |-
@@ -18208,6 +18435,25 @@ spec:
                                       Default: TerminateConnection
                                     type: string
                                 type: object
+                              http3:
+                                description: |-
+                                  HTTP3 enables HTTP/3 for backend connections.
+                                  HTTP/3 always runs over TLS, so the backend must be configured
+                                  with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                                  HTTP/3 is only supported for the backends of a route, through
+                                  BackendTrafficPolicy. It is rejected for the backends of other
+                                  resources, such as the external services of a SecurityPolicy
+                                  or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                                properties:
+                                  mode:
+                                    description: |-
+                                      Mode determines when HTTP/3 is used to reach the backend.
+                                      Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                                    enum:
+                                    - Auto
+                                    - Always
+                                    type: string
+                                type: object
                               loadBalancer:
                                 description: |-
                                   LoadBalancer policy to apply when routing traffic from the gateway to
@@ -18827,6 +19073,9 @@ spec:
                                 && has(self.connection.preconnect.predictivePercent))
                                 && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                 && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                            - message: proxyProtocol cannot be used together with
+                                http3
+                              rule: '!has(self.http3) || !has(self.proxyProtocol)'
                           host:
                             description: |-
                               Host define the provider service hostname.
@@ -18994,6 +19243,8 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
+                        - message: http3 is only supported for route backends
+                          rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be

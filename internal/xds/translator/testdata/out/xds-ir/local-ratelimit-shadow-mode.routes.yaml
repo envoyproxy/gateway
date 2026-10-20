@@ -58,6 +58,7 @@
               fillInterval: 60s
               maxTokens: 10
               tokensPerFill: 10
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
