@@ -1,0 +1,1 @@
+`SecurityPolicy` authorization rules targeting TCP/TLS listeners now validate whether the rules can be enforced at L4. Unsupported `Allow` rules are skipped on L4 listeners with a warning, while unsupported `Deny` rules fail closed instead of potentially broadening access.

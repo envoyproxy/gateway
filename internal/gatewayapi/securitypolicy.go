@@ -63,6 +63,11 @@ const (
 
 var newOIDCDiscoveryHTTPClient = newGuardedOIDCDiscoveryHTTPClient
 
+type securityPolicyTranslationResult struct {
+	skippedTCPAllowRules []string
+	tcpDenyError         error
+}
+
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
@@ -532,9 +537,51 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
-		// No merging - use existing translation logic
-		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil); err != nil {
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+		routePolicy := policy
+
+		if currTarget.Kind == resource.KindTCPRoute && policy.Spec.Authorization != nil {
+			policyCopy := *policy
+			authorizationCopy := *policy.Spec.Authorization
+			authorizationCopy.Rules = append(
+				[]egv1a1.AuthorizationRule(nil),
+				policy.Spec.Authorization.Rules...,
+			)
+			policyCopy.Spec.Authorization = &authorizationCopy
+
+			skipped := filterAuthorizationForTCP(&policyCopy)
+			routePolicy = &policyCopy
+
+			if len(skipped) > 0 {
+				message := fmt.Sprintf(
+					"Authorization rules skipped for TCP listeners: %s",
+					strings.Join(skipped, ", "),
+				)
+
+				for _, ancestorRef := range ancestorRefs {
+					status.SetWarningForPolicyAncestor(
+						&policy.Status,
+						ancestorRef,
+						t.GatewayControllerName,
+						egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+						message,
+						policy.Generation,
+					)
+				}
+			}
+
+		}
+
+		if err := t.translateSecurityPolicyForRoute(
+			routePolicy,
+			&securityPolicyOwners{},
+			targetedRoute,
+			currTarget,
+			resources,
+			xdsIR,
+			nil,
+		); err != nil {
+			status.SetTranslationErrorForPolicyAncestors(
+				&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
 				policy.Generation,
@@ -589,12 +636,54 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				if parentPolicy == nil {
-					// No parent policy found, fall back to current policy
-					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
+					// No parent policy found, fall back to current policy.
+					// TCP routes still need protocol-specific authorization filtering.
+					routePolicy := policy
+
+					if currTarget.Kind == resource.KindTCPRoute && policy.Spec.Authorization != nil {
+						policyCopy := *policy
+						authorizationCopy := *policy.Spec.Authorization
+						authorizationCopy.Rules = append(
+							[]egv1a1.AuthorizationRule(nil),
+							policy.Spec.Authorization.Rules...,
+						)
+						policyCopy.Spec.Authorization = &authorizationCopy
+
+						skipped := filterAuthorizationForTCP(&policyCopy)
+						routePolicy = &policyCopy
+
+						if len(skipped) > 0 {
+							message := fmt.Sprintf(
+								"Authorization rules skipped for TCP listeners: %s",
+								strings.Join(skipped, ", "),
+							)
+
+							status.SetWarningForPolicyAncestor(
+								&policy.Status,
+								&ancestorRef,
+								t.GatewayControllerName,
+								egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+								message,
+								policy.Generation,
+							)
+						}
+					}
+
+					if err := t.translateSecurityPolicyForRoute(
+						routePolicy,
+						&securityPolicyOwners{},
+						targetedRoute,
+						currTarget,
+						resources,
+						xdsIR,
+						listener,
+					); err != nil {
+						status.SetConditionForPolicyAncestor(
+							&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
+							gwapiv1.PolicyConditionAccepted,
+							metav1.ConditionFalse,
 							egv1a1.PolicyReasonInvalid,
 							status.Error2ConditionMsg(err),
 							policy.Generation,
@@ -604,7 +693,73 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Merge with parent policy
-				mergedPolicy, owners, err := mergeSecurityPolicy(policy, parentPolicy)
+				mergeParent := parentPolicy
+				if currTarget.Kind == resource.KindTCPRoute {
+					parentCopy := *parentPolicy
+					if parentPolicy.Spec.Authorization != nil {
+						authorizationCopy := *parentPolicy.Spec.Authorization
+						authorizationCopy.Rules = append([]egv1a1.AuthorizationRule(nil), parentPolicy.Spec.Authorization.Rules...)
+						parentCopy.Spec.Authorization = &authorizationCopy
+					}
+					skipped := filterAuthorizationForTCP(&parentCopy)
+					mergeParent = &parentCopy
+
+					denyErr := unsupportedTCPDenyRule(parentPolicy)
+
+					if len(skipped) > 0 || denyErr != nil {
+						var parentAncestorRef gwapiv1.ParentReference
+
+						switch parentScope.Kind {
+						case policyScopeKindGateway:
+							parentAncestorRef = getAncestorRefForPolicy(
+								parentScope.NamespacedName, nil,
+							)
+						case policyScopeKindGatewayListener:
+							sectionName := parentScope.SectionName
+							parentAncestorRef = getAncestorRefForPolicy(
+								parentScope.NamespacedName, &sectionName,
+							)
+						case policyScopeKindListenerSet:
+							parentAncestorRef = getAncestorRefForListenerSetPolicy(
+								parentScope.NamespacedName, nil,
+							)
+						case policyScopeKindListenerSetListener:
+							sectionName := parentScope.SectionName
+							parentAncestorRef = getAncestorRefForListenerSetPolicy(
+								parentScope.NamespacedName, &sectionName,
+							)
+						}
+
+						if len(skipped) > 0 {
+							message := fmt.Sprintf(
+								"Authorization rules skipped for TCP listeners: %s",
+								strings.Join(skipped, ", "),
+							)
+
+							status.SetWarningForPolicyAncestor(
+								&parentPolicy.Status,
+								&parentAncestorRef,
+								t.GatewayControllerName,
+								egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+								message,
+								parentPolicy.Generation,
+							)
+						}
+
+						if denyErr != nil {
+							status.SetTranslationErrorForPolicyAncestor(
+								&parentPolicy.Status,
+								&parentAncestorRef,
+								t.GatewayControllerName,
+								parentPolicy.Generation,
+								status.Error2ConditionMsg(denyErr),
+							)
+						}
+					}
+
+				}
+
+				mergedPolicy, owners, err := mergeSecurityPolicy(policy, mergeParent)
 				if err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -615,6 +770,25 @@ func (t *Translator) processSecurityPolicyForRoute(
 						policy.Generation,
 					)
 					continue
+				}
+
+				if currTarget.Kind == resource.KindTCPRoute {
+					skipped := filterAuthorizationForTCP(mergedPolicy)
+					if len(skipped) > 0 {
+						message := fmt.Sprintf(
+							"Authorization rules skipped for TCP listeners: %s",
+							strings.Join(skipped, ", "),
+						)
+
+						status.SetWarningForPolicyAncestor(
+							&policy.Status,
+							&ancestorRef,
+							t.GatewayControllerName,
+							egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+							message,
+							policy.Generation,
+						)
+					}
 				}
 
 				if err := validator(mergedPolicy); err != nil {
@@ -753,7 +927,8 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
-	if err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR); err != nil {
+	translationResult, err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR)
+	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -762,6 +937,32 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 		)
 	}
 
+	if translationResult != nil && len(translationResult.skippedTCPAllowRules) > 0 {
+		status.SetWarningForPolicyAncestor(
+			&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+			fmt.Sprintf(
+				"Authorization rules skipped for TCP listeners: %s",
+				strings.Join(translationResult.skippedTCPAllowRules, ", "),
+			),
+			policy.Generation,
+		)
+	}
+
+	if translationResult != nil && translationResult.tcpDenyError != nil {
+		err = errors.Join(err, translationResult.tcpDenyError)
+	}
+
+	if err != nil {
+		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			policy.Generation,
+			status.Error2ConditionMsg(err),
+		)
+	}
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 
@@ -853,7 +1054,27 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
+	translationResult, err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR)
+
+	if translationResult != nil && len(translationResult.skippedTCPAllowRules) > 0 {
+		status.SetWarningForPolicyAncestor(
+			&policy.Status,
+			&ancestorRef,
+			t.GatewayControllerName,
+			egv1a1.PolicyReasonUnsupportedAuthorizationRule,
+			fmt.Sprintf(
+				"Authorization rules skipped for TCP listeners: %s",
+				strings.Join(translationResult.skippedTCPAllowRules, ", "),
+			),
+			policy.Generation,
+		)
+	}
+
+	if translationResult != nil && translationResult.tcpDenyError != nil {
+		err = errors.Join(err, translationResult.tcpDenyError)
+	}
+
+	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -980,6 +1201,61 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 	return nil
+}
+
+func unsupportedTCPDenyRule(policy *egv1a1.SecurityPolicy) error {
+	if policy.Spec.Authorization == nil {
+		return nil
+	}
+
+	for i, rule := range policy.Spec.Authorization.Rules {
+		if rule.Action == egv1a1.AuthorizationActionDeny &&
+			!isAuthorizationRuleSupportedOnTCP(&rule) {
+			return fmt.Errorf(
+				"authorization deny rule at index %d cannot be enforced on TCP listeners",
+				i,
+			)
+		}
+	}
+
+	return nil
+}
+
+func isAuthorizationRuleSupportedOnTCP(rule *egv1a1.AuthorizationRule) bool {
+	return rule.Operation == nil &&
+		rule.CEL == nil &&
+		rule.Principal != nil &&
+		rule.Principal.JWT == nil &&
+		len(rule.Principal.Headers) == 0 &&
+		len(rule.Principal.ClientIPGeoLocations) == 0 &&
+		len(rule.Principal.ClientCIDRs) > 0
+}
+
+func filterAuthorizationForTCP(policy *egv1a1.SecurityPolicy) []string {
+	if policy.Spec.Authorization == nil {
+		return nil
+	}
+
+	var skipped []string
+	rules := make([]egv1a1.AuthorizationRule, 0, len(policy.Spec.Authorization.Rules))
+
+	for i, rule := range policy.Spec.Authorization.Rules {
+		incompatible := !isAuthorizationRuleSupportedOnTCP(&rule)
+
+		if incompatible && rule.Action == egv1a1.AuthorizationActionAllow {
+			name := fmt.Sprintf("rule at index %d", i)
+			if rule.Name != nil {
+				name = *rule.Name
+			}
+			skipped = append(skipped, name)
+			continue
+		}
+
+		rules = append(rules, rule)
+	}
+
+	policy.Spec.Authorization.Rules = rules
+	return skipped
 }
 
 // validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
@@ -1413,14 +1689,41 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						continue
 					}
 
+					// Only authorization for TCP.
+					if policy.Spec.Authorization == nil {
+						continue
+					}
+
+					var unsupportedDeny bool
+					for _, rule := range policy.Spec.Authorization.Rules {
+						if rule.Action == egv1a1.AuthorizationActionDeny &&
+							!isAuthorizationRuleSupportedOnTCP(&rule) {
+							unsupportedDeny = true
+							break
+						}
+					}
+
 					if r.Authorization != nil {
 						continue
 					}
-					// Only authorization for TCP
+
+					if unsupportedDeny {
+						r.Authorization = &ir.Authorization{
+							DefaultAction: egv1a1.AuthorizationActionDeny,
+						}
+
+						errs = errors.Join(
+							errs,
+							fmt.Errorf("authorization deny rule cannot be enforced on TCP listeners"),
+						)
+						continue
+					}
+
 					if authorization != nil {
 						authCopy := *authorization
 						r.Authorization = &authCopy
 					}
+
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
@@ -1507,7 +1810,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
-) error {
+) (*securityPolicyTranslationResult, error) {
 	return t.translateSecurityPolicyForListeners(
 		policy,
 		gtwCtx,
@@ -1523,7 +1826,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
-) error {
+) (*securityPolicyTranslationResult, error) {
 	return t.translateSecurityPolicyForListeners(
 		policy,
 		gtwCtx,
@@ -1539,9 +1842,10 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	targetListeners []*ListenerContext,
-) error {
+) (*securityPolicyTranslationResult, error) {
 	// Build IR
 	noOwners := &securityPolicyOwners{}
+	result := &securityPolicyTranslationResult{}
 	var (
 		cors                  *ir.CORS
 		jwt                   *ir.JWT
@@ -1643,8 +1947,14 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	// Should exist since we've validated this
 	x := xdsIR[irKey]
 	listenerNames := sets.New[string]()
+	hasTCPListener := false
+
 	for _, listener := range targetListeners {
 		listenerNames.Insert(irListenerName(listener))
+		if listener.Protocol == gwapiv1.TCPProtocolType ||
+			listener.Protocol == gwapiv1.TLSProtocolType {
+			hasTCPListener = true
+		}
 	}
 
 	// Pre-create security features and error response to avoid repeated allocations
@@ -1719,14 +2029,55 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	}
 
 	// Pre-create a TCP-only authorization object to avoid re-allocation
+	var skippedTCPAllowRules []string
+	var tcpDenyError error
 	var tcpAuthorization *ir.Authorization
-	if authorization != nil {
-		authCopy := *authorization
-		tcpAuthorization = &authCopy
+	if policy.Spec.Authorization != nil && hasTCPListener {
+		if authorization == nil {
+			tcpAuthorization = &ir.Authorization{
+				DefaultAction: egv1a1.AuthorizationActionDeny,
+			}
+		} else {
+			authCopy := *authorization
+			tcpAuthorization = &authCopy
+
+			var compatibleRules []*ir.AuthorizationRule
+			for _, rule := range authorization.Rules {
+				if rule.Operation != nil ||
+					rule.CEL != nil ||
+					rule.Principal.JWT != nil ||
+					len(rule.Principal.Headers) > 0 ||
+					len(rule.Principal.ClientIPGeoLocations) > 0 ||
+					len(rule.Principal.ClientCIDRs) == 0 {
+					if rule.Action == egv1a1.AuthorizationActionAllow {
+						skippedTCPAllowRules = append(skippedTCPAllowRules, rule.Name)
+						continue
+					}
+
+					tcpDenyError = fmt.Errorf(
+						"authorization deny rule %q cannot be enforced on TCP listeners",
+						rule.Name,
+					)
+					compatibleRules = nil
+					break
+				}
+
+				compatibleRules = append(compatibleRules, rule)
+			}
+
+			if tcpDenyError != nil {
+				tcpAuthorization = &ir.Authorization{
+					DefaultAction: egv1a1.AuthorizationActionDeny,
+				}
+			} else {
+				tcpAuthorization.Rules = compatibleRules
+			}
+		}
 	}
 
 	// Apply to TCP listeners (Authorization only).
 	if tcpAuthorization != nil {
+		tcpPolicyApplied := false
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
@@ -1742,11 +2093,17 @@ func (t *Translator) translateSecurityPolicyForListeners(
 					continue
 				}
 				r.Authorization = tcpAuthorization
+				tcpPolicyApplied = true
 			}
+		}
+
+		if tcpPolicyApplied {
+			result.skippedTCPAllowRules = skippedTCPAllowRules
+			result.tcpDenyError = tcpDenyError
 		}
 	}
 
-	return errs
+	return result, errs
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
