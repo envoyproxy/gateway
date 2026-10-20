@@ -1551,6 +1551,48 @@ func TestWarnEnvoyGateway(t *testing.T) {
 				"envoyProxy.telemetry.tracing.provider.host is deprecated and will be removed in v1.11, use envoyProxy.telemetry.tracing.provider.backendRefs instead",
 			},
 		},
+		{
+			name: "default envoyProxy keeps explicit legacy ports with backendRefs",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					EnvoyProxy: &egv1a1.EnvoyProxySpec{
+						Telemetry: &egv1a1.ProxyTelemetry{
+							Tracing: &egv1a1.ProxyTracing{Provider: egv1a1.TracingProvider{Port: 4317}},
+							Metrics: &egv1a1.ProxyMetrics{Sinks: []egv1a1.ProxyMetricSink{
+								{OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{Port: 4317}},
+								{OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{}},
+							}},
+						},
+					},
+				},
+			},
+			expected: []string{
+				"envoyProxy.telemetry.metrics.sinks[0].openTelemetry.port is deprecated and will be removed in v1.11, use envoyProxy.telemetry.metrics.sinks[0].openTelemetry.backendRefs instead",
+				"envoyProxy.telemetry.tracing.provider.port is deprecated and will be removed in v1.11, use envoyProxy.telemetry.tracing.provider.backendRefs instead",
+			},
+		},
+		{
+			name: "extension service port is set with a new endpoint",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						Service: &egv1a1.ExtensionService{
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{Hostname: "extension.default.svc", Port: 8080},
+							},
+							Port: 8080,
+						},
+					},
+				},
+			},
+			expected: []string{
+				"extensionManager.service.port is deprecated and will be removed in v1.11, use the port of extensionManager.service.fqdn or extensionManager.service.ip instead",
+			},
+		},
 	}
 
 	for _, tc := range testCases {

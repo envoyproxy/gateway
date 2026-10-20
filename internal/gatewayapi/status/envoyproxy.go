@@ -83,7 +83,7 @@ func setEnvoyProxyWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReferen
 			continue
 		}
 		if existing := meta.FindStatusCondition(item.Conditions, string(egv1a1.EnvoyProxyConditionWarning)); existing != nil {
-			msg = mergePolicyWarningMessages(existing.Message, msg)
+			msg = mergeBoundedWarningMessages(existing.Message, msg)
 			if existing.Reason != "" && existing.Reason != string(reason) {
 				reason = egv1a1.EnvoyProxyReasonMultipleWarnings
 			}
@@ -100,4 +100,22 @@ func setEnvoyProxyWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReferen
 			newCondition(string(egv1a1.EnvoyProxyConditionWarning), metav1.ConditionTrue, string(reason), msg, ep.Generation),
 		},
 	})
+}
+
+// mergeBoundedWarningMessages merges next into the existing warning message like
+// mergePolicyWarningMessages. If the result would be longer than a condition message can be, the
+// existing message is cut short to make room for next, so the newer warning is not truncated off
+// the end. If next alone is too long, the merged message is returned as is and newCondition
+// truncates it.
+func mergeBoundedWarningMessages(existing, next string) string {
+	const sep = "; "
+	merged := mergePolicyWarningMessages(existing, next)
+	if len(merged) <= conditionMessageMaxLength || merged == existing || merged == next {
+		return merged
+	}
+	room := conditionMessageMaxLength - len(sep) - len(next) - len(conditionMessageTruncationSuffix)
+	if room <= 0 {
+		return merged
+	}
+	return existing[:room] + conditionMessageTruncationSuffix + sep + next
 }

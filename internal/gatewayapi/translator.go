@@ -705,7 +705,7 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 
 func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
 	deprecatedFields := make(map[string]status.DeprecatedField)
-	validation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec)
+	validation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
 	return deprecatedFields
 }
 
