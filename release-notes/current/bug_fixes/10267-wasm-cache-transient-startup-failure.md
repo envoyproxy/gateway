@@ -1,0 +1,1 @@
+Fixed a transient failure to load the OIDC HMAC secret at startup leaving the Wasm cache uninitialized until the controller restarted, which rejected every EnvoyExtensionPolicy with an HTTP or Image Wasm source with `wasm cache is not initialized`. The controller now retries with backoff and translates the resources again once the cache starts.

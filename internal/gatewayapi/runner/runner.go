@@ -9,10 +9,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/telepresenceio/watchable"
@@ -23,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -63,7 +66,10 @@ type Config struct {
 
 type Runner struct {
 	Config
-	wasmCache wasm.Cache
+	// wasmCache is published by startWasmCache and read by subscribeAndTranslate.
+	wasmCache atomic.Pointer[wasm.HTTPServer]
+	// wasmCacheReady is closed once wasmCache is published.
+	wasmCacheReady chan struct{}
 
 	// Key tracking for mark and sweep - avoids expensive LoadAll operations
 	keyCache *KeyCache
@@ -153,8 +159,9 @@ func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a
 
 func New(cfg *Config) *Runner {
 	return &Runner{
-		Config:   *cfg,
-		keyCache: newKeyCache(),
+		Config:         *cfg,
+		keyCache:       newKeyCache(),
+		wasmCacheReady: make(chan struct{}),
 	}
 }
 
@@ -189,9 +196,31 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	// Start the wasm cache server
 	// EG reuse the OIDC HMAC secret as a hash salt to generate an unguessable
 	// downloading path for the Wasm module.
-	tlsConfig, salt, err := r.loadTLSConfig(ctx)
+	// Loading the HMAC secret can fail transiently, e.g. when the API server is
+	// briefly unable to serve reads, so retry until it succeeds or ctx is done.
+	var (
+		tlsConfig *tls.Config
+		salt      []byte
+		attempt   int
+	)
+	backoff := wait.Backoff{
+		Duration: time.Second,
+		Factor:   2,
+		Jitter:   0.1,
+		Steps:    math.MaxInt32,
+		Cap:      30 * time.Second,
+	}
+	err := backoff.DelayFunc().Until(ctx, true, false, func(ctx context.Context) (bool, error) {
+		attempt++
+		var loadErr error
+		if tlsConfig, salt, loadErr = r.loadTLSConfig(ctx); loadErr != nil {
+			r.Logger.Error(loadErr, "failed to load wasm cache TLS config, retrying", "attempt", attempt)
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
-		r.Logger.Error(err, "failed to start wasm cache")
+		// ctx is done before the TLS config could be loaded.
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
@@ -206,20 +235,88 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		r.Logger.Error(err, "Failed to create Wasm cache directory")
 		return
 	}
-	r.wasmCache = wasm.NewHTTPServerWithFileCache(
+	wasmCache := wasm.NewHTTPServerWithFileCache(
 		// HTTP server options
 		wasm.ServerOptions{
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},
 		cacheOption, r.ControllerNamespace, r.Logger)
-	r.wasmCache.Start(ctx)
+	wasmCache.Start(ctx)
+	r.wasmCache.Store(wasmCache)
+	close(r.wasmCacheReady)
+}
+
+// getWasmCache returns the Wasm cache, or nil if it has not been started yet.
+func (r *Runner) getWasmCache() wasm.Cache {
+	// Avoid returning a typed nil pointer as a non-nil interface.
+	if c := r.wasmCache.Load(); c != nil {
+		return c
+	}
+	return nil
+}
+
+// retranslateOnWasmCacheReady forwards the snapshots from sub. Once the Wasm cache
+// is ready, it replays the latest state so that resources translated without the
+// cache, such as EnvoyExtensionPolicies with HTTP or Image Wasm sources, recover
+// without waiting for an unrelated resource change.
+func (r *Runner) retranslateOnWasmCacheReady(
+	sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext],
+) <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext] {
+	out := make(chan watchable.Snapshot[string, *resource.ControllerResourcesContext])
+	go func() {
+		defer close(out)
+		var state map[string]*resource.ControllerResourcesContext
+	waitForCache:
+		for {
+			select {
+			case snapshot, ok := <-sub:
+				if !ok {
+					return
+				}
+				select {
+				case <-r.wasmCacheReady:
+					// This snapshot is translated with the cache, so there is
+					// nothing to replay.
+					state = nil
+					out <- snapshot
+					break waitForCache
+				default:
+				}
+				state = snapshot.State
+				out <- snapshot
+			case <-r.wasmCacheReady:
+				break waitForCache
+			}
+		}
+		// Nothing has been translated yet if no snapshot was received, and the
+		// first one will be translated with the cache.
+		if len(state) > 0 {
+			replay := watchable.Snapshot[string, *resource.ControllerResourcesContext]{State: state}
+			for key, val := range state {
+				// The translator must not share the values of the original snapshot,
+				// and the replay is not reported as queue latency.
+				val = val.DeepCopy()
+				if val != nil {
+					val.StoredAt = time.Time{}
+				}
+				replay.Updates = append(replay.Updates,
+					watchable.Update[string, *resource.ControllerResourcesContext]{Key: key, Value: val})
+			}
+			r.Logger.Info("wasm cache is ready, translating the latest resources again")
+			out <- replay
+		}
+		for snapshot := range sub {
+			out <- snapshot
+		}
+	}()
+	return out
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
 	message.HandleSubscription(
 		r.Logger,
-		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
+		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, r.retranslateOnWasmCacheReady(sub),
 		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
@@ -330,7 +427,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
 					MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
 					PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
-					WasmCache:                       r.wasmCache,
+					WasmCache:                       r.getWasmCache(),
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
 					Logger:                          traceLogger,

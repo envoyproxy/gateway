@@ -9,12 +9,17 @@ import (
 	"context"
 	"crypto/tls"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/telepresenceio/watchable"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -22,6 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
@@ -519,4 +525,258 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.NotNil(t, tlsConfig.GetConfigForClient)
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+}
+
+// writeHostModeCerts writes the Envoy Gateway TLS certificates into a temporary
+// host-mode config home and returns a config pointing at it. The HMAC secret is
+// returned rather than written, so callers decide when it becomes available.
+func writeHostModeCerts(t *testing.T) (cfg *config.Server, hmacFile string, hmacSecret []byte) {
+	t.Helper()
+	configHome := t.TempDir()
+	certsDir := filepath.Join(configHome, "certs", "envoy-gateway")
+	hmacDir := filepath.Join(configHome, "certs", "envoy-oidc-hmac")
+	require.NoError(t, os.MkdirAll(certsDir, 0o750))
+	require.NoError(t, os.MkdirAll(hmacDir, 0o750))
+
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	certs, err := crypto.GenerateCerts(cfg)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(certsDir, "ca.crt"), certs.CACertificate, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(certsDir, "tls.crt"), certs.EnvoyGatewayCertificate, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(certsDir, "tls.key"), certs.EnvoyGatewayPrivateKey, 0o600))
+
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+				Type: egv1a1.InfrastructureProviderTypeHost,
+				Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{
+					ConfigHome: &configHome,
+				},
+			},
+		},
+	}
+	return cfg, filepath.Join(hmacDir, "hmac-secret"), certs.OIDCHMACSecret
+}
+
+// TestStartWasmCacheRetriesUntilTLSConfigLoads verifies that a transient failure to
+// load the HMAC secret delays the Wasm cache instead of disabling it until restart.
+func TestStartWasmCacheRetriesUntilTLSConfigLoads(t *testing.T) {
+	// The Wasm cache directory is created under the home directory in host mode.
+	t.Setenv("HOME", t.TempDir())
+	cfg, hmacFile, hmacSecret := writeHostModeCerts(t)
+
+	r := New(&Config{Server: *cfg})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		r.startWasmCache(ctx)
+		close(done)
+	}()
+
+	// The HMAC secret is missing at startup and becomes available shortly after.
+	time.Sleep(200 * time.Millisecond)
+	require.NoError(t, os.WriteFile(hmacFile, hmacSecret, 0o600))
+
+	require.Eventually(t, func() bool {
+		return r.getWasmCache() != nil
+	}, 5*time.Second, 50*time.Millisecond, "wasm cache was not initialized after the HMAC secret became available")
+
+	cancel()
+	<-done
+}
+
+// TestStartWasmCacheStopsRetryingOnContextDone verifies that startWasmCache returns
+// once the context is done if the HMAC secret never becomes available.
+func TestStartWasmCacheStopsRetryingOnContextDone(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	cfg, _, _ := writeHostModeCerts(t)
+
+	r := New(&Config{Server: *cfg})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		r.startWasmCache(ctx)
+		close(done)
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("startWasmCache did not return after the context was cancelled")
+	}
+	require.Nil(t, r.getWasmCache())
+	select {
+	case <-r.wasmCacheReady:
+		t.Fatal("wasmCacheReady was closed although the wasm cache was not started")
+	default:
+	}
+}
+
+func TestRetranslateOnWasmCacheReady(t *testing.T) {
+	newSnapshot := func(val *resource.ControllerResourcesContext) watchable.Snapshot[string, *resource.ControllerResourcesContext] {
+		return watchable.Snapshot[string, *resource.ControllerResourcesContext]{
+			State: map[string]*resource.ControllerResourcesContext{"test": val},
+			Updates: []watchable.Update[string, *resource.ControllerResourcesContext]{
+				{Key: "test", Value: val},
+			},
+		}
+	}
+	receive := func(t *testing.T, out <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) watchable.Snapshot[string, *resource.ControllerResourcesContext] {
+		t.Helper()
+		select {
+		case snapshot, ok := <-out:
+			require.True(t, ok, "channel closed unexpectedly")
+			return snapshot
+		case <-time.After(5 * time.Second):
+			t.Fatal("timed out waiting for a snapshot")
+		}
+		return watchable.Snapshot[string, *resource.ControllerResourcesContext]{}
+	}
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	t.Run("replays the latest state once the cache is ready", func(t *testing.T) {
+		r := New(&Config{Server: *cfg})
+		sub := make(chan watchable.Snapshot[string, *resource.ControllerResourcesContext])
+		out := r.retranslateOnWasmCacheReady(sub)
+
+		val := &resource.ControllerResourcesContext{
+			Resources: &resource.ControllerResources{
+				{GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "eg"}}},
+			},
+			StoredAt: time.Now(),
+		}
+		sub <- newSnapshot(val)
+		require.Equal(t, newSnapshot(val), receive(t, out))
+
+		close(r.wasmCacheReady)
+		replay := receive(t, out)
+		require.Len(t, replay.Updates, 1)
+		update := replay.Updates[0]
+		require.Equal(t, "test", update.Key)
+		require.False(t, update.Delete)
+		require.NotSame(t, val, update.Value)
+		require.Equal(t, val.Resources, update.Value.Resources)
+		require.True(t, update.Value.StoredAt.IsZero())
+
+		// Later snapshots are forwarded unchanged.
+		sub <- newSnapshot(val)
+		require.Equal(t, newSnapshot(val), receive(t, out))
+		close(sub)
+		_, ok := <-out
+		require.False(t, ok)
+	})
+
+	t.Run("does not replay before the first snapshot", func(t *testing.T) {
+		r := New(&Config{Server: *cfg})
+		sub := make(chan watchable.Snapshot[string, *resource.ControllerResourcesContext])
+		close(r.wasmCacheReady)
+		out := r.retranslateOnWasmCacheReady(sub)
+
+		val := &resource.ControllerResourcesContext{StoredAt: time.Now()}
+		sub <- newSnapshot(val)
+		require.Equal(t, newSnapshot(val), receive(t, out))
+		close(sub)
+		_, ok := <-out
+		require.False(t, ok)
+	})
+}
+
+// TestWasmPolicyRecoversOnceWasmCacheStarts verifies that an EnvoyExtensionPolicy
+// rejected because the Wasm cache was not started yet is translated again, and
+// accepted, once the cache starts, without any further resource change.
+func TestWasmPolicyRecoversOnceWasmCacheStarts(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	cfg, hmacFile, hmacSecret := writeHostModeCerts(t)
+
+	wasmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// The smallest valid Wasm module: the magic number and the version.
+		_, _ = w.Write([]byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00})
+	}))
+	defer wasmServer.Close()
+
+	pResources := new(message.ProviderResources)
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
+		XdsIR:             new(message.XdsIR),
+		InfraIR:           new(message.InfraIR),
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	require.NoError(t, r.Start(ctx))
+	defer func() {
+		cancel()
+		require.NoError(t, r.Close())
+	}()
+
+	policyKey := types.NamespacedName{Namespace: "default", Name: "wasm"}
+	pResources.GatewayAPIResources.Store(cfg.EnvoyGateway.Gateway.ControllerName, &resource.ControllerResourcesContext{
+		Context: ctx,
+		Resources: &resource.ControllerResources{{
+			GatewayClass: &gwapiv1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{Name: "eg"},
+				Spec:       gwapiv1.GatewayClassSpec{ControllerName: gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName)},
+			},
+			Gateways: []*gwapiv1.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "eg"},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "eg",
+					Listeners:        []gwapiv1.Listener{{Name: "http", Protocol: gwapiv1.HTTPProtocolType, Port: 80}},
+				},
+			}},
+			EnvoyExtensionPolicies: []*egv1a1.EnvoyExtensionPolicy{{
+				ObjectMeta: metav1.ObjectMeta{Namespace: policyKey.Namespace, Name: policyKey.Name},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.GroupName,
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						}},
+					},
+					Wasm: []egv1a1.Wasm{{
+						Code: &egv1a1.WasmCodeSource{
+							Type: egv1a1.HTTPWasmCodeSourceType,
+							HTTP: &egv1a1.HTTPWasmCodeSource{URL: wasmServer.URL + "/filter.wasm"},
+						},
+					}},
+				},
+			}},
+		}},
+	})
+
+	policyMessage := func() string {
+		status, ok := pResources.EnvoyExtensionPolicyStatuses.Load(policyKey)
+		if !ok || len(status.Ancestors) == 0 {
+			return ""
+		}
+		for _, cond := range status.Ancestors[0].Conditions {
+			if cond.Type == string(gwapiv1.PolicyConditionAccepted) {
+				return string(cond.Status) + ": " + cond.Message
+			}
+		}
+		return ""
+	}
+
+	// The HMAC secret is missing, so the policy is rejected.
+	require.Eventually(t, func() bool {
+		return strings.Contains(policyMessage(), "wasm cache is not initialized")
+	}, 5*time.Second, 50*time.Millisecond)
+
+	// The HMAC secret becomes available, and the policy is accepted with no
+	// change to the resources.
+	require.NoError(t, os.WriteFile(hmacFile, hmacSecret, 0o600))
+	require.Eventually(t, func() bool {
+		return strings.HasPrefix(policyMessage(), string(metav1.ConditionTrue))
+	}, 10*time.Second, 50*time.Millisecond, "policy status: %s", policyMessage())
 }
