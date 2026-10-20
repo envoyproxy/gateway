@@ -568,6 +568,7 @@ func TestStartWasmCacheRetriesUntilTLSConfigLoads(t *testing.T) {
 	cfg, hmacFile, hmacSecret := writeHostModeCerts(t)
 
 	r := New(&Config{Server: *cfg})
+	r.wasmListenAddr = "127.0.0.1:0"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	done := make(chan struct{})
@@ -595,6 +596,7 @@ func TestStartWasmCacheStopsRetryingOnContextDone(t *testing.T) {
 	cfg, _, _ := writeHostModeCerts(t)
 
 	r := New(&Config{Server: *cfg})
+	r.wasmListenAddr = "127.0.0.1:0"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	done := make(chan struct{})
@@ -710,6 +712,7 @@ func TestWasmPolicyRecoversOnceWasmCacheStarts(t *testing.T) {
 		XdsIR:             new(message.XdsIR),
 		InfraIR:           new(message.InfraIR),
 	})
+	r.wasmListenAddr = "127.0.0.1:0"
 	ctx, cancel := context.WithCancel(context.Background())
 	require.NoError(t, r.Start(ctx))
 	defer func() {

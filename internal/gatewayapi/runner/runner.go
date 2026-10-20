@@ -70,6 +70,8 @@ type Runner struct {
 	wasmCache atomic.Pointer[wasm.HTTPServer]
 	// wasmCacheReady is closed once wasmCache is published.
 	wasmCacheReady chan struct{}
+	// wasmListenAddr overrides the Wasm HTTP server address in tests.
+	wasmListenAddr string
 
 	// Key tracking for mark and sweep - avoids expensive LoadAll operations
 	keyCache *KeyCache
@@ -238,8 +240,9 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	wasmCache := wasm.NewHTTPServerWithFileCache(
 		// HTTP server options
 		wasm.ServerOptions{
-			Salt:      salt,
-			TLSConfig: tlsConfig,
+			Salt:       salt,
+			TLSConfig:  tlsConfig,
+			ListenAddr: r.wasmListenAddr,
 		},
 		cacheOption, r.ControllerNamespace, r.Logger)
 	wasmCache.Start(ctx)
