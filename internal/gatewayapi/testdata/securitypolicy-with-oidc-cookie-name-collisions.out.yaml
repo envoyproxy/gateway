@@ -1,0 +1,596 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 4
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-merged
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /merged
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-duplicate
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /duplicate
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-generated-suffix
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /generated-suffix
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-valid
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /valid
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-1
+      namespace: envoy-gateway-system
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-merged
+    namespace: default
+    uid: cccccccc-0000-0000-0000-000000000003
+  spec:
+    mergeType: StrategicMerge
+    oidc:
+      clientSecret:
+        name: client1-secret
+      cookieNames:
+        oauthHmac: session_0
+      provider:
+        issuer: https://oauth.foo.com
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-merged
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'OIDC: cookie name "session_0" of oauthHmac collides with a chunk
+          cookie of the accessToken cookie "session".'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-duplicate
+    namespace: default
+    uid: dddddddd-0000-0000-0000-000000000004
+  spec:
+    oidc:
+      clientID: client1.apps.googleusercontent.com
+      clientSecret:
+        name: client1-secret
+      cookieNames:
+        accessToken: same
+        oauthHmac: same
+      provider:
+        authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+        issuer: https://oauth.foo.com
+        tokenEndpoint: https://oauth.foo.com/token
+      redirectURL: https://www.example.com/oauth2/callback
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-duplicate
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'OIDC: cookie name "same" is used for both accessToken and oauthHmac.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-generated-suffix
+    namespace: default
+    uid: bbbbbbbb-0000-0000-0000-000000000002
+  spec:
+    oidc:
+      clientID: client1.apps.googleusercontent.com
+      clientSecret:
+        name: client1-secret
+      cookieNames:
+        oauthHmac: AccessToken-6ac6170b_chunks
+      provider:
+        authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+        issuer: https://oauth.foo.com
+        tokenEndpoint: https://oauth.foo.com/token
+      redirectURL: https://www.example.com/oauth2/callback
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-generated-suffix
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'OIDC: cookie name "AccessToken-6ac6170b_chunks" of oauthHmac collides
+          with a chunk cookie of the accessToken cookie "AccessToken-6ac6170b".'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-valid
+    namespace: default
+    uid: eeeeeeee-0000-0000-0000-000000000005
+  spec:
+    oidc:
+      clientID: client1.apps.googleusercontent.com
+      clientSecret:
+        name: client1-secret
+      cookieNames:
+        accessToken: session
+        oauthHmac: session_16
+      provider:
+        authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+        issuer: https://oauth.foo.com
+        tokenEndpoint: https://oauth.foo.com/token
+      redirectURL: https://www.example.com/oauth2/callback
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-valid
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-for-gateway
+    namespace: envoy-gateway
+    uid: aaaaaaaa-0000-0000-0000-000000000001
+  spec:
+    oidc:
+      clientID: client1.apps.googleusercontent.com
+      clientSecret:
+        name: client1-secret
+      cookieNames:
+        accessToken: session
+      provider:
+        authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+        issuer: https://oauth.foo.com
+        tokenEndpoint: https://oauth.foo.com/token
+      redirectURL: https://www.example.com/oauth2/callback
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other securityPolicies for these
+          routes: [default/httproute-duplicate default/httproute-generated-suffix
+          default/httproute-merged default/httproute-valid]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-1-196ae069
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-1-196ae069
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-1
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-generated-suffix
+            namespace: default
+          name: httproute/default/httproute-generated-suffix/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-generated-suffix/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: www.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-generated-suffix
+          namespace: default
+        name: httproute/default/httproute-generated-suffix/rule/0/match/0/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /generated-suffix
+        security: {}
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-duplicate
+            namespace: default
+          name: httproute/default/httproute-duplicate/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-duplicate/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: www.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-duplicate
+          namespace: default
+        name: httproute/default/httproute-duplicate/rule/0/match/0/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /duplicate
+        security: {}
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-merged
+            namespace: default
+          name: httproute/default/httproute-merged/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-merged/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: www.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-merged
+          namespace: default
+        name: httproute/default/httproute-merged/rule/0/match/0/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /merged
+        security: {}
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-valid
+            namespace: default
+          name: httproute/default/httproute-valid/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-valid/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: www.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-valid
+          namespace: default
+        name: httproute/default/httproute-valid/rule/0/match/0/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /valid
+        security:
+          oidc:
+            clientID: client1.apps.googleusercontent.com
+            clientSecret: '[redacted]'
+            cookieNameOverrides:
+              accessToken: session
+              oauthHmac: session_16
+            cookieSuffix: 45142c12
+            hmacSecret: '[redacted]'
+            logoutPath: /logout
+            name: securitypolicy/default/policy-valid
+            provider:
+              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              tokenEndpoint: https://oauth.foo.com/token
+            redirectPath: /oauth2/callback
+            redirectURL: https://www.example.com/oauth2/callback
+            refreshToken: true
+            scopes:
+            - openid
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

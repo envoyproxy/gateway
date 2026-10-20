@@ -2824,3 +2824,97 @@ func Test_securityPolicyOwnerChoose(t *testing.T) {
 		assert.Same(t, parentPolicy, owners.extAuthBackendRefs)
 	})
 }
+
+func Test_validateOIDCCookieNames(t *testing.T) {
+	const suffix = "6ac6170b"
+	tests := []struct {
+		name      string
+		overrides *egv1a1.OIDCCookieNames
+		wantErr   string
+	}{
+		{
+			name: "defaults",
+		},
+		{
+			name: "distinct overrides",
+			overrides: &egv1a1.OIDCCookieNames{
+				AccessToken: ToPointer("session"),
+				OAuthHMAC:   ToPointer("session_hmac"),
+			},
+		},
+		{
+			name: "duplicate overrides",
+			overrides: &egv1a1.OIDCCookieNames{
+				AccessToken: ToPointer("same"),
+				OAuthHMAC:   ToPointer("same"),
+			},
+			wantErr: `cookie name "same" is used for both accessToken and oauthHmac`,
+		},
+		{
+			name:      "override collides with a default name",
+			overrides: &egv1a1.OIDCCookieNames{IDToken: ToPointer("AccessToken-" + suffix)},
+			wantErr:   `cookie name "AccessToken-6ac6170b" is used for both accessToken and idToken`,
+		},
+		{
+			name: "first chunk of the access token",
+			overrides: &egv1a1.OIDCCookieNames{
+				AccessToken: ToPointer("session"),
+				OAuthHMAC:   ToPointer("session_0"),
+			},
+			wantErr: `cookie name "session_0" of oauthHmac collides with a chunk cookie of the accessToken cookie "session"`,
+		},
+		{
+			name: "last chunk of the refresh token",
+			overrides: &egv1a1.OIDCCookieNames{
+				RefreshToken: ToPointer("refresh"),
+				OAuthNonce:   ToPointer("refresh_15"),
+			},
+			wantErr: `cookie name "refresh_15" of oauthNonce collides with a chunk cookie of the refreshToken cookie "refresh"`,
+		},
+		{
+			name:      "chunk count of the default ID token name",
+			overrides: &egv1a1.OIDCCookieNames{OAuthExpires: ToPointer("IdToken-" + suffix + "_chunks")},
+			wantErr:   `cookie name "IdToken-6ac6170b_chunks" of oauthExpires collides with a chunk cookie of the idToken cookie "IdToken-6ac6170b"`,
+		},
+		{
+			name: "one token named like a chunk of another",
+			overrides: &egv1a1.OIDCCookieNames{
+				AccessToken: ToPointer("a"),
+				IDToken:     ToPointer("a_3"),
+			},
+			wantErr: `cookie name "a_3" of idToken collides with a chunk cookie of the accessToken cookie "a"`,
+		},
+		{
+			name: "index beyond the 16 chunks Envoy reads",
+			overrides: &egv1a1.OIDCCookieNames{
+				AccessToken: ToPointer("session"),
+				OAuthHMAC:   ToPointer("session_16"),
+			},
+		},
+		{
+			name: "index with a leading zero is not a chunk name",
+			overrides: &egv1a1.OIDCCookieNames{
+				AccessToken: ToPointer("session"),
+				OAuthHMAC:   ToPointer("session_01"),
+			},
+		},
+		{
+			name: "chunk-like name of a cookie that is not a token",
+			overrides: &egv1a1.OIDCCookieNames{
+				OAuthHMAC:    ToPointer("hmac"),
+				OAuthExpires: ToPointer("hmac_0"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateOIDCCookieNames(tt.overrides, suffix)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, tt.wantErr)
+		})
+	}
+}
