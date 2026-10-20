@@ -293,8 +293,12 @@ func authCheckerHandler(w http.ResponseWriter, req *http.Request) {
 	extracted := strings.Split(authorization, " ")
 	if len(extracted) == 2 && extracted[0] == "Bearer" {
 		if user, ok := testUsers[extracted[1]]; ok {
-			w.Header().Add("x-current-user", user) // this should be set before call WriteHeader
+			w.Header().Add("x-current-user", user)
 			w.Header().Add("x-ext-auth-req-path", req.URL.Path)
+			w.Header().Add(
+				"set-cookie",
+				fmt.Sprintf("ext-auth-session=%s; Path=/; HttpOnly", user),
+			)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
