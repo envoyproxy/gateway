@@ -1,1 +1,1 @@
-Reduced the cost of checking cross-namespace references during reconciliation by looking up ReferenceGrants only in the target namespace, instead of listing every ReferenceGrant for the target kind across the cluster.
+Reduced the cost of checking cross-namespace references during reconciliation by looking up only the ReferenceGrants in the target namespace that allow references from the source namespace to the target kind, instead of listing every ReferenceGrant for the target kind across the cluster.

@@ -44,7 +44,7 @@ func newRefGrantReconciler(t testing.TB, objs ...client.Object) *gatewayAPIRecon
 	cli := fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		WithObjects(objs...).
-		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
+		WithIndex(&gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc).
 		Build()
 	return &gatewayAPIReconciler{client: cli, log: logging.DefaultLogger(nil, egv1a1.LogLevelInfo)}
 }
@@ -95,6 +95,29 @@ func TestFindReferenceGrant(t *testing.T) {
 				refGrant("backends", "allow", resource.KindHTTPRoute, "routes", resource.KindService, nil),
 			},
 			want: "allow",
+		},
+		{
+			name: "matching grant among grants for other source namespaces in the target namespace",
+			grants: []client.Object{
+				refGrant("backends", "allow-a", resource.KindHTTPRoute, "a", resource.KindService, nil),
+				refGrant("backends", "allow-b", resource.KindHTTPRoute, "b", resource.KindService, nil),
+				refGrant("backends", "allow", resource.KindHTTPRoute, "routes", resource.KindService, nil),
+			},
+			want: "allow",
+		},
+		{
+			name: "grant with several from and to entries",
+			grants: []client.Object{&gwapiv1b1.ReferenceGrant{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "backends", Name: "allow-many"},
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
+						{Group: gwapiv1.GroupName, Kind: resource.KindGRPCRoute, Namespace: "elsewhere"},
+						{Group: gwapiv1.GroupName, Kind: resource.KindHTTPRoute, Namespace: "routes"},
+					},
+					To: []gwapiv1b1.ReferenceGrantTo{{Kind: resource.KindSecret}, {Kind: resource.KindService}},
+				},
+			}},
+			want: "allow-many",
 		},
 	}
 	for _, tc := range tests {
