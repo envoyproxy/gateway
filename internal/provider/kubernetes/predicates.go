@@ -579,10 +579,6 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
-	if r.isServiceReferencedByBackend(&nsName) {
-		return true
-	}
-
 	if r.spCRDExists {
 		if r.isSecurityPolicyReferencingBackend(&nsName) {
 			return true
@@ -601,7 +597,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		}
 	}
 
-	return false
+	return r.isServiceReferencedByBackend(&nsName)
 }
 
 // validateBackendForReconcile tries finding the owning Gateway of the Backend
@@ -812,10 +808,6 @@ func (r *gatewayAPIReconciler) isEndpointSliceBackendReferenced(nsName *types.Na
 		return true
 	}
 
-	if r.isServiceReferencedByBackend(nsName) {
-		return true
-	}
-
 	if r.spCRDExists {
 		if r.isSecurityPolicyReferencingBackend(nsName) {
 			return true
@@ -834,7 +826,7 @@ func (r *gatewayAPIReconciler) isEndpointSliceBackendReferenced(nsName *types.Na
 		}
 	}
 
-	return false
+	return r.isServiceReferencedByBackend(nsName)
 }
 
 // validateObjectForReconcile tries finding the owning Gateway of the Deployment or DaemonSet
