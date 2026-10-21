@@ -153,6 +153,10 @@ type Translator struct {
 	ExtensionStats ExtensionHookStats
 }
 
+func (t *Translator) lbEndpointMetadataEnabled() bool {
+	return t.RuntimeFlags.IsEnabled(egv1a1.LbEndpointMetadata)
+}
+
 func (t *Translator) xdsNameSchemeV2() bool {
 	if t.RuntimeFlags == nil {
 		return false
@@ -693,7 +697,7 @@ func (t *Translator) processMergedBackendClusters(tCtx *types.ResourceVersionTab
 			useClientProtocol: bc.UseClientProtocol,
 			healthCheckLog:    xdsIR.HealthCheckLog,
 		}
-		if err := processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &BackendClusterTranslator{}, ea, bc.Metadata, t.caIndex); err != nil {
+		if err := t.processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &BackendClusterTranslator{}, ea, bc.Metadata); err != nil {
 			errs = errors.Join(errs, err)
 		}
 		if err := processClientCertificates(tCtx, []*ir.DestinationSetting{bc.Setting}); err != nil {
@@ -849,14 +853,13 @@ func (t *Translator) addRouteToRouteConfig(
 				// * The rule also has a merged BackendClusterRef, whose weighted route action
 				//   entry always names each Settings entry individually (buildXdsWeightedRouteAction)
 				if !httpRoute.NeedsClusterPerSetting() && len(httpRoute.Destination.BackendClusterRefs) == 0 {
-					err = processXdsCluster(
+					err = t.processXdsCluster(
 						tCtx,
 						httpRoute.Destination.Name,
 						httpRoute.Destination.Settings,
 						&HTTPRouteTranslator{httpRoute},
 						ea,
 						httpRoute.Destination.Metadata,
-						t.caIndex,
 					)
 					if err != nil {
 						errs = errors.Join(errs, err)
@@ -864,14 +867,13 @@ func (t *Translator) addRouteToRouteConfig(
 				} else {
 					for _, setting := range httpRoute.Destination.Settings {
 						tSettings := []*ir.DestinationSetting{setting}
-						err = processXdsCluster(
+						err = t.processXdsCluster(
 							tCtx,
 							setting.Name,
 							tSettings,
 							&HTTPRouteTranslator{httpRoute},
 							ea,
-							httpRoute.Destination.Metadata,
-							t.caIndex)
+							httpRoute.Destination.Metadata)
 						if err != nil {
 							errs = errors.Join(errs, err)
 						}
@@ -884,14 +886,15 @@ func (t *Translator) addRouteToRouteConfig(
 			for _, mrr := range httpRoute.Mirrors {
 				if mrr.Destination != nil {
 					if err = addXdsCluster(tCtx, &xdsClusterArgs{
-						name:         mrr.Destination.Name,
-						settings:     mrr.Destination.Settings,
-						tSocket:      nil,
-						endpointType: buildEndpointType(mrr.Destination.Settings),
-						metrics:      metrics,
-						metadata:     mrr.Destination.Metadata,
-						isRoute:      true,
-						caIndex:      t.caIndex,
+						name:             mrr.Destination.Name,
+						settings:         mrr.Destination.Settings,
+						tSocket:          nil,
+						endpointType:     buildEndpointType(mrr.Destination.Settings),
+						metrics:          metrics,
+						metadata:         mrr.Destination.Metadata,
+						isRoute:          true,
+						caIndex:          t.caIndex,
+						endpointMetadata: t.lbEndpointMetadataEnabled(),
 					}); err != nil {
 						errs = errors.Join(errs, err)
 					}
@@ -1039,13 +1042,12 @@ func (t *Translator) processTCPListenerXdsTranslation(
 
 		for _, route := range tcpListener.Routes {
 			if needsRouteCluster(route.Destination) {
-				if err := processXdsCluster(tCtx,
+				if err := t.processXdsCluster(tCtx,
 					route.Destination.Name,
 					route.Destination.Settings,
 					&TCPRouteTranslator{route},
 					&ExtraArgs{metrics: metrics, healthCheckLog: healthCheckLog},
-					route.Destination.Metadata,
-					t.caIndex); err != nil {
+					route.Destination.Metadata); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -1144,13 +1146,12 @@ func (t *Translator) processUDPListenerXdsTranslation(
 		if udpListener.Route != nil {
 			// 1:1 between IR UDPRoute and xDS Cluster
 			if needsRouteCluster(udpListener.Route.Destination) {
-				if err := processXdsCluster(tCtx,
+				if err := t.processXdsCluster(tCtx,
 					udpListener.Route.Destination.Name,
 					udpListener.Route.Destination.Settings,
 					&UDPRouteTranslator{udpListener.Route},
 					&ExtraArgs{metrics: metrics, healthCheckLog: healthCheckLog},
-					udpListener.Route.Destination.Metadata,
-					t.caIndex); err != nil {
+					udpListener.Route.Destination.Metadata); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -1300,16 +1301,16 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 // processXdsCluster processes xds cluster with args per route.
-func processXdsCluster(tCtx *types.ResourceVersionTable,
+func (t *Translator) processXdsCluster(tCtx *types.ResourceVersionTable,
 	name string,
 	settings []*ir.DestinationSetting,
 	route clusterArgs,
 	extras *ExtraArgs,
 	metadata *ir.ResourceMetadata,
-	caIndex caCertificateIndex,
 ) error {
 	args := route.asClusterArgs(name, settings, extras, metadata)
-	args.caIndex = caIndex
+	args.caIndex = t.caIndex
+	args.endpointMetadata = t.lbEndpointMetadataEnabled()
 	return addXdsCluster(tCtx, args)
 }
 
@@ -1360,7 +1361,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	}
 	xdsCluster := result.cluster
 	lb := ptr.Deref(args.loadBalancer, ir.LoadBalancer{})
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones, args.endpointMetadata)
 	for _, ds := range args.settings {
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {

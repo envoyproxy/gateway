@@ -21,6 +21,7 @@ const (
 	envoyGatewayXdsMetadataKeySectionName = "sectionName"
 	envoyGatewayMetadataKeyResources      = "resources"
 	envoyGatewayMetadataKeyPolicies       = "policies"
+	envoyGatewayMetadataKeyBackend        = "backend"
 )
 
 func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
@@ -60,6 +61,34 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	}
 
 	return md
+}
+
+// buildXdsEndpointMetadata builds lb_endpoint-level metadata from a DestinationSetting's ResourceMetadata.
+// It emits a nested "backend" struct (matching Gateway API backendRef terminology) so individual fields
+// are reachable in Envoy access log format strings, e.g: %METADATA(UPSTREAM_HOST:envoy-gateway:backend:name)%
+func buildXdsEndpointMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
+	if metadata == nil {
+		return nil
+	}
+	backendFields := map[string]*structpb.Value{
+		envoyGatewayXdsMetadataKeyKind:        structpb.NewStringValue(metadata.Kind),
+		envoyGatewayXdsMetadataKeyName:        structpb.NewStringValue(metadata.Name),
+		envoyGatewayXdsMetadataKeyNamespace:   structpb.NewStringValue(metadata.Namespace),
+		envoyGatewayXdsMetadataKeySectionName: structpb.NewStringValue(metadata.SectionName),
+	}
+	return &corev3.Metadata{
+		FilterMetadata: map[string]*structpb.Struct{
+			envoyGatewayXdsMetadataNamespace: {
+				Fields: map[string]*structpb.Value{
+					envoyGatewayMetadataKeyBackend: {
+						Kind: &structpb.Value_StructValue{
+							StructValue: &structpb.Struct{Fields: backendFields},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func buildpolicyMetadata(md *ir.PolicyMetadata) *structpb.Value {
