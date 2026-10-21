@@ -72,6 +72,7 @@ func TestGetExtensionRef(t *testing.T) {
 				extRes("v1", "Foo", "ns", "a", "malformed"),
 				extRes("foo.example.io/v1", "Foo", "ns", "a", "match"),
 			},
+			wantMarker:    "match",
 			wantMalformed: true,
 		},
 		{

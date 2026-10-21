@@ -3412,7 +3412,7 @@ func (t *Translator) processBackendExtensions(
 	gwIR *ir.Xds,
 	gatewayCtx *GatewayContext,
 ) *ir.UnstructuredRef { // This list of resources will be empty unless an extension is loaded (and introduces resources)
-	// A resource with a malformed apiVersion is treated as not found, as it has no group to match.
+	// Resources with a malformed apiVersion have no group to match, so they are skipped.
 	res, _ := t.getExtensionRef(resources, GroupDerefOr(backendRef.Group, ""), KindDerefOr(backendRef.Kind, ""), backendNamespace, string(backendRef.Name))
 	if res == nil {
 		return nil

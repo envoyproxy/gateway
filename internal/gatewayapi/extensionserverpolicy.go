@@ -528,15 +528,14 @@ func BuildExtensionRefIndex(resources []unstructured.Unstructured) ExtensionRefI
 //
 // malformed reports that a resource with the same kind, namespace and name but an apiVersion with
 // no group comes before any match in resources.ExtensionRefFilters (or that there is no match).
+// The match, if any, is returned regardless, so callers that skip malformed resources can use it.
 func (t *Translator) getExtensionRef(resources *resource.Resources, group, kind, namespace, name string) (res *unstructured.Unstructured, malformed bool) {
 	i, found := t.ExtensionRefIndex.valid[extensionRefKey{Group: group, Kind: kind, Namespace: namespace, Name: name}]
 	j, hasMalformed := t.ExtensionRefIndex.malformed[extensionRefKey{Kind: kind, Namespace: namespace, Name: name}]
-	if hasMalformed && (!found || j < i) {
-		return nil, true
-	}
+	malformed = hasMalformed && (!found || j < i)
 	if !found {
-		return nil, false
+		return nil, malformed
 	}
 	r := resources.ExtensionRefFilters[i]
-	return &r, false
+	return &r, malformed
 }
