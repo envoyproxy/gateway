@@ -603,15 +603,16 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			if backendPolicyKeyFromMetadata(bc.Metadata) != key {
 				continue
 			}
-			mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
+			mergedPolicy, _, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
 			if err != nil {
 				ref := getAncestorRefForPolicy(gwNN, nil)
 				status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
 					&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
 				continue
 			}
-			tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
-			if err != nil || tf == nil {
+			// A route-scoped field failing on gwPolicy must not block this cluster-scoped result.
+			cf, err := t.buildClusterTrafficFeatures(mergedPolicy)
+			if err != nil || cf == nil {
 				if err != nil {
 					ref := getAncestorRefForPolicy(gwNN, nil)
 					status.SetTranslationErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
@@ -620,7 +621,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				continue
 			}
 			// Reuse the gateway-BTP path's protocol subsetting to keep HTTP-only fields off UDP/TCP clusters.
-			warnings := applyGatewayPolicyToMergedCluster(bc, tf, mergedPolicy.Spec.UseClientProtocol)
+			warnings := applyGatewayPolicyToMergedCluster(bc, cf, mergedPolicy.Spec.UseClientProtocol)
 			h3Warnings.addMergedCluster(bc, warnings)
 
 			matchedGWs.Insert(gwNN)
@@ -1749,45 +1750,22 @@ func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.Bac
 	return mergedPolicy, buildBackendTrafficPolicyOwners(routePolicy, gwPolicy), nil
 }
 
-// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy. owners is
-// the per-field owners for a merged policy, or nil to resolve references against the
-// policy's own namespace.
-func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.TrafficFeatures, error) {
+// buildClusterTrafficFeatures builds the cluster-scoped subset so a route-scoped field error can't block it.
+func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.ClusterTrafficFeatures, error) {
 	var (
-		rl          *ir.RateLimit
-		bl          *ir.BandwidthLimit
-		lb          *ir.LoadBalancer
-		pp          *ir.ProxyProtocol
-		hc          *ir.HealthCheck
-		cb          *ir.CircuitBreaker
-		fi          *ir.FaultInjection
-		ac          *ir.AdmissionControl
-		to          *ir.Timeout
-		ka          *ir.TCPKeepalive
-		rt          *ir.Retry
-		bc          *ir.BackendConnection
-		ds          *ir.DNS
-		h2          *ir.HTTP2Settings
-		ro          *ir.ResponseOverride
-		rb          *ir.RequestBuffer
-		rbbl        *uint64
-		cp          []*ir.Compression
-		httpUpgrade []ir.HTTPUpgradeConfig
-		err, errs   error
+		lb        *ir.LoadBalancer
+		pp        *ir.ProxyProtocol
+		hc        *ir.HealthCheck
+		ac        *ir.AdmissionControl
+		cb        *ir.CircuitBreaker
+		to        *ir.Timeout
+		ka        *ir.TCPKeepalive
+		bc        *ir.BackendConnection
+		ds        *ir.DNS
+		h2        *ir.HTTP2Settings
+		err, errs error
 	)
 
-	if policy.Spec.RateLimit != nil {
-		if rl, err = t.buildRateLimit(policy); err != nil {
-			err = perr.WithMessage(err, "RateLimit")
-			errs = errors.Join(errs, err)
-		}
-	}
-	if policy.Spec.BandwidthLimit != nil {
-		if bl, err = buildBandwidthLimit(policy.Spec.BandwidthLimit); err != nil {
-			err = perr.WithMessage(err, "BandwidthLimit")
-			errs = errors.Join(errs, err)
-		}
-	}
 	if lb, err = buildLoadBalancer(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
@@ -1798,19 +1776,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		err = perr.WithMessage(err, "CircuitBreaker")
 		errs = errors.Join(errs, err)
 	}
-	if policy.Spec.FaultInjection != nil {
-		fi = t.buildFaultInjection(policy)
-	}
 	if policy.Spec.AdmissionControl != nil {
 		ac = t.buildAdmissionControl(policy)
 	}
 	if ka, err = buildTCPKeepAlive(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
-		errs = errors.Join(errs, err)
-	}
-
-	if rt, err = buildRetry(policy.Spec.Retry); err != nil {
-		err = perr.WithMessage(err, "Retry")
 		errs = errors.Join(errs, err)
 	}
 
@@ -1826,6 +1796,63 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 
 	if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
 		err = perr.WithMessage(err, "HTTP2")
+		errs = errors.Join(errs, err)
+	}
+
+	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
+
+	return &ir.ClusterTrafficFeatures{
+		LoadBalancer:      lb,
+		ProxyProtocol:     pp,
+		HealthCheck:       hc,
+		AdmissionControl:  ac,
+		CircuitBreaker:    cb,
+		Timeout:           to,
+		TCPKeepalive:      ka,
+		BackendConnection: bc,
+		HTTP2:             h2,
+		HTTP3:             buildIRBackendHTTP3Settings(policy.Spec.HTTP3),
+		DNS:               ds,
+	}, errs
+}
+
+// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy. owners is
+// the per-field owners for a merged policy, or nil to resolve references against the
+// policy's own namespace.
+func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.TrafficFeatures, error) {
+	cf, errs := t.buildClusterTrafficFeatures(policy)
+
+	var (
+		rl          *ir.RateLimit
+		bl          *ir.BandwidthLimit
+		fi          *ir.FaultInjection
+		rt          *ir.Retry
+		ro          *ir.ResponseOverride
+		rb          *ir.RequestBuffer
+		rbbl        *uint64
+		cp          []*ir.Compression
+		httpUpgrade []ir.HTTPUpgradeConfig
+		err         error
+	)
+
+	if policy.Spec.RateLimit != nil {
+		if rl, err = t.buildRateLimit(policy); err != nil {
+			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
+		}
+	}
+	if policy.Spec.BandwidthLimit != nil {
+		if bl, err = buildBandwidthLimit(policy.Spec.BandwidthLimit); err != nil {
+			err = perr.WithMessage(err, "BandwidthLimit")
+			errs = errors.Join(errs, err)
+		}
+	}
+	if policy.Spec.FaultInjection != nil {
+		fi = t.buildFaultInjection(policy)
+	}
+
+	if rt, err = buildRetry(policy.Spec.Retry); err != nil {
+		err = perr.WithMessage(err, "Retry")
 		errs = errors.Join(errs, err)
 	}
 
@@ -1852,22 +1879,8 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
-
 	return &ir.TrafficFeatures{
-		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
-			LoadBalancer:      lb,
-			ProxyProtocol:     pp,
-			HealthCheck:       hc,
-			AdmissionControl:  ac,
-			CircuitBreaker:    cb,
-			Timeout:           to,
-			TCPKeepalive:      ka,
-			BackendConnection: bc,
-			HTTP2:             h2,
-			HTTP3:             buildIRBackendHTTP3Settings(policy.Spec.HTTP3),
-			DNS:               ds,
-		},
+		ClusterTrafficFeatures: *cf,
 		RateLimit:              rl,
 		BandwidthLimit:         bl,
 		FaultInjection:         fi,
@@ -2061,10 +2074,13 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	// BackendTrafficPolicy that would conflict is already excluded from merging via
 	// hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here. What each cluster
 	// takes from it still depends on the protocol it serves.
-	if applyToBackendClusters && buildErr == nil {
-		for _, bc := range x.BackendClusters {
-			warnings := applyGatewayPolicyToMergedCluster(bc, tf, policy.Spec.UseClientProtocol)
-			h3Warnings.addMergedCluster(bc, warnings)
+	// Gate on the cluster-scoped subset's own error, not buildErr - a route-scoped field failure shouldn't block it.
+	if applyToBackendClusters {
+		if _, clusterErrs := t.buildClusterTrafficFeatures(policy); clusterErrs == nil {
+			for _, bc := range x.BackendClusters {
+				warnings := applyGatewayPolicyToMergedCluster(bc, &tf.ClusterTrafficFeatures, policy.Spec.UseClientProtocol)
+				h3Warnings.addMergedCluster(bc, warnings)
+			}
 		}
 	}
 
@@ -2187,8 +2203,8 @@ func applyRouteHTTP3(r *ir.HTTPRoute, warnings http3Warnings) {
 // Deduplicating clusters must not change that, so the subsets below mirror exactly what the TCP
 // and UDP loops in translateBackendTrafficPolicyForListeners set on their routes; keep them in
 // sync with those loops.
-func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeatures, useClientProtocol *bool) (http3Warnings []string) {
-	if bc == nil || tf == nil {
+func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, cf *ir.ClusterTrafficFeatures, useClientProtocol *bool) (http3Warnings []string) {
+	if bc == nil || cf == nil {
 		return nil
 	}
 
@@ -2199,26 +2215,26 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeat
 	switch bc.Protocol() {
 	case ir.UDP:
 		bc.Traffic = &ir.ClusterTrafficFeatures{
-			LoadBalancer: tf.LoadBalancer.DeepCopy(),
-			DNS:          tf.DNS.DeepCopy(),
+			LoadBalancer: cf.LoadBalancer.DeepCopy(),
+			DNS:          cf.DNS.DeepCopy(),
 		}
 	case ir.TCP:
 		bc.Traffic = &ir.ClusterTrafficFeatures{
-			LoadBalancer:   tf.LoadBalancer.DeepCopy(),
-			ProxyProtocol:  tf.ProxyProtocol.DeepCopy(),
-			HealthCheck:    tf.HealthCheck.DeepCopy(),
-			CircuitBreaker: tf.CircuitBreaker.DeepCopy(),
-			TCPKeepalive:   tf.TCPKeepalive.DeepCopy(),
+			LoadBalancer:   cf.LoadBalancer.DeepCopy(),
+			ProxyProtocol:  cf.ProxyProtocol.DeepCopy(),
+			HealthCheck:    cf.HealthCheck.DeepCopy(),
+			CircuitBreaker: cf.CircuitBreaker.DeepCopy(),
+			TCPKeepalive:   cf.TCPKeepalive.DeepCopy(),
 			// Drop the route-scoped timeout members, exactly as TCPRouteTranslator does when it
 			// builds the same cluster from an ir.TCPRoute.
-			Timeout: tf.Timeout.ClusterOnly().AsTimeout(),
-			DNS:     tf.DNS.DeepCopy(),
+			Timeout: cf.Timeout.ClusterOnly().AsTimeout(),
+			DNS:     cf.DNS.DeepCopy(),
 		}
 	default:
-		bc.Traffic = tf.ClusterTrafficFeatures.DeepCopy()
+		bc.Traffic = cf.DeepCopy()
 		// Drop the route-scoped timeout members: they are never read from a cluster, and a
 		// merged cluster must not advertise settings it cannot honor.
-		bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
+		bc.Traffic.Timeout = cf.Timeout.ClusterOnly().AsTimeout()
 		bc.UseClientProtocol = useClientProtocol
 		// Drop HTTP/3 from the cluster if any of its backends cannot use it, and report why so the
 		// caller can add a Warning condition to the Gateway.

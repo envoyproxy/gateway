@@ -1663,17 +1663,20 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 
 func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1b1.ReferenceGrant, error) {
 	refGrantList := new(gwapiv1b1.ReferenceGrantList)
-	opts := &client.ListOptions{FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind)}
+	// A ReferenceGrant only applies to resources in its own namespace, so only list the grants in
+	// the target namespace, and of those only the ones that allow references from the source
+	// namespace to the target kind. The field index is kept per namespace, so this is a direct
+	// lookup instead of listing every grant for the kind across the cluster.
+	opts := &client.ListOptions{
+		Namespace:     to.namespace,
+		FieldSelector: fields.OneTermEqualSelector(refGrantFromNamespaceToKindIndex, refGrantFromNamespaceToKey(from.namespace, to.kind)),
+	}
 	if err := r.client.List(ctx, refGrantList, opts); err != nil {
 		return nil, fmt.Errorf("failed to list ReferenceGrants: %w", err)
 	}
 
 	for i := range refGrantList.Items {
 		refGrant := &refGrantList.Items[i]
-		if refGrant.Namespace != to.namespace {
-			continue
-		}
-
 		var fromAllowed bool
 		for _, refGrantFrom := range refGrant.Spec.From {
 			if string(refGrantFrom.Kind) == from.kind && string(refGrantFrom.Namespace) == from.namespace {
