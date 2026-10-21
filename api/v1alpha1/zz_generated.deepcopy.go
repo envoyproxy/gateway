@@ -4474,6 +4474,11 @@ func (in *HTTP1Settings) DeepCopyInto(out *HTTP1Settings) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.HeaderKeyFormat != nil {
+		in, out := &in.HeaderKeyFormat, &out.HeaderKeyFormat
+		*out = new(HTTP1HeaderKeyFormat)
+		**out = **in
+	}
 	if in.HTTP10 != nil {
 		in, out := &in.HTTP10, &out.HTTP10
 		*out = new(HTTP10Settings)
