@@ -1882,6 +1882,8 @@ func TestComputeHostsNestedWildcardIsolation(t *testing.T) {
 		sibling string
 		// siblingProtocolConflicted marks the sibling as having lost a protocol conflict
 		siblingProtocolConflicted bool
+		// siblingSpecInvalid marks the sibling as having failed per-listener spec validation
+		siblingSpecInvalid bool
 		// the HTTPRoute's hostname
 		route string
 		want  []string
@@ -1935,6 +1937,18 @@ func TestComputeHostsNestedWildcardIsolation(t *testing.T) {
 			route:                     "test.dev.example.com",
 			want:                      []string{"test.dev.example.com"},
 		},
+		{
+			// A sibling that failed per-listener spec validation - an HTTPS listener with no
+			// usable certificate, say - is never programmed, so it cannot own a hostname.
+			// ProcessListeners omits it from the IR but leaves it in gateway.listeners, so
+			// the guard has to be here.
+			name:               "spec-invalid sibling does not own a hostname",
+			subject:            "*.example.com",
+			sibling:            "*.dev.example.com",
+			siblingSpecInvalid: true,
+			route:              "test.dev.example.com",
+			want:               []string{"test.dev.example.com"},
+		},
 	}
 
 	for _, tc := range tests {
@@ -1950,6 +1964,10 @@ func TestComputeHostsNestedWildcardIsolation(t *testing.T) {
 			}
 			subject.listenerStatusIdx = 0
 			sibling.listenerStatusIdx = 1
+			if tc.siblingSpecInvalid {
+				sibling.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalid, "listener failed spec validation")
+			}
 
 			require.ElementsMatch(t, tc.want, computeHosts([]string{tc.route}, subject))
 		})
