@@ -1,0 +1,16 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10081
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        checkDrainClose: true
+        cluster: tcp-route-dest
+        statPrefix: tcp-10081
+    name: tcp-route
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: tcp-listener
+  perConnectionBufferLimitBytes: 32768

@@ -1,0 +1,1 @@
+Added `tcp.enableActiveDrain` to ClientTrafficPolicy to close TCP-proxied client connections (TCPRoute and TLSRoute) when the listener is draining, e.g. during a graceful shutdown of the proxy or a listener update.
