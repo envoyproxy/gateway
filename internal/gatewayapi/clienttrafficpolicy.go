@@ -135,22 +135,22 @@ func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 }
 
 // deprecatedFieldsUsedInClientTrafficPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.EnableProxyProtocol != nil {
-		deprecatedFields["spec.enableProxyProtocol"] = "spec.proxyProtocol"
+		deprecatedFields["spec.enableProxyProtocol"] = deprecatedFieldScheduledForRemoval("spec.proxyProtocol")
 	}
 	if policy.Spec.Headers != nil && policy.Spec.Headers.PreserveXRequestID != nil {
-		deprecatedFields["spec.headers.preserveXRequestID"] = "spec.headers.requestID"
+		deprecatedFields["spec.headers.preserveXRequestID"] = deprecatedFieldScheduledForRemoval("spec.headers.requestID")
 	}
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
 	}
 	// Optional is a non-pointer bool, so deprecated usage is only observable when it changes behavior.
 	if policy.Spec.TLS != nil &&
 		policy.Spec.TLS.ClientValidation != nil &&
 		policy.Spec.TLS.ClientValidation.Optional {
-		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
+		deprecatedFields["spec.tls.clientValidation.optional"] = deprecatedField("spec.tls.clientValidation.mode")
 	}
 	return deprecatedFields
 }

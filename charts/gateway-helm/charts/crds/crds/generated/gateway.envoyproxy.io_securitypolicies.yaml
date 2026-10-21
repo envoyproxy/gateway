@@ -903,7 +903,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -1953,7 +1953,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -2480,7 +2480,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -3530,7 +3530,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -4372,7 +4372,7 @@ spec:
                                 BackendRef references a Kubernetes object that represents the
                                 backend server to which the authorization request will be sent.
 
-                                Deprecated: Use BackendRefs instead.
+                                Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                               properties:
                                 group:
                                   default: ""
@@ -5444,7 +5444,7 @@ spec:
                                           description: |-
                                             Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                            Deprecated: use Headers instead
+                                            Deprecated: use Headers instead. This field will be removed in v1.11.
                                           properties:
                                             name:
                                               description: Name of the header to hash.
@@ -6438,7 +6438,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -7488,7 +7488,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -8058,7 +8058,7 @@ spec:
                   This policy and the TargetRef MUST be in the same namespace for this
                   Policy to have effect
 
-                  Deprecated: use targetRefs/targetSelectors instead
+                  Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
                 properties:
                   group:
                     description: Group is the group of the target resource.
