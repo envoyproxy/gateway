@@ -9,7 +9,7 @@ require (
 	fortio.org/log v1.18.3
 	github.com/andybalholm/brotli v1.2.3
 	github.com/envoyproxy/gateway v0.0.0-00010101000000-000000000000
-	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260927022543-fc8912c55e30
+	github.com/envoyproxy/go-control-plane/envoy v1.40.0
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
