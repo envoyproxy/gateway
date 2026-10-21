@@ -1,0 +1,71 @@
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10432
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - primary.example.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tlsroute/team-a/primary
+        statPrefix: tls-terminate-10432
+    name: tlsroute/team-a/primary
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: team-a/db/tls/db-cert
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  - filterChainMatch:
+      serverNames:
+      - replica.example.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tlsroute/team-a/replica
+        statPrefix: tls-terminate-10432
+    name: tlsroute/team-a/replica
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: team-a/db/tls/db-cert
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: team-a/db/tls
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10900
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: EmptyCluster
+        statPrefix: tcp-10900
+    name: team-a/db/tcp/no-routes
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: team-a/db/tcp
+  perConnectionBufferLimitBytes: 32768

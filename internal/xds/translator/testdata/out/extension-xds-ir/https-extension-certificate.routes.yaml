@@ -1,0 +1,66 @@
+- ignorePortInHostMatching: true
+  name: team-a/web/https
+  virtualHosts:
+  - domains:
+    - app.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: web
+            namespace: team-a
+            sectionName: https
+    name: team-a/web/https/app_example_com
+    routes:
+    - match:
+        prefix: /
+      name: app-route
+      route:
+        cluster: app-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: team-a/web/mixed
+  virtualHosts:
+  - domains:
+    - mixed.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: web
+            namespace: team-a
+            sectionName: mixed
+    name: team-a/web/mixed/mixed_example_com
+    routes:
+    - match:
+        prefix: /
+      name: mixed-route
+      route:
+        cluster: mixed-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: team-a/web/shared-ok
+  virtualHosts:
+  - domains:
+    - ok.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: web
+            namespace: team-a
+            sectionName: shared-ok
+    name: team-a/web/shared-ok/ok_example_com
+    routes:
+    - match:
+        prefix: /
+      name: ok-route
+      route:
+        cluster: ok-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

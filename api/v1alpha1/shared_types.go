@@ -425,7 +425,7 @@ const (
 // XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
 // for the xds-translator
 //
-// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster;Endpoints
+// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster;Endpoints;Secret
 type XDSTranslatorHook string
 
 const (
@@ -435,6 +435,7 @@ const (
 	XDSCluster      XDSTranslatorHook = "Cluster"
 	XDSEndpoints    XDSTranslatorHook = "Endpoints"
 	XDSTranslation  XDSTranslatorHook = "Translation"
+	XDSSecret       XDSTranslatorHook = "Secret"
 )
 
 // StringMatch defines how to match any strings.

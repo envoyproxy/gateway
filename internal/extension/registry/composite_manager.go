@@ -25,6 +25,7 @@ type namedManager struct {
 	manager         extTypes.Manager
 	resourceGKSet   sets.Set[schema.GroupKind] // Resources + BackendResources GKs
 	policyGKSet     sets.Set[schema.GroupKind] // PolicyResources GKs
+	secretGKSet     sets.Set[schema.GroupKind] // SecretResources GKs
 	cleanupHookConn func()
 }
 
@@ -156,6 +157,7 @@ func (c *CompositeManager) collectHookClients(
 				failOpen:      nm.manager.FailOpen(),
 				resourceGKSet: nm.resourceGKSet,
 				policyGKSet:   nm.policyGKSet,
+				secretGKSet:   nm.secretGKSet,
 			}
 			if includeTranslationConfig {
 				entry.translationConfig = nm.manager.GetTranslationHookConfig()
