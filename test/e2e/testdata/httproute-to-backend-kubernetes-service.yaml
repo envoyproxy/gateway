@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: infra-backend-v1-kubernetes-service
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: infra-backend-v1
+  ports:
+  - protocol: TCP
+    port: 8080
+    name: http11
+    targetPort: 3000
+  - protocol: TCP
+    port: 8081
+    name: http2
+    targetPort: 3001
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-to-backend-kubernetes-service
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /backend-kubernetes-service
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-kubernetes-service
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-kubernetes-service
+  namespace: gateway-conformance-infra
+spec:
+  type: KubernetesService
+  kubernetesService:
+    name: infra-backend-v1-kubernetes-service
+    port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-to-backend-kubernetes-service-http2
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /backend-kubernetes-service-http2
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-kubernetes-service-http2
+---
+# The Service port has no appProtocol, so h2c here comes from the Backend appProtocols.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-kubernetes-service-http2
+  namespace: gateway-conformance-infra
+spec:
+  type: KubernetesService
+  kubernetesService:
+    name: infra-backend-v1-kubernetes-service
+    port: 8081
+  appProtocols:
+  - gateway.envoyproxy.io/h2c

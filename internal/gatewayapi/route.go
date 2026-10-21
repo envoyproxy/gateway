@@ -2923,7 +2923,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol)
+		ds, err = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
+		if err != nil {
+			return emptyDS, nil, err
+		}
 	default:
 		// Handle custom backend resources defined in extension manager
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
@@ -3493,30 +3496,58 @@ func (t *Translator) processBackendDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	defaultProtocol ir.AppProtocol,
-) *ir.DestinationSetting {
-	var dstAddrType *ir.DestinationAddressType
-	protocol := defaultProtocol
-	forceHTTP1Upstream := false
-
-	addrTypeMap := make(map[ir.DestinationAddressType]int)
+	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
+) (*ir.DestinationSetting, status.Error) {
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
-	for _, ap := range backend.Spec.AppProtocols {
-		protocol = resolveBackendProtocol(string(ap), protocol)
-		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
-		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
-	}
+	protocol, forceHTTP1Upstream := resolveBackendAppProtocols(backend, defaultProtocol)
 
-	ds := &ir.DestinationSetting{Name: name}
+	var ds *ir.DestinationSetting
+	if isKubernetesServiceBackend(backend) {
+		// The endpoints come from the Service, the same way a Service backendRef gets them.
+		svcDS, err := t.processServiceDestinationSetting(name, kubernetesServiceBackendRef(backend), backend.Namespace,
+			defaultProtocol, envoyProxy, btpRoutingType)
+		if err != nil {
+			return nil, err
+		}
+		ds = svcDS
+		ds.IPFamily = getServiceIPFamily(t.GetService(backend.Namespace, string(backend.Spec.KubernetesService.Name)))
+		// The Backend appProtocols take precedence over the appProtocol of the Service port.
+		if len(backend.Spec.AppProtocols) > 0 {
+			ds.Protocol = protocol
+			ds.ForceHTTP1Upstream = forceHTTP1Upstream
+		}
+	} else {
+		ds = &ir.DestinationSetting{Name: name}
 
-	// There is only one backend if it is a dynamic resolver
-	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
-		ds.IsDynamicResolver = true
+		// There is only one backend if it is a dynamic resolver
+		if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+			ds.IsDynamicResolver = true
+			ds.Protocol = protocol
+			ds.ForceHTTP1Upstream = forceHTTP1Upstream
+			return ds, nil
+		}
+
+		ds.Endpoints, ds.AddressType = backendEndpoints(backend)
 		ds.Protocol = protocol
 		ds.ForceHTTP1Upstream = forceHTTP1Upstream
-		return ds
 	}
 
+	if ptr.Deref(backend.Spec.Fallback, false) {
+		// set only the secondary priority, the backend defaults to a primary priority if unset.
+		ds.Priority = new(uint32(1))
+	}
+
+	ds.Metadata = buildResourceMetadata(backend, nil)
+
+	return ds, nil
+}
+
+// backendEndpoints converts the endpoints of a Backend that lists them into IR endpoints,
+// and returns the address type shared by all of them, or MIXED or STATIC when they differ.
+func backendEndpoints(backend *egv1a1.Backend) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
+	var dstAddrType *ir.DestinationAddressType
+	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	dstEndpoints := make([]*ir.DestinationEndpoint, 0, len(backend.Spec.Endpoints))
 
 	for _, bep := range backend.Spec.Endpoints {
@@ -3560,21 +3591,21 @@ func (t *Translator) processBackendDestinationSetting(
 		}
 	}
 
-	ds.Endpoints = dstEndpoints
-	ds.AddressType = dstAddrType
-	ds.Protocol = protocol
-	ds.ForceHTTP1Upstream = forceHTTP1Upstream
+	return dstEndpoints, dstAddrType
+}
 
-	if backend.Spec.Fallback != nil {
-		// set only the secondary priority, the backend defaults to a primary priority if unset.
-		if ptr.Deref(backend.Spec.Fallback, false) {
-			ds.Priority = new(uint32(1))
-		}
+// resolveBackendAppProtocols returns the upstream protocol and whether to force HTTP/1.1
+// from the appProtocols of a Backend, starting from the route's default protocol.
+func resolveBackendAppProtocols(backend *egv1a1.Backend, defaultProtocol ir.AppProtocol) (ir.AppProtocol, bool) {
+	protocol := defaultProtocol
+	forceHTTP1Upstream := false
+	for _, ap := range backend.Spec.AppProtocols {
+		protocol = resolveBackendProtocol(string(ap), protocol)
+		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
 	}
-
-	ds.Metadata = buildResourceMetadata(backend, nil)
-
-	return ds
+	return protocol, forceHTTP1Upstream
 }
 
 // resolveBackendProtocol computes the upstream ir.AppProtocol for a backend from the
