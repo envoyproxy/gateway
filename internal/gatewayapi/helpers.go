@@ -462,11 +462,11 @@ func irStringKey(gatewayNs, gatewayName string) string {
 // The listener name format can be:
 // - Gateway: "namespace/gateway/listener"
 // - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
-// Returns "namespace/gateway" in both cases.
+// Returns "namespace/gateway/" in both cases.
 func extractGatewayNameFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
 	if len(parts) >= 2 {
-		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+		return fmt.Sprintf("%s/%s/", parts[0], parts[1])
 	}
 	// should never happen
 	return listenerName
@@ -770,6 +770,31 @@ type policyTargetRouteKey struct {
 	Name      string
 }
 
+// backendPolicyKey identifies a backend-targeted BackendTrafficPolicy's target, for conflict
+// detection.
+type backendPolicyKey struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+func backendPolicyKeyFromTarget(target policyTargetReferenceWithSectionName) backendPolicyKey {
+	return backendPolicyKey{
+		Kind:      string(target.Kind),
+		Namespace: string(target.Namespace),
+		Name:      string(target.Name),
+	}
+}
+
+// backendPolicyKeyFromMetadata builds the same key from a BackendCluster's Metadata, so it can be
+// matched against the map backendPolicyKeyFromTarget populates. Returns the zero key for nil.
+func backendPolicyKeyFromMetadata(md *ir.ResourceMetadata) backendPolicyKey {
+	if md == nil {
+		return backendPolicyKey{}
+	}
+	return backendPolicyKey{Kind: md.Kind, Namespace: md.Namespace, Name: md.Name}
+}
+
 type policyRouteTargetContext struct {
 	RouteContext
 	attached             bool
@@ -996,6 +1021,11 @@ func (g policyScopeGraph) GetWithDescendants(parent policyScope) sets.Set[policy
 	return result
 }
 
+// maxNamesListed bounds the names a condition message lists per kind. A policy over a large
+// fleet would otherwise push the message past the condition size limit, where truncation
+// cuts the tail; the first names are enough to point at what to fix.
+const maxNamesListed = 20
+
 // formatPolicyScopes builds a status message describing a set of scopes,
 // grouping entries by kind.
 //
@@ -1034,10 +1064,19 @@ func formatPolicyScopes(scopes sets.Set[policyScope]) string {
 	parts := make([]string, 0, len(order))
 	for _, o := range order {
 		if list, ok := byKind[o.Kind]; ok {
-			parts = append(parts, fmt.Sprintf("%s: %v", o.Label, list))
+			parts = append(parts, fmt.Sprintf("%s: %s", o.Label, formatNameList(list)))
 		}
 	}
 	return strings.Join(parts, " and ")
+}
+
+// formatNameList renders a sorted name list the way formatPolicyScopes always has, as
+// "[a b c]", keeping the first maxNamesListed names and counting the rest.
+func formatNameList(names []string) string {
+	if len(names) <= maxNamesListed {
+		return fmt.Sprintf("%v", names)
+	}
+	return fmt.Sprintf("%v and %d more", names[:maxNamesListed], len(names)-maxNamesListed)
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
@@ -1140,6 +1179,17 @@ func isGateway(target policyTargetReferenceWithSectionName) bool {
 func isListener(target policyTargetReferenceWithSectionName) bool {
 	// If the target is a gateway and the section name is not nil, then it's a listener.
 	return target.Kind == resource.KindGateway && target.SectionName != nil
+}
+
+// isBackendTargetKind reports whether target's kind is Service, ServiceImport, or Backend -
+// i.e. the target is a backend, not a Gateway/ListenerSet/xRoute.
+func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {
+	switch target.Kind {
+	case gwapiv1.Kind(resource.KindService), gwapiv1.Kind(resource.KindServiceImport), gwapiv1.Kind(resource.KindBackend):
+		return true
+	default:
+		return false
+	}
 }
 
 func isListenerSet(target policyTargetReferenceWithSectionName) bool {

@@ -199,6 +199,12 @@ type Xds struct {
 	//
 	// +optional
 	ExtensionResources []*UnstructuredRef `json:"extensionResources,omitempty" yaml:"extensionResources,omitempty"`
+
+	// CACertificates holds upstream CA bundles deduplicated by content, so policies trusting
+	// the same CA share one entry whichever Secret or ConfigMap they read it from.
+	//
+	// +optional
+	CACertificates []*CACertificateEntry `json:"caCertificates,omitempty" yaml:"caCertificates,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -619,10 +625,24 @@ type TLSCrl struct {
 type TLSCACertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
-	// Certificate content.
+	// Digest names the Xds.CACertificates entry holding this reference's bytes. Empty when
+	// Certificate is carried inline instead, which happens where no gateway IR is in scope
+	// to register against.
+	Digest string `json:"digest,omitempty" yaml:"digest,omitempty"`
+	// Certificate content. Empty when the bytes live in Xds.CACertificates under Digest.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
+}
+
+// CACertificateEntry is one CA bundle in Xds.CACertificates, shared by every
+// TLSCACertificate whose Digest matches.
+// +k8s:deepcopy-gen=true
+type CACertificateEntry struct {
+	// Digest content-addresses Certificate, and is what references join on.
+	Digest string `json:"digest" yaml:"digest"`
+	// Certificate content.
+	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate
@@ -822,6 +842,13 @@ type HTTP2KeepaliveSettings struct {
 	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
 }
 
+// BackendHTTP3Settings provides HTTP/3 configuration for clusters.
+// +k8s:deepcopy-gen=true
+type BackendHTTP3Settings struct {
+	// Mode determines when HTTP/3 is used to reach the backend: "Auto" or "Always".
+	Mode string `json:"mode" yaml:"mode"`
+}
+
 // GRPCSettings provides gRPC configuration on the listener.
 // +k8s:deepcopy-gen=true
 type GRPCSettings struct {
@@ -953,6 +980,11 @@ type HeaderSettings struct {
 	// The default is to emit these headers.
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimit
 	DisableRateLimitHeaders bool `json:"disableRateLimitHeaders,omitempty" yaml:"disableRateLimitHeaders,omitempty"`
+
+	// DisableRetryAfterHeader controls if a "Retry-After" header is added to rate-limited 429 responses.
+	// The default is to emit this header.
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#extensions-filters-http-ratelimit-v3-ratelimit
+	DisableRetryAfterHeader bool `json:"disableRetryAfterHeader,omitempty" yaml:"disableRetryAfterHeader,omitempty"`
 
 	// Configure Envoy proxy how to handle the x-forwarded-client-cert (XFCC) HTTP header.
 	// refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails
@@ -1176,6 +1208,15 @@ type Compression struct {
 	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 	// MinContentLength defines the minimum response size in bytes to apply compression.
 	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
+	// Gzip holds the custom settings for the Gzip compressor library.
+	// It is only set when Type is Gzip and at least one setting is specified.
+	Gzip *egv1a1.GzipCompressor `json:"gzip,omitempty" yaml:"gzip,omitempty"`
+	// Brotli holds the custom settings for the Brotli compressor library.
+	// It is only set when Type is Brotli and at least one setting is specified.
+	Brotli *egv1a1.BrotliCompressor `json:"brotli,omitempty" yaml:"brotli,omitempty"`
+	// Zstd holds the custom settings for the Zstd compressor library.
+	// It is only set when Type is Zstd and at least one setting is specified.
+	Zstd *egv1a1.ZstdCompressor `json:"zstd,omitempty" yaml:"zstd,omitempty"`
 }
 
 // ClusterTrafficFeatures holds the TrafficFeatures fields that translate to Envoy cluster (CDS)
@@ -1204,6 +1245,9 @@ type ClusterTrafficFeatures struct {
 	// HTTP2 provides HTTP/2 configuration for clusters
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty" yaml:"http2,omitempty"`
+	// HTTP3 provides HTTP/3 configuration for clusters
+	// +optional
+	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty" yaml:"http3,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
@@ -1528,6 +1572,10 @@ type OIDC struct {
 
 	// The path to log a user out, clearing their credential cookies.
 	LogoutPath string `json:"logoutPath,omitempty"`
+
+	// PostLogoutRedirect configures the `post_logout_redirect_uri` parameter sent to the OIDC
+	// Provider's end session endpoint. If nil, Envoy's default is used.
+	PostLogoutRedirect *egv1a1.OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty"`
 
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
@@ -2240,6 +2288,105 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
 }
 
+// AllSettingsHaveTLS returns true if every destination setting is configured with TLS.
+// HTTP/3 to the backend requires it, because QUIC always runs over TLS.
+func AllSettingsHaveTLS(settings []*DestinationSetting) bool {
+	if len(settings) == 0 {
+		return false
+	}
+	for _, s := range settings {
+		if s == nil || s.TLS == nil {
+			return false
+		}
+	}
+	return true
+}
+
+// HTTP3Incompatibilities reports why HTTP/3 cannot be used to reach the given backends,
+// or nothing when it can. QUIC always runs over TLS and replaces the cluster's TCP
+// transport socket, so it is incompatible with plaintext or TCP backends and with
+// settings that assume a TCP stream. An unresolvable backendRef gets a cluster of its
+// own with nothing to wrap in QUIC, so it is incompatible too until it resolves.
+//
+// These incompatibilities can’t be caught by CRD validation. In such cases, the BTP
+// drops HTTP/3 and reports a warning in the policy status, and the xds translator can
+// trust that a route or cluster carrying HTTP3 is able to use it.
+func HTTP3Incompatibilities(settings []*DestinationSetting, useClientProtocol, proxyProtocol bool) []string {
+	var reasons []string
+	valid := validSettings(settings)
+	if len(valid) < len(settings) {
+		// An unresolvable backendRef gets its own cluster with no TLS.
+		reasons = append(reasons, "backendRefs that cannot be resolved cannot be used together with http3")
+	}
+	settings = valid
+	if len(settings) == 0 {
+		return reasons
+	}
+	if !AllSettingsHaveTLS(settings) {
+		reasons = append(reasons, "HTTP/3 requires TLS to the backend, "+
+			"configured with a BackendTLSPolicy or the Backend's spec.tls")
+	}
+	if useClientProtocol {
+		// TODO: allow it with an unset mode, forwarding HTTP/3 clients over HTTP/3 through
+		// use_downstream_protocol_config, see https://github.com/envoyproxy/gateway/issues/10250.
+		reasons = append(reasons, "useClientProtocol cannot be used together with http3")
+	}
+	if proxyProtocol {
+		reasons = append(reasons, "proxyProtocol cannot be used together with http3, it has no QUIC equivalent")
+	}
+	forceHTTP1, http2OrGRPC, tcp, skipVerify := false, false, false, false
+	for _, s := range settings {
+		if s == nil {
+			continue
+		}
+		forceHTTP1 = forceHTTP1 || s.ForceHTTP1Upstream
+		http2OrGRPC = http2OrGRPC || s.Protocol == HTTP2 || s.Protocol == GRPC
+		tcp = tcp || s.Protocol == TCP
+		skipVerify = skipVerify || (s.TLS != nil && s.TLS.InsecureSkipVerify)
+	}
+	// TODO: lift this once https://github.com/envoyproxy/envoy/issues/48215 is fixed, by
+	// marking the QUIC-wrapped context ACCEPT_UNTRUSTED for insecureSkipVerify. Envoy's QUIC
+	// client checks the leaf certificate against the SNI even when the context skips
+	// verification, and ACCEPT_UNTRUSTED is ignored on the synchronous validation path the
+	// default validator takes, so until then HTTP/3 is limited to verified backends.
+	if skipVerify {
+		reasons = append(reasons, "insecureSkipVerify cannot be used together with http3, "+
+			"configure the backend's CA certificate instead")
+	}
+	if forceHTTP1 {
+		reasons = append(reasons, "backends requiring HTTP/1.1 upstream cannot be used together with http3")
+	}
+	if http2OrGRPC {
+		reasons = append(reasons, "backends with an HTTP/2 or gRPC appProtocol cannot be used together with http3")
+	}
+	if tcp {
+		reasons = append(reasons, "TCP backends cannot be used together with http3")
+	}
+	return reasons
+}
+
+// HTTP3IgnoresALPN reports whether a cluster given QUIC drops a configured ALPN list.
+// Only h3 is supported over QUIC, so any configured ALPN list is ignored.
+func HTTP3IgnoresALPN(settings []*DestinationSetting) bool {
+	for _, s := range validSettings(settings) {
+		if s.TLS != nil && len(s.TLS.ALPNProtocols) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// validSettings drops invalid settings.
+func validSettings(settings []*DestinationSetting) []*DestinationSetting {
+	out := make([]*DestinationSetting, 0, len(settings))
+	for _, s := range settings {
+		if s != nil && !s.Invalid {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	w := &BackendWeights{}
 	for _, s := range r.Settings {
@@ -2876,6 +3023,8 @@ type UDPRoute struct {
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Authorization defines the schema for the authorization.
+	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -3345,9 +3494,10 @@ type Tracing struct {
 // Metrics defines the configuration for metrics generated by Envoy
 // +k8s:deepcopy-gen=true
 type Metrics struct {
-	EnableVirtualHostStats          bool `json:"enableVirtualHostStats" yaml:"enableVirtualHostStats"`
-	EnablePerEndpointStats          bool `json:"enablePerEndpointStats" yaml:"enablePerEndpointStats"`
-	EnableRequestResponseSizesStats bool `json:"enableRequestResponseSizesStats" yaml:"enableRequestResponseSizesStats"`
+	EnableVirtualHostStats             bool `json:"enableVirtualHostStats" yaml:"enableVirtualHostStats"`
+	EnablePerEndpointStats             bool `json:"enablePerEndpointStats" yaml:"enablePerEndpointStats"`
+	EnableRequestResponseSizesStats    bool `json:"enableRequestResponseSizesStats" yaml:"enableRequestResponseSizesStats"`
+	EnableCircuitBreakerRemainingStats bool `json:"enableCircuitBreakerRemainingStats" yaml:"enableCircuitBreakerRemainingStats"`
 }
 
 // TCPKeepalive define the TCP Keepalive configuration.
@@ -4180,11 +4330,14 @@ type Wasm struct {
 	// during the initialization or the execution of the Wasm extension.
 	FailOpen bool `json:"failOpen"`
 
-	// Code is the HTTP Wasm code source.
-	// Envoy only supports HTTP Wasm code source. EG downloads the Wasm code from the
-	// original URL(either an HTTP URL or an OCI image) and serves it through the
-	// local HTTP server.
+	// Code is the HTTP Wasm code source when the module is served by the EG HTTP
+	// server (HTTP/Image sources downloaded by the control plane).
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
+
+	// Path is the absolute filesystem path to the Wasm module on the Envoy proxy
+	// when policy code is omitted and name matches EnvoyProxy.spec.wasmModules.
+	// Mutually exclusive with Code.
+	Path string `json:"path,omitempty"`
 
 	// HostKeys is a list of keys for environment variables from the host envoy process
 	// that should be passed into the Wasm VM.

@@ -515,9 +515,13 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// then run it once to keep the flow linear and easier to read.
 	validator := validateSecurityPolicy
 	errMsg := "invalid SecurityPolicy"
-	if currTarget.Kind == resource.KindTCPRoute {
-		validator = validateSecurityPolicyForTCP
+	switch currTarget.Kind {
+	case resource.KindTCPRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "TCP") }
 		errMsg = "invalid SecurityPolicy for TCP route"
+	case resource.KindUDPRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "UDP") }
+		errMsg = "invalid SecurityPolicy for UDP route"
 	}
 	if err := validator(policy); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -962,6 +966,17 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
+	// CEL covers these on Kubernetes, but not for the file provider. A JSONMerge route can still
+	// combine a parent's uri with its own disabled: true, since JSONMerge merges keys one by one.
+	if oidc != nil && oidc.PostLogoutRedirect != nil {
+		switch plr := oidc.PostLogoutRedirect; {
+		case plr.URI != nil && ptr.Deref(plr.Disabled, false):
+			return errors.New("OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+		case plr.URI == nil && plr.Disabled == nil:
+			return errors.New("one of OIDC.PostLogoutRedirect.uri or OIDC.PostLogoutRedirect.disabled must be set")
+		}
+	}
+
 	basicAuth := p.Spec.BasicAuth
 	if basicAuth != nil {
 		if err := validateBasicAuth(basicAuth); err != nil {
@@ -971,16 +986,19 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
+// validateSecurityPolicyForL4 ensures SecurityPolicy usage on an L4 protocol
+// (TCP or UDP) is compatible. proto names the protocol in the returned errors.
 //
-// TCP supports Authorization with ClientCIDRs ONLY.
+// L4 supports Authorization with ClientCIDRs ONLY, because there is no HTTP
+// request to inspect:
 // - Principals.JWT      => invalid (HTTP-only)
 // - Principals.Headers  => invalid (HTTP-only)
-// - Empty/no Authorization is allowed and results in no-op on TCP.
+// - Operation           => invalid (HTTP methods/paths)
+// - Empty/no Authorization is allowed and results in no-op on L4.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
-func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
+func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
 	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
-		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
+		return fmt.Errorf("only authorization is supported for %s (routes/listeners)", proto)
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
@@ -988,19 +1006,25 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	for i := range p.Spec.Authorization.Rules {
 		rule := &p.Spec.Authorization.Rules[i]
 		if rule.CEL != nil {
-			return fmt.Errorf("rule %d: CEL not supported for TCP", i)
+			return fmt.Errorf("rule %d: CEL not supported for %s", i, proto)
+		}
+		// Methods and paths are HTTP concepts. The L4 matcher only looks at the
+		// client CIDRs, so accepting an operation here would silently widen the
+		// rule to every datagram or connection from those CIDRs.
+		if rule.Operation != nil {
+			return fmt.Errorf("rule %d: operation not supported for %s", i, proto)
 		}
 		if rule.Principal == nil {
 			continue
 		}
 		if rule.Principal.JWT != nil {
-			return fmt.Errorf("rule %d: JWT not supported for TCP", i)
+			return fmt.Errorf("rule %d: JWT not supported for %s", i, proto)
 		}
 		if len(rule.Principal.Headers) > 0 {
-			return fmt.Errorf("rule %d: headers not supported for TCP", i)
+			return fmt.Errorf("rule %d: headers not supported for %s", i, proto)
 		}
 		if len(rule.Principal.ClientIPGeoLocations) > 0 {
-			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP", i)
+			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for %s", i, proto)
 		}
 		if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
 			return fmt.Errorf("rule %d: %w", i, err)
@@ -1009,7 +1033,7 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateCIDRs validates CIDR strings for TCP authorization rules.
+// validateCIDRs validates CIDR strings for L4 authorization rules.
 func validateCIDRs(cidrs []egv1a1.CIDR) error {
 	for _, c := range cidrs {
 		if _, _, err := net.ParseCIDR(string(c)); err != nil {
@@ -1249,7 +1273,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			err = perr.WithMessage(err, "CORS")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	var csrf *ir.CSRF
@@ -1392,6 +1419,14 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				for _, r := range tl.Routes {
+					// Only the IR route built from the targeted TCPRoute may be
+					// modified. Several TCPRoutes can name the same listener while
+					// only one of them is attached, so without this check a policy
+					// targeting an unattached route would silently apply to
+					// whichever route is actually serving traffic.
+					if r.Name != irTCPRouteName(route) {
+						continue
+					}
 					// If target.SectionName is specified it must match the route-rule section name
 					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
 					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
@@ -1407,6 +1442,35 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						authCopy := *authorization
 						r.Authorization = &authCopy
 					}
+				}
+			}
+		case resource.KindUDPRoute:
+			for _, listener := range parentRefCtx.listeners {
+				// If targetListener is set, only apply to that exact listener.
+				if targetListener != nil && targetListenerName != irListenerName(listener) {
+					continue
+				}
+				ul := xdsIR[irKey].GetUDPListener(irListenerName(listener))
+				// A UDP listener holds at most one route: when several UDPRoutes name the
+				// same listener only the oldest one is attached, so a policy targeting any
+				// of the others has nothing to apply to. Comparing the names keeps such a
+				// policy from restricting the route that is actually serving traffic.
+				if ul == nil || ul.Route == nil || ul.Route.Name != irUDPRouteName(route) {
+					continue
+				}
+				r := ul.Route
+				// As with TCP, the route-rule section name lives on the destination metadata.
+				if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+					continue
+				}
+
+				if r.Authorization != nil {
+					continue
+				}
+				// Only authorization for UDP
+				if authorization != nil {
+					authCopy := *authorization
+					r.Authorization = &authCopy
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
@@ -1541,7 +1605,10 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			err = perr.WithMessage(err, "CORS")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	var csrf *ir.CSRF
@@ -1701,15 +1768,15 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		)
 	}
 
-	// Pre-create a TCP-only authorization object to avoid re-allocation
-	var tcpAuthorization *ir.Authorization
+	// Pre-create an L4-only authorization object to avoid re-allocation
+	var l4Authorization *ir.Authorization
 	if authorization != nil {
 		authCopy := *authorization
-		tcpAuthorization = &authCopy
+		l4Authorization = &authCopy
 	}
 
 	// Apply to TCP listeners (Authorization only).
-	if tcpAuthorization != nil {
+	if l4Authorization != nil {
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
@@ -1724,15 +1791,34 @@ func (t *Translator) translateSecurityPolicyForListeners(
 				if r.Authorization != nil {
 					continue
 				}
-				r.Authorization = tcpAuthorization
+				r.Authorization = l4Authorization
 			}
+		}
+	}
+
+	// Apply to UDP listeners (Authorization only).
+	if l4Authorization != nil {
+		for _, ul := range x.UDP {
+			// A UDP listener holds at most one route.
+			if ul == nil || ul.Route == nil {
+				continue
+			}
+			if !listenerNames.Has(ul.Name) {
+				continue
+			}
+			// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
+			// targeting a lesser specific scope(Gateway).
+			if ul.Route.Authorization != nil {
+				continue
+			}
+			ul.Route.Authorization = l4Authorization
 		}
 	}
 
 	return errs
 }
 
-func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
+func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
@@ -1746,6 +1832,26 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 				Exact: (*string)(&origin),
 			})
 		}
+	}
+
+	for _, originRegex := range cors.AllowOriginRegexes {
+		regexStr := string(originRegex)
+		// Validate the pattern before it is anchored below, since anchoring an unbalanced pattern
+		// such as ")(" would make it valid.
+		if err := regex.Validate(regexStr); err != nil {
+			return nil, err
+		}
+		// Envoy's CORS filter tries each origin matcher against the literal "*" before the request
+		// origin, so a regex that fully matches "*" allows all origins.
+		// https://github.com/envoyproxy/envoy/blob/b579d07d3ad7ee11d32b105e91a5a39ad24718d7/source/extensions/filters/http/cors/cors_filter.cc#L208-L215
+		anchored, err := regexp.Compile("^(?:" + regexStr + ")$")
+		if err != nil {
+			return nil, err
+		}
+		if anchored.MatchString("*") {
+			return nil, fmt.Errorf(`origin regular expression %q must not match "*", use allowOrigins with value "*" to allow all origins`, regexStr)
+		}
+		allowOrigins = append(allowOrigins, &ir.StringMatch{SafeRegex: &regexStr})
 	}
 
 	irCORS := &ir.CORS{
@@ -1762,7 +1868,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
-	return irCORS
+	return irCORS, nil
 }
 
 func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
@@ -1984,7 +2090,7 @@ func (t *Translator) buildRemoteJWKS(
 	}
 
 	if remoteJWKS.BackendSettings != nil {
-		if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
+		if traffic, err = translateExtServiceBackendSettings(remoteJWKS.BackendSettings); err != nil {
 			return nil, err
 		}
 	}
@@ -2131,6 +2237,11 @@ func (t *Translator) buildOIDC(
 	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
 	}
+	if oidc.PostLogoutRedirect != nil && oidc.PostLogoutRedirect.URI != nil {
+		if err := validatePostLogoutRedirectURI(*oidc.PostLogoutRedirect.URI); err != nil {
+			return nil, err
+		}
+	}
 	if oidc.ForwardAccessToken != nil {
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
@@ -2185,6 +2296,7 @@ func (t *Translator) buildOIDC(
 		RedirectURL:            redirectURL,
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
+		PostLogoutRedirect:     oidc.PostLogoutRedirect,
 		ForwardAccessToken:     forwardAccessToken,
 		ForwardIDTokenHeader:   forwardIDTokenHeader,
 		RefreshToken:           refreshToken,
@@ -2340,7 +2452,7 @@ func (t *Translator) buildOIDCProvider(
 		return nil, err
 	}
 
-	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(provider.BackendSettings); err != nil {
 		return nil, err
 	}
 
@@ -2371,6 +2483,98 @@ func extractRedirectPath(redirectURL string) (string, error) {
 		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
 	}
 	return path, nil
+}
+
+// validatePostLogoutRedirectURI sanity-checks the post logout redirect URI. Envoy evaluates the
+// URI as a formatter string, so it may contain command operators and can't be parsed as a URL.
+// This mirrors the scheme check in extractRedirectPath, but additionally accepts a request header
+// command operator as the scheme, e.g. "%REQ(x-scheme)%://host/".
+func validatePostLogoutRedirectURI(uri string) error {
+	schemeDelimiter := strings.Index(uri, "://")
+	if schemeDelimiter <= 0 {
+		return fmt.Errorf("invalid post logout redirect URI %s: must be an absolute URI", uri)
+	}
+
+	// URI schemes are case-insensitive, see RFC 3986 section 3.1.
+	switch scheme := uri[:schemeDelimiter]; {
+	case strings.EqualFold(scheme, "http"), strings.EqualFold(scheme, "https"):
+	case isReqCommandOperator(scheme):
+		// The scheme is derived from a request header, e.g. x-forwarded-proto.
+	default:
+		return fmt.Errorf("invalid post logout redirect URI %s: scheme must be http, https, or a %%REQ(header)%% command operator", uri)
+	}
+
+	// Unlike extractRedirectPath, a path is not required: the host root is a valid landing page.
+	// The authority is, since the provider would otherwise have nowhere to redirect to.
+	authority := uri[schemeDelimiter+len("://"):]
+	if end := strings.IndexAny(authority, "/?#"); end >= 0 {
+		authority = authority[:end]
+	}
+	if authority == "" {
+		return fmt.Errorf("invalid post logout redirect URI %s: must have a host", uri)
+	}
+
+	if err := validateURICommandOperators(uri); err != nil {
+		return fmt.Errorf("invalid post logout redirect URI %s: %w", uri, err)
+	}
+	return nil
+}
+
+// validateURICommandOperators accepts only the %REQ(header)% command operator and "%%" escapes.
+// Envoy rejects the whole configuration on an unknown or malformed operator, so catching it here
+// reports the mistake on the SecurityPolicy status instead of NACKing the xDS update.
+func validateURICommandOperators(uri string) error {
+	for i := 0; i < len(uri); {
+		if uri[i] != '%' {
+			i++
+			continue
+		}
+		// "%%" is an escaped literal percent, not the start of a command operator.
+		if i+1 < len(uri) && uri[i+1] == '%' {
+			i += 2
+			continue
+		}
+		closing := strings.IndexByte(uri[i+1:], '%')
+		if closing < 0 {
+			return errors.New(`unterminated command operator, write a literal percent as "%%"`)
+		}
+		end := i + 1 + closing + 1
+		if operator := uri[i:end]; !isReqCommandOperator(operator) {
+			return fmt.Errorf("unsupported command operator %s, only %%REQ(header)%% is supported", operator)
+		}
+		i = end
+	}
+	return nil
+}
+
+// isReqCommandOperator reports whether s is an Envoy request header command operator, i.e.
+// "%REQ(header)%" or "%REQ(header):maxLength%".
+func isReqCommandOperator(s string) bool {
+	body, ok := strings.CutPrefix(s, "%REQ(")
+	if !ok {
+		return false
+	}
+	if body, ok = strings.CutSuffix(body, "%"); !ok {
+		return false
+	}
+
+	header, maxLength, closed := strings.Cut(body, ")")
+	if !closed || header == "" || strings.ContainsAny(header, "%()") {
+		return false
+	}
+	if maxLength == "" {
+		return true
+	}
+	// An optional ":maxLength" truncates the header value, e.g. "%REQ(x-tenant):32%".
+	if maxLength, ok = strings.CutPrefix(maxLength, ":"); !ok || maxLength == "" {
+		return false
+	}
+	for _, c := range maxLength {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // appendOpenidScopeIfNotExist appends the openid scope to the provided scopes
@@ -2878,7 +3082,7 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(backendSettings); err != nil {
 		return nil, err
 	}
 
@@ -3048,7 +3252,17 @@ func (t *Translator) buildAuthorization(
 		irAuth        = &ir.Authorization{}
 		// The default action is Deny if not specified
 		defaultAction = egv1a1.AuthorizationActionDeny
+		// The JWT providers this policy resolves a rule's JWT principal against. For a
+		// merging policy this is the merged set, so a rule may reference a provider that
+		// only the parent policy defines.
+		jwtProviders = sets.New[string]()
 	)
+
+	if policy.Spec.JWT != nil {
+		for _, provider := range policy.Spec.JWT.Providers {
+			jwtProviders.Insert(provider.Name)
+		}
+	}
 
 	ownerPolicy := policyOwnerOr(owners.authorizationRules, policy)
 
@@ -3069,6 +3283,13 @@ func (t *Translator) buildAuthorization(
 				}
 
 				irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
+			}
+
+			// The JWT provider name is the key the JWT authn filter writes its payload
+			// under, so a rule naming a provider that is not configured can never match.
+			// Reject it here instead of silently never matching the rule.
+			if rule.Principal.JWT != nil && !jwtProviders.Has(rule.Principal.JWT.Provider) {
+				return nil, fmt.Errorf("unable to translate authorization rule: jwt provider %q is not defined in jwt.providers", rule.Principal.JWT.Provider)
 			}
 
 			irPrincipal.JWT = rule.Principal.JWT

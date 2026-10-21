@@ -414,6 +414,37 @@ _Appears in:_
 | `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
+#### BackendHTTP3Mode
+
+_Underlying type:_ _string_
+
+BackendHTTP3Mode determines when Envoy uses HTTP/3 to reach a backend.
+
+_Appears in:_
+- [BackendHTTP3Settings](#backendhttp3settings)
+
+| Value | Description |
+| ----- | ----------- |
+| `Auto` | BackendHTTP3ModeAuto uses HTTP/3 only for backends that advertise support for it<br />through an alt-svc response header. Envoy races a QUIC connection against a TCP one<br />and uses whichever is established first, so it falls back to HTTP/1.1 or HTTP/2 when<br />QUIC is unavailable.<br /> | 
+| `Always` | BackendHTTP3ModeAlways always uses HTTP/3, without falling back to TCP. Use this only<br />in environments where the backend is known to speak HTTP/3. Active health checks are<br />still sent over TLS on TCP, so a backend with an active health check must also accept<br />TCP on the same port.<br /> | 
+
+
+#### BackendHTTP3Settings
+
+
+
+BackendHTTP3Settings provides HTTP/3 configuration for backend connections.
+
+_Appears in:_
+- [BackendSettings](#backendsettings)
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `mode` | _[BackendHTTP3Mode](#backendhttp3mode)_ |  false  |  | Mode determines when HTTP/3 is used to reach the backend.<br />Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc. |
+
+
 #### BackendMetrics
 
 
@@ -489,6 +520,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 
 
@@ -603,6 +635,10 @@ between the Envoy Proxy listener and the backend service.
 
 BackendTrafficPolicySpec defines the desired state of BackendTrafficPolicy.
 
+Backend-targeted BackendTrafficPolicy (Service/ServiceImport/Backend targets) only applies to
+a backend that resolves into a merged Envoy cluster (requires the MergeBackends EnvoyProxy
+feature). A backend that never merges for any reason does not get the policy applied.
+
 _Appears in:_
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 
@@ -620,8 +656,9 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
-| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />This field can only be set when targeting xRoute or backend (Service/ServiceImport/Backend)<br />resources, and is required when targeting a backend.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `bandwidthLimit` | _[BandwidthLimitSpec](#bandwidthlimitspec)_ |  false  |  | BandwidthLimit allows the user to limit the bandwidth of traffic<br />sent to and received from the backend. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
@@ -831,6 +868,31 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `quality` | _integer_ |  false  |  | Quality controls the main compression speed-density lever, from 0 to 11.<br />The higher the quality, the slower the compression. If not set, defaults to 3. |
+| `encoderMode` | _[BrotliEncoderMode](#brotliencodermode)_ |  false  |  | EncoderMode tunes the encoder for a specific input.<br />If not set, defaults to Default. |
+| `windowBits` | _integer_ |  false  |  | WindowBits represents the base two logarithm of the compressor's window size,<br />from 10 to 24. Larger window results in better compression at the expense of<br />memory usage. If not set, defaults to 18. |
+| `inputBlockBits` | _integer_ |  false  |  | InputBlockBits represents the base two logarithm of the compressor's input block<br />size, from 16 to 24. Larger input block results in better compression at the<br />expense of memory usage. If not set, defaults to 24. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of the compressor's next output buffer, from<br />4096 to 65536. If not set, defaults to 4096. |
+| `disableLiteralContextModeling` | _boolean_ |  false  |  | DisableLiteralContextModeling disables the "literal context modeling" format<br />feature. This flag is a "decoding-speed vs compression ratio" trade-off.<br />If not set, defaults to false. |
+
+
+#### BrotliEncoderMode
+
+_Underlying type:_ _string_
+
+BrotliEncoderMode defines the modes to tune the Brotli encoder for a specific input.
+
+_Appears in:_
+- [BrotliCompressor](#brotlicompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` | BrotliEncoderModeDefault is the default encoder mode.<br /> | 
+| `Generic` | BrotliEncoderModeGeneric tunes the encoder for any input.<br /> | 
+| `Text` | BrotliEncoderModeText tunes the encoder for UTF-8 formatted text input.<br /> | 
+| `Font` | BrotliEncoderModeFont tunes the encoder for WOFF 2.0 font input.<br /> | 
 
 
 #### CELExpression
@@ -869,11 +931,29 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `allowOrigins` | _[Origin](#origin) array_ |  false  |  | AllowOrigins defines the origins that are allowed to make requests.<br />It specifies the allowed origins in the Access-Control-Allow-Origin CORS response header.<br />The value "*" allows any origin to make requests. |
+| `allowOriginRegexes` | _[CORSOriginRegex](#corsoriginregex) array_ |  false  |  | AllowOriginRegexes defines regular expressions that are matched against the Origin header.<br />It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.<br />An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes. |
 | `allowMethods` | _string array_ |  false  |  | AllowMethods defines the methods that are allowed to make requests.<br />It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..<br />The value "*" allows any method to be used. |
 | `allowHeaders` | _string array_ |  false  |  | AllowHeaders defines the headers that are allowed to be sent with requests.<br />It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..<br />The value "*" allows any header to be sent. |
 | `exposeHeaders` | _string array_ |  false  |  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
 | `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
+
+
+#### CORSOriginRegex
+
+_Underlying type:_ _string_
+
+CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+including the scheme and the port if present.
+The regex string must adhere to the syntax documented in
+https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+which is not supported.
+A regular expression that matches the literal string "*" is rejected.
+The value "*" in AllowOrigins allows any origin.
+
+_Appears in:_
+- [CORS](#cors)
+
 
 
 #### CSRF
@@ -1132,6 +1212,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
 
 
 #### ClusterTranslationConfig
@@ -1750,6 +1831,7 @@ _Appears in:_
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
 | `envoy.filters.http.dynamic_forward_proxy` | EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.<br /> | 
+| `envoy.filters.http.alternate_protocols_cache` | EnvoyFilterAlternateProtocolsCache defines the Envoy HTTP alternate protocols cache filter.<br /> | 
 | `envoy.filters.http.router` | EnvoyFilterRouter defines the Envoy HTTP router filter.<br /> | 
 
 
@@ -2410,13 +2492,14 @@ _Appears in:_
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.<br />Mutually exclusive with MergeBackends. |
 | `mergeBackends` | _[MergeBackendsConfig](#mergebackendsconfig)_ |  false  |  | MergeBackends configures cluster deduplication: routes that reference the same backend<br />share a single Envoy cluster instead of Envoy Gateway generating one cluster per route<br />rule. This reduces xDS size, active health-check traffic, and stats cardinality, and<br />improves upstream connection pooling.<br />Disabled when unset; specifying this field at all (even without further configuration)<br />enables it. Mutually exclusive with MergeGateways. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.alternate_protocols_cache<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict<br />Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release. |
 | `lua` | _[LuaValidationConfig](#luavalidationconfig)_ |  false  |  | Lua configures how Lua scripts from EnvoyExtensionPolicy resources are<br />validated in the gateway controller. It selects the validation mode and, for the Strict<br />mode, defines the filesystem paths and environment variables the scripts are permitted to<br />access during validation. |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `wasmModules` | _[WasmModuleEntry](#wasmmoduleentry) array_ |  false  |  | WasmModules defines the set of Wasm modules that are allowed to be used by<br />EnvoyExtensionPolicy resources. Each entry registers a module by a logical<br />name and a source (currently Local path).<br />When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up<br />in this list.<br />The EnvoyProxy owner is responsible for ensuring Local modules are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path. |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
 
@@ -2624,6 +2707,7 @@ _Appears in:_
 | `port` | _integer_ |  false  | 80 | Port defines the port the extension service is exposed on.<br />Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix) |
 | `tls` | _[ExtensionTLS](#extensiontls)_ |  false  |  | TLS defines TLS configuration for communication between Envoy Gateway and<br />the extension service. |
 | `retry` | _[ExtensionServiceRetry](#extensionserviceretry)_ |  false  |  | Retry defines the retry policy for to use when errors are encountered in communication with<br />the extension service. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | Timeout is the maximum duration of a single call to the extension service,<br />including the time spent waiting for the connection to become ready and<br />any retries. When the timeout is exceeded the call fails with<br />DEADLINE_EXCEEDED, which lets ExtensionManager.FailOpen take effect when the<br />extension service is unreachable.<br />If unset, calls have no deadline and block until the extension service<br />becomes reachable. |
 
 
 #### ExtensionServiceRetry
@@ -3049,6 +3133,24 @@ _Appears in:_
 | `kind` | _string_ |  true  |  |  |
 
 
+#### GzipCompressionStrategy
+
+_Underlying type:_ _string_
+
+GzipCompressionStrategy defines the zlib compression strategies supported by the Gzip compressor.
+
+_Appears in:_
+- [GzipCompressor](#gzipcompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` | GzipCompressionStrategyDefault is the default zlib compression strategy,<br />suitable for most of the content.<br /> | 
+| `Filtered` | GzipCompressionStrategyFiltered is a compression strategy for data produced<br />by a filter or predictor.<br /> | 
+| `HuffmanOnly` | GzipCompressionStrategyHuffmanOnly is a compression strategy that only uses<br />Huffman encoding.<br /> | 
+| `RLE` | GzipCompressionStrategyRLE is a compression strategy that limits match<br />distances to one (run-length encoding), designed for image data.<br /> | 
+| `Fixed` | GzipCompressionStrategyFixed is a compression strategy that prevents the<br />use of dynamic Huffman codes.<br /> | 
+
+
 #### GzipCompressor
 
 
@@ -3060,6 +3162,13 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/c
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `compressionLevel` | _integer_ |  false  |  | CompressionLevel sets the zlib compression level, from 1 (fastest compression,<br />lowest compression ratio) to 9 (slowest compression, best compression ratio).<br />If not set, Envoy uses the zlib default level, which is equivalent to level 6. |
+| `compressionStrategy` | _[GzipCompressionStrategy](#gzipcompressionstrategy)_ |  false  |  | CompressionStrategy selects the zlib compression strategy, which is directly<br />related to the characteristics of the content. Most of the time "Default" is<br />the best choice. If not set, defaults to Default. |
+| `memoryLevel` | _integer_ |  false  |  | MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.<br />Higher values use more memory, but are faster and produce better compression<br />results. If not set, defaults to 5. |
+| `windowBits` | _integer_ |  false  |  | WindowBits represents the base two logarithm of the compressor's window size,<br />from 9 to 15. Larger window results in better compression at the expense of<br />memory usage. If not set, defaults to 12, which will produce a 4096 bytes window. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.<br />If not set, defaults to 4096. |
 
 
 #### HTTP10Settings
@@ -3567,6 +3676,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableEnvoyHeaders` | _boolean_ |  false  |  | EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests<br />and responses. |
 | `disableRateLimitHeaders` | _boolean_ |  false  |  | DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers<br />when rate limiting is enabled. |
+| `disableRetryAfterHeader` | _boolean_ |  false  |  | DisableRetryAfterHeader configures Envoy Proxy to omit the "Retry-After" response header<br />on rate-limited 429 responses. |
 | `xForwardedClientCert` | _[XForwardedClientCert](#xforwardedclientcert)_ |  false  |  | XForwardedClientCert configures how Envoy Proxy handle the x-forwarded-client-cert (XFCC) HTTP header.<br />x-forwarded-client-cert (XFCC) is an HTTP header used to forward the certificate<br />information of part or all of the clients or proxies that a request has flowed through,<br />on its way from the client to the server.<br />Envoy proxy may choose to sanitize/append/forward the XFCC header before proxying the request.<br />If not set, the default behavior is sanitizing the XFCC header. |
 | `withUnderscoresAction` | _[WithUnderscoresAction](#withunderscoresaction)_ |  false  |  | WithUnderscoresAction configures the action to take when an HTTP header with underscores<br />is encountered. The default action is to reject the request. |
 | `preserveXRequestID` | _boolean_ |  false  |  | PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge<br />(Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.<br />Defaults to false and cannot be combined with RequestID.<br />Deprecated: use RequestID=PreserveOrGenerate instead |
@@ -3906,7 +4016,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `provider` | _string_ |  true  |  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`. |
+| `provider` | _string_ |  true  |  | Provider is the name of the JWT provider that used to verify the JWT token.<br />In order to use JWT claims for authorization, you must configure the JWT<br />authentication with the same provider in the same `SecurityPolicy`, or,<br />when `mergeType` is set, in the parent `SecurityPolicy` this policy is<br />merged into. |
 | `claims` | _[JWTClaim](#jwtclaim) array_ |  false  |  | Claims are the claims in a JWT token.<br />If multiple claims are specified, all claims must match for the rule to match.<br />For example, if there are two claims: one for the audience and one for the issuer,<br />the rule will match only if both the audience and the issuer match. |
 | `scopes` | _[JWTScope](#jwtscope) array_ |  false  |  | Scopes are a special type of claim in a JWT token that represents the permissions of the client.<br />The value of the scopes field should be a space delimited string that is expected in the<br />scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.<br />If multiple scopes are specified, all scopes must match for the rule to match. |
 
@@ -4096,6 +4206,14 @@ _Appears in:_
 KubernetesPatchSpec defines how to perform the patch operation.
 Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
 Note also that, currently, strings containing literal JSON are _rejected_.
+
+Warning: this patch is merged directly onto the fully-computed Kubernetes resource with no
+allowlist on which fields may be set. Whoever can author the EnvoyProxy resource that carries
+this patch can therefore set arbitrary fields — including hostPath volumes, hostNetwork/hostPID,
+privileged containers, or an arbitrary image/command — on a resource that Envoy Gateway's own,
+more privileged, ServiceAccount applies. Because EnvoyProxy is commonly namespace-scoped and
+tenant-authored, treat this field as untrusted input in multi-tenant clusters: restrict who may
+set it via RBAC, or disable EnvoyGateway's `EnvoyProxyPatch` runtime flag.
 
 _Appears in:_
 - [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
@@ -4396,6 +4514,20 @@ _Appears in:_
 | `rules` | _[RateLimitRule](#ratelimitrule) array_ |  false  |  | Rules are a list of RateLimit selectors and limits. If a request matches<br />multiple rules, the strictest limit is applied. For example, if a request<br />matches two rules, one with 10rps and one with 20rps, the final limit will<br />be based on the rule with 10rps. |
 
 
+#### LocalWasmModuleSource
+
+
+
+LocalWasmModuleSource defines a Wasm module loaded from the local filesystem.
+
+_Appears in:_
+- [WasmModuleSource](#wasmmodulesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path is the absolute filesystem path to the Wasm module on the Envoy proxy. |
+
+
 #### LogLevel
 
 _Underlying type:_ _string_
@@ -4572,6 +4704,7 @@ _Appears in:_
 | `redirectURL` | _string_ |  true  |  | The redirect URL to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses the default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" |
 | `denyRedirect` | _[OIDCDenyRedirect](#oidcdenyredirect)_ |  false  |  | Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.<br />This behavior can be useful for AJAX or machine requests. |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
+| `postLogoutRedirect` | _[OIDCPostLogoutRedirect](#oidcpostlogoutredirect)_ |  false  |  | PostLogoutRedirect configures the `post_logout_redirect_uri` parameter that EG sends to the<br />OIDC Provider's end session endpoint when a user accesses the logout path.<br />This only applies when the OIDC Provider's end session endpoint is configured or discovered,<br />i.e. when RP-Initiated Logout is in use. It is ignored otherwise.<br />If not specified, Envoy sends the root of the request's host, "<scheme>://<host>/".<br />Note that many OIDC Providers require the post logout redirect URI to be pre-registered for<br />the client and reject the logout request otherwise. If the default value is not registered,<br />set an explicit uri here, or set disabled to true to omit the parameter altogether. |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
 | `forwardIDToken` | _[OIDCTokenForwarding](#oidctokenforwarding)_ |  false  |  | ForwardIDToken configures forwarding of the OIDC ID token to the upstream.<br />If the configured header is "Authorization", EG forwards the ID token using<br />the "Bearer " prefix. For any other header, EG forwards the raw token value.<br />If not specified, the ID token will not be forwarded.<br />Note: when passThroughAuthHeader is enabled, this header must not be the same<br />as a header a JWT provider extracts from (the "Authorization" header by<br />default). The forwarded ID token header is owned by Envoy, and Envoy rejects<br />an OAuth2 configuration whose pass-through matcher keys on it. |
 | `defaultTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
@@ -4655,6 +4788,24 @@ _Appears in:_
 | `name` | _string_ |  true  |  | Specifies the name of the header in the request. |
 | `type` | _[StringMatchType](#stringmatchtype)_ |  false  | Exact | Type specifies how to match against a string. |
 | `value` | _string_ |  true  |  | Value specifies the string value that the match must have. |
+
+
+#### OIDCPostLogoutRedirect
+
+
+
+OIDCPostLogoutRedirect configures the `post_logout_redirect_uri` parameter used in OIDC
+[RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) requests.
+
+At least one of uri or disabled must be set, and uri cannot be set when disabled is true.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `uri` | _string_ |  false  |  | URI is sent as the `post_logout_redirect_uri` parameter to the OIDC Provider's end session<br />endpoint. The provider redirects the user to this URI after the logout completes, so it<br />usually must be pre-registered for the client with the provider.<br />The URI may contain the Envoy "%REQ(header)%"<br />[command operator](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)<br />to build the URI from the request, for example<br />"%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout". Envoy Gateway accepts only that<br />operator here, since it is the only one meaningful in a URI derived from the request, and<br />rejects any other so that a typo surfaces on this policy instead of being rejected by Envoy<br />as an invalid configuration. A literal percent is written as "%%".<br />The scheme must be http, https, or a "%REQ(header)%" command operator. The URI is<br />percent-encoded automatically when the logout URL is built, so do not pre-encode it. |
+| `disabled` | _boolean_ |  false  |  | Disabled omits the `post_logout_redirect_uri` parameter from the logout request entirely.<br />Use this when the OIDC Provider rejects unregistered post logout redirect URIs and you do<br />not need the user redirected back after the logout completes. In that case the user is left<br />on a page controlled by the provider.<br />Setting this to false is equivalent to leaving disabled unset. |
 
 
 #### OIDCProvider
@@ -5013,10 +5164,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected.<br />For TCPRoute targets (raw TCP connections), HTTP headers such as<br />X-Forwarded-For are not available. The client IP is obtained from the<br />TCP connection's peer address. If intermediaries (load balancers, NAT)<br />terminate or proxy TCP, the original client IP will only be available<br />if the intermediary preserves the source address (for example by<br />enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is<br />configured to preserve the source IP to enable correct client-IP<br />matching for TCPRoute targets. |
+| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected.<br />For TCPRoute and UDPRoute targets (raw L4 traffic), HTTP headers such as<br />X-Forwarded-For are not available. The client IP is obtained from the<br />TCP connection's peer address, or from the source address of the UDP<br />datagram. If intermediaries (load balancers, NAT) terminate or proxy the<br />traffic, the original client IP will only be available if the<br />intermediary preserves the source address (for example by enabling the<br />PROXY protocol or avoiding SNAT). Note that the PROXY protocol is not<br />available on the UDP path, so a UDPRoute target relies entirely on the<br />datagram source address being preserved. Ensure your L4 proxy is<br />configured to preserve the source IP to enable correct client-IP<br />matching for TCPRoute and UDPRoute targets. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 | `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
-| `clientIPGeoLocations` | _[ClientIPGeoLocation](#clientipgeolocation) array_ |  false  |  | ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.<br />This field is supported for HTTPRoute and GRPCRoute authorization.<br />It is not supported for TCPRoute targets.<br />If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header, or the<br />direct downstream connection source address (the TCP peer of the connection terminated by Envoy).<br />You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection. |
+| `clientIPGeoLocations` | _[ClientIPGeoLocation](#clientipgeolocation) array_ |  false  |  | ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.<br />This field is supported for HTTPRoute and GRPCRoute authorization.<br />It is not supported for TCPRoute or UDPRoute targets.<br />If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header, or the<br />direct downstream connection source address (the TCP peer of the connection terminated by Envoy).<br />You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection. |
 
 
 #### ProcessingModeOptions
@@ -5331,6 +5482,7 @@ _Appears in:_
 | `enableVirtualHostStats` | _boolean_ |  false  |  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 | `enablePerEndpointStats` | _boolean_ |  false  |  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 | `enableRequestResponseSizesStats` | _boolean_ |  false  |  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
+| `enableCircuitBreakerRemainingStats` | _boolean_ |  false  |  | EnableCircuitBreakerRemainingStats enables Envoy's circuit breaker `remaining_*` gauges,<br />which expose the number of resources remaining before each circuit breaker opens.<br />Enabling this adds 5 additional gauges per cluster, see:<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats#circuit-breakers-statistics |
 | `enableGRPCStats` | _boolean_ |  false  |  | EnableGRPCStats enables the gRPC stats filter on listeners.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
 | `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />`%ROUTE_NAME%`: name of Gateway API xRoute resource<br />`%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource<br />`%ROUTE_KIND%`: kind of Gateway API xRoute resource<br />`%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section<br />`%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section<br />`%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|...` format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`<br />Example: `httproute/my-ns/my-route/rule/0` |
 
@@ -6210,6 +6362,7 @@ _Appears in:_
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
 | `EndpointSliceIndex` | EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.<br />It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.<br />If the additional controller memory usage for the indexes becomes a concern,<br />consider disabling this flag.<br /> | 
 | `PerResourceSystemCASecret` | PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per<br />BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead<br />of sharing a single system_ca_certificates secret across all of them.<br />Disabled by default (i.e. the shared secret is used). Enable this flag to opt out during<br />upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use<br />it, which may cause a brief disruption to new connections on first enable.<br /> | 
+| `EnvoyProxyPatch` | EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on<br />EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve<br />pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and<br />tenant-authored, a patch may grant arbitrary access to resources applied by Envoy<br />Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters<br />where tenants can author their own EnvoyProxy resources.<br /> | 
 
 
 #### RuntimeFlags
@@ -6286,12 +6439,13 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
-NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, and TCPRoute.
-When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
-(Authorization rules that use Principal.ClientCIDRs) is applied. Other
+NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute
+and UDPRoute.
+When a SecurityPolicy targets a TCPRoute or a UDPRoute, only client-IP CIDR based
+authorization (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 authentication/authorization features such as JWT, API Key, Basic Auth,
 OIDC, External Authorization, or GeoIP based authorization are not applicable
-to TCPRoute targets.
+to TCPRoute or UDPRoute targets.
 
 _Appears in:_
 - [SecurityPolicy](#securitypolicy)
@@ -6961,9 +7115,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension. |
+| `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension.<br />When Code is omitted, Name is required and must match a module registered<br />in EnvoyProxy.spec.wasmModules. |
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
-| `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  |  | Code is the Wasm code for the extension. |
+| `code` | _[WasmCodeSource](#wasmcodesource)_ |  false  |  | Code is the Wasm code for the extension.<br />When omitted, Name must match a module in EnvoyProxy.spec.wasmModules. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the Wasm extension will also be bypassed if the configuration is invalid. |
 | `env` | _[WasmEnv](#wasmenv)_ |  false  |  | Env configures the environment for the Wasm extension |
@@ -7028,6 +7182,52 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `hostKeys` | _string array_ |  false  |  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
+
+
+#### WasmModuleEntry
+
+
+
+WasmModuleEntry defines a Wasm module that is registered and allowed for use
+by EnvoyExtensionPolicy resources.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name when wasm[].code is omitted. |
+| `source` | _[WasmModuleSource](#wasmmodulesource)_ |  true  |  | Source defines where the Wasm module code is loaded from. |
+
+
+#### WasmModuleSource
+
+
+
+WasmModuleSource defines where a registered Wasm module is loaded from.
+Mirrors DynamicModuleSource so additional source types can be added later.
+
+_Appears in:_
+- [WasmModuleEntry](#wasmmoduleentry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[WasmModuleSourceType](#wasmmodulesourcetype)_ |  false  | Local | Type is the type of the source of the Wasm module.<br />Defaults to Local. |
+| `local` | _[LocalWasmModuleSource](#localwasmmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
+
+
+#### WasmModuleSourceType
+
+_Underlying type:_ _string_
+
+WasmModuleSourceType specifies the types of sources for registered Wasm modules.
+
+_Appears in:_
+- [WasmModuleSource](#wasmmodulesource)
+
+| Value | Description |
+| ----- | ----------- |
+| `Local` | LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.<br /> | 
 
 
 #### WeightedZoneConfig
@@ -7131,6 +7331,7 @@ _Appears in:_
 | `Chain` | XFCCCertDataChain is the entire client certificate chain (including the leaf certificate) in URL encoded PEM format.<br /> | 
 | `DNS` | XFCCCertDataDNS is the DNS type Subject Alternative Name field of the current client certificate.<br /> | 
 | `URI` | XFCCCertDataURI is the URI type Subject Alternative Name field of the current client certificate.<br /> | 
+| `Issuer` | XFCCCertDataIssuer is the Issuer field of the current client certificate.<br /> | 
 
 
 #### XFCCForwardMode
@@ -7231,6 +7432,31 @@ _Appears in:_
 | `weightedZones` | _[WeightedZoneConfig](#weightedzoneconfig) array_ |  false  |  | WeightedZones configures weight-based traffic distribution across locality zones.<br />Traffic is distributed proportionally based on the sum of all zone weights. |
 
 
+#### ZstdCompressionStrategy
+
+_Underlying type:_ _string_
+
+ZstdCompressionStrategy defines the compression strategies supported by the Zstd compressor.
+The higher the value of the selected strategy, the more complex it is, resulting in stronger
+and slower compression.
+
+_Appears in:_
+- [ZstdCompressor](#zstdcompressor)
+
+| Value | Description |
+| ----- | ----------- |
+| `Default` |  | 
+| `Fast` |  | 
+| `DFast` |  | 
+| `Greedy` |  | 
+| `Lazy` |  | 
+| `Lazy2` |  | 
+| `BTLazy2` |  | 
+| `BTOpt` |  | 
+| `BTUltra` |  | 
+| `BTUltra2` |  | 
+
+
 #### ZstdCompressor
 
 
@@ -7242,5 +7468,11 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/c
 _Appears in:_
 - [Compression](#compression)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `compressionLevel` | _integer_ |  false  |  | CompressionLevel sets the compression parameters according to the pre-defined<br />zstd compression level table, from 1 to 22. Note that the exact compression<br />parameters are dynamically determined, depending on both compression level and<br />source content size (when known). If not set, defaults to 3. |
+| `enableChecksum` | _boolean_ |  false  |  | EnableChecksum specifies whether a 32-bits checksum of the content is written<br />at the end of the frame. If not set, defaults to false. |
+| `strategy` | _[ZstdCompressionStrategy](#zstdcompressionstrategy)_ |  false  |  | Strategy selects the zstd compression strategy. The higher the value of the<br />selected strategy, the more complex it is, resulting in stronger and slower<br />compression. If not set, defaults to Default. |
+| `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of the compressor's next output buffer, from<br />4096 to 65536. If not set, defaults to 4096. |
 
 

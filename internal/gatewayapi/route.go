@@ -2313,14 +2313,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			allRuleBackendRefs = distinctBackendObjectReferences(tlsRoute, allRuleBackendRefs)
 		}
 
+		var mergeIncompatible bool
+		if mergeBackendsEnabled {
+			mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(allRuleBackendRefs)
+		}
+
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, tlsRoute, parentRef, rule.Name)
-
-			var mergeIncompatible bool
-			if mergeBackendsEnabled {
-				mergeIncompatible = t.mergeIncompatibleForSingleClusterRule(allRuleBackendRefs)
-			}
 
 			for i := range rule.BackendRefs {
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
@@ -2886,6 +2886,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
 	// Process BackendTLSPolicy first to ensure status is set.
+	var gwIR *ir.Xds
+	if gatewayCtx != nil {
+		gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
+	}
 	tls, tlsErr := t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
@@ -2897,8 +2901,8 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			SectionName: parentRef.SectionName,
 			Port:        parentRef.Port,
 		},
-		resources,
 		gatewayCtx,
+		gwIR,
 	)
 	if tlsErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)

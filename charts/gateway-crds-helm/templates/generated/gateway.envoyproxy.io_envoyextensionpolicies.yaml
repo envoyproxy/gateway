@@ -1013,6 +1013,25 @@ spec:
                                 Default: TerminateConnection
                               type: string
                           type: object
+                        http3:
+                          description: |-
+                            HTTP3 enables HTTP/3 for backend connections.
+                            HTTP/3 always runs over TLS, so the backend must be configured
+                            with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                            HTTP/3 is only supported for the backends of a route, through
+                            BackendTrafficPolicy. It is rejected for the backends of other
+                            resources, such as the external services of a SecurityPolicy
+                            or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                          properties:
+                            mode:
+                              description: |-
+                                Mode determines when HTTP/3 is used to reach the backend.
+                                Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                              enum:
+                              - Auto
+                              - Always
+                              type: string
+                          type: object
                         loadBalancer:
                           description: |-
                             LoadBalancer policy to apply when routing traffic from the gateway to
@@ -1622,6 +1641,8 @@ spec:
                           && has(self.connection.preconnect.predictivePercent)) &&
                           !(has(self.loadBalancer) && has(self.loadBalancer.type)
                           && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                      - message: proxyProtocol cannot be used together with http3
+                        rule: '!has(self.http3) || !has(self.proxyProtocol)'
                     failOpen:
                       default: false
                       description: |-
@@ -1807,6 +1828,8 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http3 is only supported for route backends
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                 maxItems: 16
                 type: array
               lua:
@@ -2153,7 +2176,9 @@ spec:
                     v8 is used as the VM runtime for the Wasm extensions.
                   properties:
                     code:
-                      description: Code is the Wasm code for the extension.
+                      description: |-
+                        Code is the Wasm code for the extension.
+                        When omitted, Name must match a module in EnvoyProxy.spec.wasmModules.
                       properties:
                         http:
                           description: |-
@@ -2378,7 +2403,6 @@ spec:
                           - enum:
                             - HTTP
                             - Image
-                            - ConfigMap
                           description: |-
                             Type is the type of the source of the Wasm code.
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
@@ -2426,6 +2450,10 @@ spec:
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
                         If not specified, EG will generate a unique name for the Wasm extension.
+
+                        When Code is omitted, Name is required and must match a module registered
+                        in EnvoyProxy.spec.wasmModules.
+                      maxLength: 253
                       type: string
                     rootID:
                       description: |-
@@ -2435,9 +2463,11 @@ spec:
 
                         Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
                       type: string
-                  required:
-                  - code
                   type: object
+                  x-kubernetes-validations:
+                  - message: either code must be set, or name must be set and match
+                      the wasmModules name pattern
+                    rule: has(self.code) || (has(self.name) && self.name.matches('^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$'))
                 maxItems: 16
                 type: array
             type: object
