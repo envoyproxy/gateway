@@ -132,14 +132,17 @@ type Principal struct {
 	// You can use the `ClientIPDetection` or the `ProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
 	//
-	// For TCPRoute targets (raw TCP connections), HTTP headers such as
+	// For TCPRoute and UDPRoute targets (raw L4 traffic), HTTP headers such as
 	// X-Forwarded-For are not available. The client IP is obtained from the
-	// TCP connection's peer address. If intermediaries (load balancers, NAT)
-	// terminate or proxy TCP, the original client IP will only be available
-	// if the intermediary preserves the source address (for example by
-	// enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+	// TCP connection's peer address, or from the source address of the UDP
+	// datagram. If intermediaries (load balancers, NAT) terminate or proxy the
+	// traffic, the original client IP will only be available if the
+	// intermediary preserves the source address (for example by enabling the
+	// PROXY protocol or avoiding SNAT). Note that the PROXY protocol is not
+	// available on the UDP path, so a UDPRoute target relies entirely on the
+	// datagram source address being preserved. Ensure your L4 proxy is
 	// configured to preserve the source IP to enable correct client-IP
-	// matching for TCPRoute targets.
+	// matching for TCPRoute and UDPRoute targets.
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	ClientCIDRs []CIDR `json:"clientCIDRs,omitempty"`
@@ -160,7 +163,7 @@ type Principal struct {
 
 	// ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
 	// This field is supported for HTTPRoute and GRPCRoute authorization.
-	// It is not supported for TCPRoute targets.
+	// It is not supported for TCPRoute or UDPRoute targets.
 	//
 	// If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 	//
