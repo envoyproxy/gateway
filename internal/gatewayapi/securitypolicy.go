@@ -1939,6 +1939,7 @@ func (t *Translator) buildJWT(
 			ClaimToHeaders: p.ClaimToHeaders,
 			RecomputeRoute: p.RecomputeRoute,
 			ExtractFrom:    p.ExtractFrom,
+			ClockSkew:      p.ClockSkew,
 		}
 		if p.RemoteJWKS != nil {
 			remoteJWKS, err := t.buildRemoteJWKS(jwtOwnerPolicy, p.RemoteJWKS, i, resources, gtwCtx)
