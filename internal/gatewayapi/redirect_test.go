@@ -444,6 +444,36 @@ func TestFilterReferencesAfterDirectResponse(t *testing.T) {
 	}
 }
 
+func TestRedirectReferenceValidationIncludesCredentialInjection(t *testing.T) {
+	translator := &Translator{TranslatorContext: &TranslatorContext{}}
+	redirect := &egv1a1.HTTPRouteFilter{
+		ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
+		Spec: egv1a1.HTTPRouteFilterSpec{
+			Redirect: &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+				Type:              egv1a1.RegexHTTPPathModifier,
+				ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "(", Substitution: "/new"},
+			}},
+			CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+				Credential: egv1a1.InjectedCredential{ValueRef: gwapiv1.SecretObjectReference{Name: "missing"}},
+			},
+		},
+	}
+	resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{redirect}}
+	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+	filters := []gwapiv1.HTTPRouteFilter{{
+		Type:         gwapiv1.HTTPRouteFilterExtensionRef,
+		ExtensionRef: &gwapiv1.LocalObjectReference{Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "redirect"},
+	}}
+
+	_, errs := translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
+	var messages []string
+	for _, err := range errs {
+		messages = append(messages, err.Error())
+	}
+	require.Contains(t, strings.Join(messages, "; "), "valid RE2")
+	require.Contains(t, strings.Join(messages, "; "), "secret default/missing does not exist")
+}
+
 func TestValidateRedirectSubstitution(t *testing.T) {
 	for _, tc := range []struct {
 		value string
