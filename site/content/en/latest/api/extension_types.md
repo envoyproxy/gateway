@@ -7553,3 +7553,5 @@ _Appears in:_
 | `enableChecksum` | _boolean_ |  false  |  | EnableChecksum specifies whether a 32-bits checksum of the content is written<br />at the end of the frame. If not set, defaults to false. |
 | `strategy` | _[ZstdCompressionStrategy](#zstdcompressionstrategy)_ |  false  |  | Strategy selects the zstd compression strategy. The higher the value of the<br />selected strategy, the more complex it is, resulting in stronger and slower<br />compression. If not set, defaults to Default. |
 | `chunkSize` | _integer_ |  false  |  | ChunkSize is the size in bytes of the compressor's next output buffer, from<br />4096 to 65536. If not set, defaults to 4096. |
+
+
