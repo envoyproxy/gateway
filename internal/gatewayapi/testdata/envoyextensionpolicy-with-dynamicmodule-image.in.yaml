@@ -1,0 +1,128 @@
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: my-pull-secret
+  data:
+    .dockerconfigjson: VGhpc0lzTm90QVJlYWxEb2NrZXJDb25maWdKc29u
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: proxy-config
+  spec:
+    dynamicModules:
+    - name: image-module
+      source:
+        type: Image
+        image:
+          url: oci://www.example.com/dynamic-modules/auth:v1.0.0
+          path: /usr/lib/envoy/libauth.so
+          pullPolicy: IfNotPresent
+          pullSecretRef:
+            name: my-pull-secret
+    - name: image-module-latest
+      source:
+        type: Image
+        image:
+          url: www.example.com/dynamic-modules/ratelimit
+      doNotClose: true
+    - name: image-module-missing-secret
+      source:
+        type: Image
+        image:
+          url: www.example.com/dynamic-modules/private:v1.0.0
+          pullSecretRef:
+            name: missing-pull-secret
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: proxy-config
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyextensionpolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway  # This policy should attach to httproute-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    dynamicModule:
+    - name: image-module
+      filterName: auth-check
+      config:
+        authEndpoint: https://auth.example.com
+    - name: image-module-latest
+      filterName: ratelimit
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route  # This policy should attach to httproute-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    dynamicModule:
+    - name: image-module-missing-secret
+      filterName: private-filter

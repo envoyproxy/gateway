@@ -1195,7 +1195,11 @@ func (m *mockWasmCache) Start(_ context.Context) {}
 
 func (m *mockWasmCache) Get(downloadURL string, options *wasm.GetOptions) (url, checksum string, err error) {
 	// This is a mock implementation of the wasm.Cache.Get method.
-	sha := sha256.Sum256([]byte(downloadURL))
+	id, ext := downloadURL, "wasm"
+	if options.ModuleType == wasm.ModuleTypeDynamicModule {
+		id, ext = downloadURL+"#"+options.ModulePath, "so"
+	}
+	sha := sha256.Sum256([]byte(id))
 	hashedName := hex.EncodeToString(sha[:])
 	salt := []byte("salt")
 	salt = append(salt, hashedName...)
@@ -1204,7 +1208,7 @@ func (m *mockWasmCache) Get(downloadURL string, options *wasm.GetOptions) (url, 
 	if options.Checksum != "" && checksum != options.Checksum {
 		return "", "", fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", downloadURL, checksum, options.Checksum)
 	}
-	return fmt.Sprintf("https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/%s.wasm", hashedName), checksum, nil
+	return fmt.Sprintf("https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/%s.%s", hashedName, ext), checksum, nil
 }
 
 func (m *mockWasmCache) Cleanup() {}

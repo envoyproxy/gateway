@@ -1115,7 +1115,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var dynamicModules []ir.DynamicModule
-		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, owners, gtwCtx.envoyProxy); dynamicModuleError != nil {
+		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, owners, resources, gtwCtx.envoyProxy); dynamicModuleError != nil {
 			dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 			errs = errors.Join(errs, dynamicModuleError)
 		}
@@ -1249,7 +1249,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
-	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, noOwners, gateway.envoyProxy); dynamicModuleError != nil {
+	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, noOwners, resources, gateway.envoyProxy); dynamicModuleError != nil {
 		dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 		errs = errors.Join(errs, dynamicModuleError)
 	}
@@ -1842,6 +1842,7 @@ func irConfigNameForDynamicModule(policy *egv1a1.EnvoyExtensionPolicy, index int
 func (t *Translator) buildDynamicModules(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	owners *envoyExtensionPolicyOwners,
+	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) ([]ir.DynamicModule, error) {
 	var errs error
@@ -1904,6 +1905,13 @@ func (t *Translator) buildDynamicModules(
 				URL:    entry.Source.Remote.URL,
 				SHA256: entry.Source.Remote.SHA256,
 			}
+		case egv1a1.ImageDynamicModuleSourceType:
+			image, err := t.buildImageDynamicModuleSource(entry, resources, envoyProxy)
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q: %w", dm.Name, err))
+				continue
+			}
+			dmIR.Image = image
 		case egv1a1.LocalDynamicModuleSourceType:
 			if entry.Source.Local == nil {
 				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no local source configured", dm.Name))
@@ -1919,6 +1927,94 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
+}
+
+// buildImageDynamicModuleSource pulls the OCI image of a dynamic module through the
+// Wasm cache, which extracts the shared library and serves it to Envoy over HTTP.
+func (t *Translator) buildImageDynamicModuleSource(
+	entry *egv1a1.DynamicModuleEntry,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.ImageDynamicModuleSource, error) {
+	image := entry.Source.Image
+	// This is a sanity check, the validation should have caught this
+	if image == nil {
+		return nil, errors.New("no image source configured")
+	}
+	if t.WasmCache == nil {
+		return nil, errors.New("wasm cache is not initialized")
+	}
+
+	// The EnvoyProxy may be the EnvoyGateway default spec, which has no namespace.
+	// References in it are resolved in the controller namespace.
+	namespace, epName, epResourceVersion := t.ControllerNamespace, "", ""
+	if envoyProxy != nil {
+		if envoyProxy.Namespace != "" {
+			namespace = envoyProxy.Namespace
+		}
+		epName = envoyProxy.Name
+		epResourceVersion = envoyProxy.ResourceVersion
+	}
+
+	var pullSecret []byte
+	if image.PullSecretRef != nil {
+		from := crossNamespaceFrom{
+			group:     egv1a1.GroupName,
+			kind:      resource.KindEnvoyProxy,
+			namespace: namespace,
+		}
+		secret, err := t.validateSecretRef(true, from, *image.PullSecretRef, resources)
+		if err != nil {
+			return nil, err
+		}
+		data, ok := secret.Data[corev1.DockerConfigJsonKey]
+		if !ok {
+			return nil, fmt.Errorf("missing %s key in secret %s/%s", corev1.DockerConfigJsonKey, secret.Namespace, secret.Name)
+		}
+		pullSecret = data
+	}
+
+	var pullPolicy wasm.PullPolicy
+	switch ptr.Deref(image.PullPolicy, "") {
+	case egv1a1.ImagePullPolicyAlways:
+		pullPolicy = wasm.Always
+	case egv1a1.ImagePullPolicyIfNotPresent:
+		pullPolicy = wasm.IfNotPresent
+	default:
+		pullPolicy = wasm.Unspecified
+	}
+
+	// Wasm Cache requires the URL to be in the format "scheme://<URL>"
+	imageURL := image.URL
+	if !strings.HasPrefix(imageURL, ociURLPrefix) {
+		imageURL = ociURLPrefix + imageURL
+	}
+	// If neither digest nor tag is provided, use the latest tag.
+	if !hasDigest(imageURL) && !hasTag(imageURL) {
+		imageURL += ":latest"
+	}
+
+	// The checksum in the API is the digest of the OCI image, while the returned
+	// checksum is the one of the shared library extracted from the image, which
+	// Envoy uses to verify the downloaded module.
+	servingURL, checksum, err := t.WasmCache.Get(imageURL, &wasm.GetOptions{
+		ModuleType:      wasm.ModuleTypeDynamicModule,
+		ModulePath:      ptr.Deref(image.Path, ""),
+		Checksum:        ptr.Deref(image.SHA256, ""),
+		PullSecret:      pullSecret,
+		PullPolicy:      pullPolicy,
+		ResourceName:    fmt.Sprintf("envoyproxy/%s/%s/dynamic-module/%s", namespace, epName, entry.Name),
+		ResourceVersion: epResourceVersion,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ir.ImageDynamicModuleSource{
+		OriginalURL: imageURL,
+		ServingURL:  servingURL,
+		SHA256:      checksum,
+	}, nil
 }
 
 type envoyExtensionPolicyOwners struct {

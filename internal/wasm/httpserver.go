@@ -172,12 +172,16 @@ func (s *HTTPServer) Get(originalURL string, opts *GetOptions) (servingURL, chec
 		localFile   string
 	)
 
+	// id identifies the module, which differs from the original URL for dynamic
+	// modules extracted from an OCI image.
+	id := moduleID(originalURL, opts)
+
 	s.failedAttemptsMux.Lock()
 	defer s.failedAttemptsMux.Unlock()
-	attempt, attempted := s.failedAttempts[originalURL]
+	attempt, attempted := s.failedAttempts[id]
 
 	if attempted && attempt.fails > s.MaxFailedAttempts {
-		err = fmt.Errorf("failed to get Wasm module %s after %d attempts", originalURL, s.MaxFailedAttempts)
+		err = fmt.Errorf("failed to get %s %s after %d attempts", moduleTypeName(opts.ModuleType), id, s.MaxFailedAttempts)
 		s.logger.Error(err, "")
 		return "", "", err
 	}
@@ -186,23 +190,23 @@ func (s *HTTPServer) Get(originalURL string, opts *GetOptions) (servingURL, chec
 	// Even it's already cached, the file cache may still download the Wasm module
 	// again if it is expired or it needs to be updated.
 	if localFile, checksum, err = s.cache.Get(originalURL, opts); err != nil {
-		s.logger.Error(err, "Failed to get Wasm module", "URL", originalURL)
-		attempt, attempted = s.failedAttempts[originalURL]
+		s.logger.Error(err, "Failed to get module", "type", moduleTypeName(opts.ModuleType), "URL", originalURL)
+		attempt, attempted = s.failedAttempts[id]
 		if !attempted {
 			attempt = attemptEntry{fails: 0, last: time.Now(), delay: s.FailedAttemptResetDelay}
 		}
 		attempt.fails++
 		attempt.last = time.Now()
-		s.failedAttempts[originalURL] = attempt
+		s.failedAttempts[id] = attempt
 		return "", "", err
 	}
-	delete(s.failedAttempts, originalURL)
+	delete(s.failedAttempts, id)
 
 	// Generate a new path with the hash of the original url and a salt to
 	// make the URL unpredictable.
 	// The unguessable path is used to prevent unauthorized users from accessing
 	// an unauthorized private Wasm module.
-	mappingPath = generateUnguessablePath(originalURL, s.Salt)
+	mappingPath = generateUnguessablePath(id, s.Salt, moduleFileExtension(opts.ModuleType))
 	s.mappingPathMux.Lock()
 	defer s.mappingPathMux.Unlock()
 	s.mappingPath2Cache[mappingPath] = wasmModuleEntry{
@@ -224,12 +228,12 @@ func (s *HTTPServer) Get(originalURL string, opts *GetOptions) (servingURL, chec
 	return servingURL, checksum, nil
 }
 
-// Generate an unguessable downloading path for a Wasm module.
-func generateUnguessablePath(originalURL string, salt []byte) string {
-	saltedData := []byte(originalURL)
+// Generate an unguessable downloading path for a module.
+func generateUnguessablePath(id string, salt []byte, ext string) string {
+	saltedData := []byte(id)
 	saltedData = append(saltedData, salt...)
 	hash := sha256.Sum256(saltedData)
-	return fmt.Sprintf("%s.wasm", base64.URLEncoding.EncodeToString(hash[:]))
+	return fmt.Sprintf("%s.%s", base64.URLEncoding.EncodeToString(hash[:]), ext)
 }
 
 func (s *HTTPServer) close() {

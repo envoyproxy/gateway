@@ -409,25 +409,8 @@ func (r *gatewayAPIReconciler) isEnvoyProxyReferencingSecret(nsName *types.Names
 		return false
 	}
 
-	if len(epList.Items) == 0 {
-		return false
-	}
-
-	for i := range epList.Items {
-		ep := &epList.Items[i]
-		if ep.Spec.BackendTLS != nil {
-			if ep.Spec.BackendTLS.ClientCertificateRef != nil {
-				certRef := ep.Spec.BackendTLS.ClientCertificateRef
-				ns := gatewayapi.NamespaceDerefOr(certRef.Namespace, ep.Namespace)
-				if nsName.Name == string(certRef.Name) && nsName.Namespace == ns {
-					return true
-				}
-				continue
-			}
-		}
-	}
-
-	return false
+	// The index holds every Secret referenced by the EnvoyProxy, see secretEnvoyProxyIndexFunc.
+	return len(epList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isGatewayReferencingSecret(nsName *types.NamespacedName) bool {

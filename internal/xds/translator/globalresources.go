@@ -27,6 +27,10 @@ const (
 	wasmHTTPServiceClusterName       = "wasm_cluster"
 	wasmHTTPServiceHost              = "envoy-gateway"
 	wasmHTTPServicePort              = 18002
+	// dynamicModuleHTTPServiceClusterName is the cluster used to fetch dynamic modules
+	// extracted from OCI images. It points to the same Envoy Gateway HTTP server as
+	// wasm_cluster, but is kept separate so its settings and stats are independent.
+	dynamicModuleHTTPServiceClusterName = "dynamic_module_cluster"
 )
 
 // SystemTrustStoreSecretName is re-exported from ir for use within the xDS translator package.
@@ -37,7 +41,7 @@ func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXd
 	var errs error
 
 	if irXds.GlobalResources != nil && irXds.GlobalResources.EnvoyClientCertificate != nil {
-		// Create the envoy client TLS secret for control plane connections (rate limit, wasm).
+		// Create the envoy client TLS secret for control plane connections (rate limit, wasm, dynamic modules).
 		if err := createEnvoyClientTLSCertSecret(tCtx, irXds.GlobalResources); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -48,8 +52,14 @@ func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXd
 			}
 		}
 
-		if containsRemoteWasms(irXds.HTTP) {
-			if err := t.createWasmHTTPServiceCluster(tCtx, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
+		if ir.ContainsRemoteWasms(irXds.HTTP) {
+			if err := t.createEGHTTPServiceCluster(tCtx, wasmHTTPServiceClusterName, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		if ir.ContainsImageDynamicModules(irXds.HTTP) {
+			if err := t.createEGHTTPServiceCluster(tCtx, dynamicModuleHTTPServiceClusterName, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -230,31 +240,14 @@ func buildEnvoyClientTLSSocket(envoyClientCertificate *ir.TLSCertificate) (*core
 	}, nil
 }
 
-// containsRemoteWasms reports whether any route uses a remote Wasm code source
-// (HTTP/Image, served by the control-plane wasm HTTP service). Name-only
-// Wasm loads a path from EnvoyProxy.spec.wasmModules and does not need wasm_cluster.
-func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
-	for _, httpListener := range httpListeners {
-		for _, route := range httpListener.Routes {
-			if route.EnvoyExtensions == nil {
-				continue
-			}
-			for _, w := range route.EnvoyExtensions.Wasms {
-				if w.Code != nil {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTable, envoyClientCertificate *ir.TLSCertificate, metrics *ir.Metrics) error {
+// createEGHTTPServiceCluster creates a cluster named clusterName pointing to the Envoy Gateway
+// HTTP server, which serves Wasm modules and dynamic modules.
+func (t *Translator) createEGHTTPServiceCluster(tCtx *types.ResourceVersionTable, clusterName string, envoyClientCertificate *ir.TLSCertificate, metrics *ir.Metrics) error {
 	ds := &ir.DestinationSetting{
 		Weight:    new(uint32(1)),
 		Protocol:  ir.HTTP2,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
-		Name:      destinationSettingName(wasmHTTPServiceClusterName),
+		Name:      destinationSettingName(clusterName),
 		// TODO: tracked with issue #6861
 		Metadata: nil,
 	}
@@ -265,7 +258,7 @@ func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTab
 	}
 
 	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:         wasmHTTPServiceClusterName,
+		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
 		endpointType: EndpointTypeDNS,

@@ -105,6 +105,35 @@ spec:
 Alternative ways of loading the dynamic module are:
 - Building a custom docker image
 - Copying from `InitContainer` to a shared volume
+- Letting Envoy Gateway fetch the module from an OCI image with the `Image` source type, described below
+
+#### Loading the module from an OCI image
+
+With the `Image` source type, Envoy Gateway pulls the OCI image, extracts the shared library, and serves it to Envoy
+from the same built-in HTTP server it uses for Wasm modules. Envoy verifies the module with its SHA256 checksum.
+This works on any Kubernetes version and does not require changes to the Envoy proxy pod.
+
+```yaml
+  dynamicModules:
+    - name: composer
+      source:
+        type: Image
+        image:
+          url: ghcr.io/tetratelabs/built-on-envoy/composer:0.6.0-dev
+          path: /libcomposer.so
+          pullPolicy: IfNotPresent
+      doNotClose: true
+      loadGlobally: false
+```
+
+- `path` is the path of the shared library inside the image. It can be omitted if the image contains exactly one `.so` file,
+  for example an OCI artifact pushed with `oras push <registry>/<repository>:<tag> libmodule.so`.
+- `sha256` optionally pins the digest of the image. For a multi-platform image, this is the digest of the image index.
+- `pullSecretRef` references a `kubernetes.io/dockerconfigjson` Secret for private registries. A Secret in another
+  namespace than the EnvoyProxy requires a ReferenceGrant.
+- For a multi-platform image, Envoy Gateway uses the `linux` image for its own CPU architecture, so the Envoy Gateway
+  controller and the Envoy proxies must run on the same architecture.
+- The environment variables required by the module, such as `GODEBUG` above, still need to be set on the Envoy container.
 
 
 Verify the [EnvoyProxy][] status:
