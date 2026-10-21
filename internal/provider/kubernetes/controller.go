@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
@@ -369,13 +370,25 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// - Envoy Gateway customized resources: EnvoyPatchPolicies, ClientTrafficPolicies, BackendTrafficPolicies ...
 	// - Referenced resources: Services, ServiceImports, EndpointSlices, Secrets, ConfigMaps ...
 	gwcResources := make(resource.ControllerResources, 0, len(managedGCs))
+	var errs []error
 	for _, managedGC := range managedGCs {
 		gwcResource, err := r.reconcileGatewayClass(ctx, managedGC, gcStatusToDelete, logger)
 		if err != nil {
-			// A transient error here aborts the entire Reconcile call: managedGCs after this
-			// one are left unprocessed this pass, and GatewayAPIResources is never Store()'d
-			// below, so the previous snapshot is left untouched until the workqueue retries.
-			return reconcile.Result{}, err
+			// A transient error is scoped to this GatewayClass only: log it, record it, and move on
+			// to the rest of managedGCs so one flaky class cannot stall the others.
+			// This class is retried on the next Reconcile.
+			logger.Error(err, "transient error reconciling GatewayClass, will retry", "GatewayClass", managedGC.Name)
+			errs = append(errs, err)
+			// Carry forward this GatewayClass's last published resources instead of dropping it
+			// from gwcResources: the Store below replaces the entire snapshot, and the Gateway
+			// API runner's mark-and-sweep treats any GatewayClass missing from that snapshot as
+			// deleted, tearing down its InfraIR, XdsIR, and statuses. Republishing the previous
+			// resources keeps the data plane intact until the transient error clears.
+			if prevResource := r.resources.GetResourcesByGatewayClass(managedGC.Name); prevResource != nil {
+				gwcResources = append(gwcResources, prevResource)
+				gcStatusToDelete.Delete(utils.NamespacedName(managedGC))
+			}
+			continue
 		}
 		gwcResources = append(gwcResources, gwcResource)
 	}
@@ -404,6 +417,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	}, 1)
 
 	logger.Info("reconciled gateways successfully")
+	if len(errs) > 0 {
+		return reconcile.Result{}, utilerrors.NewAggregate(errs)
+	}
 	return reconcile.Result{}, nil
 }
 
@@ -411,9 +427,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 // parametersRef, referenced secrets/services, Gateways, policies, and BackendRefs, updates its
 // Accepted status and finalizer, and returns the collected resource.Resources for this class.
 //
-// A transient error aborts processing for this GatewayClass and is returned to the caller.
-// The caller (Reconcile) in turn aborts the entire Reconcile call on any such error, so the
-// workqueue retries the whole batch - this mirrors the original inline behavior exactly.
+// A transient error aborts processing for this GatewayClass only and is returned to the caller;
+// the caller must not let it prevent the other managed GatewayClasses in the same Reconcile
+// batch from being processed.
 func (r *gatewayAPIReconciler) reconcileGatewayClass(ctx context.Context, managedGC *gwapiv1.GatewayClass, gcStatusToDelete sets.Set[types.NamespacedName], logger logging.Logger) (*resource.Resources, error) {
 	// Initialize resource types.
 	gwcResource := resource.NewResources()
