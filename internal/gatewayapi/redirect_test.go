@@ -466,7 +466,7 @@ func TestRedirectReferenceValidationIncludesCredentialInjection(t *testing.T) {
 	}}
 
 	_, errs := translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
-	var messages []string
+	messages := make([]string, 0, len(errs))
 	for _, err := range errs {
 		messages = append(messages, err.Error())
 	}
@@ -481,7 +481,7 @@ func TestRedirectReferenceValidationIncludesDirectResponseBody(t *testing.T) {
 		Spec: egv1a1.HTTPRouteFilterSpec{
 			Redirect: &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
 				Type:              egv1a1.RegexHTTPPathModifier,
-				ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "(", Substitution: "/new"},
+				ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "^/old$", Substitution: "/new"},
 			}},
 			DirectResponse: &egv1a1.HTTPDirectResponseFilter{
 				Body: &egv1a1.CustomResponseBody{
@@ -499,11 +499,11 @@ func TestRedirectReferenceValidationIncludesDirectResponseBody(t *testing.T) {
 	}}
 
 	_, errs := translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
-	var messages []string
+	messages := make([]string, 0, len(errs))
 	for _, err := range errs {
 		messages = append(messages, err.Error())
 	}
-	require.Contains(t, strings.Join(messages, "; "), "valid RE2")
+	require.Contains(t, strings.Join(messages, "; "), "redirect cannot be combined with URLRewrite or DirectResponse")
 	require.Contains(t, strings.Join(messages, "; "), "can't find the referenced configmap default/missing")
 }
 
