@@ -422,6 +422,16 @@ func (p *Provider) GetClient() client.Client {
 	return p.client
 }
 
+// GetAPIReader returns an uncached reader backed by the live API server. It is
+// used by the infrastructure runner for conflict checks that must observe
+// resources the label-filtered cache would miss.
+func (p *Provider) GetAPIReader() client.Reader {
+	if p.manager == nil {
+		return nil
+	}
+	return p.manager.GetAPIReader()
+}
+
 // Start starts the Provider synchronously, blocking until the manager and
 // all of its registered runnables have exited.
 func (p *Provider) Start(ctx context.Context) error {
