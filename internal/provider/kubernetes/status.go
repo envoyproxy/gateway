@@ -774,6 +774,9 @@ func isRouteParentStatusEqual(ns string, a, b *gwapiv1.RouteParentStatus) bool {
 	return a.ControllerName == b.ControllerName && gatewayapi.IsParentRefEqual(a.ParentRef, b.ParentRef, ns)
 }
 
+// maxPolicyAncestors is the Gateway API CRD limit on the number of entries in PolicyStatus.Ancestors.
+const maxPolicyAncestors = 16
+
 // mergePolicyAncestorStatus merges the ancestors of the latest policy object with the computed ones.
 // An entry is identified by its ancestorRef and controllerName, and entries written by other controllers
 // MUST NOT be updated. The computed ancestors are complete for our controller, so stale entries of ours are removed.
@@ -783,6 +786,12 @@ func isRouteParentStatusEqual(ns string, a, b *gwapiv1.RouteParentStatus) bool {
 //     Further old duplicates of it are dropped.
 //  2. The entry doesn't exist in the new status and it's not our controller: append it to the final status.
 //  3. The entry doesn't exist in the new status, and it is our controller: drop it.
+//
+// Then append the new entries that weren't found in the old status.
+//
+// The CRD allows at most maxPolicyAncestors entries. The new ancestors are already truncated to it,
+// so if the merged list exceeds it, entries of other controllers are dropped from the end:
+// the status of our own ancestors, including the Aggregated condition set on truncation, is kept visible.
 func mergePolicyAncestorStatus(ns string, controllerName gwapiv1.GatewayController, old, new []gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
 	// Allocating with worst-case capacity to avoid reallocation.
 	merged := make([]gwapiv1.PolicyAncestorStatus, 0, len(old)+len(new))
@@ -811,7 +820,21 @@ func mergePolicyAncestorStatus(ns string, controllerName gwapiv1.GatewayControll
 			merged = append(merged, newA)
 		}
 	}
-	return merged
+
+	if len(merged) <= maxPolicyAncestors {
+		return merged
+	}
+	others := maxPolicyAncestors - len(new)
+	bounded := merged[:0]
+	for _, a := range merged {
+		if a.ControllerName == controllerName {
+			bounded = append(bounded, a)
+		} else if others > 0 {
+			others--
+			bounded = append(bounded, a)
+		}
+	}
+	return bounded
 }
 
 // unstructuredPolicyAncestors returns the status.ancestors of an extension server policy.

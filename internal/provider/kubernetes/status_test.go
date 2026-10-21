@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -1196,6 +1197,20 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 	}
 	accepted := string(gwapiv1.PolicyConditionAccepted)
 	foreign := "example.com/Audited"
+	ancestors := func(controller gwapiv1.GatewayController, prefix string, n int, condType string) []gwapiv1.PolicyAncestorStatus {
+		res := make([]gwapiv1.PolicyAncestorStatus, 0, n)
+		for i := range n {
+			res = append(res, ancestor(controller, fmt.Sprintf("%s-%02d", prefix, i), condType, metav1.ConditionTrue))
+		}
+		return res
+	}
+	concat := func(lists ...[]gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
+		var res []gwapiv1.PolicyAncestorStatus
+		for _, l := range lists {
+			res = append(res, l...)
+		}
+		return res
+	}
 
 	tests := []struct {
 		name string
@@ -1262,6 +1277,24 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 			},
 			new:  []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
 			want: []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
+		},
+		{
+			name: "other controllers' entries are dropped from the end to fit in the limit",
+			old:  concat(ancestors(other, "other", 4, foreign), ancestors(ours, "gw", 10, accepted)),
+			new:  ancestors(ours, "gw", 14, accepted),
+			want: concat(ancestors(other, "other", 2, foreign), ancestors(ours, "gw", 14, accepted)),
+		},
+		{
+			name: "all other controllers' entries are dropped when ours fill the limit",
+			old:  concat(ancestors(ours, "gw", 1, accepted), ancestors(other, "other", 3, foreign)),
+			new:  ancestors(ours, "gw", 16, accepted),
+			want: ancestors(ours, "gw", 16, accepted),
+		},
+		{
+			name: "other controllers' entries are kept up to the limit",
+			old:  ancestors(other, "other", 10, foreign),
+			new:  ancestors(ours, "gw", 6, accepted),
+			want: concat(ancestors(other, "other", 10, foreign), ancestors(ours, "gw", 6, accepted)),
 		},
 		{
 			name: "ancestorRef with explicit default namespace matches",
