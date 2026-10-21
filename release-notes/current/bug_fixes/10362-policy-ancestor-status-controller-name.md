@@ -1,0 +1,1 @@
+Fixed policy status updates removing `status.ancestors` entries written by other controllers. Ancestor entries are now matched on both ancestorRef and controllerName, and only Envoy Gateway's own entries are updated or removed.
