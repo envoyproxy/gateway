@@ -1058,6 +1058,11 @@ func (t *Translator) validateExtensionRefHTTPFilter(ref *gwapiv1.LocalObjectRefe
 	if string(ref.Group) == egv1a1.GroupName && string(ref.Kind) == egv1a1.KindHTTPRouteFilter {
 		for _, hrf := range resources.HTTPRouteFilters {
 			if hrf.Namespace == namespace && hrf.Name == string(ref.Name) {
+				if hrf.Spec.DirectResponse != nil && hrf.Spec.DirectResponse.Body != nil {
+					if _, err := t.getCustomResponseBody(hrf.Spec.DirectResponse.Body, namespace); err != nil {
+						return t.processInvalidHTTPFilter(egv1a1.KindHTTPRouteFilter, context, err)
+					}
+				}
 				if hrf.Spec.CredentialInjection != nil {
 					return t.validateCredentialInjectionFilter(hrf, namespace, resources, context)
 				}
