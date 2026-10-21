@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-remote-infra
 
-go 1.27.2
+go 1.27.3
 
 require (
 	google.golang.org/grpc v1.84.0

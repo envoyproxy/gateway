@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-backend-utilization
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2
