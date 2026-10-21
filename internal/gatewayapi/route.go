@@ -322,6 +322,15 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 			// backendDest.ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 			backendDest, unstructuredRef, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, httpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeUnsafeForRule)
+			// A backend without endpoints returns an error too, but it is still used.
+			if httpFiltersContext.GRPCJSONTranscoder != nil {
+				if grpcErr := useGRPCUpstream(backendDest.ds); grpcErr != nil {
+					err = grpcErr
+				}
+				if backendDest.backendClusterKey != nil {
+					backendDest.backendClusterKey.Protocol = backendDest.ds.Protocol
+				}
+			}
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -1322,6 +1331,9 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	}
 	if httpFiltersContext.CredentialInjection != nil {
 		irRoute.CredentialInjection = httpFiltersContext.CredentialInjection
+	}
+	if httpFiltersContext.GRPCJSONTranscoder != nil {
+		irRoute.GRPCJSONTranscoder = httpFiltersContext.GRPCJSONTranscoder
 	}
 	if len(httpFiltersContext.AddRequestHeaders) > 0 {
 		irRoute.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
@@ -3247,6 +3259,10 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 		}
 		return nil, err
 	}
+	if httpFiltersContext.GRPCJSONTranscoder != nil {
+		return nil, errors.New("grpcJSONTranscoder is not supported in the filters of a backendRef")
+	}
+
 	applyHTTPFiltersContextToDestinationFilters(httpFiltersContext, &destFilters)
 
 	return &destFilters, nil

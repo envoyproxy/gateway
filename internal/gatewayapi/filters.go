@@ -51,6 +51,7 @@ type HTTPFilterIR struct {
 	DirectResponse      *ir.CustomResponse
 	RedirectResponse    *ir.Redirect
 	CredentialInjection *ir.CredentialInjection
+	GRPCJSONTranscoder  *ir.GRPCJSONTranscoder
 
 	URLRewrite *ir.URLRewrite
 
@@ -77,9 +78,11 @@ type HTTPFilterIR struct {
 var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 
 const (
-	requestMirrorDirectResponseConflictMsg = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
-	requestMirrorRedirectConflictMsg       = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
-	grpcDirectResponse2xxMsg               = "DirectResponse with a 2xx status code is not supported for GRPCRoute: a 2xx status maps to the gRPC OK status, but a direct response cannot carry a gRPC response message, so the client would receive an invalid response. Use a non-2xx status code to deny or block the request instead"
+	requestMirrorDirectResponseConflictMsg      = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
+	requestMirrorRedirectConflictMsg            = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
+	grpcJSONTranscoderConflictMsg               = "%s cannot be used when the rule also configures a grpcJSONTranscoder filter"
+	grpcJSONTranscoderDirectResponseConflictMsg = "DirectResponse filter cannot be used when the rule also configures a grpcJSONTranscoder filter"
+	grpcDirectResponse2xxMsg                    = "DirectResponse with a 2xx status code is not supported for GRPCRoute: a 2xx status maps to the gRPC OK status, but a direct response cannot carry a gRPC response message, so the client would receive an invalid response. Use a non-2xx status code to deny or block the request instead"
 )
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
@@ -162,6 +165,42 @@ func (t *Translator) ProcessHTTPFilters(
 			errors.New(requestMirrorRedirectConflictMsg),
 			gwapiv1.RouteReasonIncompatibleFilters,
 		).WithType(gwapiv1.RouteConditionAccepted))
+	}
+	// The transcoder changes the path to the gRPC method before the router, so the filters
+	// that use the path, like a redirect or a path rewrite, would not work as expected.
+	if httpFiltersContext.GRPCJSONTranscoder != nil {
+		// The mirrored request is also transcoded.
+		for _, mirror := range httpFiltersContext.Mirrors {
+			for _, ds := range mirror.Destination.Settings {
+				if err := useGRPCUpstream(ds); err != nil {
+					errs.Add(err)
+				}
+			}
+		}
+
+		var conflict string
+		switch rw := httpFiltersContext.URLRewrite; {
+		case httpFiltersContext.RedirectResponse != nil:
+			conflict = "RequestRedirect"
+		case rw != nil && rw.Path != nil:
+			conflict = "URLRewrite with a path modifier"
+		case rw != nil && rw.Host != nil && rw.Host.PathRegex != nil:
+			conflict = "URLRewrite with a PathRegex hostname"
+		}
+		switch {
+		case conflict != "":
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf(grpcJSONTranscoderConflictMsg, conflict),
+				gwapiv1.RouteReasonIncompatibleFilters,
+			).WithType(gwapiv1.RouteConditionAccepted))
+		// The transcoder is not enabled for a direct response.
+		// Note: an invalid filter also sets a DirectResponse, so only check it if there is no error.
+		case httpFiltersContext.DirectResponse != nil && errs.Empty():
+			errs.Add(status.NewRouteStatusError(
+				errors.New(grpcJSONTranscoderDirectResponseConflictMsg),
+				gwapiv1.RouteReasonIncompatibleFilters,
+			).WithType(gwapiv1.RouteConditionAccepted))
+		}
 	}
 
 	if httpFiltersContext.RequestMirrorModifier != nil && len(httpFiltersContext.Mirrors) > 0 {
@@ -1048,6 +1087,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						).WithType(gwapiv1.RouteConditionAccepted)
 					}
 					filterContext.RequestMirrorModifier = hrf.Spec.RequestMirror.Hostname
+				}
+
+				if hrf.Spec.GRPCJSONTranscoder != nil {
+					if err := t.applyGRPCJSONTranscoder(hrf, filterContext); err != nil {
+						return err
+					}
 				}
 			}
 		}
