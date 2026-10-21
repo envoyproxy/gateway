@@ -1736,6 +1736,8 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Translate builds this index before processing any backendRef.
+			tc.context.BackendTLSPolicyIndex = BuildBackendTLSPolicyIndex(tc.resources.BackendTLSPolicies)
 			translator := &Translator{
 				TranslatorContext:     tc.context,
 				BackendEnabled:        true,
