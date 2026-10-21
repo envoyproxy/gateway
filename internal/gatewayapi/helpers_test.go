@@ -1884,6 +1884,11 @@ func TestComputeHostsNestedWildcardIsolation(t *testing.T) {
 		siblingProtocolConflicted bool
 		// siblingSpecInvalid marks the sibling as having failed per-listener spec validation
 		siblingSpecInvalid bool
+		// siblingNoWinnerConflict marks the sibling as one of several listeners that
+		// declared the same hostname, where validateConflictedHostnameListeners picks
+		// no winner: the spec itself stayed valid, so only the conditions say it is
+		// conflicted.
+		siblingNoWinnerConflict bool
 		// the HTTPRoute's hostname
 		route string
 		want  []string
@@ -1949,6 +1954,18 @@ func TestComputeHostsNestedWildcardIsolation(t *testing.T) {
 			route:              "test.dev.example.com",
 			want:               []string{"test.dev.example.com"},
 		},
+		{
+			// Two same-port listeners declaring the same hostname leave no winner, so
+			// neither is programmed and neither is flagged hostnameConflictLoser. The
+			// spec stayed valid, so a guard that short-circuits on specValid misses this
+			// and the broad listener loses a host nothing else can serve.
+			name:                    "no-winner conflicted sibling does not own a hostname",
+			subject:                 "*.example.com",
+			sibling:                 "*.dev.example.com",
+			siblingNoWinnerConflict: true,
+			route:                   "test.dev.example.com",
+			want:                    []string{"test.dev.example.com"},
+		},
 	}
 
 	for _, tc := range tests {
@@ -1964,6 +1981,15 @@ func TestComputeHostsNestedWildcardIsolation(t *testing.T) {
 			}
 			subject.listenerStatusIdx = 0
 			sibling.listenerStatusIdx = 1
+			if tc.siblingNoWinnerConflict {
+				// Phase 1 passed, so specValid stays true; Phase 2 records the conflict and
+				// validateListenerConditions then adds Programmed=False.
+				sibling.specValid = true
+				sibling.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionTrue,
+					gwapiv1.ListenerReasonHostnameConflict, "duplicate hostname, no winner")
+				sibling.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalid, "Listener is invalid, see other Conditions for details.")
+			}
 			if tc.siblingSpecInvalid {
 				sibling.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse,
 					gwapiv1.ListenerReasonInvalid, "listener failed spec validation")

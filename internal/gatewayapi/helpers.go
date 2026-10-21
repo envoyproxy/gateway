@@ -372,11 +372,13 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		if listener.hostnameConflictLoser {
 			continue
 		}
-		// A listener that failed spec validation, or that lost a protocol conflict, is
-		// never programmed, so it cannot own a hostname either. Letting it delete one
-		// would strip the route from the valid listener and leave it attached to nothing.
-		// Same pair of guards the hostname conflict loop uses in validate.go.
-		if !isSpecValidForConflictChecks(listener) || listener.protocolConflicted {
+		// A listener that will not be programmed cannot own a hostname. Letting it delete
+		// one would strip the route from the valid listener and leave it attached to
+		// nothing. The condition is read directly rather than through
+		// isSpecValidForConflictChecks, which short-circuits on specValid and so misses a
+		// listener that validated cleanly and was only conflicted afterwards - duplicate
+		// hostnames with no winner being the case that leaves no flag behind.
+		if hasInvalidCondition(listener) || listener.protocolConflicted {
 			continue
 		}
 		if listenerContext != nil && listenerContext.Port != listener.Port {
