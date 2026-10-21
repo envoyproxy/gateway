@@ -37,7 +37,7 @@ const (
 	gatewayUDPRouteIndex             = "gatewayUDPRouteIndex"
 	secretGatewayIndex               = "secretGatewayIndex"
 	secretListenerSetIndex           = "secretListenerSetIndex"
-	targetRefGrantRouteIndex         = "targetRefGrantRouteIndex"
+	refGrantFromNamespaceToKindIndex = "refGrantFromNamespaceToKindIndex"
 	backendHTTPRouteIndex            = "backendHTTPRouteIndex"
 	backendGRPCRouteIndex            = "backendGRPCRouteIndex"
 	backendTLSRouteIndex             = "backendTLSRouteIndex"
@@ -72,19 +72,30 @@ const (
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
+// getReferenceGrantIndexerFunc indexes a ReferenceGrant by every "<from namespace>/<to kind>" pair
+// it allows (see refGrantFromNamespaceToKey). A common pattern is a shared namespace with a grant
+// per namespace that references it, so keying by the to kind alone would still return all of them.
 func getReferenceGrantIndexerFunc(rawObj client.Object) []string {
 	refGrant := rawObj.(*gwapiv1b1.ReferenceGrant)
-	referredServices := make([]string, 0, len(refGrant.Spec.To))
-	for _, target := range refGrant.Spec.To {
-		referredServices = append(referredServices, string(target.Kind))
+	keys := sets.New[string]()
+	for _, from := range refGrant.Spec.From {
+		for _, to := range refGrant.Spec.To {
+			keys.Insert(refGrantFromNamespaceToKey(string(from.Namespace), string(to.Kind)))
+		}
 	}
-	return referredServices
+	return sets.List(keys)
+}
+
+// refGrantFromNamespaceToKey returns the refGrantFromNamespaceToKindIndex key for references from
+// fromNamespace to resources of toKind.
+func refGrantFromNamespaceToKey(fromNamespace, toKind string) string {
+	return fromNamespace + "/" + toKind
 }
 
 func addEndpointSliceIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -242,14 +253,14 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 					Name:      string(filter.ExtensionRef.Name),
 				}.String()] = struct{}{}
 			}
-			for _, backendRef := range rule.BackendRefs {
-				for _, filter := range backendRef.Filters {
-					if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
-						httpRouteFilterRefs[types.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String()] = struct{}{}
-					}
+		}
+		for _, backendRef := range rule.BackendRefs {
+			for _, filter := range backendRef.Filters {
+				if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+					httpRouteFilterRefs[types.NamespacedName{
+						Namespace: httproute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
+					}.String()] = struct{}{}
 				}
 			}
 		}
@@ -1177,6 +1188,9 @@ func configMapEepIndexFunc(rawObj client.Object) []string {
 	}
 
 	for _, wasm := range eep.Spec.Wasm {
+		if wasm.Code == nil {
+			continue
+		}
 		var caCertRef *gwapiv1.SecretObjectReference
 		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
 			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
@@ -1372,6 +1386,9 @@ func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 	var ret []string
 
 	for _, wasm := range envoyExtensionPolicy.Spec.Wasm {
+		if wasm.Code == nil {
+			continue
+		}
 		if wasm.Code.Image != nil && wasm.Code.Image.PullSecretRef != nil {
 			secretRef := wasm.Code.Image.PullSecretRef
 			ret = append(ret,
@@ -1404,6 +1421,9 @@ func clusterTrustBundleEepIndexFunc(rawObj client.Object) []string {
 	eep := rawObj.(*egv1a1.EnvoyExtensionPolicy)
 	var refs []string
 	for _, wasm := range eep.Spec.Wasm {
+		if wasm.Code == nil {
+			continue
+		}
 		var caCertRef *gwapiv1.SecretObjectReference
 		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
 			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef

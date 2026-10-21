@@ -1,0 +1,200 @@
+# Real IR extracted from gatewayapi's mergebackends-tcp-udp-gateway-btp-protocol-scoped.out.yaml:
+# a whole-Gateway BackendTrafficPolicy with the full cluster-scoped feature set, merged into a
+# UDP and a TCP BackendCluster. The UDP cluster must only carry what ir.UDPRoute can carry
+# (load balancing and DNS) - no health check, circuit breaker, tcpKeepalive, proxyProtocol or
+# HttpProtocolOptions on the cluster udp_proxy routes to. Both clusters are route clusters, so
+# neither gets the route-scoped maxStreamDuration or consistent-hash policy on the cluster.
+backendClusters:
+- metadata:
+    kind: Service
+    name: service-1
+    namespace: default
+    sectionName: '8163'
+  name: service/default/service-1/8163/tcp
+  setting:
+    addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8163
+    metadata:
+      kind: Service
+      name: service-1
+      namespace: default
+      sectionName: '8163'
+    name: service/default/service-1/8163/tcp
+    protocol: TCP
+  traffic:
+    circuitBreaker:
+      maxConnections: 2048
+      maxParallelRequests: 4294967295
+      maxParallelRetries: 1024
+      maxPendingRequests: 1
+      maxRequestsPerConnection: 1
+    dns:
+      dnsRefreshRate: 30s
+      name: default/policy-for-gateway
+      respectDnsTtl: true
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        interval: 3s
+        tcp:
+          receive:
+            text: pong
+          send:
+            text: ping
+        timeout: 500ms
+        unhealthyThreshold: 3
+      passive:
+        baseEjectionTime: 2m40s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 2s
+        maxEjectionPercent: 100
+        splitExternalLocalOriginErrors: false
+    loadBalancer:
+      consistentHash:
+        sourceIP: true
+    proxyProtocol:
+      version: V2
+    tcpKeepalive:
+      idleTime: 1200
+      interval: 60
+      probes: 3
+    timeout:
+      http:
+        connectionIdleTimeout: 16s
+        maxConnectionDuration: 17s
+        maxStreamDuration: 19s
+      tcp:
+        connectTimeout: 15s
+- metadata:
+    kind: Service
+    name: service-1
+    namespace: default
+    sectionName: '8162'
+  name: service/default/service-1/8162/udp
+  setting:
+    addressType: IP
+    endpoints:
+    - host: 7.7.7.7
+      port: 8162
+    metadata:
+      kind: Service
+      name: service-1
+      namespace: default
+      sectionName: '8162'
+    name: service/default/service-1/8162/udp
+    protocol: UDP
+  traffic:
+    dns:
+      dnsRefreshRate: 30s
+      name: default/policy-for-gateway
+      respectDnsTtl: true
+    loadBalancer:
+      consistentHash:
+        sourceIP: true
+tcp:
+- address: 0.0.0.0
+  externalPort: 8089
+  metadata:
+    kind: Gateway
+    name: tcp-gateway
+    namespace: default
+    sectionName: bar
+  name: default/tcp-gateway/bar
+  port: 8089
+  routes:
+  - circuitBreaker:
+      maxConnections: 2048
+      maxParallelRequests: 4294967295
+      maxParallelRetries: 1024
+      maxPendingRequests: 1
+      maxRequestsPerConnection: 1
+    destination:
+      backendClusterRefs:
+      - name: service/default/service-1/8163/tcp
+        weight: 1
+      metadata:
+        kind: TCPRoute
+        name: tcp-app-1
+        namespace: default
+      name: tcproute/default/tcp-app-1/rule/-1
+    dns:
+      dnsRefreshRate: 30s
+      name: default/policy-for-gateway
+      respectDnsTtl: true
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        interval: 3s
+        tcp:
+          receive:
+            text: pong
+          send:
+            text: ping
+        timeout: 500ms
+        unhealthyThreshold: 3
+      passive:
+        baseEjectionTime: 2m40s
+        consecutive5XxErrors: 5
+        consecutiveGatewayErrors: 0
+        consecutiveLocalOriginFailures: 5
+        interval: 2s
+        maxEjectionPercent: 100
+        splitExternalLocalOriginErrors: false
+    loadBalancer:
+      consistentHash:
+        sourceIP: true
+    metadata:
+      kind: TCPRoute
+      name: tcp-app-1
+      namespace: default
+      policies:
+      - kind: BackendTrafficPolicy
+        name: policy-for-gateway
+        namespace: default
+    name: tcproute/default/tcp-app-1
+    proxyProtocol:
+      version: V2
+    tcpKeepalive:
+      idleTime: 1200
+      interval: 60
+      probes: 3
+    timeout:
+      http:
+        connectionIdleTimeout: 16s
+        maxConnectionDuration: 17s
+        maxStreamDuration: 19s
+        requestTimeout: 18s
+      tcp:
+        connectTimeout: 15s
+udp:
+- address: 0.0.0.0
+  externalPort: 8162
+  metadata:
+    kind: Gateway
+    name: tcp-gateway
+    namespace: default
+    sectionName: foo
+  name: default/tcp-gateway/foo
+  port: 8162
+  route:
+    destination:
+      backendClusterRefs:
+      - name: service/default/service-1/8162/udp
+        weight: 1
+      metadata:
+        kind: UDPRoute
+        name: udp-app-1
+        namespace: default
+      name: udproute/default/udp-app-1/rule/-1
+    dns:
+      dnsRefreshRate: 30s
+      name: default/policy-for-gateway
+      respectDnsTtl: true
+    loadBalancer:
+      consistentHash:
+        sourceIP: true
+    name: udproute/default/udp-app-1

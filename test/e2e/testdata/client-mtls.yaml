@@ -72,6 +72,7 @@ spec:
     xForwardedClientCert:
       certDetailsToAdd:
         - Subject
+        - Issuer
       mode: SanitizeSet
   tls:
     clientValidation:

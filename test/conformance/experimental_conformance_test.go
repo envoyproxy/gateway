@@ -42,19 +42,21 @@ func TestExperimentalConformance(t *testing.T) {
 		t.Fatalf("error creating experimental conformance test suite: %v", err)
 	}
 
-	cSuite.Setup(t, tests.ConformanceTests)
-	err = cSuite.Run(t, tests.ConformanceTests)
-	if err != nil {
-		t.Fatalf("error running conformance profile report: %v", err)
-	}
-	report, err := cSuite.Report()
-	if err != nil {
-		t.Fatalf("error generating conformance profile report: %v", err)
-	}
+	// Since gateway-api conformance v1.6.2, Run() marks the suite as not running only from a
+	// t.Cleanup it registers itself, because parallel subtests only execute after this function
+	// returns. Cleanups run last-in-first-out, so register the report generation first so that
+	// it runs last, after every subtest has completed. Calling Report() inline after Run() always
+	// fails with "the test suite is currently running".
+	t.Cleanup(func() {
+		report, err := cSuite.Report()
+		require.NoError(t, err, "error generating conformance profile report")
+		require.NoError(t, experimentalConformanceReport(t.Logf, report, opts.ReportOutputPath))
+	})
 
-	// use to trigger the experimental conformance report
-	err = experimentalConformanceReport(t.Logf, report, opts.ReportOutputPath)
-	require.NoError(t, err)
+	cSuite.Setup(t, tests.ConformanceTests)
+	if err := cSuite.Run(t, tests.ConformanceTests); err != nil {
+		t.Fatalf("error running conformance tests: %v", err)
+	}
 }
 
 func experimentalConformanceReport(logf func(string, ...any), report *conformancev1.ConformanceReport, output string) error {

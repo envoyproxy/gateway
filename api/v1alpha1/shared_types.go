@@ -360,6 +360,8 @@ type KubernetesServiceSpec struct {
 	// it happens outside of kubernetes and has to be supported and handled by the platform provider.
 	// This field may only be set for services with type LoadBalancer and will be cleared if the type
 	// is changed to any other type.
+	// +kubebuilder:validation:items:Format=cidr
+	// +kubebuilder:validation:MaxItems=64
 	// +optional
 	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 
@@ -368,7 +370,7 @@ type KubernetesServiceSpec struct {
 	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
 	// providers such as GCP.
 	//
-	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="self.matches(r\"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$\")"
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="isIP(self) && ip(self).family() == 4"
 	// +optional
 	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 
@@ -571,6 +573,14 @@ const (
 // KubernetesPatchSpec defines how to perform the patch operation.
 // Note that `value` can be an in-line YAML document, as can be seen in e.g. (the example of patching the Envoy proxy Deployment)[https://gateway.envoyproxy.io/docs/tasks/operations/customize-envoyproxy/#patching-deployment-for-envoyproxy].
 // Note also that, currently, strings containing literal JSON are _rejected_.
+//
+// Warning: this patch is merged directly onto the fully-computed Kubernetes resource with no
+// allowlist on which fields may be set. Whoever can author the EnvoyProxy resource that carries
+// this patch can therefore set arbitrary fields — including hostPath volumes, hostNetwork/hostPID,
+// privileged containers, or an arbitrary image/command — on a resource that Envoy Gateway's own,
+// more privileged, ServiceAccount applies. Because EnvoyProxy is commonly namespace-scoped and
+// tenant-authored, treat this field as untrusted input in multi-tenant clusters: restrict who may
+// set it via RBAC, or disable EnvoyGateway's `EnvoyProxyPatch` runtime flag.
 type KubernetesPatchSpec struct {
 	// Type is the type of merge operation to perform
 	//
@@ -620,6 +630,8 @@ type BackendRef struct {
 // BackendCluster contains all the configuration required for configuring access
 // to a backend. This can include multiple endpoints, and settings that apply for
 // managing the connection to all these endpoints.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.backendSettings) || !has(self.backendSettings.http3)",message="http3 is only supported for route backends"
 type BackendCluster struct {
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
@@ -644,6 +656,7 @@ type BackendCluster struct {
 
 // ClusterSettings contains CDS-only fields that configure the upstream Envoy Cluster.
 // +kubebuilder:validation:XValidation:rule="!((has(self.connection) && has(self.connection.preconnect) && has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer) && has(self.loadBalancer.type) && self.loadBalancer.type in ['Random', 'RoundRobin']))",message="predictivePercent in preconnect policy only works with RoundRobin or Random load balancers"
+// +kubebuilder:validation:XValidation:rule="!has(self.http3) || !has(self.proxyProtocol)",message="proxyProtocol cannot be used together with http3"
 type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints. Defaults to `LeastRequest`.
@@ -690,6 +703,17 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+
+	// HTTP3 enables HTTP/3 for backend connections.
+	// HTTP/3 always runs over TLS, so the backend must be configured
+	// with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+	// HTTP/3 is only supported for the backends of a route, through
+	// BackendTrafficPolicy. It is rejected for the backends of other
+	// resources, such as the external services of a SecurityPolicy
+	// or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+	//
+	// +optional
+	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty"`
 }
 
 // BackendSettings provides the various knobs that can be set to control how traffic to a given
@@ -706,6 +730,7 @@ type BackendSettings struct {
 
 // CIDR defines a CIDR Address range.
 // A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+// +kubebuilder:validation:MaxLength=64
 // +kubebuilder:validation:Pattern=`((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))`
 type CIDR string
 
@@ -774,6 +799,32 @@ type HTTP2KeepaliveSettings struct {
 	// IdleInterval specifies how long a connection must be idle before a PING is sent.
 	// +optional
 	IdleInterval *gwapiv1.Duration `json:"idleInterval,omitempty"`
+}
+
+// BackendHTTP3Mode determines when Envoy uses HTTP/3 to reach a backend.
+// +kubebuilder:validation:Enum=Auto;Always
+type BackendHTTP3Mode string
+
+const (
+	// BackendHTTP3ModeAuto uses HTTP/3 only for backends that advertise support for it
+	// through an alt-svc response header. Envoy races a QUIC connection against a TCP one
+	// and uses whichever is established first, so it falls back to HTTP/1.1 or HTTP/2 when
+	// QUIC is unavailable.
+	BackendHTTP3ModeAuto BackendHTTP3Mode = "Auto"
+	// BackendHTTP3ModeAlways always uses HTTP/3, without falling back to TCP. Use this only
+	// in environments where the backend is known to speak HTTP/3. Active health checks are
+	// still sent over TLS on TCP, so a backend with an active health check must also accept
+	// TCP on the same port.
+	BackendHTTP3ModeAlways BackendHTTP3Mode = "Always"
+)
+
+// BackendHTTP3Settings provides HTTP/3 configuration for backend connections.
+type BackendHTTP3Settings struct {
+	// Mode determines when HTTP/3 is used to reach the backend.
+	// Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+	//
+	// +optional
+	Mode *BackendHTTP3Mode `json:"mode,omitempty"`
 }
 
 // GRPCSettings provides gRPC configuration for listeners.
@@ -914,6 +965,8 @@ type CustomResponse struct {
 	// If unset, does not override the status of response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=200
+	// +kubebuilder:validation:Maximum=599
 	StatusCode *int `json:"statusCode,omitempty"`
 
 	// Header defines headers to add, set or remove from the response.
@@ -1073,12 +1126,32 @@ type CustomRedirect struct {
 // Remove this definition and reuse the upstream one once it supports items more than 64
 
 // HTTPHeaderFilter defines a filter that modifies the headers of an HTTP
-// request or response. Only one action for a given header name is
-// permitted. Filters specifying multiple actions of the same or different
-// type for any one header name are invalid. Configuration to set or add
-// multiple values for a header must use RFC 7230 header value formatting,
-// separating each value with a comma.
+// request or response.
+//
+// The Set, Add, AddIfAbsent, Remove and RemoveOnMatch fields permit only one
+// action for a given header name. Specifying multiple actions of the same or
+// different type for any one header name via those fields is invalid, and
+// configuration to set or add multiple values for a header must use RFC 7230
+// header value formatting, separating each value with a comma.
+//
+// The Mutations field has no such restriction. It is an ordered list, so the
+// same header name may appear in any number of operations and each one is
+// applied in turn.
 type HTTPHeaderFilter struct {
+	// Mutations is an ordered list of header operations that are applied in
+	// exactly the order specified. Use this field when the sequence of
+	// operations matters, for example setting a header and then appending to
+	// it, or removing a header and then re-adding it.
+	//
+	// Mutations are always applied FIRST, in list order. The Set, Add,
+	// AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after
+	// the mutations, preserving their existing ordering (Add, then Set, then
+	// AddIfAbsent, then Remove, then RemoveOnMatch).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=64
+	Mutations []HTTPHeaderMutation `json:"mutations,omitempty"`
+
 	// Set overwrites the request with the given header (name, value)
 	// before the action.
 	//
@@ -1182,6 +1255,85 @@ type HTTPHeaderFilter struct {
 	// +kubebuilder:validation:MaxItems=64
 	RemoveOnMatch []StringMatch `json:"removeOnMatch,omitempty"`
 }
+
+// HTTPHeaderMutation defines a single header mutation operation.
+//
+// +kubebuilder:validation:MaxProperties=1
+// +kubebuilder:validation:MinProperties=1
+type HTTPHeaderMutation struct {
+	// Write adds or modifies a header using the specified action.
+	//
+	// +optional
+	Write *HTTPHeaderWrite `json:"write,omitempty"`
+
+	// Remove removes the named header if it exists. Header names are
+	// case-insensitive.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	Remove *string `json:"remove,omitempty"`
+
+	// RemoveOnMatch removes every header whose name matches the specified string
+	// matcher. Matching is performed on the header name (case-insensitive).
+	//
+	// +optional
+	RemoveOnMatch *StringMatch `json:"removeOnMatch,omitempty"`
+}
+
+// HTTPHeaderWrite defines a header to write and how it should be applied when a
+// header with the same name already exists. It mirrors Envoy's
+// core.v3.HeaderValueOption.
+type HTTPHeaderWrite struct {
+	// Header is the header name and value to write. The value may contain
+	// Envoy substitution format operators such as "%REQ(x-foo)%", which are
+	// evaluated per request.
+	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
+	Header gwapiv1.HTTPHeader `json:"header"`
+
+	// Action controls how the header value is written when a header with the
+	// same name already exists. Defaults to Add.
+	//
+	// +optional
+	// +kubebuilder:default=Add
+	Action HeaderWriteAction `json:"action,omitempty"`
+
+	// KeepEmptyValue controls whether the header is still written when its
+	// value is empty. This matters for values produced by substitution
+	// formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+	// request time. Envoy drops such headers by default; set this to true to
+	// keep them with an empty value.
+	//
+	// When unset, it defaults to true only if the configured value itself is
+	// the empty string, so a literal empty header is always written.
+	//
+	// +optional
+	KeepEmptyValue *bool `json:"keepEmptyValue,omitempty"`
+}
+
+// HeaderWriteAction controls how a header value is written when a header with
+// the same name already exists. The names match the Add, Set and AddIfAbsent
+// fields of HTTPHeaderFilter.
+//
+// +kubebuilder:validation:Enum=Add;Set;AddIfAbsent;SetIfExists
+type HeaderWriteAction string
+
+const (
+	// HeaderWriteAdd appends the value if the header exists, or adds the
+	// header otherwise. (Envoy: APPEND_IF_EXISTS_OR_ADD)
+	HeaderWriteAdd HeaderWriteAction = "Add"
+
+	// HeaderWriteSet overwrites the value if the header exists, or adds
+	// the header otherwise. (Envoy: OVERWRITE_IF_EXISTS_OR_ADD)
+	HeaderWriteSet HeaderWriteAction = "Set"
+
+	// HeaderWriteAddIfAbsent adds the header only if it is not already present.
+	// (Envoy: ADD_IF_ABSENT)
+	HeaderWriteAddIfAbsent HeaderWriteAction = "AddIfAbsent"
+
+	// HeaderWriteSetIfExists overwrites the value only if the header is
+	// already present, and does nothing otherwise. (Envoy: OVERWRITE_IF_EXISTS)
+	HeaderWriteSetIfExists HeaderWriteAction = "SetIfExists"
+)
 
 // LocalObjectKeyReference selects a key from a local object.
 type LocalObjectKeyReference struct {

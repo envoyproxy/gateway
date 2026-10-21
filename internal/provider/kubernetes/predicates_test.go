@@ -15,11 +15,14 @@ import (
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -64,6 +67,69 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.hasMatchingController(tc.gc)
 			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+func TestUnstructuredCommonPredicates(t *testing.T) {
+	base := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "example.com/v1",
+		"kind":       "ExtensionResource",
+		"metadata": map[string]any{
+			"name":      "resource",
+			"namespace": "default",
+		},
+	}}
+
+	testCases := []struct {
+		name   string
+		mutate func(*unstructured.Unstructured)
+		expect bool
+	}{
+		{
+			name: "generation changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetGeneration(1)
+			},
+			expect: true,
+		},
+		{
+			name: "labels changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetLabels(map[string]string{"environment": "test"})
+			},
+			expect: true,
+		},
+		{
+			name: "annotations changed",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.SetAnnotations(map[string]string{"example.com/config": "updated"})
+			},
+			expect: true,
+		},
+		{
+			name: "status changed only",
+			mutate: func(obj *unstructured.Unstructured) {
+				obj.Object["status"] = map[string]any{"state": "ready"}
+			},
+			expect: false,
+		},
+	}
+
+	predicates := commonPredicates[*unstructured.Unstructured]()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updated := base.DeepCopy()
+			tc.mutate(updated)
+
+			matched := false
+			for _, p := range predicates {
+				matched = matched || p.Update(event.TypedUpdateEvent[*unstructured.Unstructured]{
+					ObjectOld: base,
+					ObjectNew: updated,
+				})
+			}
+			require.Equal(t, tc.expect, matched)
 		})
 	}
 }
@@ -847,7 +913,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 							{
 								Name:   new("wasm-filter"),
 								RootID: new("my_root_id"),
-								Code: egv1a1.WasmCodeSource{
+								Code: &egv1a1.WasmCodeSource{
 									Type: egv1a1.ImageWasmCodeSourceType,
 									Image: &egv1a1.ImageWasmCodeSource{
 										URL: "https://example.com/testwasm:v1.0.0",
@@ -1176,6 +1242,10 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 	sampleServiceImportBackendRef := test.GetServiceImportBackendRef(types.NamespacedName{Name: "imported-service"}, 80)
+	// MCS implementations such as Cilium ClusterMesh label a ServiceImport's
+	// EndpointSlices with both the derived Service and the ServiceImport name.
+	dualLabelledEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "derived-service", false)
+	dualLabelledEndpointSlice.Labels[mcsapiv1a1.LabelServiceName] = "imported-service"
 
 	testCases := []struct {
 		name          string
@@ -1222,6 +1292,26 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceImportBackendRef, ""),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "imported-service", true),
+			expect:        true,
+		},
+		{
+			name: "endpointslice labelled with both names, route references the Service",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", test.GetServiceBackendRef(types.NamespacedName{Name: "derived-service"}, 80), ""),
+			},
+			endpointSlice: dualLabelledEndpointSlice,
+			expect:        true,
+		},
+		{
+			name: "endpointslice labelled with both names, route references the ServiceImport",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceImportBackendRef, ""),
+			},
+			endpointSlice: dualLabelledEndpointSlice,
 			expect:        true,
 		},
 		{
@@ -2144,6 +2234,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	sampleService := test.GetService(types.NamespacedName{Name: "service"}, nil, nil)
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 	sampleHTTPRouteFilter := test.GetHTTPRouteFilter(types.NamespacedName{Name: "httproutefilter"})
+	// A route that references the filter only from a backendRef, with no rule-level filters.
+	backendRefFilterRoute := test.GetHTTPRoute(types.NamespacedName{Name: "httproute-backendref-filter"}, "scheduled-status-test", sampleServiceBackendRef, "")
+	backendRefFilterRoute.Spec.Rules[0].BackendRefs[0].Filters = []gwapiv1.HTTPRouteFilter{
+		{
+			Type: gwapiv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: egv1a1.GroupName,
+				Kind:  egv1a1.KindHTTPRouteFilter,
+				Name:  "httproutefilter",
+			},
+		},
+	}
 
 	testCases := []struct {
 		name string
@@ -2173,6 +2275,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 				sampleService,
 				sampleHTTPRouteFilter,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, "httproutefilter"),
+			},
+			httpRouteFilter: sampleHTTPRouteFilter,
+			expect:          true,
+		},
+		{
+			name: "httproutefilter referenced only by a backendRef of route",
+			configs: []client.Object{
+				sampleGWC,
+				sampleGateway,
+				sampleService,
+				sampleHTTPRouteFilter,
+				backendRefFilterRoute,
 			},
 			httpRouteFilter: sampleHTTPRouteFilter,
 			expect:          true,

@@ -388,6 +388,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// refers to the Listener TLS.
 					TLS: tlsConfig,
 				}
+				// TLS listeners support hostname-based (SNI) matching; TCP does not.
+				if listener.Protocol == gwapiv1.TLSProtocolType && listener.Hostname != nil {
+					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
+				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
@@ -1303,14 +1307,16 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 				ResourceAttributes:       sink.OpenTelemetry.ResourceAttributes,
 				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
 				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+				Prefix:                   ptr.Deref(sink.OpenTelemetry.Prefix, ""),
 			})
 		}
 	}
 
 	return &ir.Metrics{
-		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
-		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
-		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
+		EnableVirtualHostStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
+		EnablePerEndpointStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
+		EnableRequestResponseSizesStats:    ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
+		EnableCircuitBreakerRemainingStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableCircuitBreakerRemainingStats, false),
 	}, resolvedSinks, nil
 }
 
@@ -1334,7 +1340,7 @@ func (t *Translator) processProxyGRPCSettings(
 func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, gwCtx *GatewayContext,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
-	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
+	traffic, err := translateExtServiceBackendSettings(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1376,7 +1382,7 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		}
 
 		// Apply TLS from Backend resource, BackendTLSPolicy, and EnvoyProxy.
-		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, resources, gwCtx)
+		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, gwCtx, nil)
 		if err != nil {
 			return nil, nil, err
 		}
