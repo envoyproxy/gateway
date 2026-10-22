@@ -714,6 +714,36 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty"`
+
+	// HTTP1 provides HTTP/1 configuration for backend connections.
+	// When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+	// this field takes precedence for backend (upstream) traffic.
+	//
+	// Behavior when targeting route kinds that do not use HTTP/1:
+	//   - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+	//     directly adds a Warning condition on the policy; the field is ignored.
+	//   - Gateway / ListenerSet / sectionName targets: this field is silently
+	//     ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+	//     beneath that target; no warning is emitted.
+	//   - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+	//     access log/metrics, tracing providers): rejected at admission on their
+	//     own BackendSettings via separate validation rules.
+	//
+	// +optional
+	HTTP1 *BackendHTTP1Settings `json:"http1,omitempty"`
+}
+
+// BackendHTTP1Settings provides HTTP/1 configuration for backend connections.
+// Setting this field to an empty value (http1: {}), or configuring any of its members,
+// forces explicit HTTP/1 for backend connections.
+type BackendHTTP1Settings struct {
+	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+	// +optional
+	EnableTrailers *bool `json:"enableTrailers,omitempty"`
+	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+	// By default, Envoy will lowercase all the headers.
+	// +optional
+	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 }
 
 // BackendSettings provides the various knobs that can be set to control how traffic to a given
