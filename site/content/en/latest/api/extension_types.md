@@ -669,7 +669,8 @@ _Appears in:_
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration (websocket) will be used.<br />However, if requestBuffer is configured with mode BufferAndLimit, the default<br />upgrade configuration will be ignored. |
-| `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer configures how much of a request body Envoy is allowed to buffer for a route,<br />and whether the gateway fully buffers each request before forwarding it upstream.<br />A request whose buffered body exceeds the configured limit is rejected with HTTP 413 Content Too<br />Large. How much of a request is buffered, and therefore whether the limit acts as a maximum request<br />body size, depends on the mode: see the mode field.<br />Buffering increases memory usage for Envoy that should be accounted for in your deployment settings. |
+| `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer configures how much of a request body Envoy is allowed to buffer for a route,<br />and whether the gateway fully buffers each request before forwarding it upstream.<br />A request whose buffered body exceeds the configured limit is rejected with HTTP 413 Content Too<br />Large. How much of a request is buffered, and therefore whether the limit acts as a maximum request<br />body size, depends on the mode: see the mode field.<br />Buffering increases memory usage for Envoy that should be accounted for in your deployment settings.<br />To cap the request body size without buffering it, use requestBodyLimit instead. |
+| `requestBodyLimit` | _[RequestBodyLimit](#requestbodylimit)_ |  false  |  | RequestBodyLimit caps the size of the request body on a route without buffering it.<br />Envoy rejects a request with HTTP 413 Content Too Large as soon as it knows the body is too large:<br />from the Content-Length header when present, otherwise once the bytes received exceed the limit while<br />the body is streamed to the backend. Nothing is buffered, so unlike requestBuffer with mode<br />BufferAndLimit it costs no memory and leaves HTTP upgrades such as WebSocket enabled.<br />The limit counts every request body byte of a stream. Envoy passes the client-to-server payload of<br />an upgraded connection and of a streaming request through the HTTP filter chain as request body<br />data, so a long-lived WebSocket or gRPC stream whose payload grows past the limit is terminated<br />with a 413 as well. Do not set it on routes that carry such traffic.<br />Requires Envoy proxy v1.40 or later. |
 | `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
 | `routingType` | _[RoutingType](#routingtype)_ |  false  |  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing.<br />When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.<br />If not specified, the EnvoyProxy-level setting is used. |
 
@@ -1818,6 +1819,7 @@ _Appears in:_
 | `envoy.filters.http.oauth2` | EnvoyFilterOAuth2 defines the Envoy HTTP OAuth2 filter.<br /> | 
 | `envoy.filters.http.jwt_authn` | EnvoyFilterJWTAuthn defines the Envoy HTTP JWT authentication filter.<br /> | 
 | `envoy.filters.http.stateful_session` | EnvoyFilterSessionPersistence defines the Envoy HTTP session persistence filter.<br /> | 
+| `envoy.filters.http.body_size_limit` | EnvoyFilterBodySizeLimit defines the Envoy HTTP body size limit filter.<br /> | 
 | `envoy.filters.http.buffer` | EnvoyFilterBuffer defines the Envoy HTTP buffer filter<br /> | 
 | `envoy.filters.http.lua` | EnvoyFilterLua defines the Envoy HTTP Lua filter.<br /> | 
 | `envoy.filters.http.ext_proc` | EnvoyFilterExtProc defines the Envoy HTTP external process filter.<br /> | 
@@ -6114,6 +6116,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `pattern` | _string_ |  true  |  | Pattern matches a regular expression against the value of the HTTP Path.The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
 | `substitution` | _string_ |  true  |  | Substitution is an expression that replaces the matched portion.The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax. |
+
+
+#### RequestBodyLimit
+
+
+
+RequestBodyLimit configures a maximum request body size that Envoy enforces without buffering the body.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | MaxSize is the maximum request body size. A request whose body is larger is rejected with HTTP 413<br />Content Too Large. When the Content-Length header announces a larger body, the request is rejected<br />before any body byte is read.<br />Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki"). |
 
 
 #### RequestBuffer

@@ -3344,6 +3344,39 @@ spec:
                     - Local
                     type: string
                 type: object
+              requestBodyLimit:
+                description: |-
+                  RequestBodyLimit caps the size of the request body on a route without buffering it.
+
+                  Envoy rejects a request with HTTP 413 Content Too Large as soon as it knows the body is too large:
+                  from the Content-Length header when present, otherwise once the bytes received exceed the limit while
+                  the body is streamed to the backend. Nothing is buffered, so unlike requestBuffer with mode
+                  BufferAndLimit it costs no memory and leaves HTTP upgrades such as WebSocket enabled.
+
+                  The limit counts every request body byte of a stream. Envoy passes the client-to-server payload of
+                  an upgraded connection and of a streaming request through the HTTP filter chain as request body
+                  data, so a long-lived WebSocket or gRPC stream whose payload grows past the limit is terminated
+                  with a 413 as well. Do not set it on routes that carry such traffic.
+
+                  Requires Envoy proxy v1.40 or later.
+                properties:
+                  maxSize:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxSize is the maximum request body size. A request whose body is larger is rejected with HTTP 413
+                      Content Too Large. When the Content-Length header announces a larger body, the request is rejected
+                      before any body byte is read.
+
+                      Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                    x-kubernetes-int-or-string: true
+                required:
+                - maxSize
+                type: object
               requestBuffer:
                 description: |-
                   RequestBuffer configures how much of a request body Envoy is allowed to buffer for a route,
@@ -3354,6 +3387,7 @@ spec:
                   body size, depends on the mode: see the mode field.
 
                   Buffering increases memory usage for Envoy that should be accounted for in your deployment settings.
+                  To cap the request body size without buffering it, use requestBodyLimit instead.
                 properties:
                   limit:
                     allOf:
@@ -4554,6 +4588,10 @@ spec:
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.requestBuffer)'
+            - message: requestBodyLimit is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.requestBodyLimit)'
             - message: telemetry is not allowed when targeting a backend
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
@@ -11337,6 +11375,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
@@ -11371,6 +11410,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
@@ -11403,6 +11443,7 @@ spec:
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc

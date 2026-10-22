@@ -126,10 +126,13 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 10
 	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 11
-	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+	case isFilterType(filter, egv1a1.EnvoyFilterBodySizeLimit):
+		// Reject an oversized body before the buffer filter starts buffering it.
 		order = 12
+	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
+		order = 13
 	case isFilterType(filter, egv1a1.EnvoyFilterLua):
-		order = 13 + mustGetFilterIndex(filter.Name)
+		order = 14 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterExtProc):
 		order = 100 + mustGetFilterIndex(filter.Name)
 	case isFilterType(filter, egv1a1.EnvoyFilterWasm):

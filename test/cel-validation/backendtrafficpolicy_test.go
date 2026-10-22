@@ -522,11 +522,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					}},
-					HTTPUpgrade:    []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
-					RequestBuffer:  &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
-					Telemetry:      &egv1a1.BackendTelemetry{},
-					RoutingType:    &rt,
-					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+					HTTPUpgrade:      []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer:    &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10Mi")},
+					Telemetry:        &egv1a1.BackendTelemetry{},
+					RoutingType:      &rt,
+					BandwidthLimit:   &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -536,6 +537,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
 				"requestBuffer is not allowed when targeting a backend",
+				"requestBodyLimit is not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
@@ -568,11 +570,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					}},
-					HTTPUpgrade:    []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
-					RequestBuffer:  &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
-					Telemetry:      &egv1a1.BackendTelemetry{},
-					RoutingType:    &rt,
-					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+					HTTPUpgrade:      []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer:    &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10Mi")},
+					Telemetry:        &egv1a1.BackendTelemetry{},
+					RoutingType:      &rt,
+					BandwidthLimit:   &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -582,6 +585,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
 				"requestBuffer is not allowed when targeting a backend",
+				"requestBodyLimit is not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
@@ -616,11 +620,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					}},
-					HTTPUpgrade:    []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
-					RequestBuffer:  &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
-					Telemetry:      &egv1a1.BackendTelemetry{},
-					RoutingType:    &rt,
-					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+					HTTPUpgrade:      []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer:    &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10Mi")},
+					Telemetry:        &egv1a1.BackendTelemetry{},
+					RoutingType:      &rt,
+					BandwidthLimit:   &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -630,6 +635,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
 				"requestBuffer is not allowed when targeting a backend",
+				"requestBodyLimit is not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
@@ -4474,6 +4480,57 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.requestBuffer.limit: Invalid value: \"1m\": spec.requestBuffer.limit in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'",
+			},
+		},
+		{
+			desc: "valid request body limit with httpUpgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{
+						MaxSize: resource.MustParse("1Mi"),
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "websocket",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid request body limit maxSize format",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{
+						MaxSize: resource.MustParse("1m"),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestBodyLimit.maxSize: Invalid value: \"1m\": spec.requestBodyLimit.maxSize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'",
 			},
 		},
 		{

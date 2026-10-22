@@ -1830,6 +1830,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
 		rbbl        *uint64
+		rbl         *ir.RequestBodyLimit
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		err         error
@@ -1866,6 +1867,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
+	if rbl, err = buildRequestBodyLimit(policy.Spec.RequestBodyLimit); err != nil {
+		err = perr.WithMessage(err, "RequestBodyLimit")
+		errs = errors.Join(errs, err)
+	}
+
 	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
 		err = perr.WithMessage(err, "Telemetry")
 		errs = errors.Join(errs, err)
@@ -1891,6 +1897,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		Telemetry:              buildBackendTelemetry(policy.Spec.Telemetry),
 		RequestBuffer:          rb,
 		RequestBodyBufferLimit: rbbl,
+		RequestBodyLimit:       rbl,
 	}, errs
 }
 
@@ -2843,6 +2850,30 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, *uint64,
 	return &ir.RequestBuffer{
 		Limit: spec.Limit,
 	}, nil, nil
+}
+
+// buildRequestBodyLimit translates the request body limit spec into its IR representation, which is
+// translated into the Envoy Body Size Limit filter.
+func buildRequestBodyLimit(spec *egv1a1.RequestBodyLimit) (*ir.RequestBodyLimit, error) {
+	if spec == nil {
+		return nil, nil
+	}
+
+	maxBytes, ok := spec.MaxSize.AsInt64()
+	if !ok {
+		return nil, fmt.Errorf("maxSize must be convertible to an int64")
+	}
+
+	// A zero limit would reject every request that carries a body, so treat it as invalid rather than
+	// propagating it. The Body Size Limit filter's max_request_bytes is a uint64, so there is no upper
+	// bound below MaxInt64, which the AsInt64 check above already enforces.
+	if maxBytes <= 0 {
+		return nil, fmt.Errorf("maxSize value %s is out of range, must be greater than 0", spec.MaxSize.String())
+	}
+
+	return &ir.RequestBodyLimit{
+		MaxSize: uint64(maxBytes),
+	}, nil
 }
 
 func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.ResponseOverride, error) {
