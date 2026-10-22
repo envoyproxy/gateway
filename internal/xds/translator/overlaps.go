@@ -35,7 +35,7 @@ func detectMisdirectedRequests(httpListener *ir.HTTPListener) bool {
 func (t *Translator) addMisdirectedRequestRoutes(vHosts []*routev3.VirtualHost, httpListener *ir.HTTPListener) []*routev3.VirtualHost {
 	var unmatched []string
 	for _, hostname := range httpListener.TLSOverlapsHostnames {
-		matched := false
+		var matched bool
 		for _, vHost := range vHosts {
 			if domainsMatchHostname(vHost.Domains, hostname) {
 				vHost.Routes = append([]*routev3.Route{buildMisdirectedRequestRoute(hostname)}, vHost.Routes...)
