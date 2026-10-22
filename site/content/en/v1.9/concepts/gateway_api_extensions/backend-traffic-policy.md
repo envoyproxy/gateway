@@ -34,7 +34,7 @@ Think of it as a traffic controller between your gateway and backend services. I
 BackendTrafficPolicy can be attached to Gateway API resources using two targeting mechanisms:
 
 1. **Direct Reference (`targetRefs`)**: Explicitly reference specific resources by name and kind.
-2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors))
+2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselector))
 
 ```yaml
 # Direct reference targeting

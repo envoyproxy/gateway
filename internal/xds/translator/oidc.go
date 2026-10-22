@@ -20,6 +20,7 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -222,6 +223,19 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRou
 
 	if oidc.Provider.EndSessionEndpoint != nil {
 		oauth2.Config.EndSessionEndpoint = *oidc.Provider.EndSessionEndpoint
+	}
+
+	if plr := oidc.PostLogoutRedirect; plr != nil {
+		switch {
+		case plr.URI != nil:
+			oauth2.Config.PostLogoutRedirectUri = &oauth2v3.PostLogoutRedirectUri{
+				Config: &oauth2v3.PostLogoutRedirectUri_Uri{Uri: *plr.URI},
+			}
+		case ptr.Deref(plr.Disabled, false):
+			oauth2.Config.PostLogoutRedirectUri = &oauth2v3.PostLogoutRedirectUri{
+				Config: &oauth2v3.PostLogoutRedirectUri_Disabled{Disabled: true},
+			}
+		}
 	}
 
 	if oidc.CSRFTokenTTL != nil {

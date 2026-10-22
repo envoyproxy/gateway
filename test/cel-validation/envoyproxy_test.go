@@ -2541,6 +2541,24 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
 		{
+			desc: "invalid: dynamicModules relative path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Local: &egv1a1.LocalDynamicModuleSource{
+									Path: "foo.so",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].source.local.path in body should match"},
+		},
+		{
 			desc: "lua-strict-valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
