@@ -127,6 +127,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.header_mutation
 	//
+	// - envoy.filters.http.body_size_limit
+	//
 	// - envoy.filters.http.ext_authz
 	//
 	// - envoy.filters.http.api_key_auth
