@@ -1192,7 +1192,7 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 			ControllerName: controller,
 			AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName(name)},
 			Conditions: []metav1.Condition{
-				{Type: condType, Status: condStatus, Reason: "Reason"},
+				{Type: condType, Status: condStatus, Reason: "Reason", ObservedGeneration: 1},
 			},
 		}
 	}
@@ -1334,7 +1334,7 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := mergePolicyAncestorStatus("default", ours, 1, tt.old, tt.new)
+			got := mergePolicyAncestorStatus("default", ours, tt.old, tt.new)
 			require.LessOrEqual(t, len(got), 16)
 			// The Aggregated condition set on truncation is given the current time.
 			for i := range got {
