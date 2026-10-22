@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/require"
@@ -16,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 func TestBuildRouteTracingSampling(t *testing.T) {
@@ -431,6 +433,115 @@ func TestBuildXdsURLRewriteAction_PathRegexHostRewrite(t *testing.T) {
 			if got.GetHostRewritePathRegex().GetSubstitution() != "backend-\\1.service.namespace.svc.cluster.local" {
 				t.Errorf("HostRewritePathRegex substitution = %v, want %v", got.GetHostRewritePathRegex().GetSubstitution(), "backend-\\1.service.namespace.svc.cluster.local")
 			}
+		})
+	}
+}
+
+func TestBuildXdsRequestMirrorPolicies(t *testing.T) {
+	tests := []struct {
+		name           string
+		mirrorPolicies []*ir.MirrorPolicy
+		expected       []*routev3.RouteAction_RequestMirrorPolicy
+	}{
+		{
+			name: "mirror policy without host rewrite",
+			mirrorPolicies: []*ir.MirrorPolicy{
+				{
+					Destination: &ir.RouteDestination{
+						Name: "mirror-cluster-1",
+					},
+					Percentage: new(float32(100)),
+				},
+			},
+			expected: []*routev3.RouteAction_RequestMirrorPolicy{
+				{
+					Cluster:                       "mirror-cluster-1",
+					DisableShadowHostSuffixAppend: true,
+					RuntimeFraction: &corev3.RuntimeFractionalPercent{
+						DefaultValue: fractionalpercent.FromFloat32(100),
+					},
+				},
+			},
+		},
+		{
+			name: "mirror policy with host rewrite literal",
+			mirrorPolicies: []*ir.MirrorPolicy{
+				{
+					Destination: &ir.RouteDestination{
+						Name: "mirror-cluster-2",
+					},
+					HostRewrite: new("mirror.example.internal"),
+				},
+			},
+			expected: []*routev3.RouteAction_RequestMirrorPolicy{
+				{
+					Cluster:            "mirror-cluster-2",
+					HostRewriteLiteral: "mirror.example.internal",
+					RuntimeFraction: &corev3.RuntimeFractionalPercent{
+						DefaultValue: fractionalpercent.FromIn32(100),
+					},
+				},
+			},
+		},
+		{
+			name: "mirror policy with percentage and host rewrite",
+			mirrorPolicies: []*ir.MirrorPolicy{
+				{
+					Destination: &ir.RouteDestination{
+						Name: "mirror-cluster-3",
+					},
+					Percentage:  new(float32(50)),
+					HostRewrite: new("mirror.example.internal"),
+				},
+			},
+			expected: []*routev3.RouteAction_RequestMirrorPolicy{
+				{
+					Cluster:            "mirror-cluster-3",
+					HostRewriteLiteral: "mirror.example.internal",
+					RuntimeFraction: &corev3.RuntimeFractionalPercent{
+						DefaultValue: fractionalpercent.FromFloat32(50),
+					},
+				},
+			},
+		},
+		{
+			name: "multiple mirror policies with mixed host rewrites",
+			mirrorPolicies: []*ir.MirrorPolicy{
+				{
+					Destination: &ir.RouteDestination{
+						Name: "mirror-cluster-with-rewrite",
+					},
+					HostRewrite: new("rewritten.example.com"),
+				},
+				{
+					Destination: &ir.RouteDestination{
+						Name: "mirror-cluster-without-rewrite",
+					},
+				},
+			},
+			expected: []*routev3.RouteAction_RequestMirrorPolicy{
+				{
+					Cluster:            "mirror-cluster-with-rewrite",
+					HostRewriteLiteral: "rewritten.example.com",
+					RuntimeFraction: &corev3.RuntimeFractionalPercent{
+						DefaultValue: fractionalpercent.FromIn32(100),
+					},
+				},
+				{
+					Cluster:                       "mirror-cluster-without-rewrite",
+					DisableShadowHostSuffixAppend: true,
+					RuntimeFraction: &corev3.RuntimeFractionalPercent{
+						DefaultValue: fractionalpercent.FromIn32(100),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := buildXdsRequestMirrorPolicies(tc.mirrorPolicies)
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }
