@@ -1,1 +1,12 @@
-[]
+- clusterName: ext-authz/placeholder
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 127.0.0.1
+            portValue: 1
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: ext-authz/placeholder/backend/-1
