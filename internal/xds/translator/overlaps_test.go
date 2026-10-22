@@ -6,45 +6,44 @@
 package translator
 
 import (
-	"regexp"
+	"net/http"
 	"testing"
 
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
 )
 
 func TestDetectMisdirectedRequests(t *testing.T) {
-	tests := []struct {
-		name     string
+	t.Parallel()
+
+	tests := map[string]struct {
 		listener *ir.HTTPListener
 		want     bool
 	}{
-		{name: "nil listener", want: false},
-		{
-			name: "no overlapping TLS",
+		"nil listener": {},
+		"no overlapping TLS": {
 			listener: &ir.HTTPListener{
 				OverlappingTLSHandling: ir.OverlappingTLSHandlingMisdirectedRequest,
 			},
-			want: false,
 		},
-		{
-			name: "unset handling",
+		"unset handling": {
 			listener: &ir.HTTPListener{
 				TLSOverlaps: true,
 			},
-			want: false,
 		},
-		{
-			name: "downgrade handling",
+		"downgrade handling": {
 			listener: &ir.HTTPListener{
 				TLSOverlaps:            true,
 				OverlappingTLSHandling: ir.OverlappingTLSHandlingDowngradeToHTTP1,
 			},
-			want: false,
 		},
-		{
-			name: "misdirected request handling",
+		"misdirected request handling": {
 			listener: &ir.HTTPListener{
 				TLSOverlaps:            true,
 				OverlappingTLSHandling: ir.OverlappingTLSHandlingMisdirectedRequest,
@@ -52,80 +51,137 @@ func TestDetectMisdirectedRequests(t *testing.T) {
 			},
 			want: true,
 		},
-		{
-			name: "misdirected request handling without recorded hostnames (e.g. SDS)",
+		"misdirected request handling without recorded hostnames (e.g. SDS)": {
 			listener: &ir.HTTPListener{
 				TLSOverlaps:            true,
 				OverlappingTLSHandling: ir.OverlappingTLSHandlingMisdirectedRequest,
 			},
-			want: false,
 		},
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, detectMisdirectedRequests(tc.listener))
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Empty(t, cmp.Diff(tc.want, detectMisdirectedRequests(tc.listener)))
 		})
 	}
 }
 
 func TestDomainsMatchHostname(t *testing.T) {
-	tests := []struct {
-		name     string
+	t.Parallel()
+
+	tests := map[string]struct {
 		domains  []string
 		hostname string
 		want     bool
 	}{
-		{name: "exact", domains: []string{"foo.example.com"}, hostname: "foo.example.com", want: true},
-		{name: "exact mismatch", domains: []string{"foo.example.com"}, hostname: "bar.example.com", want: false},
-		{name: "any", domains: []string{"*"}, hostname: "foo.example.com", want: true},
-		{name: "wildcard single label", domains: []string{"*.example.com"}, hostname: "foo.example.com", want: true},
-		{name: "wildcard multiple labels", domains: []string{"*.example.com"}, hostname: "foo.bar.example.com", want: true},
-		{name: "wildcard matches narrower wildcard", domains: []string{"*.example.com"}, hostname: "*.foo.example.com", want: true},
-		{name: "wildcard does not match apex", domains: []string{"*.example.com"}, hostname: "example.com", want: false},
-		{name: "wildcard does not match broader wildcard", domains: []string{"*.foo.example.com"}, hostname: "*.example.com", want: false},
-		{name: "exact does not match wildcard", domains: []string{"foo.example.com"}, hostname: "*.example.com", want: false},
-		{name: "any of the domains", domains: []string{"bar.com", "*.example.com"}, hostname: "foo.example.com", want: true},
+		"exact":                              {domains: []string{"foo.example.com"}, hostname: "foo.example.com", want: true},
+		"exact mismatch":                     {domains: []string{"foo.example.com"}, hostname: "bar.example.com"},
+		"any":                                {domains: []string{"*"}, hostname: "foo.example.com", want: true},
+		"wildcard single label":              {domains: []string{"*.example.com"}, hostname: "foo.example.com", want: true},
+		"wildcard multiple labels":           {domains: []string{"*.example.com"}, hostname: "foo.bar.example.com", want: true},
+		"wildcard matches narrower wildcard": {domains: []string{"*.example.com"}, hostname: "*.foo.example.com", want: true},
+		"wildcard does not match apex":       {domains: []string{"*.example.com"}, hostname: "example.com"},
+		"wildcard does not match broader wildcard": {domains: []string{"*.foo.example.com"}, hostname: "*.example.com"},
+		"exact does not match wildcard":            {domains: []string{"foo.example.com"}, hostname: "*.example.com"},
+		"any of the domains":                       {domains: []string{"bar.com", "*.example.com"}, hostname: "foo.example.com", want: true},
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, domainsMatchHostname(tc.domains, tc.hostname))
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Empty(t, cmp.Diff(tc.want, domainsMatchHostname(tc.domains, tc.hostname)))
 		})
 	}
 }
 
 func TestBuildMisdirectedRequestRouteAuthority(t *testing.T) {
-	tests := []struct {
-		hostname   string
-		matches    []string
-		mismatches []string
+	t.Parallel()
+
+	tests := map[string]struct {
+		hostname string
+		want     *routev3.Route
 	}{
-		{
-			hostname:   "foo.example.com",
-			matches:    []string{"foo.example.com", "foo.example.com:443"},
-			mismatches: []string{"bar.example.com", "xfoo.example.com", "foo.example.com.evil", "fooXexample.com"},
+		"exact hostname includes an optional port": {
+			hostname: "foo.example.com",
+			want: &routev3.Route{
+				Match: &routev3.RouteMatch{
+					PathSpecifier: &routev3.RouteMatch_Prefix{Prefix: "/"},
+					FilterState: []*matcherv3.FilterStateMatcher{{
+						Key: xdsfilters.DownstreamProtocolKey,
+						Matcher: &matcherv3.FilterStateMatcher_StringMatch{
+							StringMatch: &matcherv3.StringMatcher{
+								MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "HTTP/2"},
+							},
+						},
+					}},
+					Headers: []*routev3.HeaderMatcher{{
+						Name: AuthorityHeaderKey,
+						HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+							StringMatch: &matcherv3.StringMatcher{
+								MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+									SafeRegex: &matcherv3.RegexMatcher{Regex: `^foo\.example\.com(:\d+)?$`},
+								},
+							},
+						},
+					}},
+				},
+				Action: &routev3.Route_DirectResponse{
+					DirectResponse: &routev3.DirectResponseAction{Status: http.StatusMisdirectedRequest},
+				},
+			},
 		},
-		{
-			hostname:   "*.example.com",
-			matches:    []string{"foo.example.com", "foo.bar.example.com", "foo.example.com:8443"},
-			mismatches: []string{"example.com", ".example.com", "foo.example.org", "fooexample.com"},
+		"wildcard hostname matches one or more labels": {
+			hostname: "*.example.com",
+			want: &routev3.Route{
+				Match: &routev3.RouteMatch{
+					PathSpecifier: &routev3.RouteMatch_Prefix{Prefix: "/"},
+					FilterState: []*matcherv3.FilterStateMatcher{{
+						Key: xdsfilters.DownstreamProtocolKey,
+						Matcher: &matcherv3.FilterStateMatcher_StringMatch{
+							StringMatch: &matcherv3.StringMatcher{
+								MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "HTTP/2"},
+							},
+						},
+					}},
+					Headers: []*routev3.HeaderMatcher{{
+						Name: AuthorityHeaderKey,
+						HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+							StringMatch: &matcherv3.StringMatcher{
+								MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+									SafeRegex: &matcherv3.RegexMatcher{Regex: `^.+\.example\.com(:\d+)?$`},
+								},
+							},
+						},
+					}},
+				},
+				Action: &routev3.Route_DirectResponse{
+					DirectResponse: &routev3.DirectResponseAction{Status: http.StatusMisdirectedRequest},
+				},
+			},
+		},
+		"all hostnames omit the authority match": {
+			hostname: "*",
+			want: &routev3.Route{
+				Match: &routev3.RouteMatch{
+					PathSpecifier: &routev3.RouteMatch_Prefix{Prefix: "/"},
+					FilterState: []*matcherv3.FilterStateMatcher{{
+						Key: xdsfilters.DownstreamProtocolKey,
+						Matcher: &matcherv3.FilterStateMatcher_StringMatch{
+							StringMatch: &matcherv3.StringMatcher{
+								MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "HTTP/2"},
+							},
+						},
+					}},
+				},
+				Action: &routev3.Route_DirectResponse{
+					DirectResponse: &routev3.DirectResponseAction{Status: http.StatusMisdirectedRequest},
+				},
+			},
 		},
 	}
-	for _, tc := range tests {
-		t.Run(tc.hostname, func(t *testing.T) {
-			route := buildMisdirectedRequestRoute(tc.hostname)
-			require.EqualValues(t, 421, route.GetDirectResponse().GetStatus())
-			require.Len(t, route.GetMatch().GetHeaders(), 1)
-			re := regexp.MustCompile(route.GetMatch().GetHeaders()[0].GetStringMatch().GetSafeRegex().GetRegex())
-			for _, authority := range tc.matches {
-				require.True(t, re.MatchString(authority), authority)
-			}
-			for _, authority := range tc.mismatches {
-				require.False(t, re.MatchString(authority), authority)
-			}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Empty(t, cmp.Diff(tc.want, buildMisdirectedRequestRoute(tc.hostname), protocmp.Transform()))
 		})
 	}
-
-	t.Run("any hostname has no authority match", func(t *testing.T) {
-		require.Empty(t, buildMisdirectedRequestRoute("*").GetMatch().GetHeaders())
-	})
 }
