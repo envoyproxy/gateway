@@ -212,7 +212,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},
-		cacheOption, r.ControllerNamespace, r.Logger)
+		cacheOption, r.ControllerNamespace, r.DNSDomain, r.Logger)
 	r.wasmCache.Start(ctx)
 }
 
