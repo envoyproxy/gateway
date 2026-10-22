@@ -730,31 +730,28 @@ type RateLimit struct {
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
 
-	// Service holds configuration for how Envoy connects to the rate limit service.
-	//
-	// +optional
-	Service *RateLimitService `json:"service,omitempty"`
-}
-
-// RateLimitService defines configuration for how Envoy connects to the rate limit service.
-type RateLimitService struct {
-	// BackendSettings holds configuration for managing the connection to the rate limit
+	// ServiceSettings holds configuration for managing the connection to the rate limit
 	// service, such as circuit breakers, timeouts, health checks, and load balancing.
-	// ProxyProtocol is not supported, since the managed rate limit service doesn't accept it.
-	// HTTP active health checks are not supported, since the managed rate limit service only
-	// serves its HTTP health endpoint as plaintext; use GRPC or TCP instead. For the same reason,
-	// active health check overrides are not supported.
 	//
 	// +optional
-	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
+	ServiceSettings *RateLimitClusterSettings `json:"serviceSettings,omitempty"`
 }
 
-// GetBackendSettings returns the rate limit service backend settings, or nil if unset.
-func (r *RateLimit) GetBackendSettings() *ClusterSettings {
-	if r == nil || r.Service == nil {
+// RateLimitClusterSettings defines configuration for how Envoy connects to the rate limit service.
+// ProxyProtocol is not supported, since the managed rate limit service doesn't accept it.
+// HTTP active health checks are not supported, since the managed rate limit service only
+// serves its HTTP health endpoint as plaintext; use GRPC or TCP instead. For the same reason,
+// active health check overrides are not supported.
+type RateLimitClusterSettings struct {
+	ClusterSettings `json:",inline"`
+}
+
+// GetServiceSettings returns the rate limit service cluster settings, or nil if unset.
+func (r *RateLimit) GetServiceSettings() *ClusterSettings {
+	if r == nil || r.ServiceSettings == nil {
 		return nil
 	}
-	return r.Service.BackendSettings
+	return &r.ServiceSettings.ClusterSettings
 }
 
 type RateLimitTelemetry struct {

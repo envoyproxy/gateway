@@ -1511,13 +1511,13 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "rateLimit service backendSettings with supported fields only",
+			name: "rateLimit serviceSettings with supported fields only",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
-						Service: &egv1a1.RateLimitService{BackendSettings: &egv1a1.ClusterSettings{
+						ServiceSettings: &egv1a1.RateLimitClusterSettings{ClusterSettings: egv1a1.ClusterSettings{
 							CircuitBreaker: &egv1a1.CircuitBreaker{
 								MaxRequestsPerConnection: new(int64(10)),
 							},
@@ -1528,13 +1528,13 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "rateLimit service backendSettings requestTimeout and streamIdleTimeout have no effect",
+			name: "rateLimit serviceSettings requestTimeout and streamIdleTimeout have no effect",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
-						Service: &egv1a1.RateLimitService{BackendSettings: &egv1a1.ClusterSettings{
+						ServiceSettings: &egv1a1.RateLimitClusterSettings{ClusterSettings: egv1a1.ClusterSettings{
 							Timeout: &egv1a1.Timeout{
 								HTTP: &egv1a1.HTTPTimeout{
 									RequestTimeout:    new(gwapiv1.Duration("30s")),
@@ -1546,8 +1546,8 @@ func TestWarnEnvoyGateway(t *testing.T) {
 				},
 			},
 			expected: []string{
-				"rateLimit.service.backendSettings.timeout.http.requestTimeout has no effect: the rate limit service cluster has no associated route",
-				"rateLimit.service.backendSettings.timeout.http.streamIdleTimeout has no effect: the rate limit service cluster has no associated route",
+				"rateLimit.serviceSettings.timeout.http.requestTimeout has no effect: the rate limit service cluster has no associated route",
+				"rateLimit.serviceSettings.timeout.http.streamIdleTimeout has no effect: the rate limit service cluster has no associated route",
 			},
 		},
 	}
@@ -1720,13 +1720,16 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 
 func TestValidateRateLimitClusterSettings(t *testing.T) {
 	validRedis := func(cs *egv1a1.ClusterSettings) *egv1a1.RateLimit {
-		return &egv1a1.RateLimit{
+		rl := &egv1a1.RateLimit{
 			Backend: egv1a1.RateLimitDatabaseBackend{
 				Type:  egv1a1.RedisBackendType,
 				Redis: &egv1a1.RateLimitRedisSettings{URL: new("redis.redis.svc:6379")},
 			},
-			Service: &egv1a1.RateLimitService{BackendSettings: cs},
 		}
+		if cs != nil {
+			rl.ServiceSettings = &egv1a1.RateLimitClusterSettings{ClusterSettings: *cs}
+		}
+		return rl
 	}
 	cases := []struct {
 		name      string
