@@ -2859,16 +2859,20 @@ func buildRequestBodyLimit(spec *egv1a1.RequestBodyLimit) (*ir.RequestBodyLimit,
 		return nil, nil
 	}
 
-	maxBytes, ok := spec.MaxSize.AsInt64()
-	if !ok {
-		return nil, fmt.Errorf("maxSize must be convertible to an int64")
+	// A zero limit would reject every request that carries a body, so treat it as invalid rather than
+	// propagating it.
+	if spec.MaxSize.Sign() <= 0 {
+		return nil, fmt.Errorf("maxSize value %s is out of range, must be greater than 0", spec.MaxSize.String())
 	}
 
-	// A zero limit would reject every request that carries a body, so treat it as invalid rather than
-	// propagating it. The Body Size Limit filter's max_request_bytes is a uint64, so there is no upper
-	// bound below MaxInt64, which the AsInt64 check above already enforces.
-	if maxBytes <= 0 {
-		return nil, fmt.Errorf("maxSize value %s is out of range, must be greater than 0", spec.MaxSize.String())
+	// AsInt64 only converts a quantity held as an int64, so it fails for values the CRD admits that the
+	// parser holds as a big decimal, such as 9Ei or a 19-digit byte count. Value converts both forms and
+	// rounds a fractional value up to whole bytes. The parser already caps binary values such as 9Ei at
+	// the int64 maximum; cap decimal values such as 10E there as well rather than failing the routes,
+	// since no request body comes anywhere near that size.
+	maxBytes := int64(math.MaxInt64)
+	if spec.MaxSize.CmpInt64(math.MaxInt64) < 0 {
+		maxBytes = spec.MaxSize.Value()
 	}
 
 	return &ir.RequestBodyLimit{
