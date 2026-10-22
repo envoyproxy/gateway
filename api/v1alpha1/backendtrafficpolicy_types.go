@@ -53,6 +53,7 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.responseOverride)", message="responseOverride is not allowed when targeting a backend"
 // +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.httpUpgrade)", message="httpUpgrade is not allowed when targeting a backend"
 // +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.requestBuffer)", message="requestBuffer is not allowed when targeting a backend"
+// +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.requestBodyLimit)", message="requestBodyLimit is not allowed when targeting a backend"
 // +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.telemetry)", message="telemetry is not allowed when targeting a backend"
 // +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.routingType)", message="routingType is not allowed when targeting a backend"
 // +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.retry)", message="retry is not allowed when targeting a backend"
@@ -157,9 +158,34 @@ type BackendTrafficPolicySpec struct {
 	// body size, depends on the mode: see the mode field.
 	//
 	// Buffering increases memory usage for Envoy that should be accounted for in your deployment settings.
+	// To cap the request body size without buffering it, use requestBodyLimit instead.
 	//
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
+
+	// RequestBodyLimit caps the size of the request body on a route without buffering it.
+	//
+	// Envoy rejects a request as soon as it knows the body is too large: from the Content-Length header
+	// when present, otherwise once the bytes received exceed the limit while the body is streamed to the
+	// backend. A request rejected on its Content-Length header always gets an HTTP 413 Content Too Large
+	// response. A streamed body gets a 413 only if no response headers have been sent to the client yet.
+	// Otherwise the response can no longer be replaced, so Envoy resets the stream instead, which closes
+	// an HTTP/1.1 connection.
+	//
+	// Nothing is buffered, so unlike requestBuffer with mode BufferAndLimit it costs no memory and leaves
+	// HTTP upgrades such as WebSocket enabled.
+	//
+	// The limit counts every request body byte of a stream. Envoy passes the client-to-server payload of
+	// an upgraded connection and of a streaming request through the HTTP filter chain as request body
+	// data, so a long-lived WebSocket or gRPC stream whose payload grows past the limit is terminated as
+	// well. By then a WebSocket has always received its 101 Switching Protocols response, and a gRPC stream
+	// has often received its response headers, so the client sees a reset stream or a closed connection
+	// rather than a 413. Do not set it on routes that carry such traffic.
+	//
+	// Requires Envoy proxy v1.40 or later.
+	//
+	// +optional
+	RequestBodyLimit *RequestBodyLimit `json:"requestBodyLimit,omitempty"`
 
 	// Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
 	// This will override the telemetry settings in the EnvoyProxy resource.
@@ -270,6 +296,20 @@ type RequestBuffer struct {
 	// +kubebuilder:default=BufferAndLimit
 	// +optional
 	Mode *RequestBufferMode `json:"mode,omitempty"`
+}
+
+// RequestBodyLimit configures a maximum request body size that Envoy enforces without buffering the body.
+type RequestBodyLimit struct {
+	// MaxSize is the maximum request body size. A request whose body is larger is rejected; see
+	// requestBodyLimit for when the client receives HTTP 413 Content Too Large. When the Content-Length
+	// header announces a larger body, the request is rejected with a 413 before any body byte is read.
+	//
+	// Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +kubebuilder:validation:XValidation:rule="type(self) == string || self > 0",message="maxSize must be greater than 0"
+	MaxSize resource.Quantity `json:"maxSize"`
 }
 
 // RequestBufferMode determines how RequestBuffer.Limit is applied.

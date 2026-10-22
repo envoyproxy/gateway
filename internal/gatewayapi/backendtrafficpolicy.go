@@ -1809,6 +1809,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
 		rbbl        *uint64
+		rbl         *ir.RequestBodyLimit
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		err         error
@@ -1845,6 +1846,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
+	if rbl, err = buildRequestBodyLimit(policy.Spec.RequestBodyLimit); err != nil {
+		err = perr.WithMessage(err, "RequestBodyLimit")
+		errs = errors.Join(errs, err)
+	}
+
 	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
 		err = perr.WithMessage(err, "Telemetry")
 		errs = errors.Join(errs, err)
@@ -1870,6 +1876,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		Telemetry:              buildBackendTelemetry(policy.Spec.Telemetry),
 		RequestBuffer:          rb,
 		RequestBodyBufferLimit: rbbl,
+		RequestBodyLimit:       rbl,
 	}, errs
 }
 
@@ -2822,6 +2829,34 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, *uint64,
 	return &ir.RequestBuffer{
 		Limit: spec.Limit,
 	}, nil, nil
+}
+
+// buildRequestBodyLimit translates the request body limit spec into its IR representation, which is
+// translated into the Envoy Body Size Limit filter.
+func buildRequestBodyLimit(spec *egv1a1.RequestBodyLimit) (*ir.RequestBodyLimit, error) {
+	if spec == nil {
+		return nil, nil
+	}
+
+	// A zero limit would reject every request that carries a body, so treat it as invalid rather than
+	// propagating it.
+	if spec.MaxSize.Sign() <= 0 {
+		return nil, fmt.Errorf("maxSize value %s is out of range, must be greater than 0", spec.MaxSize.String())
+	}
+
+	// AsInt64 only converts a quantity held as an int64, so it fails for values the CRD admits that the
+	// parser holds as a big decimal, such as 9Ei or a 19-digit byte count. Value converts both forms and
+	// rounds a fractional value up to whole bytes. The parser already caps binary values such as 9Ei at
+	// the int64 maximum; cap decimal values such as 10E there as well rather than failing the routes,
+	// since no request body comes anywhere near that size.
+	maxBytes := int64(math.MaxInt64)
+	if spec.MaxSize.CmpInt64(math.MaxInt64) < 0 {
+		maxBytes = spec.MaxSize.Value()
+	}
+
+	return &ir.RequestBodyLimit{
+		MaxSize: uint64(maxBytes),
+	}, nil
 }
 
 func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.ResponseOverride, error) {

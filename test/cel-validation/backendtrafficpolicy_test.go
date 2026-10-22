@@ -522,11 +522,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					}},
-					HTTPUpgrade:    []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
-					RequestBuffer:  &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
-					Telemetry:      &egv1a1.BackendTelemetry{},
-					RoutingType:    &rt,
-					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+					HTTPUpgrade:      []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer:    &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10Mi")},
+					Telemetry:        &egv1a1.BackendTelemetry{},
+					RoutingType:      &rt,
+					BandwidthLimit:   &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -536,6 +537,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
 				"requestBuffer is not allowed when targeting a backend",
+				"requestBodyLimit is not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
@@ -568,11 +570,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					}},
-					HTTPUpgrade:    []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
-					RequestBuffer:  &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
-					Telemetry:      &egv1a1.BackendTelemetry{},
-					RoutingType:    &rt,
-					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+					HTTPUpgrade:      []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer:    &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10Mi")},
+					Telemetry:        &egv1a1.BackendTelemetry{},
+					RoutingType:      &rt,
+					BandwidthLimit:   &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -582,6 +585,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
 				"requestBuffer is not allowed when targeting a backend",
+				"requestBodyLimit is not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
@@ -616,11 +620,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							},
 						},
 					}},
-					HTTPUpgrade:    []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
-					RequestBuffer:  &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
-					Telemetry:      &egv1a1.BackendTelemetry{},
-					RoutingType:    &rt,
-					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+					HTTPUpgrade:      []*egv1a1.ProtocolUpgradeConfig{{Type: "websocket"}},
+					RequestBuffer:    &egv1a1.RequestBuffer{Limit: resource.MustParse("10Mi")},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10Mi")},
+					Telemetry:        &egv1a1.BackendTelemetry{},
+					RoutingType:      &rt,
+					BandwidthLimit:   &egv1a1.BandwidthLimitSpec{},
 				}
 			},
 			wantErrors: []string{
@@ -630,6 +635,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
 				"requestBuffer is not allowed when targeting a backend",
+				"requestBodyLimit is not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
@@ -4477,6 +4483,57 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid request body limit with httpUpgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{
+						MaxSize: resource.MustParse("1Mi"),
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "websocket",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid request body limit maxSize format",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{
+						MaxSize: resource.MustParse("1m"),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestBodyLimit.maxSize: Invalid value: \"1m\": spec.requestBodyLimit.maxSize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'",
+			},
+		},
+		{
 			desc: "invalid request buffer mode",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -5607,6 +5664,64 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		wantError := "spec.compressor[0].brotli.quality: Invalid value: -1: spec.compressor[0].brotli.quality in body should be greater than or equal to 0"
 		if err := c.Create(ctx, btp); err == nil || !strings.Contains(err.Error(), wantError) {
 			t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%q", err, wantError)
+		}
+	})
+
+	// The quantity pattern only applies to string values, so an unquoted integer maxSize is validated
+	// separately. It cannot be set through the typed API since resource.Quantity always marshals to a string.
+	// The field path and the message are checked separately because the "Invalid value" part of a CEL
+	// error differs between Kubernetes versions.
+	t.Run("request body limit integer maxSize", func(t *testing.T) {
+		cases := []struct {
+			desc       string
+			maxSize    int64
+			wantErrors []string
+		}{
+			{
+				desc:    "positive integer",
+				maxSize: 1048576,
+			},
+			{
+				desc:       "zero integer - should fail",
+				maxSize:    0,
+				wantErrors: []string{"spec.requestBodyLimit.maxSize: Invalid value", "maxSize must be greater than 0"},
+			},
+			{
+				desc:       "negative integer - should fail",
+				maxSize:    -1,
+				wantErrors: []string{"spec.requestBodyLimit.maxSize: Invalid value", "maxSize must be greater than 0"},
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.desc, func(t *testing.T) {
+				btp := &unstructured.Unstructured{Object: map[string]any{
+					"apiVersion": egv1a1.GroupVersion.String(),
+					"kind":       egv1a1.KindBackendTrafficPolicy,
+					"metadata": map[string]any{
+						"name":      fmt.Sprintf("btp-%v", time.Now().UnixNano()),
+						"namespace": metav1.NamespaceDefault,
+					},
+					"spec": map[string]any{
+						"targetRef": map[string]any{
+							"group": "gateway.networking.k8s.io",
+							"kind":  "Gateway",
+							"name":  "eg",
+						},
+						"requestBodyLimit": map[string]any{"maxSize": tc.maxSize},
+					},
+				}}
+
+				err := c.Create(ctx, btp)
+				if (len(tc.wantErrors) != 0) != (err != nil) {
+					t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+				}
+				for _, wantError := range tc.wantErrors {
+					if !strings.Contains(err.Error(), wantError) {
+						t.Errorf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;missing string within error=%q", err, wantError)
+					}
+				}
+			})
 		}
 	})
 }

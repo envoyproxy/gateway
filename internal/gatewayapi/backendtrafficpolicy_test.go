@@ -3139,6 +3139,7 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"ResponseOverride":  false,
 		"HTTPUpgrade":       false,
 		"RequestBuffer":     false,
+		"RequestBodyLimit":  false,
 		"Telemetry":         false,
 		"RoutingType":       false,
 	}
@@ -3884,4 +3885,99 @@ func TestRejectBackendTargetSelectors(t *testing.T) {
 	require.Equal(t, "gw-referencing", string(ancestor.AncestorRef.Name))
 	require.Len(t, ancestor.Conditions, 1)
 	require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
+}
+
+func TestBuildRequestBodyLimit(t *testing.T) {
+	testCases := []struct {
+		name     string
+		spec     *egv1a1.RequestBodyLimit
+		expected *ir.RequestBodyLimit
+		errMsg   string
+	}{
+		{
+			name: "nil spec",
+		},
+		{
+			name:     "quantity",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("4Mi")},
+			expected: &ir.RequestBodyLimit{MaxSize: 4194304},
+		},
+		{
+			name:     "plain bytes",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1")},
+			expected: &ir.RequestBodyLimit{MaxSize: 1},
+		},
+		{
+			name:     "above the uint32 range of the buffer filter",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("8Gi")},
+			expected: &ir.RequestBodyLimit{MaxSize: 8589934592},
+		},
+		{
+			// The parser holds a 19-digit value as a big decimal, which AsInt64 cannot convert.
+			name:     "int64 maximum",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("9223372036854775807")},
+			expected: &ir.RequestBodyLimit{MaxSize: math.MaxInt64},
+		},
+		{
+			// The CRD admits this value, and the parser caps it at the int64 maximum.
+			name:     "binary value above the int64 range",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("9Ei")},
+			expected: &ir.RequestBodyLimit{MaxSize: math.MaxInt64},
+		},
+		{
+			// The CRD admits this value, and the parser does not cap decimal values.
+			name:     "decimal value above the int64 range",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10E")},
+			expected: &ir.RequestBodyLimit{MaxSize: math.MaxInt64},
+		},
+		{
+			name:     "fractional value rounds up",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1500m")},
+			expected: &ir.RequestBodyLimit{MaxSize: 2},
+		},
+		{
+			name:   "zero",
+			spec:   &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("0")},
+			errMsg: "maxSize value 0 is out of range, must be greater than 0",
+		},
+		{
+			name:   "negative",
+			spec:   &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("-1")},
+			errMsg: "maxSize value -1 is out of range, must be greater than 0",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := buildRequestBodyLimit(tc.spec)
+			if tc.errMsg != "" {
+				require.ErrorContains(t, err, tc.errMsg)
+				require.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestBuildTrafficFeaturesRequestBodyLimitWithHTTPUpgrade(t *testing.T) {
+	tr := &Translator{}
+	policy := &egv1a1.BackendTrafficPolicy{
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			RequestBodyLimit: &egv1a1.RequestBodyLimit{
+				MaxSize: resource.MustParse("1Mi"),
+			},
+			HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+				{Type: "websocket"},
+			},
+		},
+	}
+
+	// A request body limit does not buffer, so unlike requestBuffer with mode BufferAndLimit it is
+	// allowed together with HTTP upgrades.
+	tf, err := tr.buildTrafficFeatures(policy, nil)
+	require.NoError(t, err)
+	require.Equal(t, &ir.RequestBodyLimit{MaxSize: 1048576}, tf.RequestBodyLimit)
+	require.Len(t, tf.HTTPUpgrade, 1)
 }
