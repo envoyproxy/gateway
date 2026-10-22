@@ -51,7 +51,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 |-----------|------------------|---------|-------------------|-------------------|
 | `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters or extension server policies targeting them |
 | `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
-| `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host |
+| `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host; receives extension server policies targeting the listener that owns the virtual host |
 | `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
 | `Translation` | `PostTranslateModifyHook` | Global modification of all xDS resources | All clusters, secrets, listeners, and routes | Once per translation cycle |
 
@@ -90,10 +90,10 @@ The hooks are executed in the following order during xDS translation:
 
 #### VirtualHost Hook (`PostVirtualHostModifyHook`)
 
-- **When called**: After all routes for a virtual host are processed
-- **Input**: Complete virtual host with all its routes
+- **When called**: When a virtual host is first created (once per IR HTTP listener)
+- **Input**: Complete virtual host with all its routes, plus extension server policies targeting the listener that owns this virtual host
 - **Output**: Modified virtual host (can add/remove/modify routes)
-- **Use cases**: Add virtual host-level configuration, inject additional routes
+- **Use cases**: Add virtual host-level configuration
 
 #### HTTPListener Hook (`PostHTTPListenerModifyHook`)
 
@@ -117,8 +117,8 @@ Envoy Gateway resources through their `targetRefs`/`targetRef` (with an optional
 
 | `targetRef` kind | `sectionName` | Attaches to | Delivered to hook(s) |
 |------------------|---------------|-------------|----------------------|
-| `Gateway`        | _(unset)_     | The whole Gateway | `PostTranslateModifyHook` |
-| `Gateway`        | Listener name | A single Listener | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `Gateway`        | _(unset)_     | The whole Gateway | `PostVirtualHostModifyHook` (once for each listener's virtual host), `PostTranslateModifyHook` |
+| `Gateway`        | Listener name | A single Listener | `PostVirtualHostModifyHook` (virtual host of that listener only), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
 | `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
 | `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
 

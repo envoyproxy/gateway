@@ -62,11 +62,12 @@ func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostna
 	return current, types.HookResult{CallCount: called}, nil
 }
 
-func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, types.HookResult, error) {
+func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost, extensionResources []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
 	current := vh
 	var called int
 	for _, entry := range c.entries {
-		result, hr, err := entry.client.PostVirtualHostModifyHook(current)
+		filtered := filterResourcesByGK(extensionResources, entry.policyGKSet)
+		result, hr, err := entry.client.PostVirtualHostModifyHook(current, filtered)
 		called += hr.CallCount
 		if err != nil {
 			if entry.failOpen {

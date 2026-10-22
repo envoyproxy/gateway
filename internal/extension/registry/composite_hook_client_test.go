@@ -45,7 +45,7 @@ func (m *mockXDSHookClient) PostRouteModifyHook(r *route.Route, hostnames []stri
 	return r, types.HookResult{CallCount: 1}, nil
 }
 
-func (m *mockXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, types.HookResult, error) {
+func (m *mockXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost, _ []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
 	if m.postVirtualHostModifyHook != nil {
 		vh, err := m.postVirtualHostModifyHook(vh)
 		return vh, types.HookResult{CallCount: 1}, err
@@ -359,7 +359,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 		}
 
 		input := &route.VirtualHost{Name: "test"}
-		result, _, err := composite.PostVirtualHostModifyHook(input)
+		result, _, err := composite.PostVirtualHostModifyHook(input, nil)
 		require.NoError(t, err)
 		require.Equal(t, "test-ext1-ext2", result.Name)
 	})
@@ -381,7 +381,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 			},
 		}
 
-		result, _, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		result, _, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
 		require.NoError(t, err)
 		require.Equal(t, "test-ext2", result.Name)
 	})
@@ -405,7 +405,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 			},
 		}
 
-		_, _, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		_, _, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
 		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
 		require.False(t, client2Called)
 	})
@@ -417,7 +417,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 				{name: "ext2", client: &mockXDSHookClient{}},
 			},
 		}
-		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
 		require.NoError(t, err)
 		assert.Equal(t, 2, hr.CallCount)
 	})
@@ -433,7 +433,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 				{name: "ext2", client: &mockXDSHookClient{}},
 			},
 		}
-		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
 		require.NoError(t, err)
 		assert.Equal(t, 2, hr.CallCount)
 	})
@@ -450,7 +450,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 				{name: "ext3", client: &mockXDSHookClient{}},
 			},
 		}
-		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
 		require.Error(t, err)
 		assert.Equal(t, 2, hr.CallCount)
 	})
