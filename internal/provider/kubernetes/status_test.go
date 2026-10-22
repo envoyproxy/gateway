@@ -1187,7 +1187,7 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 		ours  = gwapiv1.GatewayController("gateway.envoyproxy.io/gatewayclass-controller")
 		other = gwapiv1.GatewayController("example.com/other-controller")
 	)
-	ancestor := func(controller gwapiv1.GatewayController, name string, condType string, condStatus metav1.ConditionStatus) gwapiv1.PolicyAncestorStatus {
+	ancestor := func(controller gwapiv1.GatewayController, name, condType string, condStatus metav1.ConditionStatus) gwapiv1.PolicyAncestorStatus {
 		return gwapiv1.PolicyAncestorStatus{
 			ControllerName: controller,
 			AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName(name)},
