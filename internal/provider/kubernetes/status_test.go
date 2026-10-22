@@ -21,6 +21,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
@@ -1211,6 +1212,18 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 		}
 		return res
 	}
+	aggregated := func(as []gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
+		for i := range as {
+			as[i].Conditions = append(as[i].Conditions, metav1.Condition{
+				Type:               string(egv1a1.PolicyConditionAggregated),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(egv1a1.PolicyReasonAggregated),
+				Message:            "Ancestors have been truncated because the number of policy ancestors exceeds 16.",
+				ObservedGeneration: 1,
+			})
+		}
+		return as
+	}
 
 	tests := []struct {
 		name string
@@ -1279,16 +1292,22 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 			want: []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
 		},
 		{
-			name: "other controllers' entries are dropped from the end to fit in the limit",
+			name: "ours are truncated to the slots left by other controllers",
 			old:  concat(ancestors(other, "other", 4, foreign), ancestors(ours, "gw", 10, accepted)),
 			new:  ancestors(ours, "gw", 14, accepted),
-			want: concat(ancestors(other, "other", 2, foreign), ancestors(ours, "gw", 14, accepted)),
+			want: concat(ancestors(other, "other", 4, foreign), ancestors(ours, "gw", 11, accepted), aggregated(ancestors(ours, "gw", 12, accepted)[11:])),
 		},
 		{
-			name: "all other controllers' entries are dropped when ours fill the limit",
+			name: "other controllers' entries are kept when ours fill the limit",
 			old:  concat(ancestors(ours, "gw", 1, accepted), ancestors(other, "other", 3, foreign)),
 			new:  ancestors(ours, "gw", 16, accepted),
-			want: ancestors(ours, "gw", 16, accepted),
+			want: concat(ancestors(ours, "gw", 1, accepted), ancestors(other, "other", 3, foreign), ancestors(ours, "gw", 12, accepted)[1:], aggregated(ancestors(ours, "gw", 13, accepted)[12:])),
+		},
+		{
+			name: "all of ours are dropped when other controllers fill the limit",
+			old:  ancestors(other, "other", 16, foreign),
+			new:  ancestors(ours, "gw", 3, accepted),
+			want: ancestors(other, "other", 16, foreign),
 		},
 		{
 			name: "other controllers' entries are kept up to the limit",
@@ -1315,7 +1334,17 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := mergePolicyAncestorStatus("default", ours, tt.old, tt.new)
+			got := mergePolicyAncestorStatus("default", ours, 1, tt.old, tt.new)
+			require.LessOrEqual(t, len(got), 16)
+			// The Aggregated condition set on truncation is given the current time.
+			for i := range got {
+				for j := range got[i].Conditions {
+					if got[i].Conditions[j].Type == string(egv1a1.PolicyConditionAggregated) {
+						require.False(t, got[i].Conditions[j].LastTransitionTime.IsZero())
+						got[i].Conditions[j].LastTransitionTime = metav1.Time{}
+					}
+				}
+			}
 			require.Equal(t, tt.want, got)
 		})
 	}

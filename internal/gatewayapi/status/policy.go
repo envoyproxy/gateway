@@ -34,18 +34,18 @@ const (
 )
 
 const (
-	// maxPolicyAncestors is the Gateway API CRD limit on the number of entries
+	// MaxPolicyAncestors is the Gateway API CRD limit on the number of entries
 	// allowed in status.ancestors.
-	maxPolicyAncestors = 16
+	MaxPolicyAncestors = 16
 
 	// policyAncestorsSoftCap bounds policyStatus.Ancestors as entries are added, so
 	// SetConditionForPolicyAncestor stays O(1) instead of O(N) at scale (see #9539). It is
 	// intentionally one slot above the CRD limit: keeping a single extra ancestor lets the
-	// post-processing TruncatePolicyAncestors still observe len > maxPolicyAncestors, sort, cut to
-	// maxPolicyAncestors, and stamp the Aggregated condition. Since the best maxPolicyAncestors
+	// post-processing TruncatePolicyAncestors still observe len > MaxPolicyAncestors, sort, cut to
+	// MaxPolicyAncestors, and stamp the Aggregated condition. Since the best MaxPolicyAncestors
 	// ancestors are a subset of the best policyAncestorsSoftCap, the final survivors match the
 	// unbounded behavior for policies whose conditions do not change rank across passes.
-	policyAncestorsSoftCap = maxPolicyAncestors + 1
+	policyAncestorsSoftCap = MaxPolicyAncestors + 1
 )
 
 type PolicyResolveError struct {
@@ -198,7 +198,7 @@ func SetConditionForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorR
 // It is called as each ancestor is added so status building stays O(1) per insert. Because eviction
 // happens before an ancestor's rank is necessarily final, a truncated ancestor that later becomes
 // higher-priority (e.g. Overridden) is re-added carrying only that later condition; the redundant
-// Accepted condition is lost for policies with more than maxPolicyAncestors ancestors. The one slot
+// Accepted condition is lost for policies with more than MaxPolicyAncestors ancestors. The one slot
 // above the CRD limit lets the post-processing TruncatePolicyAncestors still stamp Aggregated.
 func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 	if len(policyStatus.Ancestors) <= policyAncestorsSoftCap {
@@ -296,12 +296,24 @@ func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {
 // The first 15 ancestors are shown as is.
 // The last 16th ancestor is shown as is and add Aggregated condition.
 func TruncatePolicyAncestors(policyStatus *gwapiv1.PolicyStatus, controllerName string, generation int64) {
-	if len(policyStatus.Ancestors) <= maxPolicyAncestors {
+	TruncatePolicyAncestorsWithLimit(policyStatus, controllerName, generation, MaxPolicyAncestors)
+}
+
+// TruncatePolicyAncestorsWithLimit trims PolicyStatus.Ancestors down to at most limit entries.
+// The first limit-1 ancestors are shown as is.
+// The last ancestor is shown as is and add Aggregated condition.
+// If limit is not positive, all ancestors are removed.
+func TruncatePolicyAncestorsWithLimit(policyStatus *gwapiv1.PolicyStatus, controllerName string, generation int64, limit int) {
+	if len(policyStatus.Ancestors) <= limit {
+		return
+	}
+	if limit <= 0 {
+		policyStatus.Ancestors = []gwapiv1.PolicyAncestorStatus{}
 		return
 	}
 
-	// we need to truncate policy ancestor status due to the item limit (max maxPolicyAncestors).
-	// so we are choosing to preserve the maxPolicyAncestors most important ancestors.
+	// we need to truncate policy ancestor status due to the item limit.
+	// so we are choosing to preserve the limit most important ancestors.
 	// negative polarity (Conflicted, Overridden...) should be clearly indicated to the user.
 	sort.Slice(policyStatus.Ancestors, func(i, j int) bool {
 		return lessPolicyAncestor(&policyStatus.Ancestors[i], &policyStatus.Ancestors[j])
@@ -309,9 +321,9 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1.PolicyStatus, controllerName 
 
 	aggregatedMessage := "Ancestors have been truncated because the number of policy ancestors exceeds 16."
 
-	policyStatus.Ancestors = policyStatus.Ancestors[:maxPolicyAncestors]
+	policyStatus.Ancestors = policyStatus.Ancestors[:limit]
 	SetConditionForPolicyAncestor(policyStatus,
-		&policyStatus.Ancestors[maxPolicyAncestors-1].AncestorRef,
+		&policyStatus.Ancestors[limit-1].AncestorRef,
 		controllerName,
 		egv1a1.PolicyConditionAggregated,
 		metav1.ConditionTrue,
