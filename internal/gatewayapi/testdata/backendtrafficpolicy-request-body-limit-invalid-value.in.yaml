@@ -44,7 +44,8 @@ backendTrafficPolicies:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-    # The CRD pattern rejects a zero maxSize at admission; the translator rejects it as well so an
-    # unvalidated input never renders a filter that would reject every request with a body.
+    # The CRD rejects a zero maxSize at admission, with the quantity pattern for string values and a CEL rule
+    # for integer values such as this one. The translator rejects it as well so an unvalidated input never
+    # renders a filter that would reject every request with a body.
     requestBodyLimit:
       maxSize: 0

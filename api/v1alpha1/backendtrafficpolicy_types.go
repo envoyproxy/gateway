@@ -301,6 +301,7 @@ type RequestBodyLimit struct {
 	//
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	// +kubebuilder:validation:XValidation:rule="type(self) == string || self > 0",message="maxSize must be greater than 0"
 	MaxSize resource.Quantity `json:"maxSize"`
 }
 

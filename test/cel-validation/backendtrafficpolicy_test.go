@@ -5666,4 +5666,62 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%q", err, wantError)
 		}
 	})
+
+	// The quantity pattern only applies to string values, so an unquoted integer maxSize is validated
+	// separately. It cannot be set through the typed API since resource.Quantity always marshals to a string.
+	// The field path and the message are checked separately because the "Invalid value" part of a CEL
+	// error differs between Kubernetes versions.
+	t.Run("request body limit integer maxSize", func(t *testing.T) {
+		cases := []struct {
+			desc       string
+			maxSize    int64
+			wantErrors []string
+		}{
+			{
+				desc:    "positive integer",
+				maxSize: 1048576,
+			},
+			{
+				desc:       "zero integer - should fail",
+				maxSize:    0,
+				wantErrors: []string{"spec.requestBodyLimit.maxSize: Invalid value", "maxSize must be greater than 0"},
+			},
+			{
+				desc:       "negative integer - should fail",
+				maxSize:    -1,
+				wantErrors: []string{"spec.requestBodyLimit.maxSize: Invalid value", "maxSize must be greater than 0"},
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.desc, func(t *testing.T) {
+				btp := &unstructured.Unstructured{Object: map[string]any{
+					"apiVersion": egv1a1.GroupVersion.String(),
+					"kind":       egv1a1.KindBackendTrafficPolicy,
+					"metadata": map[string]any{
+						"name":      fmt.Sprintf("btp-%v", time.Now().UnixNano()),
+						"namespace": metav1.NamespaceDefault,
+					},
+					"spec": map[string]any{
+						"targetRef": map[string]any{
+							"group": "gateway.networking.k8s.io",
+							"kind":  "Gateway",
+							"name":  "eg",
+						},
+						"requestBodyLimit": map[string]any{"maxSize": tc.maxSize},
+					},
+				}}
+
+				err := c.Create(ctx, btp)
+				if (len(tc.wantErrors) != 0) != (err != nil) {
+					t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+				}
+				for _, wantError := range tc.wantErrors {
+					if !strings.Contains(err.Error(), wantError) {
+						t.Errorf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;missing string within error=%q", err, wantError)
+					}
+				}
+			})
+		}
+	})
 }

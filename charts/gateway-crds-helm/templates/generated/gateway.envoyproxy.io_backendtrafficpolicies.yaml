@@ -2778,6 +2778,9 @@ spec:
 
                       Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
                     x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: maxSize must be greater than 0
+                      rule: type(self) == string || self > 0
                 required:
                 - maxSize
                 type: object
