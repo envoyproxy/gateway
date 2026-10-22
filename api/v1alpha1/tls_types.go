@@ -36,7 +36,9 @@ type ClientTLSSettings struct {
 	// when the request authority does not match the connection's SNI, as described
 	// in [GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).
 	// When unset or set to DowngradeToHTTP1, the existing ALPN downgrade is preserved
-	// unless alpnProtocols is explicitly configured.
+	// unless alpnProtocols is explicitly configured. The downgrade is also preserved when
+	// the overlapping certificate cannot be determined (e.g. SDS), as no 421 routes can be
+	// generated in that case.
 	//
 	// +optional
 	OverlappingTLSHandling OverlappingTLSHandling `json:"overlappingTLSHandling,omitempty"`

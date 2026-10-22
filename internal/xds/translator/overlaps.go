@@ -19,8 +19,10 @@ import (
 
 // detectMisdirectedRequests reports whether HTTP/2 is kept on a listener with overlapping TLS config
 // and misdirected requests are answered with 421.
+// Overlaps without recorded hostnames (e.g. opaque SDS certificates) keep the ALPN downgrade since no 421 routes can be generated for them.
 func detectMisdirectedRequests(httpListener *ir.HTTPListener) bool {
 	return httpListener != nil && httpListener.TLSOverlaps &&
+		len(httpListener.TLSOverlapsHostnames) > 0 &&
 		httpListener.OverlappingTLSHandling == ir.OverlappingTLSHandlingMisdirectedRequest
 }
 

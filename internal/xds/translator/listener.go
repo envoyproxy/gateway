@@ -542,14 +542,8 @@ func (t *Translator) addHCMToXDSListener(
 			// to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/),
 			// unless misdirected requests are detected and answered with 421 instead.
 			// Note: if ALPN is explicitly set by the user using ClientTrafficPolicy, we keep it as is
-			if irListener.TLSOverlaps && config.ALPNProtocols == nil {
-				switch irListener.OverlappingTLSHandling {
-				case ir.OverlappingTLSHandlingMisdirectedRequest:
-					// Keep HTTP/2 enabled; misdirected requests receive 421.
-				default:
-					// An unset or unrecognized value preserves the safe HTTP/1.1 downgrade.
-					config.ALPNProtocols = []string{"http/1.1"}
-				}
+			if irListener.TLSOverlaps && config.ALPNProtocols == nil && !detectMisdirectedRequests(irListener) {
+				config.ALPNProtocols = []string{"http/1.1"}
 			}
 			tSocket, err = buildXdsDownstreamTLSSocket(config)
 		}

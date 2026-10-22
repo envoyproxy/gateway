@@ -48,8 +48,17 @@ func TestDetectMisdirectedRequests(t *testing.T) {
 			listener: &ir.HTTPListener{
 				TLSOverlaps:            true,
 				OverlappingTLSHandling: ir.OverlappingTLSHandlingMisdirectedRequest,
+				TLSOverlapsHostnames:   []string{"bar.example.com"},
 			},
 			want: true,
+		},
+		{
+			name: "misdirected request handling without recorded hostnames (e.g. SDS)",
+			listener: &ir.HTTPListener{
+				TLSOverlaps:            true,
+				OverlappingTLSHandling: ir.OverlappingTLSHandlingMisdirectedRequest,
+			},
+			want: false,
 		},
 	}
 	for _, tc := range tests {
