@@ -210,13 +210,13 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		Factor:   2,
 		Jitter:   0.1,
 		Steps:    math.MaxInt32,
-		Cap:      30 * time.Second,
+		Cap:      5 * time.Second,
 	}
 	err := backoff.DelayFunc().Until(ctx, true, false, func(ctx context.Context) (bool, error) {
 		attempt++
 		var loadErr error
 		if tlsConfig, salt, loadErr = r.loadTLSConfig(ctx); loadErr != nil {
-			r.Logger.Error(loadErr, "failed to load wasm cache TLS config, retrying", "attempt", attempt)
+			r.Logger.Error(loadErr, "failed to start wasm cache, retrying", "attempt", attempt)
 			return false, nil
 		}
 		return true, nil
