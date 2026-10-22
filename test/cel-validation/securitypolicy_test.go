@@ -94,6 +94,42 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid UDPRoute targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("UDPRoute"),
+								Name:  gwapiv1.ObjectName("udp-backend"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid UDPRoute targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("UDPRoute"),
+									Name:  gwapiv1.ObjectName("udp-backend"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid mergeType with xRoute targetRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -120,6 +156,24 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							{
 								Kind:        gwapiv1.Kind("HTTPRoute"),
 								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid mergeType with UDPRoute targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("UDPRoute"),
+								Name:  gwapiv1.ObjectName("udp-backend"),
 							},
 						},
 					},
@@ -210,7 +264,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 		{
@@ -251,7 +305,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 		{
@@ -274,7 +328,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 
@@ -1256,6 +1310,40 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "http3 rejected in jwt backendSettings",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									BackendCluster: egv1a1.BackendCluster{
+										BackendSettings: &egv1a1.BackendSettings{
+											ClusterSettings: egv1a1.ClusterSettings{
+												HTTP3: &egv1a1.BackendHTTP3Settings{},
+											},
+										},
+									},
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http3 is only supported for route backends"},
 		},
 		{
 			desc: "jwt with claim to headers",
@@ -2412,6 +2500,243 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"forwardAccessToken cannot be true when forwardIDToken.header is Authorization"},
+		},
+		{
+			desc: "oidc-post-logout-redirect-uri",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+							EndSessionEndpoint:    new("https://accounts.google.com/o/oauth2/v2/logout"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{
+							URI: new("https://www.example.com/loggedout"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-post-logout-redirect-uri-command-operator",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						// Envoy command operators are a valid URI value, so the CRD must not
+						// constrain this field to a well-formed URI.
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{
+							URI: new("%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-post-logout-redirect-disabled",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{
+							Disabled: new(true),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-post-logout-redirect-disabled-false",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						// Explicitly false is accepted and means the same as leaving
+						// postLogoutRedirect unset.
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{
+							Disabled: new(false),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-post-logout-redirect-uri-and-disabled",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{
+							URI:      new("https://www.example.com/loggedout"),
+							Disabled: new(true),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"uri cannot be set when disabled is true"},
+		},
+		{
+			desc: "oidc-post-logout-redirect-uri-and-disabled-false",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{
+							URI:      new("https://www.example.com/loggedout"),
+							Disabled: new(false),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "oidc-post-logout-redirect-empty",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:           new("client-id"),
+						ClientSecret:       gwapiv1b1.SecretObjectReference{Name: "secret"},
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{},
+					},
+				}
+			},
+			wantErrors: []string{"one of uri or disabled must be set"},
+		},
+		{
+			desc: "oidc-post-logout-redirect-empty-uri",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group:       new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:        "HTTPRoute",
+								MatchLabels: map[string]string{"eg/namespace": "reference-apps"},
+							},
+						},
+					},
+					OIDC: &egv1a1.OIDC{
+						Provider: egv1a1.OIDCProvider{
+							Issuer:                "https://accounts.google.com",
+							AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+							TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
+						},
+						ClientID:     new("client-id"),
+						ClientSecret: gwapiv1b1.SecretObjectReference{Name: "secret"},
+						PostLogoutRedirect: &egv1a1.OIDCPostLogoutRedirect{
+							URI: new(""),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
 		},
 	}
 

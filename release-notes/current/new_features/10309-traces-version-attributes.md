@@ -1,0 +1,1 @@
+Envoy Gateway's own traces now carry the Envoy Gateway version in the `service.version` resource attribute and the git commit in `envoy_gateway.git_commit_id`, so traces can be compared across versions.

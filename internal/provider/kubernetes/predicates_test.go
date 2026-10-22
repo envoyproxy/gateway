@@ -2234,6 +2234,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	sampleService := test.GetService(types.NamespacedName{Name: "service"}, nil, nil)
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 	sampleHTTPRouteFilter := test.GetHTTPRouteFilter(types.NamespacedName{Name: "httproutefilter"})
+	// A route that references the filter only from a backendRef, with no rule-level filters.
+	backendRefFilterRoute := test.GetHTTPRoute(types.NamespacedName{Name: "httproute-backendref-filter"}, "scheduled-status-test", sampleServiceBackendRef, "")
+	backendRefFilterRoute.Spec.Rules[0].BackendRefs[0].Filters = []gwapiv1.HTTPRouteFilter{
+		{
+			Type: gwapiv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: egv1a1.GroupName,
+				Kind:  egv1a1.KindHTTPRouteFilter,
+				Name:  "httproutefilter",
+			},
+		},
+	}
 
 	testCases := []struct {
 		name string
@@ -2263,6 +2275,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 				sampleService,
 				sampleHTTPRouteFilter,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, "httproutefilter"),
+			},
+			httpRouteFilter: sampleHTTPRouteFilter,
+			expect:          true,
+		},
+		{
+			name: "httproutefilter referenced only by a backendRef of route",
+			configs: []client.Object{
+				sampleGWC,
+				sampleGateway,
+				sampleService,
+				sampleHTTPRouteFilter,
+				backendRefFilterRoute,
 			},
 			httpRouteFilter: sampleHTTPRouteFilter,
 			expect:          true,

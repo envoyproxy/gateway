@@ -27,6 +27,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests,
 		LocalRateLimitTest,
 		LocalRateLimitQueryParametersTest,
+		LocalRateLimitDisableRetryAfterHeaderTest,
 	)
 }
 
@@ -34,6 +35,7 @@ const (
 	RatelimitLimitHeaderName     = "x-ratelimit-limit"
 	RatelimitRemainingHeaderName = "x-ratelimit-remaining"
 	RatelimitResetHeaderName     = "x-ratelimit-reset"
+	RetryAfterHeaderName         = "retry-after"
 )
 
 var allRateLimitHeaders = []string{
@@ -670,4 +672,47 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 		}
 		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse3)
 	})
+}
+
+var LocalRateLimitDisableRetryAfterHeaderTest = suite.ConformanceTest{
+	ShortName:   "LocalRateLimitDisableRetryAfterHeader",
+	Description: "Omit Retry-After header on local rate-limited 429 responses when disabled",
+	Manifests:   []string{"testdata/local-ratelimit-disable-retry-after-header.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "local-ratelimit-disable-retry-after-header-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		okResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/retry-after-local",
+			},
+			Response: http.Response{
+				StatusCodes:   []int{200},
+				AbsentHeaders: []string{RetryAfterHeaderName},
+			},
+			Namespace: ns,
+		}
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
+
+		limitResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/retry-after-local",
+			},
+			Response: http.Response{
+				StatusCodes:   []int{429},
+				AbsentHeaders: []string{RetryAfterHeaderName},
+			},
+			Namespace: ns,
+		}
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &limitResponse)
+	},
 }
