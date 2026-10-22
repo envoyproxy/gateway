@@ -240,7 +240,6 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
-      overlappingTLSHandling: MisdirectedRequest
       externalPort: 443
       hostnames:
       - foo.example.com
@@ -250,6 +249,7 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: https-1
       name: envoy-gateway/gateway-1/https-1
+      overlappingTLSHandling: MisdirectedRequest
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
