@@ -269,7 +269,7 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 	})
 
 	t.Run("ReferenceGrant index", func(t *testing.T) {
-		err := cli.List(context.Background(), &gwapiv1b1.ReferenceGrantList{}, client.MatchingFields{targetRefGrantRouteIndex: "any"})
+		err := cli.List(context.Background(), &gwapiv1b1.ReferenceGrantList{}, client.MatchingFields{refGrantFromNamespaceToKindIndex: "any"})
 		require.NoError(t, err)
 	})
 }

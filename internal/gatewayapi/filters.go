@@ -72,6 +72,9 @@ type HTTPFilterIR struct {
 	// BackendPriority is the locality priority set by an HTTPRouteFilter's backendPriority.
 	// It is only valid on a backendRef's filters.
 	BackendPriority *uint32
+
+	// RequestMirrorModifier holds the request mirror modifier defined on an attached HTTPRouteFilter.
+	RequestMirrorModifier *egv1a1.RequestMirrorHostnameModifier
 }
 
 // Header value pattern according to RFC 7230
@@ -197,6 +200,12 @@ func (t *Translator) ProcessHTTPFilters(
 		).WithType(gwapiv1.RouteConditionAccepted))
 	}
 
+	if httpFiltersContext.RequestMirrorModifier != nil && len(httpFiltersContext.Mirrors) > 0 {
+		if err := t.applyRequestMirrorModifier(httpFiltersContext); err != nil {
+			errs.Add(err)
+		}
+	}
+
 	return httpFiltersContext, errs.GetAllErrors()
 }
 
@@ -272,6 +281,12 @@ func (t *Translator) ProcessGRPCFilters(
 			errors.New(grpcDirectResponse2xxMsg),
 			gwapiv1.RouteReasonUnsupportedValue,
 		).WithType(gwapiv1.RouteConditionAccepted))
+	}
+
+	if httpFiltersContext.RequestMirrorModifier != nil && len(httpFiltersContext.Mirrors) > 0 {
+		if err := t.applyRequestMirrorModifier(httpFiltersContext); err != nil {
+			errs.Add(err)
+		}
 	}
 
 	return httpFiltersContext, errs.GetAllErrors()
@@ -1069,6 +1084,16 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					}
 					filterContext.CredentialInjection = injection
 				}
+
+				if hrf.Spec.RequestMirror != nil && hrf.Spec.RequestMirror.Hostname != nil {
+					if filterContext.RequestMirrorModifier != nil {
+						return status.NewRouteStatusError(
+							errors.New("cannot configure multiple requestMirror filters for a single HTTPRouteRule"),
+							gwapiv1.RouteReasonUnsupportedValue,
+						).WithType(gwapiv1.RouteConditionAccepted)
+					}
+					filterContext.RequestMirrorModifier = hrf.Spec.RequestMirror.Hostname
+				}
 			}
 		}
 		if !found {
@@ -1175,6 +1200,57 @@ func (t *Translator) processRequestMirrorFilter(
 	}
 
 	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{Destination: routeDst, Percentage: percent})
+	return nil
+}
+
+func (t *Translator) applyRequestMirrorModifier(filterContext *HTTPFiltersContext) status.Error {
+	if filterContext == nil || filterContext.RequestMirrorModifier == nil {
+		return nil
+	}
+
+	modifier := filterContext.RequestMirrorModifier
+	switch modifier.Type {
+	case egv1a1.RequestMirrorHostnameModifierLiteral:
+		if modifier.Literal == nil {
+			return status.NewRouteStatusError(
+				errors.New("literal hostname must be set when type is Literal"),
+				gwapiv1.RouteReasonUnsupportedValue,
+			).WithType(gwapiv1.RouteConditionAccepted)
+		}
+		literal := string(*modifier.Literal)
+		for _, mirror := range filterContext.Mirrors {
+			mirror.HostRewrite = &literal
+		}
+	case egv1a1.RequestMirrorHostnameModifierBackend:
+		for _, mirror := range filterContext.Mirrors {
+			if mirror.Destination == nil || len(mirror.Destination.Settings) != 1 {
+				return status.NewRouteStatusError(
+					errors.New("mirror backend must resolve to a single destination setting when hostname type is Backend"),
+					gwapiv1.RouteReasonUnsupportedValue,
+				).WithType(gwapiv1.RouteConditionAccepted)
+			}
+			ds := mirror.Destination.Settings[0]
+			if len(ds.Endpoints) != 1 {
+				return status.NewRouteStatusError(
+					fmt.Errorf("mirror backend must resolve to a single endpoint when hostname type is Backend, got %d endpoints", len(ds.Endpoints)),
+					gwapiv1.RouteReasonUnsupportedValue,
+				).WithType(gwapiv1.RouteConditionAccepted)
+			}
+			if ds.AddressType == nil || *ds.AddressType != ir.FQDN {
+				return status.NewRouteStatusError(
+					errors.New("mirror backend must resolve to an FQDN endpoint when hostname type is Backend"),
+					gwapiv1.RouteReasonUnsupportedValue,
+				).WithType(gwapiv1.RouteConditionAccepted)
+			}
+			mirror.HostRewrite = &ds.Endpoints[0].Host
+		}
+	default:
+		return status.NewRouteStatusError(
+			fmt.Errorf("unsupported requestMirror hostname modifier type: %s", modifier.Type),
+			gwapiv1.RouteReasonUnsupportedValue,
+		).WithType(gwapiv1.RouteConditionAccepted)
+	}
+
 	return nil
 }
 

@@ -7,7 +7,7 @@ used on a Route rule. This MUST NOT be used on the same Route rule as a HTTPRequ
 
 The Envoy Gateway `HTTPRouteFilter` (used for hostname and regex path rewrite) can also be referenced from a `GRPCRoute`
 via an `extensionRef` filter. For gRPC, a regex `:path` rewrite operates on the gRPC path, which has the form
-`/<package>.<Service>/<Method>`. See [Gateway API support](./gatewayapi-support#grpcroute) for details.
+`/<package>.<Service>/<Method>`. See [Gateway API support](../../concepts/gatewayapi-support#grpcroute) for details.
 
 ## Prerequisites
 

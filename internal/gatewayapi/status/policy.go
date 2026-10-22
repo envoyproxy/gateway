@@ -6,11 +6,13 @@
 package status
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -21,6 +23,11 @@ const (
 	// PolicyReasonUnsupportedHTTP3ClientValidation is used with the "Warning" condition when
 	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
 	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
+
+	// PolicyReasonUnsupportedHTTP3Backend is used with the "Warning" condition when HTTP/3 to
+	// a backend is disabled because the backend, or another setting, cannot use QUIC, or when
+	// it stays on but a backend TLS setting that QUIC cannot carry is ignored.
+	PolicyReasonUnsupportedHTTP3Backend gwapiv1.PolicyConditionReason = "UnsupportedHTTP3Backend"
 
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
@@ -71,6 +78,23 @@ func SetTranslationErrorForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, a
 func SetTranslationErrorForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, errMsg string) {
 	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1.PolicyReasonInvalid, errMsg, generation)
+}
+
+// SetMergeResultForPolicyAncestor reports the results of merging a route policy with its
+// parent policies on the listeners of one route parentRef: the errors as Accepted=False,
+// and the parent policies it merged with as Merged.
+func SetMergeResultForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64,
+	errMsgs, mergedWith sets.Set[string],
+) {
+	if errMsgs.Len() > 0 {
+		SetTranslationErrorForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation,
+			strings.Join(sets.List(errMsgs), "; "))
+	}
+	if mergedWith.Len() > 0 {
+		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+			egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
+			"Merged with policy "+strings.Join(sets.List(mergedWith), ", "), generation)
+	}
 }
 
 // SetAcceptedForPolicyAncestors sets accepted conditions for each ancestor reference if it is unset.
@@ -233,6 +257,12 @@ func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
 		builder.WriteString(" instead")
 	}
 	return builder.String()
+}
+
+// MergedConditionMessage builds the status message for a Merged condition, naming the
+// policy that was merged with.
+func MergedConditionMessage(mergedWith metav1.Object) string {
+	return fmt.Sprintf("Merged with policy %s/%s", mergedWith.GetNamespace(), mergedWith.GetName())
 }
 
 func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {

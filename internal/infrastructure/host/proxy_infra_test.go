@@ -267,6 +267,11 @@ func TestExtractSemver(t *testing.T) {
 		{"envoyproxy/envoy:distroless-v1.35.0-extra", "1.35.0", false},
 		{"envoyproxy/envoy:1.2.3", "1.2.3", false},
 		{"envoyproxy/envoy:foo-2.3.4-bar", "2.3.4", false},
+		{"docker.io/envoyproxy/envoy:distroless-v1.39.1@sha256:eb2c01c13125d1629637cb4e4cce7207009fb7cc2c8027f9742758549d15b6f4", "1.39.1", false},
+		{"envoyproxy/envoy@sha256:eb2c01c13125d1629637cb4e4cce7207009fb7cc2c8027f9742758549d15b6f4", "", true},
+		{"localhost:5000/envoyproxy/envoy:v1.35.0", "1.35.0", false},
+		{"localhost:5000/envoyproxy/envoy", "", true},
+		{"envoyproxy/envoy:", "", true},
 	}
 	for _, tc := range tests {
 		t.Run(tc.image, func(t *testing.T) {
@@ -434,6 +439,12 @@ func TestGetEnvoyVersion(t *testing.T) {
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
 			provider:     egv1a1.DefaultEnvoyProxyProvider(),
 			want:         "1.35.0",
+		},
+		{
+			name:         "k8s provider default release version pinned by digest",
+			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.39.1@sha256:eb2c01c13125d1629637cb4e4cce7207009fb7cc2c8027f9742758549d15b6f4",
+			provider:     egv1a1.DefaultEnvoyProxyProvider(),
+			want:         "1.39.1",
 		},
 		{
 			name:         "k8s provider dev version",

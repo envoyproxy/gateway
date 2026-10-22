@@ -76,6 +76,12 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return fmt.Errorf("disableLua and enableLua must not have the same value")
 	}
 
+	if eg.EnvoyProxy != nil {
+		if err := validateEnvoyProxySpec(eg.EnvoyProxy); err != nil {
+			return fmt.Errorf("invalid EnvoyProxy template: %w", err)
+		}
+	}
+
 	return nil
 }
 
