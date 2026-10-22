@@ -809,6 +809,35 @@ func (r *RouteParentContext) GetGateway() *GatewayContext {
 	return r.listeners[0].gateway
 }
 
+// PolicyAncestorRef returns this parent as a policy status ancestorRef, with group, kind
+// and namespace always filled in.
+func (r *RouteParentContext) PolicyAncestorRef() gwapiv1.ParentReference {
+	parentNN := types.NamespacedName{
+		Namespace: NamespaceDerefOr(r.Namespace, r.routeNamespace()),
+		Name:      string(r.Name),
+	}
+	if r.Kind != nil && *r.Kind == resource.KindListenerSet {
+		return getAncestorRefForListenerSetPolicy(parentNN, r.SectionName)
+	}
+	return getAncestorRefForPolicy(parentNN, r.SectionName)
+}
+
+func (r *RouteParentContext) routeNamespace() string {
+	switch {
+	case r.HTTPRoute != nil:
+		return r.HTTPRoute.Namespace
+	case r.GRPCRoute != nil:
+		return r.GRPCRoute.Namespace
+	case r.TLSRoute != nil:
+		return r.TLSRoute.Namespace
+	case r.TCPRoute != nil:
+		return r.TCPRoute.Namespace
+	case r.UDPRoute != nil:
+		return r.UDPRoute.Namespace
+	}
+	return ""
+}
+
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 	r.listeners = append(r.listeners, listeners...)
 }
@@ -879,6 +908,32 @@ type BackendClusterKey struct {
 	Protocol     ir.AppProtocol
 }
 
+// ExtensionResourceKey identifies a unique extension-introduced resource per gateway for dedup.
+type ExtensionResourceKey struct {
+	GatewayIRKey string
+	Group        string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
+// CACertificateKey identifies a shared upstream CA bundle within a gateway's IR by a digest
+// of its content.
+type CACertificateKey struct {
+	GatewayIRKey string
+	Digest       string
+}
+
+// ResolvedCAKey identifies a resource whose CA was already resolved. It keys on the resource
+// rather than the CA's secret name, which a Backend and a BackendTLSPolicy of the same name
+// and namespace mint identically.
+type ResolvedCAKey struct {
+	GatewayIRKey string
+	Kind         string
+	Namespace    string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -889,10 +944,13 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
+	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
+	ResolvedCAMap           map[ResolvedCAKey]string
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
-	BTPLoadBalancerIndex    *BTPLoadBalancerIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
+	BackendTLSPolicyIndex   BackendTLSPolicyIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {
@@ -1015,23 +1073,23 @@ func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, b
 func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
 	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
 
-	var kind, svcName string
+	// A slice may carry both service-name labels (e.g. Cilium ClusterMesh MCS
+	// slices), so file it under every backend it belongs to.
 	for _, slice := range slices {
 		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
-			kind = resource.KindService
-			svcName = name
-		} else if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
-			kind = resource.KindServiceImport
-			svcName = name
-		} else {
-			continue
+			t.addEndpointSliceForBackend(resource.KindService, name, slice)
 		}
-
-		key := backendServiceKey{
-			kind:      kind,
-			namespace: slice.Namespace,
-			name:      svcName,
+		if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
+			t.addEndpointSliceForBackend(resource.KindServiceImport, name, slice)
 		}
-		t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 	}
+}
+
+func (t *TranslatorContext) addEndpointSliceForBackend(kind, svcName string, slice *discoveryv1.EndpointSlice) {
+	key := backendServiceKey{
+		kind:      kind,
+		namespace: slice.Namespace,
+		name:      svcName,
+	}
+	t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 }

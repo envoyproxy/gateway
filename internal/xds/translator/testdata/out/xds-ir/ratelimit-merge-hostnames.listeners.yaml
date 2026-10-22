@@ -19,6 +19,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             disableXEnvoyRatelimitedHeader: true
             domain: envoy-gateway/gateway-2/http-app1
+            enableRetryAfterHeader: true
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
               grpcService:

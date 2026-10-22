@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -28,7 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) error {
+func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager, idx extensionResourceIndex, stats *ExtensionHookStats) error {
 	// Do nothing unless there is an extension manager and the ir.HTTPRoute has extension filters
 	if em == nil || (len(irRoute.ExtensionRefs) == 0 && len(irRoute.ExtensionServerPolicies) == 0) {
 		return nil
@@ -45,19 +46,24 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	}
 	unstructuredResources := make([]*unstructured.Unstructured, len(irRoute.ExtensionRefs))
 	for refIdx, ref := range irRoute.ExtensionRefs {
-		unstructuredResources[refIdx] = ref.Object
+		unstructuredResources[refIdx] = resolveUnstructuredRef(ref, idx)
 	}
 	unstructuredPolicies := make([]*unstructured.Unstructured, len(irRoute.ExtensionServerPolicies))
 	for refIdx, ref := range irRoute.ExtensionServerPolicies {
-		unstructuredPolicies[refIdx] = ref.Object
+		unstructuredPolicies[refIdx] = resolveUnstructuredRef(ref, idx)
 	}
 
-	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
+	start := time.Now()
+	modifiedRoute, hookResult, err := extRouteHookClient.PostRouteModifyHook(
 		route,
 		vHost.Domains,
 		unstructuredResources,
 		unstructuredPolicies,
 	)
+	if stats != nil {
+		stats.RouteCallCount += int64(hookResult.CallCount)
+		stats.RouteDuration += time.Since(start)
+	}
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
@@ -138,7 +144,7 @@ func processExtensionPostEndpointsHook(loadAssignment *endpointv3.ClusterLoadAss
 	return nil
 }
 
-func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager) error {
+func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager, stats *ExtensionHookStats) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -153,7 +159,12 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	if extVHHookClient == nil {
 		return nil
 	}
-	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
+	start := time.Now()
+	modifiedVH, hookResult, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
+	if stats != nil {
+		stats.VHostCallCount += int64(hookResult.CallCount)
+		stats.VHostDuration += time.Since(start)
+	}
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
@@ -170,7 +181,7 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	return nil
 }
 
-func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, extensionRefs []*ir.UnstructuredRef, em *extensionTypes.Manager) error {
+func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, extensionRefs []*ir.UnstructuredRef, em *extensionTypes.Manager, idx extensionResourceIndex, stats *ExtensionHookStats) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -185,9 +196,14 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	if extListenerHookClient != nil {
 		unstructuredResources := make([]*unstructured.Unstructured, len(extensionRefs))
 		for refIdx, ref := range extensionRefs {
-			unstructuredResources[refIdx] = ref.Object
+			unstructuredResources[refIdx] = resolveUnstructuredRef(ref, idx)
 		}
-		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources)
+		start := time.Now()
+		modifiedListener, hookResult, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener, unstructuredResources)
+		if stats != nil {
+			stats.ListenerCallCount += int64(hookResult.CallCount)
+			stats.ListenerDuration += time.Since(start)
+		}
 		if err != nil {
 			return err
 		} else if modifiedListener != nil {
@@ -211,7 +227,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	return nil
 }
 
-func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []*ir.UnstructuredRef) error {
+func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager, policies []*ir.UnstructuredRef, idx extensionResourceIndex) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -228,6 +244,14 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	if extensionInsertHookClient == nil {
 		return nil
 	}
+
+	// The hook client reads Object directly off each ref (e.g. for per-extension GroupKind
+	// filtering), so resolve name-only refs to their canonical Object before handing them off.
+	resolvedPolicies := make([]*ir.UnstructuredRef, len(policies))
+	for i, policy := range policies {
+		resolvedPolicies[i] = &ir.UnstructuredRef{Object: resolveUnstructuredRef(policy, idx)}
+	}
+	policies = resolvedPolicies
 
 	// Get translation configuration and determine which resources to include
 	translationConfig := extManager.GetTranslationHookConfig()

@@ -57,6 +57,8 @@ func TestTranslate(t *testing.T) {
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
+		EnvoyProxyPatchDisabled         bool
+		CTPHTTP1ClientScopeOnly         bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -134,6 +136,30 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name:                    "envoyproxy-patch-disabled",
+			EnvoyProxyPatchDisabled: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-listenerset-http1-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-listener-http1-divergence-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-listener-ctp-divergence-no-sectionname-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-ctp-flat-http1-btp-override-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-btp-backend-target-http1-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -160,6 +186,8 @@ func TestTranslate(t *testing.T) {
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
 			perResourceSystemCASecret := false
+			envoyProxyPatchDisabled := false
+			ctpHTTP1ClientScopeOnly := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -170,6 +198,8 @@ func TestTranslate(t *testing.T) {
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
+					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
+					ctpHTTP1ClientScopeOnly = config.CTPHTTP1ClientScopeOnly
 				}
 			}
 
@@ -188,6 +218,8 @@ func TestTranslate(t *testing.T) {
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
+				EnvoyProxyPatchDisabled:         envoyProxyPatchDisabled,
+				CTPHTTP1ClientScopeOnly:         ctpHTTP1ClientScopeOnly,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
@@ -1219,7 +1251,9 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder             []egv1a1.FilterPosition
 		GlobalResources         *ir.GlobalResources
 		ExtensionServerPolicies []*ir.UnstructuredRef
+		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
+		CACertificates          []*ir.CACertificateEntry
 	}{
 		ReadyListener:           a.ReadyListener,
 		AccessLog:               a.AccessLog,
@@ -1233,7 +1267,9 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		FilterOrder:             a.FilterOrder,
 		GlobalResources:         a.GlobalResources,
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
+		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
+		CACertificates:          a.CACertificates,
 	}
 
 	// Ensure we didn't drop an exported field.

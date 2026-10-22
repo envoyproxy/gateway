@@ -92,3 +92,38 @@ spec:
       timeouts:
         request: 0s
 ```
+
+## Why are requests with underscored header names rejected with HTTP 400 or a stream reset?
+
+Clients that send headers with underscores in the name (for example `X_Forwarded_For`)
+get HTTP/1 400 responses or HTTP/2 stream resets, even though you never configured a
+`ClientTrafficPolicy`. This commonly surprises users migrating from nginx-ingress,
+which accepts those headers by default.
+
+**Root cause:** [`ClientTrafficPolicy`](../../api/extension_types#clienttrafficpolicy)
+[`headers.withUnderscoresAction`](../../api/extension_types#headersettings) defaults to
+`RejectRequest` even when the field is unset. Envoy Gateway follows Envoy's
+[edge proxy best practices](https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge)
+rather than Envoy's own `ALLOW` default. HTTP/1 requests are rejected with 400; HTTP/2
+requests end with a stream reset.
+
+To allow those headers, set `withUnderscoresAction: Allow` on a `ClientTrafficPolicy`
+that targets the Gateway:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: allow-underscores
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  headers:
+    withUnderscoresAction: Allow
+```
+
+See [HeaderSettings](../../api/extension_types#headersettings) for the other actions
+(`RejectRequest`, `DropHeader`).

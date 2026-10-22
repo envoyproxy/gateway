@@ -360,6 +360,112 @@ func TestHTTPRouteFilter(t *testing.T) {
 				": header.remove is not supported for DirectResponse",
 			},
 		},
+		{
+			desc: "Valid BackendPriority with highest priority",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					BackendPriority: new(int32(0)),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Valid BackendPriority with max value",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					BackendPriority: new(int32(128)),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Invalid BackendPriority exceeding max value",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					BackendPriority: new(int32(129)),
+				}
+			},
+			wantErrors: []string{
+				"spec.backendPriority: Invalid value: 129:",
+				"should be less than or equal to 128",
+			},
+		},
+		{
+			desc: "valid RequestMirror with Literal",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type:    egv1a1.RequestMirrorHostnameModifierLiteral,
+							Literal: new(gwapiv1.PreciseHostname("mirror.example.internal")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid RequestMirror with Backend",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type: egv1a1.RequestMirrorHostnameModifierBackend,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid RequestMirror Literal missing literal field",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type: egv1a1.RequestMirrorHostnameModifierLiteral,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestMirror.hostname: Invalid value:",
+				": literal must be specified for Literal type",
+			},
+		},
+		{
+			desc: "invalid RequestMirror Backend with literal set",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type:    egv1a1.RequestMirrorHostnameModifierBackend,
+							Literal: new(gwapiv1.PreciseHostname("mirror.example.internal")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestMirror.hostname: Invalid value:",
+				": literal must be nil if the type is not Literal",
+			},
+		},
+		{
+			desc: "invalid RequestMirror Literal with spaces",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					RequestMirror: &egv1a1.HTTPRequestMirrorFilter{
+						Hostname: &egv1a1.RequestMirrorHostnameModifier{
+							Type:    egv1a1.RequestMirrorHostnameModifierLiteral,
+							Literal: new(gwapiv1.PreciseHostname("invalid hostname")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.requestMirror.hostname.literal: Invalid value:",
+			},
+		},
 	}
 
 	for _, tc := range cases {

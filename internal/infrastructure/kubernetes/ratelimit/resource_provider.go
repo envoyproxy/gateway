@@ -308,9 +308,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// apply merge patch to deployment
+	// Patch is always applied here: the rate limit deployment config comes from
+	// EnvoyGateway.spec.rateLimit, which is admin-authored, not tenant-facing.
 	var err error
 	deploymentConfig := r.rateLimitDeployment
-	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch); err != nil {
+	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch, false); err != nil {
 		return nil, err
 	}
 
@@ -371,7 +373,9 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Name = r.Name()
 	}
 
-	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
+	// Patch is always applied here: the rate limit HPA config comes from
+	// EnvoyGateway.spec.rateLimit, which is admin-authored, not tenant-facing.
+	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch, false); err != nil {
 		return nil, err
 	}
 
@@ -390,10 +394,12 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		resourceName = *pdb.Name
 	}
 
+	// Patch is always applied here: the rate limit PDB config comes from
+	// EnvoyGateway.spec.rateLimit, which is admin-authored, not tenant-facing.
 	return common.GetPodDisruptionBudget(r.rateLimitPdb, resource.GetSelector(rateLimitLabels()), &types.NamespacedName{
 		Name:      resourceName,
 		Namespace: r.Namespace(),
-	}, r.ownerReferences())
+	}, r.ownerReferences(), false)
 }
 
 func (r *ResourceRender) ownerReferences() []metav1.OwnerReference {
