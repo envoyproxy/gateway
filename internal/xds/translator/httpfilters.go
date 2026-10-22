@@ -116,8 +116,9 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 5
 	case isFilterType(filter, egv1a1.EnvoyFilterBodySizeLimit):
 		// Ensure body size limit runs before ext auth, which may buffer the request body to send
-		// it to the authorization service, and before the buffer filter, so that an oversized body
-		// is rejected before any filter buffers it.
+		// it to the authorization service, and before the buffer filter. An oversized Content-Length
+		// is then rejected before either of them buffers the body, and a streamed body is rejected
+		// before they buffer more than the limit.
 		order = 6
 	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
 		order = 7

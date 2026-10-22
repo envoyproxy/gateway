@@ -14,8 +14,9 @@ http:
     port: 10080
     routes:
       # The route sends up to 10 MiB of the request body to the external authorization service, but caps
-      # the request body at 1 MiB. The body size limit filter is ordered before the ext_authz filter, so
-      # an oversized body is rejected before ext_authz buffers it and sends it to the authorization service.
+      # the request body at 1 MiB. The body size limit filter is ordered before the ext_authz filter, so an
+      # oversized Content-Length is rejected before ext_authz buffers the body, and a streamed body is
+      # rejected before ext_authz buffers more than 1 MiB of it or sends it to the authorization service.
       - destination:
           name: httproute/default/httproute-1/rule/0
           settings:

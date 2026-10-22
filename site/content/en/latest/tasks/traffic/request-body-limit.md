@@ -194,14 +194,18 @@ Both fields reject a request whose body is larger than a configured size with HT
 | Upper bound of the limit | 64-bit | 32-bit (`max_request_bytes` of the buffer filter) |
 
 Use `requestBodyLimit` when you only need a maximum request body size. Use `requestBuffer` when the backend must also be shielded from
-slow or partial requests. The two can be combined on a route: the body size limit filter runs first, so an oversized body is rejected
-before the buffer filter starts buffering it.
+slow or partial requests. The two can be combined on a route, and the body size limit filter runs first:
+
+- A request whose `Content-Length` exceeds `maxSize` is rejected before the buffer filter starts buffering it.
+- A streamed body is counted as it arrives, and every chunk below the limit is passed on to the buffer filter. By the time the body
+  passes `maxSize` and is rejected, the buffer filter already holds the bytes received so far. Each streamed request can therefore
+  buffer up to the lower of `maxSize` and the `requestBuffer` limit.
 
 ## Combining with external authorization
 
 The body size limit filter also runs before the external authorization filter. When a [SecurityPolicy][] on the same route sends the
 request body to the authorization service with `extAuth.bodyToExtAuth` (see [External Authorization][]), a body larger than `maxSize`
-is rejected with HTTP 413 before it is buffered and sent to the authorization service:
+is rejected with HTTP 413 before it is sent to the authorization service:
 
 - An oversized `Content-Length` is rejected without calling the authorization service.
 - A streamed body is rejected once it passes `maxSize`, so the external authorization filter never buffers more than `maxSize` bytes.
