@@ -1,0 +1,5 @@
+Changed the xDS shape of Lua filters generated from an `EnvoyExtensionPolicy`. The HTTP connection manager now holds one empty, disabled Lua filter per execution slot, named `envoy.filters.http.lua/<index>`, instead of one filter per policy carrying its script. Each route carries its scripts as `LuaPerRoute` configuration with a `shared_vm_id` set to the script name, so Envoy builds one set of Lua VMs per script no matter how many routes run it.
+
+A script's VM is now shared across every listener that runs it, where previously each listener had its own. Global variables that a script uses as shared state, such as a cache or a counter, were already shared by all routes of the policy on one listener and are now also shared across listeners. This should rarely matter, but scripts that rely on per-listener globals should be aware of it and use a separate policy per listener if needed, since each policy script gets its own VM.
+
+An `EnvoyPatchPolicy` that targets a Lua filter by its old policy-derived name, or edits a script through the listener, needs to target the route instead.
