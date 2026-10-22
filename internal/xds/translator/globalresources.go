@@ -16,6 +16,7 @@ import (
 	proto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -260,7 +261,7 @@ func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTab
 	ds := &ir.DestinationSetting{
 		Weight:    new(uint32(1)),
 		Protocol:  ir.HTTP2,
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace, t.DNSDomain), wasmHTTPServicePort, false, nil)},
 		Name:      destinationSettingName(wasmHTTPServiceClusterName),
 		// TODO: tracked with issue #6861
 		Metadata: nil,
@@ -281,6 +282,9 @@ func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTab
 	})
 }
 
-func wasmHTTPServiceFQDN(controllerNamespace string) string {
-	return fmt.Sprintf("%s.%s.svc.cluster.local", wasmHTTPServiceHost, controllerNamespace)
+func wasmHTTPServiceFQDN(controllerNamespace, dnsDomain string) string {
+	if dnsDomain == "" {
+		dnsDomain = config.DefaultDNSDomain
+	}
+	return fmt.Sprintf("%s.%s.svc.%s", wasmHTTPServiceHost, controllerNamespace, dnsDomain)
 }
