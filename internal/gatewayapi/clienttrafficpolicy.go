@@ -856,7 +856,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		httpIR.ProxyProtocol = proxyProtocol
 		httpIR.Timeout = timeout
 		httpIR.TLS = tlsConfig
-		httpIR.OverlappingTLSHandling = translateOverlappingTLSHandling(policy.Spec.TLS)
+		if policy.Spec.TLS != nil {
+			httpIR.OverlappingTLSHandling = ir.OverlappingTLSHandling(policy.Spec.TLS.OverlappingTLSHandling)
+		}
 	}
 
 	if tcpIR != nil {
@@ -1185,15 +1187,6 @@ func translateSchemeHeaderTransform(scheme *egv1a1.SchemeHeaderTransform, httpIR
 	if *scheme == egv1a1.SchemeHeaderTransformMatchBackend {
 		httpIR.MatchBackendScheme = true
 	}
-}
-
-// translateOverlappingTLSHandling preserves the ClientTrafficPolicy setting in the IR. An unset value remains empty
-// so that it can use the default behavior without being persisted into existing objects.
-func translateOverlappingTLSHandling(tls *egv1a1.ClientTLSSettings) ir.OverlappingTLSHandling {
-	if tls == nil {
-		return ""
-	}
-	return ir.OverlappingTLSHandling(tls.OverlappingTLSHandling)
 }
 
 func (t *Translator) buildListenerTLSParameters(
