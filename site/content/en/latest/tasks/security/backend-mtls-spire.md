@@ -36,9 +36,18 @@ The chart installs:
 
 - The SPIRE Agent as a DaemonSet. It serves the Workload API and SDS on a Unix domain socket on every node.
 - The [SPIFFE CSI driver][] (`csi.spiffe.io`), which mounts that socket into pods.
-- A default `ClusterSPIFFEID` that gives every pod the identity `spiffe://example.org/ns/<namespace>/sa/<service-account>`.
+- A default `ClusterSPIFFEID` that gives every pod outside the SPIRE namespaces the identity
+  `spiffe://example.org/ns/<namespace>/sa/<service-account>`. It has no pod selector, so pods don't need any label.
 
 The Envoy proxy pods get their identity from this default registration, so you don't need to register them separately.
+If you installed SPIRE with a custom `ClusterSPIFFEID` that selects pods by label, add that label to the Envoy pods with
+`spec.provider.kubernetes.envoyDeployment.pod.labels` in the [EnvoyProxy][] resource.
+
+To confirm which pods the default registration selects, run:
+
+```shell
+kubectl get clusterspiffeid spire-server-spire-default -o jsonpath='{.spec}'
+```
 
 ## Install Istio and the backend
 
@@ -113,7 +122,6 @@ spec:
     metadata:
       labels:
         app: httpbin
-        spiffe.io/spire-managed-identity: "true"
       annotations:
         inject.istio.io/templates: "sidecar,spire"
     spec:
@@ -388,6 +396,30 @@ kubectl delete namespace spire-server
 ```
 
 The SPIRE CRDs are kept when you uninstall the `spire-crds` chart, so delete them explicitly.
+
+If you keep Envoy Gateway installed, turn SDS Secret references off again, so that Envoy Gateway stops accepting
+`gateway.envoyproxy.io/sds` Secrets:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableSDSSecretRef: false
+EOF
+kubectl -n envoy-gateway-system rollout restart deployment envoy-gateway
+```
 
 ## Security considerations
 
