@@ -139,10 +139,21 @@ The `httpbin` workload's SPIFFE ID is `spiffe://example.org/ns/spire-sample/sa/h
 ## Enable SDS Secret references
 
 Envoy Gateway reads SDS settings from Secrets of type `gateway.envoyproxy.io/sds`. This feature is turned off by
-default. To turn it on, set `enableSDSSecretRef` under `extensionApis` in the `envoy-gateway-config` ConfigMap:
+default. To turn it on, set `enableSDSSecretRef` under `extensionApis` in the [EnvoyGateway][] configuration.
+
+If you installed Envoy Gateway with Helm, as in the [Quickstart](../../quickstart), use `helm upgrade` with
+`--reuse-values` so your other settings stay as they are:
 
 ```shell
-cat <<EOF | kubectl apply -f -
+helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} \
+  -n envoy-gateway-system --reuse-values \
+  --set config.envoyGateway.extensionApis.enableSDSSecretRef=true
+```
+
+Otherwise, edit the `envoy-gateway-config` ConfigMap with `kubectl edit configmap envoy-gateway-config -n envoy-gateway-system`
+and add the setting to `envoy-gateway.yaml`. Keep all of the existing configuration:
+
+```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -152,13 +163,10 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
-    provider:
-      type: Kubernetes
-    gateway:
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    ... keep the existing configuration ...
     extensionApis:
+      ... keep any existing extensionApis settings ...
       enableSDSSecretRef: true
-EOF
 ```
 
 {{< boilerplate rollout-envoy-gateway >}}
@@ -398,26 +406,20 @@ kubectl delete namespace spire-server
 The SPIRE CRDs are kept when you uninstall the `spire-crds` chart, so delete them explicitly.
 
 If you keep Envoy Gateway installed, turn SDS Secret references off again, so that Envoy Gateway stops accepting
-`gateway.envoyproxy.io/sds` Secrets:
+`gateway.envoyproxy.io/sds` Secrets. With Helm:
 
 ```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: envoy-gateway-config
-  namespace: envoy-gateway-system
-data:
-  envoy-gateway.yaml: |
-    apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: EnvoyGateway
-    provider:
-      type: Kubernetes
-    gateway:
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    extensionApis:
-      enableSDSSecretRef: false
-EOF
+helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} \
+  -n envoy-gateway-system --reuse-values \
+  --set config.envoyGateway.extensionApis.enableSDSSecretRef=false
+kubectl -n envoy-gateway-system rollout restart deployment envoy-gateway
+```
+
+Otherwise, remove `enableSDSSecretRef` from the `envoy-gateway-config` ConfigMap (or set it back to `false`), leave
+the other settings unchanged, and restart Envoy Gateway:
+
+```shell
+kubectl edit configmap envoy-gateway-config -n envoy-gateway-system
 kubectl -n envoy-gateway-system rollout restart deployment envoy-gateway
 ```
 
@@ -432,6 +434,7 @@ so separate SPIFFE identities. See [SDS Certificate References][] for more on SD
 [SPIRE]: https://spiffe.io/docs/latest/spire-about/
 [SDS]: https://www.envoyproxy.io/docs/envoy/latest/configuration/security/secret
 [SPIFFE CSI driver]: https://github.com/spiffe/spiffe-csi
+[EnvoyGateway]: ../../api/extension_types#envoygateway
 [Helm]: https://helm.sh/docs/intro/install/
 [istioctl]: https://istio.io/latest/docs/setup/getting-started/#download
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
