@@ -976,21 +976,21 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		h3WarningsByListener := map[string]http3Warnings{}
 		listenerErrs := map[string]error{}
 		for _, parent := range parentRefCtxs {
+			// The listeners can merge with different parent policies, and fail on some of them
+			// only, so collect their results and report them once for the parentRef.
+			errMsgs, mergedWith := sets.New[string](), sets.New[string]()
 			for _, listener := range parent.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 				var (
-					ancestorRef  gwapiv1.ParentReference
 					parentPolicy *egv1a1.BackendTrafficPolicy
 					parentScope  policyScope
 				)
 
-				ancestorRef = listener.PolicyAncestorRef()
 				if listener.isFromListenerSet() {
 					lsNN := types.NamespacedName{
 						Name:      listener.listenerSet.Name,
 						Namespace: listener.listenerSet.Namespace,
 					}
-
 					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
@@ -1023,17 +1023,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 						h3WarningsByListener[name], listenerErrs[name] = h3Warnings, err
 					}
 
-					// If a policy failed to build, mark it Invalid on this route's ancestor;
+					// If a policy failed to build, report it on this parentRef's ancestor;
 					// the error is cached so every parent reaching the listener reports it.
 					if ownBuildErr := listenerErrs[name]; ownBuildErr != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(ownBuildErr),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(ownBuildErr))
 					}
 
 					// Report the listener's HTTP/3 warnings (disabled, or a setting ignored) on the parentRef's
@@ -1052,14 +1045,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
 					)
 					if err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(err))
 						continue
 					}
 					h3WarningsByListener[irListenerName(listener)] = h3Warnings
@@ -1070,17 +1056,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
+
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parent.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
