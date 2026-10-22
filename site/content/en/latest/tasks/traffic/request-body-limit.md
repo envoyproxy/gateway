@@ -191,6 +191,18 @@ Use `requestBodyLimit` when you only need a maximum request body size. Use `requ
 slow or partial requests. The two can be combined on a route: the body size limit filter runs first, so an oversized body is rejected
 before the buffer filter starts buffering it.
 
+## Combining with external authorization
+
+The body size limit filter also runs before the external authorization filter. When a [SecurityPolicy][] on the same route sends the
+request body to the authorization service with `extAuth.bodyToExtAuth` (see [External Authorization][]), a body larger than `maxSize`
+is rejected with HTTP 413 before it is buffered and sent to the authorization service:
+
+- An oversized `Content-Length` is rejected without calling the authorization service.
+- A streamed body is rejected once it passes `maxSize`, so the external authorization filter never buffers more than `maxSize` bytes.
+
+Because the size check comes first, a client that sends an oversized body receives a 413 even if the request would have failed
+authorization.
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
@@ -211,3 +223,5 @@ Checkout the [Developer Guide](../../../contributions/develop) to get involved i
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [body size limit filter]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/body_size_limit_filter
 [request buffering]: ../request-buffering
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
+[External Authorization]: ../../security/ext-auth

@@ -114,20 +114,22 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):
 		// Ensure header mutation run before ext auth which might consume the header.
 		order = 5
-	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
-		order = 6
-	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
-		order = 7
-	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
-		order = 8
-	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
-		order = 9
-	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
-		order = 10
-	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
-		order = 11
 	case isFilterType(filter, egv1a1.EnvoyFilterBodySizeLimit):
-		// Reject an oversized body before the buffer filter starts buffering it.
+		// Ensure body size limit runs before ext auth, which may buffer the request body to send
+		// it to the authorization service, and before the buffer filter, so that an oversized body
+		// is rejected before any filter buffers it.
+		order = 6
+	case isFilterType(filter, egv1a1.EnvoyFilterExtAuthz):
+		order = 7
+	case isFilterType(filter, egv1a1.EnvoyFilterAPIKeyAuth):
+		order = 8
+	case isFilterType(filter, egv1a1.EnvoyFilterBasicAuth):
+		order = 9
+	case isFilterType(filter, egv1a1.EnvoyFilterOAuth2):
+		order = 10
+	case isFilterType(filter, egv1a1.EnvoyFilterJWTAuthn):
+		order = 11
+	case isFilterType(filter, egv1a1.EnvoyFilterSessionPersistence):
 		order = 12
 	case isFilterType(filter, egv1a1.EnvoyFilterBuffer):
 		order = 13

@@ -1,0 +1,61 @@
+http:
+  - address: 0.0.0.0
+    hostnames:
+      - "*"
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    name: envoy-gateway/gateway-1/http
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      # The route sends up to 10 MiB of the request body to the external authorization service, but caps
+      # the request body at 1 MiB. The body size limit filter is ordered before the ext_authz filter, so
+      # an oversized body is rejected before ext_authz buffers it and sends it to the authorization service.
+      - destination:
+          name: httproute/default/httproute-1/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              protocol: HTTP
+              weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /upload
+        security:
+          extAuth:
+            name: securitypolicy/default/policy-for-http-route-1
+            failOpen: false
+            bodyToExtAuth:
+              maxRequestBytes: 10485760
+            http:
+              authority: auth.foo.com
+              destination:
+                name: securitypolicy/default/policy-for-http-route-1/default/http-backend
+                settings:
+                  - addressType: IP
+                    endpoints:
+                      - host: 8.8.8.8
+                        port: 80
+                    protocol: HTTP
+                    weight: 1
+                    name: securitypolicy/default/policy-for-http-route-1/default/http-backend/backend/0
+              path: /auth
+        traffic:
+          requestBodyLimit:
+            maxSize: 1048576

@@ -11369,13 +11369,13 @@ spec:
                       - envoy.filters.http.cors
                       - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
-                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
@@ -11404,13 +11404,13 @@ spec:
                       - envoy.filters.http.cors
                       - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
-                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
@@ -11437,13 +11437,13 @@ spec:
                       - envoy.filters.http.cors
                       - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
                       - envoy.filters.http.oauth2
                       - envoy.filters.http.jwt_authn
                       - envoy.filters.http.stateful_session
-                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.buffer
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
