@@ -1,0 +1,273 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package gatewayapi
+
+import (
+	"cmp"
+	"fmt"
+	"reflect"
+	"slices"
+	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils"
+)
+
+func (t *Translator) buildExtensionBackend(policy *egv1a1.EnvoyExtensionPolicy, backend egv1a1.ExtensionBackend,
+	resources *resource.Resources, gateway *GatewayContext, moduleIndex, backendIndex int,
+) (*ir.ExtensionBackend, error) {
+	if problems := validation.IsDNS1123Subdomain(backend.Name); len(problems) > 0 {
+		return nil, fmt.Errorf("cluster name %q is invalid: %s", backend.Name, strings.Join(problems, ", "))
+	}
+	// The service cluster exists in bootstrap before its Service appears in the resource tree.
+	if backend.Name == t.getIRKey(gateway.Gateway) {
+		return nil, fmt.Errorf("cluster name %q is reserved for Envoy Gateway's service cluster", backend.Name)
+	}
+	if backend.Name == "tracing" {
+		return nil, fmt.Errorf("cluster name %q is reserved for Envoy Gateway's tracing cluster", backend.Name)
+	}
+	destination, err := t.translateExtServiceBackendRefs(policy,
+		[]egv1a1.BackendRef{{BackendObjectReference: backend.BackendRef}}, ir.HTTP,
+		resources, gateway, fmt.Sprintf("dynamic-module/%d", moduleIndex), backendIndex)
+	if err != nil {
+		return nil, err
+	}
+	destination.Name = backend.Name
+	var traffic *ir.TrafficFeatures
+	if backend.BackendSettings != nil {
+		traffic, err = translateTrafficFeatures(&egv1a1.BackendSettings{ClusterSettings: *backend.BackendSettings})
+		if err != nil {
+			return nil, err
+		}
+		if traffic != nil {
+			// Compare only effective cluster settings when sharing a cluster name.
+			traffic.Timeout = traffic.Timeout.ClusterOnly().AsTimeout()
+			if timeout := traffic.Timeout; timeout != nil {
+				if timeout.HTTP != nil && timeout.HTTP.ClusterHTTPTimeout == (ir.ClusterHTTPTimeout{}) {
+					timeout.HTTP = nil
+				}
+				if timeout.TCP == nil && timeout.HTTP == nil {
+					traffic.Timeout = nil
+				}
+			}
+			if reflect.DeepEqual(*traffic, ir.TrafficFeatures{}) {
+				traffic = nil
+			}
+		}
+	}
+	return &ir.ExtensionBackend{Destination: *destination, Traffic: traffic}, nil
+}
+
+type extensionBackendRoute struct {
+	owner    types.NamespacedName
+	consumer types.NamespacedName
+	listener *ListenerContext
+}
+
+func (t *Translator) recordExtensionBackendRoute(route *ir.HTTPRoute, consumer, owner *egv1a1.EnvoyExtensionPolicy, listener *ListenerContext) {
+	for _, dm := range route.EnvoyExtensions.DynamicModules {
+		if len(dm.Backends) > 0 {
+			t.extensionBackendRoutes[route] = extensionBackendRoute{
+				owner: utils.NamespacedName(owner), consumer: utils.NamespacedName(consumer), listener: listener,
+			}
+			return
+		}
+	}
+}
+
+type extensionBackendRef struct {
+	group     gwapiv1.Group
+	kind      gwapiv1.Kind
+	namespace string
+	name      gwapiv1.ObjectName
+	port      gwapiv1.PortNumber
+}
+
+func normalizeExtensionBackendRef(ref gwapiv1.BackendObjectReference, namespace string) extensionBackendRef {
+	return extensionBackendRef{
+		group: ptr.Deref(ref.Group, ""), kind: ptr.Deref(ref.Kind, resource.KindService),
+		namespace: NamespaceDerefOr(ref.Namespace, namespace), name: ref.Name, port: ptr.Deref(ref.Port, 0),
+	}
+}
+
+func (ref extensionBackendRef) String() string {
+	backend := fmt.Sprintf("%s %s/%s", ref.kind, ref.namespace, ref.name)
+	if ref.port != 0 {
+		backend += fmt.Sprintf(":%d", ref.port)
+	}
+	return backend
+}
+
+type extensionBackendClaim struct {
+	owner       *egv1a1.EnvoyExtensionPolicy
+	location    string
+	gateway     types.NamespacedName
+	ref         extensionBackendRef
+	destination *ir.ExtensionBackend
+}
+
+func (claim *extensionBackendClaim) matches(other *extensionBackendClaim) bool {
+	if claim.ref != other.ref || !reflect.DeepEqual(claim.destination.Traffic, other.destination.Traffic) {
+		return false
+	}
+	return slices.EqualFunc(claim.destination.Destination.Settings, other.destination.Destination.Settings,
+		func(a, b *ir.DestinationSetting) bool {
+			if a == b {
+				return true
+			}
+			if a == nil || b == nil {
+				return false
+			}
+			// These fields describe the declaration's origin, not the cluster configuration.
+			left, right := *a, *b
+			left.Name, right.Name = "", ""
+			left.Metadata, right.Metadata = nil, nil
+			return reflect.DeepEqual(left, right)
+		})
+}
+
+type extensionBackendConflict struct {
+	reason  gwapiv1.PolicyConditionReason
+	message string
+}
+
+// resolveExtensionBackendConflicts builds routes from extensionBackendRoutes
+// keys, so every route has a registered attachment.
+func (t *Translator) checkExtensionBackendClaims(policy *egv1a1.EnvoyExtensionPolicy, routes []*ir.HTTPRoute,
+	claimed map[string]*extensionBackendClaim,
+) (map[string]*extensionBackendClaim, *extensionBackendConflict) {
+	slices.SortFunc(routes, func(a, b *ir.HTTPRoute) int {
+		if order := cmp.Compare(irListenerName(t.extensionBackendRoutes[a].listener), irListenerName(t.extensionBackendRoutes[b].listener)); order != 0 {
+			return order
+		}
+		return cmp.Compare(a.Name, b.Name)
+	})
+	pending := make(map[string]*extensionBackendClaim)
+	// Gateway-specific TLS configuration can differ even for one policy and backend reference.
+	for _, route := range routes {
+		gateway := t.extensionBackendRoutes[route].listener.gateway.Gateway
+		for moduleIndex, dm := range route.EnvoyExtensions.DynamicModules {
+			for backendIndex, destination := range dm.Backends {
+				backend := policy.Spec.DynamicModule[moduleIndex].Backends[backendIndex]
+				claim := &extensionBackendClaim{
+					owner: policy, location: fmt.Sprintf("dynamicModule[%d].backends[%d]", moduleIndex, backendIndex),
+					gateway: utils.NamespacedName(gateway),
+					ref:     normalizeExtensionBackendRef(backend.BackendRef, policy.Namespace), destination: destination,
+				}
+				name := destination.Destination.Name
+				previous, exists := pending[name]
+				reason := gwapiv1.PolicyReasonInvalid
+				if !exists || previous.matches(claim) {
+					previous, exists = claimed[name]
+					reason = gwapiv1.PolicyReasonConflicted
+				}
+				if exists && !previous.matches(claim) {
+					return nil, &extensionBackendConflict{
+						reason: reason,
+						message: fmt.Sprintf("%s: cluster %q references %s on Gateway %s, but EnvoyExtensionPolicy %s/%s %s on Gateway %s already declares it for %s with a different backend reference, settings, or resolved transport configuration. Choose another cluster name and update the module configuration to match, or use the same backend reference, settings, and transport configuration.",
+							claim.location, name, claim.ref, claim.gateway, previous.owner.Namespace, previous.owner.Name, previous.location, previous.gateway, previous.ref),
+					}
+				}
+				pending[name] = claim
+			}
+		}
+	}
+	return pending, nil
+}
+
+func (t *Translator) resolveExtensionBackendConflicts(policies []*egv1a1.EnvoyExtensionPolicy) {
+	if len(t.extensionBackendRoutes) == 0 {
+		return
+	}
+	byDeployment := make(map[string]map[types.NamespacedName][]*ir.HTTPRoute)
+	for route, attachment := range t.extensionBackendRoutes {
+		key := t.getIRKey(attachment.listener.gateway.Gateway)
+		if byDeployment[key] == nil {
+			byDeployment[key] = make(map[types.NamespacedName][]*ir.HTTPRoute)
+		}
+		byDeployment[key][attachment.owner] = append(byDeployment[key][attachment.owner], route)
+	}
+	byName := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy, len(policies))
+	for _, policy := range policies {
+		byName[utils.NamespacedName(policy)] = policy
+	}
+	// Attachment traversal favors specific targets. Cluster ownership must depend only on age.
+	policies = slices.Clone(policies)
+	slices.SortFunc(policies, func(a, b *egv1a1.EnvoyExtensionPolicy) int {
+		if order := a.CreationTimestamp.Compare(b.CreationTimestamp.Time); order != 0 {
+			return order
+		}
+		if order := cmp.Compare(a.Namespace, b.Namespace); order != 0 {
+			return order
+		}
+		return cmp.Compare(a.Name, b.Name)
+	})
+	for _, routesByPolicy := range byDeployment {
+		claimed := make(map[string]*extensionBackendClaim)
+		for _, policy := range policies {
+			routes := routesByPolicy[utils.NamespacedName(policy)]
+			if len(routes) == 0 {
+				continue
+			}
+			pending, conflict := t.checkExtensionBackendClaims(policy, routes, claimed)
+			if conflict != nil {
+				for _, route := range routes {
+					attachment := t.extensionBackendRoutes[route]
+					route.EnvoyExtensions = nil
+					route.DirectResponse = &ir.CustomResponse{StatusCode: new(uint32(500))}
+					t.setExtensionBackendConflict(policy, attachment.listener, conflict.reason, conflict.message)
+					if attachment.consumer != attachment.owner {
+						t.setExtensionBackendConflict(byName[attachment.consumer], attachment.listener, conflict.reason, conflict.message)
+					}
+				}
+				continue
+			}
+			// Publish only after every declaration passes, so rejected policies reserve no names.
+			for name, claim := range pending {
+				if _, exists := claimed[name]; !exists {
+					claimed[name] = claim
+				}
+			}
+			for _, route := range routes {
+				for _, dm := range route.EnvoyExtensions.DynamicModules {
+					for index, destination := range dm.Backends {
+						dm.Backends[index] = claimed[destination.Destination.Name].destination
+					}
+				}
+			}
+		}
+	}
+}
+
+func (t *Translator) setExtensionBackendConflict(policy *egv1a1.EnvoyExtensionPolicy, listener *ListenerContext,
+	reason gwapiv1.PolicyConditionReason, message string,
+) {
+	for _, ancestor := range policy.Status.Ancestors {
+		ref := ancestor.AncestorRef
+		if ref.SectionName != nil && *ref.SectionName != listener.Name {
+			continue
+		}
+		namespace := NamespaceDerefOr(ref.Namespace, policy.Namespace)
+		matches := ptr.Deref(ref.Kind, resource.KindGateway) == resource.KindGateway &&
+			namespace == listener.gateway.Namespace && string(ref.Name) == listener.gateway.Name
+		if ptr.Deref(ref.Kind, resource.KindGateway) == resource.KindListenerSet && listener.listenerSet != nil {
+			matches = namespace == listener.listenerSet.Namespace && string(ref.Name) == listener.listenerSet.Name
+		}
+		if matches && string(ancestor.ControllerName) == t.GatewayControllerName {
+			status.SetConditionForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName,
+				gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, reason, message, policy.Generation)
+		}
+	}
+}

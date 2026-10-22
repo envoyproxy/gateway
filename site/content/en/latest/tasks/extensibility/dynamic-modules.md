@@ -236,6 +236,66 @@ The Coraza WAF should block the request and return a `403 Forbidden` response:
 <
 ```
 
+## Backend dependencies
+
+A module that makes HTTP callouts can declare its backends in `dynamicModule[].backends`.
+Envoy Gateway creates a cluster with each declared name. The module must use that same
+name when making a callout. Envoy Gateway does not read or rewrite the module's `config`.
+
+For example, a registered `envoy-web-bot-auth` module can call a resolver exposed by a
+Service named `web-bot-auth-resolver` on port 8081:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: bot-auth
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: application
+  dynamicModule:
+    - name: envoy-web-bot-auth
+      filterName: web-bot-auth
+      backends:
+        - name: web-bot-auth-key-resolver
+          backendRef:
+            name: web-bot-auth-resolver
+            port: 8081
+          backendSettings:
+            timeout:
+              tcp:
+                connectTimeout: 2s
+            loadBalancer:
+              type: RoundRobin
+      config:
+        resolver:
+          cluster: web-bot-auth-key-resolver
+```
+
+Each entry references one Service, ServiceImport, or Envoy Gateway Backend. References
+to another namespace require a ReferenceGrant.
+
+`backendSettings` configures each backend cluster. Request timeouts and retries
+are controlled by the dynamic module.
+
+### Resolving conflicts
+
+Cluster names are shared throughout an Envoy deployment, including Gateways combined
+with `mergeGateways`. Policies that declare the same name, backend reference, settings,
+and resolved transport configuration share one cluster. Different references, settings,
+or transport configurations conflict, even if their endpoints match. This includes
+different backend client certificates configured on the Gateways.
+
+The oldest policy keeps the name. A conflicting policy receives `Accepted=False` with
+reason `Conflicted`, and its affected routes return HTTP 500. Use the same backend
+reference, settings, and transport configuration or choose another cluster name and
+update the module configuration to match.
+
+If one policy resolves the same cluster name to incompatible configurations across
+Gateways, it receives reason `Invalid` and its affected routes return HTTP 500.
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.

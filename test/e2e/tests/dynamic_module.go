@@ -27,7 +27,7 @@ func init() {
 
 var DynamicModuleTest = suite.ConformanceTest{
 	ShortName:   "DynamicModule",
-	Description: "Test dynamic module extension that adds response headers",
+	Description: "Test dynamic modules that mutate headers and call a declared backend",
 	Manifests:   []string{"testdata/dynamic-module.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("http route with dynamic module filter", func(t *testing.T) {
@@ -59,6 +59,7 @@ var DynamicModuleTest = suite.ConformanceTest{
 					StatusCodes: []int{200},
 					Headers: map[string]string{
 						"x-dynamic-module": "true",
+						"x-module-callout": "true",
 					},
 				},
 				Namespace: ns,

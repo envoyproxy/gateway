@@ -991,6 +991,61 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 			shouldBeAdded: true,
 		},
 		{
+			name: "valid dynamic module backend with proper ref grant",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule: []egv1a1.DynamicModule{
+						{
+							Backends: []egv1a1.ExtensionBackend{
+								{
+									Name: "module-backend",
+									BackendRef: gwapiv1.BackendObjectReference{
+										Namespace: gatewayapi.NamespacePtr("ns-2"),
+										Name:      "test-backend",
+										Kind:      gatewayapi.KindPtr(resource.KindBackend),
+										Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			backend: &egv1a1.Backend{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-2",
+					Name:      "test-backend",
+				},
+			},
+			referenceGrant: &gwapiv1b1.ReferenceGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-2",
+					Name:      "test-grant",
+				},
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
+						{
+							Namespace: gwapiv1.Namespace("ns-1"),
+							Kind:      gwapiv1.Kind(resource.KindEnvoyExtensionPolicy),
+							Group:     gwapiv1.Group(egv1a1.GroupName),
+						},
+					},
+					To: []gwapiv1b1.ReferenceGrantTo{
+						{
+							Name:  gatewayapi.ObjectNamePtr("test-backend"),
+							Kind:  gwapiv1.Kind(resource.KindBackend),
+							Group: gwapiv1.Group(egv1a1.GroupName),
+						},
+					},
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
 			name: "valid envoy extension policy with wrong from kind in ref grant to backend",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
 				ObjectMeta: metav1.ObjectMeta{
