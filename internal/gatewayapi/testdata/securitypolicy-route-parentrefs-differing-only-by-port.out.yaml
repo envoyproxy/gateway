@@ -380,34 +380,13 @@ securityPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
+        port: 80
       conditions:
       - lastTransitionTime: null
         message: Merged with policy envoy-gateway/policy-for-gateway
         reason: Merged
         status: "True"
         type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http-8080
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/policy-for-listener
-        reason: Merged
-        status: "True"
-        type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        port: 80
-      conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
@@ -421,6 +400,11 @@ securityPolicies:
         namespace: envoy-gateway
         port: 8080
       conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway/policy-for-listener
+        reason: Merged
+        status: "True"
+        type: Merged
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
