@@ -384,8 +384,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	}
 
-	requiresHTTP1Options := args.http1Settings != nil &&
-		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
+	requiresHTTP1Options := args.http1Settings != nil
 
 	// build common, HTTP/1, HTTP/2 and HTTP/3 protocol options for cluster
 	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options,

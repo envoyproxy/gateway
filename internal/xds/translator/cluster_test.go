@@ -101,7 +101,7 @@ func TestBuildXdsHealthCheckDisableConnectionReuse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			hc := base()
 			hc.DisableConnectionReuse = tc.disable
-			out, err := buildXdsHealthCheck(hc, "", nil)
+			out, err := buildXdsHealthCheck(hc, "", nil, nil, false, false)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			require.Equal(t, tc.expected, out[0].ReuseConnection)
