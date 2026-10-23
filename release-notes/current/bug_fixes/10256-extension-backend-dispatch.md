@@ -1,0 +1,1 @@
+Fixed route translation panicking when a backendRef to an extension backend resource whose kind collides with a built-in one (for example `custom.example.io/Service`) was dispatched to the built-in Service resolver. Extension backend resources are now always handed to the extension, and the Service/ServiceImport resolvers report `BackendNotFound` for a missing object.
