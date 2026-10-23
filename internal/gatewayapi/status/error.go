@@ -190,6 +190,24 @@ func (m *MultiStatusError) Add(err Error) {
 	m.errs = append(m.errs, err)
 }
 
+// AddFrom adds the errors of other that m did not hold before the call, comparing type, reason
+// and message, so that combining several translations of the same rules reports each error once.
+func (m *MultiStatusError) AddFrom(other *MultiStatusError) {
+	if m == nil || other == nil {
+		return
+	}
+	held := m.errs
+	for _, err := range other.errs {
+		if !slices.ContainsFunc(held, func(e Error) bool { return sameError(e, err) }) {
+			m.errs = append(m.errs, err)
+		}
+	}
+}
+
+func sameError(a, b Error) bool {
+	return a.Type() == b.Type() && a.Reason() == b.Reason() && a.Error() == b.Error()
+}
+
 // Error returns a string representation of all the wrapped errors.
 // If there are no errors, it returns an empty string.
 func (m *MultiStatusError) Error() string {
@@ -314,6 +332,22 @@ func (c *TypedErrorCollector) Add(err Error) {
 		c.errs[err.Type()] = &MultiStatusError{}
 	}
 	c.errs[err.Type()].Add(err)
+}
+
+// AddFrom adds the errors of other per condition type, the same way MultiStatusError.AddFrom does.
+func (c *TypedErrorCollector) AddFrom(other *TypedErrorCollector) {
+	if other == nil {
+		return
+	}
+	for _, t := range other.Types() {
+		if c.errs == nil {
+			c.errs = make(map[gwapiv1.RouteConditionType]*MultiStatusError)
+		}
+		if _, exist := c.errs[t]; !exist {
+			c.errs[t] = &MultiStatusError{}
+		}
+		c.errs[t].AddFrom(other.errs[t])
+	}
 }
 
 // GetError returns all errors of the specified condition type as a single RouteStatusError.

@@ -117,10 +117,15 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routesByListener, errs, unacceptedRules := t.processRouteRulesPerRoutingGroup(httpRoute, parentRef,
-			func(parentRef *RouteParentContext) ([]*httpRouteWithBackendDestinations, []status.Error, []int) {
-				return t.processHTTPRouteRules(httpRoute, parentRef, resources, xdsIR)
+		errorCollector, unaccepted := &status.TypedErrorCollector{}, sets.NewInt()
+		routesByListener := translatePerRoutingGroup(t, httpRoute, parentRef,
+			func(parentRef *RouteParentContext) []*httpRouteWithBackendDestinations {
+				routes, routeErrs, routeUnaccepted := t.processHTTPRouteRules(httpRoute, parentRef, resources, xdsIR)
+				errorCollector.AddFrom(routeErrs)
+				unaccepted.Insert(routeUnaccepted.UnsortedList()...)
+				return routes
 			})
+		errs, unacceptedRules := errorCollector.GetAllErrors(), unaccepted.List()
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(httpRoute)
 			// errs are already grouped by condition type in TypedErrorCollector
@@ -282,37 +287,17 @@ func (t *Translator) inheritedServiceRouting(gatewayCtx *GatewayContext, scope b
 		t.BTPRoutingTypeIndex.LookupInheritedBTPRoutingType(gatewayNN, scope.listenerName, scope.listenerSetNN))
 }
 
-// processRouteRulesPerRoutingGroup translates the route's rules once per routing group and
-// merges every group's errors for the shared parent status.
-func (t *Translator) processRouteRulesPerRoutingGroup(route RouteContext, parentRef *RouteParentContext, process func(*RouteParentContext) ([]*httpRouteWithBackendDestinations, []status.Error, []int)) (map[*ListenerContext][]*httpRouteWithBackendDestinations, []status.Error, []int) {
-	routesByListener := make(map[*ListenerContext][]*httpRouteWithBackendDestinations)
-	groups := t.routingGroups(route, parentRef)
-	if len(groups) == 1 {
-		routes, errs, unacceptedRules := process(groups[0].parentRef)
-		for _, listener := range groups[0].listeners {
-			routesByListener[listener] = routes
-		}
-		return routesByListener, errs, unacceptedRules
-	}
-
-	var errs status.TypedErrorCollector
-	seen := sets.New[string]()
-	unaccepted := sets.NewInt()
-	for _, group := range groups {
-		routes, groupErrs, groupUnaccepted := process(group.parentRef)
+// translatePerRoutingGroup calls translate once per routing group of parentRef's listeners and
+// returns each listener's result.
+func translatePerRoutingGroup[T any](t *Translator, route RouteContext, parentRef *RouteParentContext, translate func(*RouteParentContext) T) map[*ListenerContext]T {
+	results := make(map[*ListenerContext]T, len(parentRef.listeners))
+	for _, group := range t.routingGroups(route, parentRef) {
+		result := translate(group.parentRef)
 		for _, listener := range group.listeners {
-			routesByListener[listener] = routes
-		}
-		unaccepted.Insert(groupUnaccepted...)
-		for _, err := range groupErrs {
-			key := fmt.Sprintf("%s/%s/%s", err.Type(), err.Reason(), err.Error())
-			if !seen.Has(key) {
-				seen.Insert(key)
-				errs.Add(err)
-			}
+			results[listener] = result
 		}
 	}
-	return routesByListener, errs.GetAllErrors(), unaccepted.List()
+	return results
 }
 
 // l4RouteBackends is a TLS, TCP or UDP route's backends for one routing group.
@@ -320,34 +305,6 @@ type l4RouteBackends struct {
 	destName                 string
 	routeBackendDestinations []routeBackendRefDestination
 	hasDynamicResolver       bool
-}
-
-// processL4RouteBackendsPerRoutingGroup resolves the route's backends once per routing group and
-// merges every group's errors for the shared parent status.
-func (t *Translator) processL4RouteBackendsPerRoutingGroup(route RouteContext, parentRef *RouteParentContext, process func(*RouteParentContext) (l4RouteBackends, *status.MultiStatusError)) (map[*ListenerContext]l4RouteBackends, *status.MultiStatusError) {
-	backendsByListener := make(map[*ListenerContext]l4RouteBackends)
-	groups := t.routingGroups(route, parentRef)
-	if len(groups) == 1 {
-		backends, errs := process(groups[0].parentRef)
-		for _, listener := range groups[0].listeners {
-			backendsByListener[listener] = backends
-		}
-		return backendsByListener, errs
-	}
-
-	resolveErrs := &status.MultiStatusError{}
-	seen := sets.New[string]()
-	for _, group := range groups {
-		backends, errs := process(group.parentRef)
-		for _, listener := range group.listeners {
-			backendsByListener[listener] = backends
-		}
-		if !errs.Empty() && !seen.Has(errs.Error()) {
-			seen.Insert(errs.Error())
-			resolveErrs.Add(errs)
-		}
-	}
-	return backendsByListener, resolveErrs
 }
 
 // routingDestinationName scopes name by routing type when parentRef's routingListener resolves
@@ -406,7 +363,7 @@ type httpRouteWithBackendDestinations struct {
 	statName                 *string
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*httpRouteWithBackendDestinations, []status.Error, []int) {
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*httpRouteWithBackendDestinations, *status.TypedErrorCollector, sets.Int) {
 	var (
 		routesWithBackends []*httpRouteWithBackendDestinations
 		errorCollector     = &status.TypedErrorCollector{}
@@ -652,11 +609,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 	}
 
-	if errorCollector.Empty() {
-		return routesWithBackends, nil, nil
-	}
-
-	return routesWithBackends, errorCollector.GetAllErrors(), unacceptedRules.List()
+	return routesWithBackends, errorCollector, unacceptedRules
 }
 
 // hasPathRegexHostRewrite reports whether any of the given IR routes rewrites the upstream host
@@ -1540,10 +1493,15 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routesByListener, errs, unacceptedRules := t.processRouteRulesPerRoutingGroup(grpcRoute, parentRef,
-			func(parentRef *RouteParentContext) ([]*httpRouteWithBackendDestinations, []status.Error, []int) {
-				return t.processGRPCRouteRules(grpcRoute, parentRef, resources, xdsIR)
+		errorCollector, unaccepted := &status.TypedErrorCollector{}, sets.NewInt()
+		routesByListener := translatePerRoutingGroup(t, grpcRoute, parentRef,
+			func(parentRef *RouteParentContext) []*httpRouteWithBackendDestinations {
+				routes, routeErrs, routeUnaccepted := t.processGRPCRouteRules(grpcRoute, parentRef, resources, xdsIR)
+				errorCollector.AddFrom(routeErrs)
+				unaccepted.Insert(routeUnaccepted.UnsortedList()...)
+				return routes
 			})
+		errs, unacceptedRules := errorCollector.GetAllErrors(), unaccepted.List()
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(grpcRoute)
 			// errs are already grouped by condition type in TypedErrorCollector
@@ -1643,7 +1601,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*httpRouteWithBackendDestinations, []status.Error, []int) {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *resource.Resources, xdsIR resource.XdsIRMap) ([]*httpRouteWithBackendDestinations, *status.TypedErrorCollector, sets.Int) {
 	var (
 		routesWithBackends []*httpRouteWithBackendDestinations
 		errorCollector     = &status.TypedErrorCollector{}
@@ -1858,11 +1816,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 	}
 
-	if errorCollector.Empty() {
-		return routesWithBackends, nil, nil
-	}
-
-	return routesWithBackends, errorCollector.GetAllErrors(), unacceptedRules.List()
+	return routesWithBackends, errorCollector, unacceptedRules
 }
 
 // grpcRouteMatchCombination is a single gRPC route match ANDed with the cookie
@@ -2517,9 +2471,12 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		backendsByListener, resolveErrs := t.processL4RouteBackendsPerRoutingGroup(tlsRoute, parentRef,
-			func(parentRef *RouteParentContext) (l4RouteBackends, *status.MultiStatusError) {
-				return t.processTLSRouteBackends(tlsRoute, parentRef, resources, xdsIR)
+		resolveErrs := &status.MultiStatusError{}
+		backendsByListener := translatePerRoutingGroup(t, tlsRoute, parentRef,
+			func(parentRef *RouteParentContext) l4RouteBackends {
+				backends, errs := t.processTLSRouteBackends(tlsRoute, parentRef, resources, xdsIR)
+				resolveErrs.AddFrom(errs)
+				return backends
 			})
 		routeRuleMetadata := buildResourceMetadata(tlsRoute, nil)
 		gatewayCtx := GetRouteParentContext(tlsRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
@@ -2788,9 +2745,12 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		// udpRoute must have a single rule, so Spec.Rules[0] is always safe to index below.
-		backendsByListener, resolveErrs := t.processL4RouteBackendsPerRoutingGroup(udpRoute, parentRef,
-			func(parentRef *RouteParentContext) (l4RouteBackends, *status.MultiStatusError) {
-				return t.processUDPRouteBackends(udpRoute, parentRef, resources, xdsIR)
+		resolveErrs := &status.MultiStatusError{}
+		backendsByListener := translatePerRoutingGroup(t, udpRoute, parentRef,
+			func(parentRef *RouteParentContext) l4RouteBackends {
+				backends, errs := t.processUDPRouteBackends(udpRoute, parentRef, resources, xdsIR)
+				resolveErrs.AddFrom(errs)
+				return backends
 			})
 		routeRuleMetadata := buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name)
 		gatewayCtx := GetRouteParentContext(udpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
@@ -2964,9 +2924,12 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		backendsByListener, resolveErrs := t.processL4RouteBackendsPerRoutingGroup(tcpRoute, parentRef,
-			func(parentRef *RouteParentContext) (l4RouteBackends, *status.MultiStatusError) {
-				return t.processTCPRouteBackends(tcpRoute, parentRef, resources, xdsIR)
+		resolveErrs := &status.MultiStatusError{}
+		backendsByListener := translatePerRoutingGroup(t, tcpRoute, parentRef,
+			func(parentRef *RouteParentContext) l4RouteBackends {
+				backends, errs := t.processTCPRouteBackends(tcpRoute, parentRef, resources, xdsIR)
+				resolveErrs.AddFrom(errs)
+				return backends
 			})
 		routeRuleMetadata := buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name)
 		gatewayCtx := GetRouteParentContext(tcpRoute, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
