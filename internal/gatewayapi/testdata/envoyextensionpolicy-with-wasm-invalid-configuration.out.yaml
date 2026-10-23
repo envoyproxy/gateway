@@ -34,7 +34,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated, use spec.targetRefs instead; spec.wasm.code
+          is deprecated, use EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -75,7 +76,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated, use spec.targetRefs instead; spec.wasm.code
+          is deprecated, use EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -128,7 +130,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated, use spec.targetRefs instead; spec.wasm.code
+          is deprecated, use EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -177,7 +180,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated, use spec.targetRefs instead; spec.wasm.code
+          is deprecated, use EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -217,7 +221,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated, use spec.targetRefs instead; spec.wasm.code
+          is deprecated, use EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -256,7 +261,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated, use spec.targetRefs instead; spec.wasm.code
+          is deprecated, use EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
