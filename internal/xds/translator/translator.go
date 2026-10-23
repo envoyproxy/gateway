@@ -160,6 +160,39 @@ func (t *Translator) xdsNameSchemeV2() bool {
 	return t.RuntimeFlags.IsEnabled(egv1a1.XDSNameSchemeV2)
 }
 
+// clusterHTTP1Settings returns the http1 settings to seed into backend clusters.
+// When ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly is enabled, returns nil —
+// CTP http1 fields apply to the client connection only and must not configure backend
+// HTTP/1 protocol settings. Remove this method when that runtime flag is removed.
+// Listener-only fields (HTTP10, IgnoredUpgradeTypes, DisableSafeMaxConnectionDuration)
+// are stripped unconditionally. A non-nil return value acts as a sentinel that forces
+// explicit HTTP/1 protocol selection on the cluster.
+// nil is returned when s is nil, when the runtime flag applies HTTP/1 settings to
+// clients only, or when only listener-only fields are set (preserving legacy behavior
+// where those fields did not affect upstream protocol selection).
+func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	if t.RuntimeFlags != nil && t.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly) {
+		return nil
+	}
+	// Strip listener-only fields; keep only cluster-relevant ones.
+	stripped := ir.HTTP1Settings{
+		EnableTrailers:     s.EnableTrailers,
+		PreserveHeaderCase: s.PreserveHeaderCase,
+	}
+	// Only return a non-nil sentinel when at least one cluster-relevant field is
+	// set. If the CTP block contained only listener-only fields (e.g. ignoredUpgradeTypes,
+	// disableSafeMaxConnectionDuration) or explicitly-false trailer/case values,
+	// returning nil preserves the pre-flag behavior where those configurations did
+	// not affect upstream protocol selection.
+	if !stripped.EnableTrailers && !stripped.PreserveHeaderCase && s.HTTP10 == nil {
+		return nil
+	}
+	return &stripped
+}
+
 type GlobalRateLimitSettings struct {
 	// ServiceURL is the URL of the global
 	// rate limit service.
@@ -825,7 +858,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 			ea := &ExtraArgs{
 				metrics:          metrics,
-				http1Settings:    httpListener.HTTP1,
+				http1Settings:    t.clusterHTTP1Settings(httpListener.HTTP1),
 				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
 				statName:         httpRoute.Destination.StatName,
 				unstructuredRefs: extensionResources,

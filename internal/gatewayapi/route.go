@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -1149,50 +1151,9 @@ func (t *Translator) processHTTPRouteRule(
 	rule *gwapiv1.HTTPRouteRule,
 	routeRuleMetadata *ir.ResourceMetadata,
 ) ([]*ir.HTTPRoute, status.Error) {
-	var sessionPersistence *ir.SessionPersistence
-	if rule.SessionPersistence != nil {
-		var sessionName string
-		if rule.SessionPersistence.SessionName == nil {
-			// SessionName is optional on the gateway-api, but envoy requires it
-			// so we generate the one here.
-
-			// We generate a unique session name per route.
-			// `/` isn't allowed in the header key, so we just replace it with `-`.
-			sessionName = strings.ReplaceAll(irRouteDestinationName(httpRoute, ruleIdx), "/", "-")
-		} else {
-			sessionName = *rule.SessionPersistence.SessionName
-		}
-
-		switch {
-		case rule.SessionPersistence.Type == nil || // Cookie-based session persistence is default.
-			*rule.SessionPersistence.Type == gwapiv1.CookieBasedSessionPersistence:
-			sessionPersistence = &ir.SessionPersistence{
-				Cookie: &ir.CookieBasedSessionPersistence{
-					Name: sessionName,
-				},
-			}
-			if rule.SessionPersistence.AbsoluteTimeout != nil &&
-				rule.SessionPersistence.CookieConfig != nil && rule.SessionPersistence.CookieConfig.LifetimeType != nil &&
-				*rule.SessionPersistence.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
-				ttl, err := time.ParseDuration(string(*rule.SessionPersistence.AbsoluteTimeout))
-				if err != nil {
-					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
-				}
-				sessionPersistence.Cookie.TTL = ir.MetaV1DurationPtr(ttl)
-			}
-		case *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence:
-			sessionPersistence = &ir.SessionPersistence{
-				Header: &ir.HeaderBasedSessionPersistence{
-					Name: sessionName,
-				},
-			}
-		default:
-			// Unknown session persistence type is specified.
-			return nil, status.NewRouteStatusError(
-				fmt.Errorf("unknown session persistence type %s", *rule.SessionPersistence.Type),
-				gwapiv1.RouteReasonUnsupportedValue,
-			)
-		}
+	sessionPersistence, err := translateSessionPersistence(rule.SessionPersistence, httpRoute, ruleIdx)
+	if err != nil {
+		return nil, err
 	}
 
 	filterMatches := []egv1a1.HTTPRouteMatchFilter(nil)
@@ -1554,7 +1515,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.GRPCBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, false)
+			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, rule.SessionPersistence != nil)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
@@ -1761,6 +1722,11 @@ func buildGRPCRouteMatchCombinations(ruleMatches []gwapiv1.GRPCRouteMatch, filte
 }
 
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
+	sessionPersistence, err := translateSessionPersistence(rule.SessionPersistence, grpcRoute, ruleIdx)
+	if err != nil {
+		return nil, err
+	}
+
 	filterMatches := []egv1a1.HTTPRouteMatchFilter(nil)
 	if httpFiltersContext != nil {
 		filterMatches = httpFiltersContext.Matches
@@ -1776,7 +1742,8 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 	// If no matches are specified, the implementation MUST match every gRPC request.
 	if len(matches) == 0 {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(grpcRoute, ruleIdx, -1),
+			Name:               irRouteName(grpcRoute, ruleIdx, -1),
+			SessionPersistence: sessionPersistence,
 		}
 		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
@@ -1788,7 +1755,8 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 	// a unique Xds IR HTTPRoute per match.
 	for matchIdx, match := range matches {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(grpcRoute, ruleIdx, matchIdx),
+			Name:               irRouteName(grpcRoute, ruleIdx, matchIdx),
+			SessionPersistence: sessionPersistence,
 		}
 		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name)
 		for _, headerMatch := range match.Headers {
@@ -1840,6 +1808,70 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 	}
 	return ruleRoutes, nil
+}
+
+// translateSessionPersistence converts a gateway-api SessionPersistence into the IR
+// representation. It is shared by HTTPRoute and GRPCRoute rule processing.
+func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteContext, ruleIdx int) (*ir.SessionPersistence, status.Error) {
+	if sp == nil {
+		return nil, nil
+	}
+
+	var sessionName string
+	switch {
+	case sp.SessionName == nil:
+		// SessionName is optional on the gateway-api, but envoy requires it
+		// so we generate the one here.
+
+		// We generate a unique session name per route.
+		// `/` isn't allowed in the header key, so we replace it with `-`. That
+		// replacement alone is ambiguous (e.g. a-b/c and a/b-c), so a short hash
+		// of the original name is appended to keep names collision-free.
+		destName := irRouteDestinationName(route, ruleIdx)
+		sum := sha256.Sum256([]byte(destName))
+		sessionName = strings.ReplaceAll(destName, "/", "-") + "-" + hex.EncodeToString(sum[:4])
+	case *sp.SessionName == "":
+		// The CRD only bounds the maximum length, but envoy rejects an empty
+		// cookie or header name, which would fail the whole xDS update.
+		return nil, status.NewRouteStatusError(
+			errors.New("sessionName must not be empty"),
+			gwapiv1.RouteReasonUnsupportedValue,
+		)
+	default:
+		sessionName = *sp.SessionName
+	}
+
+	switch {
+	case sp.Type == nil || // Cookie-based session persistence is default.
+		*sp.Type == gwapiv1.CookieBasedSessionPersistence:
+		out := &ir.SessionPersistence{
+			Cookie: &ir.CookieBasedSessionPersistence{
+				Name: sessionName,
+			},
+		}
+		if sp.AbsoluteTimeout != nil &&
+			sp.CookieConfig != nil && sp.CookieConfig.LifetimeType != nil &&
+			*sp.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
+			ttl, err := time.ParseDuration(string(*sp.AbsoluteTimeout))
+			if err != nil {
+				return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
+			}
+			out.Cookie.TTL = ir.MetaV1DurationPtr(ttl)
+		}
+		return out, nil
+	case *sp.Type == gwapiv1.HeaderBasedSessionPersistence:
+		return &ir.SessionPersistence{
+			Header: &ir.HeaderBasedSessionPersistence{
+				Name: sessionName,
+			},
+		}, nil
+	default:
+		// Unknown session persistence type is specified.
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("unknown session persistence type %s", *sp.Type),
+			gwapiv1.RouteReasonUnsupportedValue,
+		)
+	}
 }
 
 func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
