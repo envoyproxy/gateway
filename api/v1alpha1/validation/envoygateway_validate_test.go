@@ -1805,12 +1805,21 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		{
 			name:      "tcp keepalive sub-second interval",
 			cs:        &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{Interval: new(gwapiv1.Duration("500ms"))}},
-			expectErr: `tcpKeepalive.interval must be between 1s and 32767s`,
+			expectErr: `tcpKeepalive.interval must be a whole number of seconds between 1s and 32767s`,
 		},
 		{
 			name:      "tcp keepalive idle time too large",
 			cs:        &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{IdleTime: new(gwapiv1.Duration("10h"))}},
-			expectErr: `tcpKeepalive.idleTime must be between 1s and 32767s`,
+			expectErr: `tcpKeepalive.idleTime must be a whole number of seconds between 1s and 32767s`,
+		},
+		{
+			name:      "tcp keepalive fractional interval",
+			cs:        &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{Interval: new(gwapiv1.Duration("1500ms"))}},
+			expectErr: `tcpKeepalive.interval must be a whole number of seconds`,
+		},
+		{
+			name: "tcp keepalive whole seconds in milliseconds",
+			cs:   &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{IdleTime: new(gwapiv1.Duration("2000ms"))}},
 		},
 		{
 			name: "valid tcp keepalive",

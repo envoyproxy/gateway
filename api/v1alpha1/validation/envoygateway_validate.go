@@ -425,10 +425,10 @@ func validateRateLimitClusterTCPKeepalive(ka *egv1a1.TCPKeepalive) error {
 		if err := validateOptionalDuration(f.name, f.val, false); err != nil {
 			return err
 		}
-		// Translation truncates to whole seconds, so anything under 1s becomes 0.
+		// Translation truncates to whole seconds, so fractional values would be silently changed.
 		if f.val != nil {
-			if d := parseDuration(*f.val); d < time.Second || d > maxTCPKeepaliveSeconds*time.Second {
-				return fmt.Errorf("%s must be between 1s and %ds", f.name, maxTCPKeepaliveSeconds)
+			if d := parseDuration(*f.val); d%time.Second != 0 || d < time.Second || d > maxTCPKeepaliveSeconds*time.Second {
+				return fmt.Errorf("%s must be a whole number of seconds between 1s and %ds", f.name, maxTCPKeepaliveSeconds)
 			}
 		}
 	}
