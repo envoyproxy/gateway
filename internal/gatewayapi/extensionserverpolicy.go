@@ -151,7 +151,7 @@ func (t *Translator) ProcessExtensionServerPolicies(
 			// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
 			targetRefs := resolvePolicyTargetsFromReferences(targetRefsList[i], policies[i].GetNamespace())
 			for _, currTarget := range targetRefs {
-				if isListenerSetListener(currTarget) {
+				if isListenerSetListener(currTarget) && isGatewayAPIGroup(currTarget) {
 					t.processExtensionServerPolicyForListenerSet(xdsIR, gatewayMap, listenerSetMap, getOrInitPolicy(i), currTarget)
 				}
 			}
@@ -172,7 +172,7 @@ func (t *Translator) ProcessExtensionServerPolicies(
 				policies[i].GetNamespace(),
 				t.GetNamespace)
 			for _, currTarget := range targetRefs {
-				if isListenerSet(currTarget) {
+				if isListenerSet(currTarget) && isGatewayAPIGroup(currTarget) {
 					t.processExtensionServerPolicyForListenerSet(xdsIR, gatewayMap, listenerSetMap, getOrInitPolicy(i), currTarget)
 				}
 			}
@@ -240,6 +240,13 @@ func (t *Translator) ProcessExtensionServerPolicies(
 	}
 
 	return res, errs
+}
+
+// isGatewayAPIGroup reports whether target belongs to the Gateway API group. Extension server policies are
+// arbitrary CRDs without CEL validation on their targetRefs, so the group must be checked explicitly to avoid
+// attaching to a Gateway API resource a policy intended for a same-named kind in another API group.
+func isGatewayAPIGroup(target policyTargetReferenceWithSectionName) bool {
+	return string(target.Group) == gwapiv1.GroupName
 }
 
 // resolveGatewayClassTargetsFromSelectors returns gatewayClass as a target for every selector of
