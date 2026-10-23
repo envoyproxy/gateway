@@ -1,0 +1,382 @@
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    data: attached to listener http-alt of gateway-1 only, not to http-alt of gateway-2
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-alt
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-alt
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    data: attached to every listener of gateway-1 only, though gateway-2 has listeners
+      of the same names
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: gateway-1.example.com
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: gateway-1.example.com
+      name: http-alt
+      port: 8080
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-alt
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-2
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: gateway-2.example.com
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: gateway-2.example.com
+      name: http-alt
+      port: 8080
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-alt
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway-class:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeGateways: true
+        status: {}
+      listeners:
+      - name: envoy-gateway/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      - name: envoy-gateway/gateway-1/http-alt
+        ports:
+        - containerPort: 8080
+          name: http-8080
+          protocol: HTTP
+          servicePort: 8080
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway-class
+      namespace: ""
+xdsIR:
+  envoy-gateway-class:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    extensionResources:
+    - name: foo.example.io/bar/envoy-gateway/test2
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test2
+          namespace: envoy-gateway
+        spec:
+          data: attached to listener http-alt of gateway-1 only, not to http-alt of
+            gateway-2
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+            sectionName: http-alt
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+              sectionName: http-alt
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - name: foo.example.io/bar/envoy-gateway/test1
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: test1
+          namespace: envoy-gateway
+        spec:
+          data: attached to every listener of gateway-1 only, though gateway-2 has
+            listeners of the same names
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionServerPolicies:
+    - name: foo.example.io/bar/envoy-gateway/test2
+    - name: foo.example.io/bar/envoy-gateway/test1
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-class-3b1df594
+          sectionName: "8080"
+        name: envoy-gateway-class
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-class-3b1df594
+            sectionName: "8080"
+          name: envoy-gateway-class
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test1
+      externalPort: 80
+      hostnames:
+      - gateway-1.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      extensionRefs:
+      - name: foo.example.io/bar/envoy-gateway/test2
+      - name: foo.example.io/bar/envoy-gateway/test1
+      externalPort: 8080
+      hostnames:
+      - gateway-1.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-alt
+      name: envoy-gateway/gateway-1/http-alt
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - gateway-2.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-2/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      externalPort: 8080
+      hostnames:
+      - gateway-2.example.com
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http-alt
+      name: envoy-gateway/gateway-2/http-alt
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
