@@ -103,9 +103,24 @@ func TestResolveProxyImage(t *testing.T) {
 			expected: "envoyproxy/envoy:v1.2.3",
 		},
 		{
+			name: "image registry set",
+			container: &egv1a1.KubernetesContainerSpec{
+				Image:         new("quay.io/acme/envoy:v1.2.3@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+				ImageRegistry: new("registry.internal"),
+			},
+			expected: "registry.internal/acme/envoy:v1.2.3@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		},
+		{
 			name:      "neither set",
 			container: &egv1a1.KubernetesContainerSpec{},
 			expected:  defaultImage,
+		},
+		{
+			name: "image registry uses default image",
+			container: &egv1a1.KubernetesContainerSpec{
+				ImageRegistry: new("registry.internal"),
+			},
+			expected: "registry.internal/envoyproxy/envoy:distroless-dev",
 		},
 		{
 			name: "both image and imageRepository set (invalid per CRD, but still testable)",

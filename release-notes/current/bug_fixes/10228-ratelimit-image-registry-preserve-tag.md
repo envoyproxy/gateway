@@ -1,0 +1,1 @@
+Fixed the Helm chart's global image registry override replacing parts of a build-linked Envoy ratelimit image reference. The override now changes only the registry while preserving the linked repository, tag, and digest.
