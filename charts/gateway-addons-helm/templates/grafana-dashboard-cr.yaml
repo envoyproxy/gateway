@@ -1,0 +1,23 @@
+{{- if eq .Values.dashboard.mode "grafana-operator" }}
+{{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
+{{- $dashboardName := $path | base | trimSuffix ".json" }}
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: {{ $dashboardName | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $.Release.Namespace }}
+  {{- with $.Values.dashboard.labels }}
+  labels: {{- . | toYaml | nindent 4 }}
+  {{- end }}
+  {{- $anns := merge (dict) $.Values.dashboard.annotations (dict "argocd.argoproj.io/sync-options" "ServerSideApply=true") }}
+  annotations: {{- $anns | toYaml | nindent 4 }}
+spec:
+  allowCrossNamespaceImport: true
+  folder: {{ $.Values.dashboard.folder | quote }}
+  instanceSelector:
+    matchLabels:
+      {{- $.Values.dashboard.instanceSelector.matchLabels | toYaml | nindent 6 }}
+  json: {{ $.Files.Get $path | toJson }}
+{{- end }}
+{{- end }}
