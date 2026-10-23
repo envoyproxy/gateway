@@ -597,8 +597,8 @@ type xdsHookClientMock struct {
 	types.XDSHookClient
 }
 
-func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*unstructured.Unstructured) (*listenerv3.Listener, error) {
-	return nil, fmt.Errorf("assuming a network error during the call")
+func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*unstructured.Unstructured) (*listenerv3.Listener, types.HookResult, error) {
+	return nil, types.HookResult{}, fmt.Errorf("assuming a network error during the call")
 }
 
 func TestGetRandomMaxConnectionAge(t *testing.T) {

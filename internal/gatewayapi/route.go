@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -1232,50 +1234,9 @@ func (t *Translator) processHTTPRouteRule(
 	rule *gwapiv1.HTTPRouteRule,
 	routeRuleMetadata *ir.ResourceMetadata,
 ) ([]*ir.HTTPRoute, status.Error) {
-	var sessionPersistence *ir.SessionPersistence
-	if rule.SessionPersistence != nil {
-		var sessionName string
-		if rule.SessionPersistence.SessionName == nil {
-			// SessionName is optional on the gateway-api, but envoy requires it
-			// so we generate the one here.
-
-			// We generate a unique session name per route.
-			// `/` isn't allowed in the header key, so we just replace it with `-`.
-			sessionName = strings.ReplaceAll(irRouteDestinationName(httpRoute, ruleIdx), "/", "-")
-		} else {
-			sessionName = *rule.SessionPersistence.SessionName
-		}
-
-		switch {
-		case rule.SessionPersistence.Type == nil || // Cookie-based session persistence is default.
-			*rule.SessionPersistence.Type == gwapiv1.CookieBasedSessionPersistence:
-			sessionPersistence = &ir.SessionPersistence{
-				Cookie: &ir.CookieBasedSessionPersistence{
-					Name: sessionName,
-				},
-			}
-			if rule.SessionPersistence.AbsoluteTimeout != nil &&
-				rule.SessionPersistence.CookieConfig != nil && rule.SessionPersistence.CookieConfig.LifetimeType != nil &&
-				*rule.SessionPersistence.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
-				ttl, err := time.ParseDuration(string(*rule.SessionPersistence.AbsoluteTimeout))
-				if err != nil {
-					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
-				}
-				sessionPersistence.Cookie.TTL = ir.MetaV1DurationPtr(ttl)
-			}
-		case *rule.SessionPersistence.Type == gwapiv1.HeaderBasedSessionPersistence:
-			sessionPersistence = &ir.SessionPersistence{
-				Header: &ir.HeaderBasedSessionPersistence{
-					Name: sessionName,
-				},
-			}
-		default:
-			// Unknown session persistence type is specified.
-			return nil, status.NewRouteStatusError(
-				fmt.Errorf("unknown session persistence type %s", *rule.SessionPersistence.Type),
-				gwapiv1.RouteReasonUnsupportedValue,
-			)
-		}
+	sessionPersistence, err := translateSessionPersistence(rule.SessionPersistence, httpRoute, ruleIdx)
+	if err != nil {
+		return nil, err
 	}
 
 	filterMatches := []egv1a1.HTTPRouteMatchFilter(nil)
@@ -1640,7 +1601,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		var mergeIncompatible bool
 		if t.isMergeBackendsEnabledForGateway(gatewayCtx) {
 			backendRefs := toBackendObjectReferences(rule.BackendRefs, func(r gwapiv1.GRPCBackendRef) gwapiv1.BackendObjectReference { return r.BackendObjectReference })
-			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, false)
+			mergeIncompatible = t.mergeIncompatibleForWeightedRule(grpcRoute, backendRefs, rule.SessionPersistence != nil)
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
@@ -1847,6 +1808,11 @@ func buildGRPCRouteMatchCombinations(ruleMatches []gwapiv1.GRPCRouteMatch, filte
 }
 
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
+	sessionPersistence, err := translateSessionPersistence(rule.SessionPersistence, grpcRoute, ruleIdx)
+	if err != nil {
+		return nil, err
+	}
+
 	filterMatches := []egv1a1.HTTPRouteMatchFilter(nil)
 	if httpFiltersContext != nil {
 		filterMatches = httpFiltersContext.Matches
@@ -1862,7 +1828,8 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 	// If no matches are specified, the implementation MUST match every gRPC request.
 	if len(matches) == 0 {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(grpcRoute, ruleIdx, -1),
+			Name:               irRouteName(grpcRoute, ruleIdx, -1),
+			SessionPersistence: sessionPersistence,
 		}
 		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
@@ -1874,7 +1841,8 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 	// a unique Xds IR HTTPRoute per match.
 	for matchIdx, match := range matches {
 		irRoute := &ir.HTTPRoute{
-			Name: irRouteName(grpcRoute, ruleIdx, matchIdx),
+			Name:               irRouteName(grpcRoute, ruleIdx, matchIdx),
+			SessionPersistence: sessionPersistence,
 		}
 		irRoute.Metadata = buildResourceMetadata(grpcRoute, rule.Name)
 		for _, headerMatch := range match.Headers {
@@ -1926,6 +1894,70 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 	}
 	return ruleRoutes, nil
+}
+
+// translateSessionPersistence converts a gateway-api SessionPersistence into the IR
+// representation. It is shared by HTTPRoute and GRPCRoute rule processing.
+func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteContext, ruleIdx int) (*ir.SessionPersistence, status.Error) {
+	if sp == nil {
+		return nil, nil
+	}
+
+	var sessionName string
+	switch {
+	case sp.SessionName == nil:
+		// SessionName is optional on the gateway-api, but envoy requires it
+		// so we generate the one here.
+
+		// We generate a unique session name per route.
+		// `/` isn't allowed in the header key, so we replace it with `-`. That
+		// replacement alone is ambiguous (e.g. a-b/c and a/b-c), so a short hash
+		// of the original name is appended to keep names collision-free.
+		destName := irRouteDestinationName(route, ruleIdx)
+		sum := sha256.Sum256([]byte(destName))
+		sessionName = strings.ReplaceAll(destName, "/", "-") + "-" + hex.EncodeToString(sum[:4])
+	case *sp.SessionName == "":
+		// The CRD only bounds the maximum length, but envoy rejects an empty
+		// cookie or header name, which would fail the whole xDS update.
+		return nil, status.NewRouteStatusError(
+			errors.New("sessionName must not be empty"),
+			gwapiv1.RouteReasonUnsupportedValue,
+		)
+	default:
+		sessionName = *sp.SessionName
+	}
+
+	switch {
+	case sp.Type == nil || // Cookie-based session persistence is default.
+		*sp.Type == gwapiv1.CookieBasedSessionPersistence:
+		out := &ir.SessionPersistence{
+			Cookie: &ir.CookieBasedSessionPersistence{
+				Name: sessionName,
+			},
+		}
+		if sp.AbsoluteTimeout != nil &&
+			sp.CookieConfig != nil && sp.CookieConfig.LifetimeType != nil &&
+			*sp.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
+			ttl, err := time.ParseDuration(string(*sp.AbsoluteTimeout))
+			if err != nil {
+				return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
+			}
+			out.Cookie.TTL = ir.MetaV1DurationPtr(ttl)
+		}
+		return out, nil
+	case *sp.Type == gwapiv1.HeaderBasedSessionPersistence:
+		return &ir.SessionPersistence{
+			Header: &ir.HeaderBasedSessionPersistence{
+				Name: sessionName,
+			},
+		}, nil
+	default:
+		// Unknown session persistence type is specified.
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("unknown session persistence type %s", *sp.Type),
+			gwapiv1.RouteReasonUnsupportedValue,
+		)
+	}
 }
 
 func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
@@ -3040,7 +3072,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			SectionName: parentRef.SectionName,
 			Port:        parentRef.Port,
 		},
-		resources,
 		gatewayCtx,
 		gwIR,
 	)
@@ -3063,7 +3094,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol)
+		ds, err = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
+		if err != nil {
+			return emptyDS, nil, err
+		}
 	default:
 		// Handle custom backend resources defined in extension manager
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
@@ -3634,30 +3668,58 @@ func (t *Translator) processBackendDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	defaultProtocol ir.AppProtocol,
-) *ir.DestinationSetting {
-	var dstAddrType *ir.DestinationAddressType
-	protocol := defaultProtocol
-	forceHTTP1Upstream := false
-
-	addrTypeMap := make(map[ir.DestinationAddressType]int)
+	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
+) (*ir.DestinationSetting, status.Error) {
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
-	for _, ap := range backend.Spec.AppProtocols {
-		protocol = resolveBackendProtocol(string(ap), protocol)
-		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
-		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
-	}
+	protocol, forceHTTP1Upstream := resolveBackendAppProtocols(backend, defaultProtocol)
 
-	ds := &ir.DestinationSetting{Name: name}
+	var ds *ir.DestinationSetting
+	if isKubernetesServiceBackend(backend) {
+		// The endpoints come from the Service, the same way a Service backendRef gets them.
+		svcDS, err := t.processServiceDestinationSetting(name, kubernetesServiceBackendRef(backend), backend.Namespace,
+			defaultProtocol, envoyProxy, btpRoutingType)
+		if err != nil {
+			return nil, err
+		}
+		ds = svcDS
+		ds.IPFamily = getServiceIPFamily(t.GetService(backend.Namespace, string(backend.Spec.KubernetesService.Name)))
+		// The Backend appProtocols take precedence over the appProtocol of the Service port.
+		if len(backend.Spec.AppProtocols) > 0 {
+			ds.Protocol = protocol
+			ds.ForceHTTP1Upstream = forceHTTP1Upstream
+		}
+	} else {
+		ds = &ir.DestinationSetting{Name: name}
 
-	// There is only one backend if it is a dynamic resolver
-	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
-		ds.IsDynamicResolver = true
+		// There is only one backend if it is a dynamic resolver
+		if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+			ds.IsDynamicResolver = true
+			ds.Protocol = protocol
+			ds.ForceHTTP1Upstream = forceHTTP1Upstream
+			return ds, nil
+		}
+
+		ds.Endpoints, ds.AddressType = backendEndpoints(backend)
 		ds.Protocol = protocol
 		ds.ForceHTTP1Upstream = forceHTTP1Upstream
-		return ds
 	}
 
+	if ptr.Deref(backend.Spec.Fallback, false) {
+		// set only the secondary priority, the backend defaults to a primary priority if unset.
+		ds.Priority = new(uint32(1))
+	}
+
+	ds.Metadata = buildResourceMetadata(backend, nil)
+
+	return ds, nil
+}
+
+// backendEndpoints converts the endpoints of a Backend that lists them into IR endpoints,
+// and returns the address type shared by all of them, or MIXED or STATIC when they differ.
+func backendEndpoints(backend *egv1a1.Backend) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType) {
+	var dstAddrType *ir.DestinationAddressType
+	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	dstEndpoints := make([]*ir.DestinationEndpoint, 0, len(backend.Spec.Endpoints))
 
 	for _, bep := range backend.Spec.Endpoints {
@@ -3701,21 +3763,21 @@ func (t *Translator) processBackendDestinationSetting(
 		}
 	}
 
-	ds.Endpoints = dstEndpoints
-	ds.AddressType = dstAddrType
-	ds.Protocol = protocol
-	ds.ForceHTTP1Upstream = forceHTTP1Upstream
+	return dstEndpoints, dstAddrType
+}
 
-	if backend.Spec.Fallback != nil {
-		// set only the secondary priority, the backend defaults to a primary priority if unset.
-		if ptr.Deref(backend.Spec.Fallback, false) {
-			ds.Priority = new(uint32(1))
-		}
+// resolveBackendAppProtocols returns the upstream protocol and whether to force HTTP/1.1
+// from the appProtocols of a Backend, starting from the route's default protocol.
+func resolveBackendAppProtocols(backend *egv1a1.Backend, defaultProtocol ir.AppProtocol) (ir.AppProtocol, bool) {
+	protocol := defaultProtocol
+	forceHTTP1Upstream := false
+	for _, ap := range backend.Spec.AppProtocols {
+		protocol = resolveBackendProtocol(string(ap), protocol)
+		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+		forceHTTP1Upstream = forceHTTP1Upstream || shouldForceHTTP1Upstream(protocol, (*string)(&ap))
 	}
-
-	ds.Metadata = buildResourceMetadata(backend, nil)
-
-	return ds
+	return protocol, forceHTTP1Upstream
 }
 
 // resolveBackendProtocol computes the upstream ir.AppProtocol for a backend from the

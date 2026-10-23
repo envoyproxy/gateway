@@ -1,5 +1,7 @@
 ---
 title: "Gateway API Support"
+aliases:
+  - /latest/tasks/traffic/gatewayapi-support/
 ---
 
 As mentioned in the [system design][] document, Envoy Gateway's managed data plane is configured dynamically through
@@ -118,10 +120,10 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#gateway.networking.k8s.io/v1alpha2.ReferenceGrant
 [SecretObjectReference]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#SecretObjectReference
 [rate limiting]: /community/design/rate-limit
-[request authentication]: ../security/jwt-authentication
-[EnvoyProxy]: ../../../api/extension_types#envoyproxy
+[request authentication]: ../tasks/security/jwt-authentication
+[EnvoyProxy]: ../api/extension_types#envoyproxy
 [resolving conflicts]: https://gateway-api.sigs.k8s.io/guides/api-design/?h=conflict#conflicts
 [ExtensionRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#HTTPRouteFilterType
 [grpc-filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter
 [http-filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#HTTPRouteFilter
-[HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
+[HTTPRouteFilter]: ../api/extension_types#httproutefilter
