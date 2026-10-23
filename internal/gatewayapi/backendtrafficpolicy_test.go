@@ -4116,28 +4116,49 @@ func TestReportRejectedBackendPolicy(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		policy  *egv1a1.BackendTrafficPolicy
-		reason  backendPolicyRejection
-		message string
+		name          string
+		policy        *egv1a1.BackendTrafficPolicy
+		reason        backendPolicyRejection
+		mergeBackends *MergeBackendsConfig
+		wantReason    string
+		message       string
 	}{
 		{
-			name:    "selector rejection reports on the gateway using the matched backend",
-			policy:  selectorPolicy,
-			reason:  rejectionSelector,
-			message: "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead",
+			name:          "selector rejection reports on the gateway using the matched backend",
+			policy:        selectorPolicy,
+			reason:        rejectionSelector,
+			mergeBackends: &MergeBackendsConfig{},
+			wantReason:    string(gwapiv1.PolicyReasonInvalid),
+			message:       "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead",
 		},
 		{
-			name:    "mixed rejection reports on the gateway using the backend ref",
-			policy:  refPolicy,
-			reason:  rejectionMixed,
-			message: "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy",
+			name:          "mixed rejection reports on the gateway using the backend ref",
+			policy:        refPolicy,
+			reason:        rejectionMixed,
+			mergeBackends: &MergeBackendsConfig{},
+			wantReason:    string(gwapiv1.PolicyReasonInvalid),
+			message:       "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy",
+		},
+		{
+			name:       "selector rejection reports Disabled when mergeBackends is off",
+			policy:     selectorPolicy,
+			reason:     rejectionSelector,
+			wantReason: string(egv1a1.PolicyReasonDisabled),
+			message:    backendTargetingDisabledMessage,
+		},
+		{
+			name:       "mixed rejection reports Disabled when mergeBackends is off",
+			policy:     refPolicy,
+			reason:     rejectionMixed,
+			wantReason: string(egv1a1.PolicyReasonDisabled),
+			message:    backendTargetingDisabledMessage,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: &MergeBackendsConfig{}, TranslatorContext: &TranslatorContext{}}
+			tr := &Translator{GatewayControllerName: "test-controller", MergeBackends: tc.mergeBackends, TranslatorContext: &TranslatorContext{}}
+			tc.policy.Status = gwapiv1.PolicyStatus{}
 			gwReferencing := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-referencing"}}}
 			gwUnrelated := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-unrelated"}}}
 
@@ -4153,7 +4174,7 @@ func TestReportRejectedBackendPolicy(t *testing.T) {
 			ancestor := tc.policy.Status.Ancestors[0]
 			require.Equal(t, "gw-referencing", string(ancestor.AncestorRef.Name))
 			require.Len(t, ancestor.Conditions, 1)
-			require.Equal(t, string(gwapiv1.PolicyReasonInvalid), ancestor.Conditions[0].Reason)
+			require.Equal(t, tc.wantReason, ancestor.Conditions[0].Reason)
 			require.Equal(t, tc.message, ancestor.Conditions[0].Message)
 		})
 	}

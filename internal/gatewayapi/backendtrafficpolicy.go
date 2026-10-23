@@ -38,6 +38,8 @@ const (
 	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
 	// ResponseBodyConfigMapKey is the key used in ConfigMaps to store custom response body data
 	ResponseBodyConfigMapKey = "response.body"
+
+	backendTargetingDisabledMessage = "Backend targeting in BackendTrafficPolicy requires mergeBackends to be enabled on the EnvoyProxy for this Gateway"
 )
 
 // BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies, keyed by attachment
@@ -609,7 +611,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
 				&status.PolicyResolveError{
 					Reason:  egv1a1.PolicyReasonDisabled,
-					Message: "Backend targeting in BackendTrafficPolicy requires mergeBackends to be enabled on the EnvoyProxy for this Gateway",
+					Message: backendTargetingDisabledMessage,
 				})
 			continue
 		}
@@ -797,8 +799,11 @@ func (t *Translator) reportRejectedBackendPolicy(xdsIR resource.XdsIRMap, gatewa
 				continue
 			}
 			ref := getAncestorRefForPolicy(utils.NamespacedName(gw), nil)
-			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
-				&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: message})
+			resolveErr := &status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: message}
+			if !t.isMergeBackendsEnabledForGateway(gw) {
+				resolveErr = &status.PolicyResolveError{Reason: egv1a1.PolicyReasonDisabled, Message: backendTargetingDisabledMessage}
+			}
+			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation, resolveErr)
 		}
 	}
 }
