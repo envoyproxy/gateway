@@ -1788,6 +1788,35 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			expectErr: "tcpKeepalive.idleTime: invalid duration",
 		},
 		{
+			name:      "tcp keepalive zero probes",
+			cs:        &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{Probes: new(uint32(0))}},
+			expectErr: `tcpKeepalive.probes must be between 1 and 127`,
+		},
+		{
+			name:      "tcp keepalive too many probes",
+			cs:        &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{Probes: new(uint32(128))}},
+			expectErr: `tcpKeepalive.probes must be between 1 and 127`,
+		},
+		{
+			name:      "tcp keepalive zero idle time",
+			cs:        &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{IdleTime: new(gwapiv1.Duration("0s"))}},
+			expectErr: `tcpKeepalive.idleTime: duration must be positive`,
+		},
+		{
+			name:      "tcp keepalive sub-second interval",
+			cs:        &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{Interval: new(gwapiv1.Duration("500ms"))}},
+			expectErr: `tcpKeepalive.interval must be between 1s and 32767s`,
+		},
+		{
+			name:      "tcp keepalive idle time too large",
+			cs:        &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{IdleTime: new(gwapiv1.Duration("10h"))}},
+			expectErr: `tcpKeepalive.idleTime must be between 1s and 32767s`,
+		},
+		{
+			name: "valid tcp keepalive",
+			cs:   &egv1a1.RateLimitClusterSettings{TCPKeepalive: &egv1a1.TCPKeepalive{Probes: new(uint32(9)), IdleTime: new(gwapiv1.Duration("7200s")), Interval: new(gwapiv1.Duration("75s"))}},
+		},
+		{
 			name: "malformed passive health check interval",
 			cs: &egv1a1.RateLimitClusterSettings{
 				HealthCheck: &egv1a1.RateLimitHealthCheck{
@@ -1859,7 +1888,21 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		{
 			name:      "tcp health check payload type mismatch",
 			cs:        &egv1a1.RateLimitClusterSettings{HealthCheck: &egv1a1.RateLimitHealthCheck{Active: &egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP, TCP: &egv1a1.TCPActiveHealthChecker{Send: &egv1a1.ActiveHealthCheckPayload{Type: egv1a1.ActiveHealthCheckPayloadTypeText, Binary: []byte("x")}}}}},
-			expectErr: `healthCheck.active.tcp.send.text must be set`,
+			expectErr: `healthCheck.active.tcp.send.text must be non-empty`,
+		},
+		{
+			name:      "tcp health check empty text payload",
+			cs:        &egv1a1.RateLimitClusterSettings{HealthCheck: &egv1a1.RateLimitHealthCheck{Active: &egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP, TCP: &egv1a1.TCPActiveHealthChecker{Send: &egv1a1.ActiveHealthCheckPayload{Type: egv1a1.ActiveHealthCheckPayloadTypeText, Text: new("")}}}}},
+			expectErr: `healthCheck.active.tcp.send.text must be non-empty`,
+		},
+		{
+			name:      "tcp health check empty binary payload",
+			cs:        &egv1a1.RateLimitClusterSettings{HealthCheck: &egv1a1.RateLimitHealthCheck{Active: &egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP, TCP: &egv1a1.TCPActiveHealthChecker{Receive: &egv1a1.ActiveHealthCheckPayload{Type: egv1a1.ActiveHealthCheckPayloadTypeBinary, Binary: []byte{}}}}}},
+			expectErr: `healthCheck.active.tcp.receive.binary must be non-empty`,
+		},
+		{
+			name: "tcp health check non-empty payloads",
+			cs:   &egv1a1.RateLimitClusterSettings{HealthCheck: &egv1a1.RateLimitHealthCheck{Active: &egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP, TCP: &egv1a1.TCPActiveHealthChecker{Send: &egv1a1.ActiveHealthCheckPayload{Type: egv1a1.ActiveHealthCheckPayloadTypeText, Text: new("ping")}, Receive: &egv1a1.ActiveHealthCheckPayload{Type: egv1a1.ActiveHealthCheckPayloadTypeBinary, Binary: []byte("pong")}}}}},
 		},
 		{
 			name:      "http2 stream window too small",

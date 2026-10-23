@@ -325,13 +325,8 @@ func validateRateLimitClusterSettings(cs *egv1a1.RateLimitClusterSettings) error
 		}
 	}
 
-	if cs.TCPKeepalive != nil {
-		if err := validateOptionalDuration("tcpKeepalive.idleTime", cs.TCPKeepalive.IdleTime, true); err != nil {
-			return err
-		}
-		if err := validateOptionalDuration("tcpKeepalive.interval", cs.TCPKeepalive.Interval, true); err != nil {
-			return err
-		}
+	if err := validateRateLimitClusterTCPKeepalive(cs.TCPKeepalive); err != nil {
+		return err
 	}
 
 	if err := validateRateLimitClusterHTTP2(cs.HTTP2); err != nil {
@@ -400,6 +395,41 @@ func validateRateLimitClusterHTTP2(h *egv1a1.HTTP2Settings) error {
 		}
 		if ka.IntervalJitter != nil && *ka.IntervalJitter > 100 {
 			return fmt.Errorf("http2.connectionKeepalive.intervalJitter must be between 0 and 100")
+		}
+	}
+	return nil
+}
+
+// Linux bounds for TCP_KEEPIDLE/TCP_KEEPINTVL (seconds) and TCP_KEEPCNT. Envoy fails the
+// upstream connection when setsockopt rejects a value, which would make the rate limit
+// service unreachable.
+const (
+	maxTCPKeepaliveSeconds = 32767
+	maxTCPKeepaliveProbes  = 127
+)
+
+func validateRateLimitClusterTCPKeepalive(ka *egv1a1.TCPKeepalive) error {
+	if ka == nil {
+		return nil
+	}
+	if ka.Probes != nil && (*ka.Probes < 1 || *ka.Probes > maxTCPKeepaliveProbes) {
+		return fmt.Errorf("tcpKeepalive.probes must be between 1 and %d", maxTCPKeepaliveProbes)
+	}
+	for _, f := range []struct {
+		name string
+		val  *gwapiv1.Duration
+	}{
+		{"tcpKeepalive.idleTime", ka.IdleTime},
+		{"tcpKeepalive.interval", ka.Interval},
+	} {
+		if err := validateOptionalDuration(f.name, f.val, false); err != nil {
+			return err
+		}
+		// Translation truncates to whole seconds, so anything under 1s becomes 0.
+		if f.val != nil {
+			if d := parseDuration(*f.val); d < time.Second || d > maxTCPKeepaliveSeconds*time.Second {
+				return fmt.Errorf("%s must be between 1s and %ds", f.name, maxTCPKeepaliveSeconds)
+			}
 		}
 	}
 	return nil
@@ -516,14 +546,15 @@ func validateHealthCheckPayload(field string, p *egv1a1.ActiveHealthCheckPayload
 	if p == nil {
 		return nil
 	}
+	// An empty value leaves Envoy's payload unset, which fails xDS validation.
 	switch p.Type {
 	case egv1a1.ActiveHealthCheckPayloadTypeText:
-		if p.Text == nil || p.Binary != nil {
-			return fmt.Errorf("%s.text must be set, and only text, when type is Text", field)
+		if ptr.Deref(p.Text, "") == "" || p.Binary != nil {
+			return fmt.Errorf("%s.text must be non-empty, and the only value set, when type is Text", field)
 		}
 	case egv1a1.ActiveHealthCheckPayloadTypeBinary:
-		if p.Binary == nil || p.Text != nil {
-			return fmt.Errorf("%s.binary must be set, and only binary, when type is Binary", field)
+		if len(p.Binary) == 0 || p.Text != nil {
+			return fmt.Errorf("%s.binary must be non-empty, and the only value set, when type is Binary", field)
 		}
 	default:
 		return fmt.Errorf("%s.type %q is not supported, use Text or Binary", field, p.Type)
