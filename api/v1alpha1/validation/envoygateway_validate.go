@@ -13,6 +13,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -100,30 +101,6 @@ func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
 		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
 	}
 
-	warnings = append(warnings, warnRateLimitClusterSettings(eg.RateLimit)...)
-
-	return warnings
-}
-
-// warnRateLimitClusterSettings warns about RateLimit.ServiceSettings members that are accepted
-// by validateRateLimitClusterSettings but have no effect on the rate limit service cluster: it
-// has no associated route, so ir.Timeout.ClusterOnly() strips HTTP.RequestTimeout/
-// HTTP.StreamIdleTimeout before the CDS cluster is built.
-func warnRateLimitClusterSettings(rateLimit *egv1a1.RateLimit) []string {
-	cs := rateLimit.GetServiceSettings()
-	if cs == nil {
-		return nil
-	}
-
-	var warnings []string
-	if cs.Timeout != nil && cs.Timeout.HTTP != nil {
-		if cs.Timeout.HTTP.RequestTimeout != nil {
-			warnings = append(warnings, "rateLimit.serviceSettings.timeout.http.requestTimeout has no effect: the rate limit service cluster has no associated route")
-		}
-		if cs.Timeout.HTTP.StreamIdleTimeout != nil {
-			warnings = append(warnings, "rateLimit.serviceSettings.timeout.http.streamIdleTimeout has no effect: the rate limit service cluster has no associated route")
-		}
-	}
 	return warnings
 }
 
@@ -263,7 +240,7 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		return nil
 	}
 
-	if err := validateRateLimitClusterSettings(rateLimit.GetServiceSettings()); err != nil {
+	if err := validateRateLimitClusterSettings(rateLimit.ServiceSettings); err != nil {
 		return fmt.Errorf("invalid rateLimit.serviceSettings: %w", err)
 	}
 
@@ -316,67 +293,169 @@ func ValidateRedisURL(redisURL string) error {
 // validateRateLimitClusterSettings validates EnvoyGateway.RateLimit.ServiceSettings.
 //
 // EnvoyGateway is loaded as static configuration rather than admitted as a CRD, so the
-// kubebuilder/CEL constraints declared on ClusterSettings (e.g. Minimum=0 on circuit breaker
-// fields, the Go-duration format on timeout fields) are never enforced. Without this check, a
-// malformed value here is accepted at startup and only surfaces once a Global rate limit policy
-// is actually used and ProcessGlobalResources fails to translate it -- by which point the runner
-// has already begun publishing IR built from the rest of the (valid) configuration.
-//
-// The rate limit service cluster has no associated route, so route-scoped ClusterSettings
-// members have nowhere to apply: ir.TrafficFeatures.ClusterFeatures() drops Retry entirely, and
-// ir.Timeout.ClusterOnly() strips HTTP.RequestTimeout/HTTP.StreamIdleTimeout before the CDS
-// cluster is built. Rather than rejecting the whole configuration because of them, those members
-// are accepted here -- only the fields that actually apply to a cluster are validated below --
-// and WarnEnvoyGateway surfaces a non-fatal warning that they have no effect.
-func validateRateLimitClusterSettings(cs *egv1a1.ClusterSettings) error {
+// kubebuilder constraints declared on these types (enums, minimums, the Go-duration format)
+// are never enforced. Without this check, a malformed value here is accepted at startup and
+// only surfaces once a Global rate limit policy is actually used -- either failing translation
+// or producing a cluster that Envoy rejects.
+func validateRateLimitClusterSettings(cs *egv1a1.RateLimitClusterSettings) error {
 	if cs == nil {
 		return nil
 	}
 
-	// The rate limit service is deployed and managed by Envoy Gateway, and it doesn't accept
-	// PROXY protocol headers: enabling it would break every rate limit request.
-	if cs.ProxyProtocol != nil {
-		return fmt.Errorf("proxyProtocol is not supported for the managed rate limit service")
-	}
-
-	// The upstream rate limit service doesn't support HTTP/3 yet.
-	if cs.HTTP3 != nil {
-		return fmt.Errorf("http3 is not supported for the managed rate limit service")
-	}
-
-	// The rate limit service is a gRPC service, so its cluster always uses HTTP/2: HTTP/1 settings
-	// would be silently ignored rather than forcing HTTP/1 as documented.
-	if cs.HTTP1 != nil {
-		return fmt.Errorf("http1 is not supported for the managed rate limit service")
+	if lb := cs.LoadBalancer; lb != nil {
+		switch lb.Type {
+		case egv1a1.LeastRequestLoadBalancerType, egv1a1.RandomLoadBalancerType, egv1a1.RoundRobinLoadBalancerType:
+		default:
+			return fmt.Errorf("loadBalancer.type %q is not supported, use LeastRequest, Random or RoundRobin", lb.Type)
+		}
+		if lb.SlowStart != nil {
+			if lb.SlowStart.Window == nil {
+				return fmt.Errorf("loadBalancer.slowStart.window is required")
+			}
+			if err := validateOptionalDuration("loadBalancer.slowStart.window", lb.SlowStart.Window, false); err != nil {
+				return err
+			}
+		}
 	}
 
 	if err := validateRateLimitClusterCircuitBreaker(cs.CircuitBreaker); err != nil {
 		return err
 	}
 
-	if err := validateRateLimitClusterTimeout(cs.Timeout); err != nil {
-		return err
+	if t := cs.Timeout; t != nil {
+		if t.TCP != nil {
+			if err := validateOptionalDuration("timeout.tcp.connectTimeout", t.TCP.ConnectTimeout, false); err != nil {
+				return err
+			}
+		}
+		if t.HTTP != nil {
+			if err := validateOptionalDuration("timeout.http.connectionIdleTimeout", t.HTTP.ConnectionIdleTimeout, true); err != nil {
+				return err
+			}
+			if err := validateOptionalDuration("timeout.http.maxConnectionDuration", t.HTTP.MaxConnectionDuration, true); err != nil {
+				return err
+			}
+			if err := validateOptionalDuration("timeout.http.maxStreamDuration", t.HTTP.MaxStreamDuration, true); err != nil {
+				return err
+			}
+		}
 	}
 
 	if cs.TCPKeepalive != nil {
-		if err := validateOptionalDuration("tcpKeepalive.idleTime", cs.TCPKeepalive.IdleTime); err != nil {
+		if err := validateOptionalDuration("tcpKeepalive.idleTime", cs.TCPKeepalive.IdleTime, true); err != nil {
 			return err
 		}
-		if err := validateOptionalDuration("tcpKeepalive.interval", cs.TCPKeepalive.Interval); err != nil {
+		if err := validateOptionalDuration("tcpKeepalive.interval", cs.TCPKeepalive.Interval, true); err != nil {
 			return err
 		}
 	}
 
 	if cs.DNS != nil {
-		if err := validateOptionalDuration("dns.dnsRefreshRate", cs.DNS.DNSRefreshRate); err != nil {
+		if err := validateOptionalDuration("dns.dnsRefreshRate", cs.DNS.DNSRefreshRate, false); err != nil {
 			return err
+		}
+		if lf := cs.DNS.LookupFamily; lf != nil {
+			switch *lf {
+			case egv1a1.IPv4DNSLookupFamily, egv1a1.IPv6DNSLookupFamily, egv1a1.IPv4PreferredDNSLookupFamily,
+				egv1a1.IPv6PreferredDNSLookupFamily, egv1a1.IPv4AndIPv6DNSLookupFamily:
+			default:
+				return fmt.Errorf("dns.lookupFamily %q is not supported", *lf)
+			}
 		}
 	}
 
-	if err := validateRateLimitClusterHealthCheck(cs.HealthCheck); err != nil {
+	if err := validateRateLimitClusterConnection(cs.Connection); err != nil {
 		return err
 	}
 
+	if err := validateRateLimitClusterHTTP2(cs.HTTP2); err != nil {
+		return err
+	}
+
+	return validateRateLimitClusterHealthCheck(cs.HealthCheck)
+}
+
+func validateRateLimitClusterConnection(c *egv1a1.BackendConnection) error {
+	if c == nil {
+		return nil
+	}
+	if c.BufferLimit != nil {
+		if v, ok := c.BufferLimit.AsInt64(); !ok || v < 1 || v > math.MaxUint32 {
+			return fmt.Errorf("connection.bufferLimit value %s is out of range [1, %d]", c.BufferLimit.String(), uint32(math.MaxUint32))
+		}
+	}
+	if pc := c.Preconnect; pc != nil {
+		if pc.PerEndpointPercent != nil && (*pc.PerEndpointPercent < 100 || *pc.PerEndpointPercent > 300) {
+			return fmt.Errorf("connection.preconnect.perEndpointPercent must be between 100 and 300")
+		}
+		if pc.PredictivePercent != nil && *pc.PredictivePercent < 100 {
+			return fmt.Errorf("connection.preconnect.predictivePercent must be at least 100")
+		}
+	}
+	return nil
+}
+
+// HTTP/2 flow-control window bounds enforced by Envoy, mirroring internal/gatewayapi.
+const (
+	minHTTP2WindowSize = 65535
+	maxHTTP2WindowSize = math.MaxInt32
+)
+
+func validateRateLimitClusterHTTP2(h *egv1a1.HTTP2Settings) error {
+	if h == nil {
+		return nil
+	}
+	for _, w := range []struct {
+		name string
+		val  *resource.Quantity
+	}{
+		{"http2.initialStreamWindowSize", h.InitialStreamWindowSize},
+		{"http2.initialConnectionWindowSize", h.InitialConnectionWindowSize},
+	} {
+		if w.val == nil {
+			continue
+		}
+		if v, ok := w.val.AsInt64(); !ok || v < minHTTP2WindowSize || v > maxHTTP2WindowSize {
+			return fmt.Errorf("%s value %s is out of range [%d, %d]", w.name, w.val.String(), minHTTP2WindowSize, maxHTTP2WindowSize)
+		}
+	}
+	if h.MaxConcurrentStreams != nil && (*h.MaxConcurrentStreams < 1 || *h.MaxConcurrentStreams > math.MaxInt32) {
+		return fmt.Errorf("http2.maxConcurrentStreams must be between 1 and %d", math.MaxInt32)
+	}
+	if a := h.OnInvalidMessage; a != nil {
+		switch *a {
+		case egv1a1.InvalidMessageActionTerminateConnection, egv1a1.InvalidMessageActionTerminateStream:
+		default:
+			return fmt.Errorf("http2.onInvalidMessage %q is not supported", *a)
+		}
+	}
+	if ka := h.ConnectionKeepalive; ka != nil {
+		// Envoy requires a keepalive timeout, and every keepalive duration must be at least 1ms.
+		if ka.Timeout == nil {
+			return fmt.Errorf("http2.connectionKeepalive.timeout is required")
+		}
+		for _, f := range []struct {
+			name string
+			val  *gwapiv1.Duration
+		}{
+			{"http2.connectionKeepalive.interval", ka.Interval},
+			{"http2.connectionKeepalive.timeout", ka.Timeout},
+			{"http2.connectionKeepalive.idleInterval", ka.IdleInterval},
+		} {
+			if err := validateOptionalDuration(f.name, f.val, false); err != nil {
+				return err
+			}
+			if f.val != nil && parseDuration(*f.val) < time.Millisecond {
+				return fmt.Errorf("%s: duration must be at least 1ms", f.name)
+			}
+		}
+		if ka.Interval != nil && parseDuration(*ka.Timeout) >= parseDuration(*ka.Interval) {
+			return fmt.Errorf("http2.connectionKeepalive.timeout must be less than interval")
+		}
+		if ka.IntervalJitter != nil && *ka.IntervalJitter > 100 {
+			return fmt.Errorf("http2.connectionKeepalive.intervalJitter must be between 0 and 100")
+		}
+	}
 	return nil
 }
 
@@ -401,6 +480,12 @@ func validateRateLimitClusterCircuitBreaker(cb *egv1a1.CircuitBreaker) error {
 			val  *int64
 		}{"circuitBreaker.perEndpoint.maxConnections", cb.PerEndpoint.MaxConnections})
 	}
+	if rb := cb.RetryBudget; rb != nil {
+		denominator := ptr.Deref(rb.Percent.Denominator, 100)
+		if rb.Percent.Numerator < 0 || denominator < 1 || rb.Percent.Numerator > denominator {
+			return fmt.Errorf("circuitBreaker.retryBudget.percent must satisfy 0 <= numerator <= denominator and denominator >= 1")
+		}
+	}
 
 	for _, f := range fields {
 		if f.val == nil {
@@ -414,89 +499,112 @@ func validateRateLimitClusterCircuitBreaker(cb *egv1a1.CircuitBreaker) error {
 	return nil
 }
 
-func validateRateLimitClusterTimeout(t *egv1a1.Timeout) error {
-	if t == nil {
-		return nil
-	}
-
-	if t.TCP != nil {
-		if err := validateOptionalDuration("timeout.tcp.connectTimeout", t.TCP.ConnectTimeout); err != nil {
-			return err
-		}
-	}
-
-	if t.HTTP != nil {
-		// RequestTimeout and StreamIdleTimeout only ever take effect on a route, and the rate
-		// limit service cluster has none -- ir.Timeout.ClusterOnly() already drops them before
-		// the CDS cluster is built, so there's nothing to validate here. WarnEnvoyGateway warns
-		// about them separately (see warnRateLimitClusterSettings).
-
-		if err := validateOptionalDuration("timeout.http.connectionIdleTimeout", t.HTTP.ConnectionIdleTimeout); err != nil {
-			return err
-		}
-		if err := validateOptionalDuration("timeout.http.maxConnectionDuration", t.HTTP.MaxConnectionDuration); err != nil {
-			return err
-		}
-		if err := validateOptionalDuration("timeout.http.maxStreamDuration", t.HTTP.MaxStreamDuration); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// validateRateLimitClusterHealthCheck rejects malformed health check durations: translation
-// silently drops a duration it can't parse, leaving a nil field that xDS translation dereferences.
-func validateRateLimitClusterHealthCheck(hc *egv1a1.HealthCheck) error {
+func validateRateLimitClusterHealthCheck(hc *egv1a1.RateLimitHealthCheck) error {
 	if hc == nil {
 		return nil
 	}
 
-	if hc.Active != nil {
-		// The rate limit service cluster always uses an mTLS transport socket, which health checks
-		// inherit, but the managed service only serves its HTTP /healthcheck endpoint as plaintext.
-		// An HTTP active check can therefore never succeed, leaving no healthy endpoints, and the
-		// default fail-open behavior would then silently disable global rate limiting.
-		if hc.Active.Type == egv1a1.ActiveHealthCheckerTypeHTTP {
-			return fmt.Errorf("healthCheck.active.type HTTP is not supported for the managed rate limit service, use GRPC or TCP instead")
+	if hc.PanicThreshold != nil && *hc.PanicThreshold > 100 {
+		return fmt.Errorf("healthCheck.panicThreshold must be between 0 and 100")
+	}
+
+	if a := hc.Active; a != nil {
+		switch a.Type {
+		case egv1a1.ActiveHealthCheckerTypeTCP:
+			if a.TCP == nil {
+				return fmt.Errorf("healthCheck.active.tcp is required when type is TCP")
+			}
+			if err := validateHealthCheckPayload("healthCheck.active.tcp.send", a.TCP.Send); err != nil {
+				return err
+			}
+			if err := validateHealthCheckPayload("healthCheck.active.tcp.receive", a.TCP.Receive); err != nil {
+				return err
+			}
+			if a.GRPC != nil {
+				return fmt.Errorf("healthCheck.active.grpc can only be set when type is GRPC")
+			}
+		case egv1a1.ActiveHealthCheckerTypeGRPC:
+			if a.TCP != nil {
+				return fmt.Errorf("healthCheck.active.tcp can only be set when type is TCP")
+			}
+		default:
+			return fmt.Errorf("healthCheck.active.type %q is not supported, use GRPC or TCP", a.Type)
 		}
-		// For the same reason, the check must stay on the serving (TLS gRPC) port: every other port
-		// the managed service exposes is plaintext, and overriding to the serving port is a no-op.
-		if hc.Active.Overrides != nil {
-			return fmt.Errorf("healthCheck.active.overrides is not supported for the managed rate limit service")
+		// Envoy rejects health checks with zero thresholds.
+		if a.UnhealthyThreshold != nil && *a.UnhealthyThreshold == 0 {
+			return fmt.Errorf("healthCheck.active.unhealthyThreshold must be at least 1")
 		}
-		if err := validateOptionalDuration("healthCheck.active.timeout", hc.Active.Timeout); err != nil {
+		if a.HealthyThreshold != nil && *a.HealthyThreshold == 0 {
+			return fmt.Errorf("healthCheck.active.healthyThreshold must be at least 1")
+		}
+		if err := validateOptionalDuration("healthCheck.active.timeout", a.Timeout, false); err != nil {
 			return err
 		}
-		if err := validateOptionalDuration("healthCheck.active.interval", hc.Active.Interval); err != nil {
+		if err := validateOptionalDuration("healthCheck.active.interval", a.Interval, false); err != nil {
 			return err
 		}
-		if err := validateOptionalDuration("healthCheck.active.initialJitter", hc.Active.InitialJitter); err != nil {
+		if err := validateOptionalDuration("healthCheck.active.initialJitter", a.InitialJitter, true); err != nil {
 			return err
 		}
 	}
 
-	if hc.Passive != nil {
-		if err := validateOptionalDuration("healthCheck.passive.interval", hc.Passive.Interval); err != nil {
+	if p := hc.Passive; p != nil {
+		if err := validateOptionalDuration("healthCheck.passive.interval", p.Interval, false); err != nil {
 			return err
 		}
-		if err := validateOptionalDuration("healthCheck.passive.baseEjectionTime", hc.Passive.BaseEjectionTime); err != nil {
+		if err := validateOptionalDuration("healthCheck.passive.baseEjectionTime", p.BaseEjectionTime, false); err != nil {
 			return err
+		}
+		if p.MaxEjectionPercent != nil && (*p.MaxEjectionPercent < 0 || *p.MaxEjectionPercent > 100) {
+			return fmt.Errorf("healthCheck.passive.maxEjectionPercent must be between 0 and 100")
+		}
+		if p.FailurePercentageThreshold != nil && *p.FailurePercentageThreshold > 100 {
+			return fmt.Errorf("healthCheck.passive.failurePercentageThreshold must be between 0 and 100")
 		}
 	}
 
 	return nil
 }
 
-// validateOptionalDuration parses d, when set, the same way IR translation does
-// (time.ParseDuration), so a malformed value is rejected at config-load time instead of at
-// first use.
-func validateOptionalDuration(field string, d *gwapiv1.Duration) error {
+func validateHealthCheckPayload(field string, p *egv1a1.ActiveHealthCheckPayload) error {
+	if p == nil {
+		return nil
+	}
+	switch p.Type {
+	case egv1a1.ActiveHealthCheckPayloadTypeText:
+		if p.Text == nil || p.Binary != nil {
+			return fmt.Errorf("%s.text must be set, and only text, when type is Text", field)
+		}
+	case egv1a1.ActiveHealthCheckPayloadTypeBinary:
+		if p.Binary == nil || p.Text != nil {
+			return fmt.Errorf("%s.binary must be set, and only binary, when type is Binary", field)
+		}
+	default:
+		return fmt.Errorf("%s.type %q is not supported, use Text or Binary", field, p.Type)
+	}
+	return nil
+}
+
+// parseDuration parses a duration already checked by validateOptionalDuration.
+func parseDuration(d gwapiv1.Duration) time.Duration {
+	duration, _ := time.ParseDuration(string(d))
+	return duration
+}
+
+// validateOptionalDuration validates parsing and field-specific xDS duration bounds.
+func validateOptionalDuration(field string, d *gwapiv1.Duration, allowZero bool) error {
 	if d == nil {
 		return nil
 	}
-	if _, err := time.ParseDuration(string(*d)); err != nil {
+	duration, err := time.ParseDuration(string(*d))
+	if err != nil {
 		return fmt.Errorf("%s: invalid duration %q: %w", field, string(*d), err)
+	}
+	if duration < 0 || (!allowZero && duration == 0) {
+		if allowZero {
+			return fmt.Errorf("%s: duration must be nonnegative", field)
+		}
+		return fmt.Errorf("%s: duration must be positive", field)
 	}
 	return nil
 }

@@ -1517,38 +1517,15 @@ func TestWarnEnvoyGateway(t *testing.T) {
 					Gateway:  egv1a1.DefaultGateway(),
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
-						ServiceSettings: &egv1a1.RateLimitClusterSettings{ClusterSettings: egv1a1.ClusterSettings{
+						ServiceSettings: &egv1a1.RateLimitClusterSettings{
 							CircuitBreaker: &egv1a1.CircuitBreaker{
 								MaxRequestsPerConnection: new(int64(10)),
 							},
-						}},
+						},
 					},
 				},
 			},
 			expected: nil,
-		},
-		{
-			name: "rateLimit serviceSettings requestTimeout and streamIdleTimeout have no effect",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					RateLimit: &egv1a1.RateLimit{
-						ServiceSettings: &egv1a1.RateLimitClusterSettings{ClusterSettings: egv1a1.ClusterSettings{
-							Timeout: &egv1a1.Timeout{
-								HTTP: &egv1a1.HTTPTimeout{
-									RequestTimeout:    new(gwapiv1.Duration("30s")),
-									StreamIdleTimeout: new(gwapiv1.Duration("30s")),
-								},
-							},
-						}},
-					},
-				},
-			},
-			expected: []string{
-				"rateLimit.serviceSettings.timeout.http.requestTimeout has no effect: the rate limit service cluster has no associated route",
-				"rateLimit.serviceSettings.timeout.http.streamIdleTimeout has no effect: the rate limit service cluster has no associated route",
-			},
 		},
 	}
 
@@ -1719,21 +1696,18 @@ func TestValidateEnvoyGatewayRateLimitURLRef(t *testing.T) {
 }
 
 func TestValidateRateLimitClusterSettings(t *testing.T) {
-	validRedis := func(cs *egv1a1.ClusterSettings) *egv1a1.RateLimit {
-		rl := &egv1a1.RateLimit{
+	validRedis := func(cs *egv1a1.RateLimitClusterSettings) *egv1a1.RateLimit {
+		return &egv1a1.RateLimit{
 			Backend: egv1a1.RateLimitDatabaseBackend{
 				Type:  egv1a1.RedisBackendType,
 				Redis: &egv1a1.RateLimitRedisSettings{URL: new("redis.redis.svc:6379")},
 			},
+			ServiceSettings: cs,
 		}
-		if cs != nil {
-			rl.ServiceSettings = &egv1a1.RateLimitClusterSettings{ClusterSettings: *cs}
-		}
-		return rl
 	}
 	cases := []struct {
 		name      string
-		cs        *egv1a1.ClusterSettings
+		cs        *egv1a1.RateLimitClusterSettings
 		expectErr string
 	}{
 		{
@@ -1742,12 +1716,12 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "valid circuit breaker and timeout",
-			cs: &egv1a1.ClusterSettings{
+			cs: &egv1a1.RateLimitClusterSettings{
 				CircuitBreaker: &egv1a1.CircuitBreaker{
 					MaxRequestsPerConnection: new(int64(10)),
 				},
-				Timeout: &egv1a1.Timeout{
-					HTTP: &egv1a1.HTTPTimeout{
+				Timeout: &egv1a1.RateLimitTimeout{
+					HTTP: &egv1a1.RateLimitHTTPTimeout{
 						MaxConnectionDuration: new(gwapiv1.Duration("30s")),
 					},
 				},
@@ -1755,7 +1729,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "negative circuit breaker value",
-			cs: &egv1a1.ClusterSettings{
+			cs: &egv1a1.RateLimitClusterSettings{
 				CircuitBreaker: &egv1a1.CircuitBreaker{
 					MaxRequestsPerConnection: new(int64(-1)),
 				},
@@ -1764,7 +1738,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "circuit breaker value too large",
-			cs: &egv1a1.ClusterSettings{
+			cs: &egv1a1.RateLimitClusterSettings{
 				CircuitBreaker: &egv1a1.CircuitBreaker{
 					MaxConnections: new(int64(math.MaxUint32 + 1)),
 				},
@@ -1773,7 +1747,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "negative per-endpoint circuit breaker value",
-			cs: &egv1a1.ClusterSettings{
+			cs: &egv1a1.RateLimitClusterSettings{
 				CircuitBreaker: &egv1a1.CircuitBreaker{
 					PerEndpoint: &egv1a1.PerEndpointCircuitBreakers{
 						MaxConnections: new(int64(-1)),
@@ -1784,9 +1758,9 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "malformed timeout duration",
-			cs: &egv1a1.ClusterSettings{
-				Timeout: &egv1a1.Timeout{
-					HTTP: &egv1a1.HTTPTimeout{
+			cs: &egv1a1.RateLimitClusterSettings{
+				Timeout: &egv1a1.RateLimitTimeout{
+					HTTP: &egv1a1.RateLimitHTTPTimeout{
 						MaxConnectionDuration: new(gwapiv1.Duration("not-a-duration")),
 					},
 				},
@@ -1795,8 +1769,8 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "malformed tcp connect timeout",
-			cs: &egv1a1.ClusterSettings{
-				Timeout: &egv1a1.Timeout{
+			cs: &egv1a1.RateLimitClusterSettings{
+				Timeout: &egv1a1.RateLimitTimeout{
 					TCP: &egv1a1.TCPTimeout{
 						ConnectTimeout: new(gwapiv1.Duration("not-a-duration")),
 					},
@@ -1805,28 +1779,8 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			expectErr: "timeout.tcp.connectTimeout: invalid duration",
 		},
 		{
-			name: "requestTimeout is ignored, not rejected",
-			cs: &egv1a1.ClusterSettings{
-				Timeout: &egv1a1.Timeout{
-					HTTP: &egv1a1.HTTPTimeout{
-						RequestTimeout: new(gwapiv1.Duration("30s")),
-					},
-				},
-			},
-		},
-		{
-			name: "streamIdleTimeout is ignored, not rejected",
-			cs: &egv1a1.ClusterSettings{
-				Timeout: &egv1a1.Timeout{
-					HTTP: &egv1a1.HTTPTimeout{
-						StreamIdleTimeout: new(gwapiv1.Duration("30s")),
-					},
-				},
-			},
-		},
-		{
 			name: "malformed tcp keepalive duration",
-			cs: &egv1a1.ClusterSettings{
+			cs: &egv1a1.RateLimitClusterSettings{
 				TCPKeepalive: &egv1a1.TCPKeepalive{
 					IdleTime: new(gwapiv1.Duration("not-a-duration")),
 				},
@@ -1835,7 +1789,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "malformed dns refresh rate",
-			cs: &egv1a1.ClusterSettings{
+			cs: &egv1a1.RateLimitClusterSettings{
 				DNS: &egv1a1.DNS{
 					DNSRefreshRate: new(gwapiv1.Duration("not-a-duration")),
 				},
@@ -1844,8 +1798,8 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "malformed passive health check interval",
-			cs: &egv1a1.ClusterSettings{
-				HealthCheck: &egv1a1.HealthCheck{
+			cs: &egv1a1.RateLimitClusterSettings{
+				HealthCheck: &egv1a1.RateLimitHealthCheck{
 					Passive: &egv1a1.PassiveHealthCheck{
 						Interval: new(gwapiv1.Duration("not-a-duration")),
 					},
@@ -1855,10 +1809,11 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "malformed active health check timeout",
-			cs: &egv1a1.ClusterSettings{
-				HealthCheck: &egv1a1.HealthCheck{
-					Active: &egv1a1.ActiveHealthCheck{
+			cs: &egv1a1.RateLimitClusterSettings{
+				HealthCheck: &egv1a1.RateLimitHealthCheck{
+					Active: &egv1a1.RateLimitActiveHealthCheck{
 						Type:    egv1a1.ActiveHealthCheckerTypeTCP,
+						TCP:     &egv1a1.TCPActiveHealthChecker{},
 						Timeout: new(gwapiv1.Duration("not-a-duration")),
 					},
 				},
@@ -1867,62 +1822,152 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		},
 		{
 			name: "HTTP active health check is rejected",
-			cs: &egv1a1.ClusterSettings{
-				HealthCheck: &egv1a1.HealthCheck{
-					Active: &egv1a1.ActiveHealthCheck{
+			cs: &egv1a1.RateLimitClusterSettings{
+				HealthCheck: &egv1a1.RateLimitHealthCheck{
+					Active: &egv1a1.RateLimitActiveHealthCheck{
 						Type: egv1a1.ActiveHealthCheckerTypeHTTP,
-						HTTP: &egv1a1.HTTPActiveHealthChecker{
-							Path: "/healthcheck",
-						},
 					},
 				},
 			},
-			expectErr: "healthCheck.active.type HTTP is not supported for the managed rate limit service",
-		},
-		{
-			name: "active health check port override is rejected",
-			cs: &egv1a1.ClusterSettings{
-				HealthCheck: &egv1a1.HealthCheck{
-					Active: &egv1a1.ActiveHealthCheck{
-						Type:      egv1a1.ActiveHealthCheckerTypeGRPC,
-						Overrides: &egv1a1.HealthCheckOverrides{Port: 8080},
-					},
-				},
-			},
-			expectErr: "healthCheck.active.overrides is not supported for the managed rate limit service",
+			expectErr: `healthCheck.active.type "HTTP" is not supported`,
 		},
 		{
 			name: "GRPC active health check is accepted",
-			cs: &egv1a1.ClusterSettings{
-				HealthCheck: &egv1a1.HealthCheck{
-					Active: &egv1a1.ActiveHealthCheck{
+			cs: &egv1a1.RateLimitClusterSettings{
+				HealthCheck: &egv1a1.RateLimitHealthCheck{
+					Active: &egv1a1.RateLimitActiveHealthCheck{
 						Type: egv1a1.ActiveHealthCheckerTypeGRPC,
 					},
 				},
 			},
 		},
 		{
-			name: "proxy protocol is rejected",
-			cs: &egv1a1.ClusterSettings{
-				ProxyProtocol: &egv1a1.ProxyProtocol{
-					Version: egv1a1.ProxyProtocolVersionV2,
+			name: "panic threshold above 100",
+			cs: &egv1a1.RateLimitClusterSettings{
+				HealthCheck: &egv1a1.RateLimitHealthCheck{
+					PanicThreshold: new(uint32(101)),
 				},
 			},
-			expectErr: "proxyProtocol is not supported for the managed rate limit service",
+			expectErr: "healthCheck.panicThreshold must be between 0 and 100",
 		},
 		{
-			name: "http3 is rejected",
-			cs: &egv1a1.ClusterSettings{
-				HTTP3: &egv1a1.BackendHTTP3Settings{},
-			},
-			expectErr: "http3 is not supported for the managed rate limit service",
+			name:      "passive maxEjectionPercent negative",
+			cs:        &egv1a1.RateLimitClusterSettings{HealthCheck: &egv1a1.RateLimitHealthCheck{Passive: &egv1a1.PassiveHealthCheck{MaxEjectionPercent: new(int32(-1))}}},
+			expectErr: `healthCheck.passive.maxEjectionPercent must be between 0 and 100`,
 		},
 		{
-			name: "http1 is rejected",
-			cs: &egv1a1.ClusterSettings{
-				HTTP1: &egv1a1.BackendHTTP1Settings{},
+			name:      "passive maxEjectionPercent above 100",
+			cs:        &egv1a1.RateLimitClusterSettings{HealthCheck: &egv1a1.RateLimitHealthCheck{Passive: &egv1a1.PassiveHealthCheck{MaxEjectionPercent: new(int32(101))}}},
+			expectErr: `healthCheck.passive.maxEjectionPercent must be between 0 and 100`,
+		},
+		{
+			name:      "passive failurePercentageThreshold above 100",
+			cs:        &egv1a1.RateLimitClusterSettings{HealthCheck: &egv1a1.RateLimitHealthCheck{Passive: &egv1a1.PassiveHealthCheck{FailurePercentageThreshold: new(uint32(101))}}},
+			expectErr: `healthCheck.passive.failurePercentageThreshold must be between 0 and 100`,
+		},
+		{
+			name:      "tcp health check payload type mismatch",
+			cs:        &egv1a1.RateLimitClusterSettings{HealthCheck: &egv1a1.RateLimitHealthCheck{Active: &egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP, TCP: &egv1a1.TCPActiveHealthChecker{Send: &egv1a1.ActiveHealthCheckPayload{Type: egv1a1.ActiveHealthCheckPayloadTypeText, Binary: []byte("x")}}}}},
+			expectErr: `healthCheck.active.tcp.send.text must be set`,
+		},
+		{
+			name:      "http2 stream window too small",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{InitialStreamWindowSize: new(resource.MustParse("1Ki"))}},
+			expectErr: `http2.initialStreamWindowSize value 1Ki is out of range`,
+		},
+		{
+			name:      "http2 connection window too large",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{InitialConnectionWindowSize: new(resource.MustParse("4Gi"))}},
+			expectErr: `http2.initialConnectionWindowSize value 4Gi is out of range`,
+		},
+		{
+			name:      "http2 zero max concurrent streams",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{MaxConcurrentStreams: new(uint32(0))}},
+			expectErr: `http2.maxConcurrentStreams must be between 1`,
+		},
+		{
+			name:      "http2 unknown onInvalidMessage",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{OnInvalidMessage: new(egv1a1.InvalidMessageAction("Ignore"))}},
+			expectErr: `http2.onInvalidMessage "Ignore" is not supported`,
+		},
+		{
+			name:      "http2 keepalive without timeout",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{ConnectionKeepalive: &egv1a1.HTTP2KeepaliveSettings{Interval: new(gwapiv1.Duration("10s"))}}},
+			expectErr: `http2.connectionKeepalive.timeout is required`,
+		},
+		{
+			name:      "http2 keepalive negative interval",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{ConnectionKeepalive: &egv1a1.HTTP2KeepaliveSettings{Interval: new(gwapiv1.Duration("-1s")), Timeout: new(gwapiv1.Duration("1s"))}}},
+			expectErr: `http2.connectionKeepalive.interval: duration must be positive`,
+		},
+		{
+			name:      "http2 keepalive sub-millisecond idle interval",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{ConnectionKeepalive: &egv1a1.HTTP2KeepaliveSettings{Timeout: new(gwapiv1.Duration("1s")), IdleInterval: new(gwapiv1.Duration("100us"))}}},
+			expectErr: `http2.connectionKeepalive.idleInterval: duration must be at least 1ms`,
+		},
+		{
+			name:      "http2 keepalive timeout not less than interval",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{ConnectionKeepalive: &egv1a1.HTTP2KeepaliveSettings{Interval: new(gwapiv1.Duration("1s")), Timeout: new(gwapiv1.Duration("1s"))}}},
+			expectErr: `http2.connectionKeepalive.timeout must be less than interval`,
+		},
+		{
+			name:      "http2 keepalive jitter above 100",
+			cs:        &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{ConnectionKeepalive: &egv1a1.HTTP2KeepaliveSettings{Timeout: new(gwapiv1.Duration("1s")), IntervalJitter: new(uint32(101))}}},
+			expectErr: `http2.connectionKeepalive.intervalJitter must be between 0 and 100`,
+		},
+		{
+			name: "valid http2 settings",
+			cs:   &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{InitialStreamWindowSize: new(resource.MustParse("64Ki")), MaxConcurrentStreams: new(uint32(100)), ConnectionKeepalive: &egv1a1.HTTP2KeepaliveSettings{Interval: new(gwapiv1.Duration("10s")), Timeout: new(gwapiv1.Duration("1s")), IntervalJitter: new(uint32(15))}}},
+		},
+		{
+			name:      "connection buffer limit too large",
+			cs:        &egv1a1.RateLimitClusterSettings{Connection: &egv1a1.BackendConnection{BufferLimit: new(resource.MustParse("8Gi"))}},
+			expectErr: `connection.bufferLimit value 8Gi is out of range`,
+		},
+		{
+			name:      "preconnect per-endpoint percent too large",
+			cs:        &egv1a1.RateLimitClusterSettings{Connection: &egv1a1.BackendConnection{Preconnect: &egv1a1.PreconnectPolicy{PerEndpointPercent: new(uint32(301))}}},
+			expectErr: `connection.preconnect.perEndpointPercent must be between 100 and 300`,
+		},
+		{
+			name:      "preconnect predictive percent too small",
+			cs:        &egv1a1.RateLimitClusterSettings{Connection: &egv1a1.BackendConnection{Preconnect: &egv1a1.PreconnectPolicy{PredictivePercent: new(uint32(99))}}},
+			expectErr: `connection.preconnect.predictivePercent must be at least 100`,
+		},
+		{
+			name:      "unknown dns lookup family",
+			cs:        &egv1a1.RateLimitClusterSettings{DNS: &egv1a1.DNS{LookupFamily: new(egv1a1.DNSLookupFamily("IPv5"))}},
+			expectErr: `dns.lookupFamily "IPv5" is not supported`,
+		},
+		{
+			name:      "retry budget zero denominator",
+			cs:        &egv1a1.RateLimitClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{RetryBudget: &egv1a1.RetryBudget{Percent: gwapiv1.Fraction{Numerator: 0, Denominator: new(int32(0))}}}},
+			expectErr: `circuitBreaker.retryBudget.percent`,
+		},
+		{
+			name:      "retry budget numerator above denominator",
+			cs:        &egv1a1.RateLimitClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{RetryBudget: &egv1a1.RetryBudget{Percent: gwapiv1.Fraction{Numerator: 150}}}},
+			expectErr: `circuitBreaker.retryBudget.percent`,
+		},
+		{
+			name: "slow start without window",
+			cs: &egv1a1.RateLimitClusterSettings{
+				LoadBalancer: &egv1a1.RateLimitLoadBalancer{
+					Type:      egv1a1.RoundRobinLoadBalancerType,
+					SlowStart: &egv1a1.SlowStart{},
+				},
 			},
-			expectErr: "http1 is not supported for the managed rate limit service",
+			expectErr: "loadBalancer.slowStart.window is required",
+		},
+		{
+			name: "slow start with malformed window",
+			cs: &egv1a1.RateLimitClusterSettings{
+				LoadBalancer: &egv1a1.RateLimitLoadBalancer{
+					Type:      egv1a1.LeastRequestLoadBalancerType,
+					SlowStart: &egv1a1.SlowStart{Window: new(gwapiv1.Duration("not-a-duration"))},
+				},
+			},
+			expectErr: "loadBalancer.slowStart.window: invalid duration",
 		},
 	}
 	for _, tc := range cases {
@@ -1942,4 +1987,94 @@ func TestValidateRedisURL(t *testing.T) {
 	require.NoError(t, ValidateRedisURL("a.redis.svc:6379,b.redis.svc:6379"))
 	require.ErrorContains(t, ValidateRedisURL(""), "ratelimit redis url is empty")
 	require.ErrorContains(t, ValidateRedisURL(":foo"), "unknown ratelimit redis url format")
+}
+
+func TestRateLimitActiveHealthCheckUnion(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		active  egv1a1.RateLimitActiveHealthCheck
+		wantErr bool
+	}{
+		{name: "empty type", wantErr: true},
+		{name: "unknown type", active: egv1a1.RateLimitActiveHealthCheck{Type: "unknown"}, wantErr: true},
+		{name: "HTTP type", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeHTTP}, wantErr: true},
+		{name: "missing TCP payload", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP}, wantErr: true},
+		{name: "TCP", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP, TCP: &egv1a1.TCPActiveHealthChecker{}}},
+		{name: "GRPC without payload", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeGRPC}},
+		{name: "GRPC with payload", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeGRPC, GRPC: &egv1a1.GRPCActiveHealthChecker{}}},
+		{name: "mismatched TCP payload", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeGRPC, TCP: &egv1a1.TCPActiveHealthChecker{}}, wantErr: true},
+		{name: "mismatched GRPC payload", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP, TCP: &egv1a1.TCPActiveHealthChecker{}, GRPC: &egv1a1.GRPCActiveHealthChecker{}}, wantErr: true},
+		{name: "zero unhealthy threshold", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeGRPC, UnhealthyThreshold: new(uint32(0))}, wantErr: true},
+		{name: "zero healthy threshold", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeTCP, TCP: &egv1a1.TCPActiveHealthChecker{}, HealthyThreshold: new(uint32(0))}, wantErr: true},
+		{name: "positive thresholds", active: egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeGRPC, UnhealthyThreshold: new(uint32(1)), HealthyThreshold: new(uint32(1))}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateRateLimitClusterHealthCheck(&egv1a1.RateLimitHealthCheck{Active: &tc.active})
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestRateLimitDurationBounds(t *testing.T) {
+	for _, value := range []gwapiv1.Duration{"-1s", "0s", "1s"} {
+		t.Run(string(value), func(t *testing.T) {
+			active := &egv1a1.RateLimitActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeGRPC}
+			passive := &egv1a1.PassiveHealthCheck{}
+			timeout := &egv1a1.RateLimitTimeout{TCP: &egv1a1.TCPTimeout{}, HTTP: &egv1a1.RateLimitHTTPTimeout{}}
+			validateTimeout := func() error {
+				return validateRateLimitClusterSettings(&egv1a1.RateLimitClusterSettings{Timeout: timeout})
+			}
+			validateActive := func() error {
+				return validateRateLimitClusterHealthCheck(&egv1a1.RateLimitHealthCheck{Active: active})
+			}
+			validatePassive := func() error {
+				return validateRateLimitClusterHealthCheck(&egv1a1.RateLimitHealthCheck{Passive: passive})
+			}
+			for _, tc := range []struct {
+				name      string
+				field     **gwapiv1.Duration
+				allowZero bool
+				validate  func() error
+			}{
+				{"connect timeout", &timeout.TCP.ConnectTimeout, false, validateTimeout},
+				{"idle timeout", &timeout.HTTP.ConnectionIdleTimeout, true, validateTimeout},
+				{"connection duration", &timeout.HTTP.MaxConnectionDuration, true, validateTimeout},
+				{"stream duration", &timeout.HTTP.MaxStreamDuration, true, validateTimeout},
+				{"active timeout", &active.Timeout, false, validateActive},
+				{"active interval", &active.Interval, false, validateActive},
+				{"initial jitter", &active.InitialJitter, true, validateActive},
+				{"passive interval", &passive.Interval, false, validatePassive},
+				{"base ejection time", &passive.BaseEjectionTime, false, validatePassive},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					*tc.field = &value
+					err := tc.validate()
+					if value == "-1s" || (value == "0s" && !tc.allowZero) {
+						require.Error(t, err)
+					} else {
+						require.NoError(t, err)
+					}
+					*tc.field = nil
+				})
+			}
+		})
+	}
+}
+
+func TestRateLimitLoadBalancerType(t *testing.T) {
+	for _, typ := range []egv1a1.LoadBalancerType{"", "unknown", egv1a1.RoundRobinLoadBalancerType, egv1a1.LeastRequestLoadBalancerType, egv1a1.RandomLoadBalancerType, egv1a1.ConsistentHashLoadBalancerType, egv1a1.BackendUtilizationLoadBalancerType, egv1a1.DynamicModuleLoadBalancerType} {
+		t.Run(string(typ), func(t *testing.T) {
+			err := validateRateLimitClusterSettings(&egv1a1.RateLimitClusterSettings{LoadBalancer: &egv1a1.RateLimitLoadBalancer{Type: typ}})
+			switch typ {
+			case egv1a1.RoundRobinLoadBalancerType, egv1a1.LeastRequestLoadBalancerType, egv1a1.RandomLoadBalancerType:
+				require.NoError(t, err)
+			default:
+				require.ErrorContains(t, err, "loadBalancer.type")
+			}
+		})
+	}
 }

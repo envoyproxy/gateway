@@ -183,6 +183,7 @@ ActiveHealthCheckerType is the type of health checker.
 
 _Appears in:_
 - [ActiveHealthCheck](#activehealthcheck)
+- [RateLimitActiveHealthCheck](#ratelimitactivehealthcheck)
 
 | Value | Description |
 | ----- | ----------- |
@@ -427,7 +428,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -460,7 +460,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1227,7 +1226,6 @@ ClusterSettings contains CDS-only fields that configure the upstream Envoy Clust
 _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -2923,6 +2921,7 @@ GRPCActiveHealthChecker defines the settings of the GRPC health check.
 
 _Appears in:_
 - [ActiveHealthCheck](#activehealthcheck)
+- [RateLimitActiveHealthCheck](#ratelimitactivehealthcheck)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -3763,7 +3762,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -4457,7 +4455,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -4477,6 +4474,7 @@ LoadBalancerType specifies the types of LoadBalancer.
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
+- [RateLimitLoadBalancer](#ratelimitloadbalancer)
 
 | Value | Description |
 | ----- | ----------- |
@@ -5070,6 +5068,7 @@ see https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/out
 
 _Appears in:_
 - [HealthCheck](#healthcheck)
+- [RateLimitHealthCheck](#ratelimithealthcheck)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5600,7 +5599,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5747,34 +5745,52 @@ _Appears in:_
 | `serviceSettings` | _[RateLimitClusterSettings](#ratelimitclustersettings)_ |  false  |  | ServiceSettings holds configuration for managing the connection to the rate limit<br />service, such as circuit breakers, timeouts, health checks, and load balancing. |
 
 
+#### RateLimitActiveHealthCheck
+
+
+
+RateLimitActiveHealthCheck defines the active health check configuration for the rate
+limit service. HTTP health checks are not supported, since the managed rate limit service
+only serves its HTTP health endpoint as plaintext while the cluster always uses mTLS.
+
+_Appears in:_
+- [RateLimitHealthCheck](#ratelimithealthcheck)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 1s | Timeout defines the time to wait for a health check response. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 3s | Interval defines the time between active health checks. |
+| `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
+| `unhealthyThreshold` | _integer_ |  false  | 3 | UnhealthyThreshold defines the number of unhealthy health checks required before a<br />rate limit service endpoint is marked unhealthy. |
+| `healthyThreshold` | _integer_ |  false  | 1 | HealthyThreshold defines the number of healthy health checks required before a<br />rate limit service endpoint is marked healthy. |
+| `disableConnectionReuse` | _boolean_ |  false  |  | DisableConnectionReuse determines whether the active health check connection is closed<br />after each health check probe. |
+| `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  |  | Type defines the type of health checker. |
+| `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  |  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
+| `grpc` | _[GRPCActiveHealthChecker](#grpcactivehealthchecker)_ |  false  |  | GRPC defines the configuration of the GRPC health checker.<br />It's optional, and can only be used if the specified type is GRPC. |
+
+
 #### RateLimitClusterSettings
 
 
 
 RateLimitClusterSettings defines configuration for how Envoy connects to the rate limit service.
-ProxyProtocol is not supported, since the managed rate limit service doesn't accept it.
-HTTP3 is not supported, since the upstream rate limit service doesn't support HTTP/3.
-HTTP1 is not supported, since the rate limit service is a gRPC service that always uses HTTP/2.
-HTTP active health checks are not supported, since the managed rate limit service only
-serves its HTTP health endpoint as plaintext; use GRPC or TCP instead. For the same reason,
-active health check overrides are not supported.
+
+It deliberately exposes only the subset of ClusterSettings that applies to the managed rate
+limit service: a gRPC (HTTP/2) service reached over mTLS, with no associated route.
 
 _Appears in:_
 - [RateLimit](#ratelimit)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  |  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints. Defaults to `LeastRequest`. |
-| `proxyProtocol` | _[ProxyProtocol](#proxyprotocol)_ |  false  |  | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
+| `loadBalancer` | _[RateLimitLoadBalancer](#ratelimitloadbalancer)_ |  false  |  | LoadBalancer policy to apply when routing traffic to the rate limit service endpoints.<br />Defaults to `LeastRequest`. |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  |  | TcpKeepalive settings associated with the upstream client connection.<br />Disabled by default. |
-| `healthCheck` | _[HealthCheck](#healthcheck)_ |  false  |  | HealthCheck allows gateway to perform active health checking on backends. |
-| `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  |  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds |
-| `timeout` | _[Timeout](#timeout)_ |  false  |  | Timeout settings for the backend connections. |
+| `healthCheck` | _[RateLimitHealthCheck](#ratelimithealthcheck)_ |  false  |  | HealthCheck allows gateway to perform health checking on the rate limit service endpoints. |
+| `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  |  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds. |
+| `timeout` | _[RateLimitTimeout](#ratelimittimeout)_ |  false  |  | Timeout settings for the rate limit service connections. |
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
-| `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
-| `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
-| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic.<br />Behavior when targeting route kinds that do not use HTTP/1:<br />  - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds<br />    directly adds a Warning condition on the policy; the field is ignored.<br />  - Gateway / ListenerSet / sectionName targets: this field is silently<br />    ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations<br />    beneath that target; no warning is emitted.<br />  - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry<br />    access log/metrics, tracing providers): rejected at admission on their<br />    own BackendSettings via separate validation rules. |
+| `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for the rate limit service connections. |
 
 
 #### RateLimitCost
@@ -5868,6 +5884,54 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Redis` | RedisBackendType uses a redis database for the rate limit service.<br /> | 
+
+
+#### RateLimitHTTPTimeout
+
+
+
+RateLimitHTTPTimeout defines the connection-level HTTP timeouts for the rate limit service.
+Request-level timeouts are configured with RateLimit.Timeout.
+
+_Appears in:_
+- [RateLimitTimeout](#ratelimittimeout)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
+| `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+| `maxStreamDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time<br />from when the request is sent until the response stream is fully consumed.<br />Default: unlimited. |
+
+
+#### RateLimitHealthCheck
+
+
+
+RateLimitHealthCheck defines the health check configuration for the rate limit service.
+
+_Appears in:_
+- [RateLimitClusterSettings](#ratelimitclustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `active` | _[RateLimitActiveHealthCheck](#ratelimitactivehealthcheck)_ |  false  |  | Active health check configuration |
+| `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  |  | Passive passive check configuration |
+| `panicThreshold` | _integer_ |  false  |  | When number of unhealthy endpoints for a backend reaches this threshold<br />Envoy will disregard health status and balance across all endpoints.<br />It's designed to prevent a situation in which host failures cascade throughout the cluster<br />as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`. |
+
+
+#### RateLimitLoadBalancer
+
+
+
+RateLimitLoadBalancer defines the load balancer policy for the rate limit service.
+
+_Appears in:_
+- [RateLimitClusterSettings](#ratelimitclustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"LeastRequest",<br />"Random", and<br />"RoundRobin". |
+| `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Supported only for RoundRobin and LeastRequest load balancers. |
 
 
 #### RateLimitMetrics
@@ -5985,6 +6049,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `metrics` | _[RateLimitMetrics](#ratelimitmetrics)_ |  true  |  | Metrics defines metrics configuration for RateLimit. |
 | `tracing` | _[RateLimitTracing](#ratelimittracing)_ |  true  |  | Tracing defines traces configuration for RateLimit. |
+
+
+#### RateLimitTimeout
+
+
+
+RateLimitTimeout defines timeout settings for the rate limit service connections.
+
+_Appears in:_
+- [RateLimitClusterSettings](#ratelimitclustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `tcp` | _[TCPTimeout](#tcptimeout)_ |  false  |  | Timeout settings for TCP. |
+| `http` | _[RateLimitHTTPTimeout](#ratelimithttptimeout)_ |  false  |  | Timeout settings for HTTP. |
 
 
 #### RateLimitTracing
@@ -6694,6 +6773,7 @@ SlowStart defines the configuration related to the slow start load balancer poli
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
+- [RateLimitLoadBalancer](#ratelimitloadbalancer)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -6896,6 +6976,7 @@ TCPActiveHealthChecker defines the settings of tcp health check.
 
 _Appears in:_
 - [ActiveHealthCheck](#activehealthcheck)
+- [RateLimitActiveHealthCheck](#ratelimitactivehealthcheck)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -6946,6 +7027,7 @@ _Appears in:_
 
 
 _Appears in:_
+- [RateLimitTimeout](#ratelimittimeout)
 - [Timeout](#timeout)
 
 | Field | Type | Required | Default | Description |
@@ -7074,7 +7156,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
