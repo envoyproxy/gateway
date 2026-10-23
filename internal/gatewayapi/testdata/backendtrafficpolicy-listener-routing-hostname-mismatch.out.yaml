@@ -237,7 +237,7 @@ xdsIR:
               name: backend
               namespace: default
               sectionName: "8080"
-            name: httproute/default/route-1/rule/0/backend/0/listener/default/gateway-1/listener-1
+            name: httproute/default/route-1/rule/0/listener/default/gateway-1/listener-1/backend/0
             protocol: HTTP
             weight: 1
         hostname: svc.example.com
