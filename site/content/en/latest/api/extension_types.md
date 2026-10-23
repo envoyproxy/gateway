@@ -388,7 +388,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1576,7 +1575,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -4474,7 +4472,6 @@ LoadBalancerType specifies the types of LoadBalancer.
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
-- [RateLimitLoadBalancer](#ratelimitloadbalancer)
 
 | Value | Description |
 | ----- | ----------- |
@@ -5783,13 +5780,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `loadBalancer` | _[RateLimitLoadBalancer](#ratelimitloadbalancer)_ |  false  |  | LoadBalancer policy to apply when routing traffic to the rate limit service endpoints.<br />Defaults to `LeastRequest`. |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  |  | TcpKeepalive settings associated with the upstream client connection.<br />Disabled by default. |
 | `healthCheck` | _[RateLimitHealthCheck](#ratelimithealthcheck)_ |  false  |  | HealthCheck allows gateway to perform health checking on the rate limit service endpoints. |
 | `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  |  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds. |
 | `timeout` | _[RateLimitTimeout](#ratelimittimeout)_ |  false  |  | Timeout settings for the rate limit service connections. |
-| `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
-| `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for the rate limit service connections. |
 
 
@@ -5917,21 +5911,6 @@ _Appears in:_
 | `active` | _[RateLimitActiveHealthCheck](#ratelimitactivehealthcheck)_ |  false  |  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  |  | Passive passive check configuration |
 | `panicThreshold` | _integer_ |  false  |  | When number of unhealthy endpoints for a backend reaches this threshold<br />Envoy will disregard health status and balance across all endpoints.<br />It's designed to prevent a situation in which host failures cascade throughout the cluster<br />as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`. |
-
-
-#### RateLimitLoadBalancer
-
-
-
-RateLimitLoadBalancer defines the load balancer policy for the rate limit service.
-
-_Appears in:_
-- [RateLimitClusterSettings](#ratelimitclustersettings)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"LeastRequest",<br />"Random", and<br />"RoundRobin". |
-| `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Supported only for RoundRobin and LeastRequest load balancers. |
 
 
 #### RateLimitMetrics
@@ -6773,7 +6752,6 @@ SlowStart defines the configuration related to the slow start load balancer poli
 
 _Appears in:_
 - [LoadBalancer](#loadbalancer)
-- [RateLimitLoadBalancer](#ratelimitloadbalancer)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |

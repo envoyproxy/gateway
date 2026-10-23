@@ -302,22 +302,6 @@ func validateRateLimitClusterSettings(cs *egv1a1.RateLimitClusterSettings) error
 		return nil
 	}
 
-	if lb := cs.LoadBalancer; lb != nil {
-		switch lb.Type {
-		case egv1a1.LeastRequestLoadBalancerType, egv1a1.RandomLoadBalancerType, egv1a1.RoundRobinLoadBalancerType:
-		default:
-			return fmt.Errorf("loadBalancer.type %q is not supported, use LeastRequest, Random or RoundRobin", lb.Type)
-		}
-		if lb.SlowStart != nil {
-			if lb.SlowStart.Window == nil {
-				return fmt.Errorf("loadBalancer.slowStart.window is required")
-			}
-			if err := validateOptionalDuration("loadBalancer.slowStart.window", lb.SlowStart.Window, false); err != nil {
-				return err
-			}
-		}
-	}
-
 	if err := validateRateLimitClusterCircuitBreaker(cs.CircuitBreaker); err != nil {
 		return err
 	}
@@ -350,49 +334,11 @@ func validateRateLimitClusterSettings(cs *egv1a1.RateLimitClusterSettings) error
 		}
 	}
 
-	if cs.DNS != nil {
-		if err := validateOptionalDuration("dns.dnsRefreshRate", cs.DNS.DNSRefreshRate, false); err != nil {
-			return err
-		}
-		if lf := cs.DNS.LookupFamily; lf != nil {
-			switch *lf {
-			case egv1a1.IPv4DNSLookupFamily, egv1a1.IPv6DNSLookupFamily, egv1a1.IPv4PreferredDNSLookupFamily,
-				egv1a1.IPv6PreferredDNSLookupFamily, egv1a1.IPv4AndIPv6DNSLookupFamily:
-			default:
-				return fmt.Errorf("dns.lookupFamily %q is not supported", *lf)
-			}
-		}
-	}
-
-	if err := validateRateLimitClusterConnection(cs.Connection); err != nil {
-		return err
-	}
-
 	if err := validateRateLimitClusterHTTP2(cs.HTTP2); err != nil {
 		return err
 	}
 
 	return validateRateLimitClusterHealthCheck(cs.HealthCheck)
-}
-
-func validateRateLimitClusterConnection(c *egv1a1.BackendConnection) error {
-	if c == nil {
-		return nil
-	}
-	if c.BufferLimit != nil {
-		if v, ok := c.BufferLimit.AsInt64(); !ok || v < 1 || v > math.MaxUint32 {
-			return fmt.Errorf("connection.bufferLimit value %s is out of range [1, %d]", c.BufferLimit.String(), uint32(math.MaxUint32))
-		}
-	}
-	if pc := c.Preconnect; pc != nil {
-		if pc.PerEndpointPercent != nil && (*pc.PerEndpointPercent < 100 || *pc.PerEndpointPercent > 300) {
-			return fmt.Errorf("connection.preconnect.perEndpointPercent must be between 100 and 300")
-		}
-		if pc.PredictivePercent != nil && *pc.PredictivePercent < 100 {
-			return fmt.Errorf("connection.preconnect.predictivePercent must be at least 100")
-		}
-	}
-	return nil
 }
 
 // HTTP/2 flow-control window bounds enforced by Envoy, mirroring internal/gatewayapi.

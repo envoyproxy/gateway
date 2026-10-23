@@ -1788,15 +1788,6 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			expectErr: "tcpKeepalive.idleTime: invalid duration",
 		},
 		{
-			name: "malformed dns refresh rate",
-			cs: &egv1a1.RateLimitClusterSettings{
-				DNS: &egv1a1.DNS{
-					DNSRefreshRate: new(gwapiv1.Duration("not-a-duration")),
-				},
-			},
-			expectErr: "dns.dnsRefreshRate: invalid duration",
-		},
-		{
 			name: "malformed passive health check interval",
 			cs: &egv1a1.RateLimitClusterSettings{
 				HealthCheck: &egv1a1.RateLimitHealthCheck{
@@ -1920,26 +1911,6 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			cs:   &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{InitialStreamWindowSize: new(resource.MustParse("64Ki")), MaxConcurrentStreams: new(uint32(100)), ConnectionKeepalive: &egv1a1.HTTP2KeepaliveSettings{Interval: new(gwapiv1.Duration("10s")), Timeout: new(gwapiv1.Duration("1s")), IntervalJitter: new(uint32(15))}}},
 		},
 		{
-			name:      "connection buffer limit too large",
-			cs:        &egv1a1.RateLimitClusterSettings{Connection: &egv1a1.BackendConnection{BufferLimit: new(resource.MustParse("8Gi"))}},
-			expectErr: `connection.bufferLimit value 8Gi is out of range`,
-		},
-		{
-			name:      "preconnect per-endpoint percent too large",
-			cs:        &egv1a1.RateLimitClusterSettings{Connection: &egv1a1.BackendConnection{Preconnect: &egv1a1.PreconnectPolicy{PerEndpointPercent: new(uint32(301))}}},
-			expectErr: `connection.preconnect.perEndpointPercent must be between 100 and 300`,
-		},
-		{
-			name:      "preconnect predictive percent too small",
-			cs:        &egv1a1.RateLimitClusterSettings{Connection: &egv1a1.BackendConnection{Preconnect: &egv1a1.PreconnectPolicy{PredictivePercent: new(uint32(99))}}},
-			expectErr: `connection.preconnect.predictivePercent must be at least 100`,
-		},
-		{
-			name:      "unknown dns lookup family",
-			cs:        &egv1a1.RateLimitClusterSettings{DNS: &egv1a1.DNS{LookupFamily: new(egv1a1.DNSLookupFamily("IPv5"))}},
-			expectErr: `dns.lookupFamily "IPv5" is not supported`,
-		},
-		{
 			name:      "retry budget zero denominator",
 			cs:        &egv1a1.RateLimitClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{RetryBudget: &egv1a1.RetryBudget{Percent: gwapiv1.Fraction{Numerator: 0, Denominator: new(int32(0))}}}},
 			expectErr: `circuitBreaker.retryBudget.percent`,
@@ -1948,26 +1919,6 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			name:      "retry budget numerator above denominator",
 			cs:        &egv1a1.RateLimitClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{RetryBudget: &egv1a1.RetryBudget{Percent: gwapiv1.Fraction{Numerator: 150}}}},
 			expectErr: `circuitBreaker.retryBudget.percent`,
-		},
-		{
-			name: "slow start without window",
-			cs: &egv1a1.RateLimitClusterSettings{
-				LoadBalancer: &egv1a1.RateLimitLoadBalancer{
-					Type:      egv1a1.RoundRobinLoadBalancerType,
-					SlowStart: &egv1a1.SlowStart{},
-				},
-			},
-			expectErr: "loadBalancer.slowStart.window is required",
-		},
-		{
-			name: "slow start with malformed window",
-			cs: &egv1a1.RateLimitClusterSettings{
-				LoadBalancer: &egv1a1.RateLimitLoadBalancer{
-					Type:      egv1a1.LeastRequestLoadBalancerType,
-					SlowStart: &egv1a1.SlowStart{Window: new(gwapiv1.Duration("not-a-duration"))},
-				},
-			},
-			expectErr: "loadBalancer.slowStart.window: invalid duration",
 		},
 	}
 	for _, tc := range cases {
@@ -2060,20 +2011,6 @@ func TestRateLimitDurationBounds(t *testing.T) {
 					}
 					*tc.field = nil
 				})
-			}
-		})
-	}
-}
-
-func TestRateLimitLoadBalancerType(t *testing.T) {
-	for _, typ := range []egv1a1.LoadBalancerType{"", "unknown", egv1a1.RoundRobinLoadBalancerType, egv1a1.LeastRequestLoadBalancerType, egv1a1.RandomLoadBalancerType, egv1a1.ConsistentHashLoadBalancerType, egv1a1.BackendUtilizationLoadBalancerType, egv1a1.DynamicModuleLoadBalancerType} {
-		t.Run(string(typ), func(t *testing.T) {
-			err := validateRateLimitClusterSettings(&egv1a1.RateLimitClusterSettings{LoadBalancer: &egv1a1.RateLimitLoadBalancer{Type: typ}})
-			switch typ {
-			case egv1a1.RoundRobinLoadBalancerType, egv1a1.LeastRequestLoadBalancerType, egv1a1.RandomLoadBalancerType:
-				require.NoError(t, err)
-			default:
-				require.ErrorContains(t, err, "loadBalancer.type")
 			}
 		})
 	}

@@ -752,12 +752,6 @@ type RateLimit struct {
 // It deliberately exposes only the subset of ClusterSettings that applies to the managed rate
 // limit service: a gRPC (HTTP/2) service reached over mTLS, with no associated route.
 type RateLimitClusterSettings struct {
-	// LoadBalancer policy to apply when routing traffic to the rate limit service endpoints.
-	// Defaults to `LeastRequest`.
-	//
-	// +optional
-	LoadBalancer *RateLimitLoadBalancer `json:"loadBalancer,omitempty"`
-
 	// TcpKeepalive settings associated with the upstream client connection.
 	// Disabled by default.
 	//
@@ -780,39 +774,10 @@ type RateLimitClusterSettings struct {
 	// +optional
 	Timeout *RateLimitTimeout `json:"timeout,omitempty"`
 
-	// Connection includes backend connection settings.
-	//
-	// +optional
-	Connection *BackendConnection `json:"connection,omitempty"`
-
-	// DNS includes dns resolution settings.
-	//
-	// +optional
-	DNS *DNS `json:"dns,omitempty"`
-
 	// HTTP2 provides HTTP/2 configuration for the rate limit service connections.
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
-}
-
-// RateLimitLoadBalancer defines the load balancer policy for the rate limit service.
-type RateLimitLoadBalancer struct {
-	// Type decides the type of Load Balancer policy.
-	// Valid LoadBalancerType values are
-	// "LeastRequest",
-	// "Random", and
-	// "RoundRobin".
-	//
-	// +kubebuilder:validation:Enum=LeastRequest;Random;RoundRobin
-	Type LoadBalancerType `json:"type"`
-
-	// SlowStart defines the configuration related to the slow start load balancer policy.
-	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-	// Supported only for RoundRobin and LeastRequest load balancers.
-	//
-	// +optional
-	SlowStart *SlowStart `json:"slowStart,omitempty"`
 }
 
 // RateLimitHealthCheck defines the health check configuration for the rate limit service.
@@ -945,15 +910,7 @@ func (r *RateLimit) GetServiceSettings() *ClusterSettings {
 	cs := &ClusterSettings{
 		TCPKeepalive:   s.TCPKeepalive,
 		CircuitBreaker: s.CircuitBreaker,
-		Connection:     s.Connection,
-		DNS:            s.DNS,
 		HTTP2:          s.HTTP2,
-	}
-	if s.LoadBalancer != nil {
-		cs.LoadBalancer = &LoadBalancer{
-			Type:      s.LoadBalancer.Type,
-			SlowStart: s.LoadBalancer.SlowStart,
-		}
 	}
 	if s.HealthCheck != nil {
 		cs.HealthCheck = &HealthCheck{
