@@ -27,12 +27,13 @@ import (
 
 // mockXDSHookClient implements types.XDSHookClient for testing.
 type mockXDSHookClient struct {
-	postRouteModifyHook        func(r *route.Route, hostnames []string, resources, policies []*unstructured.Unstructured) (*route.Route, error)
-	postVirtualHostModifyHook  func(vh *route.VirtualHost) (*route.VirtualHost, error)
-	postEndpointsModifyHook    func(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error)
-	postHTTPListenerModifyHook func(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error)
-	postClusterModifyHook      func(c *cluster.Cluster, resources []*unstructured.Unstructured) (*cluster.Cluster, error)
-	postTranslateModifyHook    func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, policies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error)
+	postRouteModifyHook                func(r *route.Route, hostnames []string, resources, policies []*unstructured.Unstructured) (*route.Route, error)
+	postVirtualHostModifyHook          func(vh *route.VirtualHost) (*route.VirtualHost, error)
+	postVirtualHostModifyHookResources []*unstructured.Unstructured // captures last extensionResources arg
+	postEndpointsModifyHook            func(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error)
+	postHTTPListenerModifyHook         func(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error)
+	postClusterModifyHook              func(c *cluster.Cluster, resources []*unstructured.Unstructured) (*cluster.Cluster, error)
+	postTranslateModifyHook            func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, policies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error)
 }
 
 var _ types.XDSHookClient = (*mockXDSHookClient)(nil)
@@ -45,7 +46,8 @@ func (m *mockXDSHookClient) PostRouteModifyHook(r *route.Route, hostnames []stri
 	return r, types.HookResult{CallCount: 1}, nil
 }
 
-func (m *mockXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost, _ []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
+func (m *mockXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost, resources []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
+	m.postVirtualHostModifyHookResources = resources
 	if m.postVirtualHostModifyHook != nil {
 		vh, err := m.postVirtualHostModifyHook(vh)
 		return vh, types.HookResult{CallCount: 1}, err
@@ -453,6 +455,48 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
 		require.Error(t, err)
 		assert.Equal(t, 2, hr.CallCount)
+	})
+
+	t.Run("empty policyGKSet receives no resources, populated policyGKSet receives only matching resources", func(t *testing.T) {
+		ownerGK := schema.GroupKind{Group: "example.io", Kind: "MyPolicy"}
+		otherGK := schema.GroupKind{Group: "example.io", Kind: "OtherPolicy"}
+
+		ownerResource := &unstructured.Unstructured{}
+		ownerResource.SetGroupVersionKind(ownerGK.WithVersion("v1"))
+		otherResource := &unstructured.Unstructured{}
+		otherResource.SetGroupVersionKind(otherGK.WithVersion("v1"))
+
+		clientNoPolicy := &mockXDSHookClient{}
+		clientWithPolicy := &mockXDSHookClient{}
+
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{
+					name:        "no-policy-ext",
+					client:      clientNoPolicy,
+					policyGKSet: sets.New[schema.GroupKind](), // empty: declared no policyResources
+				},
+				{
+					name:        "owner-ext",
+					client:      clientWithPolicy,
+					policyGKSet: sets.New(ownerGK),
+				},
+			},
+		}
+
+		_, _, err := composite.PostVirtualHostModifyHook(
+			&route.VirtualHost{Name: "test"},
+			[]*unstructured.Unstructured{ownerResource, otherResource},
+		)
+		require.NoError(t, err)
+
+		// Manager with no declared policyResources must receive nothing, not all resources.
+		assert.Empty(t, clientNoPolicy.postVirtualHostModifyHookResources,
+			"empty policyGKSet should isolate the manager from all extension resources")
+
+		// Manager owning "MyPolicy" receives only that resource, not "OtherPolicy".
+		require.Len(t, clientWithPolicy.postVirtualHostModifyHookResources, 1)
+		assert.Equal(t, ownerResource, clientWithPolicy.postVirtualHostModifyHookResources[0])
 	})
 }
 
