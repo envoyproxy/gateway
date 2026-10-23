@@ -84,8 +84,8 @@ httpRoutes:
       - name: service-2
         port: 8080
         weight: 3
-# One parentRef per listener: the names follow the routing type, so the two parentRefs
-# don't share a cluster name with different endpoints.
+# One parentRef per listener: each parentRef resolves its own listener's routing and keeps
+# the plain name, as before.
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:

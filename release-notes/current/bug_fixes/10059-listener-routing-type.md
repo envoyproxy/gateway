@@ -1,1 +1,1 @@
-Fixed a `BackendTrafficPolicy` `routingType` that targets a Gateway or ListenerSet listener being ignored for routes, including their request mirrors, that attach to that listener without a `sectionName`.
+Fixed a `BackendTrafficPolicy` `routingType` that targets a Gateway or ListenerSet listener being ignored for routes, including their request mirrors, that attach to that listener without a `sectionName`. Where that listener's routing differs from the rest of the parentRef, its inline clusters get a `/routing/service` or `/routing/endpoint` suffix.

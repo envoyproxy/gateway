@@ -350,17 +350,19 @@ func (t *Translator) processL4RouteBackendsPerRoutingGroup(route RouteContext, p
 	return backendsByListener, resolveErrs
 }
 
-// routingDestinationName scopes name by routing type when a listener- or ListenerSet-level
-// policy gives any of ruleNames a different routing type through parentRef than the route,
-// rule and Gateway policies alone do. Listeners and parentRefs of a Gateway that end up with the
-// same name then also route the same way, and routes without such a policy keep their names.
+// routingDestinationName scopes name by routing type when parentRef's routingListener resolves
+// any of ruleNames to a different routing type than the parentRef itself, so the inline clusters
+// of listeners that diverge don't share a name with those of listeners that agree with the
+// parentRef. Everything else keeps its name.
 func (t *Translator) routingDestinationName(name string, gatewayCtx *GatewayContext, route RouteContext, parentRef *RouteParentContext, ruleNames ...*gwapiv1.SectionName) string {
-	if gatewayCtx == nil || !t.BTPRoutingTypeIndex.HasListenerRoutingType() {
+	if gatewayCtx == nil || parentRef.routingListener == nil {
 		return name
 	}
+	own := *parentRef
+	own.routingListener = nil
 	for _, ruleName := range ruleNames {
 		serviceRouting := t.IsServiceRouting(gatewayCtx.envoyProxy, t.resolveBTPRoutingType(gatewayCtx, route, parentRef, ruleName))
-		if serviceRouting == t.IsServiceRouting(gatewayCtx.envoyProxy, t.lookupBTPRoutingType(gatewayCtx, route, btpScope{}, ruleName)) {
+		if serviceRouting == t.IsServiceRouting(gatewayCtx.envoyProxy, t.resolveBTPRoutingType(gatewayCtx, route, &own, ruleName)) {
 			continue
 		}
 		routingType := egv1a1.EndpointRoutingType
@@ -708,20 +710,10 @@ func (t *Translator) resolveBTPRoutingType(
 	parentRef *RouteParentContext,
 	routeRuleName *gwapiv1.SectionName,
 ) *egv1a1.RoutingType {
-	return t.lookupBTPRoutingType(gatewayCtx, routeCtx, btpRoutingScope(routeCtx, parentRef), routeRuleName)
-}
-
-// lookupBTPRoutingType resolves the RoutingType for a route rule at scope. An empty scope
-// leaves listener- and ListenerSet-level policies out.
-func (t *Translator) lookupBTPRoutingType(
-	gatewayCtx *GatewayContext,
-	routeCtx RouteContext,
-	scope btpScope,
-	routeRuleName *gwapiv1.SectionName,
-) *egv1a1.RoutingType {
 	if gatewayCtx == nil {
 		return nil
 	}
+	scope := btpRoutingScope(routeCtx, parentRef)
 	return t.BTPRoutingTypeIndex.LookupBTPRoutingType(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},

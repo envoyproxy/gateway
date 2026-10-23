@@ -62,9 +62,8 @@ backendTrafficPolicies:
       name: ext-listeners
       sectionName: ext-http-1
     routingType: Endpoint
-# Omits sectionName: ext-http-2 inherits Service routing from the ListenerSet and ext-http-1
-# overrides it with Endpoint routing. Names are scoped relative to the route and Gateway
-# (Endpoint by default), so only the Service-routed destination gets a suffix.
+# Omits sectionName: ext-http-2 inherits Service routing from the ListenerSet and keeps the
+# plain name; ext-http-1 overrides it with Endpoint routing and gets its own destination.
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
