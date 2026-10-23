@@ -344,6 +344,12 @@ func validateRateLimitClusterSettings(cs *egv1a1.ClusterSettings) error {
 		return fmt.Errorf("http3 is not supported for the managed rate limit service")
 	}
 
+	// The rate limit service is a gRPC service, so its cluster always uses HTTP/2: HTTP/1 settings
+	// would be silently ignored rather than forcing HTTP/1 as documented.
+	if cs.HTTP1 != nil {
+		return fmt.Errorf("http1 is not supported for the managed rate limit service")
+	}
+
 	if err := validateRateLimitClusterCircuitBreaker(cs.CircuitBreaker); err != nil {
 		return err
 	}

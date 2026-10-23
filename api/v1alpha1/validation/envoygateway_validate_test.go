@@ -1917,6 +1917,13 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			},
 			expectErr: "http3 is not supported for the managed rate limit service",
 		},
+		{
+			name: "http1 is rejected",
+			cs: &egv1a1.ClusterSettings{
+				HTTP1: &egv1a1.BackendHTTP1Settings{},
+			},
+			expectErr: "http1 is not supported for the managed rate limit service",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
