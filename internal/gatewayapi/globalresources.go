@@ -71,7 +71,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 						ClusterSettings: *cs,
 					}
 				}
-				tf, err := translateTrafficFeatures(backendSetting)
+				tf, err := translateExtServiceBackendSettings(backendSetting)
 				if err != nil {
 					return fmt.Errorf("invalid rate limit cluster settings: %w", err)
 				}

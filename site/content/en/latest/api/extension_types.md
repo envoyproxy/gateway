@@ -440,6 +440,7 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
+- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5729,6 +5730,7 @@ _Appears in:_
 
 RateLimitClusterSettings defines configuration for how Envoy connects to the rate limit service.
 ProxyProtocol is not supported, since the managed rate limit service doesn't accept it.
+HTTP3 is not supported, since the upstream rate limit service doesn't support HTTP/3.
 HTTP active health checks are not supported, since the managed rate limit service only
 serves its HTTP health endpoint as plaintext; use GRPC or TCP instead. For the same reason,
 active health check overrides are not supported.
@@ -5747,6 +5749,7 @@ _Appears in:_
 | `connection` | _[BackendConnection](#backendconnection)_ |  false  |  | Connection includes backend connection settings. |
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
+| `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
 
 
 #### RateLimitCost

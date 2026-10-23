@@ -739,6 +739,7 @@ type RateLimit struct {
 
 // RateLimitClusterSettings defines configuration for how Envoy connects to the rate limit service.
 // ProxyProtocol is not supported, since the managed rate limit service doesn't accept it.
+// HTTP3 is not supported, since the upstream rate limit service doesn't support HTTP/3.
 // HTTP active health checks are not supported, since the managed rate limit service only
 // serves its HTTP health endpoint as plaintext; use GRPC or TCP instead. For the same reason,
 // active health check overrides are not supported.

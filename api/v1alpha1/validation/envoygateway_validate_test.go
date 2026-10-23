@@ -1910,6 +1910,13 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 			},
 			expectErr: "proxyProtocol is not supported for the managed rate limit service",
 		},
+		{
+			name: "http3 is rejected",
+			cs: &egv1a1.ClusterSettings{
+				HTTP3: &egv1a1.BackendHTTP3Settings{},
+			},
+			expectErr: "http3 is not supported for the managed rate limit service",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

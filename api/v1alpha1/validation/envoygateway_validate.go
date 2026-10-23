@@ -339,6 +339,11 @@ func validateRateLimitClusterSettings(cs *egv1a1.ClusterSettings) error {
 		return fmt.Errorf("proxyProtocol is not supported for the managed rate limit service")
 	}
 
+	// The upstream rate limit service doesn't support HTTP/3 yet.
+	if cs.HTTP3 != nil {
+		return fmt.Errorf("http3 is not supported for the managed rate limit service")
+	}
+
 	if err := validateRateLimitClusterCircuitBreaker(cs.CircuitBreaker); err != nil {
 		return err
 	}
