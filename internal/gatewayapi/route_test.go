@@ -994,3 +994,54 @@ func TestGetOrCreateBackendCluster(t *testing.T) {
 		require.Len(t, gwIR.BackendClusters, 1)
 	})
 }
+
+func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
+	httpRoute := func(ns, name string) RouteContext {
+		return &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name}}}
+	}
+	grpcRoute := func(ns, name string) RouteContext {
+		return &GRPCRouteContext{GRPCRoute: &gwapiv1.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name}}}
+	}
+	cookieName := func(t *testing.T, route RouteContext, ruleIdx int) string {
+		t.Helper()
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{}, route, ruleIdx)
+		require.Nil(t, err)
+		require.NotNil(t, sp.Cookie)
+		return sp.Cookie.Name
+	}
+
+	t.Run("readable prefix with hash suffix", func(t *testing.T) {
+		require.Regexp(t, `^httproute-default-route-1-rule-0-[0-9a-f]{8}$`, cookieName(t, httpRoute("default", "route-1"), 0))
+	})
+
+	t.Run("deterministic", func(t *testing.T) {
+		require.Equal(t, "grpcroute-default-route-1-rule-0-5f436ad0", cookieName(t, grpcRoute("default", "route-1"), 0))
+	})
+
+	t.Run("namespace/name pairs that flatten identically do not collide", func(t *testing.T) {
+		require.NotEqual(t, cookieName(t, httpRoute("a-b", "c"), 0), cookieName(t, httpRoute("a", "b-c"), 0))
+		require.NotEqual(t, cookieName(t, grpcRoute("a-b", "c"), 0), cookieName(t, grpcRoute("a", "b-c"), 0))
+	})
+
+	t.Run("distinct per rule and route kind", func(t *testing.T) {
+		require.NotEqual(t, cookieName(t, httpRoute("default", "route-1"), 0), cookieName(t, httpRoute("default", "route-1"), 1))
+		require.NotEqual(t, cookieName(t, httpRoute("default", "route-1"), 0), cookieName(t, grpcRoute("default", "route-1"), 0))
+	})
+
+	t.Run("explicit sessionName is used verbatim", func(t *testing.T) {
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new("my-session")}, httpRoute("default", "route-1"), 0)
+		require.Nil(t, err)
+		require.Equal(t, "my-session", sp.Cookie.Name)
+	})
+
+	t.Run("empty explicit sessionName is rejected", func(t *testing.T) {
+		for _, route := range []RouteContext{httpRoute("default", "route-1"), grpcRoute("default", "route-1")} {
+			for _, spType := range []gwapiv1.SessionPersistenceType{gwapiv1.CookieBasedSessionPersistence, gwapiv1.HeaderBasedSessionPersistence} {
+				sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new(""), Type: new(spType)}, route, 0)
+				require.Nil(t, sp)
+				require.NotNil(t, err)
+				require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, err.Reason())
+			}
+		}
+	})
+}
