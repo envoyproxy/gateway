@@ -379,6 +379,73 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
+    name: child-route-merge
+    namespace: default
+  spec:
+    cors:
+      allowHeaders:
+      - x-route-header
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: route-on-ls
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: ext-listeners
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway/parent-listenerset, envoy-gateway/parent-listenerset-section
+        reason: Merged
+        status: "True"
+        type: Merged
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: child-route-gateway-merge
+    namespace: default
+  spec:
+    cors:
+      allowHeaders:
+      - x-gateway-route-header
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: route-on-gateway-policy-ls
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: gateway-policy-listeners
+        namespace: envoy-gateway
+        sectionName: gw-http-1
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway/parent-gw
+        reason: Merged
+        status: "True"
+        type: Merged
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
     name: parent-listenerset-section
     namespace: envoy-gateway
   spec:
@@ -453,73 +520,6 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    name: child-route-merge
-    namespace: default
-  spec:
-    cors:
-      allowHeaders:
-      - x-route-header
-    mergeType: StrategicMerge
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: route-on-ls
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: ext-listeners
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/parent-listenerset, envoy-gateway/parent-listenerset-section
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    name: child-route-gateway-merge
-    namespace: default
-  spec:
-    cors:
-      allowHeaders:
-      - x-gateway-route-header
-    mergeType: StrategicMerge
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: route-on-gateway-policy-ls
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: gateway-policy-listeners
-        namespace: envoy-gateway
-        sectionName: gw-http-1
-      conditions:
-      - lastTransitionTime: null
-        message: Merged with policy envoy-gateway/parent-gw
-        reason: Merged
-        status: "True"
-        type: Merged
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
