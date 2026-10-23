@@ -99,3 +99,18 @@ extensionServerPolicies:
       group: gateway.networking.k8s.io
       name: unknown
     data: "ListenerSet does not exist, silently skipped"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test6
+    namespace: envoy-gateway
+  spec:
+    targetRefs:
+    - kind: ListenerSet
+      group: other.example.io
+      name: ext-listeners
+    - kind: ListenerSet
+      group: other.example.io
+      name: ext-listeners
+      sectionName: ext-http
+    data: "ListenerSet from another API group, silently skipped"
