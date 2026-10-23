@@ -90,10 +90,10 @@ The hooks are executed in the following order during xDS translation:
 
 #### VirtualHost Hook (`PostVirtualHostModifyHook`)
 
-- **When called**: When a virtual host is first created (once per IR HTTP listener)
+- **When called**: After all routes for a virtual host are processed
 - **Input**: Complete virtual host with all its routes, plus extension server policies targeting the listener that owns this virtual host
 - **Output**: Modified virtual host (can add/remove/modify routes)
-- **Use cases**: Add virtual host-level configuration
+- **Use cases**: Add virtual host-level configuration, inject additional routes
 
 #### HTTPListener Hook (`PostHTTPListenerModifyHook`)
 
