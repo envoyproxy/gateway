@@ -70,6 +70,26 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	return routingType
 }
 
+// HasListenerRoutingType reports whether any listener- or ListenerSet-level policy sets a
+// RoutingType, the only way for listeners of the same Gateway to resolve different ones.
+func (idx *BTPRoutingTypeIndex) HasListenerRoutingType() bool {
+	return idx != nil && idx.policyIndex != nil && idx.listenerScoped
+}
+
+// LookupInheritedBTPRoutingType resolves the RoutingType a listener, ListenerSet, or the Gateway
+// itself passes down to routes that don't set their own, ignoring route- and route-rule-level
+// policies. Returns nil if no matching BTP RoutingType is found, or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupInheritedBTPRoutingType(
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	listenerSetNN *types.NamespacedName,
+) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+	return idx.resolveParentLevels(gatewayNN, listenerName, listenerSetNN)
+}
+
 // LookupGatewayBTRoutingType resolves the RoutingType pinned directly at gatewayNN, ignoring any
 // listener/listenerSet/route/route-rule level override. Returns nil if no matching BTP RoutingType
 // is found, or if the index is nil.

@@ -1128,8 +1128,8 @@ func (t *Translator) processRequestMirrorFilter(
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	gatewayCtx := GetRouteParentContext(filterContext.Route, *filterContext.ParentRef.ParentReference, t.GatewayControllerName).GetGateway()
-	btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, filterContext.Route, filterContext.ParentRef.listener, nil)
-	destName = t.listenerRoutingDestinationName(destName, gatewayCtx, filterContext.Route, filterContext.ParentRef.listener, nil)
+	btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, filterContext.Route, filterContext.ParentRef, nil)
+	destName = t.routingDestinationName(destName, gatewayCtx, filterContext.Route, filterContext.ParentRef, nil)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
 	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType, xdsIR)
 	if err != nil {

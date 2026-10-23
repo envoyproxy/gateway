@@ -800,9 +800,10 @@ type RouteParentContext struct {
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
 
-	// listener is set only on a per-listener copy while translating route rules.
-	// The original parent reference and its status remain shared.
-	listener *ListenerContext
+	// routingListener is set only on a copy of the parentRef that translates the route's rules for
+	// listeners inheriting a different RoutingType than the parentRef itself. It stands in for all
+	// of them when resolving RoutingType; the route status stays on the parentRef.
+	routingListener *ListenerContext
 }
 
 // GetGateway returns the GatewayContext if parent resource is a gateway.
