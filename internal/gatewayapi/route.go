@@ -246,7 +246,7 @@ func (t *Translator) routingGroups(route RouteContext, parentRef *RouteParentCon
 	gatewayCtx := parentRef.GetGateway()
 	parentServiceRouting := t.inheritedServiceRouting(gatewayCtx, btpRoutingScope(route, parentRef))
 	for _, listener := range parentRef.listeners {
-		if t.inheritedServiceRouting(gatewayCtx, listenerBTPRoutingScope(listener)) == parentServiceRouting {
+		if t.inheritedServiceRouting(gatewayCtx, listenerBTPScope(listener)) == parentServiceRouting {
 			inherited = append(inherited, listener)
 		} else {
 			diverged = append(diverged, listener)
@@ -687,7 +687,7 @@ type btpScope struct {
 // sectionName and ListenerSet.
 func btpRoutingScope(routeCtx RouteContext, parentRef *RouteParentContext) btpScope {
 	if parentRef.routingListener != nil {
-		return listenerBTPRoutingScope(parentRef.routingListener)
+		return listenerBTPScope(parentRef.routingListener)
 	}
 	scope := btpScope{listenerName: parentRef.SectionName}
 	if parentRef.Kind != nil && *parentRef.Kind == resource.KindListenerSet {
@@ -703,8 +703,8 @@ func btpRoutingScope(routeCtx RouteContext, parentRef *RouteParentContext) btpSc
 	return scope
 }
 
-// listenerBTPRoutingScope is the scope of a single listener.
-func listenerBTPRoutingScope(listener *ListenerContext) btpScope {
+// listenerBTPScope is the scope of a single listener.
+func listenerBTPScope(listener *ListenerContext) btpScope {
 	scope := btpScope{listenerName: &listener.Name}
 	if listener.isFromListenerSet() {
 		scope.listenerSetNN = &types.NamespacedName{
@@ -738,19 +738,13 @@ func (t *Translator) hasClusterSettingsBelowGateway(
 		return false
 	}
 	gatewayNN := types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()}
-	var listenerSetNN *types.NamespacedName
-	if listener.isFromListenerSet() {
-		listenerSetNN = &types.NamespacedName{
-			Namespace: listener.listenerSet.Namespace,
-			Name:      listener.listenerSet.Name,
-		}
-	}
+	scope := listenerBTPScope(listener)
 	if t.BTPClusterSettingsIndex.HasClusterSettingsBelowGateway(
 		routeCtx.GetRouteType(),
 		types.NamespacedName{Namespace: routeCtx.GetNamespace(), Name: routeCtx.GetName()},
 		gatewayNN,
-		&listener.Name,
-		listenerSetNN,
+		scope.listenerName,
+		scope.listenerSetNN,
 		routeRuleName,
 	) {
 		return true

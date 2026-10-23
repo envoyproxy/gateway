@@ -26,8 +26,6 @@ type policyIndexEntry[T comparable] struct {
 // attachment order a policy itself uses, including MergeType-driven inheritance.
 type policyIndex[T comparable] struct {
 	entries map[policyScope]policyIndexEntry[T]
-	// listenerScoped records whether any listener- or ListenerSet-level entry is effective.
-	listenerScoped bool
 }
 
 // newPolicyIndex allocates a policyIndex's map.
@@ -70,7 +68,6 @@ func (idx *policyIndex[T]) setRouteLevel(route types.NamespacedName, routeKind s
 // apply here.
 func (idx *policyIndex[T]) setGatewayListenerLevel(gw types.NamespacedName, listener gwapiv1.SectionName, value T, hasValue bool) {
 	idx.putFirst(gatewayListenerScope(gw, listener), policyIndexEntry[T]{value: value, effective: hasValue})
-	idx.listenerScoped = idx.listenerScoped || hasValue
 }
 
 // setGatewayLevel records a Gateway target's first-registered value, always effective: it's the
@@ -82,7 +79,6 @@ func (idx *policyIndex[T]) setGatewayLevel(gw types.NamespacedName, value T) {
 // setListenerSetListenerLevel is setGatewayListenerLevel's counterpart for a ListenerSet listener.
 func (idx *policyIndex[T]) setListenerSetListenerLevel(ls types.NamespacedName, listener gwapiv1.SectionName, value T, hasValue bool) {
 	idx.putFirst(listenerSetListenerScope(ls, listener), policyIndexEntry[T]{value: value, effective: hasValue})
-	idx.listenerScoped = idx.listenerScoped || hasValue
 }
 
 // setListenerSetLevel is setGatewayLevel's counterpart for a ListenerSet. hasValue decides whether
@@ -92,7 +88,6 @@ func (idx *policyIndex[T]) setListenerSetListenerLevel(ls types.NamespacedName, 
 // bare-Gateway scope, which sits above both.
 func (idx *policyIndex[T]) setListenerSetLevel(ls types.NamespacedName, value T, hasValue bool) {
 	idx.putFirst(listenerSetScope(ls), policyIndexEntry[T]{value: value, effective: hasValue})
-	idx.listenerScoped = idx.listenerScoped || hasValue
 }
 
 // Lookup resolves the effective value for a route-rule/route/listener/listenerSet/gateway target.
