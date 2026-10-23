@@ -1,1 +1,0 @@
-Request-mirror clusters for GRPCRoute rules after the first rule now use the actual rule index in their names instead of rule/0. Update EnvoyPatchPolicy resources and Extension Servers that depend on those mirror-cluster names or route references.

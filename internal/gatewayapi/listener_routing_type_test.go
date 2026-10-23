@@ -31,11 +31,8 @@ func TestListenerRoutingType(t *testing.T) {
 	for _, kind := range []string{"HTTP", "GRPC", "TCP", "TLS", "UDP"} {
 		for _, merge := range []bool{false, true} {
 			for _, explicit := range []bool{false, true} {
-				for _, scenario := range []string{"gateway", "reverse", "listener-set", "headless", "serviceimport", "weighted", "mirror", "route", "rule", "replace", "tls-pool"} {
+				for _, scenario := range []string{"gateway", "reverse", "listener-set", "headless", "serviceimport", "weighted", "mirror", "route", "rule", "replace"} {
 					if (scenario == "mirror" || scenario == "weighted") && kind != "HTTP" && kind != "GRPC" {
-						continue
-					}
-					if scenario == "tls-pool" && kind != "TLS" {
 						continue
 					}
 					mode := "omitted"
@@ -159,16 +156,10 @@ backendTrafficPolicies:
 						if scenario == "mirror" {
 							input += "      filters:\n      - type: RequestMirror\n        requestMirror:\n          backendRef: {name: backend, port: 8080}\n"
 						}
-						if scenario == "tls-pool" {
-							input += "    - name: rule-2\n      backendRefs:\n      - {name: backend, port: 8080}\n"
-						}
-						if scenario == "route" || scenario == "rule" || scenario == "replace" || scenario == "tls-pool" {
+						if scenario == "route" || scenario == "rule" || scenario == "replace" {
 							policy := fmt.Sprintf("- apiVersion: gateway.envoyproxy.io/v1alpha1\n  kind: BackendTrafficPolicy\n  metadata: {name: route-routing, namespace: default}\n  spec:\n    targetRefs:\n    - {group: gateway.networking.k8s.io, kind: %sRoute, name: route-1", kind)
 							if scenario == "rule" {
 								policy += ", sectionName: rule-1"
-							}
-							if scenario == "tls-pool" {
-								policy += ", sectionName: rule-2"
 							}
 							policy += "}\n"
 							if scenario != "replace" {
@@ -322,7 +313,7 @@ backendTrafficPolicies:
 								require.True(t, found, "shared cluster reference %s", ref.Name)
 							}
 							expectedSettings := 1
-							if scenario == "tls-pool" || scenario == "weighted" {
+							if scenario == "weighted" {
 								expectedSettings = 2
 							}
 							require.Len(t, settings, expectedSettings)
@@ -342,9 +333,6 @@ backendTrafficPolicies:
 								want = "10.96.0.7"
 							}
 							expectedHosts := []string{want}
-							if scenario == "tls-pool" {
-								expectedHosts = append(expectedHosts, "10.0.0.7")
-							}
 							if scenario == "weighted" {
 								expectedHosts = append(expectedHosts, want)
 							}

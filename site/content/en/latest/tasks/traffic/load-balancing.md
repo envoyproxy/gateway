@@ -45,8 +45,7 @@ If an EnvoyPatchPolicy or Extension Server selects cluster or endpoint resources
 by name, inspect the generated xDS configuration and update those selectors and
 any cluster references in patched route actions. A previous name may still select
 an unaffected listener's cluster, so a successful patch alone does not prove that
-it reaches every intended listener. GRPCRoute request mirrors after the first
-rule also use the actual rule index instead of `rule/0` in their cluster names.
+it reaches every intended listener.
 
 ## Prerequisites
 

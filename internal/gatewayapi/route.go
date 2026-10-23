@@ -1052,18 +1052,6 @@ func (t *Translator) routeDestinationForListener(
 	routeBackendDestinations []routeBackendRefDestination,
 ) *ir.RouteDestination {
 	hasClusterSettings := t.hasClusterSettingsBelowGateway(gatewayCtx, routeCtx, listener, routeRuleName)
-	// TLS rules pool into one TCP-proxy destination. If any rule cannot use a
-	// shared cluster, keep the entire pool inline rather than silently routing
-	// only to the first shared cluster. This does not change policy rule scope.
-	forceInline := hasClusterSettings
-	if routeCtx.GetRouteType() == resource.KindTLSRoute {
-		for _, bd := range routeBackendDestinations {
-			if bd.backendClusterKey == nil {
-				forceInline = true
-				break
-			}
-		}
-	}
 
 	destination := &ir.RouteDestination{
 		Name:     t.listenerRoutingDestinationName(destName, gatewayCtx, routeCtx, listener, routeRuleName),
@@ -1071,7 +1059,7 @@ func (t *Translator) routeDestinationForListener(
 		StatName: statName,
 	}
 	for _, bd := range routeBackendDestinations {
-		if bd.backendClusterKey == nil || forceInline {
+		if bd.backendClusterKey == nil || hasClusterSettings {
 			// Weighted HTTP routes name clusters after individual settings, not
 			// the destination. Keep these names listener-scoped as well.
 			setting := bd.ds.DeepCopy()
@@ -1554,7 +1542,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 		// process GRPC route filters first, so that the filters can be applied to the IR route later
 		var processFilterError error
-		httpFiltersContext, errs := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, ruleIdx, resources, xdsIR)
+		httpFiltersContext, errs := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources, xdsIR)
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
@@ -3373,12 +3361,11 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 	var destFilters ir.DestinationFilters
 
 	var errs []status.Error
-	// BackendRef filters do not have a rule context and cannot contain RequestMirror.
 	switch filters := backendFilters.(type) {
 	case []gwapiv1.HTTPRouteFilter:
-		httpFiltersContext, errs = t.ProcessHTTPFilters(parentRef, route, filters, -1, resources, xdsIR)
+		httpFiltersContext, errs = t.ProcessHTTPFilters(parentRef, route, filters, 0, resources, xdsIR)
 	case []gwapiv1.GRPCRouteFilter:
-		httpFiltersContext, errs = t.ProcessGRPCFilters(parentRef, route, filters, -1, resources, xdsIR)
+		httpFiltersContext, errs = t.ProcessGRPCFilters(parentRef, route, filters, resources, xdsIR)
 	}
 	if len(errs) > 0 {
 		var err error

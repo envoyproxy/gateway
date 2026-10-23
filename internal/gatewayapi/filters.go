@@ -46,24 +46,6 @@ type HTTPFiltersContext struct {
 	RuleIdx   int
 }
 
-// ruleName returns the original route rule's name, not an IR match's identity.
-func (c *HTTPFiltersContext) ruleName() *gwapiv1.SectionName {
-	if c.RuleIdx < 0 {
-		return nil
-	}
-	switch route := c.Route.(type) {
-	case *HTTPRouteContext:
-		if c.RuleIdx < len(route.Spec.Rules) {
-			return route.Spec.Rules[c.RuleIdx].Name
-		}
-	case *GRPCRouteContext:
-		if c.RuleIdx < len(route.Spec.Rules) {
-			return route.Spec.Rules[c.RuleIdx].Name
-		}
-	}
-	return nil
-}
-
 // HTTPFilterIR contains the ir processing results.
 type HTTPFilterIR struct {
 	DirectResponse      *ir.CustomResponse
@@ -196,14 +178,12 @@ func (t *Translator) ProcessGRPCFilters(
 	parentRef *RouteParentContext,
 	route RouteContext,
 	filters []gwapiv1.GRPCRouteFilter,
-	ruleIdx int,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 ) (*HTTPFiltersContext, []status.Error) {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		Route:     route,
-		RuleIdx:   ruleIdx,
 
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
@@ -1148,9 +1128,8 @@ func (t *Translator) processRequestMirrorFilter(
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	gatewayCtx := GetRouteParentContext(filterContext.Route, *filterContext.ParentRef.ParentReference, t.GatewayControllerName).GetGateway()
-	ruleName := filterContext.ruleName()
-	btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, filterContext.Route, filterContext.ParentRef.listener, ruleName)
-	destName = t.listenerRoutingDestinationName(destName, gatewayCtx, filterContext.Route, filterContext.ParentRef.listener, ruleName)
+	btpRoutingType := t.resolveBTPRoutingType(gatewayCtx, filterContext.Route, filterContext.ParentRef.listener, nil)
+	destName = t.listenerRoutingDestinationName(destName, gatewayCtx, filterContext.Route, filterContext.ParentRef.listener, nil)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
 	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, gatewayCtx, btpRoutingType, xdsIR)
 	if err != nil {
