@@ -46,7 +46,8 @@ backendTrafficPolicies:
     routingType: Service
 # Only the ListenerSet sets a routing type, so no listener diverges and the names stay as they
 # are on main. route-both resolves each parentRef's own routing type under the same plain name,
-# also as on main.
+# also as on main. Known limitation, unchanged from main: both parentRefs share one cluster name,
+# and only the first one's endpoints reach Envoy.
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute

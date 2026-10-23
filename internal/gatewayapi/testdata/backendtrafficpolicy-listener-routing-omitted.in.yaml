@@ -85,7 +85,8 @@ httpRoutes:
         port: 8080
         weight: 3
 # One parentRef per listener: each parentRef resolves its own listener's routing and keeps
-# the plain name, as before.
+# the plain name, as before. Known limitation, unchanged from main: both parentRefs share one
+# cluster name, and only the first one's endpoints reach Envoy.
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
