@@ -173,6 +173,7 @@ func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	XDSNameSchemeV2:    false,
 	EndpointSliceIndex: true,
+	EndpointFastPath:   false,
 	EnvoyProxyPatch:    true,
 }
 
