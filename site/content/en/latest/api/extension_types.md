@@ -427,6 +427,7 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
+- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5772,6 +5773,7 @@ _Appears in:_
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
 | `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic.<br />Behavior when targeting route kinds that do not use HTTP/1:<br />  - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds<br />    directly adds a Warning condition on the policy; the field is ignored.<br />  - Gateway / ListenerSet / sectionName targets: this field is silently<br />    ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations<br />    beneath that target; no warning is emitted.<br />  - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry<br />    access log/metrics, tracing providers): rejected at admission on their<br />    own BackendSettings via separate validation rules. |
 
 
 #### RateLimitCost
