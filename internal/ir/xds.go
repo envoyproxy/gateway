@@ -1248,6 +1248,9 @@ type ClusterTrafficFeatures struct {
 	// HTTP3 provides HTTP/3 configuration for clusters
 	// +optional
 	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty" yaml:"http3,omitempty"`
+	// HTTP1 provides HTTP/1 upstream protocol configuration for clusters
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }

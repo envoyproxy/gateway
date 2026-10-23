@@ -99,7 +99,8 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.HTTP3 != nil ||
 		spec.DNS != nil ||
 		spec.AdmissionControl != nil ||
-		spec.UseClientProtocol != nil
+		spec.UseClientProtocol != nil ||
+		spec.HTTP1 != nil
 }
 
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
@@ -929,6 +930,23 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		return
 	}
 
+	// Protocol-specific validation: some BTP fields are HTTP-only and have no
+	// effect when targeting TCP/TLS/UDP routes or a GRPCRoute. Emit a warning so
+	// the user is informed, but continue translation — other fields (e.g. routingType)
+	// are still valid and must be applied.
+	if err := validateBackendTrafficPolicyForRoute(policy, string(targetedRoute.GetRouteType())); err != nil {
+		for _, ancestorRef := range ancestorRefs {
+			status.SetWarningForPolicyAncestor(&policy.Status,
+				ancestorRef,
+				t.GatewayControllerName,
+				status.PolicyReasonUnsupportedField,
+				err.Error(),
+				policy.Generation,
+			)
+		}
+		// do NOT return — translation continues so other fields remain effective
+	}
+
 	if policy.Spec.MergeType == nil {
 		h3WarningsByListener, buildErr := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil)
 		// Set each listener's warnings on the ancestor of the parentRef. A parentRef naming a whole Gateway or ListenerSet
@@ -1741,6 +1759,7 @@ func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPo
 		ka        *ir.TCPKeepalive
 		bc        *ir.BackendConnection
 		ds        *ir.DNS
+		h1        *ir.HTTP1Settings
 		h2        *ir.HTTP2Settings
 		err, errs error
 	)
@@ -1780,6 +1799,8 @@ func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPo
 
 	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
 
+	h1 = translateBackendHTTP1Settings(policy.Spec.HTTP1)
+
 	return &ir.ClusterTrafficFeatures{
 		LoadBalancer:      lb,
 		ProxyProtocol:     pp,
@@ -1789,6 +1810,7 @@ func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPo
 		Timeout:           to,
 		TCPKeepalive:      ka,
 		BackendConnection: bc,
+		HTTP1:             h1,
 		HTTP2:             h2,
 		HTTP3:             buildIRBackendHTTP3Settings(policy.Spec.HTTP3),
 		DNS:               ds,
@@ -2227,6 +2249,17 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, cf *ir.ClusterTraf
 		}
 	}
 	return nil
+}
+
+// translateBackendHTTP1Settings converts BTP BackendHTTP1Settings to the IR representation.
+func translateBackendHTTP1Settings(s *egv1a1.BackendHTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	return &ir.HTTP1Settings{
+		EnableTrailers:     ptr.Deref(s.EnableTrailers, false),
+		PreserveHeaderCase: ptr.Deref(s.PreserveHeaderCase, false),
+	}
 }
 
 // appendTrafficPolicyMetadata records the policy on the route once. A policy with mergeType is
@@ -3136,4 +3169,23 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	}
 
 	return &statName
+}
+
+// validateBackendTrafficPolicyForRoute returns an error when the policy carries
+// http1 settings that are silently ignored for the given route kind:
+//
+//   - GRPCRoute: http1 is meaningless (gRPC always uses HTTP/2).
+//   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 has no effect.
+func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeKind string) error {
+	switch routeKind {
+	case resource.KindGRPCRoute:
+		if p.Spec.HTTP1 != nil {
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
+		}
+	case resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
+		if p.Spec.HTTP1 != nil {
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a %s", routeKind)
+		}
+	}
+	return nil
 }

@@ -105,7 +105,8 @@ The hooks are executed in the following order during xDS translation:
 #### Translation Hook (`PostTranslateModifyHook`)
 
 - **When called**: After all individual resources are generated and processed
-- **Input**: All clusters, secrets, listeners, and routes, plus extension policies targeting Gateways
+- **Input**: All clusters, secrets, listeners, and routes, plus extension policies targeting Gateways (or, with
+  `mergeGateways` enabled, the GatewayClass)
 - **Output**: Complete set of modified resources
 - **Use cases**: Global resource injection, cross-resource modifications, cleanup operations
 
@@ -117,17 +118,47 @@ Envoy Gateway resources through their `targetRefs`/`targetRef` (with an optional
 
 | `targetRef` kind | `sectionName` | Attaches to | Delivered to hook(s) |
 |------------------|---------------|-------------|----------------------|
-| `Gateway`        | _(unset)_     | The whole Gateway | `PostTranslateModifyHook` |
+| `GatewayClass`   | _(unset)_     | Every listener of every Gateway in the class (requires `mergeGateways`) | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `Gateway`        | _(unset)_     | Every listener of the Gateway | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
 | `Gateway`        | Listener name | A single Listener | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
 | `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
 | `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
 
-**Important**: Policies targeting a `Gateway` and policies targeting an `HTTPRoute` or `GRPCRoute` are evaluated independently. Envoy Gateway does not merge, override, or resolve conflicts between them. For example, a policy attached to an `HTTPRoute` does not override a policy of the same kind attached to its `Gateway`. Any merging, overriding, or conflict resolution behavior must be implemented by the Extension Server.
+#### Targeting a GatewayClass
+
+A policy can target a `GatewayClass` only when [`mergeGateways`][merge-gateways] is enabled for that class. With
+merged Gateways, every Gateway of the class shares one Envoy fleet and one xDS translation, so a class-level policy
+has a single, well-defined place to attach:
+
+- It is attached to every listener (HTTP, TCP and UDP) of every Gateway in the class, including listeners contributed
+  by ListenerSets, and is therefore delivered to `PostHTTPListenerModifyHook` for each of those listeners.
+- It is delivered once to `PostTranslateModifyHook` for the merged translation of the class.
+- `sectionName` is not supported on a `GatewayClass` target. To select a single listener, target the `Gateway` with
+  `sectionName` instead.
+
+```yaml
+apiVersion: example.extensions.io/v1alpha1
+kind: ListenerContextExample
+metadata:
+  name: class-wide-policy
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: GatewayClass
+    name: eg                # a GatewayClass whose EnvoyProxy sets mergeGateways: true
+```
+
+A `GatewayClass` can also be selected through `targetSelectors` by matching its labels. Because a GatewayClass is
+cluster-scoped, the selector's `namespaces` field and ReferenceGrants do not apply to it.
+
+**Important**: Policies targeting a `GatewayClass`, a `Gateway`, and policies targeting an `HTTPRoute` or `GRPCRoute` are evaluated independently. Envoy Gateway does not merge, override, or resolve conflicts between them. For example, a policy attached to an `HTTPRoute` does not override a policy of the same kind attached to its `Gateway`. Any merging, overriding, or conflict resolution behavior must be implemented by the Extension Server.
 
 #### Cross-namespace attachment
 
-Direct `targetRefs` / `targetRef` are always resolved in the **policy's own namespace**, they cannot reference a
-target in another namespace. To attach a policy across namespaces, use `targetSelectors`, which can select a whole
+Direct `targetRefs` / `targetRef` to a namespaced target (`Gateway`, `HTTPRoute`, `GRPCRoute`) are always resolved
+in the **policy's own namespace**, they cannot reference a target in another namespace. A `GatewayClass` is
+cluster-scoped, so a policy in any namespace can target it directly without a ReferenceGrant. To attach a policy across namespaces, use `targetSelectors`, which can select a whole
 `Gateway` or a whole `HTTPRoute`/`GRPCRoute` in another namespace:
 
 ```yaml
@@ -175,8 +206,8 @@ always same-namespace.
 
 #### Status reporting
 
-Envoy Gateway records the outcome of attachment in the policy's `status.ancestors` conditions (the ancestor is the
-Gateway the target resolves to):
+Envoy Gateway records the outcome of attachment in the policy's `status.ancestors` conditions. The ancestor is the
+Gateway the target resolves to, or the `GatewayClass` itself for a `GatewayClass` target:
 
 - **Attached**: the policy is delivered to the relevant hook(s) and an `Accepted: True` condition (reason
   `Accepted`) is set.
@@ -185,6 +216,13 @@ Gateway the target resolves to):
   condition with reason `TargetNotFound` is set.
 - **Unsupported route kind**: targeting `TCPRoute`, `UDPRoute`, or `TLSRoute` is not currently supported. The policy
   does not attach and an `Accepted: False` condition with reason `Invalid` is set.
+- **GatewayClass without `mergeGateways`**: the policy does not attach and an `Accepted: False` condition with
+  reason `Invalid` is set on the `GatewayClass` ancestor.
+- **GatewayClass with `sectionName`**: the policy does not attach and an `Accepted: False` condition with reason
+  `Invalid` is set; target a `Gateway` with `sectionName` instead.
+- **GatewayClass with no listeners**: when `mergeGateways` is enabled but the class currently has no Gateways (or
+  none of them have listeners), the policy does not attach and an `Accepted: False` condition with reason
+  `TargetNotFound` is set.
 - **Target not found**: when the referenced `Gateway` / route does not exist (or the Gateway was not accepted), the
   policy is skipped silently and no condition is written, since the target may be created (or become accepted) later.
 
@@ -506,3 +544,4 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 [network policies]: https://kubernetes.io/docs/concepts/services-networking/network-policies/
 [SecurityPolicy]: /latest/api/extension_types/#securitypolicy
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#referencegrant
+[merge-gateways]: ../operations/deployment-mode/#merged-gateways-deployment
