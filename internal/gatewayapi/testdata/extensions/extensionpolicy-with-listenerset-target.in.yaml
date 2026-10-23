@@ -1,0 +1,101 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+    labels:
+      team: blue
+  spec:
+    parentRef:
+      name: gateway-1
+    listeners:
+    - name: ext-http
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: ext-tcp
+      protocol: TCP
+      port: 9000
+      allowedRoutes:
+        namespaces:
+          from: All
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+    data: "attached to every listener of the ListenerSet"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+      sectionName: ext-http
+    data: "attached only to the ListenerSet's ext-http listener"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test3
+    namespace: envoy-gateway
+  spec:
+    targetSelectors:
+    - kind: ListenerSet
+      group: gateway.networking.k8s.io
+      matchLabels:
+        team: blue
+    data: "attached to every listener of the ListenerSet selected by labels"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test4
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+      sectionName: not-found
+    data: "sectionName does not exist on the ListenerSet"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test5
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: unknown
+    data: "ListenerSet does not exist, silently skipped"
