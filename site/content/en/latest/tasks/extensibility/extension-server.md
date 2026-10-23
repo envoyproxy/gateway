@@ -120,7 +120,7 @@ Envoy Gateway resources through their `targetRefs`/`targetRef` (with an optional
 |------------------|---------------|-------------|----------------------|
 | `Gateway`        | _(unset)_     | The whole Gateway | `PostVirtualHostModifyHook` (once for each listener's virtual host), PostHTTPListenerModifyHook, `PostTranslateModifyHook` |
 | `Gateway`        | Listener name | A single Listener | `PostVirtualHostModifyHook` (virtual host of that listener only), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
-| `GatewayClass`   | _(unset)_     | Every listener of every Gateway in the class (requires `mergeGateways`) | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `GatewayClass`   | _(unset)_     | Every listener of every Gateway in the class (requires `mergeGateways`) | `PostVirtualHostModifyHook` (once for each listener's virtual host), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
 | `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
 | `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
 
@@ -131,7 +131,8 @@ merged Gateways, every Gateway of the class shares one Envoy fleet and one xDS t
 has a single, well-defined place to attach:
 
 - It is attached to every listener (HTTP, TCP and UDP) of every Gateway in the class, including listeners contributed
-  by ListenerSets, and is therefore delivered to `PostHTTPListenerModifyHook` for each of those listeners.
+  by ListenerSets, and is therefore delivered to `PostVirtualHostModifyHook` (once per listener's virtual host) and
+  `PostHTTPListenerModifyHook` for each of those listeners.
 - It is delivered once to `PostTranslateModifyHook` for the merged translation of the class.
 - `sectionName` is not supported on a `GatewayClass` target. To select a single listener, target the `Gateway` with
   `sectionName` instead.
