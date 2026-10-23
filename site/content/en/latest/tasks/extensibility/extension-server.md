@@ -118,7 +118,7 @@ Envoy Gateway resources through their `targetRefs`/`targetRef` (with an optional
 
 | `targetRef` kind | `sectionName` | Attaches to | Delivered to hook(s) |
 |------------------|---------------|-------------|----------------------|
-| `Gateway`        | _(unset)_     | The whole Gateway | `PostVirtualHostModifyHook` (once for each listener's virtual host), `PostTranslateModifyHook` |
+| `Gateway`        | _(unset)_     | The whole Gateway | `PostVirtualHostModifyHook` (once for each listener's virtual host), PostHTTPListenerModifyHook, `PostTranslateModifyHook` |
 | `Gateway`        | Listener name | A single Listener | `PostVirtualHostModifyHook` (virtual host of that listener only), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
 | `GatewayClass`   | _(unset)_     | Every listener of every Gateway in the class (requires `mergeGateways`) | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
 | `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |

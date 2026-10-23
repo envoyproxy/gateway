@@ -948,9 +948,14 @@ func (t *Translator) addRouteToRouteConfig(
 	// a fully-populated VirtualHost. Iterate vHostList to preserve creation order.
 	for _, vHost := range vHostList {
 		refs := vHostExtRefs[vHost]
-		extResources := make([]*unstructured.Unstructured, len(refs))
-		for i, ref := range refs {
-			extResources[i] = resolveUnstructuredRef(ref, t.extensionIndex)
+		extResources := make([]*unstructured.Unstructured, 0, len(refs))
+		seen := make(map[*unstructured.Unstructured]struct{}, len(refs))
+		for _, ref := range refs {
+			obj := resolveUnstructuredRef(ref, t.extensionIndex)
+			if _, dup := seen[obj]; !dup {
+				seen[obj] = struct{}{}
+				extResources = append(extResources, obj)
+			}
 		}
 		if hookErr := processExtensionPostVHostHook(vHost, extResources, t.ExtensionManager, &t.ExtensionStats); hookErr != nil {
 			if !(*t.ExtensionManager).FailOpen() {
