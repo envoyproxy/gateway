@@ -3343,83 +3343,6 @@ data:
               "type": "prometheus",
               "uid": "$datasource"
             },
-            "description": "Current depth of watchable map.",
-            "fieldConfig": {
-              "defaults": {
-                "color": {
-                  "fixedColor": "super-light-blue",
-                  "mode": "shades"
-                },
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
-                    }
-                  ]
-                },
-                "unit": "none"
-              },
-              "overrides": []
-            },
-            "gridPos": {
-              "h": 7,
-              "w": 2,
-              "x": 10,
-              "y": 1
-            },
-            "id": 7,
-            "options": {
-              "colorMode": "value",
-              "graphMode": "none",
-              "justifyMode": "center",
-              "orientation": "auto",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "showPercentChange": false,
-              "textMode": "value",
-              "wideLayout": false
-            },
-            "pluginVersion": "11.0.0",
-            "repeat": "Runner",
-            "repeatDirection": "v",
-            "targets": [
-              {
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "$datasource"
-                },
-                "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "sum by(runner) (watchable_depth{runner=~\"$Runner\", namespace=\"$Namespace\"})",
-                "fullMetaSearch": false,
-                "includeNullMetadata": true,
-                "instant": false,
-                "legendFormat": "__auto",
-                "range": true,
-                "refId": "A",
-                "useBackend": false
-              }
-            ],
-            "title": "Depth",
-            "type": "stat"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "$datasource"
-            },
             "fieldConfig": {
               "defaults": {
                 "color": {
@@ -3457,7 +3380,7 @@ data:
             "gridPos": {
               "h": 7,
               "w": 7,
-              "x": 12,
+              "x": 10,
               "y": 1
             },
             "id": 10,
@@ -6171,7 +6094,7 @@ data:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "definition": "label_values(watchable_depth,namespace)",
+              "definition": "label_values(watchable_subscribe_total,namespace)",
               "hide": 0,
               "includeAll": false,
               "multi": false,
@@ -6179,7 +6102,7 @@ data:
               "options": [],
               "query": {
                 "qryType": 1,
-                "query": "label_values(watchable_depth,namespace)",
+                "query": "label_values(watchable_subscribe_total,namespace)",
                 "refId": "PrometheusVariableQueryEditor-VariableQuery"
               },
               "refresh": 1,
@@ -6203,7 +6126,7 @@ data:
                 "type": "prometheus",
                 "uid": "$datasource"
               },
-              "definition": "label_values(watchable_depth,runner)",
+              "definition": "label_values(watchable_subscribe_total,runner)",
               "hide": 0,
               "includeAll": true,
               "multi": true,
@@ -6211,7 +6134,7 @@ data:
               "options": [],
               "query": {
                 "qryType": 1,
-                "query": "label_values(watchable_depth,runner)",
+                "query": "label_values(watchable_subscribe_total,runner)",
                 "refId": "PrometheusVariableQueryEditor-VariableQuery"
               },
               "refresh": 2,
@@ -9910,7 +9833,7 @@ data:
                           "type": "prometheus",
                           "uid": "$datasource"
                       },
-                      "definition": "label_values(watchable_depth,namespace)",
+                      "definition": "label_values(watchable_subscribe_total,namespace)",
                       "hide": 0,
                       "includeAll": false,
                       "multi": false,
@@ -9918,7 +9841,7 @@ data:
                       "options": [],
                       "query": {
                           "qryType": 1,
-                          "query": "label_values(watchable_depth,namespace)",
+                          "query": "label_values(watchable_subscribe_total,namespace)",
                           "refId": "PrometheusVariableQueryEditor-VariableQuery"
                       },
                       "refresh": 1,
@@ -9942,7 +9865,7 @@ data:
                           "type": "prometheus",
                           "uid": "$datasource"
                       },
-                      "definition": "label_values(watchable_depth,runner)",
+                      "definition": "label_values(watchable_subscribe_total,runner)",
                       "hide": 0,
                       "includeAll": true,
                       "multi": true,
@@ -9950,7 +9873,7 @@ data:
                       "options": [],
                       "query": {
                           "qryType": 1,
-                          "query": "label_values(watchable_depth,runner)",
+                          "query": "label_values(watchable_subscribe_total,runner)",
                           "refId": "PrometheusVariableQueryEditor-VariableQuery"
                       },
                       "refresh": 2,
