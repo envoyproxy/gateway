@@ -8,6 +8,7 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"sort"
 	"testing"
@@ -1489,6 +1490,87 @@ func TestService(t *testing.T) {
 
 			assert.Equal(t, expected, svc)
 		})
+	}
+}
+
+func TestServiceSelectorPodLabelUpdates(t *testing.T) {
+	for _, workload := range []string{"Deployment", "DaemonSet"} {
+		for _, ownership := range []string{"Gateway", "GatewayClass", "GatewayNamespace"} {
+			t.Run(workload+"/"+ownership, func(t *testing.T) {
+				cfg, err := config.New(os.Stdout, os.Stderr)
+				require.NoError(t, err)
+				infra := newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"})
+				metadata := infra.Proxy.GetProxyMetadata()
+				if ownership == "GatewayClass" {
+					delete(metadata.Labels, gatewayapi.OwningGatewayNameLabel)
+					delete(metadata.Labels, gatewayapi.OwningGatewayNamespaceLabel)
+					metadata.Labels[gatewayapi.OwningGatewayClassLabel] = gatewayClassName
+					metadata.OwnerReference = &ir.ResourceMetadata{Kind: gwapiresource.KindGatewayClass, Name: gatewayClassName}
+				}
+				if ownership == "GatewayNamespace" {
+					cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+								Deploy: &egv1a1.KubernetesDeployMode{Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace)},
+							},
+						},
+					}
+				}
+				metadata.Labels["custom"] = "infra"
+				baseline := maps.Clone(metadata.Labels)
+				kube := infra.Proxy.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+				if workload == "DaemonSet" {
+					kube.EnvoyDeployment = nil
+					kube.EnvoyDaemonSet = egv1a1.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage)
+				}
+				r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+				require.NoError(t, err)
+				before, err := r.Service()
+				require.NoError(t, err)
+				expectedSelector := EnvoyAppLabel()
+				for key, value := range baseline {
+					if key != "custom" {
+						expectedSelector[key] = value
+					}
+				}
+				if ownership == "GatewayNamespace" {
+					expectedSelector[gatewayapi.GatewayNameLabel] = r.Name()
+				}
+				require.Equal(t, expectedSelector, before.Spec.Selector)
+				var previous map[string]string
+				for _, podLabels := range []map[string]string{nil, {"custom": "pod", "version": "v1"}, {"custom": "pod", "version": "v2"}, nil} {
+					for range 2 {
+						var current map[string]string
+						if workload == "Deployment" {
+							kube.EnvoyDeployment.Pod.Labels = podLabels
+							deployment, err := r.Deployment()
+							require.NoError(t, err)
+							current = deployment.Spec.Template.Labels
+						} else {
+							kube.EnvoyDaemonSet.Pod.Labels = podLabels
+							daemonSet, err := r.DaemonSet()
+							require.NoError(t, err)
+							current = daemonSet.Spec.Template.Labels
+						}
+						expectedPodLabels := maps.Clone(before.Labels)
+						maps.Copy(expectedPodLabels, podLabels)
+						assert.Equal(t, expectedPodLabels, current)
+						assert.Equal(t, baseline, metadata.Labels)
+						after, err := r.Service()
+						require.NoError(t, err)
+						assert.Equal(t, before, after)
+						for key, value := range after.Spec.Selector {
+							assert.Equal(t, value, current[key])
+							if previous != nil {
+								assert.Equal(t, value, previous[key])
+							}
+						}
+						previous = current
+					}
+				}
+			})
+		}
 	}
 }
 

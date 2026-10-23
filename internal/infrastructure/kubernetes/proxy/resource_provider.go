@@ -364,7 +364,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	// Set the spec of gateway service
 	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
-	serviceSpec.Selector = resource.GetSelector(infraLabels).MatchLabels
+	serviceSpec.Selector = r.stableSelector().MatchLabels
 
 	if (*envoyServiceConfig.Type) == egv1a1.ServiceTypeClusterIP {
 		if len(r.infra.Addresses) > 0 {
@@ -813,7 +813,8 @@ func (r *ResourceRender) getLabels() (map[string]string, error) {
 }
 
 func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]string {
-	podLabels := r.infra.GetProxyMetadata().Labels
+	podLabels := map[string]string{}
+	maps.Copy(podLabels, r.infra.GetProxyMetadata().Labels)
 	maps.Copy(podLabels, pod.Labels)
 
 	return r.envoyLabels(podLabels)
