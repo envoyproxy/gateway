@@ -382,6 +382,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 	for _, key := range keys {
 		val := gRes.XdsIR[key]
 		xTranslator := &translator.Translator{
+			DNSDomain: dnsDomain,
 			// Set some default settings for translation
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),

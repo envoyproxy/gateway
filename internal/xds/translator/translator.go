@@ -119,6 +119,9 @@ type Translator struct {
 	// ControllerNamespace is the namespace of the Gateway API controller
 	ControllerNamespace string
 
+	// DNSDomain is the DNS domain used by k8s services. Defaults to "cluster.local".
+	DNSDomain string
+
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings

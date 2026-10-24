@@ -231,6 +231,51 @@ func Test_httpServerWithHTTP(t *testing.T) {
 	})
 }
 
+func Test_httpServerServingURLDNSDomain(t *testing.T) {
+	httpData := append([]byte{}, wasmHeader...)
+	httpData = append(httpData, []byte("data")...)
+	r := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(httpData)
+	}))
+	defer r.Close()
+
+	tests := []struct {
+		name      string
+		dnsDomain string
+		wantHost  string
+	}{
+		{
+			name:      "default domain",
+			dnsDomain: "",
+			wantHost:  "envoy-gateway.envoy-gateway-system.svc.cluster.local",
+		},
+		{
+			name:      "custom domain",
+			dnsDomain: "example.internal",
+			wantHost:  "envoy-gateway.envoy-gateway-system.svc.example.internal",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+			server := NewHTTPServerWithFileCache(
+				ServerOptions{Salt: []byte("salt")},
+				CacheOptions{CacheDir: t.TempDir()},
+				"envoy-gateway-system", tc.dnsDomain, logger)
+
+			servingURL, _, err := server.Get(fmt.Sprintf("%s/%s", r.URL, validWasmModule), &GetOptions{
+				ResourceName:   resourceName,
+				RequestTimeout: time.Second * 10,
+			})
+			require.NoError(t, err)
+
+			u, err := url.Parse(servingURL)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantHost, u.Hostname())
+		})
+	}
+}
+
 func Test_httpServerFailedAttempt(t *testing.T) {
 	var (
 		registryURL *url.URL
@@ -338,7 +383,7 @@ func startLocalHTTPServer(ctx context.Context, cacheDir string, maxFailedAttempt
 		},
 		CacheOptions{
 			CacheDir: cacheDir,
-		}, "envoy-gateway-system", logger)
+		}, "envoy-gateway-system", "cluster.local", logger)
 	go s.Start(ctx)
 
 	// Wait for the server to start

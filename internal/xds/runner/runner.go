@@ -318,6 +318,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				// Translate to xds resources
 				t := &translator.Translator{
 					ControllerNamespace: r.ControllerNamespace,
+					DNSDomain:           r.DNSDomain,
 					FilterOrder:         val.XdsIR.FilterOrder,
 					RuntimeFlags:        r.EnvoyGateway.RuntimeFlags,
 					Logger:              traceLogger,
