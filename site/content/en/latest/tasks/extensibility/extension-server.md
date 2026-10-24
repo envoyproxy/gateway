@@ -51,7 +51,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 |-----------|------------------|---------|-------------------|-------------------|
 | `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters or extension server policies targeting them |
 | `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
-| `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host |
+| `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host; receives extension server policies targeting the listener that owns the virtual host |
 | `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
 | `Translation` | `PostTranslateModifyHook` | Global modification of all xDS resources | All clusters, secrets, listeners, and routes | Once per translation cycle |
 
@@ -91,7 +91,7 @@ The hooks are executed in the following order during xDS translation:
 #### VirtualHost Hook (`PostVirtualHostModifyHook`)
 
 - **When called**: After all routes for a virtual host are processed
-- **Input**: Complete virtual host with all its routes
+- **Input**: Complete virtual host with all its routes, plus extension server policies targeting the listener that owns this virtual host
 - **Output**: Modified virtual host (can add/remove/modify routes)
 - **Use cases**: Add virtual host-level configuration, inject additional routes
 
@@ -118,9 +118,9 @@ Envoy Gateway resources through their `targetRefs`/`targetRef` (with an optional
 
 | `targetRef` kind | `sectionName` | Attaches to | Delivered to hook(s) |
 |------------------|---------------|-------------|----------------------|
-| `GatewayClass`   | _(unset)_     | Every listener of every Gateway in the class (requires `mergeGateways`) | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
-| `Gateway`        | _(unset)_     | Every listener of the Gateway | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
-| `Gateway`        | Listener name | A single Listener | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `Gateway`        | _(unset)_     | The whole Gateway | `PostVirtualHostModifyHook` (once for each listener's virtual host), PostHTTPListenerModifyHook, `PostTranslateModifyHook` |
+| `Gateway`        | Listener name | A single Listener | `PostVirtualHostModifyHook` (virtual host of that listener only), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `GatewayClass`   | _(unset)_     | Every listener of every Gateway in the class (requires `mergeGateways`) | `PostVirtualHostModifyHook` (once for each listener's virtual host), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
 | `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
 | `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
 
@@ -131,7 +131,8 @@ merged Gateways, every Gateway of the class shares one Envoy fleet and one xDS t
 has a single, well-defined place to attach:
 
 - It is attached to every listener (HTTP, TCP and UDP) of every Gateway in the class, including listeners contributed
-  by ListenerSets, and is therefore delivered to `PostHTTPListenerModifyHook` for each of those listeners.
+  by ListenerSets, and is therefore delivered to `PostVirtualHostModifyHook` (once per listener's virtual host) and
+  `PostHTTPListenerModifyHook` for each of those listeners.
 - It is delivered once to `PostTranslateModifyHook` for the merged translation of the class.
 - `sectionName` is not supported on a `GatewayClass` target. To select a single listener, target the `Gateway` with
   `sectionName` instead.
