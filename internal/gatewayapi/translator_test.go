@@ -58,6 +58,7 @@ func TestTranslate(t *testing.T) {
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
 		EnvoyProxyPatchDisabled         bool
+		DropBackendRefsWithoutEndpoints bool
 		CTPHTTP1ClientScopeOnly         bool
 	}{
 		{
@@ -141,6 +142,10 @@ func TestTranslate(t *testing.T) {
 			EnvoyProxyPatchDisabled: true,
 		},
 		{
+			name:                            "httproute-with-multiple-backendrefs-some-without-endpoints",
+			DropBackendRefsWithoutEndpoints: true,
+		},
+		{
 			name:                    "mergebackends-http-merge-listenerset-http1-ctp-client-scope",
 			CTPHTTP1ClientScopeOnly: true,
 		},
@@ -187,6 +192,7 @@ func TestTranslate(t *testing.T) {
 			sdsEnabled := false
 			perResourceSystemCASecret := false
 			envoyProxyPatchDisabled := false
+			dropBackendRefsWithoutEndpoints := false
 			ctpHTTP1ClientScopeOnly := false
 
 			for _, config := range testCasesConfig {
@@ -199,6 +205,7 @@ func TestTranslate(t *testing.T) {
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
 					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
+					dropBackendRefsWithoutEndpoints = config.DropBackendRefsWithoutEndpoints
 					ctpHTTP1ClientScopeOnly = config.CTPHTTP1ClientScopeOnly
 				}
 			}
@@ -211,6 +218,7 @@ func TestTranslate(t *testing.T) {
 				BackendEnabled:                  backendEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
+				DropBackendRefsWithoutEndpoints: dropBackendRefsWithoutEndpoints,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
 				MergeBackends:                   ResolveMergeBackendsConfig(resources),
