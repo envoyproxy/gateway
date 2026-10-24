@@ -1,0 +1,1 @@
+Fixed `backendTrafficPolicy.spec.compressor[].minContentLength` (and the deprecated `spec.compression[]`) silently wrapping when set above 4 GiB: the quantity was cast straight to a uint32, so a value such as `4Gi` truncated to `0` and Envoy compressed every response instead of only large ones. Such out-of-range values are now rejected with a policy error rather than truncated.
