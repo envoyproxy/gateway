@@ -12,9 +12,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -373,7 +375,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergePolicyAncestorStatus(t.Namespace, r.classController, t.Status.Ancestors, valCopy.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -411,7 +415,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergePolicyAncestorStatus(t.Namespace, r.classController, t.Status.Ancestors, valCopy.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -449,7 +455,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergePolicyAncestorStatus(t.Namespace, r.classController, t.Status.Ancestors, valCopy.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -487,7 +495,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergePolicyAncestorStatus(t.Namespace, r.classController, t.Status.Ancestors, valCopy.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -528,7 +538,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergePolicyAncestorStatus(t.Namespace, r.classController, t.Status.Ancestors, valCopy.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -566,7 +578,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status: gwapiv1.PolicyStatus{
+								Ancestors: mergePolicyAncestorStatus(t.Namespace, r.classController, t.Status.Ancestors, valCopy.Ancestors),
+							},
 						}
 						return tCopy
 					}),
@@ -642,6 +656,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							}
 							valCopy := val.DeepCopy()
 							setLastTransitionTimeInConditionsForPolicyStatus(valCopy, metav1.Now())
+							valCopy.Ancestors = mergePolicyAncestorStatus(t.GetNamespace(), r.classController, unstructuredPolicyAncestors(t), valCopy.Ancestors)
 							objMap := make(map[string]interface{}, len(t.Object))
 							for k, v := range t.Object {
 								if k != "status" {
@@ -758,6 +773,106 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 
 func isRouteParentStatusEqual(ns string, a, b *gwapiv1.RouteParentStatus) bool {
 	return a.ControllerName == b.ControllerName && gatewayapi.IsParentRefEqual(a.ParentRef, b.ParentRef, ns)
+}
+
+// mergePolicyAncestorStatus merges the ancestors of the latest policy object with the computed ones.
+// An entry is identified by its ancestorRef and controllerName, and entries written by other controllers
+// MUST NOT be updated. The computed ancestors are complete for our controller, so stale entries of ours are removed.
+// Entries of other controllers are never removed to fit in the CRD limit; ours are truncated instead.
+func mergePolicyAncestorStatus(ns string, controllerName gwapiv1.GatewayController, old, new []gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
+	// The CRD allows at most status.MaxPolicyAncestors entries, and entries of other controllers MUST NOT be removed.
+	// So if the merged list would exceed it, the new ancestors are truncated to the remaining slots first,
+	// and the Aggregated condition is set on the last one of them.
+	// See: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#policystatus
+	new = truncateOwnPolicyAncestors(controllerName, old, new)
+
+	// Allocating with worst-case capacity to avoid reallocation.
+	merged := make([]gwapiv1.PolicyAncestorStatus, 0, len(old)+len(new))
+	used := make([]bool, len(new))
+	// Range over old ancestors in order:
+	//  1. The entry exists in the new status: append the new one to the final status, once.
+	//     Further old duplicates of it are dropped.
+	//  2. The entry doesn't exist in the new status and it's not our controller: append it to the final status.
+	//  3. The entry doesn't exist in the new status, and it is our controller: drop it.
+	//
+	// Then append the new entries that weren't found in the old status.
+	for _, oldA := range old {
+		found := -1
+		for newI, newA := range new {
+			if isPolicyAncestorStatusEqual(ns, &oldA, &newA) {
+				found = newI
+				break
+			}
+		}
+		switch {
+		case found >= 0:
+			if !used[found] {
+				used[found] = true
+				merged = append(merged, new[found])
+			}
+		case oldA.ControllerName != controllerName:
+			merged = append(merged, oldA)
+		}
+	}
+
+	for newI, newA := range new {
+		if !used[newI] {
+			merged = append(merged, newA)
+		}
+	}
+	return merged
+}
+
+// truncateOwnPolicyAncestors truncates the new ancestors of our controller
+// to the slots left by the entries of other controllers in the old ancestors.
+func truncateOwnPolicyAncestors(controllerName gwapiv1.GatewayController, old, new []gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
+	others := 0
+	for _, a := range old {
+		if a.ControllerName != controllerName {
+			others++
+		}
+	}
+	limit := status.MaxPolicyAncestors - others
+	if len(new) <= limit {
+		return new
+	}
+
+	// The generation that produced the new ancestors, not the one of the latest object,
+	// which may have been updated since the status was computed.
+	var generation int64
+	for _, a := range new {
+		for _, c := range a.Conditions {
+			generation = max(generation, c.ObservedGeneration)
+		}
+	}
+	policyStatus := gwapiv1.PolicyStatus{Ancestors: new}
+	status.TruncatePolicyAncestorsWithLimit(&policyStatus, string(controllerName), generation, limit)
+	// The Aggregated condition is added after LastTransitionTime has been set for the new ancestors.
+	if limit > 0 {
+		last := &policyStatus.Ancestors[limit-1]
+		if c := meta.FindStatusCondition(last.Conditions, string(egv1a1.PolicyConditionAggregated)); c != nil && c.LastTransitionTime.IsZero() {
+			c.LastTransitionTime = metav1.Now()
+		}
+	}
+	return policyStatus.Ancestors
+}
+
+// unstructuredPolicyAncestors returns the status.ancestors of an extension server policy.
+// It returns nil if the object has no status or the status isn't a PolicyStatus.
+func unstructuredPolicyAncestors(obj *unstructured.Unstructured) []gwapiv1.PolicyAncestorStatus {
+	s, found, err := unstructured.NestedMap(obj.Object, "status")
+	if err != nil || !found {
+		return nil
+	}
+	var policyStatus gwapiv1.PolicyStatus
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(s, &policyStatus); err != nil {
+		return nil
+	}
+	return policyStatus.Ancestors
+}
+
+func isPolicyAncestorStatusEqual(ns string, a, b *gwapiv1.PolicyAncestorStatus) bool {
+	return a.ControllerName == b.ControllerName && gatewayapi.IsParentRefEqual(a.AncestorRef, b.AncestorRef, ns)
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {
