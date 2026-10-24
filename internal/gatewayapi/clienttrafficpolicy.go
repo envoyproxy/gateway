@@ -898,6 +898,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		httpIR.ProxyProtocol = proxyProtocol
 		httpIR.Timeout = timeout
 		httpIR.TLS = tlsConfig
+		if policy.Spec.TLS != nil {
+			httpIR.OverlappingTLSHandling = ir.OverlappingTLSHandling(policy.Spec.TLS.OverlappingTLSHandling)
+		}
 	}
 
 	if tcpIR != nil {
