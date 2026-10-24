@@ -7,12 +7,15 @@ package validation
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -85,15 +88,19 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	return nil
 }
 
-// WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
+// WarnEnvoyGateway returns non-fatal warnings for the provided EnvoyGateway configuration:
+// deprecated fields, and fields that are accepted but have no effect.
 func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
-	if eg == nil || eg.ExtensionAPIs == nil {
+	if eg == nil {
 		return nil
 	}
+
 	var warnings []string
-	if eg.ExtensionAPIs.DisableLua != nil {
+
+	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil {
 		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
 	}
+
 	return warnings
 }
 
@@ -232,6 +239,11 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit == nil {
 		return nil
 	}
+
+	if err := validateRateLimitClusterSettings(rateLimit.ServiceSettings); err != nil {
+		return fmt.Errorf("invalid rateLimit.serviceSettings: %w", err)
+	}
+
 	if rateLimit.Backend.Type != egv1a1.RedisBackendType {
 		return fmt.Errorf("unsupported ratelimit backend %v", rateLimit.Backend.Type)
 	}
@@ -274,6 +286,294 @@ func ValidateRedisURL(redisURL string) error {
 		if _, err := url.Parse(host); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}
+	}
+	return nil
+}
+
+// validateRateLimitClusterSettings validates EnvoyGateway.RateLimit.ServiceSettings.
+//
+// EnvoyGateway is loaded as static configuration rather than admitted as a CRD, so the
+// kubebuilder constraints declared on these types (enums, minimums, the Go-duration format)
+// are never enforced. Without this check, a malformed value here is accepted at startup and
+// only surfaces once a Global rate limit policy is actually used -- either failing translation
+// or producing a cluster that Envoy rejects.
+func validateRateLimitClusterSettings(cs *egv1a1.RateLimitClusterSettings) error {
+	if cs == nil {
+		return nil
+	}
+
+	if err := validateRateLimitClusterCircuitBreaker(cs.CircuitBreaker); err != nil {
+		return err
+	}
+
+	if t := cs.Timeout; t != nil {
+		if t.TCP != nil {
+			if err := validateOptionalDuration("timeout.tcp.connectTimeout", t.TCP.ConnectTimeout, false); err != nil {
+				return err
+			}
+		}
+		if t.HTTP != nil {
+			if err := validateOptionalDuration("timeout.http.connectionIdleTimeout", t.HTTP.ConnectionIdleTimeout, true); err != nil {
+				return err
+			}
+			if err := validateOptionalDuration("timeout.http.maxConnectionDuration", t.HTTP.MaxConnectionDuration, true); err != nil {
+				return err
+			}
+			if err := validateOptionalDuration("timeout.http.maxStreamDuration", t.HTTP.MaxStreamDuration, true); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := validateRateLimitClusterTCPKeepalive(cs.TCPKeepalive); err != nil {
+		return err
+	}
+
+	if err := validateRateLimitClusterHTTP2(cs.HTTP2); err != nil {
+		return err
+	}
+
+	return validateRateLimitClusterHealthCheck(cs.HealthCheck)
+}
+
+// HTTP/2 flow-control window bounds enforced by Envoy, mirroring internal/gatewayapi.
+const (
+	minHTTP2WindowSize = 65535
+	maxHTTP2WindowSize = math.MaxInt32
+)
+
+func validateRateLimitClusterHTTP2(h *egv1a1.HTTP2Settings) error {
+	if h == nil {
+		return nil
+	}
+	for _, w := range []struct {
+		name string
+		val  *resource.Quantity
+	}{
+		{"http2.initialStreamWindowSize", h.InitialStreamWindowSize},
+		{"http2.initialConnectionWindowSize", h.InitialConnectionWindowSize},
+	} {
+		if w.val == nil {
+			continue
+		}
+		if v, ok := w.val.AsInt64(); !ok || v < minHTTP2WindowSize || v > maxHTTP2WindowSize {
+			return fmt.Errorf("%s value %s is out of range [%d, %d]", w.name, w.val.String(), minHTTP2WindowSize, maxHTTP2WindowSize)
+		}
+	}
+	if h.MaxConcurrentStreams != nil && (*h.MaxConcurrentStreams < 1 || *h.MaxConcurrentStreams > math.MaxInt32) {
+		return fmt.Errorf("http2.maxConcurrentStreams must be between 1 and %d", math.MaxInt32)
+	}
+	if a := h.OnInvalidMessage; a != nil {
+		switch *a {
+		case egv1a1.InvalidMessageActionTerminateConnection, egv1a1.InvalidMessageActionTerminateStream:
+		default:
+			return fmt.Errorf("http2.onInvalidMessage %q is not supported", *a)
+		}
+	}
+	if ka := h.ConnectionKeepalive; ka != nil {
+		// Envoy requires a keepalive timeout, and every keepalive duration must be at least 1ms.
+		if ka.Timeout == nil {
+			return fmt.Errorf("http2.connectionKeepalive.timeout is required")
+		}
+		for _, f := range []struct {
+			name string
+			val  *gwapiv1.Duration
+		}{
+			{"http2.connectionKeepalive.interval", ka.Interval},
+			{"http2.connectionKeepalive.timeout", ka.Timeout},
+			{"http2.connectionKeepalive.idleInterval", ka.IdleInterval},
+		} {
+			if err := validateOptionalDuration(f.name, f.val, false); err != nil {
+				return err
+			}
+			if f.val != nil && parseDuration(*f.val) < time.Millisecond {
+				return fmt.Errorf("%s: duration must be at least 1ms", f.name)
+			}
+		}
+		if ka.Interval != nil && parseDuration(*ka.Timeout) >= parseDuration(*ka.Interval) {
+			return fmt.Errorf("http2.connectionKeepalive.timeout must be less than interval")
+		}
+		if ka.IntervalJitter != nil && *ka.IntervalJitter > 100 {
+			return fmt.Errorf("http2.connectionKeepalive.intervalJitter must be between 0 and 100")
+		}
+	}
+	return nil
+}
+
+// Linux bounds for TCP_KEEPIDLE/TCP_KEEPINTVL (seconds) and TCP_KEEPCNT. Envoy fails the
+// upstream connection when setsockopt rejects a value, which would make the rate limit
+// service unreachable.
+const (
+	maxTCPKeepaliveSeconds = 32767
+	maxTCPKeepaliveProbes  = 127
+)
+
+func validateRateLimitClusterTCPKeepalive(ka *egv1a1.TCPKeepalive) error {
+	if ka == nil {
+		return nil
+	}
+	if ka.Probes != nil && (*ka.Probes < 1 || *ka.Probes > maxTCPKeepaliveProbes) {
+		return fmt.Errorf("tcpKeepalive.probes must be between 1 and %d", maxTCPKeepaliveProbes)
+	}
+	for _, f := range []struct {
+		name string
+		val  *gwapiv1.Duration
+	}{
+		{"tcpKeepalive.idleTime", ka.IdleTime},
+		{"tcpKeepalive.interval", ka.Interval},
+	} {
+		if err := validateOptionalDuration(f.name, f.val, false); err != nil {
+			return err
+		}
+		// Translation truncates to whole seconds, so fractional values would be silently changed.
+		if f.val != nil {
+			if d := parseDuration(*f.val); d%time.Second != 0 || d < time.Second || d > maxTCPKeepaliveSeconds*time.Second {
+				return fmt.Errorf("%s must be a whole number of seconds between 1s and %ds", f.name, maxTCPKeepaliveSeconds)
+			}
+		}
+	}
+	return nil
+}
+
+func validateRateLimitClusterCircuitBreaker(cb *egv1a1.RateLimitCircuitBreaker) error {
+	if cb == nil {
+		return nil
+	}
+
+	fields := []struct {
+		name string
+		val  *int64
+	}{
+		{"circuitBreaker.maxConnections", cb.MaxConnections},
+		{"circuitBreaker.maxPendingRequests", cb.MaxPendingRequests},
+		{"circuitBreaker.maxParallelRequests", cb.MaxParallelRequests},
+		{"circuitBreaker.maxRequestsPerConnection", cb.MaxRequestsPerConnection},
+	}
+	if cb.PerEndpoint != nil {
+		fields = append(fields, struct {
+			name string
+			val  *int64
+		}{"circuitBreaker.perEndpoint.maxConnections", cb.PerEndpoint.MaxConnections})
+	}
+	for _, f := range fields {
+		if f.val == nil {
+			continue
+		}
+		if *f.val < 0 || *f.val > math.MaxUint32 {
+			return fmt.Errorf("%s value %d is out of range [0, %d]", f.name, *f.val, uint32(math.MaxUint32))
+		}
+	}
+
+	return nil
+}
+
+func validateRateLimitClusterHealthCheck(hc *egv1a1.RateLimitHealthCheck) error {
+	if hc == nil {
+		return nil
+	}
+
+	if hc.PanicThreshold != nil && *hc.PanicThreshold > 100 {
+		return fmt.Errorf("healthCheck.panicThreshold must be between 0 and 100")
+	}
+
+	if a := hc.Active; a != nil {
+		switch a.Type {
+		case egv1a1.ActiveHealthCheckerTypeTCP:
+			if a.TCP == nil {
+				return fmt.Errorf("healthCheck.active.tcp is required when type is TCP")
+			}
+			if err := validateHealthCheckPayload("healthCheck.active.tcp.send", a.TCP.Send); err != nil {
+				return err
+			}
+			if err := validateHealthCheckPayload("healthCheck.active.tcp.receive", a.TCP.Receive); err != nil {
+				return err
+			}
+			if a.GRPC != nil {
+				return fmt.Errorf("healthCheck.active.grpc can only be set when type is GRPC")
+			}
+		case egv1a1.ActiveHealthCheckerTypeGRPC:
+			if a.TCP != nil {
+				return fmt.Errorf("healthCheck.active.tcp can only be set when type is TCP")
+			}
+		default:
+			return fmt.Errorf("healthCheck.active.type %q is not supported, use GRPC or TCP", a.Type)
+		}
+		// Envoy rejects health checks with zero thresholds.
+		if a.UnhealthyThreshold != nil && *a.UnhealthyThreshold == 0 {
+			return fmt.Errorf("healthCheck.active.unhealthyThreshold must be at least 1")
+		}
+		if a.HealthyThreshold != nil && *a.HealthyThreshold == 0 {
+			return fmt.Errorf("healthCheck.active.healthyThreshold must be at least 1")
+		}
+		if err := validateOptionalDuration("healthCheck.active.timeout", a.Timeout, false); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.active.interval", a.Interval, false); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.active.initialJitter", a.InitialJitter, true); err != nil {
+			return err
+		}
+	}
+
+	if p := hc.Passive; p != nil {
+		if err := validateOptionalDuration("healthCheck.passive.interval", p.Interval, false); err != nil {
+			return err
+		}
+		if err := validateOptionalDuration("healthCheck.passive.baseEjectionTime", p.BaseEjectionTime, false); err != nil {
+			return err
+		}
+		if p.MaxEjectionPercent != nil && (*p.MaxEjectionPercent < 0 || *p.MaxEjectionPercent > 100) {
+			return fmt.Errorf("healthCheck.passive.maxEjectionPercent must be between 0 and 100")
+		}
+		if p.FailurePercentageThreshold != nil && *p.FailurePercentageThreshold > 100 {
+			return fmt.Errorf("healthCheck.passive.failurePercentageThreshold must be between 0 and 100")
+		}
+	}
+
+	return nil
+}
+
+func validateHealthCheckPayload(field string, p *egv1a1.ActiveHealthCheckPayload) error {
+	if p == nil {
+		return nil
+	}
+	// An empty value leaves Envoy's payload unset, which fails xDS validation.
+	switch p.Type {
+	case egv1a1.ActiveHealthCheckPayloadTypeText:
+		if ptr.Deref(p.Text, "") == "" || p.Binary != nil {
+			return fmt.Errorf("%s.text must be non-empty, and the only value set, when type is Text", field)
+		}
+	case egv1a1.ActiveHealthCheckPayloadTypeBinary:
+		if len(p.Binary) == 0 || p.Text != nil {
+			return fmt.Errorf("%s.binary must be non-empty, and the only value set, when type is Binary", field)
+		}
+	default:
+		return fmt.Errorf("%s.type %q is not supported, use Text or Binary", field, p.Type)
+	}
+	return nil
+}
+
+// parseDuration parses a duration already checked by validateOptionalDuration.
+func parseDuration(d gwapiv1.Duration) time.Duration {
+	duration, _ := time.ParseDuration(string(d))
+	return duration
+}
+
+// validateOptionalDuration validates parsing and field-specific xDS duration bounds.
+func validateOptionalDuration(field string, d *gwapiv1.Duration, allowZero bool) error {
+	if d == nil {
+		return nil
+	}
+	duration, err := time.ParseDuration(string(*d))
+	if err != nil {
+		return fmt.Errorf("%s: invalid duration %q: %w", field, string(*d), err)
+	}
+	if duration < 0 || (!allowZero && duration == 0) {
+		if allowZero {
+			return fmt.Errorf("%s: duration must be nonnegative", field)
+		}
+		return fmt.Errorf("%s: duration must be positive", field)
 	}
 	return nil
 }

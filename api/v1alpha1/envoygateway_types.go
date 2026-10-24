@@ -739,6 +739,262 @@ type RateLimit struct {
 	// Telemetry defines telemetry configuration for RateLimit.
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+
+	// ServiceSettings holds configuration for managing the connection to the rate limit
+	// service, such as circuit breakers, timeouts, health checks, and load balancing.
+	//
+	// +optional
+	ServiceSettings *RateLimitClusterSettings `json:"serviceSettings,omitempty"`
+}
+
+// RateLimitClusterSettings defines configuration for how Envoy connects to the rate limit service.
+//
+// It deliberately exposes only the subset of ClusterSettings that applies to the managed rate
+// limit service: a gRPC (HTTP/2) service reached over mTLS, with no associated route.
+type RateLimitClusterSettings struct {
+	// TcpKeepalive settings associated with the upstream client connection.
+	// Disabled by default.
+	//
+	// +optional
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
+
+	// HealthCheck allows gateway to perform health checking on the rate limit service endpoints.
+	//
+	// +optional
+	HealthCheck *RateLimitHealthCheck `json:"healthCheck,omitempty"`
+
+	// Circuit Breaker settings for the upstream connections and requests.
+	// If not set, circuit breakers will be enabled with the default thresholds.
+	//
+	// +optional
+	CircuitBreaker *RateLimitCircuitBreaker `json:"circuitBreaker,omitempty"`
+
+	// Timeout settings for the rate limit service connections.
+	//
+	// +optional
+	Timeout *RateLimitTimeout `json:"timeout,omitempty"`
+
+	// HTTP2 provides HTTP/2 configuration for the rate limit service connections.
+	//
+	// +optional
+	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+}
+
+// TODO: extract the fields shared with CircuitBreaker into a neutrally named type (e.g.
+// CircuitBreakerThresholds) and embed it inline in both, once a breaking change to
+// CircuitBreaker struct literals is acceptable.
+
+// RateLimitCircuitBreaker defines the circuit breaker configuration for the rate limit service.
+// Retry-related thresholds are not supported, since rate limit RPCs are never retried.
+type RateLimitCircuitBreaker struct {
+	// The maximum number of connections that Envoy will establish to the rate limit service.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
+	// +optional
+	MaxConnections *int64 `json:"maxConnections,omitempty"`
+
+	// The maximum number of pending requests that Envoy will queue to the rate limit service.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
+	// +optional
+	MaxPendingRequests *int64 `json:"maxPendingRequests,omitempty"`
+
+	// The maximum number of parallel requests that Envoy will make to the rate limit service.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
+	// +optional
+	MaxParallelRequests *int64 `json:"maxParallelRequests,omitempty"`
+
+	// The maximum number of requests that Envoy will make over a single connection to the rate limit service.
+	// Default: unlimited.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +optional
+	MaxRequestsPerConnection *int64 `json:"maxRequestsPerConnection,omitempty"`
+
+	// PerEndpoint defines Circuit Breakers that will apply per-endpoint for the rate limit service.
+	//
+	// +optional
+	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+}
+
+// RateLimitHealthCheck defines the health check configuration for the rate limit service.
+type RateLimitHealthCheck struct {
+	// Active health check configuration
+	//
+	// +optional
+	Active *RateLimitActiveHealthCheck `json:"active,omitempty"`
+
+	// Passive passive check configuration
+	//
+	// +optional
+	Passive *PassiveHealthCheck `json:"passive,omitempty"`
+
+	// When number of unhealthy endpoints for a backend reaches this threshold
+	// Envoy will disregard health status and balance across all endpoints.
+	// It's designed to prevent a situation in which host failures cascade throughout the cluster
+	// as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	PanicThreshold *uint32 `json:"panicThreshold,omitempty"`
+}
+
+// RateLimitActiveHealthCheck defines the active health check configuration for the rate
+// limit service. HTTP health checks are not supported, since the managed rate limit service
+// only serves its HTTP health endpoint as plaintext while the cluster always uses mTLS.
+type RateLimitActiveHealthCheck struct {
+	// Timeout defines the time to wait for a health check response.
+	//
+	// +kubebuilder:default="1s"
+	// +optional
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
+
+	// Interval defines the time between active health checks.
+	//
+	// +kubebuilder:default="3s"
+	// +optional
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
+
+	// InitialJitter defines the maximum time Envoy will wait before the first health check.
+	// Envoy will randomly select a value between 0 and the initial jitter value.
+	//
+	// +optional
+	InitialJitter *gwapiv1.Duration `json:"initialJitter,omitempty"`
+
+	// UnhealthyThreshold defines the number of unhealthy health checks required before a
+	// rate limit service endpoint is marked unhealthy.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=3
+	// +optional
+	UnhealthyThreshold *uint32 `json:"unhealthyThreshold,omitempty"`
+
+	// HealthyThreshold defines the number of healthy health checks required before a
+	// rate limit service endpoint is marked healthy.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=1
+	// +optional
+	HealthyThreshold *uint32 `json:"healthyThreshold,omitempty"`
+
+	// DisableConnectionReuse determines whether the active health check connection is closed
+	// after each health check probe.
+	//
+	// +optional
+	DisableConnectionReuse *bool `json:"disableConnectionReuse,omitempty"`
+
+	// Type defines the type of health checker.
+	//
+	// +kubebuilder:validation:Enum=TCP;GRPC
+	Type ActiveHealthCheckerType `json:"type"`
+
+	// TCP defines the configuration of tcp health checker.
+	// It's required while the health checker type is TCP.
+	//
+	// +optional
+	TCP *TCPActiveHealthChecker `json:"tcp,omitempty"`
+
+	// GRPC defines the configuration of the GRPC health checker.
+	// It's optional, and can only be used if the specified type is GRPC.
+	//
+	// +optional
+	GRPC *GRPCActiveHealthChecker `json:"grpc,omitempty"`
+}
+
+// RateLimitTimeout defines timeout settings for the rate limit service connections.
+type RateLimitTimeout struct {
+	// Timeout settings for TCP.
+	//
+	// +optional
+	TCP *TCPTimeout `json:"tcp,omitempty"`
+
+	// Timeout settings for HTTP.
+	//
+	// +optional
+	HTTP *RateLimitHTTPTimeout `json:"http,omitempty"`
+}
+
+// RateLimitHTTPTimeout defines the connection-level HTTP timeouts for the rate limit service.
+// Request-level timeouts are configured with RateLimit.Timeout.
+type RateLimitHTTPTimeout struct {
+	// The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+	// Default: 1 hour.
+	//
+	// +optional
+	ConnectionIdleTimeout *gwapiv1.Duration `json:"connectionIdleTimeout,omitempty"`
+
+	// The maximum duration of an HTTP connection.
+	// Default: unlimited.
+	//
+	// +optional
+	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
+
+	// MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+	// from when the request is sent until the response stream is fully consumed.
+	// Default: unlimited.
+	//
+	// +optional
+	MaxStreamDuration *gwapiv1.Duration `json:"maxStreamDuration,omitempty"`
+}
+
+// GetServiceSettings returns the rate limit service cluster settings as ClusterSettings, or nil if unset.
+func (r *RateLimit) GetServiceSettings() *ClusterSettings {
+	if r == nil || r.ServiceSettings == nil {
+		return nil
+	}
+	s := r.ServiceSettings
+	cs := &ClusterSettings{
+		TCPKeepalive: s.TCPKeepalive,
+		HTTP2:        s.HTTP2,
+	}
+	if cb := s.CircuitBreaker; cb != nil {
+		cs.CircuitBreaker = &CircuitBreaker{
+			MaxConnections:           cb.MaxConnections,
+			MaxPendingRequests:       cb.MaxPendingRequests,
+			MaxParallelRequests:      cb.MaxParallelRequests,
+			MaxRequestsPerConnection: cb.MaxRequestsPerConnection,
+			PerEndpoint:              cb.PerEndpoint,
+		}
+	}
+	if s.HealthCheck != nil {
+		cs.HealthCheck = &HealthCheck{
+			Passive:        s.HealthCheck.Passive,
+			PanicThreshold: s.HealthCheck.PanicThreshold,
+		}
+		if a := s.HealthCheck.Active; a != nil {
+			cs.HealthCheck.Active = &ActiveHealthCheck{
+				Timeout:                a.Timeout,
+				Interval:               a.Interval,
+				InitialJitter:          a.InitialJitter,
+				UnhealthyThreshold:     a.UnhealthyThreshold,
+				HealthyThreshold:       a.HealthyThreshold,
+				DisableConnectionReuse: a.DisableConnectionReuse,
+				Type:                   a.Type,
+				TCP:                    a.TCP,
+				GRPC:                   a.GRPC,
+			}
+		}
+	}
+	if s.Timeout != nil {
+		cs.Timeout = &Timeout{TCP: s.Timeout.TCP}
+		if h := s.Timeout.HTTP; h != nil {
+			cs.Timeout.HTTP = &HTTPTimeout{
+				ConnectionIdleTimeout: h.ConnectionIdleTimeout,
+				MaxConnectionDuration: h.MaxConnectionDuration,
+				MaxStreamDuration:     h.MaxStreamDuration,
+			}
+		}
+	}
+	return cs
 }
 
 type RateLimitTelemetry struct {
