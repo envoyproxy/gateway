@@ -31,6 +31,10 @@ const (
 	DefaultShutdownManagerCPUResourceRequests = "10m"
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
 	DefaultShutdownManagerMemoryResourceRequests = "32Mi"
+	// DefaultShutdownManagerMemoryResourceLimit for shutdown manager memory resource limit.
+	// Headroom above the 32Mi request is required so the preStop drain child process
+	// (envoy-gateway envoy shutdown) can run without cgroup OOM.
+	DefaultShutdownManagerMemoryResourceLimit = "64Mi"
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
 	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
