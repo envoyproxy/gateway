@@ -1,0 +1,12 @@
+rateLimitsByDomain:
+  first-listener:
+  - actions:
+    - ActionSpecifier:
+        GenericKey:
+          descriptor_key: first-route
+          descriptor_value: first-route
+    - ActionSpecifier:
+        QueryParameters:
+          descriptor_key: rule-0-match-0
+          query_parameter_name: user
+routeName: first-route
