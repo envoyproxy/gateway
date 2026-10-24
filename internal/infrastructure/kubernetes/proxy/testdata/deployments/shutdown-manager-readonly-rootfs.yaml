@@ -216,6 +216,7 @@ spec:
                 max_active_downstream_connections: 50000
         - --log-level
         - warn
+        - --cpuset-threads
         - --drain-strategy
         - immediate
         - --component-log-level
@@ -240,7 +241,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.annotations['topology.kubernetes.io/zone']
-        image: docker.io/envoyproxy/envoy:distroless-dev
+        image: docker.io/envoyproxy/envoy:distroless-v1.39.3@sha256:7369b033550a14997e5d698677b7b51f0210a80754f5d084c5caa1a78268267b
         imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
