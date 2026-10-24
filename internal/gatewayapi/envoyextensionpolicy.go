@@ -445,7 +445,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			}
 
 			// Do need a section name since the policy is targeting to a route
-			ancestorRef := getAncestorRefForPolicy(parentNN, p.SectionName)
+			ancestorRef := getAncestorRefForRouteParent(parentNN, p)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 
 			// Only process parentRefs that were handled by this translator
@@ -476,7 +476,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 
 			// ListenerSet-attached Route policies report status against the
 			// ListenerSet itself.
-			ancestorRef := getAncestorRefForListenerSetPolicy(parentNN, p.SectionName)
+			ancestorRef := getAncestorRefForRouteParent(parentNN, p)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
 
 			// Only process parentRefs that were handled by this translator

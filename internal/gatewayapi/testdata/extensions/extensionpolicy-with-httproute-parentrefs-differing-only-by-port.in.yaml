@@ -1,0 +1,57 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-8080
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - foo.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      port: 80
+    - namespace: envoy-gateway
+      name: gateway-1
+      port: 8080
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+extensionServerPolicies:
+# The parentRefs differ only by port, so the policy reports an ancestor for each of them.
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-1
+    namespace: default
+  spec:
+    targetRef:
+      kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: httproute-1
+    data: "attached to an httproute with parentRefs differing only by port"
