@@ -3843,6 +3843,10 @@ type HTTPHealthChecker struct {
 	Host string `json:"host" yaml:"host"`
 	// Path defines the HTTP path that will be requested during health checking.
 	Path string `json:"path" yaml:"path"`
+	// Protocol defines the HTTP protocol used to send health check requests.
+	// If unset or set to Auto, it's derived from the effective upstream protocol of
+	// the backend.
+	Protocol *egv1a1.HTTPHealthCheckProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	// Method defines the HTTP method used for health checking.
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
