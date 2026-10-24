@@ -462,11 +462,11 @@ func irStringKey(gatewayNs, gatewayName string) string {
 // The listener name format can be:
 // - Gateway: "namespace/gateway/listener"
 // - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
-// Returns "namespace/gateway" in both cases.
+// Returns "namespace/gateway/" in both cases.
 func extractGatewayNameFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
 	if len(parts) >= 2 {
-		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+		return fmt.Sprintf("%s/%s/", parts[0], parts[1])
 	}
 	// should never happen
 	return listenerName
@@ -764,6 +764,18 @@ func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *
 	}
 }
 
+// getAncestorRefForGatewayClassPolicy returns a GatewayClass as an ancestor reference for policy.
+// Used when a policy directly targets a GatewayClass, which is only meaningful when the Gateways
+// under that class are merged into a single xDS IR.
+func getAncestorRefForGatewayClassPolicy(name gwapiv1.ObjectName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(resource.KindGatewayClass),
+		Name:        name,
+		SectionName: sectionName,
+	}
+}
+
 type policyTargetRouteKey struct {
 	Kind      string
 	Namespace string
@@ -1021,6 +1033,11 @@ func (g policyScopeGraph) GetWithDescendants(parent policyScope) sets.Set[policy
 	return result
 }
 
+// maxNamesListed bounds the names a condition message lists per kind. A policy over a large
+// fleet would otherwise push the message past the condition size limit, where truncation
+// cuts the tail; the first names are enough to point at what to fix.
+const maxNamesListed = 20
+
 // formatPolicyScopes builds a status message describing a set of scopes,
 // grouping entries by kind.
 //
@@ -1059,10 +1076,19 @@ func formatPolicyScopes(scopes sets.Set[policyScope]) string {
 	parts := make([]string, 0, len(order))
 	for _, o := range order {
 		if list, ok := byKind[o.Kind]; ok {
-			parts = append(parts, fmt.Sprintf("%s: %v", o.Label, list))
+			parts = append(parts, fmt.Sprintf("%s: %s", o.Label, formatNameList(list)))
 		}
 	}
 	return strings.Join(parts, " and ")
+}
+
+// formatNameList renders a sorted name list the way formatPolicyScopes always has, as
+// "[a b c]", keeping the first maxNamesListed names and counting the rest.
+func formatNameList(names []string) string {
+	if len(names) <= maxNamesListed {
+		return fmt.Sprintf("%v", names)
+	}
+	return fmt.Sprintf("%v and %d more", names[:maxNamesListed], len(names)-maxNamesListed)
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
@@ -1148,13 +1174,13 @@ type policyTargetReferenceWithSectionName struct {
 }
 
 func isRouteRule(target policyTargetReferenceWithSectionName) bool {
-	// If the target is not a gateway and the section name is not nil, then it's a route rule.
-	return target.Kind != resource.KindGateway && target.SectionName != nil
+	// If the target is not a gateway, gatewayclass, or listenerset and the section name is not nil, then it's a route rule.
+	return target.Kind != resource.KindGateway && target.Kind != resource.KindGatewayClass && target.Kind != resource.KindListenerSet && target.SectionName != nil
 }
 
 func isRoute(target policyTargetReferenceWithSectionName) bool {
-	// If the target is not a gateway and the section name is nil, then it's a route.
-	return target.Kind != resource.KindGateway && target.SectionName == nil
+	// If the target is not a gateway, gatewayclass, or listenerset and the section name is nil, then it's a route.
+	return target.Kind != resource.KindGateway && target.Kind != resource.KindGatewayClass && target.Kind != resource.KindListenerSet && target.SectionName == nil
 }
 
 func isGateway(target policyTargetReferenceWithSectionName) bool {
@@ -1562,7 +1588,8 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 		return new(egv1a1.IPv4)
 	case egv1a1.IPv6:
 		return new(egv1a1.IPv6)
-	case egv1a1.DualStack:
+	case egv1a1.DualStack, egv1a1.PreferDualStack:
+		// Both build the same proxy listeners. Only the proxy Service differs.
 		return new(egv1a1.DualStack)
 	default:
 		return nil

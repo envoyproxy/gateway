@@ -66,7 +66,6 @@ func (t *Translator) translateExtServiceBackendRefs(
 			pnn,
 			policy.GetObjectKind().GroupVersionKind().Kind,
 			protocol,
-			resources,
 			gtwCtx,
 		); err != nil {
 			return nil, err
@@ -97,7 +96,6 @@ func (t *Translator) processExtServiceDestination(
 	policyNamespacedName types.NamespacedName,
 	policyKind string,
 	protocol ir.AppProtocol,
-	resources *resource.Resources,
 	gtwCtx *GatewayContext,
 ) (*ir.DestinationSetting, error) {
 	var (
@@ -123,7 +121,10 @@ func (t *Translator) processExtServiceDestination(
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol)
+		ds, err = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, gtwCtx.envoyProxy, nil)
+		if err != nil {
+			return nil, err
+		}
 		// Dynamic resolver destinations are not supported for none-route destinations
 		if ds.IsDynamicResolver {
 			return nil, errors.New("dynamic resolver destinations are not supported")
@@ -154,7 +155,6 @@ func (t *Translator) processExtServiceDestination(
 			Namespace: new(gwapiv1.Namespace(policyNamespacedName.Namespace)),
 			Name:      gwapiv1.ObjectName(policyNamespacedName.Name),
 		},
-		resources,
 		gtwCtx,
 		nil,
 	)

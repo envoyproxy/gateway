@@ -31,8 +31,8 @@ func TestExtensionBackendMetadata(t *testing.T) {
 	for i, route := range routes {
 		bindings := route.Metadata.FilterMetadata[extensionBackendsMetadataNamespace]
 		require.Equal(t, x.HTTP[0].Routes[i].EnvoyExtensions.Backends["resolver"].Name, bindings.Fields["resolver"].GetStringValue())
-		for _, lua := range x.HTTP[0].Routes[i].EnvoyExtensions.Luas {
-			require.Equal(t, bindings, route.Metadata.FilterMetadata[luaFilterName(lua)])
+		for slot := range x.HTTP[0].Routes[i].EnvoyExtensions.Luas {
+			require.Equal(t, bindings, route.Metadata.FilterMetadata[luaFilterName(slot)])
 		}
 	}
 	require.NotEqual(t, routes[0].Metadata.FilterMetadata[extensionBackendsMetadataNamespace], routes[1].Metadata.FilterMetadata[extensionBackendsMetadataNamespace])

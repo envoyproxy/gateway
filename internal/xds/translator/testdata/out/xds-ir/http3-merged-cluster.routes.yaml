@@ -1,0 +1,36 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-http3/http
+  virtualHosts:
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-http3/http/*
+    routes:
+    - match:
+        path: /merged-h3-route
+      name: merged-h3-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: service/default/h3-always/8080/http
+            weight: 1
+          - name: service/default/h3-backend/8080/http
+            weight: 1
+      typedPerFilterConfig:
+        envoy.filters.http.alternate_protocols_cache:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+        envoy.filters.http.header_mutation/upstream_http3:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutationPerRoute
+          mutations:
+            responseMutations:
+            - remove: alt-svc
+    - match:
+        path: /merged-plain-route
+      name: merged-plain-route
+      route:
+        cluster: service/default/plain-backend/8080/http
+        upgradeConfigs:
+        - upgradeType: websocket

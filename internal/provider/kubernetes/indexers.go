@@ -37,7 +37,7 @@ const (
 	gatewayUDPRouteIndex             = "gatewayUDPRouteIndex"
 	secretGatewayIndex               = "secretGatewayIndex"
 	secretListenerSetIndex           = "secretListenerSetIndex"
-	targetRefGrantRouteIndex         = "targetRefGrantRouteIndex"
+	refGrantFromNamespaceToKindIndex = "refGrantFromNamespaceToKindIndex"
 	backendHTTPRouteIndex            = "backendHTTPRouteIndex"
 	backendGRPCRouteIndex            = "backendGRPCRouteIndex"
 	backendTLSRouteIndex             = "backendTLSRouteIndex"
@@ -47,6 +47,7 @@ const (
 	serviceImportEndpointSliceIndex  = "serviceImportEndpointSliceIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
+	serviceBackendIndex              = "serviceBackendIndex"
 	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
@@ -72,19 +73,30 @@ const (
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
+// getReferenceGrantIndexerFunc indexes a ReferenceGrant by every "<from namespace>/<to kind>" pair
+// it allows (see refGrantFromNamespaceToKey). A common pattern is a shared namespace with a grant
+// per namespace that references it, so keying by the to kind alone would still return all of them.
 func getReferenceGrantIndexerFunc(rawObj client.Object) []string {
 	refGrant := rawObj.(*gwapiv1b1.ReferenceGrant)
-	referredServices := make([]string, 0, len(refGrant.Spec.To))
-	for _, target := range refGrant.Spec.To {
-		referredServices = append(referredServices, string(target.Kind))
+	keys := sets.New[string]()
+	for _, from := range refGrant.Spec.From {
+		for _, to := range refGrant.Spec.To {
+			keys.Insert(refGrantFromNamespaceToKey(string(from.Namespace), string(to.Kind)))
+		}
 	}
-	return referredServices
+	return sets.List(keys)
+}
+
+// refGrantFromNamespaceToKey returns the refGrantFromNamespaceToKindIndex key for references from
+// fromNamespace to resources of toKind.
+func refGrantFromNamespaceToKey(fromNamespace, toKind string) string {
+	return fromNamespace + "/" + toKind
 }
 
 func addEndpointSliceIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -242,14 +254,14 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 					Name:      string(filter.ExtensionRef.Name),
 				}.String()] = struct{}{}
 			}
-			for _, backendRef := range rule.BackendRefs {
-				for _, filter := range backendRef.Filters {
-					if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
-						httpRouteFilterRefs[types.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String()] = struct{}{}
-					}
+		}
+		for _, backendRef := range rule.BackendRefs {
+			for _, filter := range backendRef.Filters {
+				if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+					httpRouteFilterRefs[types.NamespacedName{
+						Namespace: httproute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
+					}.String()] = struct{}{}
 				}
 			}
 		}
@@ -1061,7 +1073,25 @@ func addBackendIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.Backend{}, serviceBackendIndex, serviceBackendIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// serviceBackendIndexFunc indexes KubernetesService Backends by the Service they point at.
+func serviceBackendIndexFunc(rawObj client.Object) []string {
+	backend := rawObj.(*egv1a1.Backend)
+	if backend.Spec.Type == nil || *backend.Spec.Type != egv1a1.BackendTypeKubernetesService || backend.Spec.KubernetesService == nil {
+		return nil
+	}
+	return []string{
+		types.NamespacedName{
+			Namespace: backend.Namespace,
+			Name:      string(backend.Spec.KubernetesService.Name),
+		}.String(),
+	}
 }
 
 func configMapBackendIndexFunc(rawObj client.Object) []string {

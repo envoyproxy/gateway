@@ -37,8 +37,8 @@ func patchExtensionBackendMetadata(route *routev3.Route, irRoute *ir.HTTPRoute) 
 	}
 	route.Metadata.FilterMetadata[extensionBackendsMetadataNamespace] = bindings
 	// Lua's route:metadata() reads the namespace matching its filter name.
-	for _, lua := range irRoute.EnvoyExtensions.Luas {
-		route.Metadata.FilterMetadata[luaFilterName(lua)] = bindings
+	for slot := range irRoute.EnvoyExtensions.Luas {
+		route.Metadata.FilterMetadata[luaFilterName(slot)] = bindings
 	}
 }
 

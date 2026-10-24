@@ -15,27 +15,45 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/default/one/lua/0
+          name: envoy.filters.http.lua/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: |
-                function envoy_on_request(handle)
-                  local cluster = handle:route():metadata():get("resolver")
-                  handle:httpCall(cluster, {[":method"]="GET", [":path"]="/", [":authority"]="resolver"}, nil, 1000)
-                end
         - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/default/two/lua/0
+          name: envoy.filters.http.lua/1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_request(handle) end
         - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/default/one/lua/1
+          name: envoy.filters.http.lua/2
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_request(handle) end
+        - disabled: true
+          name: envoy.filters.http.lua/3
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/4
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/5
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/6
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/7
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/8
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+        - disabled: true
+          name: envoy.filters.http.lua/9
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
         - disabled: true
           name: envoy.filters.http.wasm/envoyextensionpolicy/default/one/wasm/0
           typedConfig:

@@ -51,7 +51,7 @@ func (t *Translator) buildExtensionBackends(policy *egv1a1.EnvoyExtensionPolicy,
 				(settings.Timeout.HTTP.RequestTimeout != nil || settings.Timeout.HTTP.StreamIdleTimeout != nil) {
 				return nil, fmt.Errorf("backends[%d] %q: requestTimeout and streamIdleTimeout are controlled by the extension", i, backend.Name)
 			}
-			traffic, err = translateTrafficFeatures(&egv1a1.BackendSettings{ClusterSettings: *settings})
+			traffic, err = translateExtServiceBackendSettings(&egv1a1.BackendSettings{ClusterSettings: *settings})
 			if err != nil {
 				return nil, fmt.Errorf("backends[%d] %q backendSettings: %w", i, backend.Name, err)
 			}
