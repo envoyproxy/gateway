@@ -767,7 +767,7 @@ type RateLimitClusterSettings struct {
 	// If not set, circuit breakers will be enabled with the default thresholds.
 	//
 	// +optional
-	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty"`
+	CircuitBreaker *RateLimitCircuitBreaker `json:"circuitBreaker,omitempty"`
 
 	// Timeout settings for the rate limit service connections.
 	//
@@ -778,6 +778,51 @@ type RateLimitClusterSettings struct {
 	//
 	// +optional
 	HTTP2 *HTTP2Settings `json:"http2,omitempty"`
+}
+
+// TODO: extract the fields shared with CircuitBreaker into a neutrally named type (e.g.
+// CircuitBreakerThresholds) and embed it inline in both, once a breaking change to
+// CircuitBreaker struct literals is acceptable.
+
+// RateLimitCircuitBreaker defines the circuit breaker configuration for the rate limit service.
+// Retry-related thresholds are not supported, since rate limit RPCs are never retried.
+type RateLimitCircuitBreaker struct {
+	// The maximum number of connections that Envoy will establish to the rate limit service.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
+	// +optional
+	MaxConnections *int64 `json:"maxConnections,omitempty"`
+
+	// The maximum number of pending requests that Envoy will queue to the rate limit service.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
+	// +optional
+	MaxPendingRequests *int64 `json:"maxPendingRequests,omitempty"`
+
+	// The maximum number of parallel requests that Envoy will make to the rate limit service.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=1024
+	// +optional
+	MaxParallelRequests *int64 `json:"maxParallelRequests,omitempty"`
+
+	// The maximum number of requests that Envoy will make over a single connection to the rate limit service.
+	// Default: unlimited.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +optional
+	MaxRequestsPerConnection *int64 `json:"maxRequestsPerConnection,omitempty"`
+
+	// PerEndpoint defines Circuit Breakers that will apply per-endpoint for the rate limit service.
+	//
+	// +optional
+	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
 }
 
 // RateLimitHealthCheck defines the health check configuration for the rate limit service.
@@ -908,9 +953,17 @@ func (r *RateLimit) GetServiceSettings() *ClusterSettings {
 	}
 	s := r.ServiceSettings
 	cs := &ClusterSettings{
-		TCPKeepalive:   s.TCPKeepalive,
-		CircuitBreaker: s.CircuitBreaker,
-		HTTP2:          s.HTTP2,
+		TCPKeepalive: s.TCPKeepalive,
+		HTTP2:        s.HTTP2,
+	}
+	if cb := s.CircuitBreaker; cb != nil {
+		cs.CircuitBreaker = &CircuitBreaker{
+			MaxConnections:           cb.MaxConnections,
+			MaxPendingRequests:       cb.MaxPendingRequests,
+			MaxParallelRequests:      cb.MaxParallelRequests,
+			MaxRequestsPerConnection: cb.MaxRequestsPerConnection,
+			PerEndpoint:              cb.PerEndpoint,
+		}
 	}
 	if s.HealthCheck != nil {
 		cs.HealthCheck = &HealthCheck{

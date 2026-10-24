@@ -1518,7 +1518,7 @@ func TestWarnEnvoyGateway(t *testing.T) {
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
 						ServiceSettings: &egv1a1.RateLimitClusterSettings{
-							CircuitBreaker: &egv1a1.CircuitBreaker{
+							CircuitBreaker: &egv1a1.RateLimitCircuitBreaker{
 								MaxRequestsPerConnection: new(int64(10)),
 							},
 						},
@@ -1717,7 +1717,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		{
 			name: "valid circuit breaker and timeout",
 			cs: &egv1a1.RateLimitClusterSettings{
-				CircuitBreaker: &egv1a1.CircuitBreaker{
+				CircuitBreaker: &egv1a1.RateLimitCircuitBreaker{
 					MaxRequestsPerConnection: new(int64(10)),
 				},
 				Timeout: &egv1a1.RateLimitTimeout{
@@ -1730,7 +1730,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		{
 			name: "negative circuit breaker value",
 			cs: &egv1a1.RateLimitClusterSettings{
-				CircuitBreaker: &egv1a1.CircuitBreaker{
+				CircuitBreaker: &egv1a1.RateLimitCircuitBreaker{
 					MaxRequestsPerConnection: new(int64(-1)),
 				},
 			},
@@ -1739,7 +1739,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		{
 			name: "circuit breaker value too large",
 			cs: &egv1a1.RateLimitClusterSettings{
-				CircuitBreaker: &egv1a1.CircuitBreaker{
+				CircuitBreaker: &egv1a1.RateLimitCircuitBreaker{
 					MaxConnections: new(int64(math.MaxUint32 + 1)),
 				},
 			},
@@ -1748,7 +1748,7 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		{
 			name: "negative per-endpoint circuit breaker value",
 			cs: &egv1a1.RateLimitClusterSettings{
-				CircuitBreaker: &egv1a1.CircuitBreaker{
+				CircuitBreaker: &egv1a1.RateLimitCircuitBreaker{
 					PerEndpoint: &egv1a1.PerEndpointCircuitBreakers{
 						MaxConnections: new(int64(-1)),
 					},
@@ -1961,16 +1961,6 @@ func TestValidateRateLimitClusterSettings(t *testing.T) {
 		{
 			name: "valid http2 settings",
 			cs:   &egv1a1.RateLimitClusterSettings{HTTP2: &egv1a1.HTTP2Settings{InitialStreamWindowSize: new(resource.MustParse("64Ki")), MaxConcurrentStreams: new(uint32(100)), ConnectionKeepalive: &egv1a1.HTTP2KeepaliveSettings{Interval: new(gwapiv1.Duration("10s")), Timeout: new(gwapiv1.Duration("1s")), IntervalJitter: new(uint32(15))}}},
-		},
-		{
-			name:      "retry budget zero denominator",
-			cs:        &egv1a1.RateLimitClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{RetryBudget: &egv1a1.RetryBudget{Percent: gwapiv1.Fraction{Numerator: 0, Denominator: new(int32(0))}}}},
-			expectErr: `circuitBreaker.retryBudget.percent`,
-		},
-		{
-			name:      "retry budget numerator above denominator",
-			cs:        &egv1a1.RateLimitClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{RetryBudget: &egv1a1.RetryBudget{Percent: gwapiv1.Fraction{Numerator: 150}}}},
-			expectErr: `circuitBreaker.retryBudget.percent`,
 		},
 	}
 	for _, tc := range cases {

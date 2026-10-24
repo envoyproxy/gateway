@@ -1008,7 +1008,6 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
-- [RateLimitClusterSettings](#ratelimitclustersettings)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5138,6 +5137,7 @@ PerEndpointCircuitBreakers defines Circuit Breakers that will apply per-endpoint
 
 _Appears in:_
 - [CircuitBreaker](#circuitbreaker)
+- [RateLimitCircuitBreaker](#ratelimitcircuitbreaker)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5766,6 +5766,25 @@ _Appears in:_
 | `grpc` | _[GRPCActiveHealthChecker](#grpcactivehealthchecker)_ |  false  |  | GRPC defines the configuration of the GRPC health checker.<br />It's optional, and can only be used if the specified type is GRPC. |
 
 
+#### RateLimitCircuitBreaker
+
+
+
+RateLimitCircuitBreaker defines the circuit breaker configuration for the rate limit service.
+Retry-related thresholds are not supported, since rate limit RPCs are never retried.
+
+_Appears in:_
+- [RateLimitClusterSettings](#ratelimitclustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxConnections` | _integer_ |  false  | 1024 | The maximum number of connections that Envoy will establish to the rate limit service. |
+| `maxPendingRequests` | _integer_ |  false  | 1024 | The maximum number of pending requests that Envoy will queue to the rate limit service. |
+| `maxParallelRequests` | _integer_ |  false  | 1024 | The maximum number of parallel requests that Envoy will make to the rate limit service. |
+| `maxRequestsPerConnection` | _integer_ |  false  |  | The maximum number of requests that Envoy will make over a single connection to the rate limit service.<br />Default: unlimited. |
+| `perEndpoint` | _[PerEndpointCircuitBreakers](#perendpointcircuitbreakers)_ |  false  |  | PerEndpoint defines Circuit Breakers that will apply per-endpoint for the rate limit service. |
+
+
 #### RateLimitClusterSettings
 
 
@@ -5782,7 +5801,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  |  | TcpKeepalive settings associated with the upstream client connection.<br />Disabled by default. |
 | `healthCheck` | _[RateLimitHealthCheck](#ratelimithealthcheck)_ |  false  |  | HealthCheck allows gateway to perform health checking on the rate limit service endpoints. |
-| `circuitBreaker` | _[CircuitBreaker](#circuitbreaker)_ |  false  |  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds. |
+| `circuitBreaker` | _[RateLimitCircuitBreaker](#ratelimitcircuitbreaker)_ |  false  |  | Circuit Breaker settings for the upstream connections and requests.<br />If not set, circuit breakers will be enabled with the default thresholds. |
 | `timeout` | _[RateLimitTimeout](#ratelimittimeout)_ |  false  |  | Timeout settings for the rate limit service connections. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for the rate limit service connections. |
 

@@ -435,7 +435,7 @@ func validateRateLimitClusterTCPKeepalive(ka *egv1a1.TCPKeepalive) error {
 	return nil
 }
 
-func validateRateLimitClusterCircuitBreaker(cb *egv1a1.CircuitBreaker) error {
+func validateRateLimitClusterCircuitBreaker(cb *egv1a1.RateLimitCircuitBreaker) error {
 	if cb == nil {
 		return nil
 	}
@@ -447,7 +447,6 @@ func validateRateLimitClusterCircuitBreaker(cb *egv1a1.CircuitBreaker) error {
 		{"circuitBreaker.maxConnections", cb.MaxConnections},
 		{"circuitBreaker.maxPendingRequests", cb.MaxPendingRequests},
 		{"circuitBreaker.maxParallelRequests", cb.MaxParallelRequests},
-		{"circuitBreaker.maxParallelRetries", cb.MaxParallelRetries},
 		{"circuitBreaker.maxRequestsPerConnection", cb.MaxRequestsPerConnection},
 	}
 	if cb.PerEndpoint != nil {
@@ -456,13 +455,6 @@ func validateRateLimitClusterCircuitBreaker(cb *egv1a1.CircuitBreaker) error {
 			val  *int64
 		}{"circuitBreaker.perEndpoint.maxConnections", cb.PerEndpoint.MaxConnections})
 	}
-	if rb := cb.RetryBudget; rb != nil {
-		denominator := ptr.Deref(rb.Percent.Denominator, 100)
-		if rb.Percent.Numerator < 0 || denominator < 1 || rb.Percent.Numerator > denominator {
-			return fmt.Errorf("circuitBreaker.retryBudget.percent must satisfy 0 <= numerator <= denominator and denominator >= 1")
-		}
-	}
-
 	for _, f := range fields {
 		if f.val == nil {
 			continue
