@@ -3547,6 +3547,7 @@ func (t *Translator) processBackendDestinationSetting(
 			ds.IsDynamicResolver = true
 			ds.Protocol = protocol
 			ds.ForceHTTP1Upstream = forceHTTP1Upstream
+			ds.Metadata = buildResourceMetadata(backend, nil)
 			return ds, nil
 		}
 

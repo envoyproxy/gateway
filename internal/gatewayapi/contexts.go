@@ -949,6 +949,7 @@ type TranslatorContext struct {
 	ResolvedCAMap           map[ResolvedCAKey]string
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
+	BTPRejectedPolicies     map[types.NamespacedName]backendPolicyRejection
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 	BackendTLSPolicyIndex   BackendTLSPolicyIndex
 	// ExtensionRefIndex is held by value, unlike the policy indexes above: it only holds maps, so

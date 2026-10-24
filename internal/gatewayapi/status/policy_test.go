@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -132,5 +133,66 @@ func TestSetWarningForPolicyAncestorMergesWarnings(t *testing.T) {
 			assert.Equal(t, string(PolicyReasonMultipleWarnings), conditions[0].Reason)
 			assert.Equal(t, "deprecated field warning; http3 warning", conditions[0].Message)
 		}
+	}
+}
+
+func TestSetNotMergedForPolicyAncestor(t *testing.T) {
+	const controller = "example.com/controller"
+	ref := &gwapiv1.ParentReference{Name: "gw-1"}
+
+	tests := []struct {
+		name     string
+		existing *metav1.Condition
+		want     []string
+	}{
+		{
+			name:     "no Accepted condition is not accepted",
+			existing: nil,
+			want: []string{
+				"Accepted/False/NotMerged",
+			},
+		},
+		{
+			name: "existing Accepted=True is left alone",
+			existing: &metav1.Condition{
+				Type:   string(gwapiv1.PolicyConditionAccepted),
+				Status: metav1.ConditionTrue,
+				Reason: string(gwapiv1.PolicyReasonAccepted),
+			},
+			want: []string{
+				"Accepted/True/Accepted",
+			},
+		},
+		{
+			name: "existing Accepted=False error is left alone",
+			existing: &metav1.Condition{
+				Type:   string(gwapiv1.PolicyConditionAccepted),
+				Status: metav1.ConditionFalse,
+				Reason: string(gwapiv1.PolicyReasonInvalid),
+			},
+			want: []string{
+				"Accepted/False/Invalid",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			policyStatus := &gwapiv1.PolicyStatus{}
+			if tc.existing != nil {
+				SetConditionForPolicyAncestor(policyStatus, ref, controller,
+					gwapiv1.PolicyConditionType(tc.existing.Type), tc.existing.Status, gwapiv1.PolicyConditionReason(tc.existing.Reason), "existing", 1)
+			}
+
+			SetNotMergedForPolicyAncestor(policyStatus, ref, controller, 1, "not merged")
+
+			require.Len(t, policyStatus.Ancestors, 1)
+			conditions := policyStatus.Ancestors[0].Conditions
+			got := make([]string, 0, len(conditions))
+			for _, c := range conditions {
+				got = append(got, fmt.Sprintf("%s/%s/%s", c.Type, c.Status, c.Reason))
+			}
+			assert.Equal(t, tc.want, got)
+		})
 	}
 }
