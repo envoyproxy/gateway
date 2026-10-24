@@ -21,7 +21,6 @@ import (
 // rewriting the listener.
 func TestPatchHCMWithAPIKeyAuth(t *testing.T) {
 	listener := &ir.HTTPListener{
-		Name: "listener-1",
 		Routes: []*ir.HTTPRoute{
 			{
 				Name: "route-1",
@@ -64,7 +63,6 @@ func TestPatchHCMWithAPIKeyAuth(t *testing.T) {
 func TestPatchHCMWithAPIKeyAuthNotNeeded(t *testing.T) {
 	mgr := &hcmv3.HttpConnectionManager{}
 	listener := &ir.HTTPListener{
-		Name:   "listener-1",
 		Routes: []*ir.HTTPRoute{{Name: "route-1"}},
 	}
 
@@ -77,7 +75,6 @@ func TestPatchHCMWithAPIKeyAuthAlreadyPresent(t *testing.T) {
 		HttpFilters: []*hcmv3.HttpFilter{{Name: egv1a1.EnvoyFilterAPIKeyAuth.String()}},
 	}
 	listener := &ir.HTTPListener{
-		Name: "listener-1",
 		Routes: []*ir.HTTPRoute{
 			{
 				Name: "route-1",
