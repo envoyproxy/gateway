@@ -51,6 +51,7 @@
             passThroughMatcher:
             - name: Authorization
               stringMatch:
+                ignoreCase: true
                 prefix: 'Bearer '
             - name: MyHeaderPrefixed
               stringMatch:
