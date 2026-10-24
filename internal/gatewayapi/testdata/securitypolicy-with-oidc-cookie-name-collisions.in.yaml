@@ -1,0 +1,231 @@
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: client1-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: client1-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway-system
+    name: envoy-oidc-hmac
+  data:
+    hmac-secret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-merged
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/merged"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-duplicate
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/duplicate"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-generated-suffix
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/generated-suffix"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-valid
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/valid"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+# Valid on its own; the merging route policy below adds a colliding name.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+    uid: aaaaaaaa-0000-0000-0000-000000000001
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    oidc:
+      provider:
+        issuer: "https://oauth.foo.com"
+        authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
+        tokenEndpoint: "https://oauth.foo.com/token"
+      clientID: "client1.apps.googleusercontent.com"
+      clientSecret:
+        name: "client1-secret"
+      redirectURL: "https://www.example.com/oauth2/callback"
+      cookieNames:
+        accessToken: "session"
+# Each passes admission alone, but merged with the parent the HMAC cookie is
+# named like the first chunk of the access token cookie.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-merged
+    uid: cccccccc-0000-0000-0000-000000000003
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-merged
+    oidc:
+      provider:
+        issuer: "https://oauth.foo.com"
+      clientSecret:
+        name: "client1-secret"
+      cookieNames:
+        oauthHmac: "session_0"
+# Rejected by CEL at admission, but the file provider skips admission.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-duplicate
+    uid: dddddddd-0000-0000-0000-000000000004
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-duplicate
+    oidc:
+      provider:
+        issuer: "https://oauth.foo.com"
+        authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
+        tokenEndpoint: "https://oauth.foo.com/token"
+      clientID: "client1.apps.googleusercontent.com"
+      clientSecret:
+        name: "client1-secret"
+      redirectURL: "https://www.example.com/oauth2/callback"
+      cookieNames:
+        accessToken: "same"
+        oauthHmac: "same"
+# The access token cookie keeps its default name with the generated suffix
+# (6ac6170b for this uid), which CEL cannot know at admission.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-generated-suffix
+    uid: bbbbbbbb-0000-0000-0000-000000000002
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-generated-suffix
+    oidc:
+      provider:
+        issuer: "https://oauth.foo.com"
+        authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
+        tokenEndpoint: "https://oauth.foo.com/token"
+      clientID: "client1.apps.googleusercontent.com"
+      clientSecret:
+        name: "client1-secret"
+      redirectURL: "https://www.example.com/oauth2/callback"
+      cookieNames:
+        oauthHmac: "AccessToken-6ac6170b_chunks"
+# Envoy reads at most 16 chunks, so "_16" is not a chunk name.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-valid
+    uid: eeeeeeee-0000-0000-0000-000000000005
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-valid
+    oidc:
+      provider:
+        issuer: "https://oauth.foo.com"
+        authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
+        tokenEndpoint: "https://oauth.foo.com/token"
+      clientID: "client1.apps.googleusercontent.com"
+      clientSecret:
+        name: "client1-secret"
+      redirectURL: "https://www.example.com/oauth2/callback"
+      cookieNames:
+        accessToken: "session"
+        oauthHmac: "session_16"
