@@ -4188,6 +4188,79 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid Global rate limit rule with negative response cost",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Hour"},
+									Cost: &egv1a1.RateLimitCost{
+										Request: &egv1a1.RateLimitCostSpecifier{
+											From:   egv1a1.RateLimitCostFromNumber,
+											Number: new(uint64(1)),
+										},
+										Response: &egv1a1.RateLimitCostSpecifier{
+											From:     egv1a1.RateLimitCostFromNumber,
+											Number:   new(uint64(1)),
+											Negative: new(true),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid Global rate limit rule with negative request cost",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Hour"},
+									Cost: &egv1a1.RateLimitCost{
+										Request: &egv1a1.RateLimitCostSpecifier{
+											From:     egv1a1.RateLimitCostFromNumber,
+											Number:   new(uint64(1)),
+											Negative: new(true),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.rateLimit.global.rules[0].cost: Invalid value:",
+				": negative is only supported for response cost",
+			},
+		},
+		{
 			desc: "invalid count of local rate limit rules specifying costPerResponse",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

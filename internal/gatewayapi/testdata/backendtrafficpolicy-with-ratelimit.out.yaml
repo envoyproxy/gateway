@@ -30,6 +30,21 @@ backendTrafficPolicies:
               namespace: something.com
             requests: 20
             unit: Hour
+        - clientSelectors:
+          - headers:
+            - name: x-tenant-id
+              type: Distinct
+          cost:
+            request:
+              from: Number
+              number: 1
+            response:
+              from: Number
+              negative: true
+              number: 1
+          limit:
+            requests: 8
+            unit: Hour
       type: Global
     targetRef:
       group: gateway.networking.k8s.io
@@ -869,6 +884,18 @@ xdsIR:
                   number: 1
                 responseCost:
                   format: '%DYNAMIC_METADATA(something.com:some_cost_set_by_foo)%'
+              - headerMatches:
+                - distinct: true
+                  name: x-tenant-id
+                limit:
+                  requests: 8
+                  unit: Hour
+                name: default/policy-for-route/rule/1
+                requestCost:
+                  number: 1
+                responseCost:
+                  negative: true
+                  number: 1
     - address: 0.0.0.0
       externalPort: 80
       hostnames:
@@ -944,6 +971,18 @@ xdsIR:
                   number: 1
                 responseCost:
                   format: '%DYNAMIC_METADATA(something.com:some_cost_set_by_foo)%'
+              - headerMatches:
+                - distinct: true
+                  name: x-tenant-id
+                limit:
+                  requests: 8
+                  unit: Hour
+                name: default/policy-for-route/rule/1
+                requestCost:
+                  number: 1
+                responseCost:
+                  negative: true
+                  number: 1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
