@@ -1683,3 +1683,38 @@ func TestValidateRedisURL(t *testing.T) {
 	require.ErrorContains(t, ValidateRedisURL(""), "ratelimit redis url is empty")
 	require.ErrorContains(t, ValidateRedisURL(":foo"), "unknown ratelimit redis url format")
 }
+
+func TestValidateEnvoyGatewayRateLimitTLSCACertificateRef(t *testing.T) {
+	rateLimit := func(ref *gwapiv1.LocalObjectReference) *egv1a1.RateLimit {
+		return &egv1a1.RateLimit{
+			Backend: egv1a1.RateLimitDatabaseBackend{
+				Type: egv1a1.RedisBackendType,
+				Redis: &egv1a1.RateLimitRedisSettings{
+					URL: new("redis.redis.svc:6379"),
+					TLS: &egv1a1.RedisTLSSettings{CACertificateRef: ref},
+				},
+			},
+		}
+	}
+	cases := []struct {
+		name      string
+		ref       *gwapiv1.LocalObjectReference
+		expectErr bool
+	}{
+		{name: "configmap", ref: &gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "redis-ca"}},
+		{name: "secret", ref: &gwapiv1.LocalObjectReference{Kind: "Secret", Name: "redis-ca"}},
+		{name: "no ca ref", ref: nil},
+		{name: "unsupported kind", ref: &gwapiv1.LocalObjectReference{Kind: "Pod", Name: "redis-ca"}, expectErr: true},
+		{name: "non-core group", ref: &gwapiv1.LocalObjectReference{Group: "example.io", Kind: "ConfigMap", Name: "redis-ca"}, expectErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateEnvoyGatewayRateLimit(rateLimit(tc.ref))
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
