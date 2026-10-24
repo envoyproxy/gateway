@@ -1098,6 +1098,8 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// Credentials to be injected into the request.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// GRPCJSONTranscoder defines the gRPC-JSON transcoding configuration for this route.
+	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty" yaml:"grpcJSONTranscoder,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
@@ -4498,6 +4500,20 @@ type EndpointOverride struct {
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// GRPCJSONTranscoder holds the gRPC-JSON transcoder configuration of a route.
+// +k8s:deepcopy-gen=true
+type GRPCJSONTranscoder struct {
+	// Name is the name of the transcoder filter.
+	Name string `json:"name" yaml:"name"`
+	// ProtoDescriptorBin is the binary FileDescriptorSet of the gRPC services.
+	ProtoDescriptorBin []byte `json:"protoDescriptorBin" yaml:"protoDescriptorBin"`
+	// Services are the full names of the gRPC services to transcode.
+	Services                     []string                 `json:"services" yaml:"services"`
+	PrintOptions                 *egv1a1.JSONPrintOptions `json:"printOptions,omitempty" yaml:"printOptions,omitempty"`
+	IgnoreUnknownQueryParameters *bool                    `json:"ignoreUnknownQueryParameters,omitempty" yaml:"ignoreUnknownQueryParameters,omitempty"`
+	ConvertGRPCStatus            *bool                    `json:"convertGRPCStatus,omitempty" yaml:"convertGRPCStatus,omitempty"`
 }
 
 // LoadBalancerType defines the type of load balancer for IR.

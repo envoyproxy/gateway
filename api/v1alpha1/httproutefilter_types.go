@@ -59,6 +59,14 @@ type HTTPRouteFilterSpec struct {
 	//
 	// +optional
 	RequestMirror *HTTPRequestMirrorFilter `json:"requestMirror,omitempty"`
+	// GRPCJSONTranscoder converts a JSON/HTTP request to a gRPC request, and the gRPC
+	// response back to JSON.
+	//
+	// It can only be used in the rule filters of an HTTPRoute. It is not supported in a
+	// GRPCRoute or in the filters of a backendRef.
+	//
+	// +optional
+	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty"`
 	// Matches defines additional matching criteria for the HTTPRoute rule.
 	// As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
 	// When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
