@@ -25,6 +25,7 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	serviceSpec := corev1.ServiceSpec{}
 	serviceSpec.Type = corev1.ServiceType(*service.Type)
 	serviceSpec.SessionAffinity = corev1.ServiceAffinityNone
+	externalTrafficPolicy := service.ExternalTrafficPolicy
 	if service.ExternalTrafficPolicy == nil {
 		service.ExternalTrafficPolicy = egv1a1.DefaultKubernetesServiceExternalTrafficPolicy()
 	}
@@ -45,6 +46,10 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*service.ExternalTrafficPolicy)
 	case egv1a1.ServiceTypeNodePort:
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*service.ExternalTrafficPolicy)
+	case egv1a1.ServiceTypeClusterIP:
+		if externalTrafficPolicy != nil {
+			serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*externalTrafficPolicy)
+		}
 	}
 
 	return serviceSpec
