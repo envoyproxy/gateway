@@ -511,6 +511,54 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid UDP idle timeout",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				d := gwapiv1.Duration("30s")
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Timeout: &egv1a1.ClientTimeout{
+						UDP: &egv1a1.UDPClientTimeout{
+							IdleTimeout: &d,
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid UDP idle timeout",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				d := gwapiv1.Duration("0s")
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Timeout: &egv1a1.ClientTimeout{
+						UDP: &egv1a1.UDPClientTimeout{
+							IdleTimeout: &d,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"idleTimeout must be greater than 0",
+			},
+		},
+		{
 			desc: "invalid bufferLimit format",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
