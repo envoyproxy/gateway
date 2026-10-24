@@ -325,6 +325,17 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			caseName: "shutdown-manager-readonly-rootfs",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Container: &egv1a1.KubernetesContainerSpec{
+					SecurityContext: &corev1.SecurityContext{
+						ReadOnlyRootFilesystem: new(true),
+					},
+				},
+			},
+		},
+		{
 			caseName:  "bootstrap",
 			infra:     newTestInfra(),
 			deploy:    nil,
@@ -1416,6 +1427,11 @@ func TestService(t *testing.T) {
 		{
 			caseName: "dualstack",
 			infra:    newTestInfraWithIPFamily(new(egv1a1.DualStack)),
+			service:  nil,
+		},
+		{
+			caseName: "prefer-dualstack",
+			infra:    newTestInfraWithIPFamily(new(egv1a1.PreferDualStack)),
 			service:  nil,
 		},
 		{

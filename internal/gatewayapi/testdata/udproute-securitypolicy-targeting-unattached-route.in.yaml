@@ -1,0 +1,66 @@
+# Two UDPRoutes name the same listener, so only the oldest is attached to the IR.
+# A SecurityPolicy targeting the other one must not restrict the route that is
+# actually serving traffic.
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-udp
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: udp
+      protocol: UDP
+      port: 8088
+      allowedRoutes:
+        namespaces:
+          from: All
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udpr-attached
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-udp
+      sectionName: udp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udpr-unattached
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-udp
+      sectionName: udp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-udpr-unattached
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udpr-unattached
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-unattached-only
+        principal:
+          clientCIDRs:
+          - 10.99.0.0/16

@@ -809,6 +809,35 @@ func (r *RouteParentContext) GetGateway() *GatewayContext {
 	return r.listeners[0].gateway
 }
 
+// PolicyAncestorRef returns this parent as a policy status ancestorRef, with group, kind
+// and namespace always filled in.
+func (r *RouteParentContext) PolicyAncestorRef() gwapiv1.ParentReference {
+	parentNN := types.NamespacedName{
+		Namespace: NamespaceDerefOr(r.Namespace, r.routeNamespace()),
+		Name:      string(r.Name),
+	}
+	if r.Kind != nil && *r.Kind == resource.KindListenerSet {
+		return getAncestorRefForListenerSetPolicy(parentNN, r.SectionName)
+	}
+	return getAncestorRefForPolicy(parentNN, r.SectionName)
+}
+
+func (r *RouteParentContext) routeNamespace() string {
+	switch {
+	case r.HTTPRoute != nil:
+		return r.HTTPRoute.Namespace
+	case r.GRPCRoute != nil:
+		return r.GRPCRoute.Namespace
+	case r.TLSRoute != nil:
+		return r.TLSRoute.Namespace
+	case r.TCPRoute != nil:
+		return r.TCPRoute.Namespace
+	case r.UDPRoute != nil:
+		return r.UDPRoute.Namespace
+	}
+	return ""
+}
+
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 	r.listeners = append(r.listeners, listeners...)
 }
@@ -921,6 +950,11 @@ type TranslatorContext struct {
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
+	BackendTLSPolicyIndex   BackendTLSPolicyIndex
+	// ExtensionRefIndex is held by value, unlike the policy indexes above: it only holds maps, so
+	// copying it is cheap and shares the entries, and its zero value is an empty index whose
+	// lookups find nothing instead of panicking when a context is built without it.
+	ExtensionRefIndex ExtensionRefIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {
@@ -1043,23 +1077,23 @@ func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, b
 func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
 	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
 
-	var kind, svcName string
+	// A slice may carry both service-name labels (e.g. Cilium ClusterMesh MCS
+	// slices), so file it under every backend it belongs to.
 	for _, slice := range slices {
 		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
-			kind = resource.KindService
-			svcName = name
-		} else if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
-			kind = resource.KindServiceImport
-			svcName = name
-		} else {
-			continue
+			t.addEndpointSliceForBackend(resource.KindService, name, slice)
 		}
-
-		key := backendServiceKey{
-			kind:      kind,
-			namespace: slice.Namespace,
-			name:      svcName,
+		if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
+			t.addEndpointSliceForBackend(resource.KindServiceImport, name, slice)
 		}
-		t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 	}
+}
+
+func (t *TranslatorContext) addEndpointSliceForBackend(kind, svcName string, slice *discoveryv1.EndpointSlice) {
+	key := backendServiceKey{
+		kind:      kind,
+		namespace: slice.Namespace,
+		name:      svcName,
+	}
+	t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 }
