@@ -5,6 +5,11 @@ envoyExtensionPolicies:
     name: policy-for-http-route
     namespace: default
   spec:
+    backends:
+    - backendRef:
+        name: service-1
+        port: 8080
+      name: resolver
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -307,6 +312,26 @@ xdsIR:
             protocol: HTTP
             weight: 1
         envoyExtensions:
+          backends:
+            resolver:
+              metadata:
+                kind: EnvoyExtensionPolicy
+                name: policy-for-http-route
+                namespace: default
+              name: envoyextensionpolicy/default/policy-for-http-route/backend/resolver/gateway/envoy-gateway/gateway-1/0
+              settings:
+              - addressType: IP
+                endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+                metadata:
+                  kind: Service
+                  name: service-1
+                  namespace: default
+                  sectionName: "8080"
+                name: envoyextensionpolicy/default/policy-for-http-route/backend/resolver/gateway/envoy-gateway/gateway-1/0/backend/0
+                protocol: HTTP
+                weight: 1
           wasms:
           - config:
               parameter1:

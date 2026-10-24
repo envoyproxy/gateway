@@ -57,6 +57,20 @@ type EnvoyExtensionPolicySpec struct {
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
 
+	// Backends declares HTTP callout dependencies for Lua, Wasm and dynamic modules.
+	// Each name is an alias in this policy. Extensions read the generated cluster
+	// name from route metadata during a request. Initialization and independent
+	// background callbacks have no request route. Asynchronous callbacks can use
+	// bindings resolved for their request.
+	// When merging policies, a nonempty list replaces the parent's list.
+	// Inherited references keep the namespace of the policy that declared them.
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	Backends []ExtensionBackend `json:"backends,omitempty"`
+
 	// Wasm is a list of Wasm extensions to be loaded by the Gateway.
 	// Order matters, as the extensions will be loaded in the order they are
 	// defined in this list.
@@ -89,6 +103,31 @@ type EnvoyExtensionPolicySpec struct {
 	// +kubebuilder:validation:MaxItems=16
 	// +optional
 	DynamicModule []DynamicModule `json:"dynamicModule,omitempty"`
+}
+
+// ExtensionBackend binds an extension's backend alias to a backend resource.
+type ExtensionBackend struct {
+	// Name is the alias used by extensions. It must be a lowercase DNS label
+	// and unique within this policy.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Name string `json:"name"`
+
+	// BackendRef references the backend for HTTP callouts. References to another
+	// namespace require a ReferenceGrant allowing the policy that declares this binding.
+	BackendRef gwapiv1.BackendObjectReference `json:"backendRef"`
+
+	// BackendSettings configures connections and traffic for this binding's cluster.
+	// Request timeouts and retries are controlled by the extension's callout API.
+	// RequestTimeout and StreamIdleTimeout are not supported here.
+	// DynamicModule load balancing is not supported here.
+	//
+	// +kubebuilder:validation:XValidation:rule="!has(self.timeout) || !has(self.timeout.http) || (!has(self.timeout.http.requestTimeout) && !has(self.timeout.http.streamIdleTimeout))",message="requestTimeout and streamIdleTimeout are controlled by the extension"
+	// +kubebuilder:validation:XValidation:rule="!has(self.loadBalancer) || self.loadBalancer.type != 'DynamicModule'",message="DynamicModule load balancing is not supported for extension backends"
+	// +optional
+	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
 }
 
 //+kubebuilder:object:root=true
