@@ -1248,6 +1248,9 @@ type ClusterTrafficFeatures struct {
 	// HTTP3 provides HTTP/3 configuration for clusters
 	// +optional
 	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty" yaml:"http3,omitempty"`
+	// HTTP1 provides HTTP/1 upstream protocol configuration for clusters
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
@@ -2041,6 +2044,9 @@ type MirrorPolicy struct {
 	// When absent, all the traffic (100%) will be mirrored.
 	// Values are in the range of [0.0, 100.0].
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+	// HostRewrite defines the host/authority header override for the mirrored traffic.
+	// When set, the Host header of the mirrored request is rewritten to this value.
+	HostRewrite *string `json:"hostRewrite,omitempty" yaml:"hostRewrite,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -3723,6 +3729,8 @@ type ActiveHealthCheck struct {
 	UnhealthyThreshold *uint32 `json:"unhealthyThreshold"`
 	// HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy.
 	HealthyThreshold *uint32 `json:"healthyThreshold"`
+	// DisableConnectionReuse determines whether the health check connection is closed after each probe.
+	DisableConnectionReuse *bool `json:"disableConnectionReuse,omitempty" yaml:"disableConnectionReuse,omitempty"`
 	// HTTP defines the configuration of http health checker.
 	HTTP *HTTPHealthChecker `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP defines the configuration of tcp health checker.

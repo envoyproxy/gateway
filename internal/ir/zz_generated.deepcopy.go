@@ -247,6 +247,11 @@ func (in *ActiveHealthCheck) DeepCopyInto(out *ActiveHealthCheck) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.DisableConnectionReuse != nil {
+		in, out := &in.DisableConnectionReuse, &out.DisableConnectionReuse
+		*out = new(bool)
+		**out = **in
+	}
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
 		*out = new(HTTPHealthChecker)
@@ -1152,6 +1157,11 @@ func (in *ClusterTrafficFeatures) DeepCopyInto(out *ClusterTrafficFeatures) {
 		in, out := &in.HTTP3, &out.HTTP3
 		*out = new(BackendHTTP3Settings)
 		**out = **in
+	}
+	if in.HTTP1 != nil {
+		in, out := &in.HTTP1, &out.HTTP1
+		*out = new(HTTP1Settings)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.DNS != nil {
 		in, out := &in.DNS, &out.DNS
@@ -3599,6 +3609,11 @@ func (in *MirrorPolicy) DeepCopyInto(out *MirrorPolicy) {
 	if in.Percentage != nil {
 		in, out := &in.Percentage, &out.Percentage
 		*out = new(float32)
+		**out = **in
+	}
+	if in.HostRewrite != nil {
+		in, out := &in.HostRewrite, &out.HostRewrite
+		*out = new(string)
 		**out = **in
 	}
 }

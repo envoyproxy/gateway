@@ -182,6 +182,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 					// It's weird for non-namespaced resource to have namespace.
+					// Labels are kept so GatewayClass targetSelectors on policies can match it.
+					Labels: un.GetLabels(),
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}

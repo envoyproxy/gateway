@@ -170,7 +170,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
 type RuntimeFlag string
 
 const (
@@ -199,6 +199,16 @@ const (
 	// Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters
 	// where tenants can author their own EnvoyProxy resources.
 	EnvoyProxyPatch RuntimeFlag = "EnvoyProxyPatch"
+
+	// ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly restricts the ClientTrafficPolicy http1 fields
+	// (enableTrailers, preserveHeaderCase, http10) to client connections only.
+	// When enabled, these fields no longer affect backend HTTP/1 protocol settings.
+	// Use BackendTrafficPolicy.http1 to configure backend HTTP/1 protocol settings.
+	//
+	// Disabled by default to preserve existing behavior. Users are encouraged to migrate
+	// to BackendTrafficPolicy.http1 for backend settings and enable this flag to opt in
+	// to the new behavior. This flag will be enabled by default in a future release.
+	ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly RuntimeFlag = "ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.

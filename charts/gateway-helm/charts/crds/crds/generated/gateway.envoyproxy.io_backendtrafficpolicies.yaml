@@ -910,6 +910,14 @@ spec:
                   active:
                     description: Active health check configuration
                     properties:
+                      disableConnectionReuse:
+                        description: |-
+                          DisableConnectionReuse determines whether the active health check connection to a
+                          backend host is closed after each health check probe. When set to true, Envoy opens a
+                          new connection for each health check, which is useful for backends (such as
+                          haproxy-style agent checks) that do not expect a reused connection.
+                          Defaults to false, which reuses the connection across probes.
+                        type: boolean
                       grpc:
                         description: |-
                           GRPC defines the configuration of the GRPC health checker.
@@ -1326,6 +1334,32 @@ spec:
                           of errors between external and local origin.
                         type: boolean
                     type: object
+                type: object
+              http1:
+                description: |-
+                  HTTP1 provides HTTP/1 configuration for backend connections.
+                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                  this field takes precedence for backend (upstream) traffic.
+
+                  Behavior when targeting route kinds that do not use HTTP/1:
+                    - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                      directly adds a Warning condition on the policy; the field is ignored.
+                    - Gateway / ListenerSet / sectionName targets: this field is silently
+                      ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                      beneath that target; no warning is emitted.
+                    - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                      access log/metrics, tracing providers): rejected at admission on their
+                      own BackendSettings via separate validation rules.
+                properties:
+                  enableTrailers:
+                    description: EnableTrailers defines if HTTP/1 trailers should
+                      be proxied by Envoy.
+                    type: boolean
+                  preserveHeaderCase:
+                    description: |-
+                      PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                      By default, Envoy will lowercase all the headers.
+                    type: boolean
                 type: object
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
