@@ -86,3 +86,25 @@
         cluster: wildcard-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: team-a/web/by-name
+  virtualHosts:
+  - domains:
+    - by-name.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: web
+            namespace: team-a
+            sectionName: by-name
+    name: team-a/web/by-name/by-name_example_com
+    routes:
+    - match:
+        prefix: /
+      name: by-name-route
+      route:
+        cluster: by-name-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

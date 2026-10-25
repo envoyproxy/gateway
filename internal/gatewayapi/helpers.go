@@ -592,7 +592,7 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 }
 
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
+func (t *Translator) irTLSConfigs(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
 	if len(config.secrets) == 0 && len(config.extensionCertificates) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
@@ -605,7 +605,7 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 	}
 	for i := range config.extensionCertificates {
 		tlsListenerConfigs.Certificates = append(tlsListenerConfigs.Certificates,
-			getTLSCertificateFromExtensionRef(&config.extensionCertificates[i]))
+			t.getTLSCertificateFromExtensionRef(&config.extensionCertificates[i], gwIR, gatewayCtx))
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
@@ -664,10 +664,10 @@ func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
 // getTLSCertificateFromExtensionRef builds the IR certificate for a listener certificate
 // resolved from an extension-registered kind. No key material is carried: how Envoy obtains
 // the certificate is decided by the extension server via the Secret hook.
-func getTLSCertificateFromExtensionRef(obj *unstructured.Unstructured) ir.TLSCertificate {
+func (t *Translator) getTLSCertificateFromExtensionRef(obj *unstructured.Unstructured, gwIR *ir.Xds, gatewayCtx *GatewayContext) ir.TLSCertificate {
 	return ir.TLSCertificate{
 		Name:         irTLSExtensionCertificateName(obj),
-		ExtensionRef: &ir.UnstructuredRef{Object: obj},
+		ExtensionRef: t.getOrCreateExtensionResource(gwIR, gatewayCtx, obj),
 	}
 }
 
@@ -682,8 +682,8 @@ func irTLSExtensionCertificateName(obj *unstructured.Unstructured) string {
 
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
-	tlsListenerConfigs := irTLSConfigs(config)
+func (t *Translator) irTLSConfigsForTCPListener(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
+	tlsListenerConfigs := t.irTLSConfigs(config, gwIR, gatewayCtx)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice

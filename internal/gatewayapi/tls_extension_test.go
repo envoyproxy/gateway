@@ -15,6 +15,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -155,7 +156,7 @@ func TestExtensionCertificateRefAdmission(t *testing.T) {
 			listener.SetTLSExtensionCertificates(extCerts)
 
 			// The IR must carry a reference, never key material.
-			irTLS := irTLSConfigs(&listener.tls)
+			irTLS := translator.irTLSConfigs(&listener.tls, nil, nil)
 			require.NotNil(t, irTLS)
 			require.Len(t, irTLS.Certificates, 1)
 			cert := irTLS.Certificates[0]
@@ -188,4 +189,27 @@ func TestUnregisteredCertificateKindStillRejected(t *testing.T) {
 	_, extCerts, _, ok := translator.validateTerminateModeAndGetTLSSecrets(listener, res)
 	require.False(t, ok)
 	require.Empty(t, extCerts)
+}
+
+// Extension-resolved certificates are stored once in the gateway's IR registry and referenced by
+// name, so a certificate shared by several listeners is not copied into each of them.
+func TestExtensionCertificatesInRegistry(t *testing.T) {
+	translator := &Translator{TranslatorContext: &TranslatorContext{}}
+	gwIR := &ir.Xds{}
+	gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"}}}
+	cert := extensionCertificate(nil, "")
+
+	listenerTLS := func() *ir.TLSConfig {
+		return translator.irTLSConfigs(&ListenerTLSConfig{extensionCertificates: []unstructured.Unstructured{*cert}}, gwIR, gwCtx)
+	}
+	first, second := listenerTLS(), listenerTLS()
+
+	require.Len(t, gwIR.ExtensionResources, 1)
+	require.Equal(t, cert.GetName(), gwIR.ExtensionResources[0].Object.GetName())
+	for _, tlsConfig := range []*ir.TLSConfig{first, second} {
+		ref := tlsConfig.Certificates[0].ExtensionRef
+		require.Nil(t, ref.Object)
+		require.Equal(t, gwIR.ExtensionResources[0].Name, ref.Name)
+		require.NoError(t, tlsConfig.Certificates[0].Validate())
+	}
 }

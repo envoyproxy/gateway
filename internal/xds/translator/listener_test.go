@@ -254,6 +254,16 @@ func Test_resolveExtensionCertificates(t *testing.T) {
 			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("error-cert")}},
 		},
 		{
+			// A name-only reference must be in the IR's extension resources.
+			name:      "extension certificate referencing a resource not in the IR",
+			extension: &withTLSCertificateHook,
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{{
+				Name:         "ext",
+				ExtensionRef: &ir.UnstructuredRef{Name: "cert.example.io/examplecertificate/default/missing"},
+			}}},
+			wantErr: "which is not in the IR",
+		},
+		{
 			// A resolution to a secret Envoy Gateway provides itself is ignored, not an error.
 			name:      "resolution to a reserved secret is ignored",
 			extension: &withTLSCertificateHook,

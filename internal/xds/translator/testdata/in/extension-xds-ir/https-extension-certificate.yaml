@@ -226,3 +226,37 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "wildcard-refused-route-dest/backend/0"
+# The certificate is referenced by name and looked up in the IR's extension resources.
+- name: "team-a/web/by-name"
+  address: "::"
+  port: 10448
+  hostnames:
+  - "by-name.example.com"
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: web
+    sectionName: by-name
+  tls:
+    certificates:
+    - name: shared-cert
+      extensionRef:
+        name: cert.example.io/examplecertificate/team-a/shared-cert
+  routes:
+  - name: "by-name-route"
+    hostname: "by-name.example.com"
+    destination:
+      name: "by-name-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "by-name-route-dest/backend/0"
+extensionResources:
+- name: cert.example.io/examplecertificate/team-a/shared-cert
+  object:
+    apiVersion: cert.example.io/v1alpha1
+    kind: ExampleCertificate
+    metadata:
+      namespace: team-a
+      name: shared-cert

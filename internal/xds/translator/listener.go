@@ -1512,7 +1512,12 @@ func (t *Translator) resolveExtensionCertificates(
 				cert.Name, egv1a1.XDSSecret)
 		}
 
-		secretCtx := &extensionTypes.SecretContext{Secret: cert.ExtensionRef.Object}
+		secret := resolveUnstructuredRef(cert.ExtensionRef, t.extensionIndex)
+		if secret == nil {
+			return nil, fmt.Errorf("certificate %q references extension resource %q, which is not in the IR",
+				cert.Name, cert.ExtensionRef.Name)
+		}
+		secretCtx := &extensionTypes.SecretContext{Secret: secret}
 		if listenerMeta != nil {
 			secretCtx.GatewayNamespace = listenerMeta.Namespace
 			secretCtx.GatewayName = listenerMeta.Name
