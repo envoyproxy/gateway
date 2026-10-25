@@ -24,8 +24,7 @@ required: the resource is reconciled whenever the CRD is present in the cluster.
 
 ## Configuration
 
-A Gateway must explicitly opt in to ListenerSet attachment through `spec.allowedListeners`. By default, no
-ListenerSets are allowed. Update the Gateway from the Quickstart to accept ListenerSets from the same namespace:
+A Gateway must explicitly opt in to ListenerSet attachment through `spec.allowedListeners`. By default, no ListenerSets are allowed. Update the Gateway from the Quickstart to accept ListenerSets from the same namespace:
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -170,17 +169,9 @@ Secrets in the ListenerSet's namespace, so application teams manage their own ce
 
 ### Listener conflicts
 
-Every listener needs a unique combination of port, protocol, and hostname across the Gateway and all of its
-ListenerSets. When two listeners clash, the Gateway's own listeners win, and among ListenerSet listeners the
-first in processing order wins.
-
-Listeners that share a port also need compatible protocols, even if their hostnames differ. HTTPS and TLS can
-share a port, and UDP can share a port with anything. If the protocols clash, the Gateway's own protocol wins.
-If only ListenerSets use the port, the first listener sets the protocol, unless a single ListenerSet mixes
-incompatible protocols on one port, in which case all of its listeners on that port are rejected.
-
-Rejected listeners report `Conflicted: True` in the status, and ListenerSet listeners also get `Accepted: False`
-and `Programmed: False`.
+Listeners across the Gateway and its ListenerSets must not clash on port, protocol, and hostname. When they do,
+the Gateway's own listeners take precedence and conflicted listeners are rejected, reporting `Conflicted: True`
+in their status. See the upstream [listener conflicts guide][] for the full rules.
 
 ## Comparison with Merged Gateways
 
@@ -214,6 +205,7 @@ better choice in some setups:
   points, so existing per-Gateway workflows keep working unchanged.
 
 [ListenerSet]: https://gateway-api.sigs.k8s.io/reference/api-types/listenerset/
+[listener conflicts guide]: https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/#listener-conflicts
 [ClientTrafficPolicy]: ../../../concepts/gateway_api_extensions/client-traffic-policy
 [SecurityPolicy]: ../../../concepts/gateway_api_extensions/security-policy
 [BackendTrafficPolicy]: ../../../concepts/gateway_api_extensions/backend-traffic-policy
