@@ -64,3 +64,25 @@
         cluster: ok-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: team-a/web/wildcard
+  virtualHosts:
+  - domains:
+    - '*.wild.example.com'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: web
+            namespace: team-a
+            sectionName: wildcard
+    name: team-a/web/wildcard/*_wild_example_com
+    routes:
+    - match:
+        prefix: /
+      name: wildcard-route
+      route:
+        cluster: wildcard-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -905,8 +905,8 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []i
 //
 // It is always false for a TLS config holding any Secret or SDS certificate, so listeners that
 // do not use an extension server for certificates are never affected. A certificate that did not
-// resolve is omitted while another remains; only when none remain is the listener or route left
-// out, since a filter chain without a certificate is rejected by Envoy together with every other
+// resolve is omitted while another remains; only when none remain is the listener closed instead,
+// since a filter chain without a certificate is rejected by Envoy together with every other
 // filter chain on the same listener.
 func allExtensionCertificatesUnresolved(tlsConfig *ir.TLSConfig, certResolutions map[string]*tlsv3.SdsSecretConfig) bool {
 	if tlsConfig == nil || len(tlsConfig.Certificates) == 0 {

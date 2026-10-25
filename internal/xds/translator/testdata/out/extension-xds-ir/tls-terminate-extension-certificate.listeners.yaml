@@ -69,3 +69,25 @@
   maxConnectionsToAcceptPerSocketEvent: 1
   name: team-a/db/tcp
   perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10433
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - refused.example.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: EmptyCluster
+        statPrefix: unresolved-certificate-10433
+    name: tlsroute/team-a/refused/unresolved-certificate
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: team-a/db/tls-refused
+  perConnectionBufferLimitBytes: 32768

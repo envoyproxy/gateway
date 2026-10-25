@@ -69,7 +69,8 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "mixed-route-dest/backend/0"
-# Two listeners sharing a port. The refused one is left out, and the other keeps serving.
+# Two listeners sharing a port. The other keeps serving, and the refused one's hostname gets a
+# filter chain that closes connections.
 - name: "team-a/web/shared-ok"
   address: "::"
   port: 10445
@@ -130,7 +131,8 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "refused-route-dest/backend/0"
-# The only listener on its port, with its certificate refused: no listener is emitted for the port.
+# The only listener on its port, with its certificate refused: the port gets a listener whose only
+# filter chain closes connections for the listener's hostname.
 - name: "team-a/web/alone-refused"
   address: "::"
   port: 10446
@@ -161,3 +163,66 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "alone-route-dest/backend/0"
+# Two listeners on one port: a wildcard one whose certificate resolves, and a more specific one
+# whose certificate is refused. The refused listener gets a filter chain that closes connections
+# for its hostname, so they are not served by the wildcard filter chain.
+- name: "team-a/web/wildcard"
+  address: "::"
+  port: 10447
+  hostnames:
+  - "*.wild.example.com"
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: web
+    sectionName: wildcard
+  tls:
+    certificates:
+    - name: wildcard-cert
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: wildcard-cert
+  routes:
+  - name: "wildcard-route"
+    hostname: "*.wild.example.com"
+    destination:
+      name: "wildcard-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "wildcard-route-dest/backend/0"
+- name: "team-a/web/wildcard-refused"
+  address: "::"
+  port: 10447
+  hostnames:
+  - "refused.wild.example.com"
+  metadata:
+    kind: Gateway
+    namespace: team-a
+    name: web
+    sectionName: wildcard-refused
+  tls:
+    certificates:
+    - name: refuse-wild
+      extensionRef:
+        object:
+          apiVersion: cert.example.io/v1alpha1
+          kind: ExampleCertificate
+          metadata:
+            namespace: team-a
+            name: refuse-wild
+  routes:
+  - name: "wildcard-refused-route"
+    hostname: "refused.wild.example.com"
+    destination:
+      name: "wildcard-refused-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "wildcard-refused-route-dest/backend/0"

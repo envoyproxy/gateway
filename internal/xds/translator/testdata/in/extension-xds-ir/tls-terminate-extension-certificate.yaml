@@ -64,7 +64,7 @@ tcp:
         - host: "5.6.7.8"
           port: 5432
         name: "tlsroute/team-a/replica/backend/0"
-# Certificate refused: no listener is emitted for the port.
+# Certificate refused: the route gets a filter chain that closes connections for its SNI.
 - name: "team-a/db/tls-refused"
   address: "::"
   port: 10433
@@ -86,6 +86,9 @@ tcp:
   routes:
   - name: "tlsroute/team-a/refused"
     tls:
+      inspector:
+        snis:
+        - "refused.example.com"
       terminate:
         certificates:
         - name: refuse-db

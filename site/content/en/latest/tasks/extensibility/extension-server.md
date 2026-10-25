@@ -110,6 +110,16 @@ The hooks are executed in the following order during xDS translation:
 - **Output**: Modified listener
 - **Use cases**: Add listener filters, modify listener configuration, add authentication
 
+#### Secret Hook (`ResolveSecretHook`)
+
+- **When called**: For each listener certificate that references a kind registered under `secretResources`
+- **Input**: The referenced resource, and the namespace and name of the Gateway the listener belongs to
+- **Output**: How Envoy obtains the secret, or a failure reason when it cannot be resolved yet
+- **Unresolved certificates**: A certificate that is not resolved is left out of the listener. If none of a
+  listener's certificates are resolved, Envoy closes the connections for the listener's hostnames, rather than
+  letting another listener on the same port, such as one with a wildcard hostname, handle them. HTTP/3 traffic
+  for the listener is not served.
+
 #### Translation Hook (`PostTranslateModifyHook`)
 
 - **When called**: After all individual resources are generated and processed
