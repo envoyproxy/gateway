@@ -706,10 +706,9 @@ func BuildExtensionRefIndex(resources []unstructured.Unstructured) ExtensionRefI
 func (t *Translator) getExtensionRef(resources *resource.Resources, group, kind, namespace, name string) (res *unstructured.Unstructured, malformed bool) {
 	i, found := t.ExtensionRefIndex.valid[extensionRefKey{Group: group, Kind: kind, Namespace: namespace, Name: name}]
 	j, hasMalformed := t.ExtensionRefIndex.malformed[extensionRefKey{Kind: kind, Namespace: namespace, Name: name}]
-	malformed = hasMalformed && (!found || j < i)
 	if !found {
-		return nil, malformed
+		return nil, hasMalformed
 	}
 	r := resources.ExtensionRefFilters[i]
-	return &r, malformed
+	return &r, hasMalformed && j < i
 }
