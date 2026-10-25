@@ -18,8 +18,14 @@ For the Lua example, first [enable Lua support](../lua/) in Envoy Gateway.
 
 ## Declare a backend
 
-This policy binds the alias `resolver` to a Kubernetes Service. The Lua script
-looks up that alias and calls the resulting cluster. The Service does not need
+In `spec.backends`, `name` defines the alias your extension uses. The
+`backendRef.name` identifies a Kubernetes resource by its `metadata.name`. That
+resource can be a Service, ServiceImport or Envoy Gateway Backend. A
+[Backend resource](../../traffic/backend/) defines destinations such as IP
+addresses, DNS names and Unix socket paths. The alias and resource name can differ.
+
+This policy binds the alias `resolver` to the Kubernetes Service `lookup-service`.
+The Lua script looks up that alias and calls the resulting cluster. The Service does not need
 to appear in the HTTPRoute's `backendRefs`. Your route can send client requests
 to the application while the extension uses a separate service for its lookup.
 
@@ -37,7 +43,7 @@ spec:
   backends:
   - name: resolver
     backendRef:
-      name: resolver
+      name: lookup-service
       port: 8080
   lua:
   - type: Inline
@@ -51,7 +57,7 @@ spec:
         local headers = handle:httpCall(cluster, {
           [":method"] = "GET",
           [":path"] = "/lookup",
-          [":authority"] = "resolver"
+          [":authority"] = "lookup-service"
         }, nil, 2000)
         if headers[":status"] ~= "200" then
           handle:respond({[":status"] = "502"}, "resolver callout failed")
@@ -79,7 +85,7 @@ limits the cluster to 100 connections:
 backends:
 - name: resolver
   backendRef:
-    name: resolver
+    name: lookup-service
     port: 8080
   backendSettings:
     timeout:
@@ -179,6 +185,23 @@ same namespace and key. SDK buffers can borrow Envoy memory. Copy the string if
 it must outlive the callback. See the [dynamic module test example][] for a complete
 HTTP callout using the Go SDK.
 
+## Security considerations
+
+Backend bindings allow policy authors to configure outbound traffic from Envoy.
+[`ReferenceGrant`][] checks authorize references to Kubernetes resources, but they
+do not prevent SSRF or restrict the network destinations behind those resources.
+
+Aliases identify clusters, however they do not restrict which clusters a dynamic
+module can call. Use trusted modules and restrict who can configure policies and
+referenced backends.
+
+A child policy can use inherited bindings or replace them while retaining the
+parent's extension. Replacing an authorization backend could therefore change
+authorization decisions.
+
+Active health checks can also generate traffic without extension calls. Use
+admission controls and network restrictions when delegating policy management.
+
 ## Scope and lifecycle
 
 Bindings belong to the selected route, so a shared extension can call different
@@ -212,3 +235,4 @@ invalid. Unrelated policies continue to operate.
 
 [dynamic module test example]: https://github.com/envoyproxy/gateway/tree/main/examples/dynamic-module-test
 [Envoy's route metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-route-metadata
+[`ReferenceGrant`]: https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/
