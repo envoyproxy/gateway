@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -86,7 +85,6 @@ func (t *Translator) applyBackendTLSSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1.ParentReference,
-	resources *resource.Resources,
 	gtwCtx *GatewayContext,
 	gwIR *ir.Xds,
 ) (*ir.TLSUpstreamConfig, error) {
@@ -127,7 +125,7 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the backend certificate validation settings from BackendTLSPolicy.
-	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources, gwIR, gtwCtx); err != nil {
+	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, gwIR, gtwCtx); err != nil {
 		return nil, err
 	}
 
@@ -332,11 +330,10 @@ func (t *Translator) processBackendTLSPolicy(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1.ParentReference,
-	resources *resource.Resources,
 	gwIR *ir.Xds,
 	gtwCtx *GatewayContext,
 ) (*ir.TLSUpstreamConfig, error) {
-	policy := t.getBackendTLSPolicy(resources.BackendTLSPolicies, backendRef, backendNamespace)
+	policy := t.getBackendTLSPolicy(backendRef, backendNamespace)
 	if policy == nil {
 		return nil, nil
 	}
@@ -471,44 +468,63 @@ func (t *Translator) processClientTLSSettings(
 	return tlsConfig, nil
 }
 
-func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string, shouldSectionNameMatch bool) bool {
-	for _, currTarget := range policy.Spec.TargetRefs {
-		if target.Group == currTarget.Group &&
-			target.Kind == currTarget.Kind &&
-			backendNamespace == policy.Namespace &&
-			target.Name == currTarget.Name {
-			// if section name is not set, then it targets the entire backend
-			if currTarget.SectionName == nil && target.SectionName != nil {
-				return !shouldSectionNameMatch
-			} else if reflect.DeepEqual(currTarget.SectionName, target.SectionName) {
-				return true
+// backendTLSPolicyKey identifies the backend, and optionally the section of it, that a
+// BackendTLSPolicy targets. An empty SectionName means the policy targets the whole backend.
+type backendTLSPolicyKey struct {
+	Namespace   string
+	Group       gwapiv1.Group
+	Kind        gwapiv1.Kind
+	Name        gwapiv1.ObjectName
+	SectionName gwapiv1.SectionName
+}
+
+// BackendTLSPolicyIndex maps each backend (and section) targeted by a BackendTLSPolicy to the
+// policy that applies to it, so a route's backendRef finds its policy without scanning them all.
+type BackendTLSPolicyIndex map[backendTLSPolicyKey]*gwapiv1.BackendTLSPolicy
+
+// BuildBackendTLSPolicyIndex indexes policies by every target they list. policies must already be
+// in precedence order (oldest first): when several policies target the same backend and section,
+// the first one wins.
+func BuildBackendTLSPolicyIndex(policies []*gwapiv1.BackendTLSPolicy) BackendTLSPolicyIndex {
+	idx := make(BackendTLSPolicyIndex, len(policies))
+	for _, policy := range policies {
+		for _, target := range policy.Spec.TargetRefs {
+			key := backendTLSPolicyKey{
+				Namespace:   policy.Namespace,
+				Group:       target.Group,
+				Kind:        target.Kind,
+				Name:        target.Name,
+				SectionName: ptr.Deref(target.SectionName, ""),
+			}
+			if _, ok := idx[key]; !ok {
+				idx[key] = policy
 			}
 		}
 	}
-	return false
+	return idx
 }
 
 func (t *Translator) getBackendTLSPolicy(
-	policies []*gwapiv1.BackendTLSPolicy,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 ) *gwapiv1.BackendTLSPolicy {
 	// SectionName is port number for EG Backend object
 	target := t.getTargetBackendReference(backendRef, backendNamespace)
-	if target.SectionName != nil {
-		for _, policy := range policies {
-			if backendTLSTargetMatched(policy, target, backendNamespace, true) {
-				// prefer policies that target this specific section over wildcard matches
-				return policy
-			}
-		}
+	key := backendTLSPolicyKey{
+		Namespace: backendNamespace,
+		Group:     target.Group,
+		Kind:      target.Kind,
+		Name:      target.Name,
 	}
-	for _, policy := range policies {
-		if backendTLSTargetMatched(policy, target, backendNamespace, false) {
+	// prefer policies that target this specific section over ones that target the whole backend
+	if target.SectionName != nil {
+		sectionKey := key
+		sectionKey.SectionName = *target.SectionName
+		if policy, ok := t.BackendTLSPolicyIndex[sectionKey]; ok {
 			return policy
 		}
 	}
-	return nil
+	return t.BackendTLSPolicyIndex[key]
 }
 
 func (t *Translator) buildBTPServerValidationTLSConfig(backendTLSPolicy *gwapiv1.BackendTLSPolicy, gwIR *ir.Xds, gtwCtx *GatewayContext) (*ir.TLSUpstreamConfig, error) {
