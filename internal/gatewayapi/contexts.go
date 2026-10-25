@@ -644,6 +644,27 @@ func GetManagedParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	return managed
 }
 
+// GetManagedRouteParentContexts returns the RouteParentContexts of the route in
+// spec.parentRefs order. Iterating the ParentRefs map directly is nondeterministic,
+// which matters when several parentRefs compete for the same listener.
+func GetManagedRouteParentContexts(route RouteContext) []*RouteParentContext {
+	parentRefs := GetParentReferences(route)
+	ctxs := make([]*RouteParentContext, 0, len(parentRefs))
+	seen := make(map[*RouteParentContext]struct{}, len(parentRefs))
+	for _, parentRef := range parentRefs {
+		ctx := route.GetRouteParentContext(parentRef)
+		if ctx == nil {
+			continue
+		}
+		if _, ok := seen[ctx]; ok {
+			continue
+		}
+		seen[ctx] = struct{}{}
+		ctxs = append(ctxs, ctx)
+	}
+	return ctxs
+}
+
 // GetRouteStatus returns the RouteStatus object associated with the Route.
 func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 	return route.GetRouteStatus()
