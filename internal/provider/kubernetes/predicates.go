@@ -764,10 +764,7 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		}
 	}
 
-	if r.isProxyServiceCluster(ep.GetLabels()) {
-		return true
-	}
-	return false
+	return r.isProxyServiceCluster(ep.GetLabels())
 }
 
 // isEndpointSliceBackendReferenced returns true if the named Service or
