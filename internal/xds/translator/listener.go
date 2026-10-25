@@ -1539,6 +1539,12 @@ func (t *Translator) resolveExtensionCertificates(
 		if resolution.SdsSecretConfig == nil || resolution.SdsSecretConfig.GetName() == "" {
 			continue
 		}
+		// An extension must not point a listener at a secret Envoy Gateway provides to Envoy itself.
+		if secretName := resolution.SdsSecretConfig.GetName(); t.isReservedSecretName(secretName) {
+			t.Logger.Error(fmt.Errorf("secret %q is reserved by Envoy Gateway", secretName),
+				"ignoring extension resolution of certificate", "certificate", cert.Name)
+			continue
+		}
 
 		if resolutions == nil {
 			resolutions = make(map[string]*tlsv3.SdsSecretConfig, len(tlsConfig.Certificates))
@@ -1547,4 +1553,18 @@ func (t *Translator) resolveExtensionCertificates(
 	}
 
 	return resolutions, nil
+}
+
+// isReservedSecretName reports whether name is a secret Envoy Gateway gives Envoy for its own use,
+// either from the bootstrap or over xDS.
+func (t *Translator) isReservedSecretName(name string) bool {
+	switch name {
+	// Secrets the bootstrap gives Envoy for its connection to Envoy Gateway.
+	case "xds_certificate", "xds_trusted_ca", "jwt-sa-bearer",
+		// Envoy's client certificate for control plane components, such as the rate limit service.
+		t.ControllerNamespace + "/envoy",
+		SystemTrustStoreSecretName:
+		return true
+	}
+	return false
 }

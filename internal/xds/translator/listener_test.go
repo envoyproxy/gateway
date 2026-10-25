@@ -22,6 +22,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 func Test_toNetworkFilter(t *testing.T) {
@@ -252,10 +253,20 @@ func Test_resolveExtensionCertificates(t *testing.T) {
 			extension: &failOpen,
 			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("error-cert")}},
 		},
+		{
+			// A resolution to a secret Envoy Gateway provides itself is ignored, not an error.
+			name:      "resolution to a reserved secret is ignored",
+			extension: &withTLSCertificateHook,
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{
+				newExtensionCertificate("reserved-xds_certificate"),
+				newExtensionCertificate("reserved-" + SystemTrustStoreSecretName),
+				newExtensionCertificate("reserved-envoy-gateway-system/envoy"),
+			}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := &Translator{}
+			tr := &Translator{ControllerNamespace: "envoy-gateway-system"}
 			if tt.extension != nil {
 				extMgr, closeFunc, err := registry.NewInMemoryManager(tt.extension, &testingExtensionServer{})
 				require.NoError(t, err)
@@ -272,4 +283,43 @@ func Test_resolveExtensionCertificates(t *testing.T) {
 			assert.Empty(t, resolutions)
 		})
 	}
+}
+
+func Test_isReservedSecretName(t *testing.T) {
+	tr := &Translator{ControllerNamespace: "envoy-gateway-system"}
+	tests := []struct {
+		name     string
+		sdsName  string
+		reserved bool
+	}{
+		{name: "xds client certificate", sdsName: "xds_certificate", reserved: true},
+		{name: "xds trusted CA", sdsName: "xds_trusted_ca", reserved: true},
+		{name: "service account token", sdsName: "jwt-sa-bearer", reserved: true},
+		{name: "envoy client certificate", sdsName: "envoy-gateway-system/envoy", reserved: true},
+		{name: "system trust store", sdsName: SystemTrustStoreSecretName, reserved: true},
+		{name: "envoy secret in another namespace", sdsName: "default/envoy", reserved: false},
+		{name: "name chosen by the extension", sdsName: "example-provider-cert", reserved: false},
+		{name: "listener certificate from a Secret", sdsName: "default/app-cert", reserved: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.reserved, tr.isReservedSecretName(tt.sdsName))
+		})
+	}
+}
+
+// The reserved bootstrap secret names must match the names the bootstrap gives Envoy.
+func Test_isReservedSecretName_matchesBootstrap(t *testing.T) {
+	tr := &Translator{}
+	cfg, err := bootstrap.GetRenderedBootstrapConfig(nil)
+	require.NoError(t, err)
+	nsModeCfg, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootstrapConfigOptions{GatewayNamespaceMode: true})
+	require.NoError(t, err)
+
+	for _, name := range []string{"xds_certificate", "xds_trusted_ca"} {
+		assert.Contains(t, cfg, "name: "+name+"\n")
+		assert.True(t, tr.isReservedSecretName(name))
+	}
+	assert.Contains(t, nsModeCfg, "name: jwt-sa-bearer\n")
+	assert.True(t, tr.isReservedSecretName("jwt-sa-bearer"))
 }

@@ -39,6 +39,14 @@ When enabling Extension Server, additional security measures should be taken by 
 * Using K8s [RBAC][] to restrict access to the Envoy Gateway Configuration as well as the Extension Server deployment.
 * Disabling envoy extensions which are not needed with envoy [command line options][].
 * Implementing Kubernetes [network policies][] that restrict traffic from the proxy pod only to relevant targets.
+
+Resources registered under `secretResources` are created by users, who may be less trusted than the
+Extension Server. The `Secret` hook resolves such a resource to a secret that Envoy loads, so the
+Extension Server decides which secret a user's resource gives access to. Envoy Gateway only checks that
+the reference is to a registered kind, is permitted by a ReferenceGrant, and exists, and it ignores a
+resolution to a secret it provides to Envoy itself (for example, the xDS client certificate). It cannot
+check any other secret name or SDS server. The Extension Server must make sure a resource only resolves
+to secrets its owner is allowed to use, and must not pass a user-supplied secret name through unchecked.
   {{% /alert %}}
 
 ## Extension Hooks Overview
