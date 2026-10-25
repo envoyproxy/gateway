@@ -1158,6 +1158,11 @@ func (in *ClusterTrafficFeatures) DeepCopyInto(out *ClusterTrafficFeatures) {
 		*out = new(BackendHTTP3Settings)
 		**out = **in
 	}
+	if in.HTTP1 != nil {
+		in, out := &in.HTTP1, &out.HTTP1
+		*out = new(HTTP1Settings)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.DNS != nil {
 		in, out := &in.DNS, &out.DNS
 		*out = new(DNS)
@@ -3604,6 +3609,11 @@ func (in *MirrorPolicy) DeepCopyInto(out *MirrorPolicy) {
 	if in.Percentage != nil {
 		in, out := &in.Percentage, &out.Percentage
 		*out = new(float32)
+		**out = **in
+	}
+	if in.HostRewrite != nil {
+		in, out := &in.HostRewrite, &out.HostRewrite
+		*out = new(string)
 		**out = **in
 	}
 }

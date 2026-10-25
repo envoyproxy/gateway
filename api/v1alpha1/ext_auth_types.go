@@ -161,6 +161,7 @@ type ContextExtension struct {
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service, ServiceImport, and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'ServiceImport' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="http1 is not supported for gRPC ExtAuth backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
 type GRPCExtAuthService struct {
 	// Only Service kind is supported for now.
 	BackendCluster `json:",inline"`

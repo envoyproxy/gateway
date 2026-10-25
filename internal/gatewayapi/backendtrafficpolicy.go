@@ -101,7 +101,8 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.HTTP3 != nil ||
 		spec.DNS != nil ||
 		spec.AdmissionControl != nil ||
-		spec.UseClientProtocol != nil
+		spec.UseClientProtocol != nil ||
+		spec.HTTP1 != nil
 }
 
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
@@ -1054,6 +1055,23 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		return
 	}
 
+	// Protocol-specific validation: some BTP fields are HTTP-only and have no
+	// effect when targeting TCP/TLS/UDP routes or a GRPCRoute. Emit a warning so
+	// the user is informed, but continue translation — other fields (e.g. routingType)
+	// are still valid and must be applied.
+	if err := validateBackendTrafficPolicyForRoute(policy, string(targetedRoute.GetRouteType())); err != nil {
+		for _, ancestorRef := range ancestorRefs {
+			status.SetWarningForPolicyAncestor(&policy.Status,
+				ancestorRef,
+				t.GatewayControllerName,
+				status.PolicyReasonUnsupportedField,
+				err.Error(),
+				policy.Generation,
+			)
+		}
+		// do NOT return — translation continues so other fields remain effective
+	}
+
 	if policy.Spec.MergeType == nil {
 		h3WarningsByListener, buildErr := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil)
 		// Set each listener's warnings on the ancestor of the parentRef. A parentRef naming a whole Gateway or ListenerSet
@@ -1083,21 +1101,21 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		h3WarningsByListener := map[string]http3Warnings{}
 		listenerErrs := map[string]error{}
 		for _, parent := range parentRefCtxs {
+			// The listeners can merge with different parent policies, and fail on some of them
+			// only, so collect their results and report them once for the parentRef.
+			errMsgs, mergedWith := sets.New[string](), sets.New[string]()
 			for _, listener := range parent.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 				var (
-					ancestorRef  gwapiv1.ParentReference
 					parentPolicy *egv1a1.BackendTrafficPolicy
 					parentScope  policyScope
 				)
 
-				ancestorRef = listener.PolicyAncestorRef()
 				if listener.isFromListenerSet() {
 					lsNN := types.NamespacedName{
 						Name:      listener.listenerSet.Name,
 						Namespace: listener.listenerSet.Namespace,
 					}
-
 					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
@@ -1130,17 +1148,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 						h3WarningsByListener[name], listenerErrs[name] = h3Warnings, err
 					}
 
-					// If a policy failed to build, mark it Invalid on this route's ancestor;
+					// If a policy failed to build, report it on this parentRef's ancestor;
 					// the error is cached so every parent reaching the listener reports it.
 					if ownBuildErr := listenerErrs[name]; ownBuildErr != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(ownBuildErr),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(ownBuildErr))
 					}
 
 					// Report the listener's HTTP/3 warnings (disabled, or a setting ignored) on the parentRef's
@@ -1159,14 +1170,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
 					)
 					if err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(err))
 						continue
 					}
 					h3WarningsByListener[irListenerName(listener)] = h3Warnings
@@ -1177,17 +1181,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
+
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parent.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
@@ -1887,6 +1884,7 @@ func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPo
 		ka        *ir.TCPKeepalive
 		bc        *ir.BackendConnection
 		ds        *ir.DNS
+		h1        *ir.HTTP1Settings
 		h2        *ir.HTTP2Settings
 		err, errs error
 	)
@@ -1926,6 +1924,8 @@ func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPo
 
 	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
 
+	h1 = translateBackendHTTP1Settings(policy.Spec.HTTP1)
+
 	return &ir.ClusterTrafficFeatures{
 		LoadBalancer:      lb,
 		ProxyProtocol:     pp,
@@ -1935,6 +1935,7 @@ func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPo
 		Timeout:           to,
 		TCPKeepalive:      ka,
 		BackendConnection: bc,
+		HTTP1:             h1,
 		HTTP2:             h2,
 		HTTP3:             buildIRBackendHTTP3Settings(policy.Spec.HTTP3),
 		DNS:               ds,
@@ -2373,6 +2374,17 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, cf *ir.ClusterTraf
 		}
 	}
 	return nil
+}
+
+// translateBackendHTTP1Settings converts BTP BackendHTTP1Settings to the IR representation.
+func translateBackendHTTP1Settings(s *egv1a1.BackendHTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	return &ir.HTTP1Settings{
+		EnableTrailers:     ptr.Deref(s.EnableTrailers, false),
+		PreserveHeaderCase: ptr.Deref(s.PreserveHeaderCase, false),
+	}
 }
 
 // appendTrafficPolicyMetadata records the policy on the route once. A policy with mergeType is
@@ -3282,4 +3294,23 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	}
 
 	return &statName
+}
+
+// validateBackendTrafficPolicyForRoute returns an error when the policy carries
+// http1 settings that are silently ignored for the given route kind:
+//
+//   - GRPCRoute: http1 is meaningless (gRPC always uses HTTP/2).
+//   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 has no effect.
+func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeKind string) error {
+	switch routeKind {
+	case resource.KindGRPCRoute:
+		if p.Spec.HTTP1 != nil {
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
+		}
+	case resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
+		if p.Spec.HTTP1 != nil {
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a %s", routeKind)
+		}
+	}
+	return nil
 }
