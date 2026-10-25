@@ -187,7 +187,7 @@ differently:
 | Opt-in                | Per Gateway, via `spec.allowedListeners`                                 | Per GatewayClass, via `mergeGateways: true` in EnvoyProxy                 |
 | Delegation model      | Gateway owner controls which namespaces may attach listeners             | Any Gateway under the GatewayClass is merged, no per-Gateway consent      |
 | Listener limit        | 64 per resource, scale by adding ListenerSets to one Gateway            | 64 per resource, scale by adding Gateways under the GatewayClass          |
-| Status reporting      | Per-ListenerSet status, plus `attachedListenerSets` on the Gateway       | Status aggregated on each merged Gateway                                  |
+| Status reporting      | Per-ListenerSet status, plus `attachedListenerSets` on the Gateway       | Each Gateway reports status for its own listeners only                     |
 | Policy attachment     | Policies can target a ListenerSet or its individual listeners            | Policies target each Gateway separately                                   |
 
 For new deployments, prefer ListenerSet: it is the upstream Gateway API design for this use case, and it gives the Gateway owner explicit control over who may attach listeners.
