@@ -61,6 +61,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 | `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
 | `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host |
 | `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
+| `Secret` | `ResolveSecretHook` | Resolve listener certificates that reference a kind registered under `secretResources` | Single `envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig` | Per-certificate, only for certificates referencing a registered kind |
 | `Translation` | `PostTranslateModifyHook` | Global modification of all xDS resources | All clusters, secrets, listeners, and routes | Once per translation cycle |
 
 ### Hook Execution Order
@@ -68,6 +69,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 The hooks are executed in the following order during xDS translation:
 
 1. **Route Processing Phase**
+   - `Secret` hook (`ResolveSecretHook`): Called for each certificate of a listener that references a kind registered under `secretResources`, before the listener's routes are processed
    - `Route` hook (`PostRouteModifyHook`): Called for each route that has extension filters attached or extension server policies targettig the route
    - `Cluster` hook (`PostClusterModifyHook`): Called for each cluster generated from custom backend references
 
@@ -113,8 +115,12 @@ The hooks are executed in the following order during xDS translation:
 #### Secret Hook (`ResolveSecretHook`)
 
 - **When called**: For each listener certificate that references a kind registered under `secretResources`
-- **Input**: The referenced resource, and the namespace and name of the Gateway the listener belongs to
-- **Output**: How Envoy obtains the secret, or a failure reason when it cannot be resolved yet
+- **Input**: The referenced resource (`secret_resource`), and the namespace and name of the Gateway the listener
+  belongs to (`gateway_namespace`, `gateway_name`)
+- **Output**: How Envoy obtains the secret (`sds_secret_config`), or a failure reason when it cannot be resolved
+  yet (`failure_reason`, `failure_message`). `sds_secret_config` must have a name. Its `sds_config` may be left
+  unset when the data plane resolves the name itself. A response with neither is treated as unresolved.
+- **Use cases**: Serve listener certificates held by an external provider, without storing the key in a Kubernetes Secret
 - **Unresolved certificates**: A certificate that is not resolved is left out of the listener. If none of a
   listener's certificates are resolved, Envoy closes the connections for the listener's hostnames, rather than
   letting another listener on the same port, such as one with a wildcard hostname, handle them. HTTP/3 traffic
@@ -222,6 +228,7 @@ extensionManager:
         - HTTPListener   # Enable HTTP listener modification hook
         - Cluster        # Enable cluster modification hook
         - Translation    # Enable global translation hook
+        - Secret         # Enable secret resolution hook (requires secretResources)
       # Configure which resources to include in PostTranslateModifyHook
       # Default: true for clusters and secrets (for backward compatibility)
       # Default: false for listeners and routes (for backward compatibility)
@@ -230,6 +237,21 @@ extensionManager:
           includeAll: true
         route:
           includeAll: true
+```
+
+To use the `Secret` hook, register the kinds that Gateway or ListenerSet listeners may reference in
+`tls.certificateRefs` under `secretResources`:
+
+```yaml
+extensionManager:
+  secretResources:
+    - group: example.io
+      version: v1alpha1
+      kind: ExampleCertificate
+  hooks:
+    xdsTranslator:
+      post:
+        - Secret
 ```
 
 This task sets up an example extension server that adds the Envoy Proxy Basic Authentication
@@ -394,9 +416,11 @@ A few nuances apply when multiple extension managers are configured:
   declared. Each server sees the output of the previous one, so mutations
   compose.
 * **Resource isolation.** Each server only receives the extension resources
-  whose GVK it declares under `resources`, `policyResources`, or
-  `backendResources`. In the example above a `FooFilter` is sent to `ext-a`
+  whose GVK it declares under `resources`, `policyResources`,
+  `backendResources`, or `secretResources`. In the example above a `FooFilter` is sent to `ext-a`
   but not to `ext-b`.
+* **The `Secret` hook does not chain.** Only the server that declares the
+  referenced kind under `secretResources` is called.
 * **`failOpen` is per server.** Setting `failOpen: true` on a server causes
   Envoy Gateway to skip that server in the chain when its hook returns an
   error (or when its gRPC connection cannot be established), while still
