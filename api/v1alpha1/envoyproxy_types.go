@@ -101,6 +101,12 @@ type EnvoyProxySpec struct {
 	// rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
 	// improves upstream connection pooling.
 	//
+	// Only a route's own backendRefs (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute) are
+	// considered. A backend used any other way, such as a RequestMirror filter or an external
+	// service of a SecurityPolicy or EnvoyExtensionPolicy, is never merged. A BackendTrafficPolicy
+	// that targets a backend only reports status for Gateways where the backend is used as a route
+	// backendRef.
+	//
 	// Disabled when unset; specifying this field at all (even without further configuration)
 	// enables it. Mutually exclusive with MergeGateways.
 	//
@@ -169,6 +175,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.dynamic_forward_proxy
 	//
+	// - envoy.filters.http.alternate_protocols_cache
+	//
 	// - envoy.filters.http.router
 	//
 	// Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain.
@@ -187,7 +195,7 @@ type EnvoyProxySpec struct {
 	// - It defaults to IPv4 only.
 	// - IPv6 and dual-stack environments are not supported in this default configuration.
 	// Note: To enable IPv6 or dual-stack functionality, explicit configuration is required.
-	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack
+	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack;PreferDualStack
 	// +optional
 	IPFamily *IPFamily `json:"ipFamily,omitempty"`
 
@@ -408,7 +416,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy;envoy.filters.http.alternate_protocols_cache
 type EnvoyFilter string
 
 const (
@@ -493,6 +501,9 @@ const (
 
 	// EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.
 	EnvoyFilterDynamicForwardProxy EnvoyFilter = "envoy.filters.http.dynamic_forward_proxy"
+
+	// EnvoyFilterAlternateProtocolsCache defines the Envoy HTTP alternate protocols cache filter.
+	EnvoyFilterAlternateProtocolsCache EnvoyFilter = "envoy.filters.http.alternate_protocols_cache"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
@@ -851,6 +862,9 @@ const (
 	// When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses
 	// for incoming client traffic, enabling support for both IP protocol versions.
 	DualStack IPFamily = "DualStack"
+	// PreferDualStack defines the dual-stack family, degrading to the single family
+	// the cluster provides instead of failing when the cluster is not dual-stack.
+	PreferDualStack IPFamily = "PreferDualStack"
 )
 
 func init() {
