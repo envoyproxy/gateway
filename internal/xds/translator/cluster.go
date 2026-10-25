@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	peak_ewma_filter_v3alpha "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/filters/http/peak_ewma/v3alpha"
+	peak_ewmav3alpha "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/load_balancing_policies/peak_ewma/v3alpha"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -514,6 +516,12 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			return nil, err
 		}
 		cluster.LoadBalancingPolicy = backendUtilizationPolicy
+	case args.loadBalancer.PeakEwma != nil:
+		peakEwmaPolicy, err := buildPeakEwmaLoadBalancingPolicy(args.loadBalancer)
+		if err != nil {
+			return nil, err
+		}
+		cluster.LoadBalancingPolicy = peakEwmaPolicy
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
@@ -1191,7 +1199,8 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	autoHTTP3 := requiresHTTP3 && !alwaysHTTP3
 
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
-		args.admissionControl != nil
+		args.admissionControl != nil ||
+		(args.loadBalancer != nil && args.loadBalancer.PeakEwma != nil)
 
 	var clusterHashPolicy []*routev3.RouteAction_HashPolicy
 	if !args.isRoute && args.loadBalancer != nil {
@@ -1378,6 +1387,14 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 		filters = append(filters, filter)
 	}
 
+	if args.loadBalancer != nil && args.loadBalancer.PeakEwma != nil {
+		filter, err := buildUpstreamPeakEwmaFilter()
+		if err != nil {
+			return nil, nil, err
+		}
+		filters = append(filters, filter)
+	}
+
 	// UpstreamCodec filter is required as the terminal filter for the upstream HTTP filters.
 	if len(filters) > 0 {
 		upstreamCodec, err := buildUpstreamCodecFilter()
@@ -1421,6 +1438,22 @@ func buildUpstreamCodecFilter() (*hcmv3.HttpFilter, error) {
 		Name: "envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec",
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: codecAny,
+		},
+	}, nil
+}
+
+// buildUpstreamPeakEwmaFilter builds the Peak EWMA upstream HTTP filter required for RTT
+// measurement samples consumed by the Peak EWMA load balancing policy.
+func buildUpstreamPeakEwmaFilter() (*hcmv3.HttpFilter, error) {
+	cfg := &peak_ewma_filter_v3alpha.PeakEwmaConfig{}
+	cfgAny, err := proto.ToAnyWithValidation(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &hcmv3.HttpFilter{
+		Name: "envoy.filters.http.peak_ewma",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: cfgAny,
 		},
 	}, nil
 }
@@ -1800,6 +1833,8 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 		fallbackType = ir.ConsistentHashLoadBalancer
 	case loadBalancer.BackendUtilization != nil:
 		fallbackType = ir.BackendUtilizationLoadBalancer
+	case loadBalancer.PeakEwma != nil:
+		fallbackType = ir.PeakEwmaLoadBalancer
 	default:
 		// Default to LeastRequest if no specific type is set
 		fallbackType = ir.LeastRequestLoadBalancer
@@ -1810,6 +1845,8 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 	var err error
 	if fallbackType == ir.BackendUtilizationLoadBalancer {
 		fallbackPolicy, err = buildBackendUtilizationLoadBalancingPolicy(loadBalancer)
+	} else if fallbackType == ir.PeakEwmaLoadBalancer {
+		fallbackPolicy, err = buildPeakEwmaLoadBalancingPolicy(loadBalancer)
 	} else {
 		fallbackPolicy, err = buildFallbackLoadBalancingPolicy(fallbackType)
 	}
@@ -1901,6 +1938,63 @@ func buildBackendUtilizationLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (
 	// per-zone weights from the EDS ClusterLoadAssignment.
 	wrrLocality := &wrr_localityv3.WrrLocality{
 		EndpointPickingPolicy: cswrrPolicy,
+	}
+	typedWrrLocality, err := proto.ToAnyWithValidation(wrrLocality)
+	if err != nil {
+		return nil, err
+	}
+	return &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.wrr_locality",
+				TypedConfig: typedWrrLocality,
+			},
+		}},
+	}, nil
+}
+
+func buildPeakEwmaLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*clusterv3.LoadBalancingPolicy, error) {
+	if loadBalancer == nil || loadBalancer.PeakEwma == nil {
+		return nil, fmt.Errorf("peak ewma load balancer config is required")
+	}
+
+	pe := &peak_ewmav3alpha.PeakEwma{}
+	v := loadBalancer.PeakEwma
+	if v.DecayTime != nil && v.DecayTime.Duration > 0 {
+		pe.DecayTime = durationpb.New(v.DecayTime.Duration)
+	}
+	if v.AggregationInterval != nil && v.AggregationInterval.Duration > 0 {
+		pe.AggregationInterval = durationpb.New(v.AggregationInterval.Duration)
+	}
+	if v.MaxSamplesPerHost != nil {
+		pe.MaxSamplesPerHost = wrapperspb.UInt32(*v.MaxSamplesPerHost)
+	}
+	if v.DefaultRtt != nil && v.DefaultRtt.Duration > 0 {
+		pe.DefaultRtt = durationpb.New(v.DefaultRtt.Duration)
+	}
+	if v.PenaltyValue != nil {
+		pe.PenaltyValue = wrapperspb.Double(*v.PenaltyValue)
+	}
+	typedPe, err := proto.ToAnyWithValidation(pe)
+	if err != nil {
+		return nil, err
+	}
+	peakEwmaPolicy := &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.peak_ewma",
+				TypedConfig: typedPe,
+			},
+		}},
+	}
+	if len(loadBalancer.WeightedZones) == 0 {
+		return peakEwmaPolicy, nil
+	}
+
+	// PeakEwma has no LocalityLbConfig field, so wrap it in wrr_locality to honor
+	// per-zone weights from the EDS ClusterLoadAssignment.
+	wrrLocality := &wrr_localityv3.WrrLocality{
+		EndpointPickingPolicy: peakEwmaPolicy,
 	}
 	typedWrrLocality, err := proto.ToAnyWithValidation(wrrLocality)
 	if err != nil {

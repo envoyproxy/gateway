@@ -26413,6 +26413,75 @@ spec:
                     required:
                     - extractFrom
                     type: object
+                  peakEwma:
+                    description: |-
+                      PeakEwma defines the configuration when the load balancer type is
+                      set to PeakEwma.
+                    properties:
+                      aggregationInterval:
+                        description: |-
+                          AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                          to the main thread. This controls the frequency of cross-thread synchronization for the
+                          per-thread aggregation model.
+
+                          A shorter interval provides more up-to-date cross-worker information but increases
+                          synchronization overhead. A longer interval reduces overhead but may cause workers
+                          to operate with staler information about other workers' latency observations.
+
+                          If not specified, defaults to 100 milliseconds.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      decayTime:
+                        description: |-
+                          DecayTime specifies the time window over which latency observations are considered
+                          relevant. After this duration, older measurements have exponentially decayed to half
+                          their original weight.
+
+                          This parameter directly relates to the time duration over which you want to observe
+                          latency trends.
+
+                          If not specified, defaults to 10 seconds (following Finagle's default).
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      defaultRtt:
+                        description: |-
+                          DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                          This provides a baseline for cost calculations until actual measurements are available.
+
+                          This value is critical for initial load balancing decisions when hosts first join
+                          the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                          the expected baseline latency for your environment.
+
+                          If not specified, defaults to 10 milliseconds.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      maxSamplesPerHost:
+                        description: |-
+                          MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                          thread before overwriting the oldest samples. This bounds memory usage while allowing
+                          burst traffic handling.
+
+                          Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                          Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                          If not specified, defaults to 1,000 samples per host per worker.
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      penaltyValue:
+                        description: |-
+                          PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                          calculations. This is used when a host has no RTT measurements or is unhealthy,
+                          ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                          The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                          hosts with unknown performance are strongly deprioritized while still allowing them to
+                          receive traffic if no better alternatives exist.
+
+                          If not specified, defaults to 1,000,000.0 (1 million).
+                        minimum: 0
+                        type: number
+                    type: object
                   slowStart:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -26439,6 +26508,7 @@ spec:
                       "Random",
                       "RoundRobin",
                       "BackendUtilization",
+                      "PeakEwma",
                       "DynamicModule".
                     enum:
                     - ConsistentHash
@@ -26446,6 +26516,7 @@ spec:
                     - Random
                     - RoundRobin
                     - BackendUtilization
+                    - PeakEwma
                     - DynamicModule
                     type: string
                   zoneAware:
@@ -26536,14 +26607,17 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                     : !has(self.backendUtilization)'
+                - message: If LoadBalancer type is PeakEwma, peakEwma field needs
+                    to be set.
+                  rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma) : !has(self.peakEwma)'
                 - message: If LoadBalancer type is DynamicModule, dynamicModule field
                     needs to be set.
                   rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
                     : !has(self.dynamicModule)'
                 - message: Currently SlowStart is only supported for RoundRobin, LeastRequest,
                     and BackendUtilization load balancers.
-                  rule: 'self.type in [''Random'', ''ConsistentHash'', ''DynamicModule'']
-                    ? !has(self.slowStart) : true'
+                  rule: 'self.type in [''Random'', ''ConsistentHash'', ''PeakEwma'',
+                    ''DynamicModule''] ? !has(self.slowStart) : true'
                 - message: PreferLocal zone-aware routing is not supported for ConsistentHash
                     load balancers. Use weightedZones instead.
                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
@@ -26553,6 +26627,11 @@ spec:
                     be used with BackendUtilization.
                   rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
                     ? !has(self.zoneAware.preferLocal) : true'
+                - message: PreferLocal zone-aware routing is not currently supported
+                    for PeakEwma load balancers. Only WeightedZones can be used with
+                    PeakEwma.
+                  rule: 'self.type == ''PeakEwma'' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                    : true'
                 - message: ZoneAware routing is not supported for DynamicModule load
                     balancers.
                   rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware) : true'
@@ -32979,6 +33058,75 @@ spec:
                               required:
                               - extractFrom
                               type: object
+                            peakEwma:
+                              description: |-
+                                PeakEwma defines the configuration when the load balancer type is
+                                set to PeakEwma.
+                              properties:
+                                aggregationInterval:
+                                  description: |-
+                                    AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                    to the main thread. This controls the frequency of cross-thread synchronization for the
+                                    per-thread aggregation model.
+
+                                    A shorter interval provides more up-to-date cross-worker information but increases
+                                    synchronization overhead. A longer interval reduces overhead but may cause workers
+                                    to operate with staler information about other workers' latency observations.
+
+                                    If not specified, defaults to 100 milliseconds.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                decayTime:
+                                  description: |-
+                                    DecayTime specifies the time window over which latency observations are considered
+                                    relevant. After this duration, older measurements have exponentially decayed to half
+                                    their original weight.
+
+                                    This parameter directly relates to the time duration over which you want to observe
+                                    latency trends.
+
+                                    If not specified, defaults to 10 seconds (following Finagle's default).
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                defaultRtt:
+                                  description: |-
+                                    DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                    This provides a baseline for cost calculations until actual measurements are available.
+
+                                    This value is critical for initial load balancing decisions when hosts first join
+                                    the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                    the expected baseline latency for your environment.
+
+                                    If not specified, defaults to 10 milliseconds.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                maxSamplesPerHost:
+                                  description: |-
+                                    MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                    thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                    burst traffic handling.
+
+                                    Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                    Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                    If not specified, defaults to 1,000 samples per host per worker.
+                                  format: int32
+                                  minimum: 1
+                                  type: integer
+                                penaltyValue:
+                                  description: |-
+                                    PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                    calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                    ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                    The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                    hosts with unknown performance are strongly deprioritized while still allowing them to
+                                    receive traffic if no better alternatives exist.
+
+                                    If not specified, defaults to 1,000,000.0 (1 million).
+                                  minimum: 0
+                                  type: number
+                              type: object
                             slowStart:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
@@ -33005,6 +33153,7 @@ spec:
                                 "Random",
                                 "RoundRobin",
                                 "BackendUtilization",
+                                "PeakEwma",
                                 "DynamicModule".
                               enum:
                               - ConsistentHash
@@ -33012,6 +33161,7 @@ spec:
                               - Random
                               - RoundRobin
                               - BackendUtilization
+                              - PeakEwma
                               - DynamicModule
                               type: string
                             zoneAware:
@@ -33104,14 +33254,18 @@ spec:
                               field needs to be set.
                             rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                               : !has(self.backendUtilization)'
+                          - message: If LoadBalancer type is PeakEwma, peakEwma field
+                              needs to be set.
+                            rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                              : !has(self.peakEwma)'
                           - message: If LoadBalancer type is DynamicModule, dynamicModule
                               field needs to be set.
                             rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
                               : !has(self.dynamicModule)'
                           - message: Currently SlowStart is only supported for RoundRobin,
                               LeastRequest, and BackendUtilization load balancers.
-                            rule: 'self.type in [''Random'', ''ConsistentHash'', ''DynamicModule'']
-                              ? !has(self.slowStart) : true'
+                            rule: 'self.type in [''Random'', ''ConsistentHash'', ''PeakEwma'',
+                              ''DynamicModule''] ? !has(self.slowStart) : true'
                           - message: PreferLocal zone-aware routing is not supported
                               for ConsistentHash load balancers. Use weightedZones
                               instead.
@@ -33121,6 +33275,11 @@ spec:
                               supported for BackendUtilization load balancers. Only
                               WeightedZones can be used with BackendUtilization.
                             rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                              ? !has(self.zoneAware.preferLocal) : true'
+                          - message: PreferLocal zone-aware routing is not currently
+                              supported for PeakEwma load balancers. Only WeightedZones
+                              can be used with PeakEwma.
+                            rule: 'self.type == ''PeakEwma'' && has(self.zoneAware)
                               ? !has(self.zoneAware.preferLocal) : true'
                           - message: ZoneAware routing is not supported for DynamicModule
                               load balancers.
@@ -48172,6 +48331,75 @@ spec:
                                                 required:
                                                 - extractFrom
                                                 type: object
+                                              peakEwma:
+                                                description: |-
+                                                  PeakEwma defines the configuration when the load balancer type is
+                                                  set to PeakEwma.
+                                                properties:
+                                                  aggregationInterval:
+                                                    description: |-
+                                                      AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                                      to the main thread. This controls the frequency of cross-thread synchronization for the
+                                                      per-thread aggregation model.
+
+                                                      A shorter interval provides more up-to-date cross-worker information but increases
+                                                      synchronization overhead. A longer interval reduces overhead but may cause workers
+                                                      to operate with staler information about other workers' latency observations.
+
+                                                      If not specified, defaults to 100 milliseconds.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  decayTime:
+                                                    description: |-
+                                                      DecayTime specifies the time window over which latency observations are considered
+                                                      relevant. After this duration, older measurements have exponentially decayed to half
+                                                      their original weight.
+
+                                                      This parameter directly relates to the time duration over which you want to observe
+                                                      latency trends.
+
+                                                      If not specified, defaults to 10 seconds (following Finagle's default).
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  defaultRtt:
+                                                    description: |-
+                                                      DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                                      This provides a baseline for cost calculations until actual measurements are available.
+
+                                                      This value is critical for initial load balancing decisions when hosts first join
+                                                      the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                                      the expected baseline latency for your environment.
+
+                                                      If not specified, defaults to 10 milliseconds.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  maxSamplesPerHost:
+                                                    description: |-
+                                                      MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                                      thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                                      burst traffic handling.
+
+                                                      Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                                      Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                                      If not specified, defaults to 1,000 samples per host per worker.
+                                                    format: int32
+                                                    minimum: 1
+                                                    type: integer
+                                                  penaltyValue:
+                                                    description: |-
+                                                      PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                                      calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                                      ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                                      The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                                      hosts with unknown performance are strongly deprioritized while still allowing them to
+                                                      receive traffic if no better alternatives exist.
+
+                                                      If not specified, defaults to 1,000,000.0 (1 million).
+                                                    minimum: 0
+                                                    type: number
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -48198,6 +48426,7 @@ spec:
                                                   "Random",
                                                   "RoundRobin",
                                                   "BackendUtilization",
+                                                  "PeakEwma",
                                                   "DynamicModule".
                                                 enum:
                                                 - ConsistentHash
@@ -48205,6 +48434,7 @@ spec:
                                                 - Random
                                                 - RoundRobin
                                                 - BackendUtilization
+                                                - PeakEwma
                                                 - DynamicModule
                                                 type: string
                                               zoneAware:
@@ -48305,6 +48535,10 @@ spec:
                                                 be set.
                                               rule: 'self.type == ''BackendUtilization''
                                                 ? has(self.backendUtilization) : !has(self.backendUtilization)'
+                                            - message: If LoadBalancer type is PeakEwma,
+                                                peakEwma field needs to be set.
+                                              rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                                                : !has(self.peakEwma)'
                                             - message: If LoadBalancer type is DynamicModule,
                                                 dynamicModule field needs to be set.
                                               rule: 'self.type == ''DynamicModule''
@@ -48313,8 +48547,8 @@ spec:
                                                 supported for RoundRobin, LeastRequest,
                                                 and BackendUtilization load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'',
-                                                ''DynamicModule''] ? !has(self.slowStart)
-                                                : true'
+                                                ''PeakEwma'', ''DynamicModule''] ?
+                                                !has(self.slowStart) : true'
                                             - message: PreferLocal zone-aware routing
                                                 is not supported for ConsistentHash
                                                 load balancers. Use weightedZones
@@ -48328,6 +48562,13 @@ spec:
                                                 can be used with BackendUtilization.
                                               rule: 'self.type == ''BackendUtilization''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
+                                            - message: PreferLocal zone-aware routing
+                                                is not currently supported for PeakEwma
+                                                load balancers. Only WeightedZones
+                                                can be used with PeakEwma.
+                                              rule: 'self.type == ''PeakEwma'' &&
+                                                has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
                                             - message: ZoneAware routing is not supported
                                                 for DynamicModule load balancers.
@@ -49938,6 +50179,75 @@ spec:
                                                 required:
                                                 - extractFrom
                                                 type: object
+                                              peakEwma:
+                                                description: |-
+                                                  PeakEwma defines the configuration when the load balancer type is
+                                                  set to PeakEwma.
+                                                properties:
+                                                  aggregationInterval:
+                                                    description: |-
+                                                      AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                                      to the main thread. This controls the frequency of cross-thread synchronization for the
+                                                      per-thread aggregation model.
+
+                                                      A shorter interval provides more up-to-date cross-worker information but increases
+                                                      synchronization overhead. A longer interval reduces overhead but may cause workers
+                                                      to operate with staler information about other workers' latency observations.
+
+                                                      If not specified, defaults to 100 milliseconds.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  decayTime:
+                                                    description: |-
+                                                      DecayTime specifies the time window over which latency observations are considered
+                                                      relevant. After this duration, older measurements have exponentially decayed to half
+                                                      their original weight.
+
+                                                      This parameter directly relates to the time duration over which you want to observe
+                                                      latency trends.
+
+                                                      If not specified, defaults to 10 seconds (following Finagle's default).
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  defaultRtt:
+                                                    description: |-
+                                                      DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                                      This provides a baseline for cost calculations until actual measurements are available.
+
+                                                      This value is critical for initial load balancing decisions when hosts first join
+                                                      the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                                      the expected baseline latency for your environment.
+
+                                                      If not specified, defaults to 10 milliseconds.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  maxSamplesPerHost:
+                                                    description: |-
+                                                      MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                                      thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                                      burst traffic handling.
+
+                                                      Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                                      Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                                      If not specified, defaults to 1,000 samples per host per worker.
+                                                    format: int32
+                                                    minimum: 1
+                                                    type: integer
+                                                  penaltyValue:
+                                                    description: |-
+                                                      PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                                      calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                                      ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                                      The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                                      hosts with unknown performance are strongly deprioritized while still allowing them to
+                                                      receive traffic if no better alternatives exist.
+
+                                                      If not specified, defaults to 1,000,000.0 (1 million).
+                                                    minimum: 0
+                                                    type: number
+                                                type: object
                                               slowStart:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -49964,6 +50274,7 @@ spec:
                                                   "Random",
                                                   "RoundRobin",
                                                   "BackendUtilization",
+                                                  "PeakEwma",
                                                   "DynamicModule".
                                                 enum:
                                                 - ConsistentHash
@@ -49971,6 +50282,7 @@ spec:
                                                 - Random
                                                 - RoundRobin
                                                 - BackendUtilization
+                                                - PeakEwma
                                                 - DynamicModule
                                                 type: string
                                               zoneAware:
@@ -50071,6 +50383,10 @@ spec:
                                                 be set.
                                               rule: 'self.type == ''BackendUtilization''
                                                 ? has(self.backendUtilization) : !has(self.backendUtilization)'
+                                            - message: If LoadBalancer type is PeakEwma,
+                                                peakEwma field needs to be set.
+                                              rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                                                : !has(self.peakEwma)'
                                             - message: If LoadBalancer type is DynamicModule,
                                                 dynamicModule field needs to be set.
                                               rule: 'self.type == ''DynamicModule''
@@ -50079,8 +50395,8 @@ spec:
                                                 supported for RoundRobin, LeastRequest,
                                                 and BackendUtilization load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'',
-                                                ''DynamicModule''] ? !has(self.slowStart)
-                                                : true'
+                                                ''PeakEwma'', ''DynamicModule''] ?
+                                                !has(self.slowStart) : true'
                                             - message: PreferLocal zone-aware routing
                                                 is not supported for ConsistentHash
                                                 load balancers. Use weightedZones
@@ -50094,6 +50410,13 @@ spec:
                                                 can be used with BackendUtilization.
                                               rule: 'self.type == ''BackendUtilization''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
+                                            - message: PreferLocal zone-aware routing
+                                                is not currently supported for PeakEwma
+                                                load balancers. Only WeightedZones
+                                                can be used with PeakEwma.
+                                              rule: 'self.type == ''PeakEwma'' &&
+                                                has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
                                             - message: ZoneAware routing is not supported
                                                 for DynamicModule load balancers.
@@ -52082,6 +52405,75 @@ spec:
                                           required:
                                           - extractFrom
                                           type: object
+                                        peakEwma:
+                                          description: |-
+                                            PeakEwma defines the configuration when the load balancer type is
+                                            set to PeakEwma.
+                                          properties:
+                                            aggregationInterval:
+                                              description: |-
+                                                AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                                to the main thread. This controls the frequency of cross-thread synchronization for the
+                                                per-thread aggregation model.
+
+                                                A shorter interval provides more up-to-date cross-worker information but increases
+                                                synchronization overhead. A longer interval reduces overhead but may cause workers
+                                                to operate with staler information about other workers' latency observations.
+
+                                                If not specified, defaults to 100 milliseconds.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            decayTime:
+                                              description: |-
+                                                DecayTime specifies the time window over which latency observations are considered
+                                                relevant. After this duration, older measurements have exponentially decayed to half
+                                                their original weight.
+
+                                                This parameter directly relates to the time duration over which you want to observe
+                                                latency trends.
+
+                                                If not specified, defaults to 10 seconds (following Finagle's default).
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            defaultRtt:
+                                              description: |-
+                                                DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                                This provides a baseline for cost calculations until actual measurements are available.
+
+                                                This value is critical for initial load balancing decisions when hosts first join
+                                                the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                                the expected baseline latency for your environment.
+
+                                                If not specified, defaults to 10 milliseconds.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            maxSamplesPerHost:
+                                              description: |-
+                                                MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                                thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                                burst traffic handling.
+
+                                                Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                                Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                                If not specified, defaults to 1,000 samples per host per worker.
+                                              format: int32
+                                              minimum: 1
+                                              type: integer
+                                            penaltyValue:
+                                              description: |-
+                                                PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                                calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                                ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                                The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                                hosts with unknown performance are strongly deprioritized while still allowing them to
+                                                receive traffic if no better alternatives exist.
+
+                                                If not specified, defaults to 1,000,000.0 (1 million).
+                                              minimum: 0
+                                              type: number
+                                          type: object
                                         slowStart:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
@@ -52108,6 +52500,7 @@ spec:
                                             "Random",
                                             "RoundRobin",
                                             "BackendUtilization",
+                                            "PeakEwma",
                                             "DynamicModule".
                                           enum:
                                           - ConsistentHash
@@ -52115,6 +52508,7 @@ spec:
                                           - Random
                                           - RoundRobin
                                           - BackendUtilization
+                                          - PeakEwma
                                           - DynamicModule
                                           type: string
                                         zoneAware:
@@ -52213,6 +52607,10 @@ spec:
                                           backendUtilization field needs to be set.
                                         rule: 'self.type == ''BackendUtilization''
                                           ? has(self.backendUtilization) : !has(self.backendUtilization)'
+                                      - message: If LoadBalancer type is PeakEwma,
+                                          peakEwma field needs to be set.
+                                        rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                                          : !has(self.peakEwma)'
                                       - message: If LoadBalancer type is DynamicModule,
                                           dynamicModule field needs to be set.
                                         rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
@@ -52221,7 +52619,7 @@ spec:
                                           for RoundRobin, LeastRequest, and BackendUtilization
                                           load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'',
-                                          ''DynamicModule''] ? !has(self.slowStart)
+                                          ''PeakEwma'', ''DynamicModule''] ? !has(self.slowStart)
                                           : true'
                                       - message: PreferLocal zone-aware routing is
                                           not supported for ConsistentHash load balancers.
@@ -52236,6 +52634,12 @@ spec:
                                         rule: 'self.type == ''BackendUtilization''
                                           && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                           : true'
+                                      - message: PreferLocal zone-aware routing is
+                                          not currently supported for PeakEwma load
+                                          balancers. Only WeightedZones can be used
+                                          with PeakEwma.
+                                        rule: 'self.type == ''PeakEwma'' && has(self.zoneAware)
+                                          ? !has(self.zoneAware.preferLocal) : true'
                                       - message: ZoneAware routing is not supported
                                           for DynamicModule load balancers.
                                         rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
@@ -53956,6 +54360,75 @@ spec:
                                     required:
                                     - extractFrom
                                     type: object
+                                  peakEwma:
+                                    description: |-
+                                      PeakEwma defines the configuration when the load balancer type is
+                                      set to PeakEwma.
+                                    properties:
+                                      aggregationInterval:
+                                        description: |-
+                                          AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                          to the main thread. This controls the frequency of cross-thread synchronization for the
+                                          per-thread aggregation model.
+
+                                          A shorter interval provides more up-to-date cross-worker information but increases
+                                          synchronization overhead. A longer interval reduces overhead but may cause workers
+                                          to operate with staler information about other workers' latency observations.
+
+                                          If not specified, defaults to 100 milliseconds.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      decayTime:
+                                        description: |-
+                                          DecayTime specifies the time window over which latency observations are considered
+                                          relevant. After this duration, older measurements have exponentially decayed to half
+                                          their original weight.
+
+                                          This parameter directly relates to the time duration over which you want to observe
+                                          latency trends.
+
+                                          If not specified, defaults to 10 seconds (following Finagle's default).
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      defaultRtt:
+                                        description: |-
+                                          DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                          This provides a baseline for cost calculations until actual measurements are available.
+
+                                          This value is critical for initial load balancing decisions when hosts first join
+                                          the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                          the expected baseline latency for your environment.
+
+                                          If not specified, defaults to 10 milliseconds.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      maxSamplesPerHost:
+                                        description: |-
+                                          MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                          thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                          burst traffic handling.
+
+                                          Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                          Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                          If not specified, defaults to 1,000 samples per host per worker.
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      penaltyValue:
+                                        description: |-
+                                          PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                          calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                          ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                          The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                          hosts with unknown performance are strongly deprioritized while still allowing them to
+                                          receive traffic if no better alternatives exist.
+
+                                          If not specified, defaults to 1,000,000.0 (1 million).
+                                        minimum: 0
+                                        type: number
+                                    type: object
                                   slowStart:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
@@ -53982,6 +54455,7 @@ spec:
                                       "Random",
                                       "RoundRobin",
                                       "BackendUtilization",
+                                      "PeakEwma",
                                       "DynamicModule".
                                     enum:
                                     - ConsistentHash
@@ -53989,6 +54463,7 @@ spec:
                                     - Random
                                     - RoundRobin
                                     - BackendUtilization
+                                    - PeakEwma
                                     - DynamicModule
                                     type: string
                                   zoneAware:
@@ -54084,6 +54559,10 @@ spec:
                                     backendUtilization field needs to be set.
                                   rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                     : !has(self.backendUtilization)'
+                                - message: If LoadBalancer type is PeakEwma, peakEwma
+                                    field needs to be set.
+                                  rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                                    : !has(self.peakEwma)'
                                 - message: If LoadBalancer type is DynamicModule,
                                     dynamicModule field needs to be set.
                                   rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
@@ -54092,7 +54571,8 @@ spec:
                                     RoundRobin, LeastRequest, and BackendUtilization
                                     load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'',
-                                    ''DynamicModule''] ? !has(self.slowStart) : true'
+                                    ''PeakEwma'', ''DynamicModule''] ? !has(self.slowStart)
+                                    : true'
                                 - message: PreferLocal zone-aware routing is not supported
                                     for ConsistentHash load balancers. Use weightedZones
                                     instead.
@@ -54102,6 +54582,11 @@ spec:
                                     supported for BackendUtilization load balancers.
                                     Only WeightedZones can be used with BackendUtilization.
                                   rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                    ? !has(self.zoneAware.preferLocal) : true'
+                                - message: PreferLocal zone-aware routing is not currently
+                                    supported for PeakEwma load balancers. Only WeightedZones
+                                    can be used with PeakEwma.
+                                  rule: 'self.type == ''PeakEwma'' && has(self.zoneAware)
                                     ? !has(self.zoneAware.preferLocal) : true'
                                 - message: ZoneAware routing is not supported for
                                     DynamicModule load balancers.
@@ -57581,6 +58066,75 @@ spec:
                                 required:
                                 - extractFrom
                                 type: object
+                              peakEwma:
+                                description: |-
+                                  PeakEwma defines the configuration when the load balancer type is
+                                  set to PeakEwma.
+                                properties:
+                                  aggregationInterval:
+                                    description: |-
+                                      AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                      to the main thread. This controls the frequency of cross-thread synchronization for the
+                                      per-thread aggregation model.
+
+                                      A shorter interval provides more up-to-date cross-worker information but increases
+                                      synchronization overhead. A longer interval reduces overhead but may cause workers
+                                      to operate with staler information about other workers' latency observations.
+
+                                      If not specified, defaults to 100 milliseconds.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  decayTime:
+                                    description: |-
+                                      DecayTime specifies the time window over which latency observations are considered
+                                      relevant. After this duration, older measurements have exponentially decayed to half
+                                      their original weight.
+
+                                      This parameter directly relates to the time duration over which you want to observe
+                                      latency trends.
+
+                                      If not specified, defaults to 10 seconds (following Finagle's default).
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  defaultRtt:
+                                    description: |-
+                                      DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                      This provides a baseline for cost calculations until actual measurements are available.
+
+                                      This value is critical for initial load balancing decisions when hosts first join
+                                      the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                      the expected baseline latency for your environment.
+
+                                      If not specified, defaults to 10 milliseconds.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  maxSamplesPerHost:
+                                    description: |-
+                                      MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                      thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                      burst traffic handling.
+
+                                      Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                      Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                      If not specified, defaults to 1,000 samples per host per worker.
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  penaltyValue:
+                                    description: |-
+                                      PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                      calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                      ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                      The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                      hosts with unknown performance are strongly deprioritized while still allowing them to
+                                      receive traffic if no better alternatives exist.
+
+                                      If not specified, defaults to 1,000,000.0 (1 million).
+                                    minimum: 0
+                                    type: number
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -57607,6 +58161,7 @@ spec:
                                   "Random",
                                   "RoundRobin",
                                   "BackendUtilization",
+                                  "PeakEwma",
                                   "DynamicModule".
                                 enum:
                                 - ConsistentHash
@@ -57614,6 +58169,7 @@ spec:
                                 - Random
                                 - RoundRobin
                                 - BackendUtilization
+                                - PeakEwma
                                 - DynamicModule
                                 type: string
                               zoneAware:
@@ -57708,6 +58264,10 @@ spec:
                                 backendUtilization field needs to be set.
                               rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                 : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is PeakEwma, peakEwma
+                                field needs to be set.
+                              rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                                : !has(self.peakEwma)'
                             - message: If LoadBalancer type is DynamicModule, dynamicModule
                                 field needs to be set.
                               rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
@@ -57715,7 +58275,8 @@ spec:
                             - message: Currently SlowStart is only supported for RoundRobin,
                                 LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'',
-                                ''DynamicModule''] ? !has(self.slowStart) : true'
+                                ''PeakEwma'', ''DynamicModule''] ? !has(self.slowStart)
+                                : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
@@ -57725,6 +58286,11 @@ spec:
                                 supported for BackendUtilization load balancers. Only
                                 WeightedZones can be used with BackendUtilization.
                               rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for PeakEwma load balancers. Only WeightedZones
+                                can be used with PeakEwma.
+                              rule: 'self.type == ''PeakEwma'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware routing is not supported for DynamicModule
                                 load balancers.
@@ -59205,6 +59771,75 @@ spec:
                                 required:
                                 - extractFrom
                                 type: object
+                              peakEwma:
+                                description: |-
+                                  PeakEwma defines the configuration when the load balancer type is
+                                  set to PeakEwma.
+                                properties:
+                                  aggregationInterval:
+                                    description: |-
+                                      AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                      to the main thread. This controls the frequency of cross-thread synchronization for the
+                                      per-thread aggregation model.
+
+                                      A shorter interval provides more up-to-date cross-worker information but increases
+                                      synchronization overhead. A longer interval reduces overhead but may cause workers
+                                      to operate with staler information about other workers' latency observations.
+
+                                      If not specified, defaults to 100 milliseconds.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  decayTime:
+                                    description: |-
+                                      DecayTime specifies the time window over which latency observations are considered
+                                      relevant. After this duration, older measurements have exponentially decayed to half
+                                      their original weight.
+
+                                      This parameter directly relates to the time duration over which you want to observe
+                                      latency trends.
+
+                                      If not specified, defaults to 10 seconds (following Finagle's default).
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  defaultRtt:
+                                    description: |-
+                                      DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                      This provides a baseline for cost calculations until actual measurements are available.
+
+                                      This value is critical for initial load balancing decisions when hosts first join
+                                      the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                      the expected baseline latency for your environment.
+
+                                      If not specified, defaults to 10 milliseconds.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  maxSamplesPerHost:
+                                    description: |-
+                                      MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                      thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                      burst traffic handling.
+
+                                      Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                      Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                      If not specified, defaults to 1,000 samples per host per worker.
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  penaltyValue:
+                                    description: |-
+                                      PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                      calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                      ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                      The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                      hosts with unknown performance are strongly deprioritized while still allowing them to
+                                      receive traffic if no better alternatives exist.
+
+                                      If not specified, defaults to 1,000,000.0 (1 million).
+                                    minimum: 0
+                                    type: number
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -59231,6 +59866,7 @@ spec:
                                   "Random",
                                   "RoundRobin",
                                   "BackendUtilization",
+                                  "PeakEwma",
                                   "DynamicModule".
                                 enum:
                                 - ConsistentHash
@@ -59238,6 +59874,7 @@ spec:
                                 - Random
                                 - RoundRobin
                                 - BackendUtilization
+                                - PeakEwma
                                 - DynamicModule
                                 type: string
                               zoneAware:
@@ -59332,6 +59969,10 @@ spec:
                                 backendUtilization field needs to be set.
                               rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                 : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is PeakEwma, peakEwma
+                                field needs to be set.
+                              rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                                : !has(self.peakEwma)'
                             - message: If LoadBalancer type is DynamicModule, dynamicModule
                                 field needs to be set.
                               rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
@@ -59339,7 +59980,8 @@ spec:
                             - message: Currently SlowStart is only supported for RoundRobin,
                                 LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'',
-                                ''DynamicModule''] ? !has(self.slowStart) : true'
+                                ''PeakEwma'', ''DynamicModule''] ? !has(self.slowStart)
+                                : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
@@ -59349,6 +59991,11 @@ spec:
                                 supported for BackendUtilization load balancers. Only
                                 WeightedZones can be used with BackendUtilization.
                               rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for PeakEwma load balancers. Only WeightedZones
+                                can be used with PeakEwma.
+                              rule: 'self.type == ''PeakEwma'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware routing is not supported for DynamicModule
                                 load balancers.
@@ -61166,6 +61813,75 @@ spec:
                                       required:
                                       - extractFrom
                                       type: object
+                                    peakEwma:
+                                      description: |-
+                                        PeakEwma defines the configuration when the load balancer type is
+                                        set to PeakEwma.
+                                      properties:
+                                        aggregationInterval:
+                                          description: |-
+                                            AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                            to the main thread. This controls the frequency of cross-thread synchronization for the
+                                            per-thread aggregation model.
+
+                                            A shorter interval provides more up-to-date cross-worker information but increases
+                                            synchronization overhead. A longer interval reduces overhead but may cause workers
+                                            to operate with staler information about other workers' latency observations.
+
+                                            If not specified, defaults to 100 milliseconds.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        decayTime:
+                                          description: |-
+                                            DecayTime specifies the time window over which latency observations are considered
+                                            relevant. After this duration, older measurements have exponentially decayed to half
+                                            their original weight.
+
+                                            This parameter directly relates to the time duration over which you want to observe
+                                            latency trends.
+
+                                            If not specified, defaults to 10 seconds (following Finagle's default).
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        defaultRtt:
+                                          description: |-
+                                            DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                            This provides a baseline for cost calculations until actual measurements are available.
+
+                                            This value is critical for initial load balancing decisions when hosts first join
+                                            the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                            the expected baseline latency for your environment.
+
+                                            If not specified, defaults to 10 milliseconds.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        maxSamplesPerHost:
+                                          description: |-
+                                            MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                            thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                            burst traffic handling.
+
+                                            Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                            Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                            If not specified, defaults to 1,000 samples per host per worker.
+                                          format: int32
+                                          minimum: 1
+                                          type: integer
+                                        penaltyValue:
+                                          description: |-
+                                            PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                            calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                            ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                            The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                            hosts with unknown performance are strongly deprioritized while still allowing them to
+                                            receive traffic if no better alternatives exist.
+
+                                            If not specified, defaults to 1,000,000.0 (1 million).
+                                          minimum: 0
+                                          type: number
+                                      type: object
                                     slowStart:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
@@ -61192,6 +61908,7 @@ spec:
                                         "Random",
                                         "RoundRobin",
                                         "BackendUtilization",
+                                        "PeakEwma",
                                         "DynamicModule".
                                       enum:
                                       - ConsistentHash
@@ -61199,6 +61916,7 @@ spec:
                                       - Random
                                       - RoundRobin
                                       - BackendUtilization
+                                      - PeakEwma
                                       - DynamicModule
                                       type: string
                                     zoneAware:
@@ -61294,6 +62012,10 @@ spec:
                                       backendUtilization field needs to be set.
                                     rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                       : !has(self.backendUtilization)'
+                                  - message: If LoadBalancer type is PeakEwma, peakEwma
+                                      field needs to be set.
+                                    rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                                      : !has(self.peakEwma)'
                                   - message: If LoadBalancer type is DynamicModule,
                                       dynamicModule field needs to be set.
                                     rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
@@ -61302,8 +62024,8 @@ spec:
                                       for RoundRobin, LeastRequest, and BackendUtilization
                                       load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'',
-                                      ''DynamicModule''] ? !has(self.slowStart) :
-                                      true'
+                                      ''PeakEwma'', ''DynamicModule''] ? !has(self.slowStart)
+                                      : true'
                                   - message: PreferLocal zone-aware routing is not
                                       supported for ConsistentHash load balancers.
                                       Use weightedZones instead.
@@ -61316,6 +62038,11 @@ spec:
                                     rule: 'self.type == ''BackendUtilization'' &&
                                       has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                       : true'
+                                  - message: PreferLocal zone-aware routing is not
+                                      currently supported for PeakEwma load balancers.
+                                      Only WeightedZones can be used with PeakEwma.
+                                    rule: 'self.type == ''PeakEwma'' && has(self.zoneAware)
+                                      ? !has(self.zoneAware.preferLocal) : true'
                                   - message: ZoneAware routing is not supported for
                                       DynamicModule load balancers.
                                     rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
@@ -63251,6 +63978,75 @@ spec:
                                 required:
                                 - extractFrom
                                 type: object
+                              peakEwma:
+                                description: |-
+                                  PeakEwma defines the configuration when the load balancer type is
+                                  set to PeakEwma.
+                                properties:
+                                  aggregationInterval:
+                                    description: |-
+                                      AggregationInterval is the interval at which EWMA data is aggregated from worker threads
+                                      to the main thread. This controls the frequency of cross-thread synchronization for the
+                                      per-thread aggregation model.
+
+                                      A shorter interval provides more up-to-date cross-worker information but increases
+                                      synchronization overhead. A longer interval reduces overhead but may cause workers
+                                      to operate with staler information about other workers' latency observations.
+
+                                      If not specified, defaults to 100 milliseconds.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  decayTime:
+                                    description: |-
+                                      DecayTime specifies the time window over which latency observations are considered
+                                      relevant. After this duration, older measurements have exponentially decayed to half
+                                      their original weight.
+
+                                      This parameter directly relates to the time duration over which you want to observe
+                                      latency trends.
+
+                                      If not specified, defaults to 10 seconds (following Finagle's default).
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  defaultRtt:
+                                    description: |-
+                                      DefaultRtt is the default RTT value to use for hosts that don't have measured RTT yet.
+                                      This provides a baseline for cost calculations until actual measurements are available.
+
+                                      This value is critical for initial load balancing decisions when hosts first join
+                                      the cluster or when RTT measurements are temporarily unavailable. It should reflect
+                                      the expected baseline latency for your environment.
+
+                                      If not specified, defaults to 10 milliseconds.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  maxSamplesPerHost:
+                                    description: |-
+                                      MaxSamplesPerHost is the maximum number of RTT samples to buffer per host per worker
+                                      thread before overwriting the oldest samples. This bounds memory usage while allowing
+                                      burst traffic handling.
+
+                                      Buffer capacity formula: max_samples_per_host / aggregation_interval = RPS capacity per host per worker
+                                      Memory formula: max_samples_per_host × num_hosts × num_workers × 16 bytes
+
+                                      If not specified, defaults to 1,000 samples per host per worker.
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  penaltyValue:
+                                    description: |-
+                                      PenaltyValue is the penalty cost assigned to hosts that cannot provide valid cost
+                                      calculations. This is used when a host has no RTT measurements or is unhealthy,
+                                      ensuring the Power of Two Choices algorithm will prefer hosts with known performance.
+
+                                      The penalty should be significantly higher than any realistic RTT-based cost to ensure
+                                      hosts with unknown performance are strongly deprioritized while still allowing them to
+                                      receive traffic if no better alternatives exist.
+
+                                      If not specified, defaults to 1,000,000.0 (1 million).
+                                    minimum: 0
+                                    type: number
+                                type: object
                               slowStart:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
@@ -63277,6 +64073,7 @@ spec:
                                   "Random",
                                   "RoundRobin",
                                   "BackendUtilization",
+                                  "PeakEwma",
                                   "DynamicModule".
                                 enum:
                                 - ConsistentHash
@@ -63284,6 +64081,7 @@ spec:
                                 - Random
                                 - RoundRobin
                                 - BackendUtilization
+                                - PeakEwma
                                 - DynamicModule
                                 type: string
                               zoneAware:
@@ -63378,6 +64176,10 @@ spec:
                                 backendUtilization field needs to be set.
                               rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                 : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is PeakEwma, peakEwma
+                                field needs to be set.
+                              rule: 'self.type == ''PeakEwma'' ? has(self.peakEwma)
+                                : !has(self.peakEwma)'
                             - message: If LoadBalancer type is DynamicModule, dynamicModule
                                 field needs to be set.
                               rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
@@ -63385,7 +64187,8 @@ spec:
                             - message: Currently SlowStart is only supported for RoundRobin,
                                 LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'',
-                                ''DynamicModule''] ? !has(self.slowStart) : true'
+                                ''PeakEwma'', ''DynamicModule''] ? !has(self.slowStart)
+                                : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
@@ -63395,6 +64198,11 @@ spec:
                                 supported for BackendUtilization load balancers. Only
                                 WeightedZones can be used with BackendUtilization.
                               rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for PeakEwma load balancers. Only WeightedZones
+                                can be used with PeakEwma.
+                              rule: 'self.type == ''PeakEwma'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware routing is not supported for DynamicModule
                                 load balancers.
