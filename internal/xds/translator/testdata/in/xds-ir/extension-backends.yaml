@@ -1,3 +1,37 @@
+extensionBackends:
+- name: envoyextensionpolicy/default/one/backend/resolver/0
+  traffic:
+    loadBalancer:
+      roundRobin: {}
+    timeout:
+      tcp:
+        connectTimeout: 3s
+  settings:
+  - name: envoyextensionpolicy/default/one/backend/resolver/0/0
+    protocol: HTTP
+    addressType: IP
+    endpoints:
+    - host: 10.0.0.2
+      port: 8080
+    weight: 1
+- name: envoyextensionpolicy/default/two/backend/resolver/0
+  settings:
+  - name: envoyextensionpolicy/default/two/backend/resolver/0/0
+    protocol: HTTP
+    addressType: FQDN
+    endpoints:
+    - host: resolver.example.com
+      port: 443
+    weight: 1
+    tls:
+      sni: resolver.example.com
+      caCertificate:
+        name: extension-ca
+        certificate: [99, 97]
+      clientCertificates:
+      - name: extension-client
+        certificate: [99, 101, 114, 116]
+        privateKey: [107, 101, 121]
 http:
 - address: 0.0.0.0
   hostnames: ['*']
@@ -24,22 +58,7 @@ http:
         weight: 1
     envoyExtensions:
       backends:
-        resolver:
-          name: envoyextensionpolicy/default/one/backend/resolver/0
-          traffic:
-            loadBalancer:
-              roundRobin: {}
-            timeout:
-              tcp:
-                connectTimeout: 3s
-          settings:
-          - name: envoyextensionpolicy/default/one/backend/resolver/0/0
-            protocol: HTTP
-            addressType: IP
-            endpoints:
-            - host: 10.0.0.2
-              port: 8080
-            weight: 1
+        resolver: envoyextensionpolicy/default/one/backend/resolver/0
       luas:
       - name: envoyextensionpolicy/default/one/lua/0
         code: |
@@ -74,25 +93,7 @@ http:
       statusCode: 200
     envoyExtensions:
       backends:
-        resolver:
-          name: envoyextensionpolicy/default/two/backend/resolver/0
-          settings:
-          - name: envoyextensionpolicy/default/two/backend/resolver/0/0
-            protocol: HTTP
-            addressType: FQDN
-            endpoints:
-            - host: resolver.example.com
-              port: 443
-            weight: 1
-            tls:
-              sni: resolver.example.com
-              caCertificate:
-                name: extension-ca
-                certificate: [99, 97]
-              clientCertificates:
-              - name: extension-client
-                certificate: [99, 101, 114, 116]
-                privateKey: [107, 101, 121]
+        resolver: envoyextensionpolicy/default/two/backend/resolver/0
       luas:
       - name: envoyextensionpolicy/default/two/lua/0
         code: function envoy_on_request(handle) end

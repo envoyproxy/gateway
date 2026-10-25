@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -32,6 +33,11 @@ func extensionBackendResources(t *testing.T) *resource.Resources {
 	require.NoError(t, err)
 	resources := &resource.Resources{}
 	mustUnmarshal(t, data, resources)
+	base, err := os.ReadFile("testdata/base/base.yaml")
+	require.NoError(t, err)
+	baseResources := &resource.Resources{}
+	mustUnmarshal(t, base, baseResources)
+	resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
 	for _, namespace := range []string{"default", "envoy-gateway"} {
 		resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 		for _, name := range []string{"service-1", "service-2"} {
@@ -71,6 +77,22 @@ func translateExtensionBackends(t *testing.T, resources *resource.Resources) (*T
 	return result, routes
 }
 
+// Resolve references through the registry, just as serialized or copied IR consumers do.
+func resolverBackendForRoute(t *testing.T, result *TranslateResult, route *ir.HTTPRoute) *ir.ExtensionBackend {
+	t.Helper()
+	name := route.EnvoyExtensions.Backends["resolver"]
+	require.NotEmpty(t, name)
+	for _, x := range result.XdsIR {
+		for _, backend := range x.ExtensionBackends {
+			if backend.Name == name {
+				return backend
+			}
+		}
+	}
+	t.Fatalf("backend %s not found", name)
+	return nil
+}
+
 func extensionPolicyCondition(t *testing.T, result *TranslateResult, policyName string) *metav1.Condition {
 	t.Helper()
 	for _, policy := range result.EnvoyExtensionPolicies {
@@ -106,13 +128,100 @@ func TestExtensionBackendIsolation(t *testing.T) {
 			for _, policy := range result.EnvoyExtensionPolicies {
 				require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, policy.Name).Status)
 			}
-			first := routes["httproute-1"].EnvoyExtensions.Backends["resolver"]
-			second := routes["httproute-2"].EnvoyExtensions.Backends["resolver"]
+			first := resolverBackendForRoute(t, result, routes["httproute-1"])
+			second := resolverBackendForRoute(t, result, routes["httproute-2"])
 			require.NotEqual(t, first.Name, second.Name)
 			require.Equal(t, "default", first.Settings[0].Metadata.Namespace)
 			require.Equal(t, "envoy-gateway", second.Settings[0].Metadata.Namespace)
 			for _, route := range routes {
 				require.Nil(t, route.DirectResponse)
+			}
+		})
+	}
+}
+
+func TestExtensionBackendRegistry(t *testing.T) {
+	translator := &Translator{
+		GatewayControllerName: egv1a1.GatewayControllerName, GatewayClassName: "envoy-gateway-class",
+		ControllerNamespace: "envoy-gateway-system", EndpointRoutingDisabled: true, BackendEnabled: true,
+		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+	}
+	// Run the same translator with maxConnections 17, then 18. The second output
+	// must use the new setting, showing the lookup is rebuilt for each translation.
+	for _, limit := range []int64{17, 18} {
+		resources := extensionBackendResources(t)
+		parent, child := resources.EnvoyExtensionPolicies[0], resources.EnvoyExtensionPolicies[1]
+		parent.Spec.Backends[0].BackendSettings = &egv1a1.ClusterSettings{
+			CircuitBreaker: &egv1a1.CircuitBreaker{MaxConnections: new(limit)},
+		}
+		child.Spec.MergeType = new(egv1a1.JSONMerge)
+		child.Spec.Backends = nil
+		resources.Sort()
+		result, err := translator.Translate(t.Context(), resources)
+		require.NoError(t, err)
+		require.Len(t, result.XdsIR, 1)
+		for _, x := range result.XdsIR {
+			require.Len(t, x.ExtensionBackends, 1, "inherited and direct uses of one binding share a definition")
+			require.EqualValues(t, limit, *x.ExtensionBackends[0].Traffic.CircuitBreaker.MaxConnections)
+			data, err := json.Marshal(x)
+			require.NoError(t, err)
+			var decoded ir.Xds
+			require.NoError(t, json.Unmarshal(data, &decoded))
+			for _, snapshot := range []*ir.Xds{x, x.DeepCopy(), &decoded} {
+				require.Len(t, snapshot.ExtensionBackends, 1)
+				require.NoError(t, snapshot.Validate())
+				for _, listener := range snapshot.HTTP {
+					for _, route := range listener.Routes {
+						require.Equal(t, map[string]string{"resolver": snapshot.ExtensionBackends[0].Name}, route.EnvoyExtensions.Backends)
+					}
+				}
+			}
+		}
+	}
+}
+
+func TestExtensionBackendRegistryOnlyIncludesAttachedPolicies(t *testing.T) {
+	for _, failure := range []string{"overridden", "invalid backend", "invalid filter"} {
+		t.Run(failure, func(t *testing.T) {
+			resources := extensionBackendResources(t)
+			parent, child := resources.EnvoyExtensionPolicies[0], resources.EnvoyExtensionPolicies[1]
+			child.Spec.TargetRef = nil
+			child.Spec.TargetRefs = nil
+			for _, route := range resources.HTTPRoutes {
+				child.Spec.TargetRefs = append(child.Spec.TargetRefs, gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.GroupName, Kind: "HTTPRoute", Name: gwapiv1.ObjectName(route.Name)},
+				})
+			}
+			switch failure {
+			case "invalid backend":
+				// Fail after one backend has already translated successfully.
+				child.Spec.Backends = append(child.Spec.Backends, egv1a1.ExtensionBackend{
+					Name: "missing", BackendRef: gwapiv1.BackendObjectReference{Name: "missing", Port: new(gwapiv1.PortNumber(8080))},
+				})
+			case "invalid filter":
+				child.Spec.DynamicModule[0].Name = "missing"
+			}
+			result, routes := translateExtensionBackends(t, resources)
+			for _, x := range result.XdsIR {
+				switch failure {
+				case "overridden":
+					require.Len(t, x.ExtensionBackends, 1)
+					require.Contains(t, x.ExtensionBackends[0].Name, child.Name)
+					require.NotContains(t, x.ExtensionBackends[0].Name, parent.Name)
+				case "invalid backend":
+					require.Empty(t, x.ExtensionBackends)
+				case "invalid filter":
+					// Existing filter failure handling allows the parent to attach,
+					// while preserving the child's 500 response.
+					require.Len(t, x.ExtensionBackends, 1)
+					require.Contains(t, x.ExtensionBackends[0].Name, parent.Name)
+					require.NotContains(t, x.ExtensionBackends[0].Name, child.Name)
+				}
+				if failure != "overridden" {
+					for _, route := range routes {
+						require.EqualValues(t, 500, *route.DirectResponse.StatusCode)
+					}
+				}
 			}
 		})
 	}
@@ -145,7 +254,7 @@ func TestExtensionBackendResources(t *testing.T) {
 				return
 			}
 			require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
-			backend := routes["httproute-1"].EnvoyExtensions.Backends["resolver"]
+			backend := resolverBackendForRoute(t, result, routes["httproute-1"])
 			require.Equal(t, tc.addressType, *backend.Settings[0].AddressType)
 			require.Len(t, backend.Settings[0].Endpoints, 1)
 			if tc.addressType == ir.UDS {
@@ -167,14 +276,14 @@ func TestExtensionBackendNames(t *testing.T) {
 	require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
 	before := routes["httproute-1"].EnvoyExtensions.Backends
 	for alias, destination := range before {
-		require.NotEqual(t, alias, destination.Name)
+		require.NotEqual(t, alias, destination)
 	}
 
 	slices.Reverse(child.Spec.Backends)
 	result, routes = translateExtensionBackends(t, resources)
 	require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
 	for alias, destination := range routes["httproute-1"].EnvoyExtensions.Backends {
-		require.Equal(t, before[alias].Name, destination.Name)
+		require.Equal(t, before[alias], destination)
 	}
 }
 
@@ -228,7 +337,7 @@ func TestExtensionBackendInheritanceAndAuthorization(t *testing.T) {
 			child.Spec.Backends = nil
 			result, routes := translateExtensionBackends(t, resources)
 			require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
-			backend := routes["httproute-1"].EnvoyExtensions.Backends["resolver"]
+			backend := resolverBackendForRoute(t, result, routes["httproute-1"])
 			require.Equal(t, "envoy-gateway", backend.Settings[0].Metadata.Namespace)
 			require.Contains(t, backend.Name, parent.Name)
 
@@ -253,7 +362,7 @@ func TestExtensionBackendInheritanceAndAuthorization(t *testing.T) {
 			}}
 			result, routes = translateExtensionBackends(t, resources)
 			require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
-			backend = routes["httproute-1"].EnvoyExtensions.Backends["resolver"]
+			backend = resolverBackendForRoute(t, result, routes["httproute-1"])
 			require.Equal(t, "default", backend.Settings[0].Metadata.Namespace)
 			require.True(t, backend.Settings[0].TLS.UseSystemTrustStore)
 			require.Equal(t, "resolver.example.com", *backend.Settings[0].TLS.SNI)
@@ -264,8 +373,8 @@ func TestExtensionBackendInheritanceAndAuthorization(t *testing.T) {
 			result, routes = translateExtensionBackends(t, resources)
 			require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
 			require.Len(t, routes["httproute-1"].EnvoyExtensions.Backends, 1)
-			require.Contains(t, routes["httproute-1"].EnvoyExtensions.Backends["resolver"].Name, child.Name)
-			require.Equal(t, "service-1", routes["httproute-1"].EnvoyExtensions.Backends["resolver"].Settings[0].Metadata.Name)
+			require.Contains(t, routes["httproute-1"].EnvoyExtensions.Backends["resolver"], child.Name)
+			require.Equal(t, "service-1", resolverBackendForRoute(t, result, routes["httproute-1"]).Settings[0].Metadata.Name)
 		})
 	}
 }
@@ -311,8 +420,8 @@ func TestExtensionBackendMergedGatewayTLS(t *testing.T) {
 	result, routes := translateExtensionBackends(t, resources)
 	require.Len(t, result.XdsIR, 1)
 	require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, policy.Name).Status)
-	first := routes["httproute-1"].EnvoyExtensions.Backends["resolver"]
-	secondBackend := routes["httproute-2"].EnvoyExtensions.Backends["resolver"]
+	first := resolverBackendForRoute(t, result, routes["httproute-1"])
+	secondBackend := resolverBackendForRoute(t, result, routes["httproute-2"])
 	require.NotEqual(t, first.Settings[0].TLS.ClientCertificates, secondBackend.Settings[0].TLS.ClientCertificates)
 	require.NotEqual(t, first.Name, secondBackend.Name, "different Gateway TLS configurations must not share a cluster")
 }
@@ -329,16 +438,16 @@ func TestExtensionBackendSettings(t *testing.T) {
 	child.Spec.Backends = nil
 	result, routes := translateExtensionBackends(t, resources)
 	require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
-	backend := routes["httproute-1"].EnvoyExtensions.Backends["resolver"]
+	backend := resolverBackendForRoute(t, result, routes["httproute-1"])
 	require.NotNil(t, backend.Traffic.LoadBalancer.RoundRobin)
 	require.Equal(t, 3*time.Second, backend.Traffic.Timeout.TCP.ConnectTimeout.Duration)
 	require.EqualValues(t, 17, *backend.Traffic.CircuitBreaker.MaxConnections)
-	require.Equal(t, backend.Traffic, routes["httproute-2"].EnvoyExtensions.Backends["resolver"].Traffic)
+	require.Equal(t, backend.Traffic, resolverBackendForRoute(t, result, routes["httproute-2"]).Traffic)
 	child.Spec.Backends = []egv1a1.ExtensionBackend{{Name: "resolver", BackendRef: parent.Spec.Backends[0].BackendRef}}
 	result, routes = translateExtensionBackends(t, resources)
 	require.Equal(t, metav1.ConditionTrue, extensionPolicyCondition(t, result, child.Name).Status)
-	require.Nil(t, routes["httproute-1"].EnvoyExtensions.Backends["resolver"].Traffic)
-	require.NotNil(t, routes["httproute-2"].EnvoyExtensions.Backends["resolver"].Traffic)
+	require.Nil(t, resolverBackendForRoute(t, result, routes["httproute-1"]).Traffic)
+	require.NotNil(t, resolverBackendForRoute(t, result, routes["httproute-2"]).Traffic)
 }
 
 func TestExtensionBackendInvalidSettings(t *testing.T) {

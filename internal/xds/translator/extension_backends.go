@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"cmp"
 	"errors"
 	"slices"
 
@@ -26,8 +27,8 @@ func patchExtensionBackendMetadata(route *routev3.Route, irRoute *ir.HTTPRoute) 
 		return
 	}
 	bindings := &structpb.Struct{Fields: make(map[string]*structpb.Value, len(irRoute.EnvoyExtensions.Backends))}
-	for alias, destination := range irRoute.EnvoyExtensions.Backends {
-		bindings.Fields[alias] = structpb.NewStringValue(destination.Name)
+	for alias, name := range irRoute.EnvoyExtensions.Backends {
+		bindings.Fields[alias] = structpb.NewStringValue(name)
 	}
 	if route.Metadata == nil {
 		route.Metadata = &corev3.Metadata{}
@@ -42,28 +43,17 @@ func patchExtensionBackendMetadata(route *routev3.Route, irRoute *ir.HTTPRoute) 
 	}
 }
 
-func patchExtensionBackendResources(tCtx *types.ResourceVersionTable, listeners []*ir.HTTPListener) error {
+func patchExtensionBackendResources(tCtx *types.ResourceVersionTable, backends []*ir.ExtensionBackend) error {
 	var errs error
-	for _, listener := range listeners {
-		for _, route := range listener.Routes {
-			if route.EnvoyExtensions == nil {
-				continue
-			}
-			aliases := make([]string, 0, len(route.EnvoyExtensions.Backends))
-			for alias := range route.EnvoyExtensions.Backends {
-				aliases = append(aliases, alias)
-			}
-			slices.Sort(aliases)
-			// The same policy can serve many routes. Existing helpers reuse its resources.
-			for _, alias := range aliases {
-				destination := route.EnvoyExtensions.Backends[alias]
-				if err := createExtServiceXDSCluster(&destination.RouteDestination, destination.Traffic, tCtx); err != nil {
-					errs = errors.Join(errs, err)
-				}
-				if err := processClientCertificates(tCtx, destination.Settings); err != nil {
-					errs = errors.Join(errs, err)
-				}
-			}
+	// Keep resource order deterministic without mutating the input IR.
+	backends = slices.Clone(backends)
+	slices.SortFunc(backends, func(a, b *ir.ExtensionBackend) int { return cmp.Compare(a.Name, b.Name) })
+	for _, backend := range backends {
+		if err := createExtServiceXDSCluster(&backend.RouteDestination, backend.Traffic, tCtx); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if err := processClientCertificates(tCtx, backend.Settings); err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 	return errs

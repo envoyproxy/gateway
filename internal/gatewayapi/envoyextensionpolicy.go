@@ -1091,6 +1091,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var backends map[string]*ir.ExtensionBackend
+		var backendRefs map[string]string
 		if backends, backendError = t.buildExtensionBackends(policy, owners, resources, gtwCtx); backendError != nil {
 			errs = errors.Join(errs, backendError)
 		}
@@ -1143,12 +1144,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
+							if backendRefs == nil {
+								backendRefs = t.registerExtensionBackends(xdsIR[irKey], gtwCtx, backends)
+							}
 							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 								ExtProcs:       extProcs,
 								Wasms:          wasms,
 								Luas:           luas,
 								DynamicModules: dynamicModules,
-								Backends:       backends,
+								Backends:       backendRefs,
 							}
 						}
 					}
@@ -1236,6 +1240,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 	}
 
 	var backends map[string]*ir.ExtensionBackend
+	var backendRefs map[string]string
 	if backends, backendError = t.buildExtensionBackends(policy, noOwners, resources, gateway); backendError != nil {
 		errs = errors.Join(errs, backendError)
 	}
@@ -1289,12 +1294,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				}
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
+				if backendRefs == nil {
+					backendRefs = t.registerExtensionBackends(x, gateway, backends)
+				}
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 					ExtProcs:       extProcs,
 					Wasms:          wasms,
 					Luas:           luas,
 					DynamicModules: dynamicModules,
-					Backends:       backends,
+					Backends:       backendRefs,
 				}
 			}
 		}

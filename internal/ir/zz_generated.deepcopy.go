@@ -1757,18 +1757,9 @@ func (in *EnvoyExtensionFeatures) DeepCopyInto(out *EnvoyExtensionFeatures) {
 	*out = *in
 	if in.Backends != nil {
 		in, out := &in.Backends, &out.Backends
-		*out = make(map[string]*ExtensionBackend, len(*in))
+		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
-			var outVal *ExtensionBackend
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				inVal := (*in)[key]
-				in, out := &inVal, &outVal
-				*out = new(ExtensionBackend)
-				(*in).DeepCopyInto(*out)
-			}
-			(*out)[key] = outVal
+			(*out)[key] = val
 		}
 	}
 	if in.ExtProcs != nil {
@@ -5960,6 +5951,17 @@ func (in *Xds) DeepCopyInto(out *Xds) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(BackendCluster)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+	if in.ExtensionBackends != nil {
+		in, out := &in.ExtensionBackends, &out.ExtensionBackends
+		*out = make([]*ExtensionBackend, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(ExtensionBackend)
 				(*in).DeepCopyInto(*out)
 			}
 		}

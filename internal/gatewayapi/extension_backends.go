@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -59,4 +60,32 @@ func (t *Translator) buildExtensionBackends(policy *egv1a1.EnvoyExtensionPolicy,
 		backends[backend.Name] = &ir.ExtensionBackend{RouteDestination: *destination, Traffic: traffic}
 	}
 	return backends, nil
+}
+
+// registerExtensionBackends stores full definitions once in the output IR and returns
+// map[string]string. Call only when a valid policy is attached to a
+// route, so failed or fully overridden policies do not leave unused clusters behind.
+func (t *Translator) registerExtensionBackends(xdsIR *ir.Xds, gateway *GatewayContext, backends map[string]*ir.ExtensionBackend) map[string]string {
+	if len(backends) == 0 {
+		return nil
+	}
+	if t.ExtensionBackendMap == nil {
+		t.ExtensionBackendMap = make(map[ExtensionBackendKey]*ir.ExtensionBackend)
+	}
+	aliases := make([]string, 0, len(backends))
+	for alias := range backends {
+		aliases = append(aliases, alias)
+	}
+	slices.Sort(aliases)
+	refs := make(map[string]string, len(backends))
+	for _, alias := range aliases {
+		backend := backends[alias]
+		key := ExtensionBackendKey{GatewayIRKey: t.getIRKey(gateway.Gateway), Name: backend.Name}
+		if _, exists := t.ExtensionBackendMap[key]; !exists {
+			t.ExtensionBackendMap[key] = backend
+			xdsIR.ExtensionBackends = append(xdsIR.ExtensionBackends, backend)
+		}
+		refs[alias] = backend.Name
+	}
+	return refs
 }

@@ -1253,6 +1253,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies []*ir.UnstructuredRef
 		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
+		ExtensionBackends       []*ir.ExtensionBackend
 		CACertificates          []*ir.CACertificateEntry
 	}{
 		ReadyListener:           a.ReadyListener,
@@ -1269,6 +1270,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
 		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
+		ExtensionBackends:       a.ExtensionBackends,
 		CACertificates:          a.CACertificates,
 	}
 
