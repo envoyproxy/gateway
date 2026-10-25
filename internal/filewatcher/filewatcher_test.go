@@ -98,11 +98,9 @@ func TestWatchFile(t *testing.T) {
 		events := w.Events(watchFile)
 
 		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			<-events
-			wg.Done()
-		}()
+		})
 
 		// Overwriting the file and waiting its event to be received.
 		err = os.WriteFile(watchFile, []byte("foo: baz\n"), 0o600)
@@ -125,11 +123,9 @@ func TestWatchFile(t *testing.T) {
 		events := w.Events(watchFile)
 
 		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			<-events
-			wg.Done()
-		}()
+		})
 
 		// Link to another `test.conf` file
 		dataDir2 := path.Join(watchDir, "data2")
@@ -159,11 +155,9 @@ func TestWatchFile(t *testing.T) {
 		events := w.Events(watchFile)
 
 		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			<-events
-			wg.Done()
-		}()
+		})
 
 		// Overwriting the file and waiting its event to be received.
 		err := os.WriteFile(watchFile, []byte("foo: baz\n"), 0o600)
@@ -191,8 +185,7 @@ func TestWatchDir(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	var timeoutErr error
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		select {
 		case <-w.Events(d):
 
@@ -201,8 +194,7 @@ func TestWatchDir(t *testing.T) {
 		case <-timeout:
 			timeoutErr = errors.New("timeout")
 		}
-		wg.Done()
-	}()
+	})
 
 	// Overwriting the file and waiting its event to be received.
 	err = os.WriteFile(watchFile, []byte("foo: baz\n"), 0o600)

@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -212,13 +213,7 @@ func (m *Manager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ext
 		return nil, nil
 	}
 
-	hookUsed := false
-	for _, hook := range ext.Hooks.XDSTranslator.Pre {
-		if xdsHookType == hook {
-			hookUsed = true
-			break
-		}
-	}
+	hookUsed := slices.Contains(ext.Hooks.XDSTranslator.Pre, xdsHookType)
 	if !hookUsed {
 		return nil, nil
 	}
@@ -261,13 +256,7 @@ func (m *Manager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ex
 		return nil, nil
 	}
 
-	hookUsed := false
-	for _, hook := range ext.Hooks.XDSTranslator.Post {
-		if xdsHookType == hook {
-			hookUsed = true
-			break
-		}
-	}
+	hookUsed := slices.Contains(ext.Hooks.XDSTranslator.Post, xdsHookType)
 	if !hookUsed {
 		return nil, nil
 	}

@@ -57,7 +57,7 @@ func (p PrometheusMetric) CheckRBAC(_ context.Context, _ tbcollect.Collector, _ 
 	return nil
 }
 
-func (p PrometheusMetric) Collect(_ chan<- interface{}) (tbcollect.CollectorResult, error) {
+func (p PrometheusMetric) Collect(_ chan<- any) (tbcollect.CollectorResult, error) {
 	client, err := kubernetes.NewForConfig(p.ClientConfig)
 	if err != nil {
 		return nil, err

@@ -41,17 +41,15 @@ func TestRunnerDataRace(t *testing.T) {
 	// Create minimal config for runner
 	serverCfg := &config.Server{
 		EnvoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				Gateway: &egv1a1.Gateway{
-					ControllerName: "test-controller",
-				},
-				Provider: &egv1a1.EnvoyGatewayProvider{
-					Type: egv1a1.ProviderTypeCustom,
-					Custom: &egv1a1.EnvoyGatewayCustomProvider{
-						Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-							Type: egv1a1.InfrastructureProviderTypeHost,
-							Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-						},
+			Gateway: &egv1a1.Gateway{
+				ControllerName: "test-controller",
+			},
+			Provider: &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyGatewayCustomProvider{
+					Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+						Type: egv1a1.InfrastructureProviderTypeHost,
+						Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
 					},
 				},
 			},
@@ -113,21 +111,19 @@ func TestRunnerDataRace(t *testing.T) {
 // TestRunnerDataRaceAggressive runs multiple iterations with varying timing
 // to maximize the chance of hitting the race condition
 func TestRunnerDataRaceAggressive(t *testing.T) {
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		t.Run("iteration", func(t *testing.T) {
 			serverCfg := &config.Server{
 				EnvoyGateway: &egv1a1.EnvoyGateway{
-					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-						Gateway: &egv1a1.Gateway{
-							ControllerName: "test-controller",
-						},
-						Provider: &egv1a1.EnvoyGatewayProvider{
-							Type: egv1a1.ProviderTypeCustom,
-							Custom: &egv1a1.EnvoyGatewayCustomProvider{
-								Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-									Type: egv1a1.InfrastructureProviderTypeHost,
-									Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-								},
+					Gateway: &egv1a1.Gateway{
+						ControllerName: "test-controller",
+					},
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{
+							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeHost,
+								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
 							},
 						},
 					},
@@ -154,10 +150,8 @@ func TestRunnerDataRaceAggressive(t *testing.T) {
 
 			// Continuously trigger updates in background to keep goroutines busy
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for j := 0; j < 3; j++ {
+			wg.Go(func() {
+				for range 3 {
 					select {
 					case <-ctx.Done():
 						return
@@ -168,7 +162,7 @@ func TestRunnerDataRaceAggressive(t *testing.T) {
 						time.Sleep(10 * time.Millisecond)
 					}
 				}
-			}()
+			})
 
 			// Varying timing to hit different race windows
 			time.Sleep(time.Duration(20+i*10) * time.Millisecond)
@@ -190,17 +184,15 @@ func TestRunnerDataRaceAggressive(t *testing.T) {
 func TestRunnerDataRaceImmediate(t *testing.T) {
 	serverCfg := &config.Server{
 		EnvoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				Gateway: &egv1a1.Gateway{
-					ControllerName: "test-controller",
-				},
-				Provider: &egv1a1.EnvoyGatewayProvider{
-					Type: egv1a1.ProviderTypeCustom,
-					Custom: &egv1a1.EnvoyGatewayCustomProvider{
-						Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-							Type: egv1a1.InfrastructureProviderTypeHost,
-							Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-						},
+			Gateway: &egv1a1.Gateway{
+				ControllerName: "test-controller",
+			},
+			Provider: &egv1a1.EnvoyGatewayProvider{
+				Type: egv1a1.ProviderTypeCustom,
+				Custom: &egv1a1.EnvoyGatewayCustomProvider{
+					Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+						Type: egv1a1.InfrastructureProviderTypeHost,
+						Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
 					},
 				},
 			},
@@ -251,9 +243,7 @@ func TestSubscribeAndTranslateEndsGatewayClassSpansOnPanic(t *testing.T) {
 
 	serverCfg := &config.Server{
 		EnvoyGateway: &egv1a1.EnvoyGateway{
-			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-				Gateway: &egv1a1.Gateway{ControllerName: "test-controller"},
-			},
+			Gateway: &egv1a1.Gateway{ControllerName: "test-controller"},
 		},
 		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}

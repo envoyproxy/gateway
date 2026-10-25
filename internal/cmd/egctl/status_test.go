@@ -52,9 +52,7 @@ func TestWriteStatus(t *testing.T) {
 			resourceList: &gwapiv1.GatewayClassList{
 				Items: []gwapiv1.GatewayClass{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "gc",
-						},
+						Name: "gc",
 						Status: gwapiv1.GatewayClassStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -94,9 +92,7 @@ gc        foobar2   test-status-2   test reason 2
 			resourceList: &gwapiv1.GatewayClassList{
 				Items: []gwapiv1.GatewayClass{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "gc",
-						},
+						Name: "gc",
 						Status: gwapiv1.GatewayClassStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -136,9 +132,7 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 			resourceList: &gwapiv1.GatewayClassList{
 				Items: []gwapiv1.GatewayClass{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "gc",
-						},
+						Name: "gc",
 						Status: gwapiv1.GatewayClassStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -189,10 +183,8 @@ gc        foobar2   test-status-2   test reason 2   test message 2   123457     
 			resourceList: &gwapiv1.GatewayList{
 				Items: []gwapiv1.Gateway{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gtw",
-							Namespace: "default",
-						},
+						Name:      "gtw",
+						Namespace: "default",
 						Status: gwapiv1.GatewayStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -232,10 +224,8 @@ default     gtw       foobar2   test-status-2   test reason 2   test message 2  
 			resourceList: &gwapiv1.GatewayList{
 				Items: []gwapiv1.Gateway{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gtw1",
-							Namespace: "default1",
-						},
+						Name:      "gtw1",
+						Namespace: "default1",
 						Status: gwapiv1.GatewayStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -258,10 +248,8 @@ default     gtw       foobar2   test-status-2   test reason 2   test message 2  
 						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "gtw2",
-							Namespace: "default2",
-						},
+						Name:      "gtw2",
+						Namespace: "default2",
 						Status: gwapiv1.GatewayStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -301,10 +289,8 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 			resourceList: &gwapiv1.HTTPRouteList{
 				Items: []gwapiv1.HTTPRoute{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "http1",
-							Namespace: "default1",
-						},
+						Name:      "http1",
+						Namespace: "default1",
 						Status: gwapiv1.HTTPRouteStatus{
 							RouteStatus: gwapiv1.RouteStatus{
 								Parents: []gwapiv1.RouteParentStatus{
@@ -337,10 +323,8 @@ default2    gtw2      foobar4   test-status-4   test reason 4   test message 4  
 						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "http2",
-							Namespace: "default2",
-						},
+						Name:      "http2",
+						Namespace: "default2",
 						Status: gwapiv1.HTTPRouteStatus{
 							RouteStatus: gwapiv1.RouteStatus{
 								Parents: []gwapiv1.RouteParentStatus{
@@ -392,10 +376,8 @@ default2    http2     gateway/test-2   foobar4   test-status-4   test reason 4
 			resourceList: &gwapiv1.HTTPRouteList{
 				Items: []gwapiv1.HTTPRoute{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "http1",
-							Namespace: "default1",
-						},
+						Name:      "http1",
+						Namespace: "default1",
 						Status: gwapiv1.HTTPRouteStatus{
 							RouteStatus: gwapiv1.RouteStatus{
 								Parents: []gwapiv1.RouteParentStatus{
@@ -428,10 +410,8 @@ default2    http2     gateway/test-2   foobar4   test-status-4   test reason 4
 						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "http2",
-							Namespace: "default2",
-						},
+						Name:      "http2",
+						Namespace: "default2",
 						Status: gwapiv1.HTTPRouteStatus{
 							RouteStatus: gwapiv1.RouteStatus{
 								Parents: []gwapiv1.RouteParentStatus{
@@ -482,10 +462,8 @@ http2     gateway/test-2   foobar4   test-status-4   test reason 4
 			resourceList: &gwapiv1.BackendTLSPolicyList{
 				Items: []gwapiv1.BackendTLSPolicy{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "btls",
-							Namespace: "default",
-						},
+						Name:      "btls",
+						Namespace: "default",
 						Status: gwapiv1.PolicyStatus{
 							Ancestors: []gwapiv1.PolicyAncestorStatus{
 								{
@@ -533,10 +511,8 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 			resourceList: &gwapiv1.HTTPRouteList{
 				Items: []gwapiv1.HTTPRoute{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "http1",
-							Namespace: "default1",
-						},
+						Name:      "http1",
+						Namespace: "default1",
 						Status: gwapiv1.HTTPRouteStatus{
 							RouteStatus: gwapiv1.RouteStatus{
 								Parents: []gwapiv1.RouteParentStatus{
@@ -593,10 +569,8 @@ btls      gateway/test         foobar2   test-status-2   test reason 2
 						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "http2",
-							Namespace: "default2",
-						},
+						Name:      "http2",
+						Namespace: "default2",
 						Status: gwapiv1.HTTPRouteStatus{
 							RouteStatus: gwapiv1.RouteStatus{
 								Parents: []gwapiv1.RouteParentStatus{
@@ -676,10 +650,8 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 			resourceList: &egv1a1.BackendTrafficPolicyList{
 				Items: []egv1a1.BackendTrafficPolicy{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "btp-1",
-							Namespace: "default",
-						},
+						Name:      "btp-1",
+						Namespace: "default",
 						Status: gwapiv1.PolicyStatus{
 							Ancestors: []gwapiv1.PolicyAncestorStatus{
 								{
@@ -734,10 +706,8 @@ default2    http2     gateway/test-3   foobar6   test-status-6   test reason 6
 						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "btp-2",
-							Namespace: "default",
-						},
+						Name:      "btp-2",
+						Namespace: "default",
 						Status: gwapiv1.PolicyStatus{
 							Ancestors: []gwapiv1.PolicyAncestorStatus{
 								{

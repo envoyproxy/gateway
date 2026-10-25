@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"maps"
 	"os"
 	"testing"
 
@@ -47,9 +48,7 @@ func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.
 	if selector != nil {
 		dCopy.Spec.Selector = selector
 	}
-	for k, v := range additionalLabel {
-		dCopy.Spec.Template.Labels[k] = v
-	}
+	maps.Copy(dCopy.Spec.Template.Labels, additionalLabel)
 	return dCopy
 }
 
@@ -328,10 +327,8 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			require.NoError(t, err)
 
 			actual := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.GetResourceNamespace(tc.in),
-					Name:      expectedName(tc.in.Proxy, tc.gatewayNamespaceMode),
-				},
+				Namespace: kube.GetResourceNamespace(tc.in),
+				Name:      expectedName(tc.in.Proxy, tc.gatewayNamespaceMode),
 			}
 			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 			require.Equal(t, tc.want.Spec, actual.Spec)
@@ -379,10 +376,8 @@ func TestDeleteProxyDeployment(t *testing.T) {
 			err = kube.createOrUpdateDeployment(ctx, r)
 			require.NoError(t, err)
 			deployment := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.ControllerNamespace,
-					Name:      r.Name(),
-				},
+				Namespace: kube.ControllerNamespace,
+				Name:      r.Name(),
 			}
 			err = kube.Client.Delete(ctx, deployment)
 			require.NoError(t, err)

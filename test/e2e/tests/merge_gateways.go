@@ -115,7 +115,7 @@ var MergeGatewaysTest = suite.ConformanceTest{
 						{
 							AllowedRoutes: &gwapiv1.AllowedRoutes{
 								Namespaces: &gwapiv1.RouteNamespaces{
-									From: gatewayapi.FromNamespacesPtr(gwapiv1.NamespacesFromSame),
+									From: new(gwapiv1.NamespacesFromSame),
 								},
 							},
 							Name:     "http3",

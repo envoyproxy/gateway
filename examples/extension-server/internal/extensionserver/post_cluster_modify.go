@@ -28,7 +28,7 @@ func (s *Server) PostClusterModify(ctx context.Context, req *pb.PostClusterModif
 	var inferencePoolConfigs []*inferencev1.InferencePool
 	for _, ext := range req.PostClusterContext.BackendExtensionResources {
 		// Parse the JSON to check the kind and apiVersion
-		var resourceInfo map[string]interface{}
+		var resourceInfo map[string]any
 		if err := json.Unmarshal(ext.GetUnstructuredBytes(), &resourceInfo); err != nil {
 			s.log.Error("failed to unmarshal extension resource", slog.String("error", err.Error()))
 			continue

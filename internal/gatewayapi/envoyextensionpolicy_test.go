@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -114,17 +113,15 @@ func TestValidateDynamicModuleRemoteURL(t *testing.T) {
 func Test_envoyExtensionPolicyOwnerChoose(t *testing.T) {
 	t.Run("route policy overrides parent for the same owner fields", func(t *testing.T) {
 		parentPolicy := &egv1a1.EnvoyExtensionPolicy{
-			ObjectMeta: metav1.ObjectMeta{Name: "parent", Namespace: "parent-ns"},
+			Name: "parent", Namespace: "parent-ns",
 			Spec: egv1a1.EnvoyExtensionPolicySpec{
 				Wasm: []egv1a1.Wasm{{
 					Name: new("parent-wasm"),
 				}},
 				ExtProc: []egv1a1.ExtProc{{
-					BackendCluster: egv1a1.BackendCluster{
-						BackendRefs: []egv1a1.BackendRef{{
-							BackendObjectReference: gwapiv1.BackendObjectReference{Name: "parent-extproc"},
-						}},
-					},
+					BackendRefs: []egv1a1.BackendRef{{
+						Name: "parent-extproc",
+					}},
 				}},
 				Lua: []egv1a1.Lua{{
 					Type:     egv1a1.LuaValueTypeValueRef,
@@ -137,18 +134,16 @@ func Test_envoyExtensionPolicyOwnerChoose(t *testing.T) {
 		}
 
 		routePolicy := &egv1a1.EnvoyExtensionPolicy{
-			ObjectMeta: metav1.ObjectMeta{Name: "route", Namespace: "route-ns"},
+			Name: "route", Namespace: "route-ns",
 			Spec: egv1a1.EnvoyExtensionPolicySpec{
 				MergeType: new(egv1a1.StrategicMerge),
 				Wasm: []egv1a1.Wasm{{
 					Name: new("route-wasm"),
 				}},
 				ExtProc: []egv1a1.ExtProc{{
-					BackendCluster: egv1a1.BackendCluster{
-						BackendRefs: []egv1a1.BackendRef{{
-							BackendObjectReference: gwapiv1.BackendObjectReference{Name: "route-extproc"},
-						}},
-					},
+					BackendRefs: []egv1a1.BackendRef{{
+						Name: "route-extproc",
+					}},
 				}},
 				Lua: []egv1a1.Lua{{
 					Type:     egv1a1.LuaValueTypeValueRef,
@@ -172,18 +167,16 @@ func Test_envoyExtensionPolicyOwnerChoose(t *testing.T) {
 
 	t.Run("uses parent owner when route does not set the field", func(t *testing.T) {
 		parentPolicy := &egv1a1.EnvoyExtensionPolicy{
-			ObjectMeta: metav1.ObjectMeta{Name: "parent", Namespace: "parent-ns"},
+			Name: "parent", Namespace: "parent-ns",
 			Spec: egv1a1.EnvoyExtensionPolicySpec{
 				MergeType: new(egv1a1.StrategicMerge),
 				Wasm: []egv1a1.Wasm{{
 					Name: new("parent-wasm"),
 				}},
 				ExtProc: []egv1a1.ExtProc{{
-					BackendCluster: egv1a1.BackendCluster{
-						BackendRefs: []egv1a1.BackendRef{{
-							BackendObjectReference: gwapiv1.BackendObjectReference{Name: "parent-extproc"},
-						}},
-					},
+					BackendRefs: []egv1a1.BackendRef{{
+						Name: "parent-extproc",
+					}},
 				}},
 				Lua: []egv1a1.Lua{{
 					Type:     egv1a1.LuaValueTypeValueRef,
@@ -196,7 +189,7 @@ func Test_envoyExtensionPolicyOwnerChoose(t *testing.T) {
 		}
 
 		routePolicy := &egv1a1.EnvoyExtensionPolicy{
-			ObjectMeta: metav1.ObjectMeta{Name: "route", Namespace: "route-ns"},
+			Name: "route", Namespace: "route-ns",
 			Spec: egv1a1.EnvoyExtensionPolicySpec{
 				MergeType: new(egv1a1.StrategicMerge),
 				Wasm: []egv1a1.Wasm{{

@@ -56,28 +56,24 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				Proxy: proxyInfra,
 			},
 			want: &corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ServiceAccount",
-					APIVersion: "v1",
-				},
+				Kind:                         "ServiceAccount",
+				APIVersion:                   "v1",
 				AutomountServiceAccountToken: new(false),
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "envoy-test-9f86d081",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "GatewayClass",
-							Name:       "envoy-gateway-class",
-							UID:        "foo.bar",
-						},
+				Namespace:                    "test",
+				Name:                         "envoy-test-9f86d081",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
+					gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "GatewayClass",
+						Name:       "envoy-gateway-class",
+						UID:        "foo.bar",
 					},
 				},
 			},
@@ -89,44 +85,36 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				Proxy: proxyInfra,
 			},
 			current: &corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ServiceAccount",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "envoy-test",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-					},
+				Kind:       "ServiceAccount",
+				APIVersion: "v1",
+				Namespace:  "test",
+				Name:       "envoy-test",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
 				},
 			},
 			want: &corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ServiceAccount",
-					APIVersion: "v1",
-				},
+				Kind:                         "ServiceAccount",
+				APIVersion:                   "v1",
 				AutomountServiceAccountToken: new(false),
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "envoy-test-9f86d081",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "GatewayClass",
-							Name:       "envoy-gateway-class",
-							UID:        "foo.bar",
-						},
+				Namespace:                    "test",
+				Name:                         "envoy-test-9f86d081",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
+					gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "GatewayClass",
+						Name:       "envoy-gateway-class",
+						UID:        "foo.bar",
 					},
 				},
 			},
@@ -150,45 +138,37 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				},
 			},
 			current: &corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ServiceAccount",
-					APIVersion: "v1",
-				},
+				Kind:                         "ServiceAccount",
+				APIVersion:                   "v1",
 				AutomountServiceAccountToken: new(false),
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "very-long-name-that-will-be-hashed-and-cut-off-because-its-too-long",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-					},
+				Namespace:                    "test",
+				Name:                         "very-long-name-that-will-be-hashed-and-cut-off-because-its-too-long",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
 				},
 			},
 			want: &corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ServiceAccount",
-					APIVersion: "v1",
-				},
+				Kind:                         "ServiceAccount",
+				APIVersion:                   "v1",
 				AutomountServiceAccountToken: new(false),
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "envoy-very-long-name-that-will-be-hashed-and-cut-off-b-5bacc75e",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "GatewayClass",
-							Name:       "envoy-gateway-class",
-							UID:        "foo.bar",
-						},
+				Namespace:                    "test",
+				Name:                         "envoy-very-long-name-that-will-be-hashed-and-cut-off-b-5bacc75e",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "default",
+					gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "GatewayClass",
+						Name:       "envoy-gateway-class",
+						UID:        "foo.bar",
 					},
 				},
 			},
@@ -214,29 +194,25 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			},
 			gatewayNamespaceMode: true,
 			want: &corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ServiceAccount",
-					APIVersion: "v1",
-				},
+				Kind:                         "ServiceAccount",
+				APIVersion:                   "v1",
 				AutomountServiceAccountToken: new(false),
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "gateway-1",
-					Labels: map[string]string{
-						"app.kubernetes.io/name":               "envoy",
-						"app.kubernetes.io/component":          "proxy",
-						"app.kubernetes.io/managed-by":         "envoy-gateway",
-						gatewayapi.OwningGatewayNamespaceLabel: "ns1",
-						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
-						gatewayapi.GatewayNameLabel:            "gateway-1",
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "Gateway",
-							Name:       "gateway-1",
-							UID:        "foo.bar",
-						},
+				Namespace:                    "ns1",
+				Name:                         "gateway-1",
+				Labels: map[string]string{
+					"app.kubernetes.io/name":               "envoy",
+					"app.kubernetes.io/component":          "proxy",
+					"app.kubernetes.io/managed-by":         "envoy-gateway",
+					gatewayapi.OwningGatewayNamespaceLabel: "ns1",
+					gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					gatewayapi.GatewayNameLabel:            "gateway-1",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "Gateway",
+						Name:       "gateway-1",
+						UID:        "foo.bar",
 					},
 				},
 			},
@@ -279,10 +255,8 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			require.NoError(t, err)
 
 			actual := &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.GetResourceNamespace(tc.in),
-					Name:      tc.want.Name,
-				},
+				Namespace: kube.GetResourceNamespace(tc.in),
+				Name:      tc.want.Name,
 			}
 			require.NoError(t, kube.Client.Get(ctx, client.ObjectKeyFromObject(actual), actual))
 

@@ -205,10 +205,10 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		}
 
 		allResources := []*unstructured.Unstructured{
-			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooFilter"}},
-			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
-			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooPolicy"}},
-			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackendPolicy"}},
+			{Object: map[string]any{"apiVersion": "foo.io/v1", "kind": "FooFilter"}},
+			{Object: map[string]any{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
+			{Object: map[string]any{"apiVersion": "foo.io/v1", "kind": "FooPolicy"}},
+			{Object: map[string]any{"apiVersion": "bar.io/v1", "kind": "BarBackendPolicy"}},
 		}
 
 		_, _, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, allResources, allResources)
@@ -252,8 +252,8 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 			},
 		}
 		servedAtV2 := []*unstructured.Unstructured{
-			{Object: map[string]interface{}{"apiVersion": "foo.io/v2", "kind": "FooFilter"}},
-			{Object: map[string]interface{}{"apiVersion": "foo.io/v2", "kind": "FooPolicy"}},
+			{Object: map[string]any{"apiVersion": "foo.io/v2", "kind": "FooFilter"}},
+			{Object: map[string]any{"apiVersion": "foo.io/v2", "kind": "FooPolicy"}},
 		}
 
 		_, _, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, servedAtV2, servedAtV2)
@@ -280,8 +280,8 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		}
 
 		allResources := []*unstructured.Unstructured{
-			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooFilter"}},
-			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
+			{Object: map[string]any{"apiVersion": "foo.io/v1", "kind": "FooFilter"}},
+			{Object: map[string]any{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
 		}
 
 		_, _, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, allResources, allResources)
@@ -639,8 +639,8 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 		}
 
 		allResources := []*unstructured.Unstructured{
-			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooPolicy"}},
-			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarPolicy"}},
+			{Object: map[string]any{"apiVersion": "foo.io/v1", "kind": "FooPolicy"}},
+			{Object: map[string]any{"apiVersion": "bar.io/v1", "kind": "BarPolicy"}},
 		}
 
 		_, _, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, allResources)
@@ -807,8 +807,8 @@ func TestCompositeHookClient_PostClusterModifyHook(t *testing.T) {
 		}
 
 		allResources := []*unstructured.Unstructured{
-			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooBackend"}},
-			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
+			{Object: map[string]any{"apiVersion": "foo.io/v1", "kind": "FooBackend"}},
+			{Object: map[string]any{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
 		}
 
 		_, err := composite.PostClusterModifyHook(&cluster.Cluster{Name: "test"}, allResources)
@@ -907,7 +907,7 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 
 		fooPolicy := &ir.UnstructuredRef{
 			Object: &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "foo.io/v1",
 					"kind":       "FooPolicy",
 				},
@@ -915,7 +915,7 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 		}
 		barPolicy := &ir.UnstructuredRef{
 			Object: &unstructured.Unstructured{
-				Object: map[string]interface{}{
+				Object: map[string]any{
 					"apiVersion": "bar.io/v1",
 					"kind":       "BarPolicy",
 				},
@@ -1110,7 +1110,7 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 		policies := []*ir.UnstructuredRef{
 			nil,
 			{Object: nil},
-			{Object: &unstructured.Unstructured{Object: map[string]interface{}{
+			{Object: &unstructured.Unstructured{Object: map[string]any{
 				"apiVersion": "foo.io/v1",
 				"kind":       "FooPolicy",
 			}}},
@@ -1138,11 +1138,11 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 		}
 
 		policies := []*ir.UnstructuredRef{
-			{Object: &unstructured.Unstructured{Object: map[string]interface{}{
+			{Object: &unstructured.Unstructured{Object: map[string]any{
 				"apiVersion": "foo.io/v1",
 				"kind":       "FooPolicy",
 			}}},
-			{Object: &unstructured.Unstructured{Object: map[string]interface{}{
+			{Object: &unstructured.Unstructured{Object: map[string]any{
 				"apiVersion": "bar.io/v1",
 				"kind":       "BarPolicy",
 			}}},

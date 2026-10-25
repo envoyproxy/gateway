@@ -60,10 +60,8 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 	}
 	// Define the NetworkPolicy object
 	netPolicy := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      policyName,
-			Namespace: namespace,
-		},
+		Name:      policyName,
+		Namespace: namespace,
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: scope,

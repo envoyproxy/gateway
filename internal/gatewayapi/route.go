@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -750,12 +751,7 @@ func (t *Translator) backendLabelsFor(backendRef gwapiv1.BackendObjectReference,
 // anyGatewayHasMergeBackendsEnabled reports whether MergeBackends is enabled for at least one of
 // gateways, so callers can skip merge-only precomputation entirely when none of them merge.
 func (t *Translator) anyGatewayHasMergeBackendsEnabled(gateways []*GatewayContext) bool {
-	for _, gw := range gateways {
-		if t.isMergeBackendsEnabledForGateway(gw) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(gateways, t.isMergeBackendsEnabledForGateway)
 }
 
 // routingTypeDivergesForRule reports whether this rule's effective RoutingType differs from the
@@ -3514,21 +3510,19 @@ func (t *Translator) getTargetBackendReference(
 	backendNamespace string,
 ) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	ref := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-			Group: func() gwapiv1.Group {
-				if backendRef.Group == nil || *backendRef.Group == "" {
-					return ""
-				}
-				return *backendRef.Group
-			}(),
-			Kind: func() gwapiv1.Kind {
-				if backendRef.Kind == nil || *backendRef.Kind == resource.KindService {
-					return "Service"
-				}
-				return *backendRef.Kind
-			}(),
-			Name: backendRef.Name,
-		},
+		Group: func() gwapiv1.Group {
+			if backendRef.Group == nil || *backendRef.Group == "" {
+				return ""
+			}
+			return *backendRef.Group
+		}(),
+		Kind: func() gwapiv1.Kind {
+			if backendRef.Kind == nil || *backendRef.Kind == resource.KindService {
+				return "Service"
+			}
+			return *backendRef.Kind
+		}(),
+		Name: backendRef.Name,
 	}
 	if backendRef.Port == nil {
 		return ref

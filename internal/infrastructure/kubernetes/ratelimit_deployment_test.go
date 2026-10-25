@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -89,10 +88,8 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 			require.NoError(t, err)
 
 			actual := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.ControllerNamespace,
-					Name:      ratelimit.InfraName,
-				},
+				Namespace: kube.ControllerNamespace,
+				Name:      ratelimit.InfraName,
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 

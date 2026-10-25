@@ -109,7 +109,7 @@ func TestHandleAPIServerInfo(t *testing.T) {
 	}
 
 	// Verify EnvoyGateway configuration structure
-	configData, ok := info.EnvoyGatewayConfig.(map[string]interface{})
+	configData, ok := info.EnvoyGatewayConfig.(map[string]any)
 	if ok {
 		// Check if it has the expected structure (this will be a map when JSON unmarshaled)
 		assert.Contains(t, configData, "kind")
@@ -339,7 +339,7 @@ func TestHandleAPIConfigDumpWithResourceAll(t *testing.T) {
 	assert.Empty(t, resp.Header().Get("Content-Disposition"))
 
 	// Should return JSON response with structured format
-	var result map[string]interface{}
+	var result map[string]any
 	err := json.Unmarshal(resp.Body.Bytes(), &result)
 	require.NoError(t, err)
 
@@ -351,7 +351,7 @@ func TestHandleAPIConfigDumpWithResourceAll(t *testing.T) {
 	// Verify resources field exists (could be nil for empty case)
 	resources := result["resources"]
 	if resources != nil {
-		resourcesArray, ok := resources.([]interface{})
+		resourcesArray, ok := resources.([]any)
 		assert.True(t, ok)
 		assert.Empty(t, resourcesArray) // Empty for test case
 	} else {
@@ -372,18 +372,16 @@ func TestHandleAPIConfigDumpWithResourceAllRedactsSecrets(t *testing.T) {
 
 	providerRes := &message.ProviderResources{}
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-secret",
-			Namespace: "default",
-			Annotations: map[string]string{
-				corev1.LastAppliedConfigAnnotation: "{\"data\":{\"token\":\"c3VwZXJzZWNyZXQ=\"}}",
-				"example.com/foo":                  "value",
-			},
-			ManagedFields: []metav1.ManagedFieldsEntry{
-				{
-					Manager:   "kubectl",
-					Operation: metav1.ManagedFieldsOperationApply,
-				},
+		Name:      "test-secret",
+		Namespace: "default",
+		Annotations: map[string]string{
+			corev1.LastAppliedConfigAnnotation: "{\"data\":{\"token\":\"c3VwZXJzZWNyZXQ=\"}}",
+			"example.com/foo":                  "value",
+		},
+		ManagedFields: []metav1.ManagedFieldsEntry{
+			{
+				Manager:   "kubectl",
+				Operation: metav1.ManagedFieldsOperationApply,
 			},
 		},
 		Data: map[string][]byte{
@@ -452,181 +450,135 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 	controllerResources := resource.ControllerResources{
 		&resource.Resources{
 			GatewayClass: &gwapiv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eg",
-				},
+				Name: "eg",
 			},
 			Gateways: []*gwapiv1.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eg",
-						Namespace: "default",
-					},
+					Name:      "eg",
+					Namespace: "default",
 				},
 			},
 			HTTPRoutes: []*gwapiv1.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "hr",
-						Namespace: "default",
-					},
+					Name:      "hr",
+					Namespace: "default",
 				},
 			},
 			GRPCRoutes: []*gwapiv1.GRPCRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gr",
-						Namespace: "default",
-					},
+					Name:      "gr",
+					Namespace: "default",
 				},
 			},
 			TLSRoutes: []*gwapiv1.TLSRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tr",
-						Namespace: "default",
-					},
+					Name:      "tr",
+					Namespace: "default",
 				},
 			},
 			TCPRoutes: []*gwapiv1.TCPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tcr",
-						Namespace: "default",
-					},
+					Name:      "tcr",
+					Namespace: "default",
 				},
 			},
 			UDPRoutes: []*gwapiv1.UDPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ur",
-						Namespace: "default",
-					},
+					Name:      "ur",
+					Namespace: "default",
 				},
 			},
 			ClientTrafficPolicies: []*egv1a1.ClientTrafficPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ctp",
-						Namespace: "default",
-					},
+					Name:      "ctp",
+					Namespace: "default",
 				},
 			},
 			BackendTrafficPolicies: []*egv1a1.BackendTrafficPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "btp",
-						Namespace: "default",
-					},
+					Name:      "btp",
+					Namespace: "default",
 				},
 			},
 			BackendTLSPolicies: []*gwapiv1.BackendTLSPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "btlsp",
-						Namespace: "default",
-					},
+					Name:      "btlsp",
+					Namespace: "default",
 				},
 			},
 			SecurityPolicies: []*egv1a1.SecurityPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "sp",
-						Namespace: "default",
-					},
+					Name:      "sp",
+					Namespace: "default",
 				},
 			},
 			EnvoyPatchPolicies: []*egv1a1.EnvoyPatchPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "epp",
-						Namespace: "default",
-					},
+					Name:      "epp",
+					Namespace: "default",
 				},
 			},
 			EnvoyExtensionPolicies: []*egv1a1.EnvoyExtensionPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eep",
-						Namespace: "default",
-					},
+					Name:      "eep",
+					Namespace: "default",
 				},
 			},
 			Services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc",
-						Namespace: "default",
-					},
+					Name:      "svc",
+					Namespace: "default",
 				},
 			},
 			Secrets: []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "sec",
-						Namespace: "default",
-					},
+					Name:      "sec",
+					Namespace: "default",
 				},
 			},
 			ConfigMaps: []*corev1.ConfigMap{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cm",
-						Namespace: "default",
-					},
+					Name:      "cm",
+					Namespace: "default",
 				},
 			},
 			Namespaces: []*corev1.Namespace{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
-					},
+					Name: "default",
 				},
 			},
 			EndpointSlices: []*discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "eps",
-						Namespace: "default",
-					},
+					Name:      "eps",
+					Namespace: "default",
 				},
 			},
 			ReferenceGrants: []*gwapiv1b1.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "rg",
-						Namespace: "default",
-					},
+					Name:      "rg",
+					Namespace: "default",
 				},
 			},
 			HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "hrf",
-						Namespace: "default",
-					},
-				},
-			},
-			EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ep",
+					Name:      "hrf",
 					Namespace: "default",
 				},
 			},
+			EnvoyProxyForGatewayClass: &egv1a1.EnvoyProxy{
+				Name:      "ep",
+				Namespace: "default",
+			},
 			Backends: []*egv1a1.Backend{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "be",
-						Namespace: "default",
-					},
+					Name:      "be",
+					Namespace: "default",
 				},
 			},
 			ServiceImports: []*mcsapiv1a1.ServiceImport{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "si",
-						Namespace: "default",
-					},
+					Name:      "si",
+					Namespace: "default",
 				},
 			},
 		},
@@ -678,17 +630,17 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 			handler.handleAPIConfigDump(resp, req)
 
 			assert.Equal(t, http.StatusOK, resp.Code)
-			var result map[string]interface{}
+			var result map[string]any
 			err := json.Unmarshal(resp.Body.Bytes(), &result)
 			require.NoError(t, err)
 			assert.Equal(t, tc.totalCount, result["totalCount"])
 
-			resources, ok := result["resources"].([]interface{})
+			resources, ok := result["resources"].([]any)
 			require.True(t, ok)
 			require.Len(t, resources, 1)
-			resourceItem, ok := resources[0].(map[string]interface{})
+			resourceItem, ok := resources[0].(map[string]any)
 			require.True(t, ok)
-			metadata, ok := resourceItem["metadata"].(map[string]interface{})
+			metadata, ok := resourceItem["metadata"].(map[string]any)
 			require.True(t, ok)
 			assert.Equal(t, tc.expectedName, metadata["name"])
 			if tc.expectedNamespace == "" {

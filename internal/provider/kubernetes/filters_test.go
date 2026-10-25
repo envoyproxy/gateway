@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,20 +66,16 @@ func TestGetExtensionRefFilters(t *testing.T) {
 
 	// Create namespace with labels for testing namespace filtering
 	testNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-ns",
-			Labels: map[string]string{
-				"env": "test",
-			},
+		Name: "test-ns",
+		Labels: map[string]string{
+			"env": "test",
 		},
 	}
 
 	defaultNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "default",
-			Labels: map[string]string{
-				"env": "prod",
-			},
+		Name: "default",
+		Labels: map[string]string{
+			"env": "prod",
 		},
 	}
 
@@ -193,20 +188,16 @@ func TestGetExtensionBackendResources(t *testing.T) {
 
 	// Create namespace with labels for testing namespace filtering
 	testNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-ns",
-			Labels: map[string]string{
-				"env": "test",
-			},
+		Name: "test-ns",
+		Labels: map[string]string{
+			"env": "test",
 		},
 	}
 
 	defaultNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "default",
-			Labels: map[string]string{
-				"env": "prod",
-			},
+		Name: "default",
+		Labels: map[string]string{
+			"env": "prod",
 		},
 	}
 

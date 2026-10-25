@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sort"
+	"strings"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
@@ -51,9 +53,9 @@ type TranslationOptions struct {
 
 type TranslationResult struct {
 	resource.Resources
-	XdsIR   resource.XdsIRMap      `json:"xdsIR,omitempty" yaml:"xdsIR,omitempty"`
-	InfraIR resource.InfraIRMap    `json:"infraIR,omitempty" yaml:"infraIR,omitempty"`
-	Xds     map[string]interface{} `json:"xds,omitempty"`
+	XdsIR   resource.XdsIRMap   `json:"xdsIR,omitempty" yaml:"xdsIR,omitempty"`
+	InfraIR resource.InfraIRMap `json:"infraIR,omitempty" yaml:"infraIR,omitempty"`
+	Xds     map[string]any      `json:"xds,omitempty"`
 }
 
 func newTranslateCommand() *cobra.Command {
@@ -127,12 +129,7 @@ func validInputTypes() []string {
 }
 
 func isValidInputType(inType string) bool {
-	for _, vType := range validInputTypes() {
-		if inType == vType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(validInputTypes(), inType)
 }
 
 func getValidInputTypesStr() string {
@@ -145,13 +142,7 @@ func validOutputTypes() []string {
 
 func findInvalidOutputType(outTypes []string) string {
 	for _, oType := range outTypes {
-		found := false
-		for _, vType := range validOutputTypes() {
-			if oType == vType {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(validOutputTypes(), oType)
 		if !found {
 			return oType
 		}
@@ -175,12 +166,7 @@ func validResourceTypes() []envoyConfigType {
 }
 
 func isValidResourceType(outType envoyConfigType) bool {
-	for _, vType := range validResourceTypes() {
-		if outType == vType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(validResourceTypes(), outType)
 }
 
 func getValidResourceTypesStr() string {
@@ -191,14 +177,14 @@ func getInputBytes(inFile string) ([]byte, error) {
 	// Get input from stdin
 	if inFile == "-" {
 		scanner := bufio.NewScanner(os.Stdin)
-		var input string
+		var input strings.Builder
 		for {
 			if !scanner.Scan() {
 				break
 			}
-			input += scanner.Text() + "\n"
+			input.WriteString(scanner.Text() + "\n")
 		}
-		return []byte(input), nil
+		return []byte(input.String()), nil
 	}
 	// Get input from file
 	return os.ReadFile(inFile)
@@ -378,7 +364,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 	sort.Strings(keys)
 
 	// Translate from Xds IR to Xds
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	for _, key := range keys {
 		val := gRes.XdsIR[key]
 		xTranslator := &translator.Translator{

@@ -171,7 +171,7 @@ func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // renderTemplate renders a template with the given data
-func (h *Handler) renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) error {
+func (h *Handler) renderTemplate(w http.ResponseWriter, tmpl string, data any) error {
 	if len(h.templates) == 0 {
 		if err := h.loadTemplates(); err != nil {
 			// Set Content-Type before returning error

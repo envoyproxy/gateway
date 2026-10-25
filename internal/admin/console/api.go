@@ -37,7 +37,7 @@ type ServerInfo struct {
 	Version            string            `json:"version"`
 	Uptime             string            `json:"uptime"`
 	Components         []ComponentStatus `json:"components"`
-	EnvoyGatewayConfig interface{}       `json:"envoyGatewayConfig"`
+	EnvoyGatewayConfig any               `json:"envoyGatewayConfig"`
 	LastUpdated        time.Time         `json:"lastUpdated"`
 }
 
@@ -238,7 +238,7 @@ func (h *Handler) handleProviderResourcesDump(w http.ResponseWriter, resourcePar
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	if h.providerResources == nil {
-		emptyResponse := map[string]interface{}{
+		emptyResponse := map[string]any{
 			"message":   "No provider resources available",
 			"timestamp": time.Now(),
 		}
@@ -252,7 +252,7 @@ func (h *Handler) handleProviderResourcesDump(w http.ResponseWriter, resourcePar
 	switch resourceParam {
 	case "all":
 		resources = redactSecretData(resources)
-		response := map[string]interface{}{
+		response := map[string]any{
 			"resources":  resources,
 			"timestamp":  time.Now(),
 			"totalCount": len(resources),
@@ -265,7 +265,7 @@ func (h *Handler) handleProviderResourcesDump(w http.ResponseWriter, resourcePar
 			resources = redactSecretData(resources)
 		}
 		filteredResources := filterResourcesByType(resources, resourceParam)
-		response := map[string]interface{}{
+		response := map[string]any{
 			"resources":  filteredResources,
 			"timestamp":  time.Now(),
 			"totalCount": len(filteredResources),
@@ -321,8 +321,8 @@ func redactSecrets(secrets []*corev1.Secret) []*corev1.Secret {
 	return redacted
 }
 
-func filterResourcesByType(resources []*resource.Resources, resourceType string) []interface{} {
-	filtered := make([]interface{}, 0)
+func filterResourcesByType(resources []*resource.Resources, resourceType string) []any {
+	filtered := make([]any, 0)
 
 	for _, item := range resources {
 		if item == nil {

@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -292,11 +293,9 @@ func TestRunner(t *testing.T) {
 	res := ir.Xds{
 		HTTP: []*ir.HTTPListener{
 			{
-				CoreListenerDetails: ir.CoreListenerDetails{
-					Name:    "test",
-					Address: "0.0.0.0",
-					Port:    80,
-				},
+				Name:      "test",
+				Address:   "0.0.0.0",
+				Port:      80,
 				Hostnames: []string{"example.com"},
 				Routes: []*ir.HTTPRoute{
 					{
@@ -448,11 +447,9 @@ func TestRunner_withExtensionManager_FailOpen(t *testing.T) {
 	res := ir.Xds{
 		HTTP: []*ir.HTTPListener{
 			{
-				CoreListenerDetails: ir.CoreListenerDetails{
-					Name:    "test",
-					Address: "0.0.0.0",
-					Port:    80,
-				},
+				Name:      "test",
+				Address:   "0.0.0.0",
+				Port:      80,
 				Hostnames: []string{"example.com"},
 				Routes: []*ir.HTTPRoute{
 					{
@@ -534,11 +531,9 @@ func TestRunner_withExtensionManager_FailClosed(t *testing.T) {
 	res := ir.Xds{
 		HTTP: []*ir.HTTPListener{
 			{
-				CoreListenerDetails: ir.CoreListenerDetails{
-					Name:    "test",
-					Address: "0.0.0.0",
-					Port:    80,
-				},
+				Name:      "test",
+				Address:   "0.0.0.0",
+				Port:      80,
 				Hostnames: []string{"example.com"},
 				Routes: []*ir.HTTPRoute{
 					{
@@ -606,17 +601,11 @@ func TestGetRandomMaxConnectionAge(t *testing.T) {
 	counts := make(map[time.Duration]int)
 
 	// Call the function 100 times
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		value := getRandomMaxConnectionAge()
 
 		// Verify the value is one of the expected values from maxConnectionAgeValues
-		found := false
-		for _, expected := range maxConnectionAgeValues {
-			if value == expected {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(maxConnectionAgeValues, value)
 		assert.True(t, found, "Unexpected value returned: %v", value)
 
 		// Track counts
@@ -768,9 +757,7 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	}
 
 	r := &Runner{
-		Config: Config{
-			Server: *cfg,
-		},
+		Server: *cfg,
 	}
 
 	// Test loadTLSConfig with host mode

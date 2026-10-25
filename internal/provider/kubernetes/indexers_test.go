@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -46,9 +45,7 @@ func TestEndpointSliceIndexFuncs(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			endpointSlice := &discoveryv1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: tc.labels,
-				},
+				Labels: tc.labels,
 			}
 
 			require.Equal(t, tc.expectedService, serviceEndpointSliceIndexFunc(endpointSlice))
@@ -66,21 +63,15 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		{
 			name: "no filters, single backend",
 			route: &gwapiv1.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "grpcroute-1",
-					Namespace: "default",
-				},
+				Name:      "grpcroute-1",
+				Namespace: "default",
 				Spec: gwapiv1.GRPCRouteSpec{
 					Rules: []gwapiv1.GRPCRouteRule{
 						{
 							BackendRefs: []gwapiv1.GRPCBackendRef{
 								{
-									BackendRef: gwapiv1.BackendRef{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "service-1",
-											Port: new(gwapiv1.PortNumber(8080)),
-										},
-									},
+									Name: "service-1",
+									Port: new(gwapiv1.PortNumber(8080)),
 								},
 							},
 						},
@@ -92,21 +83,15 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		{
 			name: "request mirror filter includes mirror backendRef",
 			route: &gwapiv1.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "grpcroute-mirror",
-					Namespace: "default",
-				},
+				Name:      "grpcroute-mirror",
+				Namespace: "default",
 				Spec: gwapiv1.GRPCRouteSpec{
 					Rules: []gwapiv1.GRPCRouteRule{
 						{
 							BackendRefs: []gwapiv1.GRPCBackendRef{
 								{
-									BackendRef: gwapiv1.BackendRef{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "service-1",
-											Port: new(gwapiv1.PortNumber(8080)),
-										},
-									},
+									Name: "service-1",
+									Port: new(gwapiv1.PortNumber(8080)),
 								},
 							},
 							Filters: []gwapiv1.GRPCRouteFilter{
@@ -130,21 +115,15 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		{
 			name: "mirror filter with cross-namespace backendRef",
 			route: &gwapiv1.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "grpcroute-cross-ns",
-					Namespace: "default",
-				},
+				Name:      "grpcroute-cross-ns",
+				Namespace: "default",
 				Spec: gwapiv1.GRPCRouteSpec{
 					Rules: []gwapiv1.GRPCRouteRule{
 						{
 							BackendRefs: []gwapiv1.GRPCBackendRef{
 								{
-									BackendRef: gwapiv1.BackendRef{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "service-1",
-											Port: new(gwapiv1.PortNumber(8080)),
-										},
-									},
+									Name: "service-1",
+									Port: new(gwapiv1.PortNumber(8080)),
 								},
 							},
 							Filters: []gwapiv1.GRPCRouteFilter{
@@ -169,21 +148,15 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		{
 			name: "multiple mirror filters in same rule",
 			route: &gwapiv1.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "grpcroute-multi-mirror",
-					Namespace: "default",
-				},
+				Name:      "grpcroute-multi-mirror",
+				Namespace: "default",
 				Spec: gwapiv1.GRPCRouteSpec{
 					Rules: []gwapiv1.GRPCRouteRule{
 						{
 							BackendRefs: []gwapiv1.GRPCBackendRef{
 								{
-									BackendRef: gwapiv1.BackendRef{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "service-1",
-											Port: new(gwapiv1.PortNumber(8080)),
-										},
-									},
+									Name: "service-1",
+									Port: new(gwapiv1.PortNumber(8080)),
 								},
 							},
 							Filters: []gwapiv1.GRPCRouteFilter{
@@ -217,21 +190,15 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		{
 			name: "non-mirror filter is ignored",
 			route: &gwapiv1.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "grpcroute-header-filter",
-					Namespace: "default",
-				},
+				Name:      "grpcroute-header-filter",
+				Namespace: "default",
 				Spec: gwapiv1.GRPCRouteSpec{
 					Rules: []gwapiv1.GRPCRouteRule{
 						{
 							BackendRefs: []gwapiv1.GRPCBackendRef{
 								{
-									BackendRef: gwapiv1.BackendRef{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "service-1",
-											Port: new(gwapiv1.PortNumber(8080)),
-										},
-									},
+									Name: "service-1",
+									Port: new(gwapiv1.PortNumber(8080)),
 								},
 							},
 							Filters: []gwapiv1.GRPCRouteFilter{
@@ -253,22 +220,16 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		{
 			name: "backend with Backend kind is indexed",
 			route: &gwapiv1.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "grpcroute-backend-kind",
-					Namespace: "default",
-				},
+				Name:      "grpcroute-backend-kind",
+				Namespace: "default",
 				Spec: gwapiv1.GRPCRouteSpec{
 					Rules: []gwapiv1.GRPCRouteRule{
 						{
 							BackendRefs: []gwapiv1.GRPCBackendRef{
 								{
-									BackendRef: gwapiv1.BackendRef{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Kind: new(gwapiv1.Kind(egv1a1.KindBackend)),
-											Name: "backend-1",
-											Port: new(gwapiv1.PortNumber(8080)),
-										},
-									},
+									Kind: new(gwapiv1.Kind(egv1a1.KindBackend)),
+									Name: "backend-1",
+									Port: new(gwapiv1.PortNumber(8080)),
 								},
 							},
 						},

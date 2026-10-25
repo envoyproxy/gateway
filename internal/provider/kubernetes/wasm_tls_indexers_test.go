@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -33,18 +32,14 @@ func TestWasmTLSIndexers(t *testing.T) {
 
 	// EnvoyExtensionPolicy with HTTP WASM using Secret
 	eepHTTPSecret := &egv1a1.EnvoyExtensionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "wasm-http-secret",
-			Namespace: "default",
-		},
+		Name:      "wasm-http-secret",
+		Namespace: "default",
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Kind: "Gateway",
-							Name: "test-gateway",
-						},
+						Kind: "Gateway",
+						Name: "test-gateway",
 					},
 				},
 			},
@@ -70,18 +65,14 @@ func TestWasmTLSIndexers(t *testing.T) {
 
 	// EnvoyExtensionPolicy with HTTP WASM using ConfigMap
 	eepHTTPConfigMap := &egv1a1.EnvoyExtensionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "wasm-http-configmap",
-			Namespace: "default",
-		},
+		Name:      "wasm-http-configmap",
+		Namespace: "default",
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Kind: "Gateway",
-							Name: "test-gateway",
-						},
+						Kind: "Gateway",
+						Name: "test-gateway",
 					},
 				},
 			},
@@ -108,18 +99,14 @@ func TestWasmTLSIndexers(t *testing.T) {
 
 	// EnvoyExtensionPolicy with HTTP WASM using ClusterTrustBundle
 	eepHTTPClusterTrustBundle := &egv1a1.EnvoyExtensionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "wasm-http-ctb",
-			Namespace: "default",
-		},
+		Name:      "wasm-http-ctb",
+		Namespace: "default",
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Kind: "Gateway",
-							Name: "test-gateway",
-						},
+						Kind: "Gateway",
+						Name: "test-gateway",
 					},
 				},
 			},
@@ -146,18 +133,14 @@ func TestWasmTLSIndexers(t *testing.T) {
 
 	// EnvoyExtensionPolicy with Image WASM using Secret
 	eepImageSecret := &egv1a1.EnvoyExtensionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "wasm-image-secret",
-			Namespace: "default",
-		},
+		Name:      "wasm-image-secret",
+		Namespace: "default",
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Kind: "Gateway",
-							Name: "test-gateway",
-						},
+						Kind: "Gateway",
+						Name: "test-gateway",
 					},
 				},
 			},
@@ -183,18 +166,14 @@ func TestWasmTLSIndexers(t *testing.T) {
 
 	// EnvoyExtensionPolicy with Image WASM using ConfigMap
 	eepImageConfigMap := &egv1a1.EnvoyExtensionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "wasm-image-configmap",
-			Namespace: "default",
-		},
+		Name:      "wasm-image-configmap",
+		Namespace: "default",
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Kind: "Gateway",
-							Name: "test-gateway",
-						},
+						Kind: "Gateway",
+						Name: "test-gateway",
 					},
 				},
 			},
@@ -221,18 +200,14 @@ func TestWasmTLSIndexers(t *testing.T) {
 
 	// EnvoyExtensionPolicy with Image WASM using ClusterTrustBundle
 	eepImageClusterTrustBundle := &egv1a1.EnvoyExtensionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "wasm-image-ctb",
-			Namespace: "default",
-		},
+		Name:      "wasm-image-ctb",
+		Namespace: "default",
 		Spec: egv1a1.EnvoyExtensionPolicySpec{
 			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Kind: "Gateway",
-							Name: "test-gateway",
-						},
+						Kind: "Gateway",
+						Name: "test-gateway",
 					},
 				},
 			},
@@ -260,7 +235,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 	testCases := []struct {
 		name     string
 		configs  []egv1a1.EnvoyExtensionPolicy
-		resource interface{}
+		resource any
 		expect   bool
 	}{
 		{
@@ -404,10 +379,8 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 		{
 			name: "HTTP WASM with Secret",
 			eep: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-eep",
-					Namespace: "default",
-				},
+				Name:      "test-eep",
+				Namespace: "default",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -433,10 +406,8 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 		{
 			name: "Image WASM with ConfigMap",
 			eep: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-eep",
-					Namespace: "default",
-				},
+				Name:      "test-eep",
+				Namespace: "default",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -463,10 +434,8 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 		{
 			name: "HTTP WASM with ClusterTrustBundle",
 			eep: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-eep",
-					Namespace: "default",
-				},
+				Name:      "test-eep",
+				Namespace: "default",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -493,10 +462,8 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 		{
 			name: "Multiple WASM with different sources",
 			eep: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-eep",
-					Namespace: "test-ns",
-				},
+				Name:      "test-eep",
+				Namespace: "test-ns",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -547,10 +514,8 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 		{
 			name: "WASM with cross-namespace references",
 			eep: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-eep",
-					Namespace: "default",
-				},
+				Name:      "test-eep",
+				Namespace: "default",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{
@@ -576,10 +541,8 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 		{
 			name: "WASM without TLS config",
 			eep: &egv1a1.EnvoyExtensionPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-eep",
-					Namespace: "default",
-				},
+				Name:      "test-eep",
+				Namespace: "default",
 				Spec: egv1a1.EnvoyExtensionPolicySpec{
 					Wasm: []egv1a1.Wasm{
 						{

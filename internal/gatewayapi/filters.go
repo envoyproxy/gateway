@@ -384,9 +384,7 @@ func (t *Translator) processURLRewriteFilter(
 			}
 			if rewrite.Path.ReplaceFullPath != nil {
 				pathModifier = &ir.ExtendedHTTPPathModifier{
-					HTTPPathModifier: ir.HTTPPathModifier{
-						FullReplace: rewrite.Path.ReplaceFullPath,
-					},
+					FullReplace: rewrite.Path.ReplaceFullPath,
 				}
 			}
 		case gwapiv1.PrefixMatchHTTPPathModifier:
@@ -404,9 +402,7 @@ func (t *Translator) processURLRewriteFilter(
 			}
 			if rewrite.Path.ReplacePrefixMatch != nil {
 				pathModifier = &ir.ExtendedHTTPPathModifier{
-					HTTPPathModifier: ir.HTTPPathModifier{
-						PrefixMatchReplace: rewrite.Path.ReplacePrefixMatch,
-					},
+					PrefixMatchReplace: rewrite.Path.ReplacePrefixMatch,
 				}
 			}
 		default:

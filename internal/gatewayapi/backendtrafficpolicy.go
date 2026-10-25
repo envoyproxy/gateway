@@ -1823,13 +1823,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					!ptr.Deref(r.Traffic.LoadBalancer.BackendUtilization.KeepResponseHeaders, false) {
 					headersToRemove := []string{"endpoint-load-metrics", "endpoint-load-metrics-bin"}
 					for _, h := range headersToRemove {
-						found := false
-						for _, existing := range r.RemoveResponseHeaders {
-							if existing == h {
-								found = true
-								break
-							}
-						}
+						found := slices.Contains(r.RemoveResponseHeaders, h)
 						if !found {
 							r.RemoveResponseHeaders = append(r.RemoveResponseHeaders, h)
 						}

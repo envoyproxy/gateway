@@ -276,8 +276,7 @@ func (p *permissionCache) lookupPermission(key string) (error, bool) {
 // isRetriableError checks if the error is retriable.
 // If the error is a permission error, it's not retriable. For example, 401 and 403 HTTP status code.
 func isRetriableError(err error) bool {
-	var terr *transport.Error
-	if errors.As(err, &terr) {
+	if terr, ok := errors.AsType[*transport.Error](err); ok {
 		if terr.StatusCode == http.StatusUnauthorized || terr.StatusCode == http.StatusForbidden {
 			return false
 		}

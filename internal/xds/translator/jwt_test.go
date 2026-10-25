@@ -122,7 +122,7 @@ func TestBuildJWTProviderClaimToHeaders(t *testing.T) {
 // human-readable prefix would exceed the length guard if left unbounded.
 func TestJWTAuthnNamesAreBounded(t *testing.T) {
 	providers := make([]ir.JWTProvider, 0, 50)
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		providers = append(providers, ir.JWTProvider{
 			Name:   strings.Repeat("very-long-jwt-provider-name", 3),
 			Issuer: "https://issuer.example.com/",
