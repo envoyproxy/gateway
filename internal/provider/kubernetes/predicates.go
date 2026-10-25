@@ -749,44 +749,53 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		return false
 	}
 
-	nsName := types.NamespacedName{
-		Namespace: obj.GetNamespace(),
-		Name:      svcName,
+	// A slice may carry both service-name labels (e.g. Cilium ClusterMesh MCS
+	// slices); it is relevant if either the Service or the ServiceImport is.
+	var backendNames []string
+	if ok {
+		backendNames = append(backendNames, svcName)
 	}
-
 	if isMCS {
-		nsName.Name = multiClusterSvcName
+		backendNames = append(backendNames, multiClusterSvcName)
+	}
+	for _, name := range backendNames {
+		if r.isEndpointSliceBackendReferenced(&types.NamespacedName{Namespace: obj.GetNamespace(), Name: name}) {
+			return true
+		}
 	}
 
-	if r.isRateLimitService(&nsName) {
+	return r.isProxyServiceCluster(ep.GetLabels())
+}
+
+// isEndpointSliceBackendReferenced returns true if the named Service or
+// ServiceImport is referenced by a rate limit config, route or policy.
+func (r *gatewayAPIReconciler) isEndpointSliceBackendReferenced(nsName *types.NamespacedName) bool {
+	if r.isRateLimitService(nsName) {
 		return true
 	}
 
-	if r.isRouteReferencingBackend(&nsName) {
+	if r.isRouteReferencingBackend(nsName) {
 		return true
 	}
 
 	if r.spCRDExists {
-		if r.isSecurityPolicyReferencingBackend(&nsName) {
+		if r.isSecurityPolicyReferencingBackend(nsName) {
 			return true
 		}
 	}
 
 	if r.epCRDExists {
-		if r.isEnvoyProxyReferencingBackend(&nsName) {
+		if r.isEnvoyProxyReferencingBackend(nsName) {
 			return true
 		}
 	}
 
 	if r.eepCRDExists {
-		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+		if r.isEnvoyExtensionPolicyReferencingBackend(nsName) {
 			return true
 		}
 	}
 
-	if r.isProxyServiceCluster(ep.GetLabels()) {
-		return true
-	}
 	return false
 }
 
