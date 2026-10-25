@@ -906,6 +906,8 @@ type ExtensionManager struct {
 	// source of the configuration which was sent to the extension server. The errors are ignored and the resulting
 	// xDS configuration is updated in the xDS snapshot.
 	//
+	// FailOpen does not apply to the Secret hook: its errors are never ignored.
+	//
 	// Default: false
 	//
 	// +optional

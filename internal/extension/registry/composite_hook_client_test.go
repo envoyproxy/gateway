@@ -1101,6 +1101,19 @@ func TestCompositeHookClient_ResolveSecretHook(t *testing.T) {
 		require.ErrorContains(t, err, "no extension registered secret kind")
 	})
 
+	t.Run("an error is returned even with failOpen", func(t *testing.T) {
+		c := &compositeXDSHookClient{entries: []hookClientEntry{
+			{name: "owner", failOpen: true, secretGKSet: sets.New(certGVK.GroupKind()), client: &mockXDSHookClient{
+				resolveSecret: func(*types.SecretContext) (*types.SecretResolution, error) {
+					return nil, fmt.Errorf("extension error")
+				},
+			}},
+		}}
+
+		_, err := c.ResolveSecretHook(&types.SecretContext{Secret: newCert(certGVK)})
+		require.ErrorContains(t, err, "extension error")
+	})
+
 	t.Run("a missing certificate is rejected", func(t *testing.T) {
 		c := &compositeXDSHookClient{entries: []hookClientEntry{
 			{name: "owner", client: &mockXDSHookClient{}, secretGKSet: sets.New(certGVK.GroupKind())},

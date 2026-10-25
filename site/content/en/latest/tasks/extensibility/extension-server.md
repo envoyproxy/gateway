@@ -119,6 +119,8 @@ The hooks are executed in the following order during xDS translation:
   listener's certificates are resolved, Envoy closes the connections for the listener's hostnames, rather than
   letting another listener on the same port, such as one with a wildcard hostname, handle them. HTTP/3 traffic
   for the listener is not served.
+- **Errors**: A hook error fails translation even when `failOpen` is set, so Envoy keeps its last good
+  configuration. Report a certificate that cannot be served yet with a failure reason, not an error.
 
 #### Translation Hook (`PostTranslateModifyHook`)
 

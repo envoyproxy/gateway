@@ -255,9 +255,7 @@ func (c *compositeXDSHookClient) ResolveSecretHook(secretCtx *types.SecretContex
 		if err != nil {
 			// A secret kind is owned by a single extension, so this loop matches at
 			// most one entry: return immediately rather than continuing like the chaining hooks.
-			if entry.failOpen {
-				return nil, nil
-			}
+			// failOpen does not apply: a hook error fails translation.
 			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
 		}
 		return resolution, nil

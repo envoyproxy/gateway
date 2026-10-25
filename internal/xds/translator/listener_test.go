@@ -248,10 +248,11 @@ func Test_resolveExtensionCertificates(t *testing.T) {
 			wantErr:   "secret resolve error",
 		},
 		{
-			// With failOpen the error is logged and the certificate is left unresolved.
+			// failOpen does not apply to the Secret hook: the error still fails translation.
 			name:      "extension server error with failOpen",
 			extension: &failOpen,
 			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("error-cert")}},
+			wantErr:   "secret resolve error",
 		},
 		{
 			// A name-only reference must be in the IR's extension resources.

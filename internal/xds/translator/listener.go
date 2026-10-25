@@ -1525,11 +1525,9 @@ func (t *Translator) resolveExtensionCertificates(
 
 		resolution, err := hookClient.ResolveSecretHook(secretCtx)
 		if err != nil {
-			if !(*t.ExtensionManager).FailOpen() {
-				return nil, fmt.Errorf("failed to resolve certificate %q: %w", cert.Name, err)
-			}
-			t.Logger.Error(err, "Extension Manager ResolveSecret failure", "certificate", cert.Name)
-			continue
+			// A hook error fails translation even with failOpen, so Envoy keeps its last good
+			// config instead of losing the listener's certificate.
+			return nil, fmt.Errorf("failed to resolve certificate %q (failOpen does not apply to the Secret hook): %w", cert.Name, err)
 		}
 		if resolution == nil {
 			continue
