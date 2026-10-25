@@ -194,16 +194,6 @@ For new deployments, prefer ListenerSet: it is the upstream Gateway API design f
 Moving to ListenerSet requires converting Gateways into ListenerSets and rewriting the `parentRefs` of every route.
 See [issue 1230][] for the original motivation behind `mergeGateways`.
 
-### When Merged Gateways may still fit
-
-ListenerSet does not yet cover every aspect of the merged Gateways model, so `mergeGateways` can still be the
-better choice in some setups:
-
-- **Tenants keep authoring plain Gateways.** With `mergeGateways`, each team owns a standard Gateway resource,which the wider ecosystem, for example cert-manager and external-dns, already understands. Tooling support for ListenerSet is still catching up.
-- **No coupling to a named parent.** A ListenerSet must reference its parent Gateway by name through `spec.parentRef`, so tenants need to know, and hard-code, the shared Gateway's name and namespace. With `mergeGateways`, tenants only reference the GatewayClass.
-- **Per-tenant Gateway semantics.** Each merged Gateway keeps its own status, addresses, and policy attachment
-  points, so existing per-Gateway workflows keep working unchanged.
-
 [ListenerSet]: https://gateway-api.sigs.k8s.io/reference/api-types/listenerset/
 [listener conflicts guide]: https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/#listener-conflicts
 [ClientTrafficPolicy]: ../../../concepts/gateway_api_extensions/client-traffic-policy
