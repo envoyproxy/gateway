@@ -40,7 +40,7 @@
           - h2
           - http/1.1
           tlsCertificateSdsSecretConfigs:
-          - name: team-a/web/https/app-cert
+          - name: team-a/web/app-cert
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   listenerFilters:
@@ -151,7 +151,7 @@
           - h2
           - http/1.1
           tlsCertificateSdsSecretConfigs:
-          - name: team-a/web/shared-ok/ok-cert
+          - name: team-a/web/ok-cert
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   - filterChainMatch:
@@ -213,7 +213,7 @@
           - h2
           - http/1.1
           tlsCertificateSdsSecretConfigs:
-          - name: team-a/web/wildcard/wildcard-cert
+          - name: team-a/web/wildcard-cert
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   - filterChainMatch:
@@ -275,7 +275,7 @@
           - h2
           - http/1.1
           tlsCertificateSdsSecretConfigs:
-          - name: team-a/web/by-name/shared-cert
+          - name: team-a/web/shared-cert
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   listenerFilters:

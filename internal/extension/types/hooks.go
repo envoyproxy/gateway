@@ -73,8 +73,6 @@ type SecretContext struct {
 
 	GatewayNamespace string
 	GatewayName      string
-
-	ListenerName string
 }
 
 // SecretResolution is how Envoy should obtain one secret.

@@ -202,7 +202,6 @@ func (h *XDSHook) ResolveSecretHook(secretCtx *types.SecretContext) (*types.Secr
 				SecretResource:   secretBytes[0],
 				GatewayNamespace: secretCtx.GatewayNamespace,
 				GatewayName:      secretCtx.GatewayName,
-				ListenerName:     secretCtx.ListenerName,
 			},
 		})
 	if err != nil {

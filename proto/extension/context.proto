@@ -79,9 +79,6 @@ message SecretExtensionContext {
     // Namespace and name of the Gateway owning the listener.
     string gateway_namespace = 2;
     string gateway_name = 3;
-
-    // Name of the listener, as written in the Gateway spec.
-    string listener_name = 4;
 }
 
 

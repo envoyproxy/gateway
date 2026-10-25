@@ -1521,7 +1521,6 @@ func (t *Translator) resolveExtensionCertificates(
 		if listenerMeta != nil {
 			secretCtx.GatewayNamespace = listenerMeta.Namespace
 			secretCtx.GatewayName = listenerMeta.Name
-			secretCtx.ListenerName = listenerMeta.SectionName
 		}
 
 		resolution, err := hookClient.ResolveSecretHook(secretCtx)

@@ -571,8 +571,7 @@ func (t *testingExtensionServer) ResolveSecret(_ context.Context, req *pb.Resolv
 	default:
 		return &pb.ResolveSecretResponse{
 			SdsSecretConfig: &tlsV3.SdsSecretConfig{
-				Name: fmt.Sprintf("%s/%s/%s/%s", secretCtx.GetGatewayNamespace(), secretCtx.GetGatewayName(),
-					secretCtx.GetListenerName(), name),
+				Name: fmt.Sprintf("%s/%s/%s", secretCtx.GetGatewayNamespace(), secretCtx.GetGatewayName(), name),
 			},
 		}, nil
 	}
