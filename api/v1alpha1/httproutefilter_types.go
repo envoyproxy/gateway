@@ -85,7 +85,6 @@ type HTTPRouteFilterSpec struct {
 	// backendRef of the rule, and a uniform priority carries no failover meaning.
 	//
 	// +optional
-	// +notImplementedHide
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=128
 	BackendPriority *int32 `json:"backendPriority,omitempty"`
