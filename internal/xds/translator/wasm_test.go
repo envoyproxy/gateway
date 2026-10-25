@@ -18,8 +18,8 @@ func TestWasmConfigVMSharing(t *testing.T) {
 	const (
 		policyVMID       = "envoyextensionpolicy/shop/a/wasm/0"
 		sharedRemoteVMID = "envoyextensionpolicy/shop/wasm/module-sha"
-		sharedLocalVMID  = "envoyextensionpolicy/shop/wasm/local"
 		localPath        = "/var/lib/envoy/plugin.wasm"
+		sharedLocalVMID  = "envoyextensionpolicy/shop/wasm/" + localPath
 	)
 	remoteCode := &ir.HTTPWasmCode{ServingURL: "https://envoy-gateway/plugin.wasm", SHA256: "module-sha"}
 	tests := []struct {

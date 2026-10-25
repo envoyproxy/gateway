@@ -115,15 +115,15 @@ func TestBuildLocalWasmVMSharing(t *testing.T) {
 		},
 		{
 			name: "local Namespace scope", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "a",
-			hostKeys: []string{"REGION", "API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: "envoyextensionpolicy/shop/wasm/local",
+			hostKeys: []string{"REGION", "API_TOKEN", "REGION"}, wantHostKeys: []string{"API_TOKEN", "REGION"}, wantVMID: "envoyextensionpolicy/shop/wasm/" + localPath,
 		},
 		{
 			name: "local module in another policy", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "shop", policyName: "b",
-			wantVMID: "envoyextensionpolicy/shop/wasm/local",
+			wantVMID: "envoyextensionpolicy/shop/wasm/" + localPath,
 		},
 		{
 			name: "local module in another namespace", sharingScope: new(egv1a1.WasmVMSharingScopeNamespace), namespace: "other", policyName: "a",
-			wantVMID: "envoyextensionpolicy/other/wasm/local",
+			wantVMID: "envoyextensionpolicy/other/wasm/" + localPath,
 		},
 	}
 	for _, tt := range tests {

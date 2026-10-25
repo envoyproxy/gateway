@@ -1784,9 +1784,9 @@ func (t *Translator) buildWasm(
 	}
 
 	if ptr.Deref(config.VMSharingScope, egv1a1.WasmVMSharingScopePolicy) == egv1a1.WasmVMSharingScopeNamespace {
-		// Local module bytes distinguish VMs; remote modules need their
-		// resolved checksum because Envoy computes the key before fetching code.
-		moduleID := "local"
+		// Identify local modules by path and remote modules by their resolved
+		// checksum because Envoy computes the key before fetching remote code.
+		moduleID := wasmIR.Path
 		if wasmIR.Code != nil {
 			moduleID = wasmIR.Code.SHA256
 		}
