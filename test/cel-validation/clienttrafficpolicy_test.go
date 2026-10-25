@@ -600,6 +600,53 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid Connection Limit with maxConnectionDurationJitter",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							MaxConnectionDuration:       new(gwapiv1.Duration("300s")),
+							MaxConnectionDurationJitter: new(uint32(20)),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid Connection Limit maxConnectionDurationJitter without maxConnectionDuration",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							MaxConnectionDurationJitter: new(uint32(20)),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"maxConnectionDurationJitter can only be configured when maxConnectionDuration is set",
+			},
+		},
+		{
 			desc: "invalid Connection Limit closeDelay without value",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
