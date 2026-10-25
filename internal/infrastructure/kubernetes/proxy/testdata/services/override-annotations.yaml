@@ -37,8 +37,6 @@ spec:
     app.kubernetes.io/name: envoy
     gateway.envoyproxy.io/owning-gateway-name: default
     gateway.envoyproxy.io/owning-gateway-namespace: default
-    label1: value1
-    label2: value2
   sessionAffinity: None
   type: LoadBalancer
 status:

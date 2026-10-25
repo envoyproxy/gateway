@@ -381,9 +381,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	// Set the spec of gateway service
 	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
-	// Build the selector from envoyLabels, not objectLabels, to keep gateway-name
-	// out of the immutable selector.
-	serviceSpec.Selector = resource.GetSelector(r.envoyLabels(r.infra.GetProxyMetadata().Labels)).MatchLabels
+	// Use the workload's stable selector so pod label overrides cannot break
+	// Service selection. User-provided infrastructure labels are metadata only.
+	serviceSpec.Selector = r.stableSelector().MatchLabels
 
 	if (*envoyServiceConfig.Type) == egv1a1.ServiceTypeClusterIP {
 		if len(r.infra.Addresses) > 0 {

@@ -801,6 +801,14 @@ func TestDeployment(t *testing.T) {
 			require.NoError(t, err)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
+			if tc.caseName == "override-labels-and-annotations" {
+				svc, err := r.Service()
+				require.NoError(t, err)
+				require.Subset(t, dp.Spec.Template.Labels, svc.Spec.Selector,
+					"Service selector must match the Pod labels after overrides")
+				require.Equal(t, "value1", svc.Labels["label1"])
+				require.Equal(t, "value1", tc.infra.Proxy.GetProxyMetadata().Labels["label1"])
+			}
 
 			if test.OverrideTestData() {
 				deploymentYAML, err := yaml.Marshal(dp)
@@ -1282,6 +1290,14 @@ func TestDaemonSet(t *testing.T) {
 			require.NoError(t, err)
 			ds, err := r.DaemonSet()
 			require.NoError(t, err)
+			if tc.caseName == "override-labels-and-annotations" {
+				svc, err := r.Service()
+				require.NoError(t, err)
+				require.Subset(t, ds.Spec.Template.Labels, svc.Spec.Selector,
+					"Service selector must match the Pod labels after overrides")
+				require.Equal(t, "value1", svc.Labels["label1"])
+				require.Equal(t, "value1", tc.infra.Proxy.GetProxyMetadata().Labels["label1"])
+			}
 
 			sortEnv := func(env []corev1.EnvVar) {
 				sort.Slice(env, func(i, j int) bool {
