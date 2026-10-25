@@ -15,7 +15,7 @@ config:
           enabled: false
         rateLimitDeployment:
           container:
-            image: private-hub/envoyproxy/ratelimit:0482748e
+            image: private-hub/envoyproxy/ratelimit:5ae0682e
     logging:
       level:
         default: debug

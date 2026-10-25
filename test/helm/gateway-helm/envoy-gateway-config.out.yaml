@@ -44,7 +44,7 @@ data:
           enabled: false
         rateLimitDeployment:
           container:
-            image: private-hub/envoyproxy/ratelimit:0482748e
+            image: private-hub/envoyproxy/ratelimit:5ae0682e
           patch:
             type: StrategicMerge
             value:

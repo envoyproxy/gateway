@@ -1,2 +1,2 @@
-github.com/envoyproxy/envoy/source/extensions/dynamic_modules v0.0.0-20261006173603-6eb0d2d97489 h1:TPQr3TJs//DxI3nXtEHmMok+7h/xbPZYX4Idh98yduM=
-github.com/envoyproxy/envoy/source/extensions/dynamic_modules v0.0.0-20261006173603-6eb0d2d97489/go.mod h1:NpQosaDAX20s0ak0o/4b5dLOdvkbk15XqoakhSNX1Gg=
+github.com/envoyproxy/envoy/source/extensions/dynamic_modules v0.0.0-20261023015548-aa2d2f1b2b30 h1:en192HZ/9emKEIlr7l080VCUgFgSEIwzz85Rzd7qM0s=
+github.com/envoyproxy/envoy/source/extensions/dynamic_modules v0.0.0-20261023015548-aa2d2f1b2b30/go.mod h1:NpQosaDAX20s0ak0o/4b5dLOdvkbk15XqoakhSNX1Gg=
