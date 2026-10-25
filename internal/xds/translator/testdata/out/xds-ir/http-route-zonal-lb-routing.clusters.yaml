@@ -46,6 +46,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             zoneAwareLbConfig:
+              failTrafficOnPanic: true
               minClusterSize: "3"
   name: route-with-lb-preferlocal-dest/backend/0
   perConnectionBufferLimitBytes: 32768
