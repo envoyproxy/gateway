@@ -460,6 +460,9 @@ func TestExtensionBackendInvalidSettings(t *testing.T) {
 		{"request timeout", egv1a1.ClusterSettings{Timeout: &egv1a1.Timeout{HTTP: &egv1a1.HTTPTimeout{RequestTimeout: new(gwapiv1.Duration("1s"))}}}, "controlled by the extension"},
 		{"stream idle timeout", egv1a1.ClusterSettings{Timeout: &egv1a1.Timeout{HTTP: &egv1a1.HTTPTimeout{StreamIdleTimeout: new(gwapiv1.Duration("1s"))}}}, "controlled by the extension"},
 		{"circuit breaker", egv1a1.ClusterSettings{CircuitBreaker: &egv1a1.CircuitBreaker{MaxConnections: new(int64(-1))}}, "MaxConnections"},
+		{"http3 default", egv1a1.ClusterSettings{HTTP3: &egv1a1.BackendHTTP3Settings{}}, "http3 is not supported for extension backends"},
+		{"http3 auto", egv1a1.ClusterSettings{HTTP3: &egv1a1.BackendHTTP3Settings{Mode: new(egv1a1.BackendHTTP3ModeAuto)}}, "http3 is not supported for extension backends"},
+		{"http3 always", egv1a1.ClusterSettings{HTTP3: &egv1a1.BackendHTTP3Settings{Mode: new(egv1a1.BackendHTTP3ModeAlways)}}, "http3 is not supported for extension backends"},
 		{"dynamic module load balancer", egv1a1.ClusterSettings{LoadBalancer: &egv1a1.LoadBalancer{
 			Type:          egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{Name: "my-auth-module", LBPolicyName: "test"},
@@ -470,6 +473,7 @@ func TestExtensionBackendInvalidSettings(t *testing.T) {
 			child := resources.EnvoyExtensionPolicies[1]
 			child.Spec.Backends[0].BackendSettings = &tc.settings
 			result, routes := translateExtensionBackends(t, resources)
+			require.Equal(t, metav1.ConditionFalse, extensionPolicyCondition(t, result, child.Name).Status)
 			require.Contains(t, extensionPolicyCondition(t, result, child.Name).Message, tc.message)
 			require.EqualValues(t, 500, *routes["httproute-1"].DirectResponse.StatusCode)
 			require.Empty(t, routes["httproute-1"].EnvoyExtensions.Backends)

@@ -123,9 +123,11 @@ type ExtensionBackend struct {
 	// Request timeouts and retries are controlled by the extension's callout API.
 	// RequestTimeout and StreamIdleTimeout are not supported here.
 	// DynamicModule load balancing is not supported here.
+	// HTTP3 is not supported for extension backends.
 	//
 	// +kubebuilder:validation:XValidation:rule="!has(self.timeout) || !has(self.timeout.http) || (!has(self.timeout.http.requestTimeout) && !has(self.timeout.http.streamIdleTimeout))",message="requestTimeout and streamIdleTimeout are controlled by the extension"
 	// +kubebuilder:validation:XValidation:rule="!has(self.loadBalancer) || self.loadBalancer.type != 'DynamicModule'",message="DynamicModule load balancing is not supported for extension backends"
+	// +kubebuilder:validation:XValidation:rule="!has(self.http3)",message="http3 is not supported for extension backends"
 	// +optional
 	BackendSettings *ClusterSettings `json:"backendSettings,omitempty"`
 }

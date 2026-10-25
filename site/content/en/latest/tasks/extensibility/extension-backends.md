@@ -100,8 +100,8 @@ defaults. Inherited bindings keep their settings. BackendTrafficPolicy settings
 for route traffic do not apply to these callouts. A connection timeout limits
 how long Envoy waits to connect. The extension controls how long it waits for
 an individual callout and whether to retry. For that reason, `requestTimeout`
-and `streamIdleTimeout` are rejected here. `DynamicModule` load balancing is
-not supported for these backends.
+and `streamIdleTimeout` are rejected here. `DynamicModule` load balancing and
+HTTP/3 are not supported for extension backends.
 
 Backend references support the same resources as external processing services:
 Service, ServiceImport and Envoy Gateway Backend. Enable the Backend API before

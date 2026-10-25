@@ -75,6 +75,9 @@ func TestExtensionBackendSettingsValidation(t *testing.T) {
 		{"request", egv1a1.ClusterSettings{Timeout: &egv1a1.Timeout{HTTP: &egv1a1.HTTPTimeout{RequestTimeout: new(gwapiv1.Duration("1s"))}}}, "controlled by the extension"},
 		{"stream", egv1a1.ClusterSettings{Timeout: &egv1a1.Timeout{HTTP: &egv1a1.HTTPTimeout{StreamIdleTimeout: new(gwapiv1.Duration("1s"))}}}, "controlled by the extension"},
 		{"round robin", egv1a1.ClusterSettings{LoadBalancer: &egv1a1.LoadBalancer{Type: egv1a1.RoundRobinLoadBalancerType}}, ""},
+		{"http3 default", egv1a1.ClusterSettings{HTTP3: &egv1a1.BackendHTTP3Settings{}}, "http3 is not supported for extension backends"},
+		{"http3 auto", egv1a1.ClusterSettings{HTTP3: &egv1a1.BackendHTTP3Settings{Mode: new(egv1a1.BackendHTTP3ModeAuto)}}, "http3 is not supported for extension backends"},
+		{"http3 always", egv1a1.ClusterSettings{HTTP3: &egv1a1.BackendHTTP3Settings{Mode: new(egv1a1.BackendHTTP3ModeAlways)}}, "http3 is not supported for extension backends"},
 		{"dynamic module", egv1a1.ClusterSettings{LoadBalancer: &egv1a1.LoadBalancer{
 			Type:          egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{Name: "my-auth-module", LBPolicyName: "test"},

@@ -2688,7 +2688,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name is the alias used by extensions. It must be a lowercase DNS label<br />and unique within this policy. |
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendobjectreference)_ |  true  |  | BackendRef references the backend for HTTP callouts. References to another<br />namespace require a ReferenceGrant allowing the policy that declares this binding. |
-| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings configures connections and traffic for this binding's cluster.<br />Request timeouts and retries are controlled by the extension's callout API.<br />RequestTimeout and StreamIdleTimeout are not supported here.<br />DynamicModule load balancing is not supported here. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings configures connections and traffic for this binding's cluster.<br />Request timeouts and retries are controlled by the extension's callout API.<br />RequestTimeout and StreamIdleTimeout are not supported here.<br />DynamicModule load balancing is not supported here.<br />HTTP3 is not supported for extension backends. |
 
 
 #### ExtensionHooks

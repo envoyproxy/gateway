@@ -31710,6 +31710,7 @@ spec:
                         Request timeouts and retries are controlled by the extension's callout API.
                         RequestTimeout and StreamIdleTimeout are not supported here.
                         DynamicModule load balancing is not supported here.
+                        HTTP3 is not supported for extension backends.
                       properties:
                         circuitBreaker:
                           description: |-
@@ -33003,6 +33004,8 @@ spec:
                           extension backends
                         rule: '!has(self.loadBalancer) || self.loadBalancer.type !=
                           ''DynamicModule'''
+                      - message: http3 is not supported for extension backends
+                        rule: '!has(self.http3)'
                       - message: predictivePercent in preconnect policy only works
                           with RoundRobin or Random load balancers
                         rule: '!((has(self.connection) && has(self.connection.preconnect)

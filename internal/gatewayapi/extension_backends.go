@@ -45,6 +45,9 @@ func (t *Translator) buildExtensionBackends(policy *egv1a1.EnvoyExtensionPolicy,
 		}
 		var traffic *ir.TrafficFeatures
 		if settings := backend.BackendSettings; settings != nil {
+			if settings.HTTP3 != nil {
+				return nil, fmt.Errorf("backends[%d] %q: http3 is not supported for extension backends", i, backend.Name)
+			}
 			if settings.LoadBalancer != nil && settings.LoadBalancer.Type == egv1a1.DynamicModuleLoadBalancerType {
 				return nil, fmt.Errorf("backends[%d] %q: DynamicModule load balancing is not supported for extension backends", i, backend.Name)
 			}
