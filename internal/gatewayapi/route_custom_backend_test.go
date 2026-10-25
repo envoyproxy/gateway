@@ -52,9 +52,12 @@ func TestProcessDestinationCustomBackendWithBuiltinKind(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			resources := &resource.Resources{ExtensionRefFilters: []unstructured.Unstructured{customService}}
 			translator := &Translator{
 				ExtensionBackendGroupKinds: []schema.GroupKind{{Group: customGroup, Kind: resource.KindService}},
-				TranslatorContext:          &TranslatorContext{},
+				TranslatorContext: &TranslatorContext{
+					ExtensionRefIndex: BuildExtensionRefIndex(resources.ExtensionRefFilters),
+				},
 			}
 			route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
@@ -68,7 +71,6 @@ func TestProcessDestinationCustomBackendWithBuiltinKind(t *testing.T) {
 					Port:  new(gwapiv1.PortNumber(8080)),
 				},
 			}}
-			resources := &resource.Resources{ExtensionRefFilters: []unstructured.Unstructured{customService}}
 
 			var (
 				ds              *ir.DestinationSetting
@@ -166,9 +168,12 @@ func TestProcessDestinationCustomBackendKind(t *testing.T) {
 	customBackend.SetNamespace("default")
 	customBackend.SetName("custom")
 
+	resources := &resource.Resources{ExtensionRefFilters: []unstructured.Unstructured{customBackend}}
 	translator := &Translator{
 		ExtensionBackendGroupKinds: []schema.GroupKind{{Group: customGroup, Kind: egv1a1.KindBackend}},
-		TranslatorContext:          &TranslatorContext{},
+		TranslatorContext: &TranslatorContext{
+			ExtensionRefIndex: BuildExtensionRefIndex(resources.ExtensionRefFilters),
+		},
 	}
 	route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
@@ -183,7 +188,7 @@ func TestProcessDestinationCustomBackendKind(t *testing.T) {
 	}}
 
 	ds, unstructuredRef, err := translator.processDestination("dest", backendRef, parentRef, route,
-		&resource.Resources{ExtensionRefFilters: []unstructured.Unstructured{customBackend}}, nil, nil, nil)
+		resources, nil, nil, nil)
 	require.NoError(t, err)
 	require.True(t, ds.IsCustomBackend)
 	require.NotNil(t, unstructuredRef)
