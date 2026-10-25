@@ -2851,6 +2851,49 @@ func TestGatewayNameLabelPropagation(t *testing.T) {
 	})
 }
 
+func TestAutoscalingAndDisruptionBudgetGatewayNameLabel(t *testing.T) {
+	for _, mode := range []string{"default", "merged", "gateway-namespace"} {
+		t.Run(mode, func(t *testing.T) {
+			cfg, err := config.New(os.Stdout, os.Stderr)
+			require.NoError(t, err)
+			infra := newTestInfra()
+			if mode == "merged" {
+				infra.Proxy.GetProxyMetadata().Labels = gatewayapi.GatewayClassOwnerLabel("eg-class")
+			}
+			provider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+			provider.EnvoyPDB = &egv1a1.KubernetesPodDisruptionBudgetSpec{
+				MinAvailable: new(intstr.FromInt32(1)),
+			}
+			provider.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+				MaxReplicas: new(int32(2)),
+			}
+			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+			require.NoError(t, err)
+			r.GatewayNamespaceMode = mode == "gateway-namespace"
+			selector := r.stableSelector()
+
+			pdb, err := r.PodDisruptionBudget()
+			require.NoError(t, err)
+			hpa, err := r.HorizontalPodAutoscaler()
+			require.NoError(t, err)
+			require.Equal(t, selector, pdb.Spec.Selector)
+			require.Equal(t, selector, r.stableSelector())
+			require.Equal(t, r.Name(), hpa.Spec.ScaleTargetRef.Name)
+			for _, labels := range []map[string]string{pdb.Labels, hpa.Labels} {
+				if mode == "merged" {
+					require.NotContains(t, labels, gatewayapi.GatewayNameLabel)
+				} else {
+					want := infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel]
+					if mode == "gateway-namespace" {
+						want = r.Name()
+					}
+					require.Equal(t, want, labels[gatewayapi.GatewayNameLabel])
+				}
+			}
+		})
+	}
+}
+
 // TestServiceSelectorGatewayName guards against gateway-name leaking into the
 // Service selector, which is built independently of stableSelector.
 func TestServiceSelectorGatewayName(t *testing.T) {

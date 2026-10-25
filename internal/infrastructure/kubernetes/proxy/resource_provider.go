@@ -704,7 +704,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		resourceName = *pdb.Name
 	}
 
-	return infracommon.GetPodDisruptionBudget(pdb, r.stableSelector(), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences(), r.EnvoyProxyPatchDisabled)
+	return infracommon.GetPodDisruptionBudget(pdb, r.stableSelector(), r.objectLabels(r.stableSelector().MatchLabels), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences(), r.EnvoyProxyPatchDisabled)
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
@@ -726,7 +726,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			Labels:          r.stableSelector().MatchLabels,
+			Labels:          r.objectLabels(r.stableSelector().MatchLabels),
 			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
