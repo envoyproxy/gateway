@@ -417,13 +417,33 @@ type HTTP3Settings struct {
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 type HTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+	//
+	// Note: this field currently configures both the client connection and the backend HTTP/1
+	// protocol settings. In a future release it will be restricted to the client connection only.
+	// Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+	// Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+	// to opt in to the new behavior now.
+	//
 	// +optional
 	EnableTrailers *bool `json:"enableTrailers,omitempty"`
 	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
 	// By default, Envoy will lowercase all the headers.
+	//
+	// Note: this field currently configures both the client connection and the backend HTTP/1
+	// protocol settings. In a future release it will be restricted to the client connection only.
+	// Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+	// Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+	// to opt in to the new behavior now.
+	//
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+	//
+	// Note: this field currently forces explicit HTTP/1 for backend connections when other
+	// backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.
+	// In a future release it will no longer force explicit HTTP/1 on backend connections.
+	// Use BackendTrafficPolicy.http1: {} to force HTTP/1 on a backend cluster explicitly.
+	//
 	// +optional
 	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
 	// DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.

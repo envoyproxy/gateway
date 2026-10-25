@@ -77,6 +77,8 @@ func translateExtServiceBackendSettings(policy *egv1a1.BackendSettings) (*ir.Tra
 		ret.HTTP2 = h2
 	}
 
+	ret.HTTP1 = translateBackendHTTP1Settings(policy.HTTP1)
+
 	var err error
 	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
 		return nil, err
@@ -595,9 +597,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 
 	hc := policy.Active
 	irHC := &ir.ActiveHealthCheck{
-		InitialJitter:      hc.InitialJitter,
-		UnhealthyThreshold: hc.UnhealthyThreshold,
-		HealthyThreshold:   hc.HealthyThreshold,
+		InitialJitter:          hc.InitialJitter,
+		UnhealthyThreshold:     hc.UnhealthyThreshold,
+		HealthyThreshold:       hc.HealthyThreshold,
+		DisableConnectionReuse: hc.DisableConnectionReuse,
 	}
 
 	if hc.Timeout != nil {

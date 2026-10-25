@@ -38,6 +38,8 @@ const (
 	MaxConsistentHashTableSize = 5000011 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-maglevlbconfig
 	// ResponseBodyConfigMapKey is the key used in ConfigMaps to store custom response body data
 	ResponseBodyConfigMapKey = "response.body"
+
+	backendTargetingDisabledMessage = "Backend targeting in BackendTrafficPolicy requires mergeBackends to be enabled on the EnvoyProxy for this Gateway"
 )
 
 // BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies, keyed by attachment
@@ -99,7 +101,8 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.HTTP3 != nil ||
 		spec.DNS != nil ||
 		spec.AdmissionControl != nil ||
-		spec.UseClientProtocol != nil
+		spec.UseClientProtocol != nil ||
+		spec.HTTP1 != nil
 }
 
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
@@ -138,11 +141,12 @@ func (idx *BTPClusterSettingsIndex) HasClusterSettingsBelowGateway(
 	return hasClusterSettings || replacesParent
 }
 
-// BTPIndexes groups the two pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds
-// together in one pass over btps.
+// BTPIndexes groups the two pre-computed BackendTrafficPolicy indexes BuildBTPIndexes builds together
+// in one pass over btps, plus the policies it left out of them because they are rejected.
 type BTPIndexes struct {
-	RoutingType     *BTPRoutingTypeIndex
-	ClusterSettings *BTPClusterSettingsIndex
+	RoutingType      *BTPRoutingTypeIndex
+	ClusterSettings  *BTPClusterSettingsIndex
+	RejectedPolicies map[types.NamespacedName]backendPolicyRejection
 }
 
 // BuildBTPIndexes builds BTPIndexes, resolving each BackendTrafficPolicy's targets at most once.
@@ -167,7 +171,13 @@ func BuildBTPIndexes(
 		allTargets = append(allTargets, ls)
 	}
 
+	rejected := make(map[types.NamespacedName]backendPolicyRejection)
 	for _, btp := range btps {
+		if r := classifyBackendPolicy(btp); r != rejectionNone {
+			rejected[utils.NamespacedName(btp)] = r
+			continue
+		}
+
 		hasRoutingType := btp.Spec.RoutingType != nil
 		hasClusterScoped := btpSpecHasClusterScopedFields(&btp.Spec)
 
@@ -227,8 +237,9 @@ func BuildBTPIndexes(
 	}
 
 	return &BTPIndexes{
-		RoutingType:     routingTypeIdx,
-		ClusterSettings: clusterSettingsIdx,
+		RoutingType:      routingTypeIdx,
+		ClusterSettings:  clusterSettingsIdx,
+		RejectedPolicies: rejected,
 	}
 }
 
@@ -251,8 +262,11 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	routes []RouteContext,
 	xdsIR resource.XdsIRMap,
 ) []*egv1a1.BackendTrafficPolicy {
-	backendTrafficPolicies := resources.BackendTrafficPolicies
 	// BackendTrafficPolicies are already sorted by the provider layer
+	backendTrafficPolicies := slices.DeleteFunc(slices.Clone(resources.BackendTrafficPolicies), func(policy *egv1a1.BackendTrafficPolicy) bool {
+		_, rejected := t.BTPRejectedPolicies[utils.NamespacedName(policy)]
+		return rejected
+	})
 
 	routeMapSize := len(routes)
 	gatewayMapSize := len(gateways)
@@ -462,25 +476,32 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		policyName := utils.NamespacedName(currPolicy)
 		// Same-namespace only - backend targeting does not support cross-namespace ReferenceGrants.
 		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+		applied := sets.New[types.NamespacedName]()
+		notMergedTargets := make(map[types.NamespacedName][]string)
 		for _, currTarget := range targetRefs {
-			if isBackendTargetKind(currTarget) {
+			if isBackendGroupKind(targetRefGroupKind(currTarget)) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = backendTrafficPolicies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, policy, currTarget, backendPolicyMap)
+				targetApplied, targetNotMerged := t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, policy, currTarget, backendPolicyMap)
+				applied = applied.Union(targetApplied)
+				for _, gwNN := range targetNotMerged {
+					notMergedTargets[gwNN] = append(notMergedTargets[gwNN], fmt.Sprintf("%s %s", currTarget.Kind, currTarget.Name))
+				}
 			}
 		}
-		if policyHasBackendTargetSelectors(currPolicy) {
-			policy, found := handledPolicies[policyName]
-			if !found {
-				policy = backendTrafficPolicies[i]
-				handledPolicies[policyName] = policy
-				res = append(res, policy)
-			}
-			t.rejectBackendTargetSelectors(xdsIR, gateways, resources, policy)
+		if len(notMergedTargets) > 0 {
+			t.setNotMergedStatusForBackendTargets(handledPolicies[policyName], gateways, notMergedTargets, applied)
+		}
+	}
+
+	for _, policy := range resources.BackendTrafficPolicies {
+		if reason, ok := t.BTPRejectedPolicies[utils.NamespacedName(policy)]; ok {
+			t.reportRejectedBackendPolicy(xdsIR, gateways, resources, policy, reason)
+			res = append(res, policy)
 		}
 	}
 
@@ -494,7 +515,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 }
 
 // gatewayReferencesBackend reports whether any BackendCluster or inline DestinationSetting in x
-// identifies the same backend as key, across merged clusters and every route kind.
+// identifies the same backend as key, across merged clusters and every route kind's backendRefs.
 func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 	for _, bc := range x.BackendClusters {
 		if backendPolicyKeyFromMetadata(bc.Metadata) == key {
@@ -539,11 +560,13 @@ func gatewayReferencesBackend(x *ir.Xds, key backendPolicyKey) bool {
 }
 
 // processBackendTrafficPolicyForBackend resolves policy's target (already confirmed to be a
-// Service/ServiceImport/Backend by isBackendTargetKind) against backendPolicyMap for conflict
+// Service/ServiceImport/Backend by isBackendGroupKind) against backendPolicyMap for conflict
 // detection, then applies it to the Traffic (and, for an HTTP/GRPC cluster, UseClientProtocol) of
 // every matching merged BackendCluster. A gateway with mergeBackends disabled only gets a Disabled
-// ancestor if it actually references the backend; otherwise it's skipped entirely. A backend that
-// never merges or doesn't resolve for other reasons gets no policy applied and no error.
+// ancestor if it actually references the backend; otherwise it's skipped entirely. It returns the
+// gateways the policy was applied on for this target and the gateways that reference the backend
+// without a merged cluster for it, so the caller can report the latter once every target of the
+// policy has been processed; a backend no gateway references gets no status.
 func (t *Translator) processBackendTrafficPolicyForBackend(
 	xdsIR resource.XdsIRMap,
 	gateways []*GatewayContext,
@@ -551,7 +574,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	policy *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
-) {
+) (applied sets.Set[types.NamespacedName], notMerged []types.NamespacedName) {
 	key := backendPolicyKeyFromTarget(target)
 
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(gateways))
@@ -569,7 +592,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				Reason:  gwapiv1.PolicyReasonConflicted,
 				Message: fmt.Sprintf("Unable to target %s %s, another BackendTrafficPolicy has already attached to it", string(target.Kind), string(target.Name)),
 			})
-		return
+		return nil, nil
 	}
 	backendPolicyMap[key] = policy
 
@@ -590,7 +613,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
 				&status.PolicyResolveError{
 					Reason:  egv1a1.PolicyReasonDisabled,
-					Message: "Backend targeting in BackendTrafficPolicy requires mergeBackends to be enabled on the EnvoyProxy for this Gateway",
+					Message: backendTargetingDisabledMessage,
 				})
 			continue
 		}
@@ -600,19 +623,22 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			gwPolicy = p
 		}
 		h3Warnings := http3Warnings{}
+		hasMergedCluster := false
 		for _, bc := range x.BackendClusters {
 			if backendPolicyKeyFromMetadata(bc.Metadata) != key {
 				continue
 			}
-			mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
+			hasMergedCluster = true
+			mergedPolicy, _, err := t.mergeBackendTrafficPolicy(policy, gwPolicy)
 			if err != nil {
 				ref := getAncestorRefForPolicy(gwNN, nil)
 				status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
 					&status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: fmt.Sprintf("error merging policies: %v", err)})
 				continue
 			}
-			tf, err := t.buildTrafficFeatures(mergedPolicy, owners)
-			if err != nil || tf == nil {
+			// A route-scoped field failing on gwPolicy must not block this cluster-scoped result.
+			cf, err := t.buildClusterTrafficFeatures(mergedPolicy)
+			if err != nil || cf == nil {
 				if err != nil {
 					ref := getAncestorRefForPolicy(gwNN, nil)
 					status.SetTranslationErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation,
@@ -621,7 +647,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 				continue
 			}
 			// Reuse the gateway-BTP path's protocol subsetting to keep HTTP-only fields off UDP/TCP clusters.
-			warnings := applyGatewayPolicyToMergedCluster(bc, tf, mergedPolicy.Spec.UseClientProtocol)
+			warnings := applyGatewayPolicyToMergedCluster(bc, cf, mergedPolicy.Spec.UseClientProtocol)
 			h3Warnings.addMergedCluster(bc, warnings)
 
 			matchedGWs.Insert(gwNN)
@@ -633,6 +659,10 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			ref := getAncestorRefForPolicy(gwNN, nil)
 			status.SetWarningForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName,
 				status.PolicyReasonUnsupportedHTTP3Backend, msg, policy.Generation)
+		}
+
+		if !hasMergedCluster && gatewayReferencesBackend(x, key) {
+			notMerged = append(notMerged, gwNN)
 		}
 	}
 
@@ -655,29 +685,148 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
+	return matchedGWs, notMerged
 }
 
-// policyHasBackendTargetSelectors reports a targetSelectors entry naming a kind translation never resolves.
-func policyHasBackendTargetSelectors(policy *egv1a1.BackendTrafficPolicy) bool {
-	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
-			return true
+func (t *Translator) setNotMergedStatusForBackendTargets(
+	policy *egv1a1.BackendTrafficPolicy,
+	gateways []*GatewayContext,
+	notMergedTargets map[types.NamespacedName][]string,
+	applied sets.Set[types.NamespacedName],
+) {
+	for _, gw := range gateways {
+		gwNN := utils.NamespacedName(gw)
+		targets, ok := notMergedTargets[gwNN]
+		if !ok {
+			continue
+		}
+		ref := getAncestorRefForPolicy(gwNN, nil)
+		message := "The following targets were not merged into a cluster on this Gateway, so the policy was not applied to them: " + strings.Join(targets, ", ")
+		if applied.Has(gwNN) {
+			status.SetWarningForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, egv1a1.PolicyReasonNotMerged, message, policy.Generation)
+		} else {
+			status.SetNotMergedForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation, message)
 		}
 	}
-	return false
 }
 
-// rejectBackendTargetSelectors reports a resolve error for every ancestor a selector-based backend
-// target would otherwise silently have no effect on; the match itself is never applied.
-func (t *Translator) rejectBackendTargetSelectors(
-	xdsIR resource.XdsIRMap,
-	gateways []*GatewayContext,
-	resources *resource.Resources,
-	policy *egv1a1.BackendTrafficPolicy,
-) {
+// backendPolicyRejection is why a backend policy is rejected; rejectionNone means valid or not a backend policy.
+type backendPolicyRejection int
+
+const (
+	// rejectionNone: a valid backend policy (backend targetRef/targetRefs only), or not a backend policy at all.
+	rejectionNone backendPolicyRejection = iota
+	// rejectionSelector: a targetSelectors entry names a backend kind, which backend targeting does not support.
+	rejectionSelector
+	// rejectionMixed: a backend target is combined with a non-backend target in the same policy.
+	rejectionMixed
+)
+
+// allPolicyTargetRefs resolves targetRef and targetRefs together; GetTargetRefs drops targetRefs when the singular targetRef is set.
+func allPolicyTargetRefs(policy *egv1a1.BackendTrafficPolicy) []policyTargetReferenceWithSectionName {
+	raw := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, 0, len(policy.Spec.TargetRefs)+1)
+	if policy.Spec.TargetRef != nil {
+		raw = append(raw, *policy.Spec.TargetRef)
+	}
+	raw = append(raw, policy.Spec.TargetRefs...)
+
+	var empty gwapiv1.LocalPolicyTargetReferenceWithSectionName
+	refs := make([]policyTargetReferenceWithSectionName, 0, len(raw))
+	for _, v := range raw {
+		if v == empty {
+			continue
+		}
+		refs = append(refs, policyTargetReferenceWithSectionName{
+			Group:       v.Group,
+			Kind:        v.Kind,
+			Name:        v.Name,
+			Namespace:   gwapiv1.Namespace(policy.Namespace),
+			SectionName: v.SectionName,
+		})
+	}
+	return refs
+}
+
+// classifyBackendPolicy gates backend policies by target group+kind (refs) and kind (selectors) only, so it is safe before route translation.
+func classifyBackendPolicy(policy *egv1a1.BackendTrafficPolicy) backendPolicyRejection {
+	var hasBackendRef, hasBackendSelector, hasOther bool
+	for _, ref := range allPolicyTargetRefs(policy) {
+		if isBackendGroupKind(targetRefGroupKind(ref)) {
+			hasBackendRef = true
+		} else {
+			hasOther = true
+		}
+	}
+	for _, sel := range policy.Spec.TargetSelectors {
+		if _, ok := backendGroupForKind(sel.Kind); ok {
+			hasBackendSelector = true
+		} else {
+			hasOther = true
+		}
+	}
+	switch {
+	case !hasBackendRef && !hasBackendSelector:
+		return rejectionNone
+	case hasBackendSelector:
+		return rejectionSelector
+	case hasOther:
+		return rejectionMixed
+	default:
+		return rejectionNone
+	}
+}
+
+// backendTargets returns every Service, ServiceImport and Backend the policy targets, by reference
+// or by selector.
+func (t *Translator) backendTargets(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []policyTargetReferenceWithSectionName {
+	var targets []policyTargetReferenceWithSectionName
+	for _, ref := range allPolicyTargetRefs(policy) {
+		if isBackendGroupKind(targetRefGroupKind(ref)) {
+			targets = append(targets, ref)
+		}
+	}
+	for _, match := range t.backendSelectorMatches(resources, policy) {
+		targets = append(targets, match.policyTargetReferenceWithSectionName)
+	}
+	return targets
+}
+
+// reportRejectedBackendPolicy marks the policy Invalid on each gateway using a backend target; nothing is applied.
+func (t *Translator) reportRejectedBackendPolicy(xdsIR resource.XdsIRMap, gateways []*GatewayContext, resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy, reason backendPolicyRejection) {
+	message := backendRejectionMessage(reason)
+	for _, target := range t.backendTargets(resources, policy) {
+		key := backendPolicyKeyFromTarget(target)
+		for _, gw := range gateways {
+			if x, ok := xdsIR[t.getIRKey(gw.Gateway)]; !ok || !gatewayReferencesBackend(x, key) {
+				continue
+			}
+			ref := getAncestorRefForPolicy(utils.NamespacedName(gw), nil)
+			resolveErr := &status.PolicyResolveError{Reason: egv1a1.PolicyReasonInvalid, Message: message}
+			if !t.isMergeBackendsEnabledForGateway(gw) {
+				resolveErr = &status.PolicyResolveError{Reason: egv1a1.PolicyReasonDisabled, Message: backendTargetingDisabledMessage}
+			}
+			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation, resolveErr)
+		}
+	}
+}
+
+func backendRejectionMessage(reason backendPolicyRejection) string {
+	switch reason {
+	case rejectionSelector:
+		return "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead"
+	case rejectionMixed:
+		return "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy"
+	}
+	return ""
+}
+
+// backendSelectorMatches returns the Services, ServiceImports and Backends matched by the policy's
+// backend-kind targetSelectors.
+func (t *Translator) backendSelectorMatches(resources *resource.Resources, policy *egv1a1.BackendTrafficPolicy) []targetRefWithTimestamp {
 	var backendSelectors []egv1a1.TargetSelector
 	for _, sel := range policy.Spec.TargetSelectors {
-		if isBackendTargetKind(policyTargetReferenceWithSectionName{Kind: sel.Kind}) {
+		if group, ok := backendGroupForKind(sel.Kind); ok {
+			sel.Group = new(gwapiv1.Group(group))
 			backendSelectors = append(backendSelectors, sel)
 		}
 	}
@@ -696,29 +845,7 @@ func (t *Translator) rejectBackendTargetSelectors(
 	matched = append(matched, svcMatches...)
 	matched = append(matched, siMatches...)
 	matched = append(matched, beMatches...)
-
-	resolveErr := &status.PolicyResolveError{
-		Reason:  egv1a1.PolicyReasonInvalid,
-		Message: "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead",
-	}
-
-	seen := sets.New[types.NamespacedName]()
-	for _, target := range matched {
-		key := backendPolicyKeyFromTarget(target.policyTargetReferenceWithSectionName)
-		for _, gw := range gateways {
-			x, ok := xdsIR[t.getIRKey(gw.Gateway)]
-			if !ok || !gatewayReferencesBackend(x, key) {
-				continue
-			}
-			gwNN := utils.NamespacedName(gw)
-			if seen.Has(gwNN) {
-				continue
-			}
-			seen.Insert(gwNN)
-			ref := getAncestorRefForPolicy(gwNN, nil)
-			status.SetResolveErrorForPolicyAncestor(&policy.Status, &ref, t.GatewayControllerName, policy.Generation, resolveErr)
-		}
-	}
+	return matched
 }
 
 func (t *Translator) buildGatewayPolicyMap(
@@ -929,6 +1056,23 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		return
 	}
 
+	// Protocol-specific validation: some BTP fields are HTTP-only and have no
+	// effect when targeting TCP/TLS/UDP routes or a GRPCRoute. Emit a warning so
+	// the user is informed, but continue translation — other fields (e.g. routingType)
+	// are still valid and must be applied.
+	if err := validateBackendTrafficPolicyForRoute(policy, string(targetedRoute.GetRouteType())); err != nil {
+		for _, ancestorRef := range ancestorRefs {
+			status.SetWarningForPolicyAncestor(&policy.Status,
+				ancestorRef,
+				t.GatewayControllerName,
+				status.PolicyReasonUnsupportedField,
+				err.Error(),
+				policy.Generation,
+			)
+		}
+		// do NOT return — translation continues so other fields remain effective
+	}
+
 	if policy.Spec.MergeType == nil {
 		h3WarningsByListener, buildErr := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil)
 		// Set each listener's warnings on the ancestor of the parentRef. A parentRef naming a whole Gateway or ListenerSet
@@ -958,21 +1102,21 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		h3WarningsByListener := map[string]http3Warnings{}
 		listenerErrs := map[string]error{}
 		for _, parent := range parentRefCtxs {
+			// The listeners can merge with different parent policies, and fail on some of them
+			// only, so collect their results and report them once for the parentRef.
+			errMsgs, mergedWith := sets.New[string](), sets.New[string]()
 			for _, listener := range parent.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 				var (
-					ancestorRef  gwapiv1.ParentReference
 					parentPolicy *egv1a1.BackendTrafficPolicy
 					parentScope  policyScope
 				)
 
-				ancestorRef = listener.PolicyAncestorRef()
 				if listener.isFromListenerSet() {
 					lsNN := types.NamespacedName{
 						Name:      listener.listenerSet.Name,
 						Namespace: listener.listenerSet.Namespace,
 					}
-
 					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
@@ -1005,17 +1149,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 						h3WarningsByListener[name], listenerErrs[name] = h3Warnings, err
 					}
 
-					// If a policy failed to build, mark it Invalid on this route's ancestor;
+					// If a policy failed to build, report it on this parentRef's ancestor;
 					// the error is cached so every parent reaching the listener reports it.
 					if ownBuildErr := listenerErrs[name]; ownBuildErr != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(ownBuildErr),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(ownBuildErr))
 					}
 
 					// Report the listener's HTTP/3 warnings (disabled, or a setting ignored) on the parentRef's
@@ -1034,14 +1171,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
 					)
 					if err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(err))
 						continue
 					}
 					h3WarningsByListener[irListenerName(listener)] = h3Warnings
@@ -1052,17 +1182,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
+
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parent.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
@@ -1750,45 +1873,23 @@ func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.Bac
 	return mergedPolicy, buildBackendTrafficPolicyOwners(routePolicy, gwPolicy), nil
 }
 
-// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy. owners is
-// the per-field owners for a merged policy, or nil to resolve references against the
-// policy's own namespace.
-func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.TrafficFeatures, error) {
+// buildClusterTrafficFeatures builds the cluster-scoped subset so a route-scoped field error can't block it.
+func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.ClusterTrafficFeatures, error) {
 	var (
-		rl          *ir.RateLimit
-		bl          *ir.BandwidthLimit
-		lb          *ir.LoadBalancer
-		pp          *ir.ProxyProtocol
-		hc          *ir.HealthCheck
-		cb          *ir.CircuitBreaker
-		fi          *ir.FaultInjection
-		ac          *ir.AdmissionControl
-		to          *ir.Timeout
-		ka          *ir.TCPKeepalive
-		rt          *ir.Retry
-		bc          *ir.BackendConnection
-		ds          *ir.DNS
-		h2          *ir.HTTP2Settings
-		ro          *ir.ResponseOverride
-		rb          *ir.RequestBuffer
-		rbbl        *uint64
-		cp          []*ir.Compression
-		httpUpgrade []ir.HTTPUpgradeConfig
-		err, errs   error
+		lb        *ir.LoadBalancer
+		pp        *ir.ProxyProtocol
+		hc        *ir.HealthCheck
+		ac        *ir.AdmissionControl
+		cb        *ir.CircuitBreaker
+		to        *ir.Timeout
+		ka        *ir.TCPKeepalive
+		bc        *ir.BackendConnection
+		ds        *ir.DNS
+		h1        *ir.HTTP1Settings
+		h2        *ir.HTTP2Settings
+		err, errs error
 	)
 
-	if policy.Spec.RateLimit != nil {
-		if rl, err = t.buildRateLimit(policy); err != nil {
-			err = perr.WithMessage(err, "RateLimit")
-			errs = errors.Join(errs, err)
-		}
-	}
-	if policy.Spec.BandwidthLimit != nil {
-		if bl, err = buildBandwidthLimit(policy.Spec.BandwidthLimit); err != nil {
-			err = perr.WithMessage(err, "BandwidthLimit")
-			errs = errors.Join(errs, err)
-		}
-	}
 	if lb, err = buildLoadBalancer(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
@@ -1799,19 +1900,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		err = perr.WithMessage(err, "CircuitBreaker")
 		errs = errors.Join(errs, err)
 	}
-	if policy.Spec.FaultInjection != nil {
-		fi = t.buildFaultInjection(policy)
-	}
 	if policy.Spec.AdmissionControl != nil {
 		ac = t.buildAdmissionControl(policy)
 	}
 	if ka, err = buildTCPKeepAlive(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
-		errs = errors.Join(errs, err)
-	}
-
-	if rt, err = buildRetry(policy.Spec.Retry); err != nil {
-		err = perr.WithMessage(err, "Retry")
 		errs = errors.Join(errs, err)
 	}
 
@@ -1827,6 +1920,66 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 
 	if h2, err = buildIRHTTP2Settings(policy.Spec.HTTP2); err != nil {
 		err = perr.WithMessage(err, "HTTP2")
+		errs = errors.Join(errs, err)
+	}
+
+	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
+
+	h1 = translateBackendHTTP1Settings(policy.Spec.HTTP1)
+
+	return &ir.ClusterTrafficFeatures{
+		LoadBalancer:      lb,
+		ProxyProtocol:     pp,
+		HealthCheck:       hc,
+		AdmissionControl:  ac,
+		CircuitBreaker:    cb,
+		Timeout:           to,
+		TCPKeepalive:      ka,
+		BackendConnection: bc,
+		HTTP1:             h1,
+		HTTP2:             h2,
+		HTTP3:             buildIRBackendHTTP3Settings(policy.Spec.HTTP3),
+		DNS:               ds,
+	}, errs
+}
+
+// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy. owners is
+// the per-field owners for a merged policy, or nil to resolve references against the
+// policy's own namespace.
+func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.TrafficFeatures, error) {
+	cf, errs := t.buildClusterTrafficFeatures(policy)
+
+	var (
+		rl          *ir.RateLimit
+		bl          *ir.BandwidthLimit
+		fi          *ir.FaultInjection
+		rt          *ir.Retry
+		ro          *ir.ResponseOverride
+		rb          *ir.RequestBuffer
+		rbbl        *uint64
+		cp          []*ir.Compression
+		httpUpgrade []ir.HTTPUpgradeConfig
+		err         error
+	)
+
+	if policy.Spec.RateLimit != nil {
+		if rl, err = t.buildRateLimit(policy); err != nil {
+			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
+		}
+	}
+	if policy.Spec.BandwidthLimit != nil {
+		if bl, err = buildBandwidthLimit(policy.Spec.BandwidthLimit); err != nil {
+			err = perr.WithMessage(err, "BandwidthLimit")
+			errs = errors.Join(errs, err)
+		}
+	}
+	if policy.Spec.FaultInjection != nil {
+		fi = t.buildFaultInjection(policy)
+	}
+
+	if rt, err = buildRetry(policy.Spec.Retry); err != nil {
+		err = perr.WithMessage(err, "Retry")
 		errs = errors.Join(errs, err)
 	}
 
@@ -1853,22 +2006,8 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	ds = translateDNS(&policy.Spec.BackendSettings, utils.NamespacedName(policy).String())
-
 	return &ir.TrafficFeatures{
-		ClusterTrafficFeatures: ir.ClusterTrafficFeatures{
-			LoadBalancer:      lb,
-			ProxyProtocol:     pp,
-			HealthCheck:       hc,
-			AdmissionControl:  ac,
-			CircuitBreaker:    cb,
-			Timeout:           to,
-			TCPKeepalive:      ka,
-			BackendConnection: bc,
-			HTTP2:             h2,
-			HTTP3:             buildIRBackendHTTP3Settings(policy.Spec.HTTP3),
-			DNS:               ds,
-		},
+		ClusterTrafficFeatures: *cf,
 		RateLimit:              rl,
 		BandwidthLimit:         bl,
 		FaultInjection:         fi,
@@ -2062,10 +2201,13 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 	// BackendTrafficPolicy that would conflict is already excluded from merging via
 	// hasClusterSettingsBelowGateway, so it never reaches x.BackendClusters here. What each cluster
 	// takes from it still depends on the protocol it serves.
-	if applyToBackendClusters && buildErr == nil {
-		for _, bc := range x.BackendClusters {
-			warnings := applyGatewayPolicyToMergedCluster(bc, tf, policy.Spec.UseClientProtocol)
-			h3Warnings.addMergedCluster(bc, warnings)
+	// Gate on the cluster-scoped subset's own error, not buildErr - a route-scoped field failure shouldn't block it.
+	if applyToBackendClusters {
+		if _, clusterErrs := t.buildClusterTrafficFeatures(policy); clusterErrs == nil {
+			for _, bc := range x.BackendClusters {
+				warnings := applyGatewayPolicyToMergedCluster(bc, &tf.ClusterTrafficFeatures, policy.Spec.UseClientProtocol)
+				h3Warnings.addMergedCluster(bc, warnings)
+			}
 		}
 	}
 
@@ -2188,8 +2330,8 @@ func applyRouteHTTP3(r *ir.HTTPRoute, warnings http3Warnings) {
 // Deduplicating clusters must not change that, so the subsets below mirror exactly what the TCP
 // and UDP loops in translateBackendTrafficPolicyForListeners set on their routes; keep them in
 // sync with those loops.
-func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeatures, useClientProtocol *bool) (http3Warnings []string) {
-	if bc == nil || tf == nil {
+func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, cf *ir.ClusterTrafficFeatures, useClientProtocol *bool) (http3Warnings []string) {
+	if bc == nil || cf == nil {
 		return nil
 	}
 
@@ -2200,26 +2342,26 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeat
 	switch bc.Protocol() {
 	case ir.UDP:
 		bc.Traffic = &ir.ClusterTrafficFeatures{
-			LoadBalancer: tf.LoadBalancer.DeepCopy(),
-			DNS:          tf.DNS.DeepCopy(),
+			LoadBalancer: cf.LoadBalancer.DeepCopy(),
+			DNS:          cf.DNS.DeepCopy(),
 		}
 	case ir.TCP:
 		bc.Traffic = &ir.ClusterTrafficFeatures{
-			LoadBalancer:   tf.LoadBalancer.DeepCopy(),
-			ProxyProtocol:  tf.ProxyProtocol.DeepCopy(),
-			HealthCheck:    tf.HealthCheck.DeepCopy(),
-			CircuitBreaker: tf.CircuitBreaker.DeepCopy(),
-			TCPKeepalive:   tf.TCPKeepalive.DeepCopy(),
+			LoadBalancer:   cf.LoadBalancer.DeepCopy(),
+			ProxyProtocol:  cf.ProxyProtocol.DeepCopy(),
+			HealthCheck:    cf.HealthCheck.DeepCopy(),
+			CircuitBreaker: cf.CircuitBreaker.DeepCopy(),
+			TCPKeepalive:   cf.TCPKeepalive.DeepCopy(),
 			// Drop the route-scoped timeout members, exactly as TCPRouteTranslator does when it
 			// builds the same cluster from an ir.TCPRoute.
-			Timeout: tf.Timeout.ClusterOnly().AsTimeout(),
-			DNS:     tf.DNS.DeepCopy(),
+			Timeout: cf.Timeout.ClusterOnly().AsTimeout(),
+			DNS:     cf.DNS.DeepCopy(),
 		}
 	default:
-		bc.Traffic = tf.ClusterTrafficFeatures.DeepCopy()
+		bc.Traffic = cf.DeepCopy()
 		// Drop the route-scoped timeout members: they are never read from a cluster, and a
 		// merged cluster must not advertise settings it cannot honor.
-		bc.Traffic.Timeout = tf.Timeout.ClusterOnly().AsTimeout()
+		bc.Traffic.Timeout = cf.Timeout.ClusterOnly().AsTimeout()
 		bc.UseClientProtocol = useClientProtocol
 		// Drop HTTP/3 from the cluster if any of its backends cannot use it, and report why so the
 		// caller can add a Warning condition to the Gateway.
@@ -2233,6 +2375,17 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, tf *ir.TrafficFeat
 		}
 	}
 	return nil
+}
+
+// translateBackendHTTP1Settings converts BTP BackendHTTP1Settings to the IR representation.
+func translateBackendHTTP1Settings(s *egv1a1.BackendHTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	return &ir.HTTP1Settings{
+		EnableTrailers:     ptr.Deref(s.EnableTrailers, false),
+		PreserveHeaderCase: ptr.Deref(s.PreserveHeaderCase, false),
+	}
 }
 
 // appendTrafficPolicyMetadata records the policy on the route once. A policy with mergeType is
@@ -3142,4 +3295,23 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	}
 
 	return &statName
+}
+
+// validateBackendTrafficPolicyForRoute returns an error when the policy carries
+// http1 settings that are silently ignored for the given route kind:
+//
+//   - GRPCRoute: http1 is meaningless (gRPC always uses HTTP/2).
+//   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 has no effect.
+func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeKind string) error {
+	switch routeKind {
+	case resource.KindGRPCRoute:
+		if p.Spec.HTTP1 != nil {
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
+		}
+	case resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
+		if p.Spec.HTTP1 != nil {
+			return fmt.Errorf("HTTP/1 settings have no effect when targeting a %s", routeKind)
+		}
+	}
+	return nil
 }

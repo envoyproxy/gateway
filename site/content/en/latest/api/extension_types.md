@@ -134,6 +134,7 @@ _Appears in:_
 | `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
 | `unhealthyThreshold` | _integer_ |  false  | 3 | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.<br />Without RetriableStatuses configured, any health check failure results in the host being immediately<br />considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried<br />up to this threshold before the host is marked unhealthy. |
 | `healthyThreshold` | _integer_ |  false  | 1 | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
+| `disableConnectionReuse` | _boolean_ |  false  |  | DisableConnectionReuse determines whether the active health check connection to a<br />backend host is closed after each health check probe. When set to true, Envoy opens a<br />new connection for each health check, which is useful for backends (such as<br />haproxy-style agent checks) that do not expect a reused connection.<br />Defaults to false, which reuses the connection across probes. |
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  |  | Type defines the type of health checker. |
 | `http` | _[HTTPActiveHealthChecker](#httpactivehealthchecker)_ |  false  |  | HTTP defines the configuration of http health checker.<br />It's required while the health checker type is HTTP. |
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  |  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
@@ -413,6 +414,25 @@ _Appears in:_
 | `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
+#### BackendHTTP1Settings
+
+
+
+BackendHTTP1Settings provides HTTP/1 configuration for backend connections.
+Setting this field to an empty value (http1: {}), or configuring any of its members,
+forces explicit HTTP/1 for backend connections.
+
+_Appears in:_
+- [BackendSettings](#backendsettings)
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
+| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
+
+
 #### BackendHTTP3Mode
 
 _Underlying type:_ _string_
@@ -520,6 +540,7 @@ _Appears in:_
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
 | `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic.<br />Behavior when targeting route kinds that do not use HTTP/1:<br />  - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds<br />    directly adds a Warning condition on the policy; the field is ignored.<br />  - Gateway / ListenerSet / sectionName targets: this field is silently<br />    ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations<br />    beneath that target; no warning is emitted.<br />  - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry<br />    access log/metrics, tracing providers): rejected at admission on their<br />    own BackendSettings via separate validation rules. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 
 
@@ -536,7 +557,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[BackendType](#backendtype)_ |  false  | Endpoints | Type defines the type of the backend. Defaults to "Endpoints" |
 | `endpoints` | _[BackendEndpoint](#backendendpoint) array_ |  true  |  | Endpoints defines the endpoints to be used when connecting to the backend. |
-| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | AppProtocols defines the application protocols to be supported when connecting to the backend. |
+| `kubernetesService` | _[KubernetesServiceReference](#kubernetesservicereference)_ |  false  |  | KubernetesService defines the Kubernetes Service to be used when connecting to the backend.<br />It must be set when Type is KubernetesService, and must not be set otherwise.<br />The endpoints of the Service are discovered from its EndpointSlices, exactly as they<br />are for a Service backendRef, so the resulting cluster keeps pod-level load balancing,<br />health checking, session persistence, endpoint draining and zone awareness. |
+| `appProtocols` | _[AppProtocolType](#appprotocoltype) array_ |  false  |  | AppProtocols defines the application protocols to be supported when connecting to the backend.<br />For a KubernetesService backend, this takes precedence over the appProtocol of the Service port. |
 | `fallback` | _boolean_ |  false  |  | Fallback indicates whether the backend is designated as a fallback.<br />It is highly recommended to configure active or passive health checks to ensure that failover can be detected<br />when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.<br />The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when<br />the health of the active backends falls below 72%. |
 | `tls` | _[BackendTLSSettings](#backendtlssettings)_ |  false  |  | TLS defines the TLS settings for the backend.<br />If TLS is specified here and a BackendTLSPolicy is also configured for the backend, the final TLS settings will<br />be a merge of both configurations. In case of overlapping fields, the values defined in the BackendTLSPolicy will<br />take precedence. |
 
@@ -656,6 +678,7 @@ _Appears in:_
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
 | `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic.<br />Behavior when targeting route kinds that do not use HTTP/1:<br />  - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds<br />    directly adds a Warning condition on the policy; the field is ignored.<br />  - Gateway / ListenerSet / sectionName targets: this field is silently<br />    ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations<br />    beneath that target; no warning is emitted.<br />  - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry<br />    access log/metrics, tracing providers): rejected at admission on their<br />    own BackendSettings via separate validation rules. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).<br />This field can only be set when targeting xRoute or backend (Service/ServiceImport/Backend)<br />resources, and is required when targeting a backend.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
@@ -685,6 +708,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Endpoints` | BackendTypeEndpoints defines the type of the backend as Endpoints.<br /> | 
 | `DynamicResolver` | BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.<br />When a backend is of type DynamicResolver, the Envoy will resolve the upstream<br />ip address and port from the host header of the incoming request. If the ip address<br />is directly set in the host header, the Envoy will use the ip address and port as the<br />upstream address. If the hostname is set in the host header, the Envoy will resolve the<br />ip address and port from the hostname using the DNS resolver.<br /> | 
+| `KubernetesService` | BackendTypeKubernetesService defines the type of the backend as a Kubernetes Service.<br />When a backend is of type KubernetesService, Envoy Gateway watches the EndpointSlices<br />of the referenced Service and programs them as EDS endpoints, the same as it does for a<br />Service backendRef. This lets the Backend-only settings, such as TLS and appProtocols,<br />be layered on top of Service endpoint semantics instead of a DNS cluster.<br /> | 
 
 
 #### BackendUtilization
@@ -1212,6 +1236,7 @@ _Appears in:_
 | `dns` | _[DNS](#dns)_ |  false  |  | DNS includes dns resolution settings. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
 | `http3` | _[BackendHTTP3Settings](#backendhttp3settings)_ |  false  |  | HTTP3 enables HTTP/3 for backend connections.<br />HTTP/3 always runs over TLS, so the backend must be configured<br />with TLS through a BackendTLSPolicy or the Backend's spec.tls.<br />HTTP/3 is only supported for the backends of a route, through<br />BackendTrafficPolicy. It is rejected for the backends of other<br />resources, such as the external services of a SecurityPolicy<br />or EnvoyExtensionPolicy and the sinks of an EnvoyProxy. |
+| `http1` | _[BackendHTTP1Settings](#backendhttp1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration for backend connections.<br />When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,<br />this field takes precedence for backend (upstream) traffic.<br />Behavior when targeting route kinds that do not use HTTP/1:<br />  - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds<br />    directly adds a Warning condition on the policy; the field is ignored.<br />  - Gateway / ListenerSet / sectionName targets: this field is silently<br />    ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations<br />    beneath that target; no warning is emitted.<br />  - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry<br />    access log/metrics, tracing providers): rejected at admission on their<br />    own BackendSettings via separate validation rules. |
 
 
 #### ClusterTranslationConfig
@@ -1292,6 +1317,7 @@ _Appears in:_
 | `value` | _integer_ |  false  |  | Value of the maximum concurrent connections limit.<br />When the limit is reached, incoming connections will be closed after the CloseDelay duration. |
 | `closeDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | CloseDelay defines the delay to use before closing connections that are rejected<br />once the limit value is reached.<br />Default: none. |
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxConnectionDuration is the maximum amount of time a connection can remain established<br />(usually via TCP/HTTP Keepalive packets) before being drained and/or closed.<br />If not specified, there is no limit. |
+| `maxConnectionDurationJitter` | _integer_ |  false  |  | MaxConnectionDurationJitter adds a random extra amount of time to each connection's<br />MaxConnectionDuration, up to this percentage of that duration. This keeps connections<br />opened together from expiring at the same moment. Requires MaxConnectionDuration.<br />If not specified, no jitter is added. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.<br />If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive. |
 | `maxStreamDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached<br />the stream will be reset independent of any other timeouts. If not specified, no value is set. |
 
@@ -2489,7 +2515,7 @@ _Appears in:_
 | `routingType` | _[RoutingType](#routingtype)_ |  false  |  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing. The default is "Endpoint". |
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.<br />Mutually exclusive with MergeBackends. |
-| `mergeBackends` | _[MergeBackendsConfig](#mergebackendsconfig)_ |  false  |  | MergeBackends configures cluster deduplication: routes that reference the same backend<br />share a single Envoy cluster instead of Envoy Gateway generating one cluster per route<br />rule. This reduces xDS size, active health-check traffic, and stats cardinality, and<br />improves upstream connection pooling.<br />Disabled when unset; specifying this field at all (even without further configuration)<br />enables it. Mutually exclusive with MergeGateways. |
+| `mergeBackends` | _[MergeBackendsConfig](#mergebackendsconfig)_ |  false  |  | MergeBackends configures cluster deduplication: routes that reference the same backend<br />share a single Envoy cluster instead of Envoy Gateway generating one cluster per route<br />rule. This reduces xDS size, active health-check traffic, and stats cardinality, and<br />improves upstream connection pooling.<br />Only a route's own backendRefs (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute) are<br />considered. A backend used any other way, such as a RequestMirror filter or an external<br />service of a SecurityPolicy or EnvoyExtensionPolicy, is never merged. A BackendTrafficPolicy<br />that targets a backend only reports status for Gateways where the backend is used as a route<br />backendRef.<br />Disabled when unset; specifying this field at all (even without further configuration)<br />enables it. Mutually exclusive with MergeGateways. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.alternate_protocols_cache<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
@@ -3195,9 +3221,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy. |
-| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
-| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
+| `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.<br />Note: this field currently configures both the client connection and the backend HTTP/1<br />protocol settings. In a future release it will be restricted to the client connection only.<br />Use BackendTrafficPolicy.http1.enableTrailers for backend settings.<br />Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly<br />to opt in to the new behavior now. |
+| `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers.<br />Note: this field currently configures both the client connection and the backend HTTP/1<br />protocol settings. In a future release it will be restricted to the client connection only.<br />Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.<br />Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly<br />to opt in to the new behavior now. |
+| `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.<br />Note: this field currently forces explicit HTTP/1 for backend connections when other<br />backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.<br />In a future release it will no longer force explicit HTTP/1 on backend connections.<br />Use BackendTrafficPolicy.http1: \{\} to force HTTP/1 on a backend cluster explicitly. |
 | `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
 | `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |
 
@@ -3487,6 +3513,20 @@ _Appears in:_
 | `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> | 
 
 
+#### HTTPRequestMirrorFilter
+
+
+
+HTTPRequestMirrorFilter defines configuration for request mirroring modifiers.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `hostname` | _[RequestMirrorHostnameModifier](#requestmirrorhostnamemodifier)_ |  false  |  | Hostname defines the configuration to rewrite the Host header for mirrored requests. |
+
+
 #### HTTPRouteFilter
 
 
@@ -3518,7 +3558,9 @@ _Appears in:_
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |  |
 | `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  | DirectResponse returns a fixed response for matching requests.<br />When this filter is referenced from a GRPCRoute, only a non-2xx status code<br />is supported. gRPC signals success with a grpc-status trailer and a response<br />message, which a direct response cannot produce, so a 2xx status code (which<br />maps to the gRPC OK status) yields an invalid response for gRPC clients. Use a<br />non-2xx status code to deny or block gRPC requests (e.g. 403 maps to<br />PERMISSION_DENIED, 404 to UNIMPLEMENTED, 429/503 to UNAVAILABLE). |
 | `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
+| `requestMirror` | _[HTTPRequestMirrorFilter](#httprequestmirrorfilter)_ |  false  |  | RequestMirror defines configuration for request mirroring modifiers.<br />This configuration works together with the Gateway API RequestMirror filter<br />on the attached HTTPRoute rule. |
 | `matches` | _[HTTPRouteMatchFilter](#httproutematchfilter) array_ |  false  |  | Matches defines additional matching criteria for the HTTPRoute rule.<br />As with HTTPRouteRule.Matches, the rule is matched if any one match applies.<br />When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the<br />effective matching is the logical AND of the two sets. |
+| `backendPriority` | _integer_ |  false  |  | BackendPriority sets the Envoy locality priority of the endpoints belonging to the<br />backendRef this filter is attached to, enabling priority-based failover between the<br />backendRefs of a single route rule. 0 is the highest priority.<br />Envoy sends traffic to the lowest priority value that has enough healthy endpoints,<br />and only spills over to the next value as that health degrades. It is highly<br />recommended to configure active or passive health checks so that failover can be<br />detected when the higher priority backends become unhealthy.<br />This overrides the priority derived from the referenced Backend's fallback field.<br />For additional details, see<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/priority<br />This filter is only valid when referenced from a backendRef's filters. Referencing it<br />from a route rule's filters is rejected: a rule-level filter applies uniformly to every<br />backendRef of the rule, and a uniform priority carries no failover meaning. |
 
 
 #### HTTPRouteMatchFilter
@@ -3813,6 +3855,7 @@ _Appears in:_
 | `IPv4` | IPv4 defines the IPv4 family.<br /> | 
 | `IPv6` | IPv6 defines the IPv6 family.<br /> | 
 | `DualStack` | DualStack defines the dual-stack family.<br />When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses<br />for incoming client traffic, enabling support for both IP protocol versions.<br /> | 
+| `PreferDualStack` | PreferDualStack defines the dual-stack family, degrading to the single family<br />the cluster provides instead of failing when the cluster is not dual-stack.<br /> | 
 
 
 #### ImagePullPolicy
@@ -4282,6 +4325,22 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  false  |  | Name of the Service Account.<br />When unset, this defaults to an autogenerated name. |
+
+
+#### KubernetesServiceReference
+
+
+
+KubernetesServiceReference references a Kubernetes Service in the same namespace
+as the Backend.
+
+_Appears in:_
+- [BackendSpec](#backendspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _[ObjectName](#objectname)_ |  true  |  | Name is the name of the Kubernetes Service. |
+| `port` | _integer_ |  true  |  | Port is the port of the Kubernetes Service. |
 
 
 #### KubernetesServiceSpec
@@ -5163,10 +5222,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected.<br />For TCPRoute targets (raw TCP connections), HTTP headers such as<br />X-Forwarded-For are not available. The client IP is obtained from the<br />TCP connection's peer address. If intermediaries (load balancers, NAT)<br />terminate or proxy TCP, the original client IP will only be available<br />if the intermediary preserves the source address (for example by<br />enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is<br />configured to preserve the source IP to enable correct client-IP<br />matching for TCPRoute targets. |
+| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected.<br />For TCPRoute and UDPRoute targets (raw L4 traffic), HTTP headers such as<br />X-Forwarded-For are not available. The client IP is obtained from the<br />TCP connection's peer address, or from the source address of the UDP<br />datagram. If intermediaries (load balancers, NAT) terminate or proxy the<br />traffic, the original client IP will only be available if the<br />intermediary preserves the source address (for example by enabling the<br />PROXY protocol or avoiding SNAT). Note that the PROXY protocol is not<br />available on the UDP path, so a UDPRoute target relies entirely on the<br />datagram source address being preserved. Ensure your L4 proxy is<br />configured to preserve the source IP to enable correct client-IP<br />matching for TCPRoute and UDPRoute targets. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 | `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
-| `clientIPGeoLocations` | _[ClientIPGeoLocation](#clientipgeolocation) array_ |  false  |  | ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.<br />This field is supported for HTTPRoute and GRPCRoute authorization.<br />It is not supported for TCPRoute targets.<br />If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header, or the<br />direct downstream connection source address (the TCP peer of the connection terminated by Envoy).<br />You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection. |
+| `clientIPGeoLocations` | _[ClientIPGeoLocation](#clientipgeolocation) array_ |  false  |  | ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.<br />This field is supported for HTTPRoute and GRPCRoute authorization.<br />It is not supported for TCPRoute or UDPRoute targets.<br />If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header, or the<br />direct downstream connection source address (the TCP peer of the connection terminated by Envoy).<br />You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection. |
 
 
 #### ProcessingModeOptions
@@ -5481,6 +5540,7 @@ _Appears in:_
 | `enableVirtualHostStats` | _boolean_ |  false  |  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 | `enablePerEndpointStats` | _boolean_ |  false  |  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 | `enableRequestResponseSizesStats` | _boolean_ |  false  |  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
+| `enableCircuitBreakerRemainingStats` | _boolean_ |  false  |  | EnableCircuitBreakerRemainingStats enables Envoy's circuit breaker `remaining_*` gauges,<br />which expose the number of resources remaining before each circuit breaker opens.<br />Enabling this adds 5 additional gauges per cluster, see:<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats#circuit-breakers-statistics |
 | `enableGRPCStats` | _boolean_ |  false  |  | EnableGRPCStats enables the gRPC stats filter on listeners.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
 | `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />`%ROUTE_NAME%`: name of Gateway API xRoute resource<br />`%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource<br />`%ROUTE_KIND%`: kind of Gateway API xRoute resource<br />`%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section<br />`%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section<br />`%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|...` format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`<br />Example: `httproute/my-ns/my-route/rule/0` |
 
@@ -6177,6 +6237,36 @@ _Appears in:_
 | `tracing` | _[RequestIDExtensionAction](#requestidextensionaction)_ |  false  |  | Tracing configures Envoy's behavior for the UUID request ID extension,<br />including whether the trace sampling decision is packed into the UUID and<br />whether `X-Request-ID` is used for trace sampling decisions.<br />When omitted, the default behavior is `PackAndSample`, which alters the UUID<br />to contain the trace sampling decision and uses `X-Request-ID` for stable<br />trace sampling. |
 
 
+#### RequestMirrorHostnameModifier
+
+
+
+
+
+_Appears in:_
+- [HTTPRequestMirrorFilter](#httprequestmirrorfilter)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[RequestMirrorHostnameModifierType](#requestmirrorhostnamemodifiertype)_ |  true  |  | Type defines the type of hostname rewrite. |
+| `literal` | _[PreciseHostname](#precisehostname)_ |  false  |  | Literal specifies a fixed hostname to rewrite the Host header to.<br />Required when Type is "Literal". Must be empty when Type is "Backend".<br />Note: gwapiv1.PreciseHostname already carries MinLength=1, MaxLength=253,<br />and RFC 1123 pattern validation, which automatically flow into the generated CRD. |
+
+
+#### RequestMirrorHostnameModifierType
+
+_Underlying type:_ _string_
+
+RequestMirrorHostnameModifierType defines the type of hostname rewrite for mirrored requests.
+
+_Appears in:_
+- [RequestMirrorHostnameModifier](#requestmirrorhostnamemodifier)
+
+| Value | Description |
+| ----- | ----------- |
+| `Backend` | RequestMirrorHostnameModifierBackend indicates that the Host header value<br />will be replaced by the FQDN of the mirror backend.<br /> | 
+| `Literal` | RequestMirrorHostnameModifierLiteral indicates that the Host header value<br />will be replaced by a fixed literal string.<br /> | 
+
+
 #### ResourceProviderType
 
 _Underlying type:_ _string_
@@ -6361,6 +6451,7 @@ _Appears in:_
 | `EndpointSliceIndex` | EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.<br />It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.<br />If the additional controller memory usage for the indexes becomes a concern,<br />consider disabling this flag.<br /> | 
 | `PerResourceSystemCASecret` | PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per<br />BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead<br />of sharing a single system_ca_certificates secret across all of them.<br />Disabled by default (i.e. the shared secret is used). Enable this flag to opt out during<br />upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use<br />it, which may cause a brief disruption to new connections on first enable.<br /> | 
 | `EnvoyProxyPatch` | EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on<br />EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve<br />pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and<br />tenant-authored, a patch may grant arbitrary access to resources applied by Envoy<br />Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters<br />where tenants can author their own EnvoyProxy resources.<br /> | 
+| `ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly` | ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly restricts the ClientTrafficPolicy http1 fields<br />(enableTrailers, preserveHeaderCase, http10) to client connections only.<br />When enabled, these fields no longer affect backend HTTP/1 protocol settings.<br />Use BackendTrafficPolicy.http1 to configure backend HTTP/1 protocol settings.<br />Disabled by default to preserve existing behavior. Users are encouraged to migrate<br />to BackendTrafficPolicy.http1 for backend settings and enable this flag to opt in<br />to the new behavior. This flag will be enabled by default in a future release.<br /> | 
 
 
 #### RuntimeFlags
@@ -6437,12 +6528,13 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
-NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, and TCPRoute.
-When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
-(Authorization rules that use Principal.ClientCIDRs) is applied. Other
+NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute
+and UDPRoute.
+When a SecurityPolicy targets a TCPRoute or a UDPRoute, only client-IP CIDR based
+authorization (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 authentication/authorization features such as JWT, API Key, Basic Auth,
 OIDC, External Authorization, or GeoIP based authorization are not applicable
-to TCPRoute targets.
+to TCPRoute or UDPRoute targets.
 
 _Appears in:_
 - [SecurityPolicy](#securitypolicy)
