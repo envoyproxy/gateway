@@ -1,10 +1,10 @@
 # Custom Envoy image with a Wasm module baked into the filesystem for e2e.
 ARG ENVOY_VERSION=dev
 
-FROM alpine:3.20 AS modules
+FROM python:3.12-alpine AS modules
 COPY envoy_filter_http_wasm_example.wasm /module.wasm
 # A same-length header replacement preserves the Wasm binary layout.
-RUN sed 's/FOO/BAR/g' /module.wasm > /different.wasm
+RUN python3 -c 'from pathlib import Path; p = Path("/module.wasm"); Path("/different.wasm").write_bytes(p.read_bytes().replace(b"FOO", b"BAR"))'
 
 FROM docker.io/envoyproxy/envoy:distroless-${ENVOY_VERSION}
 COPY envoy_filter_http_wasm_example.wasm /var/lib/envoy/envoy_filter_http_wasm_example.wasm
