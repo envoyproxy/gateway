@@ -114,7 +114,7 @@ spec:
       kind: HTTPRoute
       name: wasm-local-shared-2
   wasm:
-    - name: example-filter-copy
+    - name: example-filter
       rootID: my_root_id
       vmSharingScope: Namespace
       config:

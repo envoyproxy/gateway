@@ -33,11 +33,11 @@ var WasmVMShareTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/wasm-vm-share.yaml", "testdata/wasm-vm-share-local.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("first route with shared wasm vm", func(t *testing.T) {
-			testWasmCodeSource(t, suite, "same-namespace", "http-with-http-wasm-source-shared-1", "http-wasm-source-test-shared-1", "/wasm-http-shared-1", "FOO")
+			testWasmCodeSource(t, suite, "wasm-remote-shared", "http-with-http-wasm-source-shared-1", "http-wasm-source-test-shared-1", "/wasm-http-shared-1", "FOO")
 		})
 
 		t.Run("second route with shared wasm vm", func(t *testing.T) {
-			testWasmCodeSource(t, suite, "same-namespace", "http-with-http-wasm-source-shared-2", "http-wasm-source-test-shared-2", "/wasm-http-shared-2", "FOO")
+			testWasmCodeSource(t, suite, "wasm-remote-shared", "http-with-http-wasm-source-shared-2", "http-wasm-source-test-shared-2", "/wasm-http-shared-2", "FOO")
 		})
 
 		// Both policies specify the Namespace sharing scope and use identical code,
@@ -46,7 +46,7 @@ var WasmVMShareTest = suite.ConformanceTest{
 		// Without sharing, the count would be twice this value.
 		tlog.Logf(t, "concurrency: %d", runtime.NumCPU())
 		t.Run("wasm vm count is shared across policies", func(t *testing.T) {
-			testWasmVMCount(t, suite, "same-namespace", model.SampleValue(runtime.NumCPU()+2))
+			testWasmVMCount(t, suite, "wasm-remote-shared", model.SampleValue(runtime.NumCPU()+2))
 		})
 
 		t.Run("wasm-local-shared", func(t *testing.T) {
