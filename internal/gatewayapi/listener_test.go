@@ -1676,6 +1676,8 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Translate builds this index before processing any backendRef.
+			tc.context.BackendTLSPolicyIndex = BuildBackendTLSPolicyIndex(tc.resources.BackendTLSPolicies)
 			translator := &Translator{
 				TranslatorContext:     tc.context,
 				BackendEnabled:        true,
@@ -1688,6 +1690,64 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.expected, ds)
 			}
+		})
+	}
+}
+
+func TestProcessProxyReadyListener(t *testing.T) {
+	testCases := []struct {
+		name            string
+		envoyProxy      *egv1a1.EnvoyProxy
+		expectedAddress string
+		expectedFamily  egv1a1.IPFamily
+	}{
+		{
+			name:            "nil envoy proxy",
+			envoyProxy:      nil,
+			expectedAddress: "0.0.0.0",
+			expectedFamily:  egv1a1.IPv4,
+		},
+		{
+			name: "ipv4",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.IPv4)},
+			},
+			expectedAddress: "0.0.0.0",
+			expectedFamily:  egv1a1.IPv4,
+		},
+		{
+			name: "ipv6",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.IPv6)},
+			},
+			expectedAddress: "::",
+			expectedFamily:  egv1a1.IPv6,
+		},
+		{
+			name: "dual stack",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.DualStack)},
+			},
+			expectedAddress: "::",
+			expectedFamily:  egv1a1.DualStack,
+		},
+		{
+			name: "prefer dual stack",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.PreferDualStack)},
+			},
+			expectedAddress: "::",
+			expectedFamily:  egv1a1.DualStack,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &Translator{}
+			xdsIR := &ir.Xds{}
+			tr.processProxyReadyListener(xdsIR, tc.envoyProxy)
+			require.Equal(t, tc.expectedAddress, xdsIR.ReadyListener.Address)
+			require.Equal(t, tc.expectedFamily, xdsIR.ReadyListener.IPFamily)
 		})
 	}
 }

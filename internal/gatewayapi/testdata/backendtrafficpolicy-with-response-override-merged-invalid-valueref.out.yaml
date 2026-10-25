@@ -27,24 +27,11 @@ backendTrafficPolicies:
         kind: Gateway
         name: my-gateway
         namespace: envoy-gateway-system
-        sectionName: http
       conditions:
       - lastTransitionTime: null
         message: 'ResponseOverride: can''t find the referenced configmap envoy-gateway-system/missing-error-page.'
         reason: Invalid
         status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: my-gateway
-        namespace: envoy-gateway-system
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1

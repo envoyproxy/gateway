@@ -708,21 +708,29 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 	// Allocating with worst-case capacity to avoid reallocation.
 	merged := make([]gwapiv1.RouteParentStatus, 0, len(old)+len(new))
 
+	// An entry is identified by its parentRef and controllerName: other controllers (e.g. policy controllers)
+	// may write their own entries for the same parentRef.
+	//
 	// Range over old status parentRefs in order:
-	// 1. The parentRef exists in the new status: append the new one to the final status.
-	// 2. The parentRef doesn't exist in the new status and it's not our controller: append it to the final status.
-	// 3. The parentRef doesn't exist in the new status, and it is our controller: keep it in the final status.
+	// 1. The entry exists in the new status: append the new one to the final status, once.
+	//    Further old duplicates of it are dropped.
+	// 2. The entry doesn't exist in the new status and it's not our controller: append it to the final status.
+	// 3. The entry doesn't exist in the new status, and it is our controller: keep it in the final status.
 	//    This is important for routes with multiple parent references - not all parents are updated in each reconciliation.
+	used := make([]bool, len(new))
 	for _, oldP := range old {
 		found := -1
 		for newI, newP := range new {
-			if gatewayapi.IsParentRefEqual(oldP.ParentRef, newP.ParentRef, ns) {
+			if isRouteParentStatusEqual(ns, &oldP, &newP) {
 				found = newI
 				break
 			}
 		}
 		if found >= 0 {
-			merged = append(merged, new[found])
+			if !used[found] {
+				used[found] = true
+				merged = append(merged, new[found])
+			}
 		} else {
 			// Keep all old parent statuses, regardless of controller.
 			// For routes with multiple parents managed by the same controller,
@@ -735,7 +743,7 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 	for _, newP := range new {
 		found := false
 		for _, mergedP := range merged {
-			if gatewayapi.IsParentRefEqual(newP.ParentRef, mergedP.ParentRef, ns) {
+			if isRouteParentStatusEqual(ns, &newP, &mergedP) {
 				found = true
 				break
 			}
@@ -746,6 +754,10 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 		}
 	}
 	return merged
+}
+
+func isRouteParentStatusEqual(ns string, a, b *gwapiv1.RouteParentStatus) bool {
+	return a.ControllerName == b.ControllerName && gatewayapi.IsParentRefEqual(a.ParentRef, b.ParentRef, ns)
 }
 
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {

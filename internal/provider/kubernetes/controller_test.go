@@ -2290,7 +2290,7 @@ func TestProcessListenerSets(t *testing.T) {
 				WithScheme(scheme).
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
-				WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
+				WithIndex(&gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc).
 				Build()
 
 			r := &gatewayAPIReconciler{
@@ -2327,7 +2327,7 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 	r.client = fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		WithObjects(objs...).
-		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
+		WithIndex(&gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc).
 		Build()
 	return r
 }
