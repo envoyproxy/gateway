@@ -735,7 +735,7 @@ func disabledHTTP3ForProxyProtocolWarningMessage(listenerNames []string) string 
 	}
 
 	return fmt.Sprintf(
-		"HTTP/3 was disabled for %s because the proxy protocol listener filter is not supported on QUIC listeners",
+		"HTTP/3 was disabled for %s because the proxy protocol listener filter is not supported on QUIC listeners. Note HTTP/3 may still be active on port 443 via another listener.",
 		target,
 	)
 }
