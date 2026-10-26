@@ -349,6 +349,17 @@ func Test_io_path_allowlist(t *testing.T) {
 			code:                 `function envoy_on_response(h) for l in io.lines("/etc/passwd") do end end`,
 			expectedErrSubstring: "io.lines restricted for param",
 		},
+		// Numbers are coerced to strings by the wrapped functions, so they must be validated too.
+		{
+			name:                 "io.open denied numeric path",
+			code:                 `function envoy_on_response(h) io.open(1337, "r") end`,
+			expectedErrSubstring: "io.open restricted for param 1337",
+		},
+		{
+			name:                 "io.lines denied numeric path",
+			code:                 `function envoy_on_response(h) for l in io.lines(1337) do end end`,
+			expectedErrSubstring: "io.lines restricted for param 1337",
+		},
 	}
 	runAllowlistCases(t, proxy, tests)
 }
@@ -555,6 +566,16 @@ func Test_os_path_allowlist(t *testing.T) {
 			name:                 "os.rename denied destination",
 			code:                 `function envoy_on_response(h) os.rename("/tmp/a", "/certs/b") end`,
 			expectedErrSubstring: "os.rename restricted for param",
+		},
+		{
+			name:                 "os.remove denied numeric path",
+			code:                 `function envoy_on_response(h) os.remove(1337) end`,
+			expectedErrSubstring: "os.remove restricted for param 1337",
+		},
+		{
+			name:                 "os.rename denied numeric destination",
+			code:                 `function envoy_on_response(h) os.rename("/tmp/a", 1337) end`,
+			expectedErrSubstring: "os.rename restricted for param 1337",
 		},
 	}
 	runAllowlistCases(t, proxy, tests)
