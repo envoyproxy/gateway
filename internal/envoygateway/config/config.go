@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -139,6 +140,14 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	if eg.EnvoyProxy != nil && eg.EnvoyProxy.Bootstrap != nil {
 		if err := bootstrap.Validate(eg.EnvoyProxy.Bootstrap); err != nil {
 			return fmt.Errorf("invalid EnvoyProxy template: %w", err)
+		}
+	}
+
+	// The CRD schema, including its CEL rules, is the single source of truth for
+	// ClusterSettings, so validate against it rather than duplicating each rule in Go.
+	if eg.RateLimit != nil {
+		if err := ValidateClusterSettings(field.NewPath("rateLimit", "serviceSettings"), eg.RateLimit.ServiceSettings); err != nil {
+			return fmt.Errorf("invalid rateLimit.serviceSettings: %w", err)
 		}
 	}
 

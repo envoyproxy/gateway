@@ -169,6 +169,14 @@ func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
 	return e.EnvoyProxy
 }
 
+// GetServiceSettings returns the settings of the rate limit service cluster, or nil if unset.
+func (r *RateLimit) GetServiceSettings() *ClusterSettings {
+	if r == nil {
+		return nil
+	}
+	return r.ServiceSettings
+}
+
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
 	XDSNameSchemeV2:    false,

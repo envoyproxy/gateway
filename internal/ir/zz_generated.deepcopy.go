@@ -2365,6 +2365,11 @@ func (in *GlobalResources) DeepCopyInto(out *GlobalResources) {
 		*out = new(RouteDestination)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RateLimitServiceClusterTraffic != nil {
+		in, out := &in.RateLimitServiceClusterTraffic, &out.RateLimitServiceClusterTraffic
+		*out = new(ClusterTrafficFeatures)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ProxyServiceCluster != nil {
 		in, out := &in.ProxyServiceCluster, &out.ProxyServiceCluster
 		*out = new(RouteDestination)
