@@ -47,34 +47,39 @@ func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.Par
 	})
 }
 
-func SetEnvoyProxyDeprecatedFieldsWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, deprecatedFields map[string]DeprecatedField) {
-	if len(deprecatedFields) == 0 {
+// SetEnvoyProxyWarnings sets the Warning condition on the EnvoyProxy ancestor status from the
+// warnings found in the current translation: the deprecated fields in use and the Kubernetes
+// resource `patch` fields that were ignored because patching is disabled in the EnvoyGateway
+// configuration. An EnvoyProxy has a single Warning condition per ancestor, so both are merged
+// into one message, and the reason becomes EnvoyProxyReasonMultipleWarnings when both are present.
+// Any Warning condition left over from an earlier translation is replaced, or removed when there
+// is nothing to warn about, so a warning goes away once the field is no longer used.
+func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference,
+	deprecatedFields map[string]DeprecatedField, patchedFields []string,
+) {
+	if ep == nil || ancestor == nil {
 		return
 	}
-	setEnvoyProxyWarning(ep, ancestor, egv1a1.EnvoyProxyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields))
-}
 
-// SetEnvoyProxyPatchDisabledWarning sets a Warning condition on the EnvoyProxy
-// ancestor status listing the Kubernetes resource `patch` fields that were
-// ignored because patching is disabled in the EnvoyGateway configuration.
-// It is a no-op when patchedFields is empty.
-func SetEnvoyProxyPatchDisabledWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, patchedFields []string) {
-	if len(patchedFields) == 0 {
-		return
+	var (
+		reason egv1a1.EnvoyProxyConditionReason
+		msg    string
+	)
+	if len(deprecatedFields) > 0 {
+		reason = egv1a1.EnvoyProxyReasonDeprecatedField
+		msg = buildDeprecationWarningMessage(deprecatedFields)
 	}
-
-	msg := fmt.Sprintf(
-		"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: %s",
-		strings.Join(patchedFields, ", "))
-	setEnvoyProxyWarning(ep, ancestor, egv1a1.EnvoyProxyReasonPatchDisabled, msg)
-}
-
-// setEnvoyProxyWarning sets the Warning condition on the EnvoyProxy ancestor status. An EnvoyProxy
-// has a single Warning condition per ancestor, so a warning set earlier is merged with this one
-// rather than replaced, and the reason becomes EnvoyProxyReasonMultipleWarnings when they differ.
-func setEnvoyProxyWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, reason egv1a1.EnvoyProxyConditionReason, msg string) {
-	if ep == nil || ancestor == nil || msg == "" {
-		return
+	if len(patchedFields) > 0 {
+		patchMsg := fmt.Sprintf(
+			"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: %s",
+			strings.Join(patchedFields, ", "))
+		if msg == "" {
+			reason = egv1a1.EnvoyProxyReasonPatchDisabled
+			msg = patchMsg
+		} else {
+			reason = egv1a1.EnvoyProxyReasonMultipleWarnings
+			msg = mergeBoundedWarningMessages(msg, patchMsg)
+		}
 	}
 
 	for i := range ep.Status.Ancestors {
@@ -82,17 +87,18 @@ func setEnvoyProxyWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReferen
 		if !ancestorRefsEqual(&item.AncestorRef, ancestor) {
 			continue
 		}
-		if existing := meta.FindStatusCondition(item.Conditions, string(egv1a1.EnvoyProxyConditionWarning)); existing != nil {
-			msg = mergeBoundedWarningMessages(existing.Message, msg)
-			if existing.Reason != "" && existing.Reason != string(reason) {
-				reason = egv1a1.EnvoyProxyReasonMultipleWarnings
-			}
+		if msg == "" {
+			meta.RemoveStatusCondition(&item.Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+			return
 		}
 		cond := newCondition(string(egv1a1.EnvoyProxyConditionWarning), metav1.ConditionTrue, string(reason), msg, ep.Generation)
 		item.Conditions = MergeConditions(item.Conditions, cond)
 		return
 	}
 
+	if msg == "" {
+		return
+	}
 	// ancestor not found, append a new one
 	ep.Status.Ancestors = append(ep.Status.Ancestors, egv1a1.EnvoyProxyAncestorStatus{
 		AncestorRef: *ancestor,
