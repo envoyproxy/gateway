@@ -124,15 +124,20 @@ func (u *UpdateHandler) apply(update Update) {
 				delete(u.lastWritten, writeKey)
 			case isStatusEqual(obj, newObj):
 				// The cache may not have seen this handler's last write yet and still show a
-				// status the API server no longer has, so confirm against the server first.
-				delete(u.lastWritten, writeKey)
+				// status the API server no longer has, so confirm against the server first. The
+				// record stays until the server agrees or a write succeeds, so that a retry after
+				// a conflict confirms again.
 				if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
 					if kerrors.IsNotFound(err) {
+						delete(u.lastWritten, writeKey)
 						return nil
 					}
 					return err
 				}
 				newObj = update.Mutator.Mutate(obj)
+				if isStatusEqual(obj, newObj) {
+					delete(u.lastWritten, writeKey)
+				}
 			}
 		}
 
