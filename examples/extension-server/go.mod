@@ -1,11 +1,11 @@
 module github.com/exampleorg/envoygateway-extension
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/envoyproxy/gateway v1.3.1
-	github.com/envoyproxy/go-control-plane v0.14.1-0.20260902172201-0f2cd005953e
-	github.com/envoyproxy/go-control-plane/envoy v1.39.1-0.20260902172201-0f2cd005953e
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260927022543-fc8912c55e30
+	github.com/envoyproxy/go-control-plane/envoy v1.40.0
 	github.com/urfave/cli/v2 v2.27.7
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
@@ -55,7 +55,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.60.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.50.0 // indirect

@@ -21,7 +21,7 @@ const (
 )
 
 func GetPodDisruptionBudget(pdb *egv1a1.KubernetesPodDisruptionBudgetSpec,
-	selector *metav1.LabelSelector, nn *types.NamespacedName, ownerReferences []metav1.OwnerReference,
+	selector *metav1.LabelSelector, objectLabels map[string]string, nn *types.NamespacedName, ownerReferences []metav1.OwnerReference,
 	disablePatch bool,
 ) (*policyv1.PodDisruptionBudget, error) {
 	// If podDisruptionBudget config is nil, ignore PodDisruptionBudget.
@@ -46,7 +46,7 @@ func GetPodDisruptionBudget(pdb *egv1a1.KubernetesPodDisruptionBudgetSpec,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nn.Name,
 			Namespace: nn.Namespace,
-			Labels:    selector.MatchLabels,
+			Labels:    objectLabels,
 		},
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "policy/v1",

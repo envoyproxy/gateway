@@ -1,0 +1,1 @@
+Reduced translation time for routes that use extensionRef filters or custom backends by indexing extension resources once per translation, instead of scanning every extension resource for each filter and backendRef.

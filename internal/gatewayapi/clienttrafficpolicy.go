@@ -42,9 +42,18 @@ const (
 	scopeEntireListenerSet ctpAttachScope = iota
 )
 
-// ctpSpecHasClusterScopedFields reports whether spec sets a listener-level HTTP1 field.
-func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec) bool {
-	return spec != nil && spec.HTTP1 != nil
+// ctpSpecHasClusterScopedFields reports whether spec sets any CTP http1 field that currently
+// also configures backend HTTP/1 protocol settings, causing divergence between listeners
+// sharing a merged backend cluster.
+// When the ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly flag is on, these fields apply to
+// client connections only and do not configure backend HTTP/1 protocol settings, so this returns false.
+func ctpSpecHasClusterScopedFields(spec *egv1a1.ClientTrafficPolicySpec, ctpHTTP1ClientScopeOnly bool) bool {
+	if spec == nil {
+		return false
+	}
+	// Any http1 block — even one with only client-scoped fields — completely replaces whatever a
+	// gateway-wide CTP set on that listener, so treat the entire http1 presence as cluster-affecting.
+	return !ctpHTTP1ClientScopeOnly && spec.HTTP1 != nil
 }
 
 // CTPClusterSettingsIndex holds, per listenerSet/listener target, whether a ClientTrafficPolicy
@@ -90,6 +99,7 @@ func BuildCTPClusterSettingsIndex(
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
 	namespaceLookup func(string) *corev1.Namespace,
 	mergeBackendsEnabled bool,
+	ctpHTTP1ClientScopeOnly bool,
 ) *CTPClusterSettingsIndex {
 	idx := newCTPClusterSettingsIndex()
 	// Moot when no accepted gateway can enable merging.
@@ -98,7 +108,7 @@ func BuildCTPClusterSettingsIndex(
 	}
 
 	for _, ctp := range ctps {
-		hasClusterScoped := ctpSpecHasClusterScopedFields(&ctp.Spec)
+		hasClusterScoped := ctpSpecHasClusterScopedFields(&ctp.Spec, ctpHTTP1ClientScopeOnly)
 
 		refs := resolvePolicyTargetsForGatewayAndListenerSet(
 			ctp.Spec.PolicyTargetReferences,
@@ -153,6 +163,30 @@ func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolic
 		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
 	}
 	return deprecatedFields
+}
+
+// behaviorChangedFieldsUsedInClientTrafficPolicy returns a map of CTP field paths to free-form
+// message suffixes for fields whose behavior will change in a future release.
+//
+// TODO: remove this function once the ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly runtime flag is removed
+// (i.e. when the behavior change becomes permanent and the flag is no longer needed).
+func behaviorChangedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]string {
+	fields := make(map[string]string)
+	if policy.Spec.HTTP1 == nil {
+		return fields
+	}
+	h := policy.Spec.HTTP1
+	// TODO: remove these checks once ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly runtime flag is removed.
+	if h.EnableTrailers != nil {
+		fields["spec.http1.enableTrailers"] = "use BackendTrafficPolicy.http1.enableTrailers for backend settings"
+	}
+	if h.PreserveHeaderCase != nil {
+		fields["spec.http1.preserveHeaderCase"] = "use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings"
+	}
+	if h.HTTP10 != nil {
+		fields["spec.http1.http10"] = "use BackendTrafficPolicy.http1: {} for backend HTTP/1 settings"
+	}
+	return fields
 }
 
 func (t *Translator) ProcessClientTrafficPolicies(
@@ -312,11 +346,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
 					status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 				}
+				if behaviorFields := behaviorChangedFieldsUsedInClientTrafficPolicy(policy); len(behaviorFields) > 0 {
+					status.SetBehaviorChangedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, behaviorFields, "this field will only apply to client connections")
+				}
 			}
 		}
 	}
 
-	// Resolve each policy's targets.
 	policyTargets := make([][]policyTargetReferenceWithSectionName, len(clientTrafficPolicies))
 	for i, currPolicy := range clientTrafficPolicies {
 		policyTargets[i] = resolvePolicyTargetsForGatewayAndListenerSet(
@@ -521,6 +557,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					// Check for deprecated fields and set warning if any are found
 					if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
 						status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+					}
+					if behaviorFields := behaviorChangedFieldsUsedInClientTrafficPolicy(policy); len(behaviorFields) > 0 {
+						status.SetBehaviorChangedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, behaviorFields, "this field will only apply to client connections")
 					}
 				}
 			}
@@ -755,7 +794,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// ProxyProtocol field takes precedence when configured
 		// Even if it's an empty object {}, we should enable proxy protocol with default settings
 		proxyProtocol = &ir.ProxyProtocolSettings{
-			Optional: ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+			Optional:     ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+			ForwardProto: buildIRForwardProtoConfig(policy.Spec.ProxyProtocol.ForwardProto),
 		}
 	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
 		// Fallback to legacy EnableProxyProtocol field
@@ -785,7 +825,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
 
-		// Translate HTTP1 Settings
+		// Translate HTTP1 Settings.
 		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
 			errs = errors.Join(errs, err)
@@ -885,6 +925,41 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 	}
 
 	return nil
+}
+
+// buildIRForwardProtoConfig translates the ProxyProtocol ForwardProtoConfig API type into the IR
+// type, converting the int32 port lists to uint32 to match the Envoy proto field types.
+func buildIRForwardProtoConfig(cfg *egv1a1.ForwardProtoConfig) *ir.ForwardProtoConfig {
+	// Return early if not set.
+	if cfg == nil {
+		return nil
+	}
+
+	// Defensive guard: CEL validation requires at least one port list to be set, but return nil
+	// for an effectively-empty config so the IR omits the field instead of carrying empty slices.
+	if len(cfg.HTTPSDestinationPorts) == 0 && len(cfg.HTTPDestinationPorts) == 0 {
+		return nil
+	}
+
+	irCfg := &ir.ForwardProtoConfig{}
+
+	// Only allocate/copy when the corresponding list is non-empty, so an unset list stays nil in
+	// the IR rather than becoming an explicitly-empty slice.
+	if len(cfg.HTTPSDestinationPorts) > 0 {
+		irCfg.HTTPSDestinationPorts = make([]uint32, len(cfg.HTTPSDestinationPorts))
+		for i, p := range cfg.HTTPSDestinationPorts {
+			irCfg.HTTPSDestinationPorts[i] = uint32(p)
+		}
+	}
+
+	if len(cfg.HTTPDestinationPorts) > 0 {
+		irCfg.HTTPDestinationPorts = make([]uint32, len(cfg.HTTPDestinationPorts))
+		for i, p := range cfg.HTTPDestinationPorts {
+			irCfg.HTTPDestinationPorts[i] = uint32(p)
+		}
+	}
+
+	return irCfg
 }
 
 func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error) {
@@ -1094,30 +1169,30 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	return errs
 }
 
-func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
-	if http1Settings == nil {
+func translateHTTP1Settings(h *egv1a1.HTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
+	if h == nil {
 		return nil
 	}
-	ignoreUpgrade := make([]*ir.StringMatch, 0, len(http1Settings.IgnoredUpgradeTypes))
-	for _, match := range http1Settings.IgnoredUpgradeTypes {
+	ignoreUpgrade := make([]*ir.StringMatch, 0, len(h.IgnoredUpgradeTypes))
+	for _, match := range h.IgnoredUpgradeTypes {
 		ignoreUpgrade = append(ignoreUpgrade, irStringMatch("", match))
 	}
 	httpIR.HTTP1 = &ir.HTTP1Settings{
-		EnableTrailers:      ptr.Deref(http1Settings.EnableTrailers, false),
-		PreserveHeaderCase:  ptr.Deref(http1Settings.PreserveHeaderCase, false),
 		IgnoredUpgradeTypes: ignoreUpgrade,
+		EnableTrailers:      ptr.Deref(h.EnableTrailers, false),
+		PreserveHeaderCase:  ptr.Deref(h.PreserveHeaderCase, false),
 	}
 	if connection != nil {
 		if connection.ConnectionLimit != nil {
 			if connection.ConnectionLimit.MaxConnectionDuration != nil {
-				httpIR.HTTP1.DisableSafeMaxConnectionDuration = ptr.Deref(http1Settings.DisableSafeMaxConnectionDuration, false)
+				httpIR.HTTP1.DisableSafeMaxConnectionDuration = ptr.Deref(h.DisableSafeMaxConnectionDuration, false)
 			}
 		}
 	}
 
-	if http1Settings.HTTP10 != nil {
+	if h.HTTP10 != nil {
 		var defaultHost *string
-		if ptr.Deref(http1Settings.HTTP10.UseDefaultHost, false) {
+		if ptr.Deref(h.HTTP10.UseDefaultHost, false) {
 			// First level of precedence - the first non-wildcard hostname associated with the listener
 			for _, hostname := range httpIR.Hostnames {
 				if !strings.Contains(hostname, "*") {
@@ -1443,6 +1518,10 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 				return nil, fmt.Errorf("invalid MaxConnectionDuration value %s", *connection.ConnectionLimit.MaxConnectionDuration)
 			}
 			irConnectionLimit.MaxConnectionDuration = ir.MetaV1DurationPtr(d)
+		}
+
+		if connection.ConnectionLimit.MaxConnectionDurationJitter != nil {
+			irConnectionLimit.MaxConnectionDurationJitter = connection.ConnectionLimit.MaxConnectionDurationJitter
 		}
 
 		if connection.ConnectionLimit.MaxRequestsPerConnection != nil {
