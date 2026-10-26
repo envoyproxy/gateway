@@ -732,6 +732,20 @@ type ProxyProtocolSettings struct {
 	// If set to false, the listener will reject requests without a Proxy Protocol header.
 	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
 	Optional bool `json:"optional,omitempty" yaml:"optional,omitempty"`
+	// ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+	// destination port. Only takes effect when PROXY protocol is enabled.
+	// +optional
+	ForwardProto *ForwardProtoConfig `json:"forwardProtoConfig,omitempty" yaml:"forwardProtoConfig,omitempty"`
+}
+
+// ForwardProtoConfig holds configuration for inferring the x-forwarded-proto header
+// from the PROXY protocol destination port.
+// +k8s:deepcopy-gen=true
+type ForwardProtoConfig struct {
+	// HTTPSDestinationPorts are the destination ports treated as HTTPS.
+	HTTPSDestinationPorts []uint32 `json:"httpsDestinationPorts,omitempty" yaml:"httpsDestinationPorts,omitempty"`
+	// HTTPDestinationPorts are the destination ports treated as HTTP.
+	HTTPDestinationPorts []uint32 `json:"httpDestinationPorts,omitempty" yaml:"httpDestinationPorts,omitempty"`
 }
 
 type WithUnderscoresAction egv1a1.WithUnderscoresAction
@@ -4219,6 +4233,8 @@ type ConnectionLimit struct {
 	// MaxConnectionDuration is the maximum amount of time a connection can remain established
 	// before being drained and/or closed.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+	// MaxConnectionDurationJitter is the percentage (0-100) of MaxConnectionDuration added as random jitter.
+	MaxConnectionDurationJitter *uint32 `json:"maxConnectionDurationJitter,omitempty" yaml:"maxConnectionDurationJitter,omitempty"`
 	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
 	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
 	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
@@ -4470,6 +4486,8 @@ type PreferLocalZone struct {
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty" yaml:"minEndpointsThreshold,omitempty"`
 	// Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, the default is 100%.
 	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty" yaml:"percentageEnabled,omitempty"`
+	// FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the cluster is in panic mode.
+	FailTrafficOnPanic *bool `json:"failTrafficOnPanic,omitempty" yaml:"failTrafficOnPanic,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior

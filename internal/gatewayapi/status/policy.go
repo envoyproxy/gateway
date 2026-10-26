@@ -129,6 +129,16 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRe
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, message, generation)
 }
 
+// SetNotMergedForPolicyAncestor marks the ancestor not accepted because its targets were not merged,
+// unless an Accepted condition is already set for it.
+func SetNotMergedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, message string) {
+	if getPolicyAncestorCondition(policyStatus, ancestorRef, controllerName, gwapiv1.PolicyConditionAccepted) != nil {
+		return
+	}
+	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, egv1a1.PolicyReasonNotMerged, message, generation)
+}
+
 // SetDeprecatedFieldsWarningForPolicyAncestors sets deprecated fields warning conditions for each ancestor reference.
 func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
 	for _, ancestorRef := range ancestorRefs {
