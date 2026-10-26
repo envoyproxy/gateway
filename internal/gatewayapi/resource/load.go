@@ -133,7 +133,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 
 		gv := gvk.GroupVersion().String()
 		objType := reflect.TypeOf(kobj)
-		if objType.Kind() != reflect.Ptr {
+		if objType.Kind() != reflect.Pointer {
 			return fmt.Errorf("expected pointer type, but got %s", objType.Kind().String())
 		}
 		kobjVal := reflect.ValueOf(kobj).Elem()
@@ -182,6 +182,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 					// It's weird for non-namespaced resource to have namespace.
+					// Labels are kept so GatewayClass targetSelectors on policies can match it.
+					Labels: un.GetLabels(),
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}

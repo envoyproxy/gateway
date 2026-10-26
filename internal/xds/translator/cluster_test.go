@@ -79,6 +79,57 @@ func TestBuildXdsClusterDNSRefreshRateValidation(t *testing.T) {
 	require.ErrorContains(t, err, "DnsRefreshRate")
 }
 
+func TestBuildZoneAwareLbConfigFailTrafficOnPanic(t *testing.T) {
+	// fail_traffic_on_panic only exists inside zone_aware_lb_config, so it is
+	// reachable only when preferLocal selects that arm of the oneof.
+	tests := []struct {
+		name     string
+		fail     *bool
+		expected bool
+	}{
+		{"unset", nil, false},
+		{"true", new(true), true},
+		{"false", new(false), false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := buildZoneAwareLbConfig(&ir.PreferLocalZone{FailTrafficOnPanic: tc.fail})
+			require.NotNil(t, cfg)
+			require.Equal(t, tc.expected, cfg.ZoneAwareLbConfig.FailTrafficOnPanic)
+		})
+	}
+}
+
+func TestBuildXdsHealthCheckDisableConnectionReuse(t *testing.T) {
+	base := func() *ir.ActiveHealthCheck {
+		return &ir.ActiveHealthCheck{
+			Timeout:  ir.MetaV1DurationPtr(time.Second),
+			Interval: ir.MetaV1DurationPtr(5 * time.Second),
+			TCP:      &ir.TCPHealthChecker{},
+		}
+	}
+	// DisableConnectionReuse is the inverse of Envoy's reuse_connection.
+	tests := []struct {
+		name     string
+		disable  *bool
+		expected *wrapperspb.BoolValue
+	}{
+		{"unset", nil, nil},
+		{"disabled", new(true), wrapperspb.Bool(false)},
+		{"enabled", new(false), wrapperspb.Bool(true)},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			hc := base()
+			hc.DisableConnectionReuse = tc.disable
+			out, err := buildXdsHealthCheck(hc, "", nil, nil, false, false)
+			require.NoError(t, err)
+			require.Len(t, out, 1)
+			require.Equal(t, tc.expected, out[0].ReuseConnection)
+		})
+	}
+}
+
 func TestToCommonDNSLookupFamily(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -208,6 +259,19 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 				BaseEjectionTime:   durationpb.New(30 * time.Second),
 				MaxEjectionPercent: wrapperspb.UInt32(10),
 				Consecutive_5Xx:    wrapperspb.UInt32(5),
+			},
+		},
+		{
+			name: "outlier detection with explicit zero max ejection percent",
+			input: &ir.OutlierDetection{
+				Interval:           ir.MetaV1DurationPtr(10 * time.Second),
+				BaseEjectionTime:   ir.MetaV1DurationPtr(30 * time.Second),
+				MaxEjectionPercent: new(uint32(0)),
+			},
+			expected: &clusterv3.OutlierDetection{
+				Interval:           durationpb.New(10 * time.Second),
+				BaseEjectionTime:   durationpb.New(30 * time.Second),
+				MaxEjectionPercent: wrapperspb.UInt32(0),
 			},
 		},
 		{
@@ -489,6 +553,26 @@ func TestBuildClusterWithEndpointOverrideBackendUtilizationWeightedZones(t *test
 	require.Equal(t, 10*time.Second, cswrr.BlackoutPeriod.AsDuration())
 }
 
+func TestBuildClusterHTTPFiltersCredentialInjectionInvalidHeader(t *testing.T) {
+	args := &xdsClusterArgs{
+		settings: []*ir.DestinationSetting{{
+			Filters: &ir.DestinationFilters{
+				CredentialInjection: &ir.CredentialInjection{
+					Name:       "test",
+					Header:     new("invalid header"),
+					Credential: []byte("credential"),
+				},
+			},
+		}},
+	}
+
+	filters, secrets, err := buildClusterHTTPFilters(args)
+
+	require.Error(t, err)
+	require.Nil(t, filters)
+	require.Nil(t, secrets)
+}
+
 func TestGetHealthCheckOverridesHostname(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -666,4 +750,88 @@ func TestBackendClusterTranslatorAsClusterArgsAppliesTraffic(t *testing.T) {
 	args := BackendClusterTranslator{}.asClusterArgs("backend-1", nil, &ExtraArgs{traffic: traffic}, nil)
 
 	require.Equal(t, circuitBreaker, args.circuitBreaker)
+}
+
+func TestGRPCHealthCheckAuthority(t *testing.T) {
+	tests := []struct {
+		name          string
+		healthCheck   *ir.GRPCHealthChecker
+		routeHostname string
+		expected      string
+	}{
+		{
+			name:          "explicit authority wins over the route hostname",
+			healthCheck:   &ir.GRPCHealthChecker{Authority: "health.example.com"},
+			routeHostname: "grpc.example.com",
+			expected:      "health.example.com",
+		},
+		{
+			name:          "route hostname is used as the default",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "grpc.example.com",
+			expected:      "grpc.example.com",
+		},
+		{
+			name:          "wildcard route hostname is not a valid authority",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "*.example.com",
+			expected:      "",
+		},
+		{
+			name:          "empty route hostname",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "",
+			expected:      "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, grpcHealthCheckAuthority(tc.healthCheck, tc.routeHostname))
+		})
+	}
+}
+
+func TestGetHealthCheckOverridesHostnameWithGRPCAuthority(t *testing.T) {
+	tests := []struct {
+		name        string
+		healthCheck *ir.HealthCheck
+		endpoint    *ir.DestinationEndpoint
+		expected    string
+	}{
+		{
+			name: "GRPC health checker with an explicit authority keeps the cluster-level authority",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					GRPC: &ir.GRPCHealthChecker{Authority: "health.example.com"},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: new("backend.example.com"),
+			},
+			expected: "",
+		},
+		{
+			name: "GRPC health checker without an authority defers to the endpoint hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					GRPC: &ir.GRPCHealthChecker{},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: new("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, getHealthCheckOverridesHostname(tc.healthCheck, tc.endpoint))
+		})
+	}
 }

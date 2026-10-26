@@ -396,6 +396,49 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid HTTP/3 advertised port",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP3: &egv1a1.HTTP3Settings{
+						AdvertisedPort: new(gwapiv1.PortNumber(8443)),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid HTTP/3 advertised port",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					HTTP3: &egv1a1.HTTP3Settings{
+						AdvertisedPort: new(gwapiv1.PortNumber(65536)),
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.http3.advertisedPort: Invalid value:",
+				"advertisedPort must be between 1 and 65535",
+			},
+		},
+		{
 			desc: "http3 enabled and ALPN protocols not set with other TLS parameters set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
@@ -555,6 +598,53 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "valid Connection Limit with maxConnectionDurationJitter",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							MaxConnectionDuration:       new(gwapiv1.Duration("300s")),
+							MaxConnectionDurationJitter: new(uint32(20)),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid Connection Limit maxConnectionDurationJitter without maxConnectionDuration",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							MaxConnectionDurationJitter: new(uint32(20)),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"maxConnectionDurationJitter can only be configured when maxConnectionDuration is set",
+			},
 		},
 		{
 			desc: "invalid Connection Limit closeDelay without value",
@@ -793,6 +883,210 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-headers\" is invalid:",
 				"spec.headers: Invalid value:",
 				": preserveXRequestID and requestID cannot both be set.",
+			},
+		},
+		{
+			desc: "proxyProtocol forwardProtoConfig with both port lists",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-forward-proto"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
+						ForwardProto: &egv1a1.ForwardProtoConfig{
+							HTTPSDestinationPorts: []int32{443, 8443},
+							HTTPDestinationPorts:  []int32{80, 8080},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "proxyProtocol forwardProtoConfig with only https ports",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-forward-proto-https"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
+						ForwardProto: &egv1a1.ForwardProtoConfig{
+							HTTPSDestinationPorts: []int32{443},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "proxyProtocol forwardProtoConfig with no ports",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-forward-proto-empty"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
+						ForwardProto: &egv1a1.ForwardProtoConfig{},
+					},
+				}
+			},
+			wantErrors: []string{
+				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-forward-proto-empty\" is invalid:",
+				"spec.proxyProtocol.forwardProtoConfig: Invalid value:",
+				": at least one of httpsDestinationPorts or httpDestinationPorts must be set",
+			},
+		},
+		{
+			desc: "proxyProtocol forwardProtoConfig with overlapping port lists",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-forward-proto-overlap"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ProxyProtocol: &egv1a1.ProxyProtocolSettings{
+						ForwardProto: &egv1a1.ForwardProtoConfig{
+							HTTPSDestinationPorts: []int32{443, 8443},
+							HTTPDestinationPorts:  []int32{8443, 80},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-forward-proto-overlap\" is invalid:",
+				"spec.proxyProtocol.forwardProtoConfig: Invalid value:",
+				": httpsDestinationPorts and httpDestinationPorts must be disjoint",
+			},
+		},
+		{
+			desc: "valid header mutations",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
+							Mutations: []egv1a1.HTTPHeaderMutation{
+								{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}, Action: egv1a1.HeaderWriteSet}},
+								{Remove: new("x-baz")},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "header mutation with no action set",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
+							Mutations: []egv1a1.HTTPHeaderMutation{{}},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.headers.earlyRequestHeaders.mutations[0]",
+			},
+		},
+		{
+			desc: "header mutation with more than one action set",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
+							Mutations: []egv1a1.HTTPHeaderMutation{
+								{
+									Write:  &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}},
+									Remove: new("x-baz"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.headers.earlyRequestHeaders.mutations[0]",
+			},
+		},
+		{
+			desc: "header mutation with invalid write action",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						EarlyRequestHeaders: &egv1a1.HTTPHeaderFilter{
+							Mutations: []egv1a1.HTTPHeaderMutation{
+								{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "bar"}, Action: egv1a1.HeaderWriteAction("Bogus")}},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.headers.earlyRequestHeaders.mutations[0].write.action",
 			},
 		},
 	}

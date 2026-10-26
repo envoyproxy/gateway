@@ -87,6 +87,12 @@ func NewOfflineGatewayAPIController(
 		}
 	}
 
+	// In offline mode, assume all extension backend CRDs are available.
+	extBackendCRDExists := make(map[schema.GroupVersionKind]bool)
+	for _, gvk := range extBackendPoliciesGVKs {
+		extBackendCRDExists[gvk] = true
+	}
+
 	r := &gatewayAPIReconciler{
 		client:            cli,
 		log:               cfg.Logger,
@@ -102,6 +108,7 @@ func NewOfflineGatewayAPIController(
 		extServerPolicies: extServerPoliciesGVKs,
 		extBackendGVKs:    extBackendPoliciesGVKs,
 		// We assume all CRDs are available in offline mode.
+		extBackendCRDExists:    extBackendCRDExists,
 		btlsCRDExists:          true,
 		btpCRDExists:           true,
 		ctpCRDExists:           true,
@@ -209,6 +216,6 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind, ena
 		WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
 		WithIndex(&egv1a1.HTTPRouteFilter{}, configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc).
 		WithIndex(&egv1a1.HTTPRouteFilter{}, secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc).
-		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
+		WithIndex(&gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc).
 		Build()
 }

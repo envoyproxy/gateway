@@ -14,13 +14,17 @@ is_installed() {
 }
 
 is_running() {
-    brew services info docker-mac-net-connect --json 2>/dev/null | \
-        jq -e '.[] | .user != null' >/dev/null
+    pgrep -f '(^|/)docker-mac-net-connect([[:space:]]|$)' >/dev/null 2>&1
 }
 
 setup() {
     if ! is_macos || [[ "$DOCKER_MAC_NET_CONNECT" == "false" ]]; then
         return
+    fi
+
+    if ! command -v brew >/dev/null 2>&1; then
+        echo "Homebrew is required to install Docker Mac Net Connect." >&2
+        return 1
     fi
 
     if is_installed && is_running; then
@@ -32,7 +36,10 @@ setup() {
     read -rp "Install and start Docker Mac Net Connect? [y/N]: " input
     case "$(echo "$input" | tr '[:upper:]' '[:lower:]')" in
         y|yes) ;;
-        *) return ;;
+        *)
+            echo "Docker Mac Net Connect is required; set DOCKER_MAC_NET_CONNECT=false to skip setup." >&2
+            return 1
+            ;;
     esac
 
     if ! is_installed; then
@@ -42,12 +49,20 @@ setup() {
 
     if ! is_running; then
         sudo brew services start chipmk/tap/docker-mac-net-connect
-        sleep 5
     fi
+
+    for ((attempt = 0; attempt < 10; attempt++)); do
+        if is_running; then
+            return
+        fi
+        sleep 1
+    done
+
+    echo "Docker Mac Net Connect did not start." >&2
+    return 1
 }
 
 case "$MODE" in
     setup) setup ;;
-    cleanup) cleanup ;;
     *) echo "Usage: $0 [setup]"; exit 1 ;;
 esac

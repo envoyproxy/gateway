@@ -61,21 +61,85 @@ func (*headerMutation) patchRoute(*routev3.Route, *ir.HTTPRoute, *ir.HTTPListene
 	return nil
 }
 
+const altSvcHeader = "alt-svc"
+
+// http3AdvertisedPort is the port clients are told to use for HTTP/3: the advertised
+// port from the ClientTrafficPolicy when set, else the listener's external port.
+func http3AdvertisedPort(httpListener *ir.HTTPListener) uint32 {
+	if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
+		return *httpListener.HTTP3.AdvertisedPort
+	}
+	return httpListener.ExternalPort
+}
+
+// upstreamHTTP3AltSvcFilterName names a header mutation filter instance of its own, so it never
+// collides with the one carrying ClientTrafficPolicy response header mutations.
+var upstreamHTTP3AltSvcFilterName = perRouteFilterName(egv1a1.EnvoyFilterHeaderMutation, "upstream_http3")
+
+// patchHCMWithUpstreamHTTP3AltSvc adds a disabled header mutation filter to a listener with a
+// route proxying over upstream HTTP/3; patchRouteWithUpstreamHTTP3AltSvc enables it per route.
+func (t *Translator) patchHCMWithUpstreamHTTP3AltSvc(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+	if mgr == nil {
+		return errors.New("hcm is nil")
+	}
+	if irListener == nil {
+		return errors.New("ir listener is nil")
+	}
+	if hcmContainsFilter(mgr, upstreamHTTP3AltSvcFilterName) || !listenerHasUpstreamHTTP3(irListener, t.backendIndex) {
+		return nil
+	}
+
+	mutationAny, err := proto.ToAnyWithValidation(&mutationv3.HeaderMutation{})
+	if err != nil {
+		return err
+	}
+	mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
+		Name:       upstreamHTTP3AltSvcFilterName,
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mutationAny},
+		Disabled:   true,
+	})
+	return nil
+}
+
+// patchRouteWithUpstreamHTTP3AltSvc strips the backend's alt-svc on a route proxying over
+// upstream HTTP/3, so clients are not told to probe the gateway host on the backend's port.
+// Route-level header removal runs in the router, before the alternate protocols cache filter
+// has recorded the header, so the strip has to live here. This filter also runs after the
+// router has added the gateway's own alt-svc, so that one is re-appended.
+//
+// TODO: replace with the filter's own strip option once Envoy supports it, see
+// https://github.com/envoyproxy/envoy/issues/48169.
+func patchRouteWithUpstreamHTTP3AltSvc(route *routev3.Route, irListener *ir.HTTPListener, downstreamHTTP3Enabled bool) error {
+	mutations := []*mutation_rulesv3.HeaderMutation{{
+		Action: &mutation_rulesv3.HeaderMutation_Remove{Remove: altSvcHeader},
+	}}
+	// If the listener is also configured to advertise HTTP/3 to clients, re-append the gateway's
+	// own alt-svc after the router has stripped the backend's alt-svc.
+	if downstreamHTTP3Enabled {
+		mutations = append(mutations, &mutation_rulesv3.HeaderMutation{
+			Action: &mutation_rulesv3.HeaderMutation_Append{
+				Append: buildHTTP3AltSvcHeader(http3AdvertisedPort(irListener)),
+			},
+		})
+	}
+	return enableFilterOnRoute(route, upstreamHTTP3AltSvcFilterName, &mutationv3.HeaderMutationPerRoute{
+		Mutations: &mutationv3.Mutations{ResponseMutations: mutations},
+	})
+}
+
 func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, error) {
 	if headers == nil {
 		return nil, nil
 	}
 
-	addHeaders := headers.LateAddResponseHeaders
-	removeHeaders := headers.LateRemoveResponseHeaders
-	removeOnMatch := headers.LateRemoveResponseHeadersOnMatch
-	if len(addHeaders) == 0 && len(removeHeaders) == 0 && len(removeOnMatch) == 0 {
+	responseMutations := buildHeaderMutationRules(headers.LateResponseHeaderMutations)
+	if len(responseMutations) == 0 {
 		return nil, nil
 	}
 
 	mutationProto := &mutationv3.HeaderMutation{
 		Mutations: &mutationv3.Mutations{
-			ResponseMutations: buildHeaderMutationRules(addHeaders, removeHeaders, removeOnMatch),
+			ResponseMutations: responseMutations,
 		},
 	}
 
@@ -92,72 +156,60 @@ func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, e
 	}, nil
 }
 
-func buildHeaderMutationRules(addHeaders []ir.AddHeader, removeHeaders []string, removeOnMatch []*ir.StringMatch) []*mutation_rulesv3.HeaderMutation {
-	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, len(addHeaders)+len(removeHeaders)+len(removeOnMatch))
+// buildHeaderMutationRules converts an ordered list of ir.HeaderMutation into
+// Envoy HeaderMutation rules, preserving the exact order of the list. It maps
+// 1:1 to Envoy's mutation_rules HeaderMutation oneof.
+func buildHeaderMutationRules(mutations []ir.HeaderMutation) []*mutation_rulesv3.HeaderMutation {
+	if len(mutations) == 0 {
+		return nil
+	}
 
-	for _, header := range addHeaders {
-		var appendAction corev3.HeaderValueOption_HeaderAppendAction
+	mutationRules := make([]*mutation_rulesv3.HeaderMutation, 0, len(mutations))
+	for _, m := range mutations {
 		switch {
-		case header.AddIfAbsent:
-			appendAction = corev3.HeaderValueOption_ADD_IF_ABSENT
-		case header.Append:
-			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		default:
-			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
-		}
-		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if len(header.Value) == 0 {
+		case m.Write != nil:
+			var appendAction corev3.HeaderValueOption_HeaderAppendAction
+			switch m.Write.Action {
+			case ir.HeaderWriteSet:
+				appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
+			case ir.HeaderWriteAddIfAbsent:
+				appendAction = corev3.HeaderValueOption_ADD_IF_ABSENT
+			case ir.HeaderWriteSetIfExists:
+				appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS
+			default:
+				appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
+			}
 			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
 				Action: &mutation_rulesv3.HeaderMutation_Append{
 					Append: &corev3.HeaderValueOption{
 						Header: &corev3.HeaderValue{
-							Key: header.Name,
+							Key:   m.Write.Name,
+							Value: m.Write.Value,
 						},
 						AppendAction:   appendAction,
-						KeepEmptyValue: true,
+						KeepEmptyValue: m.Write.KeepEmptyValue,
 					},
 				},
 			})
-		} else {
-			for _, val := range header.Value {
-				mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
-					Action: &mutation_rulesv3.HeaderMutation_Append{
-						Append: &corev3.HeaderValueOption{
-							Header: &corev3.HeaderValue{
-								Key:   header.Name,
-								Value: val,
-							},
-							AppendAction:   appendAction,
-							KeepEmptyValue: val == "",
-						},
-					},
-				})
-			}
-		}
-	}
-
-	for _, header := range removeHeaders {
-		mr := &mutation_rulesv3.HeaderMutation{
-			Action: &mutation_rulesv3.HeaderMutation_Remove{
-				Remove: header,
-			},
-		}
-		mutationRules = append(mutationRules, mr)
-	}
-
-	for _, matcher := range removeOnMatch {
-		sm := buildXdsStringMatcher(matcher)
-		if sm == nil {
-			continue
-		}
-		mr := &mutation_rulesv3.HeaderMutation{
-			Action: &mutation_rulesv3.HeaderMutation_RemoveOnMatch_{
-				RemoveOnMatch: &mutation_rulesv3.HeaderMutation_RemoveOnMatch{
-					KeyMatcher: sm,
+		case m.Remove != nil:
+			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
+				Action: &mutation_rulesv3.HeaderMutation_Remove{
+					Remove: *m.Remove,
 				},
-			},
+			})
+		case m.RemoveOnMatch != nil:
+			sm := buildXdsStringMatcher(m.RemoveOnMatch)
+			if sm == nil {
+				continue
+			}
+			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
+				Action: &mutation_rulesv3.HeaderMutation_RemoveOnMatch_{
+					RemoveOnMatch: &mutation_rulesv3.HeaderMutation_RemoveOnMatch{
+						KeyMatcher: sm,
+					},
+				},
+			})
 		}
-		mutationRules = append(mutationRules, mr)
 	}
 
 	return mutationRules

@@ -388,6 +388,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// refers to the Listener TLS.
 					TLS: tlsConfig,
 				}
+				// TLS listeners support hostname-based (SNI) matching; TCP does not.
+				if listener.Protocol == gwapiv1.TLSProtocolType && listener.Hostname != nil {
+					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
+				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
@@ -745,8 +749,8 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 		address  = netutils.IPv4ListenerAddress
 	)
 
-	if envoyProxy != nil && envoyProxy.Spec.IPFamily != nil {
-		ipFamily = *envoyProxy.Spec.IPFamily
+	if envoyIPFamily := getEnvoyIPFamily(envoyProxy); envoyIPFamily != nil {
+		ipFamily = *envoyIPFamily
 	}
 	if ipFamily == egv1a1.IPv6 || ipFamily == egv1a1.DualStack {
 		address = netutils.IPv6ListenerAddress
@@ -864,6 +868,22 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 			}
 		}
 
+		// ProxyAccessLogFormat.Type is optional: when it is unset the API only requires that
+		// one of text or json is set. The File and ALS sinks can render just one of the two,
+		// so resolve the effective type once here instead of defaulting to JSON at each sink
+		// and silently dropping a text format that was accepted by the API server.
+		// An unset type with both text and json set stays JSON, which is what those sinks
+		// have always picked for that input; only the text-only case changes.
+		// OpenTelemetry is deliberately excluded below: it can carry text and attributes at
+		// the same time and handles the unset type itself.
+		formatType := egv1a1.ProxyAccessLogFormatTypeJSON
+		switch {
+		case format.Type != nil:
+			formatType = *format.Type
+		case format.Text != nil && format.JSON == nil:
+			formatType = egv1a1.ProxyAccessLogFormatTypeText
+		}
+
 		var (
 			validExprs []string
 			errs       []error
@@ -880,13 +900,23 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 		}
 
 		if len(accessLog.Sinks) == 0 {
-			al := &ir.JSONAccessLog{
-				JSON:       ir.MapToSlice(format.JSON),
-				CELMatches: validExprs,
-				LogType:    accessLogType,
-				Path:       "/dev/stdout",
+			if formatType == egv1a1.ProxyAccessLogFormatTypeText {
+				al := &ir.TextAccessLog{
+					Format:     format.Text,
+					CELMatches: validExprs,
+					LogType:    accessLogType,
+					Path:       "/dev/stdout",
+				}
+				irAccessLog.Text = append(irAccessLog.Text, al)
+			} else {
+				al := &ir.JSONAccessLog{
+					JSON:       ir.MapToSlice(format.JSON),
+					CELMatches: validExprs,
+					LogType:    accessLogType,
+					Path:       "/dev/stdout",
+				}
+				irAccessLog.JSON = append(irAccessLog.JSON, al)
 			}
-			irAccessLog.JSON = append(irAccessLog.JSON, al)
 		}
 
 		for j, sink := range accessLog.Sinks {
@@ -896,7 +926,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					continue
 				}
 
-				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
+				if formatType == egv1a1.ProxyAccessLogFormatTypeText {
 					al := &ir.TextAccessLog{
 						Format:     format.Text,
 						Path:       sink.File.Path,
@@ -960,10 +990,9 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					}
 					al.HTTP = http
 				}
-				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
+				if formatType == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
 				} else {
-					// Default to JSON format if type is nil or JSON
 					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 
@@ -1278,14 +1307,16 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 				ResourceAttributes:       sink.OpenTelemetry.ResourceAttributes,
 				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
 				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+				Prefix:                   ptr.Deref(sink.OpenTelemetry.Prefix, ""),
 			})
 		}
 	}
 
 	return &ir.Metrics{
-		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
-		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
-		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
+		EnableVirtualHostStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
+		EnablePerEndpointStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
+		EnableRequestResponseSizesStats:    ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
+		EnableCircuitBreakerRemainingStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableCircuitBreakerRemainingStats, false),
 	}, resolvedSinks, nil
 }
 
@@ -1309,7 +1340,7 @@ func (t *Translator) processProxyGRPCSettings(
 func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, gwCtx *GatewayContext,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
-	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
+	traffic, err := translateExtServiceBackendSettings(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1338,10 +1369,13 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 				return nil, nil, err
 			}
 		case resource.KindBackend:
-			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP, true); err != nil {
 				return nil, nil, err
 			}
-			ds = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
+			ds, err = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy, nil)
+			if err != nil {
+				return nil, nil, err
+			}
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")
@@ -1351,7 +1385,7 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		}
 
 		// Apply TLS from Backend resource, BackendTLSPolicy, and EnvoyProxy.
-		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, resources, gwCtx)
+		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, gwCtx, nil)
 		if err != nil {
 			return nil, nil, err
 		}

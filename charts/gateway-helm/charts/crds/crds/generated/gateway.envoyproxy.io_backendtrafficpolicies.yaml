@@ -367,9 +367,108 @@ spec:
                   properties:
                     brotli:
                       description: The configuration for Brotli compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of the compressor's next output buffer, from
+                            4096 to 65536. If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        disableLiteralContextModeling:
+                          description: |-
+                            DisableLiteralContextModeling disables the "literal context modeling" format
+                            feature. This flag is a "decoding-speed vs compression ratio" trade-off.
+                            If not set, defaults to false.
+                          type: boolean
+                        encoderMode:
+                          description: |-
+                            EncoderMode tunes the encoder for a specific input.
+                            If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Generic
+                          - Text
+                          - Font
+                          type: string
+                        inputBlockBits:
+                          description: |-
+                            InputBlockBits represents the base two logarithm of the compressor's input block
+                            size, from 16 to 24. Larger input block results in better compression at the
+                            expense of memory usage. If not set, defaults to 24.
+                          format: int32
+                          maximum: 24
+                          minimum: 16
+                          type: integer
+                        quality:
+                          description: |-
+                            Quality controls the main compression speed-density lever, from 0 to 11.
+                            The higher the quality, the slower the compression. If not set, defaults to 3.
+                          format: int32
+                          maximum: 11
+                          minimum: 0
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithm of the compressor's window size,
+                            from 10 to 24. Larger window results in better compression at the expense of
+                            memory usage. If not set, defaults to 18.
+                          format: int32
+                          maximum: 24
+                          minimum: 10
+                          type: integer
                       type: object
                     gzip:
                       description: The configuration for GZIP compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.
+                            If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets the zlib compression level, from 1 (fastest compression,
+                            lowest compression ratio) to 9 (slowest compression, best compression ratio).
+                            If not set, Envoy uses the zlib default level, which is equivalent to level 6.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        compressionStrategy:
+                          description: |-
+                            CompressionStrategy selects the zlib compression strategy, which is directly
+                            related to the characteristics of the content. Most of the time "Default" is
+                            the best choice. If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Filtered
+                          - HuffmanOnly
+                          - RLE
+                          - Fixed
+                          type: string
+                        memoryLevel:
+                          description: |-
+                            MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.
+                            Higher values use more memory, but are faster and produce better compression
+                            results. If not set, defaults to 5.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithm of the compressor's window size,
+                            from 9 to 15. Larger window results in better compression at the expense of
+                            memory usage. If not set, defaults to 12, which will produce a 4096 bytes window.
+                          format: int32
+                          maximum: 15
+                          minimum: 9
+                          type: integer
                       type: object
                     minContentLength:
                       allOf:
@@ -395,11 +494,66 @@ spec:
                       type: string
                     zstd:
                       description: The configuration for Zstd compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of the compressor's next output buffer, from
+                            4096 to 65536. If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets the compression parameters according to the pre-defined
+                            zstd compression level table, from 1 to 22. Note that the exact compression
+                            parameters are dynamically determined, depending on both compression level and
+                            source content size (when known). If not set, defaults to 3.
+                          format: int32
+                          maximum: 22
+                          minimum: 1
+                          type: integer
+                        enableChecksum:
+                          description: |-
+                            EnableChecksum specifies whether a 32-bits checksum of the content is written
+                            at the end of the frame. If not set, defaults to false.
+                          type: boolean
+                        strategy:
+                          description: |-
+                            Strategy selects the zstd compression strategy. The higher the value of the
+                            selected strategy, the more complex it is, resulting in stronger and slower
+                            compression. If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Fast
+                          - DFast
+                          - Greedy
+                          - Lazy
+                          - Lazy2
+                          - BTLazy2
+                          - BTOpt
+                          - BTUltra
+                          - BTUltra2
+                          type: string
                       type: object
                   required:
                   - type
                   type: object
+                  x-kubernetes-validations:
+                  - message: The brotli configuration is only allowed when the type
+                      is Brotli.
+                    rule: '!has(self.brotli) || self.type == ''Brotli'''
+                  - message: The gzip configuration is only allowed when the type
+                      is Gzip.
+                    rule: '!has(self.gzip) || self.type == ''Gzip'''
+                  - message: The zstd configuration is only allowed when the type
+                      is Zstd.
+                    rule: '!has(self.zstd) || self.type == ''Zstd'''
+                maxItems: 3
                 type: array
+                x-kubernetes-validations:
+                - message: compression types must be unique
+                  rule: self.all(c, self.filter(o, o.type == c.type).size() == 1)
               compressor:
                 description: |-
                   The compressor config for the http streams.
@@ -412,9 +566,108 @@ spec:
                   properties:
                     brotli:
                       description: The configuration for Brotli compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of the compressor's next output buffer, from
+                            4096 to 65536. If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        disableLiteralContextModeling:
+                          description: |-
+                            DisableLiteralContextModeling disables the "literal context modeling" format
+                            feature. This flag is a "decoding-speed vs compression ratio" trade-off.
+                            If not set, defaults to false.
+                          type: boolean
+                        encoderMode:
+                          description: |-
+                            EncoderMode tunes the encoder for a specific input.
+                            If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Generic
+                          - Text
+                          - Font
+                          type: string
+                        inputBlockBits:
+                          description: |-
+                            InputBlockBits represents the base two logarithm of the compressor's input block
+                            size, from 16 to 24. Larger input block results in better compression at the
+                            expense of memory usage. If not set, defaults to 24.
+                          format: int32
+                          maximum: 24
+                          minimum: 16
+                          type: integer
+                        quality:
+                          description: |-
+                            Quality controls the main compression speed-density lever, from 0 to 11.
+                            The higher the quality, the slower the compression. If not set, defaults to 3.
+                          format: int32
+                          maximum: 11
+                          minimum: 0
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithm of the compressor's window size,
+                            from 10 to 24. Larger window results in better compression at the expense of
+                            memory usage. If not set, defaults to 18.
+                          format: int32
+                          maximum: 24
+                          minimum: 10
+                          type: integer
                       type: object
                     gzip:
                       description: The configuration for GZIP compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of zlib's next output buffer, from 4096 to 65536.
+                            If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets the zlib compression level, from 1 (fastest compression,
+                            lowest compression ratio) to 9 (slowest compression, best compression ratio).
+                            If not set, Envoy uses the zlib default level, which is equivalent to level 6.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        compressionStrategy:
+                          description: |-
+                            CompressionStrategy selects the zlib compression strategy, which is directly
+                            related to the characteristics of the content. Most of the time "Default" is
+                            the best choice. If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Filtered
+                          - HuffmanOnly
+                          - RLE
+                          - Fixed
+                          type: string
+                        memoryLevel:
+                          description: |-
+                            MemoryLevel controls the amount of internal memory used by zlib, from 1 to 9.
+                            Higher values use more memory, but are faster and produce better compression
+                            results. If not set, defaults to 5.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithm of the compressor's window size,
+                            from 9 to 15. Larger window results in better compression at the expense of
+                            memory usage. If not set, defaults to 12, which will produce a 4096 bytes window.
+                          format: int32
+                          maximum: 15
+                          minimum: 9
+                          type: integer
                       type: object
                     minContentLength:
                       allOf:
@@ -440,11 +693,66 @@ spec:
                       type: string
                     zstd:
                       description: The configuration for Zstd compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size in bytes of the compressor's next output buffer, from
+                            4096 to 65536. If not set, defaults to 4096.
+                          format: int32
+                          maximum: 65536
+                          minimum: 4096
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets the compression parameters according to the pre-defined
+                            zstd compression level table, from 1 to 22. Note that the exact compression
+                            parameters are dynamically determined, depending on both compression level and
+                            source content size (when known). If not set, defaults to 3.
+                          format: int32
+                          maximum: 22
+                          minimum: 1
+                          type: integer
+                        enableChecksum:
+                          description: |-
+                            EnableChecksum specifies whether a 32-bits checksum of the content is written
+                            at the end of the frame. If not set, defaults to false.
+                          type: boolean
+                        strategy:
+                          description: |-
+                            Strategy selects the zstd compression strategy. The higher the value of the
+                            selected strategy, the more complex it is, resulting in stronger and slower
+                            compression. If not set, defaults to Default.
+                          enum:
+                          - Default
+                          - Fast
+                          - DFast
+                          - Greedy
+                          - Lazy
+                          - Lazy2
+                          - BTLazy2
+                          - BTOpt
+                          - BTUltra
+                          - BTUltra2
+                          type: string
                       type: object
                   required:
                   - type
                   type: object
+                  x-kubernetes-validations:
+                  - message: The brotli configuration is only allowed when the type
+                      is Brotli.
+                    rule: '!has(self.brotli) || self.type == ''Brotli'''
+                  - message: The gzip configuration is only allowed when the type
+                      is Gzip.
+                    rule: '!has(self.gzip) || self.type == ''Gzip'''
+                  - message: The zstd configuration is only allowed when the type
+                      is Zstd.
+                    rule: '!has(self.zstd) || self.type == ''Zstd'''
+                maxItems: 3
                 type: array
+                x-kubernetes-validations:
+                - message: compressor types must be unique
+                  rule: self.all(c, self.filter(o, o.type == c.type).size() == 1)
               connection:
                 description: Connection includes backend connection settings.
                 properties:
@@ -602,11 +910,31 @@ spec:
                   active:
                     description: Active health check configuration
                     properties:
+                      disableConnectionReuse:
+                        description: |-
+                          DisableConnectionReuse determines whether the active health check connection to a
+                          backend host is closed after each health check probe. When set to true, Envoy opens a
+                          new connection for each health check, which is useful for backends (such as
+                          haproxy-style agent checks) that do not expect a reused connection.
+                          Defaults to false, which reuses the connection across probes.
+                        type: boolean
                       grpc:
                         description: |-
                           GRPC defines the configuration of the GRPC health checker.
                           It's optional, and can only be used if the specified type is GRPC.
                         properties:
+                          hostname:
+                            description: |-
+                              Hostname defines the value of the :authority header sent with active gRPC
+                              health checks. Authority selection uses this order: this field, the
+                              associated Backend endpoint hostname if available, then the effective Route
+                              hostname. If none of them is set, Envoy falls back to the name of the
+                              cluster, which is not a valid authority and is rejected by some gRPC
+                              servers.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
                           service:
                             description: |-
                               Service to send in the health check request.
@@ -755,6 +1083,28 @@ spec:
                               during health checking.
                             maxLength: 1024
                             minLength: 1
+                            type: string
+                          protocol:
+                            default: Auto
+                            description: |-
+                              Protocol is the HTTP protocol that active health check requests are sent with.
+
+                              Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                  `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                  GRPCRoute.
+                                - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                  with HTTP1 as the fallback when nothing is negotiated.
+                                - HTTP1 otherwise.
+
+                              Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                              the application, for example a backend that serves HTTP/1.1 traffic but only
+                              accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                            enum:
+                            - Auto
+                            - HTTP1
+                            - HTTP2
                             type: string
                           requestBody:
                             description: RequestBody defines the HTTP request body
@@ -1019,6 +1369,32 @@ spec:
                         type: boolean
                     type: object
                 type: object
+              http1:
+                description: |-
+                  HTTP1 provides HTTP/1 configuration for backend connections.
+                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                  this field takes precedence for backend (upstream) traffic.
+
+                  Behavior when targeting route kinds that do not use HTTP/1:
+                    - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                      directly adds a Warning condition on the policy; the field is ignored.
+                    - Gateway / ListenerSet / sectionName targets: this field is silently
+                      ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                      beneath that target; no warning is emitted.
+                    - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                      access log/metrics, tracing providers): rejected at admission on their
+                      own BackendSettings via separate validation rules.
+                properties:
+                  enableTrailers:
+                    description: EnableTrailers defines if HTTP/1 trailers should
+                      be proxied by Envoy.
+                    type: boolean
+                  preserveHeaderCase:
+                    description: |-
+                      PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                      By default, Envoy will lowercase all the headers.
+                    type: boolean
+                type: object
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
@@ -1092,12 +1468,31 @@ spec:
                       Default: TerminateConnection
                     type: string
                 type: object
+              http3:
+                description: |-
+                  HTTP3 enables HTTP/3 for backend connections.
+                  HTTP/3 always runs over TLS, so the backend must be configured
+                  with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                  HTTP/3 is only supported for the backends of a route, through
+                  BackendTrafficPolicy. It is rejected for the backends of other
+                  resources, such as the external services of a SecurityPolicy
+                  or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                properties:
+                  mode:
+                    description: |-
+                      Mode determines when HTTP/3 is used to reach the backend.
+                      Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                    enum:
+                    - Auto
+                    - Always
+                    type: string
+                type: object
               httpUpgrade:
                 description: |-
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
                   If not specified, the default upgrade configuration (websocket) will be used.
-                  However, if requestBuffer is configured, the default upgrade configuration
-                  will be ignored.
+                  However, if requestBuffer is configured with mode BufferAndLimit, the default
+                  upgrade configuration will be ignored.
                 items:
                   description: ProtocolUpgradeConfig specifies the configuration for
                     protocol upgrades.
@@ -1436,6 +1831,16 @@ spec:
                         description: PreferLocalZone configures zone-aware routing
                           to prefer sending traffic to the local locality zone.
                         properties:
+                          failTrafficOnPanic:
+                            description: |-
+                              FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                              cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                              drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                              across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                              requests instead, applying backpressure to clients and giving the backend room to
+                              recover.
+                              Defaults to false.
+                            type: boolean
                           force:
                             description: |-
                               ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -1540,7 +1945,8 @@ spec:
                   configurations targeting a parent resource. When set, this configuration will be merged
                   into the closest parent BackendTrafficPolicy in the route's attachment hierarchy (for
                   example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet listener).
-                  Currently, this field can only be set when targeting xRoute resources.
+                  This field can only be set when targeting xRoute or backend (Service/ServiceImport/Backend)
+                  resources, and is required when targeting a backend.
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
                 x-kubernetes-validations:
@@ -2413,17 +2819,14 @@ spec:
                 type: object
               requestBuffer:
                 description: |-
-                  RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
-                  upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request
-                  as any requests larger than the buffer size will be rejected.
+                  RequestBuffer configures how much of a request body Envoy is allowed to buffer for a route,
+                  and whether the gateway fully buffers each request before forwarding it upstream.
 
-                  This can have a negative performance impact so should only be enabled when necessary.
+                  A request whose buffered body exceeds the configured limit is rejected with HTTP 413 Content Too
+                  Large. How much of a request is buffered, and therefore whether the limit acts as a maximum request
+                  body size, depends on the mode: see the mode field.
 
-                  When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
-                  increase in memory usage for Envoy that should be accounted for in your deployment settings.
-
-                  Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option
-                  on routes that need those protocols, because requests can hang instead of being forwarded upstream.
+                  Buffering increases memory usage for Envoy that should be accounted for in your deployment settings.
                 properties:
                   limit:
                     allOf:
@@ -2433,11 +2836,48 @@ spec:
                     - type: integer
                     - type: string
                     description: |-
-                      Limit specifies the maximum allowed size in bytes for each incoming request buffer.
-                      If exceeded, the request will be rejected with HTTP 413 Content Too Large.
+                      Limit specifies the maximum size in bytes that Envoy may buffer for an incoming request body.
+                      If a request's buffered body exceeds this limit, the request is rejected with HTTP 413 Content
+                      Too Large.
+
+                      In BufferAndLimit mode the entire body is always buffered, so this acts as a maximum request body size.
+                      In LimitOnly mode only what a filter later in the chain actually buffers counts against the limit,
+                      so a streamed request that nothing buffers can exceed it and still be forwarded upstream.
 
                       Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
                     x-kubernetes-int-or-string: true
+                  mode:
+                    default: BufferAndLimit
+                    description: |-
+                      Mode determines how Limit is enforced. Defaults to BufferAndLimit.
+
+                      Limit applies in both modes: it is always set as the request body buffer limit for the route. Mode
+                      only controls whether the gateway additionally buffers the whole request body itself, which is what
+                      makes Limit a guaranteed maximum request body size.
+
+                      BufferAndLimit makes the gateway receive each request from the client in full before it starts sending
+                      the request upstream to the backends. This can be helpful to shield your backend servers from slow
+                      clients, and Limit acts as a maximum request body size for the route.
+                      Buffering whole request bodies costs memory and adds latency, so this mode should only be used when
+                      necessary. It is also incompatible with streaming APIs and protocol upgrades such as gRPC streaming
+                      and WebSocket: HTTP upgrades are disabled on routes using this mode, and a request whose body is
+                      never completed is never forwarded upstream. Do not use this mode on routes that need those
+                      protocols.
+
+                      LimitOnly only raises how much of a request body the gateway is allowed to buffer, without buffering
+                      requests itself. Use this mode when something later in the request path (ext_proc, Lua, Wasm, ...)
+                      buffers the request body and the default limit is too small. Unlike BufferAndLimit, this mode is
+                      compatible with streaming APIs and protocol upgrades, because the gateway does not wait for the whole
+                      request body before forwarding it upstream.
+
+                      In both modes, Limit applies to an individual request body and is separate from the connection buffer
+                      limits configured by ClientTrafficPolicy and BackendTrafficPolicy, which control per-connection
+                      read/write buffering and back pressure. There is no need to raise the connection buffer limits for
+                      Limit to take effect.
+                    enum:
+                    - BufferAndLimit
+                    - LimitOnly
+                    type: string
                 type: object
               responseOverride:
                 description: |-
@@ -2450,12 +2890,60 @@ spec:
                     match:
                       description: Match configuration.
                       properties:
+                        requestHeaders:
+                          description: |-
+                            Request headers to match on. The match evaluates to true if all matches are successful.
+                            Note that the request headers are not available for all Envoy-generated responses,
+                            in which case a request header match never evaluates to true.
+                          items:
+                            description: ResponseOverrideHeaderMatch defines the configuration
+                              for matching a request or response header.
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the HTTP header.
+                                  The header name is case-insensitive.
+                                  For example, "Foo" and "foo" are considered the same header.
+                                maxLength: 256
+                                minLength: 1
+                                pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                type: string
+                              value:
+                                description: Value within the HTTP header to match
+                                  against.
+                                properties:
+                                  type:
+                                    default: Exact
+                                    description: Type specifies how to match against
+                                      a string.
+                                    enum:
+                                    - Exact
+                                    - Prefix
+                                    - Suffix
+                                    - RegularExpression
+                                    type: string
+                                  value:
+                                    description: Value specifies the string value
+                                      that the match must have.
+                                    maxLength: 1024
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - value
+                                type: object
+                            required:
+                            - name
+                            - value
+                            type: object
+                          maxItems: 16
+                          minItems: 1
+                          type: array
                         responseHeaders:
                           description: Response headers to match on. The match evaluates
                             to true if all matches are successful.
                           items:
                             description: ResponseOverrideHeaderMatch defines the configuration
-                              for matching a response header.
+                              for matching a request or response header.
                             properties:
                               name:
                                 description: |-
@@ -2553,9 +3041,10 @@ spec:
                           type: array
                       type: object
                       x-kubernetes-validations:
-                      - message: at least one of statusCodes or responseHeaders must
-                          be specified
-                        rule: has(self.statusCodes) || has(self.responseHeaders)
+                      - message: at least one of statusCodes, requestHeaders or responseHeaders
+                          must be specified
+                        rule: has(self.statusCodes) || has(self.requestHeaders) ||
+                          has(self.responseHeaders)
                     redirect:
                       description: Redirect configuration
                       properties:
@@ -2895,6 +3384,8 @@ spec:
                           description: |-
                             Status Code of the Custom Response
                             If unset, does not override the status of response.
+                          maximum: 599
+                          minimum: 200
                           type: integer
                       type: object
                     source:
@@ -3528,46 +4019,125 @@ spec:
               rule: '(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
                 && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size()
                 > 0) '
-            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
-              rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
-                : true '
-            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
-              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'',
-                ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']
+            - message: invalid targetRef group/kind combination
+              rule: 'has(self.targetRef) ? (self.targetRef.group == ''gateway.networking.k8s.io''
+                && self.targetRef.kind in [''Gateway'', ''ListenerSet'', ''HTTPRoute'',
+                ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']) || (self.targetRef.group.size()
+                == 0 && self.targetRef.kind == ''Service'') || (self.targetRef.group
+                == ''multicluster.x-k8s.io'' && self.targetRef.kind == ''ServiceImport'')
+                || (self.targetRef.group == ''gateway.envoyproxy.io'' && self.targetRef.kind
+                == ''Backend'') : true'
+            - message: invalid targetRefs group/kind combination
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, (ref.group ==
+                ''gateway.networking.k8s.io'' && ref.kind in [''Gateway'', ''ListenerSet'',
+                ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
+                || (ref.group.size() == 0 && ref.kind == ''Service'') || (ref.group
+                == ''multicluster.x-k8s.io'' && ref.kind == ''ServiceImport'') ||
+                (ref.group == ''gateway.envoyproxy.io'' && ref.kind == ''Backend''))
                 : true'
-            - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
-                ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'',
-                ''TLSRoute'']) : true '
-            - message: mergeType can only be used with xRoute targets
+            - message: mergeType can only be used with xRoute or backend targets
               rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
-                && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in
-                [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'']))
-                && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind
-                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])))'
+                in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'',
+                ''Service'', ''ServiceImport'', ''Backend'']) && (!has(self.targetRefs)
+                || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
+                ''UDPRoute'', ''TCPRoute'', ''TLSRoute'', ''Service'', ''ServiceImport'',
+                ''Backend''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
+                sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'',
+                ''TLSRoute'', ''Service'', ''ServiceImport'', ''Backend''])))'
+            - message: mergeType is required when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || has(self.mergeType)'
+            - message: rateLimit is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.rateLimit)'
+            - message: faultInjection is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.faultInjection)'
+            - message: compression is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.compression)'
+            - message: compressor is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.compressor)'
+            - message: responseOverride is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.responseOverride)'
+            - message: httpUpgrade is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.httpUpgrade)'
+            - message: requestBuffer is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.requestBuffer)'
+            - message: telemetry is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.telemetry)'
+            - message: routingType is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.routingType)'
+            - message: retry is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.retry)'
+            - message: bandwidthLimit is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.bandwidthLimit)'
+            - message: ConsistentHash load balancing is not allowed when targeting
+                a backend (ambiguous hash input across a weighted route's backends)
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.loadBalancer)
+                || self.loadBalancer.type != ''ConsistentHash'''
+            - message: sectionName is not supported when targeting a backend
+              rule: '!has(self.targetRef) || !(self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || !has(self.targetRef.sectionName)'
+            - message: sectionName is not supported when targeting a backend
+              rule: '!has(self.targetRefs) || self.targetRefs.all(ref, !(ref.kind
+                in [''Service'', ''ServiceImport'', ''Backend'']) || !has(ref.sectionName))'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
-            - message: requestBuffer cannot be used together with httpUpgrade
-              rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
-                == 0'
+            - message: useClientProtocol cannot be used together with http3
+              rule: '!has(self.http3) || !has(self.useClientProtocol) || !self.useClientProtocol'
+            - message: requestBuffer with mode BufferAndLimit cannot be used together
+                with httpUpgrade
+              rule: '!has(self.requestBuffer) || self.requestBuffer.mode == ''LimitOnly''
+                || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0'
             - message: admissionControl can only be used with HTTPRoute, GRPCRoute,
-                Gateway, or ListenerSet targets
+                Gateway, or ListenerSet targets, or with Service, ServiceImport, or
+                Backend targets via targetRef/targetRefs (targetSelectors is not supported
+                for those kinds)
               rule: '!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''Gateway'', ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'']) &&
-                (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute''])) && (!has(self.targetSelectors)
+                in [''Gateway'', ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''Service'',
+                ''ServiceImport'', ''Backend'']) && (!has(self.targetRefs) || self.targetRefs.all(ref,
+                ref.kind in [''Gateway'', ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'',
+                ''Service'', ''ServiceImport'', ''Backend''])) && (!has(self.targetSelectors)
                 || self.targetSelectors.all(sel, sel.kind in [''Gateway'', ''ListenerSet'',
                 ''HTTPRoute'', ''GRPCRoute''])))'
+            - message: timeout.http.requestTimeout and timeout.http.streamIdleTimeout
+                are not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.timeout)
+                || !has(self.timeout.http) || (!has(self.timeout.http.requestTimeout)
+                && !has(self.timeout.http.streamIdleTimeout))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&
                 has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer)
                 && has(self.loadBalancer.type) && self.loadBalancer.type in [''Random'',
                 ''RoundRobin'']))'
+            - message: proxyProtocol cannot be used together with http3
+              rule: '!has(self.http3) || !has(self.proxyProtocol)'
           status:
             description: status defines the current status of BackendTrafficPolicy.
             properties:

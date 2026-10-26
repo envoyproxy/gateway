@@ -134,7 +134,7 @@ spec:
       rules:
       - limit:
           requests: 50
-          unit: Minute
+          unit: Second
     global:
       rules:
       - limit:

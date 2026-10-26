@@ -156,9 +156,10 @@ func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
 	}
 }
 
-// ApplyMergePatch applies a merge patch to a PodDisruptionBudget based on the merge type
-func (pdb *KubernetesPodDisruptionBudgetSpec) ApplyMergePatch(old *policyv1.PodDisruptionBudget) (*policyv1.PodDisruptionBudget, error) {
-	if pdb.Patch == nil {
+// ApplyMergePatch applies a merge patch to a PodDisruptionBudget based on the merge type.
+// If disabled is true, the patch is ignored and old is returned unchanged.
+func (pdb *KubernetesPodDisruptionBudgetSpec) ApplyMergePatch(old *policyv1.PodDisruptionBudget, disabled bool) (*policyv1.PodDisruptionBudget, error) {
+	if pdb.Patch == nil || disabled {
 		return old, nil
 	}
 

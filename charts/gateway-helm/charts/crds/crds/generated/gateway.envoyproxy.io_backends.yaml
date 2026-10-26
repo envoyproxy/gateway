@@ -53,8 +53,9 @@ spec:
             description: Spec defines the desired state of Backend.
             properties:
               appProtocols:
-                description: AppProtocols defines the application protocols to be
-                  supported when connecting to the backend.
+                description: |-
+                  AppProtocols defines the application protocols to be supported when connecting to the backend.
+                  For a KubernetesService backend, this takes precedence over the appProtocol of the Service port.
                 items:
                   description: AppProtocolType defines various backend applications
                     protocols supported by Envoy Gateway
@@ -160,6 +161,30 @@ spec:
                   The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
                   the health of the active backends falls below 72%.
                 type: boolean
+              kubernetesService:
+                description: |-
+                  KubernetesService defines the Kubernetes Service to be used when connecting to the backend.
+                  It must be set when Type is KubernetesService, and must not be set otherwise.
+
+                  The endpoints of the Service are discovered from its EndpointSlices, exactly as they
+                  are for a Service backendRef, so the resulting cluster keeps pod-level load balancing,
+                  health checking, session persistence, endpoint draining and zone awareness.
+                properties:
+                  name:
+                    description: Name is the name of the Kubernetes Service.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  port:
+                    description: Port is the port of the Kubernetes Service.
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                required:
+                - name
+                - port
+                type: object
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
@@ -302,7 +327,11 @@ spec:
                       ClientCertificateRef defines the reference to a Kubernetes Secret that contains
                       the client certificate and private key for Envoy to use when connecting to
                       backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.
-                      This secret should be located within the same namespace as the Envoy proxy resource that references it.
+                      The Secret must be in the same namespace as the EnvoyProxy or Backend resource
+                      that references it.
+                      Cross-namespace references are not supported, even with a ReferenceGrant.
+                      The ReferenceGrant requirement in the namespace field's description is inherited
+                      from the Gateway API SecretObjectReference type and does not apply to this field.
                     properties:
                       group:
                         default: ""
@@ -467,14 +496,26 @@ spec:
                 enum:
                 - Endpoints
                 - DynamicResolver
+                - KubernetesService
                 type: string
             type: object
             x-kubernetes-validations:
             - message: DynamicResolver type cannot have endpoints specified
               rule: self.type != 'DynamicResolver' || !has(self.endpoints)
+            - message: endpoints must be specified when type is Endpoints
+              rule: self.type != 'Endpoints' || has(self.endpoints)
             - message: DynamicResolver type cannot use autoSNIFromEndpointHostname
               rule: self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
                 && self.tls.autoSNIFromEndpointHostname)
+            - message: KubernetesService type cannot have endpoints specified
+              rule: self.type != 'KubernetesService' || !has(self.endpoints)
+            - message: KubernetesService type cannot use autoSNIFromEndpointHostname
+              rule: self.type != 'KubernetesService' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
+                && self.tls.autoSNIFromEndpointHostname)
+            - message: kubernetesService must be specified if and only if type is
+                KubernetesService
+              rule: 'self.type == ''KubernetesService'' ? has(self.kubernetesService)
+                : !has(self.kubernetesService)'
             - message: when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints
                 must define a hostname
               rule: '!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)

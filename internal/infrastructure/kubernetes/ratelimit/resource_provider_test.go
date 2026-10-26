@@ -723,6 +723,17 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
+			// priorityClassName from rateLimitDeployment.pod must be rendered onto the
+			// rate limit pod spec, matching the proxy deployment behavior.
+			caseName:  "with-priority-class-name",
+			rateLimit: rateLimit,
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Pod: &egv1a1.KubernetesPodSpec{
+					PriorityClassName: new("high-priority"),
+				},
+			},
+		},
+		{
 			caseName: "enable-tracing",
 			rateLimit: &egv1a1.RateLimit{
 				Backend: egv1a1.RateLimitDatabaseBackend{

@@ -51,6 +51,8 @@ layered_runtime:
   layers:
   - name: global_config
     static_layer:
+      envoy.reloadable_features.oauth2_legacy_cbc_decrypt_compat: false
+      envoy.reloadable_features.oauth2_use_gcm_encryption: true
       re2.max_program_size.error_level: 4294967295
       re2.max_program_size.warn_level: 1000
 dynamic_resources:
@@ -94,6 +96,9 @@ stats_sinks:
     {{- if $sink.ReportHistogramsAsDeltas }}
     report_histograms_as_deltas: true
     {{- end }}
+    {{- if $sink.Prefix }}
+    prefix: '{{ $sink.Prefix }}'
+    {{- end}}
     {{- if $sink.ResourceAttributes }}
     resource_detectors:
     - name: envoy.tracers.opentelemetry.resource_detectors.static_config
@@ -115,7 +120,7 @@ static_resources:
         address: '{{ .StatsServer.Address }}'
         port_value: {{ .StatsServer.Port }}
         protocol: TCP
-        {{- if eq .IPFamily "DualStack" "IPv6" }}
+        {{- if eq .IPFamily "DualStack" "PreferDualStack" "IPv6" }}
         ipv4_compat: true
         {{- end }}
     bypass_overload_manager: true
@@ -132,7 +137,7 @@ static_resources:
             - name: prometheus_stats
               domains:
               - "*"
-              {{- if .EnablePrometheusCompression }}
+              {{- if .PrometheusCompression }}
               typed_per_filter_config:
                 envoy.filters.http.compression:
                   "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
@@ -147,7 +152,7 @@ static_resources:
                       exact: GET
                 route:
                   cluster: prometheus_stats
-                {{- if .EnablePrometheusCompression }}
+                {{- if .PrometheusCompression }}
                 typed_per_filter_config:
                   envoy.filters.http.compression:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
@@ -155,27 +160,35 @@ static_resources:
                       response_direction_config:
                 {{- end }}
           http_filters:
-          {{- if .EnablePrometheusCompression }}
+          {{- if .PrometheusCompression }}
           - name: envoy.filters.http.compressor
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
-              {{- if eq .PrometheusCompressionLibrary "Gzip"}}
+              {{- if eq .PrometheusCompression.Library "Gzip"}}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
               {{- end }}
-              {{- if eq .PrometheusCompressionLibrary "Brotli"}}
+              {{- if eq .PrometheusCompression.Library "Brotli"}}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
               {{- end }}
-              {{- if eq .PrometheusCompressionLibrary "Zstd"}}
+              {{- if eq .PrometheusCompression.Library "Zstd"}}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+              {{- end }}
+              {{- with .PrometheusCompression.LibrarySettings }}
+{{ indent 18 . }}
+              {{- end }}
+              {{- with .PrometheusCompression.MinContentLength }}
+              response_direction_config:
+                common_config:
+                  min_content_length: {{ . }}
               {{- end }}
           {{- end }}
           - name: envoy.filters.http.router

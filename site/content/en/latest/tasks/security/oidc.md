@@ -542,6 +542,128 @@ Additional connection settings for the OIDC provider can be configured in the [b
 For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
 
 
+## Cookie Names
+
+Envoy keeps the OIDC session in a set of cookies, and names each one `<Purpose>-<suffix>`,
+for example `AccessToken-1a2b3c4d`. Envoy Gateway derives the suffix from the identity of
+the [SecurityPolicy], so that policies applying to the same route don't overwrite each
+other's cookies.
+
+Because the generated suffix is tied to the identity of the policy, it changes when the
+policy is deleted and recreated, which logs users out. Pin it with `cookieNames.suffix`:
+
+```yaml
+  oidc:
+    cookieNames:
+      suffix: "myapp"
+```
+
+Envoy then sets `AccessToken-myapp`, `IdToken-myapp`, `OauthHMAC-myapp`,
+`OauthExpires-myapp`, `RefreshToken-myapp`, `OauthNonce-myapp` and
+`CodeVerifier-myapp`.
+
+Policies that share a suffix also share the session cookies, so a user authenticated
+through one is authenticated through the others. This only works if those policies agree
+on the OIDC provider, the client, and the `cookieDomain`.
+
+If something that runs after OIDC expects a particular cookie name, name that cookie
+outright. A filter later in the chain, or the backend application itself, may read a token
+from a cookie whose name it hardcodes, most often the access token. The per-cookie fields
+take precedence over `suffix`:
+
+```yaml
+  oidc:
+    cookieNames:
+      suffix: "myapp"
+      accessToken: "my_access_token"
+```
+
+Here Envoy sets `my_access_token`, and keeps the suffix for the cookies that aren't named
+explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
+
+Each cookie holds a different value, so all the resulting names must be distinct.
+
+## Logout
+
+Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
+specified, `logoutPath` defaults to `/logout`. Like `redirectURL`, it must match the target
+HTTPRoute or Gateway, otherwise the logout request can't be processed by the OIDC filter.
+
+Clearing the cookies only ends the session at the gateway; the user remains logged in at the OIDC
+provider. To also terminate the provider-side session, configure the provider's
+[end session endpoint](https://openid.net/specs/openid-connect-rpinitiated-1_0.html), which enables
+[RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html):
+
+```yaml
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+      endSessionEndpoint: "https://accounts.google.com/o/oauth2/v2/logout"
+    logoutPath: "/myapp/logout"
+```
+
+Envoy Gateway also discovers `endSessionEndpoint` from the provider's
+[Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse)
+when `authorizationEndpoint` or `tokenEndpoint` is not specified, so RP-Initiated Logout may be
+active even if you did not set the field explicitly.
+
+When an end session endpoint is in use, requesting the `logoutPath` returns a redirect to the
+provider that carries a `post_logout_redirect_uri` parameter telling the provider where to send the
+user once the logout completes. By default Envoy sends the root of the request's host,
+`<scheme>://<host>/`.
+
+### Setting the post logout redirect URI
+
+Most providers require the post logout redirect URI to be **registered for the client** and reject
+the logout request otherwise. If the default value is not registered, set an explicit URI:
+
+```yaml
+  oidc:
+    logoutPath: "/myapp/logout"
+    postLogoutRedirect:
+      uri: "https://www.example.com/loggedout"
+```
+
+Point the URI at a page that the OIDC policy does not protect. If it falls under a protected route,
+Envoy Gateway starts a new login as soon as the provider redirects the user there, and the provider
+may sign the user straight back in with its own session.
+
+The URI may contain the Envoy `%REQ(header)%` [command operator][command-operators], which is useful
+when the same policy serves more than one host:
+
+```yaml
+  oidc:
+    postLogoutRedirect:
+      uri: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout"
+```
+
+Only `%REQ(header)%` is accepted here, since it is the only operator meaningful in a URI derived from
+the request. Envoy Gateway rejects any other operator and reports the error on the SecurityPolicy
+status, so that a typo such as `%REQ(x-tenant)` or `%BOGUS%` surfaces on the policy rather than
+causing Envoy to reject the configuration. Envoy percent-encodes the URI when it builds the logout
+redirect, so write it unencoded; a literal percent is written as `%%`.
+
+### Omitting the post logout redirect URI
+
+`post_logout_redirect_uri` is optional in the OIDC specification. If you cannot register a URI with
+your provider, or you do not need the user redirected back to your application, omit the parameter
+entirely:
+
+```yaml
+  oidc:
+    logoutPath: "/myapp/logout"
+    postLogoutRedirect:
+      disabled: true
+```
+
+The logout itself still completes — Envoy Gateway clears its cookies and the provider terminates the
+session — but because the provider is not told where to send the user, the browser is left on a page
+controlled by the provider rather than returning to your application.
+
+`uri` cannot be set together with `disabled: true`. `postLogoutRedirect` has no effect when no end
+session endpoint is configured or discovered, because in that case Envoy Gateway does not redirect to
+the provider at all.
+
 ## Providers
 
 Guides to integrate with specific OIDC providers.
@@ -570,7 +692,7 @@ spec:
     
     cookieDomain: "example.com"
     cookieNames:
-      accessToken: "azure-access-token"
+      suffix: "azure"
 
     provider:
       issuer: "https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0"
@@ -627,3 +749,4 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [backend-routing]: ../traffic/backend
 [backend-tls]: ../backend-tls
 [BackendSettings]: ../../../api/extension_types/#clustersettings
+[command-operators]: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators

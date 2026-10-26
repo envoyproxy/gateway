@@ -100,7 +100,7 @@ var HTTPRouteStatusAggregatesAcrossGatewayClassesTest = suite.ConformanceTest{
 		t.Run("httproute status aggregates across gateway classes", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "multiple-gc-route", Namespace: ns}
-			internetGatewayNN := types.NamespacedName{Name: "internet-gateway", Namespace: ns}
+			internetGatewayNN := types.NamespacedName{Name: "internet-gateway-for-hr-status", Namespace: ns}
 			privateGatewayNN := types.NamespacedName{Name: "private-gateway-for-hr-status", Namespace: ns}
 
 			_, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(internetGatewayNN))
@@ -131,7 +131,7 @@ var PolicyStatusAggregatesAcrossGatewayClassesTest = suite.ConformanceTest{
 		t.Run("backendtrafficpolicy status aggregates across gateway classes", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			policyNN := types.NamespacedName{Name: "multiple-gc-btp", Namespace: ns}
-			internetGatewayNN := types.NamespacedName{Name: "internet-gateway", Namespace: ns}
+			internetGatewayNN := types.NamespacedName{Name: "internet-gateway-for-pol-status", Namespace: ns}
 			privateGatewayNN := types.NamespacedName{Name: "private-gateway-for-pol-status", Namespace: ns}
 
 			_, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(internetGatewayNN))

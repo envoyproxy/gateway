@@ -45,6 +45,30 @@ var HTTP3Test = suite.ConformanceTest{
 		ClientTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "http3-ctp", Namespace: ConformanceInfraNamespace},
 			suite.ControllerName, ancestorRef)
 
+		t.Run("advertises configured HTTP/3 port", func(t *testing.T) {
+			expected := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "foo.example.com",
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers: map[string]string{
+						"alt-svc": `h3=":8443"; ma=86400`,
+					},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			serverCertificate, _, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: "foo-com-tls", Namespace: ConformanceInfraNamespace})
+			if err != nil {
+				t.Fatalf("unexpected error finding TLS secret: %v", err)
+			}
+
+			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+				gwAddr, serverCertificate, nil, nil, "foo.example.com", expected)
+		})
+
 		testHTTP3 := func(host, secretName string) {
 			quicRoundTripper := &utils.QuicRoundTripper{
 				Debug:         suite.Debug,

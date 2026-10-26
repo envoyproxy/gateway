@@ -23,10 +23,16 @@
             - openid
             authType: BASIC_AUTH
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            cookieConfigs:
+              codeVerifierCookieConfig:
+                path: /oauth2/callback
+              oauthNonceCookieConfig:
+                path: /oauth2/callback
             credentials:
               clientId: client.oauth.foo.com
               cookieNames:
                 bearerToken: AccessToken-b0a1b740
+                codeVerifier: CodeVerifier-b0a1b740
                 idToken: IdToken-b0a1b740
                 oauthExpires: OauthExpires-b0a1b740
                 oauthHmac: OauthHMAC-b0a1b740

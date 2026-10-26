@@ -13,6 +13,7 @@ import (
 	"net"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
@@ -26,6 +27,7 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -42,6 +44,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	"github.com/envoyproxy/gateway/internal/xds/server/kubejwt"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
+	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -90,6 +93,11 @@ type Config struct {
 
 type Runner struct {
 	Config
+
+	// done tracks goroutines started by Start so that Close can block until
+	// they have all exited, ensuring shared state they write to is not
+	// closed out from under them during shutdown.
+	done sync.WaitGroup
 }
 
 func New(cfg *Config) *Runner {
@@ -145,7 +153,10 @@ func getRandomMaxConnectionAge() time.Duration {
 }
 
 // Close implements Runner interface.
-func (r *Runner) Close() error { return nil }
+func (r *Runner) Close() error {
+	r.done.Wait()
+	return nil
+}
 
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) error {
@@ -220,12 +231,16 @@ func (r *Runner) Start(ctx context.Context) error {
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// Start and listen xDS gRPC Server.
-	go r.serveXdsServer(ctx)
+	r.done.Go(func() {
+		r.serveXdsServer(ctx)
+	})
 
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	sub := r.XdsIR.Subscribe(ctx)
-	go r.translateFromSubscription(sub)
+	r.done.Go(func() {
+		r.translateFromSubscription(sub)
+	})
 	r.Logger.Info("started")
 	return err
 }
@@ -274,12 +289,13 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 		func(update message.Update[string, *message.XdsIRWithContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
-			parentCtx := context.Background()
-			if update.Value != nil && update.Value.Context != nil {
-				parentCtx = update.Value.Context
+			parentCtx := update.Value.ParentContext(context.Background())
+			var startOpts []trace.SpanStartOption
+			if !update.Delete && !update.Initial {
+				parentCtx, startOpts = message.RecordQueueWait(parentCtx, tracer, r.Name(), update.Value.StoredAtTime())
 			}
 
-			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate")
+			traceCtx, span := tracer.Start(parentCtx, "XdsRunner.subscribeAndTranslate", startOpts...)
 			defer span.End()
 			traceLogger := r.Logger.WithTrace(traceCtx)
 			traceLogger.Info("received an update")
@@ -329,9 +345,15 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					}
 				}
 
-				_, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
-				result, err := t.Translate(val.XdsIR)
-				translateSpan.End()
+				// The span is ended by a deferred call inside the closure: the translator
+				// panics on some inputs and HandleSubscription recovers from it, and an
+				// unended span is never exported, so a plain End() here would drop the
+				// stage span and the input sizes recorded on it.
+				result, err := func() (*xtypes.ResourceVersionTable, error) {
+					translateCtx, translateSpan := tracer.Start(traceCtx, "Translator.Translate")
+					defer translateSpan.End()
+					return t.Translate(translateCtx, val.XdsIR)
+				}()
 				if err != nil {
 					traceLogger.Error(err, "skipped publishing xds resources: failed to translate xds ir")
 					errChan <- err

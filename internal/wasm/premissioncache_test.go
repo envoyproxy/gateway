@@ -21,12 +21,14 @@ package wasm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -71,8 +73,8 @@ func TestPermissionCache(t *testing.T) {
 			failPermissionCheck = false
 			lock.Unlock()
 
-			ctx := context.Background()
-			defer ctx.Done()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			cache, entry := setupTestPermissionCache(
 				permissionCacheOptions{
 					checkInterval:    1 * time.Nanosecond,
@@ -88,7 +90,7 @@ func TestPermissionCache(t *testing.T) {
 
 			// Wait for the cache to expire
 			time.Sleep(10 * time.Millisecond)
-			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true, nil)
 			if err != nil {
 				t.Logf("permission rechecked should not return error: %v", err)
 				return false
@@ -121,8 +123,8 @@ func TestPermissionCache(t *testing.T) {
 			failPermissionCheck = true
 			lock.Unlock()
 
-			ctx := context.Background()
-			defer ctx.Done()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			cache, entry := setupTestPermissionCache(
 				permissionCacheOptions{
 					checkInterval:    1 * time.Nanosecond,
@@ -138,7 +140,7 @@ func TestPermissionCache(t *testing.T) {
 
 			// Wait for the cache to expire
 			time.Sleep(10 * time.Millisecond)
-			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true, nil)
 			if err == nil {
 				t.Log("permission rechecked should return error if failed permission check")
 				return false
@@ -174,8 +176,8 @@ func TestPermissionCache(t *testing.T) {
 			failPermissionCheck = false
 			lock.Unlock()
 
-			ctx := context.Background()
-			defer ctx.Done()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			cache, entry := setupTestPermissionCache(
 				permissionCacheOptions{
 					checkInterval: 1 * time.Nanosecond,
@@ -197,7 +199,7 @@ func TestPermissionCache(t *testing.T) {
 				t.Log("cache entry should be removed after expiry")
 				return false
 			}
-			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true, nil)
 			if err != nil {
 				t.Logf("permission rechecked should not return error: %v", err)
 				return false
@@ -229,8 +231,8 @@ func TestPermissionCache(t *testing.T) {
 			failPermissionCheck = false
 			lock.Unlock()
 
-			ctx := context.Background()
-			defer ctx.Done()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			cache, entry := setupTestPermissionCache(
 				permissionCacheOptions{
 					checkInterval: 1 * time.Nanosecond,
@@ -250,7 +252,7 @@ func TestPermissionCache(t *testing.T) {
 			}
 
 			now := time.Now()
-			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true, nil)
 			if err != nil {
 				t.Logf("permission check should not return error: %v", err)
 				return false
@@ -283,8 +285,8 @@ func TestPermissionCache(t *testing.T) {
 			failPermissionCheck = true
 			lock.Unlock()
 
-			ctx := context.Background()
-			defer ctx.Done()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 			cache, entry := setupTestPermissionCache(
 				permissionCacheOptions{
 					checkInterval: 1 * time.Nanosecond,
@@ -304,7 +306,7 @@ func TestPermissionCache(t *testing.T) {
 			}
 
 			now := time.Now()
-			allowed, err := cache.IsAllowed(context.Background(), image, secret, true)
+			allowed, err := cache.IsAllowed(context.Background(), image, secret, true, nil)
 			if err == nil {
 				t.Logf("non-exist permission should be checked and denied at first access if secret is invalid")
 				return false
@@ -330,6 +332,196 @@ func TestPermissionCache(t *testing.T) {
 			return true
 		}, time.Second*5, time.Millisecond*20)
 	})
+}
+
+func TestPermissionCacheDoesNotHoldLockDuringMissCheck(t *testing.T) {
+	blockingImage, started, cleanup := setupBlockingRegistry(t)
+	defer cleanup()
+
+	cache := newPermissionCache(
+		permissionCacheOptions{},
+		logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
+
+	cachedImage, err := url.Parse("oci://example.com/test/cached:v1")
+	require.NoError(t, err)
+	cache.Put(&permissionCacheEntry{
+		image: cachedImage,
+		fetcherOption: &ImageFetcherOption{
+			PullSecret: nil,
+		},
+		checkError: nil,
+	})
+	cache.Lock()
+	cache.cache[permissionCacheKey(cachedImage, nil, nil)].lastCheck = time.Now().Add(time.Hour)
+	cache.Unlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	go func() {
+		_, _ = cache.IsAllowed(ctx, blockingImage, nil, true, nil)
+	}()
+
+	require.Eventually(t, func() bool {
+		return started.Load()
+	}, time.Second, 10*time.Millisecond)
+	requireCachedPermissionReturns(t, cache, cachedImage)
+}
+
+func TestPermissionCacheDoesNotHoldLockDuringBackgroundCheck(t *testing.T) {
+	blockingImage, started, cleanup := setupBlockingRegistry(t)
+	defer cleanup()
+
+	cache := newPermissionCache(
+		permissionCacheOptions{
+			checkInterval:          10 * time.Millisecond,
+			permissionExpiry:       time.Nanosecond,
+			permissionCheckTimeout: 200 * time.Millisecond,
+		},
+		logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
+	cache.Put(&permissionCacheEntry{
+		image: blockingImage,
+		fetcherOption: &ImageFetcherOption{
+			Insecure: true,
+		},
+		checkError: nil,
+	})
+
+	cachedImage, err := url.Parse("oci://example.com/test/cached:v1")
+	require.NoError(t, err)
+	cache.Put(&permissionCacheEntry{
+		image: cachedImage,
+		fetcherOption: &ImageFetcherOption{
+			PullSecret: nil,
+		},
+		checkError: nil,
+	})
+	cache.Lock()
+	cache.cache[permissionCacheKey(cachedImage, nil, nil)].lastCheck = time.Now().Add(time.Hour)
+	cache.Unlock()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cache.Start(ctx)
+
+	require.Eventually(t, func() bool {
+		return started.Load()
+	}, time.Second, 10*time.Millisecond)
+	requireCachedPermissionReturns(t, cache, cachedImage)
+}
+
+func TestPermissionCacheUpdateRecheckedPermission(t *testing.T) {
+	image, err := url.Parse("oci://example.com/test/cached:v1")
+	require.NoError(t, err)
+
+	cache := newPermissionCache(
+		permissionCacheOptions{},
+		logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
+
+	originalLastCheck := time.Now().Add(-time.Hour)
+	originalLastAccess := time.Now().Add(-30 * time.Minute)
+	entry := &permissionCacheEntry{
+		image: image,
+		fetcherOption: &ImageFetcherOption{
+			PullSecret: nil,
+		},
+		lastCheck:  originalLastCheck,
+		lastAccess: originalLastAccess,
+		checkError: nil,
+	}
+	cache.cache[entry.key()] = entry
+
+	recheckErr := errors.New("recheck failed")
+	recheckedEntry := entry.copy()
+	recheckedEntry.lastCheck = time.Now()
+	recheckedEntry.lastAccess = originalLastAccess.Add(-time.Minute)
+	recheckedEntry.checkError = recheckErr
+
+	cache.updateRecheckedPermission(recheckedEntry, originalLastCheck)
+
+	got, ok := cache.getForTest(entry.key())
+	require.True(t, ok)
+	require.ErrorIs(t, got.checkError, recheckErr)
+	require.True(t, got.lastCheck.Equal(recheckedEntry.lastCheck))
+	require.True(t, got.lastAccess.Equal(originalLastAccess))
+}
+
+func TestPermissionCacheSkipsStaleRecheckResult(t *testing.T) {
+	image, err := url.Parse("oci://example.com/test/cached:v1")
+	require.NoError(t, err)
+
+	cache := newPermissionCache(
+		permissionCacheOptions{},
+		logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
+
+	originalLastCheck := time.Now().Add(-time.Hour)
+	liveLastCheck := time.Now()
+	liveLastAccess := time.Now().Add(-30 * time.Minute)
+	liveErr := errors.New("live result")
+	entry := &permissionCacheEntry{
+		image: image,
+		fetcherOption: &ImageFetcherOption{
+			PullSecret: nil,
+		},
+		lastCheck:  liveLastCheck,
+		lastAccess: liveLastAccess,
+		checkError: liveErr,
+	}
+	cache.cache[entry.key()] = entry
+
+	staleErr := errors.New("stale result")
+	staleEntry := entry.copy()
+	staleEntry.lastCheck = liveLastCheck.Add(time.Minute)
+	staleEntry.lastAccess = liveLastAccess.Add(-time.Minute)
+	staleEntry.checkError = staleErr
+
+	cache.updateRecheckedPermission(staleEntry, originalLastCheck)
+
+	got, ok := cache.getForTest(entry.key())
+	require.True(t, ok)
+	require.ErrorIs(t, got.checkError, liveErr)
+	require.True(t, got.lastCheck.Equal(liveLastCheck))
+	require.True(t, got.lastAccess.Equal(liveLastAccess))
+}
+
+func setupBlockingRegistry(t *testing.T) (*url.URL, *atomic.Bool, func()) {
+	t.Helper()
+
+	started := &atomic.Bool{}
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		started.Store(true)
+		<-r.Context().Done()
+	}))
+	u, err := url.Parse(server.URL)
+	require.NoError(t, err)
+	image, err := url.Parse(fmt.Sprintf("oci://%s/test/block:v1", u.Host))
+	require.NoError(t, err)
+
+	return image, started, server.Close
+}
+
+func requireCachedPermissionReturns(t *testing.T, cache *permissionCache, image *url.URL) {
+	t.Helper()
+
+	done := make(chan error, 1)
+	go func() {
+		allowed, err := cache.IsAllowed(context.Background(), image, nil, false, nil)
+		if err != nil {
+			done <- err
+			return
+		}
+		if !allowed {
+			done <- fmt.Errorf("permission should be allowed")
+			return
+		}
+		done <- nil
+	}()
+
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("cached permission lookup blocked while another permission check was in flight")
+	}
 }
 
 // setupTestPermissionCache sets up a permission cache for testing.

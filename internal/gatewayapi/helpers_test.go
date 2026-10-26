@@ -1136,6 +1136,60 @@ func TestGetServiceIPFamily(t *testing.T) {
 	}
 }
 
+func TestGetEnvoyIPFamily(t *testing.T) {
+	testCases := []struct {
+		name       string
+		envoyProxy *egv1a1.EnvoyProxy
+		expected   *egv1a1.IPFamily
+	}{
+		{
+			name:       "nil envoy proxy",
+			envoyProxy: nil,
+			expected:   nil,
+		},
+		{
+			name:       "no ip family specified",
+			envoyProxy: &egv1a1.EnvoyProxy{},
+			expected:   nil,
+		},
+		{
+			name: "ipv4",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.IPv4)},
+			},
+			expected: new(egv1a1.IPv4),
+		},
+		{
+			name: "ipv6",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.IPv6)},
+			},
+			expected: new(egv1a1.IPv6),
+		},
+		{
+			name: "dual stack",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.DualStack)},
+			},
+			expected: new(egv1a1.DualStack),
+		},
+		{
+			name: "prefer dual stack",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.PreferDualStack)},
+			},
+			expected: new(egv1a1.DualStack),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getEnvoyIPFamily(tc.envoyProxy)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestGetCaCertFromConfigMap(t *testing.T) {
 	cases := []struct {
 		name          string
@@ -1405,6 +1459,100 @@ func TestWildcardHostnameMatchesHostname(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := wildcardHostnameMatchesHostname(tc.wildcard, tc.hostname)
 			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestComputeHostsConflictOwnership(t *testing.T) {
+	const hostname = "winner.example.com"
+
+	newListener := func(gateway *GatewayContext, name, listenerHostname string) *ListenerContext {
+		listener := &ListenerContext{
+			Listener: &gwapiv1.Listener{
+				Name:     gwapiv1.SectionName(name),
+				Port:     80,
+				Protocol: gwapiv1.HTTPProtocolType,
+				Hostname: new(gwapiv1.Hostname(listenerHostname)),
+			},
+			gateway: gateway,
+		}
+		return listener
+	}
+
+	tests := []struct {
+		name            string
+		winnerHostname  string
+		routeHostname   string
+		siblingHostname string
+		configure       func(*ListenerContext)
+		want            []string
+	}{
+		{
+			name:            "normal sibling reserves hostname",
+			siblingHostname: hostname,
+			want:            []string{},
+		},
+		{
+			name:            "hostname conflict loser does not reserve hostname",
+			siblingHostname: hostname,
+			configure: func(listener *ListenerContext) {
+				listener.hostnameConflictLoser = true
+			},
+			want: []string{hostname},
+		},
+		{
+			name:            "invalid non-conflicted sibling reserves hostname",
+			siblingHostname: hostname,
+			configure: func(listener *ListenerContext) {
+				listener.specValid = false
+			},
+			want: []string{},
+		},
+		{
+			name:            "no-winner gateway conflict reserves hostname",
+			siblingHostname: hostname,
+			configure: func(listener *ListenerContext) {
+				listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionTrue, gwapiv1.ListenerReasonHostnameConflict, "no winner")
+			},
+			want: []string{},
+		},
+		{
+			name:            "wildcard hostname conflict loser does not suppress intersection",
+			winnerHostname:  "*.example.com",
+			routeHostname:   "*.example.com",
+			siblingHostname: "*.example.com",
+			configure: func(listener *ListenerContext) {
+				listener.hostnameConflictLoser = true
+			},
+			want: []string{"*.example.com"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+			winnerHostname := tc.winnerHostname
+			if winnerHostname == "" {
+				winnerHostname = hostname
+			}
+			routeHostname := tc.routeHostname
+			if routeHostname == "" {
+				routeHostname = hostname
+			}
+			winner := newListener(gateway, "winner", winnerHostname)
+			sibling := newListener(gateway, "sibling", tc.siblingHostname)
+			gateway.listeners = []*ListenerContext{winner, sibling}
+			gateway.Status.Listeners = []gwapiv1.ListenerStatus{
+				{Name: winner.Name},
+				{Name: sibling.Name},
+			}
+			winner.listenerStatusIdx = 0
+			sibling.listenerStatusIdx = 1
+			if tc.configure != nil {
+				tc.configure(sibling)
+			}
+
+			require.ElementsMatch(t, tc.want, computeHosts([]string{routeHostname}, winner))
 		})
 	}
 }
@@ -1741,7 +1889,7 @@ func structWithFieldSet[T any](fieldName string) *T {
 	v := reflect.ValueOf(specPtr).Elem()
 	field := v.FieldByName(fieldName)
 	switch field.Kind() {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		field.Set(reflect.New(field.Type().Elem()))
 	case reflect.Slice:
 		field.Set(reflect.MakeSlice(field.Type(), 1, 1))
@@ -1749,4 +1897,20 @@ func structWithFieldSet[T any](fieldName string) *T {
 		panic(fmt.Sprintf("structWithFieldSet: unsupported field kind %s for field %q", field.Kind(), fieldName))
 	}
 	return specPtr
+}
+
+func TestFormatNameList(t *testing.T) {
+	names := func(n int) []string {
+		out := make([]string, 0, n)
+		for i := range n {
+			out = append(out, fmt.Sprintf("ns/route-%02d", i))
+		}
+		return out
+	}
+	require.Equal(t, "[ns/route-00 ns/route-01]", formatNameList(names(2)))
+	require.NotContains(t, formatNameList(names(maxNamesListed)), "more")
+	over := formatNameList(names(maxNamesListed + 5))
+	require.Contains(t, over, fmt.Sprintf("ns/route-%02d]", maxNamesListed-1))
+	require.NotContains(t, over, fmt.Sprintf("ns/route-%02d", maxNamesListed))
+	require.Contains(t, over, "] and 5 more")
 }

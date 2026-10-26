@@ -133,6 +133,7 @@
               fillInterval: 3600s
               maxTokens: 30
               tokensPerFill: 30
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -140,6 +141,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:

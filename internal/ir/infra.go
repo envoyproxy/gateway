@@ -76,6 +76,8 @@ type ResolvedMetricSink struct {
 	ReportCountersAsDeltas bool `json:"reportCountersAsDeltas,omitempty" yaml:"reportCountersAsDeltas,omitempty"`
 	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
 	ReportHistogramsAsDeltas bool `json:"reportHistogramsAsDeltas,omitempty" yaml:"reportHistogramsAsDeltas,omitempty"`
+	// Prefix is prepended to emitted stat names, the full stat name will be `<prefix>.<stat_name>`.
+	Prefix string `json:"prefix,omitempty" yaml:"prefix,omitempty"`
 }
 
 // InfraMetadata defines metadata for the managed proxy infrastructure.
@@ -104,7 +106,11 @@ type ProxyListener struct {
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
-type HTTP3Settings struct{}
+// +k8s:deepcopy-gen=true
+type HTTP3Settings struct {
+	// AdvertisedPort specifies the port advertised to clients in the HTTP/3 alt-svc response header.
+	AdvertisedPort *uint32 `json:"advertisedPort,omitempty" yaml:"advertisedPort,omitempty"`
+}
 
 // ListenerPort defines a network port of a listener.
 // +k8s:deepcopy-gen=true

@@ -21,7 +21,8 @@ formatters:
     gofmt:
       simplify: true
     gofumpt:
-      extra-rules: true
+      extra:
+        group-params: true
     goimports:
       # put imports beginning with prefix after 3rd-party packages;
       # it's a comma-separated list of prefixes

@@ -1,0 +1,1 @@
+Added an optional `prefix` field to the OpenTelemetry metrics sink (`EnvoyProxy.spec.telemetry.metrics.sinks[].openTelemetry.prefix`) that is prepended to emitted stat names, so the full stat name becomes `<prefix>.<stat_name>`.

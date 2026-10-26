@@ -158,6 +158,8 @@ message ResolvedMetricSink {
   bool report_counters_as_deltas = 5;
   // report_histograms_as_deltas configures histograms to use delta temporality.
   bool report_histograms_as_deltas = 6;
+  // prefix is prepended to emitted stat names, the full name will be `<prefix>.<stat_name>`.
+  string prefix = 7;
 }
 
 // HTTPHeader is a name/value HTTP header. It mirrors the subset of

@@ -64,7 +64,7 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, rou
 			return err
 		}
 	case egv1a1.KindBackend:
-		if err := t.validateBackendRefBackend(backendRef.BackendObjectReference, resources, backendNamespace, false); err != nil {
+		if err := t.validateBackendRefBackend(backendRef.BackendObjectReference, resources, backendNamespace, protocol, false); err != nil {
 			return err
 		}
 	}
@@ -201,22 +201,36 @@ func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef) statu
 func (t *Translator) validateBackendRefService(backendRef gwapiv1.BackendObjectReference,
 	serviceNamespace string, protocol corev1.Protocol,
 ) status.Error {
-	service := t.GetService(serviceNamespace, string(backendRef.Name))
+	service, err := t.validateServiceExists(serviceNamespace, string(backendRef.Name))
+	if err != nil {
+		return err
+	}
+	return validateServicePortProtocol(service, backendRef, serviceNamespace, protocol)
+}
+
+// validateServiceExists returns the Service a backend points at. It fails if the Service is
+// missing or is an ExternalName Service, which has no ClusterIP or EndpointSlices to route to.
+func (t *Translator) validateServiceExists(serviceNamespace, serviceName string) (*corev1.Service, status.Error) {
+	service := t.GetService(serviceNamespace, serviceName)
 	if service == nil {
-		return status.NewRouteStatusError(
-			fmt.Errorf("service %s/%s not found", serviceNamespace, string(backendRef.Name)),
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("service %s/%s not found", serviceNamespace, serviceName),
 			gwapiv1.RouteReasonBackendNotFound)
 	}
-	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
-	// translated into a valid backend.
-	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
 	if isServiceExternalName(service) {
-		return status.NewRouteStatusError(
+		return nil, status.NewRouteStatusError(
 			fmt.Errorf("Service %s/%s is of type ExternalName, which is not supported as a backend; "+
-				"use an Envoy Gateway Backend resource with an FQDN endpoint instead",
-				serviceNamespace, string(backendRef.Name)),
+				"use an Envoy Gateway Backend resource with an FQDN endpoint instead", serviceNamespace, serviceName),
 			gwapiv1.RouteReasonUnsupportedValue)
 	}
+	return service, nil
+}
+
+// validateServicePortProtocol checks that the Service has a port matching the backendRef
+// port number and protocol.
+func validateServicePortProtocol(service *corev1.Service, backendRef gwapiv1.BackendObjectReference,
+	serviceNamespace string, protocol corev1.Protocol,
+) status.Error {
 	var portFound bool
 	for _, port := range service.Spec.Ports {
 		portProtocol := getServicePortProtocol(port.Protocol)
@@ -267,7 +281,7 @@ func (t *Translator) validateBackendServiceImport(
 func (t *Translator) validateBackendRefBackend(
 	backendRef gwapiv1.BackendObjectReference,
 	resources *resource.Resources,
-	backendNamespace string, allowUDS bool,
+	backendNamespace string, protocol corev1.Protocol, allowUDS bool,
 ) status.Error {
 	if !t.BackendEnabled {
 		return status.NewRouteStatusError(
@@ -284,8 +298,14 @@ func (t *Translator) validateBackendRefBackend(
 		)
 	}
 
-	if err := validateBackend(backend, resources.BackendTLSPolicies, t.RunningOnHost); err != nil {
+	if err := t.validateBackend(backend, resources.BackendTLSPolicies); err != nil {
 		return err
+	}
+
+	if isKubernetesServiceBackend(backend) {
+		if err := t.validateBackendServicePortProtocol(backend, protocol); err != nil {
+			return err
+		}
 	}
 
 	for _, bep := range backend.Spec.Endpoints {
@@ -898,14 +918,14 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 			if listener.Hostname != nil {
 				hostname = listener.Hostname
 			}
-			portProtocolHostname := fmt.Sprintf("%s:%s:%d", listener.Protocol, *hostname, listener.Port)
+			// Use the protocol class rather than the protocol itself: HTTPS and TLS listeners
+			// share a port by matching on SNI, so two of them with the same hostname cannot both
+			// be served no matter which Gateway they came from. This mirrors what
+			// validateConflictedHostnameListeners already does within a single Gateway.
+			portProtocolHostname := fmt.Sprintf("%s:%s:%d", getProtocolForListener(listener), *hostname, listener.Port)
 			if listenerSets.Has(portProtocolHostname) {
-				listener.SetCondition(
-					gwapiv1.ListenerConditionConflicted,
-					metav1.ConditionTrue,
-					gwapiv1.ListenerReasonHostnameConflict,
-					"Port, protocol and hostname tuple must be unique for every listener",
-				)
+				setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict,
+					"Port, protocol and hostname tuple must be unique for every listener")
 			}
 			listenerSets.Insert(portProtocolHostname)
 		}
@@ -1174,6 +1194,7 @@ func (t *Translator) validateConflictedHostnameListeners(gateways []*GatewayCont
 				if winner, hasWinner := hostnameWinners[hostname]; hasWinner {
 					// A winner exists: only the non-winner listeners are conflicted.
 					if listener != winner {
+						listener.hostnameConflictLoser = true
 						setConflictedConditions(listener, gwapiv1.ListenerReasonHostnameConflict, conflictMsg)
 					}
 				} else if info.hostnames[hostname] > 1 {
@@ -1464,6 +1485,14 @@ func (t *Translator) validateExtServiceBackendReference(
 		// Dynamic resolver backend is not supported for EG policies
 		if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 			return fmt.Errorf("dynamic resolver backend %s/%s is not supported", backendNamespace, backendRef.Name)
+		}
+		if isKubernetesServiceBackend(backend) {
+			if err := t.validateBackendServiceAndPortExists(backend); err != nil {
+				return err
+			}
+			if err := t.validateBackendServicePortProtocol(backend, corev1.ProtocolTCP); err != nil {
+				return err
+			}
 		}
 	}
 

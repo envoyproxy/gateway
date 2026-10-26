@@ -47,9 +47,13 @@ type OIDC struct {
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1.SecretObjectReference `json:"clientSecret"`
 
-	// The optional cookie name overrides to be used for Bearer and IdToken cookies in the
+	// CookieNames configures the names of the cookies that Envoy sets for the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	// If not specified, uses a randomly generated suffix
+	//
+	// By default, every cookie is named "<Purpose>-<suffix>", where the suffix is
+	// derived from the identity of this SecurityPolicy. Set "suffix" to pin that
+	// suffix for all cookies at once, or set a per-cookie field to name a single
+	// cookie outright.
 	// +optional
 	CookieNames *OIDCCookieNames `json:"cookieNames,omitempty"`
 
@@ -93,6 +97,21 @@ type OIDC struct {
 	//
 	// If not specified, uses a default logout path "/logout"
 	LogoutPath *string `json:"logoutPath,omitempty"`
+
+	// PostLogoutRedirect configures the `post_logout_redirect_uri` parameter that EG sends to the
+	// OIDC Provider's end session endpoint when a user accesses the logout path.
+	//
+	// This only applies when the OIDC Provider's end session endpoint is configured or discovered,
+	// i.e. when RP-Initiated Logout is in use. It is ignored otherwise.
+	//
+	// If not specified, Envoy sends the root of the request's host, "<scheme>://<host>/".
+	// Note that many OIDC Providers require the post logout redirect URI to be pre-registered for
+	// the client and reject the logout request otherwise. If the default value is not registered,
+	// set an explicit uri here, or set disabled to true to omit the parameter altogether.
+	//
+	// +optional
+	// +patchStrategy=replace
+	PostLogoutRedirect *OIDCPostLogoutRedirect `json:"postLogoutRedirect,omitempty" patchStrategy:"replace"`
 
 	// ForwardAccessToken indicates whether the Envoy should forward the access token
 	// via the Authorization header Bearer scheme to the upstream.
@@ -156,6 +175,24 @@ type OIDC struct {
 	// +optional
 	CSRFTokenTTL *gwapiv1.Duration `json:"csrfTokenTTL,omitempty"`
 
+	// CodeVerifierTTL defines how long the PKCE code verifier generated during the OAuth2
+	// authorization flow remains valid.
+	//
+	// This duration determines the lifetime of the code verifier cookie, which is exchanged
+	// for the access token when the provider redirects back to the callback endpoint.
+	//
+	// Both this cookie and the CSRF cookie are only consumed on the callback endpoint, so an
+	// authorization flow that is started but never completed leaves them behind until they
+	// expire. Lowering this value along with csrfTokenTTL bounds how many such cookies a
+	// browser can accumulate. It must stay long enough for a user to complete the login,
+	// including any multi-factor prompt: once it elapses the browser drops the cookie and
+	// the callback fails.
+	//
+	// If omitted, Envoy Gateway defaults the code verifier expiration to 10 minutes.
+	//
+	// +optional
+	CodeVerifierTTL *gwapiv1.Duration `json:"codeVerifierTTL,omitempty"`
+
 	// Disable token encryption. When set to true, both the access token and the ID token will be stored in plain text.
 	// This option should only be used in secure environments where token encryption is not required.
 	// Default is false (tokens are encrypted).
@@ -194,10 +231,8 @@ type OIDCProvider struct {
 	// Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
 	// be https, a host component, and optionally, port and path components and
 	// no query or fragment components.
-	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^https://[^/?#@]+(/[^?#]*)?$`
 	Issuer string `json:"issuer"`
-
-	// TODO zhaohuabing validate the issuer
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
@@ -235,18 +270,119 @@ type OIDCDenyRedirectHeader struct {
 	StringMatch `json:",inline"`
 }
 
-// OIDCCookieNames defines the names of cookies to use in the Envoy OIDC filter.
+// OIDCPostLogoutRedirect configures the `post_logout_redirect_uri` parameter used in OIDC
+// [RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) requests.
+//
+// At least one of uri or disabled must be set, and uri cannot be set when disabled is true.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.uri) || has(self.disabled)",message="one of uri or disabled must be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.uri) || !has(self.disabled) || !self.disabled",message="uri cannot be set when disabled is true"
+type OIDCPostLogoutRedirect struct {
+	// URI is sent as the `post_logout_redirect_uri` parameter to the OIDC Provider's end session
+	// endpoint. The provider redirects the user to this URI after the logout completes, so it
+	// usually must be pre-registered for the client with the provider.
+	//
+	// The URI may contain the Envoy "%REQ(header)%"
+	// [command operator](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+	// to build the URI from the request, for example
+	// "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout". Envoy Gateway accepts only that
+	// operator here, since it is the only one meaningful in a URI derived from the request, and
+	// rejects any other so that a typo surfaces on this policy instead of being rejected by Envoy
+	// as an invalid configuration. A literal percent is written as "%%".
+	//
+	// The scheme must be http, https, or a "%REQ(header)%" command operator. The URI is
+	// percent-encoded automatically when the logout URL is built, so do not pre-encode it.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=2048
+	URI *string `json:"uri,omitempty"`
+
+	// Disabled omits the `post_logout_redirect_uri` parameter from the logout request entirely.
+	// Use this when the OIDC Provider rejects unregistered post logout redirect URIs and you do
+	// not need the user redirected back after the logout completes. In that case the user is left
+	// on a page controlled by the provider.
+	//
+	// Setting this to false is equivalent to leaving disabled unset.
+	//
+	// +optional
+	Disabled *bool `json:"disabled,omitempty"`
+}
+
+// OIDCCookieNames defines the names of the cookies that Envoy sets for the OIDC flow.
+//
+// Envoy Gateway names every cookie "<Purpose>-<suffix>". By default the suffix is
+// derived from the identity of the SecurityPolicy, which keeps the cookies of
+// different policies from overwriting each other. Suffix replaces that generated
+// suffix for all cookies at once, while the per-cookie fields replace the entire
+// name of a single cookie and take precedence over Suffix.
+//
+// Each cookie holds a different value, so the resulting names must be distinct,
+// otherwise the cookies would overwrite each other and break the OIDC flow.
+//
+// +kubebuilder:validation:XValidation:rule="[(has(self.accessToken) ? [self.accessToken] : (has(self.suffix) ? ['AccessToken-' + self.suffix] : [])) + (has(self.oauthExpires) ? [self.oauthExpires] : (has(self.suffix) ? ['OauthExpires-' + self.suffix] : [])) + (has(self.oauthHmac) ? [self.oauthHmac] : (has(self.suffix) ? ['OauthHMAC-' + self.suffix] : [])) + (has(self.idToken) ? [self.idToken] : (has(self.suffix) ? ['IdToken-' + self.suffix] : [])) + (has(self.refreshToken) ? [self.refreshToken] : (has(self.suffix) ? ['RefreshToken-' + self.suffix] : [])) + (has(self.oauthNonce) ? [self.oauthNonce] : (has(self.suffix) ? ['OauthNonce-' + self.suffix] : [])) + (has(self.codeVerifier) ? [self.codeVerifier] : (has(self.suffix) ? ['CodeVerifier-' + self.suffix] : []))].all(names, names.all(n, names.filter(m, m == n).size() == 1))",message="cookie names must be unique"
 type OIDCCookieNames struct {
+	// Suffix replaces the generated suffix in the default name of every OAuth2
+	// cookie, for example "AccessToken-<suffix>" and "IdToken-<suffix>".
+	//
+	// The generated suffix is derived from the identity of the SecurityPolicy, so
+	// it changes when the policy is deleted and recreated, which logs users out.
+	// Set this field to keep the cookie names stable across the lifetime of the
+	// policy, or to share a session between policies that authenticate the same
+	// users against the same provider. Policies sharing a suffix must also agree
+	// on the OIDC provider, the client, and the cookieDomain.
+	//
+	// If not specified, the generated suffix is used.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=238
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$`
+	Suffix *string `json:"suffix,omitempty"`
+
 	// The name of the cookie used to store the AccessToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	// If not specified, defaults to "AccessToken-(randomly generated uid)"
+	// If not specified, defaults to "AccessToken-<suffix>", see the "suffix" field.
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	AccessToken *string `json:"accessToken,omitempty"`
+	// The name of the cookie used to store the OAuth expires value.
+	// If not specified, defaults to "OauthExpires-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthExpires *string `json:"oauthExpires,omitempty"`
+	// The name of the cookie used to store the OAuth HMAC value.
+	// If not specified, defaults to "OauthHMAC-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthHMAC *string `json:"oauthHmac,omitempty"`
 	// The name of the cookie used to store the IdToken in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	// If not specified, defaults to "IdToken-(randomly generated uid)"
+	// If not specified, defaults to "IdToken-<suffix>", see the "suffix" field.
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	IDToken *string `json:"idToken,omitempty"`
+	// The name of the cookie used to store the RefreshToken.
+	// If not specified, defaults to "RefreshToken-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	RefreshToken *string `json:"refreshToken,omitempty"`
+	// The name of the cookie used to store the OAuth nonce value.
+	// If not specified, defaults to "OauthNonce-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	OAuthNonce *string `json:"oauthNonce,omitempty"`
+	// The name of the cookie used to store the PKCE code verifier.
+	// If not specified, defaults to "CodeVerifier-<suffix>", see the "suffix" field.
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	CodeVerifier *string `json:"codeVerifier,omitempty"`
 }
 
 // OIDCTokenForwarding defines how an OIDC token is forwarded upstream.

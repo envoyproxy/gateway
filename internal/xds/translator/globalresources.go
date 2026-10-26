@@ -48,7 +48,7 @@ func (t *Translator) patchGlobalResources(tCtx *types.ResourceVersionTable, irXd
 			}
 		}
 
-		if containsWasm(irXds.HTTP) {
+		if containsRemoteWasms(irXds.HTTP) {
 			if err := t.createWasmHTTPServiceCluster(tCtx, irXds.GlobalResources.EnvoyClientCertificate, irXds.Metrics); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -230,12 +230,19 @@ func buildEnvoyClientTLSSocket(envoyClientCertificate *ir.TLSCertificate) (*core
 	}, nil
 }
 
-func containsWasm(httpListeners []*ir.HTTPListener) bool {
+// containsRemoteWasms reports whether any route uses a remote Wasm code source
+// (HTTP/Image, served by the control-plane wasm HTTP service). Name-only
+// Wasm loads a path from EnvoyProxy.spec.wasmModules and does not need wasm_cluster.
+func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
 	for _, httpListener := range httpListeners {
 		for _, route := range httpListener.Routes {
-			if route.EnvoyExtensions != nil &&
-				len(route.EnvoyExtensions.Wasms) > 0 {
-				return true
+			if route.EnvoyExtensions == nil {
+				continue
+			}
+			for _, w := range route.EnvoyExtensions.Wasms {
+				if w.Code != nil {
+					return true
+				}
 			}
 		}
 	}
@@ -245,7 +252,7 @@ func containsWasm(httpListeners []*ir.HTTPListener) bool {
 func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTable, envoyClientCertificate *ir.TLSCertificate, metrics *ir.Metrics) error {
 	ds := &ir.DestinationSetting{
 		Weight:    new(uint32(1)),
-		Protocol:  ir.GRPC,
+		Protocol:  ir.HTTP2,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
 		Name:      destinationSettingName(wasmHTTPServiceClusterName),
 		// TODO: tracked with issue #6861

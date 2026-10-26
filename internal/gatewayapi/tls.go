@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -385,8 +386,48 @@ func validateCrl(data []byte) error {
 // validateCipherSuites validates the cipher suites provided in the TLS settings.
 func validateCipherSuites(ciphers []string) error {
 	for _, cipher := range ciphers {
-		if !validCipherSuites.Has(cipher) {
-			return fmt.Errorf("unsupported cipher suite: %s", cipher)
+		if err := validateCipherSuite(cipher); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateCipherSuite validates a single entry of a cipher list. An entry is
+// either a cipher suite name, or an equal-preference group such as
+// "[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]", which tells
+// BoringSSL to let the client's preference pick among equally preferred ciphers.
+func validateCipherSuite(cipher string) error {
+	if strings.HasPrefix(cipher, "[") {
+		return validateEqualPreferenceGroup(cipher)
+	}
+	if strings.Contains(cipher, "|") {
+		return fmt.Errorf("| is only valid inside an equal-preference group: %s", cipher)
+	}
+	if !validCipherSuites.Has(cipher) {
+		return fmt.Errorf("unsupported cipher suite: %s", cipher)
+	}
+	return nil
+}
+
+// validateEqualPreferenceGroup validates a cipher list entry that opens with a
+// bracket. Groups do not nest, so every member is a plain cipher suite name.
+func validateEqualPreferenceGroup(group string) error {
+	if !strings.HasSuffix(group, "]") {
+		return fmt.Errorf("unterminated equal-preference group: %s", group)
+	}
+	members := group[1 : len(group)-1]
+	if members == "" {
+		return fmt.Errorf("empty equal-preference group: %s", group)
+	}
+	for _, member := range strings.Split(members, "|") {
+		switch {
+		case member == "":
+			return fmt.Errorf("empty member in equal-preference group: %s", group)
+		case strings.ContainsAny(member, "[]"):
+			return fmt.Errorf("nested equal-preference group: %s", group)
+		case !validCipherSuites.Has(member):
+			return fmt.Errorf("unsupported cipher suite %s in equal-preference group: %s", member, group)
 		}
 	}
 	return nil

@@ -26,6 +26,7 @@
               fillInterval: 3600s
               maxTokens: 10
               tokensPerFill: 10
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -33,6 +34,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:
@@ -88,6 +90,7 @@
               fillInterval: 60s
               maxTokens: 10
               tokensPerFill: 10
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -95,6 +98,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           rateLimits:
           - actions:
             - headerValueMatch:
@@ -153,6 +157,7 @@
         envoy.filters.http.local_ratelimit:
           '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
           alwaysConsumeDefaultTokenBucket: false
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -160,6 +165,7 @@
           filterEnforced:
             defaultValue:
               numerator: 100
+          maxDynamicDescriptors: 10000
           statPrefix: http_local_rate_limiter
           tokenBucket:
             fillInterval: 60s

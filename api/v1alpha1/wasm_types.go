@@ -22,14 +22,34 @@ type WasmEnv struct {
 //
 // Note: at the moment, Envoy Gateway does not support configuring Wasm runtime.
 // v8 is used as the VM runtime for the Wasm extensions.
+// +kubebuilder:validation:XValidation:rule="has(self.code) || (has(self.name) && self.name.matches('^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$'))",message="either code must be set, or name must be set and match the wasmModules name pattern"
 type Wasm struct {
 	// Name is a unique name for this Wasm extension. It is used to identify the
 	// Wasm extension if multiple extensions are handled by the same vm_id and root_id.
 	// It's also used for logging/debugging.
 	// If not specified, EG will generate a unique name for the Wasm extension.
 	//
+	// When Code is omitted, Name is required and must match a module registered
+	// in EnvoyProxy.spec.wasmModules.
+	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=253
 	Name *string `json:"name,omitempty"`
+
+	// VMSharingScope defines the scope within which this extension may share a Wasm VM.
+	// If Policy or unset, each policy's Wasm entry uses its own VM ID. The same
+	// entry may reuse its VM across routes; different entries do not share a VM.
+	// If Namespace, this extension may share a VM with other extensions that specify
+	// Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM
+	// compatibility using the Wasm code and VM configuration, including environment
+	// variables. Each Envoy worker has its own VM.
+	//
+	// Sharing a VM shares module-level state and VM failures. Plugin names and root
+	// IDs are not changed; matching plugin identities may also share a root context.
+	//
+	// +optional
+	// +kubebuilder:default=Policy
+	VMSharingScope *WasmVMSharingScope `json:"vmSharingScope,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
@@ -39,7 +59,10 @@ type Wasm struct {
 	RootID *string `json:"rootID,omitempty"`
 
 	// Code is the Wasm code for the extension.
-	Code WasmCodeSource `json:"code"`
+	// When omitted, Name must match a module in EnvoyProxy.spec.wasmModules.
+	//
+	// +optional
+	Code *WasmCodeSource `json:"code,omitempty"`
 
 	// Config is the configuration for the Wasm extension.
 	// This configuration will be passed as a JSON string to the Wasm extension.
@@ -69,6 +92,20 @@ type Wasm struct {
 	Env *WasmEnv `json:"env,omitempty"`
 }
 
+// WasmVMSharingScope defines the scope within which Wasm extensions may share a VM.
+// +kubebuilder:validation:Enum=Policy;Namespace
+type WasmVMSharingScope string
+
+const (
+	// WasmVMSharingScopePolicy gives each policy's Wasm entry its own VM ID.
+	// The same entry may reuse its VM across routes; different entries do not share a VM.
+	WasmVMSharingScopePolicy WasmVMSharingScope = "Policy"
+
+	// WasmVMSharingScopeNamespace allows compatible extensions that specify this
+	// scope in the same EnvoyExtensionPolicy namespace to share a VM.
+	WasmVMSharingScopeNamespace WasmVMSharingScope = "Namespace"
+)
+
 // WasmCodeSource defines the source of the Wasm code.
 // +union
 //
@@ -78,7 +115,7 @@ type WasmCodeSource struct {
 	// Type is the type of the source of the Wasm code.
 	// Valid WasmCodeSourceType values are "HTTP" or "Image".
 	//
-	// +kubebuilder:validation:Enum=HTTP;Image;ConfigMap
+	// +kubebuilder:validation:Enum=HTTP;Image
 	// +unionDiscriminator
 	Type WasmCodeSourceType `json:"type"`
 
@@ -102,6 +139,7 @@ type WasmCodeSource struct {
 	// Note: EG does not update the Wasm module every time an Envoy proxy requests
 	// the Wasm module even if the pull policy is set to Always.
 	// It only updates the Wasm module when the EnvoyExtension resource version changes.
+	//
 	// +optional
 	PullPolicy *ImagePullPolicy `json:"pullPolicy,omitempty"`
 }
@@ -118,6 +156,61 @@ const (
 	ImageWasmCodeSourceType WasmCodeSourceType = "Image"
 )
 
+// WasmModuleSourceType specifies the types of sources for registered Wasm modules.
+// +kubebuilder:validation:Enum=Local
+type WasmModuleSourceType string
+
+const (
+	// LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.
+	LocalWasmModuleSourceType WasmModuleSourceType = "Local"
+)
+
+// WasmModuleSource defines where a registered Wasm module is loaded from.
+// Mirrors DynamicModuleSource so additional source types can be added later.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type != 'Local' || has(self.local)",message="If type is Local, local field needs to be set."
+type WasmModuleSource struct {
+	// Type is the type of the source of the Wasm module.
+	// Defaults to Local.
+	//
+	// +kubebuilder:default=Local
+	// +unionDiscriminator
+	// +optional
+	Type *WasmModuleSourceType `json:"type,omitempty"`
+
+	// Local specifies a module loaded from the proxy's local filesystem
+	// by absolute path.
+	//
+	// +optional
+	Local *LocalWasmModuleSource `json:"local,omitempty"`
+}
+
+// LocalWasmModuleSource defines a Wasm module loaded from the local filesystem.
+type LocalWasmModuleSource struct {
+	// Path is the absolute filesystem path to the Wasm module on the Envoy proxy.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	// +kubebuilder:validation:Pattern=`^/.*`
+	Path string `json:"path"`
+}
+
+// WasmModuleEntry defines a Wasm module that is registered and allowed for use
+// by EnvoyExtensionPolicy resources.
+type WasmModuleEntry struct {
+	// Name is the logical name for this module. EnvoyExtensionPolicy resources
+	// reference modules by this name when wasm[].code is omitted.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`
+	Name string `json:"name"`
+
+	// Source defines where the Wasm module code is loaded from.
+	Source WasmModuleSource `json:"source"`
+}
+
 // HTTPWasmCodeSource defines the HTTP URL containing the Wasm code.
 type HTTPWasmCodeSource struct {
 	// URL is the URL containing the Wasm code.
@@ -132,6 +225,7 @@ type HTTPWasmCodeSource struct {
 	SHA256 *string `json:"sha256"`
 
 	// TLS configuration when connecting to the Wasm code source.
+	// If unset, system trust store is used for HTTPS url.
 	// +optional
 	TLS *WasmCodeSourceTLSConfig `json:"tls,omitempty"`
 }
@@ -157,6 +251,7 @@ type ImageWasmCodeSource struct {
 	PullSecretRef *gwapiv1.SecretObjectReference `json:"pullSecretRef,omitempty"`
 
 	// TLS configuration when connecting to the Wasm code source.
+	// If unset, system trust store is used.
 	// +optional
 	TLS *WasmCodeSourceTLSConfig `json:"tls,omitempty"`
 }

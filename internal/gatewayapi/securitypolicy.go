@@ -7,8 +7,8 @@ package gatewayapi
 
 import (
 	"bytes"
-	//nolint:gosec // SHA1 is required to validate htpasswd {SHA} format.
-	"crypto/sha1"
+	"context"
+	"crypto/sha1" //nolint:gosec // SHA1 is required to validate htpasswd {SHA} format
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -52,6 +52,10 @@ const (
 	defaultRefreshToken          = true
 	defaultPassThroughAuthHeader = false
 	defaultOIDCHTTPTimeout       = 5 * time.Second
+	defaultOIDCMaxRedirects      = 3
+
+	// defaultExtAuthMaxRequestBytes matches the default per-connection buffer limit.
+	defaultExtAuthMaxRequestBytes = 32768
 
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
@@ -59,6 +63,8 @@ const (
 	// JWKSConfigMapKey is the key used in ConfigMaps to store JWKS data
 	JWKSConfigMapKey = "jwks"
 )
+
+var newOIDCDiscoveryHTTPClient = newGuardedOIDCDiscoveryHTTPClient
 
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
@@ -512,9 +518,13 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// then run it once to keep the flow linear and easier to read.
 	validator := validateSecurityPolicy
 	errMsg := "invalid SecurityPolicy"
-	if currTarget.Kind == resource.KindTCPRoute {
-		validator = validateSecurityPolicyForTCP
+	switch currTarget.Kind {
+	case resource.KindTCPRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "TCP") }
 		errMsg = "invalid SecurityPolicy for TCP route"
+	case resource.KindUDPRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "UDP") }
+		errMsg = "invalid SecurityPolicy for UDP route"
 	}
 	if err := validator(policy); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -546,21 +556,21 @@ func (t *Translator) processSecurityPolicyForRoute(
 		// they intentionally skip Gateway listener policies because those are
 		// sibling scopes.
 		for _, parentRefCtx := range parentRefCtxs {
+			// The listeners can merge with different parent policies, and fail on some of them
+			// only, so collect their results and report them once for the parentRef.
+			errMsgs, mergedWith := sets.New[string](), sets.New[string]()
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 
 				var (
 					parentPolicy *egv1a1.SecurityPolicy
 					parentScope  policyScope
-					ancestorRef  gwapiv1.ParentReference
 				)
 				if listener.isFromListenerSet() {
 					lsNN := types.NamespacedName{
 						Namespace: listener.listenerSet.Namespace,
 						Name:      listener.listenerSet.Name,
 					}
-					ancestorRef = getAncestorRefForListenerSetPolicy(lsNN, &listener.Name)
-
 					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
@@ -573,8 +583,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
 				} else {
-					ancestorRef = getAncestorRefForPolicy(gwNN, &listener.Name)
-
 					listenerKey := NamespacedNameWithSection{NamespacedName: gwNN, SectionName: listener.Name}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
 
@@ -588,14 +596,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				if parentPolicy == nil {
 					// No parent policy found, fall back to current policy
 					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(err))
 					}
 					continue
 				}
@@ -603,56 +604,28 @@ func (t *Translator) processSecurityPolicyForRoute(
 				// Merge with parent policy
 				mergedPolicy, owners, err := mergeSecurityPolicy(policy, parentPolicy)
 				if err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						fmt.Sprintf("error merging policies: %v", err),
-						policy.Generation,
-					)
+					errMsgs.Insert(fmt.Sprintf("error merging policies: %v", err))
 					continue
 				}
 
 				if err := validator(mergedPolicy); err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
-					)
+					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
 
 				// Apply merged policy
 				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
-					)
+					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
 
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
+
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parentRefCtx.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
@@ -959,6 +932,17 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
+	// CEL covers these on Kubernetes, but not for the file provider. A JSONMerge route can still
+	// combine a parent's uri with its own disabled: true, since JSONMerge merges keys one by one.
+	if oidc != nil && oidc.PostLogoutRedirect != nil {
+		switch plr := oidc.PostLogoutRedirect; {
+		case plr.URI != nil && ptr.Deref(plr.Disabled, false):
+			return errors.New("OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+		case plr.URI == nil && plr.Disabled == nil:
+			return errors.New("one of OIDC.PostLogoutRedirect.uri or OIDC.PostLogoutRedirect.disabled must be set")
+		}
+	}
+
 	basicAuth := p.Spec.BasicAuth
 	if basicAuth != nil {
 		if err := validateBasicAuth(basicAuth); err != nil {
@@ -968,16 +952,19 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
+// validateSecurityPolicyForL4 ensures SecurityPolicy usage on an L4 protocol
+// (TCP or UDP) is compatible. proto names the protocol in the returned errors.
 //
-// TCP supports Authorization with ClientCIDRs ONLY.
+// L4 supports Authorization with ClientCIDRs ONLY, because there is no HTTP
+// request to inspect:
 // - Principals.JWT      => invalid (HTTP-only)
 // - Principals.Headers  => invalid (HTTP-only)
-// - Empty/no Authorization is allowed and results in no-op on TCP.
+// - Operation           => invalid (HTTP methods/paths)
+// - Empty/no Authorization is allowed and results in no-op on L4.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
-func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
+func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
 	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
-		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
+		return fmt.Errorf("only authorization is supported for %s (routes/listeners)", proto)
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
@@ -985,19 +972,25 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	for i := range p.Spec.Authorization.Rules {
 		rule := &p.Spec.Authorization.Rules[i]
 		if rule.CEL != nil {
-			return fmt.Errorf("rule %d: CEL not supported for TCP", i)
+			return fmt.Errorf("rule %d: CEL not supported for %s", i, proto)
+		}
+		// Methods and paths are HTTP concepts. The L4 matcher only looks at the
+		// client CIDRs, so accepting an operation here would silently widen the
+		// rule to every datagram or connection from those CIDRs.
+		if rule.Operation != nil {
+			return fmt.Errorf("rule %d: operation not supported for %s", i, proto)
 		}
 		if rule.Principal == nil {
 			continue
 		}
 		if rule.Principal.JWT != nil {
-			return fmt.Errorf("rule %d: JWT not supported for TCP", i)
+			return fmt.Errorf("rule %d: JWT not supported for %s", i, proto)
 		}
 		if len(rule.Principal.Headers) > 0 {
-			return fmt.Errorf("rule %d: headers not supported for TCP", i)
+			return fmt.Errorf("rule %d: headers not supported for %s", i, proto)
 		}
 		if len(rule.Principal.ClientIPGeoLocations) > 0 {
-			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP", i)
+			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for %s", i, proto)
 		}
 		if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
 			return fmt.Errorf("rule %d: %w", i, err)
@@ -1006,7 +999,7 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateCIDRs validates CIDR strings for TCP authorization rules.
+// validateCIDRs validates CIDR strings for L4 authorization rules.
 func validateCIDRs(cidrs []egv1a1.CIDR) error {
 	for _, c := range cidrs {
 		if _, _, err := net.ParseCIDR(string(c)); err != nil {
@@ -1246,7 +1239,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			err = perr.WithMessage(err, "CORS")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	var csrf *ir.CSRF
@@ -1385,7 +1381,18 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				tl := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+				if tl == nil {
+					continue
+				}
 				for _, r := range tl.Routes {
+					// Only the IR route built from the targeted TCPRoute may be
+					// modified. Several TCPRoutes can name the same listener while
+					// only one of them is attached, so without this check a policy
+					// targeting an unattached route would silently apply to
+					// whichever route is actually serving traffic.
+					if r.Name != irTCPRouteName(route) {
+						continue
+					}
 					// If target.SectionName is specified it must match the route-rule section name
 					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
 					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
@@ -1401,6 +1408,35 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						authCopy := *authorization
 						r.Authorization = &authCopy
 					}
+				}
+			}
+		case resource.KindUDPRoute:
+			for _, listener := range parentRefCtx.listeners {
+				// If targetListener is set, only apply to that exact listener.
+				if targetListener != nil && targetListenerName != irListenerName(listener) {
+					continue
+				}
+				ul := xdsIR[irKey].GetUDPListener(irListenerName(listener))
+				// A UDP listener holds at most one route: when several UDPRoutes name the
+				// same listener only the oldest one is attached, so a policy targeting any
+				// of the others has nothing to apply to. Comparing the names keeps such a
+				// policy from restricting the route that is actually serving traffic.
+				if ul == nil || ul.Route == nil || ul.Route.Name != irUDPRouteName(route) {
+					continue
+				}
+				r := ul.Route
+				// As with TCP, the route-rule section name lives on the destination metadata.
+				if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+					continue
+				}
+
+				if r.Authorization != nil {
+					continue
+				}
+				// Only authorization for UDP
+				if authorization != nil {
+					authCopy := *authorization
+					r.Authorization = &authCopy
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
@@ -1535,7 +1571,10 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	)
 
 	if policy.Spec.CORS != nil {
-		cors = t.buildCORS(policy.Spec.CORS)
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			err = perr.WithMessage(err, "CORS")
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	var csrf *ir.CSRF
@@ -1695,15 +1734,15 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		)
 	}
 
-	// Pre-create a TCP-only authorization object to avoid re-allocation
-	var tcpAuthorization *ir.Authorization
+	// Pre-create an L4-only authorization object to avoid re-allocation
+	var l4Authorization *ir.Authorization
 	if authorization != nil {
 		authCopy := *authorization
-		tcpAuthorization = &authCopy
+		l4Authorization = &authCopy
 	}
 
 	// Apply to TCP listeners (Authorization only).
-	if tcpAuthorization != nil {
+	if l4Authorization != nil {
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
@@ -1718,15 +1757,34 @@ func (t *Translator) translateSecurityPolicyForListeners(
 				if r.Authorization != nil {
 					continue
 				}
-				r.Authorization = tcpAuthorization
+				r.Authorization = l4Authorization
 			}
+		}
+	}
+
+	// Apply to UDP listeners (Authorization only).
+	if l4Authorization != nil {
+		for _, ul := range x.UDP {
+			// A UDP listener holds at most one route.
+			if ul == nil || ul.Route == nil {
+				continue
+			}
+			if !listenerNames.Has(ul.Name) {
+				continue
+			}
+			// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
+			// targeting a lesser specific scope(Gateway).
+			if ul.Route.Authorization != nil {
+				continue
+			}
+			ul.Route.Authorization = l4Authorization
 		}
 	}
 
 	return errs
 }
 
-func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
+func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range cors.AllowOrigins {
@@ -1740,6 +1798,26 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 				Exact: (*string)(&origin),
 			})
 		}
+	}
+
+	for _, originRegex := range cors.AllowOriginRegexes {
+		regexStr := string(originRegex)
+		// Validate the pattern before it is anchored below, since anchoring an unbalanced pattern
+		// such as ")(" would make it valid.
+		if err := regex.Validate(regexStr); err != nil {
+			return nil, err
+		}
+		// Envoy's CORS filter tries each origin matcher against the literal "*" before the request
+		// origin, so a regex that fully matches "*" allows all origins.
+		// https://github.com/envoyproxy/envoy/blob/b579d07d3ad7ee11d32b105e91a5a39ad24718d7/source/extensions/filters/http/cors/cors_filter.cc#L208-L215
+		anchored, err := regexp.Compile("^(?:" + regexStr + ")$")
+		if err != nil {
+			return nil, err
+		}
+		if anchored.MatchString("*") {
+			return nil, fmt.Errorf(`origin regular expression %q must not match "*", use allowOrigins with value "*" to allow all origins`, regexStr)
+		}
+		allowOrigins = append(allowOrigins, &ir.StringMatch{SafeRegex: &regexStr})
 	}
 
 	irCORS := &ir.CORS{
@@ -1756,7 +1834,7 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 		}
 	}
 
-	return irCORS
+	return irCORS, nil
 }
 
 func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
@@ -1926,8 +2004,16 @@ func validateJWTProvider(providers []egv1a1.JWTProvider) error {
 			switch {
 			case len(claimToHeader.Header) == 0:
 				errs = append(errs, fmt.Errorf("header must be set for claimToHeader provider: %s", claimToHeader.Header))
-			case len(claimToHeader.Claim) == 0:
-				errs = append(errs, fmt.Errorf("claim must be set for claimToHeader provider: %s", claimToHeader.Claim))
+			case len(claimToHeader.Claim) == 0 && len(claimToHeader.ClaimPath) == 0:
+				errs = append(errs, fmt.Errorf("either claim or claimPath must be set for claimToHeader header: %s", claimToHeader.Header))
+			case len(claimToHeader.Claim) != 0 && len(claimToHeader.ClaimPath) != 0:
+				errs = append(errs, fmt.Errorf("only one of claim or claimPath may be set for claimToHeader header: %s", claimToHeader.Header))
+			}
+			for _, segment := range claimToHeader.ClaimPath {
+				if len(segment) == 0 {
+					errs = append(errs, fmt.Errorf("claimPath segments must not be empty for claimToHeader header: %s", claimToHeader.Header))
+					break
+				}
 			}
 		}
 	}
@@ -1970,7 +2056,7 @@ func (t *Translator) buildRemoteJWKS(
 	}
 
 	if remoteJWKS.BackendSettings != nil {
-		if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
+		if traffic, err = translateExtServiceBackendSettings(remoteJWKS.BackendSettings); err != nil {
 			return nil, err
 		}
 	}
@@ -2117,6 +2203,11 @@ func (t *Translator) buildOIDC(
 	if oidc.LogoutPath != nil {
 		logoutPath = *oidc.LogoutPath
 	}
+	if oidc.PostLogoutRedirect != nil && oidc.PostLogoutRedirect.URI != nil {
+		if err := validatePostLogoutRedirectURI(*oidc.PostLogoutRedirect.URI); err != nil {
+			return nil, err
+		}
+	}
 	if oidc.ForwardAccessToken != nil {
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
@@ -2139,7 +2230,13 @@ func (t *Translator) buildOIDC(
 	// Generate a unique cookie suffix for oauth filters.
 	// This is to avoid cookie name collision when multiple security policies are applied
 	// to the same route.
+	// A user-specified suffix takes precedence: it keeps the cookie names stable
+	// across recreations of the policy, and allows policies that authenticate the
+	// same users to share a session.
 	suffix := utils.Digest32(string(oidcOwner.UID))
+	if oidc.CookieNames != nil && oidc.CookieNames.Suffix != nil {
+		suffix = *oidc.CookieNames.Suffix
+	}
 
 	// Get the HMAC secret.
 	// HMAC secret is generated by the CertGen job and stored in a secret
@@ -2165,6 +2262,7 @@ func (t *Translator) buildOIDC(
 		RedirectURL:            redirectURL,
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
+		PostLogoutRedirect:     oidc.PostLogoutRedirect,
 		ForwardAccessToken:     forwardAccessToken,
 		ForwardIDTokenHeader:   forwardIDTokenHeader,
 		RefreshToken:           refreshToken,
@@ -2202,6 +2300,14 @@ func (t *Translator) buildOIDC(
 		}
 	}
 
+	if oidc.CodeVerifierTTL != nil {
+		if d, err := time.ParseDuration(string(*oidc.CodeVerifierTTL)); err == nil {
+			irOIDC.CodeVerifierTTL = ir.MetaV1DurationPtr(d)
+		} else {
+			return nil, fmt.Errorf("invalid codeVerifierTTL: %w", err)
+		}
+	}
+
 	return irOIDC, nil
 }
 
@@ -2231,6 +2337,10 @@ func (t *Translator) buildOIDCProvider(
 	}
 
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err = validateOIDCIssuerURL(provider.Issuer); err != nil {
 		return nil, err
 	}
 
@@ -2308,7 +2418,7 @@ func (t *Translator) buildOIDCProvider(
 		return nil, err
 	}
 
-	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(provider.BackendSettings); err != nil {
 		return nil, err
 	}
 
@@ -2339,6 +2449,98 @@ func extractRedirectPath(redirectURL string) (string, error) {
 		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
 	}
 	return path, nil
+}
+
+// validatePostLogoutRedirectURI sanity-checks the post logout redirect URI. Envoy evaluates the
+// URI as a formatter string, so it may contain command operators and can't be parsed as a URL.
+// This mirrors the scheme check in extractRedirectPath, but additionally accepts a request header
+// command operator as the scheme, e.g. "%REQ(x-scheme)%://host/".
+func validatePostLogoutRedirectURI(uri string) error {
+	schemeDelimiter := strings.Index(uri, "://")
+	if schemeDelimiter <= 0 {
+		return fmt.Errorf("invalid post logout redirect URI %s: must be an absolute URI", uri)
+	}
+
+	// URI schemes are case-insensitive, see RFC 3986 section 3.1.
+	switch scheme := uri[:schemeDelimiter]; {
+	case strings.EqualFold(scheme, "http"), strings.EqualFold(scheme, "https"):
+	case isReqCommandOperator(scheme):
+		// The scheme is derived from a request header, e.g. x-forwarded-proto.
+	default:
+		return fmt.Errorf("invalid post logout redirect URI %s: scheme must be http, https, or a %%REQ(header)%% command operator", uri)
+	}
+
+	// Unlike extractRedirectPath, a path is not required: the host root is a valid landing page.
+	// The authority is, since the provider would otherwise have nowhere to redirect to.
+	authority := uri[schemeDelimiter+len("://"):]
+	if end := strings.IndexAny(authority, "/?#"); end >= 0 {
+		authority = authority[:end]
+	}
+	if authority == "" {
+		return fmt.Errorf("invalid post logout redirect URI %s: must have a host", uri)
+	}
+
+	if err := validateURICommandOperators(uri); err != nil {
+		return fmt.Errorf("invalid post logout redirect URI %s: %w", uri, err)
+	}
+	return nil
+}
+
+// validateURICommandOperators accepts only the %REQ(header)% command operator and "%%" escapes.
+// Envoy rejects the whole configuration on an unknown or malformed operator, so catching it here
+// reports the mistake on the SecurityPolicy status instead of NACKing the xDS update.
+func validateURICommandOperators(uri string) error {
+	for i := 0; i < len(uri); {
+		if uri[i] != '%' {
+			i++
+			continue
+		}
+		// "%%" is an escaped literal percent, not the start of a command operator.
+		if i+1 < len(uri) && uri[i+1] == '%' {
+			i += 2
+			continue
+		}
+		closing := strings.IndexByte(uri[i+1:], '%')
+		if closing < 0 {
+			return errors.New(`unterminated command operator, write a literal percent as "%%"`)
+		}
+		end := i + 1 + closing + 1
+		if operator := uri[i:end]; !isReqCommandOperator(operator) {
+			return fmt.Errorf("unsupported command operator %s, only %%REQ(header)%% is supported", operator)
+		}
+		i = end
+	}
+	return nil
+}
+
+// isReqCommandOperator reports whether s is an Envoy request header command operator, i.e.
+// "%REQ(header)%" or "%REQ(header):maxLength%".
+func isReqCommandOperator(s string) bool {
+	body, ok := strings.CutPrefix(s, "%REQ(")
+	if !ok {
+		return false
+	}
+	if body, ok = strings.CutSuffix(body, "%"); !ok {
+		return false
+	}
+
+	header, maxLength, closed := strings.Cut(body, ")")
+	if !closed || header == "" || strings.ContainsAny(header, "%()") {
+		return false
+	}
+	if maxLength == "" {
+		return true
+	}
+	// An optional ":maxLength" truncates the header value, e.g. "%REQ(x-tenant):32%".
+	if maxLength, ok = strings.CutPrefix(maxLength, ":"); !ok || maxLength == "" {
+		return false
+	}
+	for _, c := range maxLength {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // appendOpenidScopeIfNotExist appends the openid scope to the provided scopes
@@ -2394,7 +2596,37 @@ func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.
 	return config, nil
 }
 
-func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+func validateOIDCIssuerURL(raw string) (*url.URL, error) {
+	issuer, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid issuer URL: %w", err)
+	}
+
+	switch {
+	case issuer.Scheme != "https":
+		return nil, fmt.Errorf("issuer URL must use https scheme")
+	case issuer.Hostname() == "":
+		return nil, fmt.Errorf("issuer URL must include a host")
+	case issuer.User != nil:
+		return nil, fmt.Errorf("issuer URL must not include userinfo")
+	case issuer.RawQuery != "" || strings.Contains(raw, "?"):
+		return nil, fmt.Errorf("issuer URL must not include a query")
+	case issuer.Fragment != "" || strings.Contains(raw, "#"):
+		return nil, fmt.Errorf("issuer URL must not include a fragment")
+	}
+
+	return issuer, nil
+}
+
+func buildOIDCDiscoveryURL(issuer *url.URL) string {
+	discoveryURL := *issuer
+	discoveryURL.RawQuery = ""
+	discoveryURL.Fragment = ""
+	discoveryURL.Path = strings.TrimRight(discoveryURL.Path, "/") + "/.well-known/openid-configuration"
+	return discoveryURL.String()
+}
+
+func newGuardedOIDCDiscoveryHTTPClient(providerTLS *ir.TLSUpstreamConfig) (*http.Client, error) {
 	var (
 		tlsConfig *tls.Config
 		err       error
@@ -2406,17 +2638,96 @@ func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamCo
 		}
 	}
 
-	client := &http.Client{Timeout: defaultOIDCHTTPTimeout}
-	if tlsConfig != nil {
-		client.Transport = &http.Transport{
-			TLSClientConfig: tlsConfig,
+	transport := &http.Transport{
+		DialContext: (&oidcDiscoveryDialer{
+			dialer: &net.Dialer{Timeout: defaultOIDCHTTPTimeout},
+		}).DialContext,
+		TLSClientConfig: tlsConfig,
+	}
+
+	return &http.Client{
+		Timeout:   defaultOIDCHTTPTimeout,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= defaultOIDCMaxRedirects {
+				return fmt.Errorf("stopped after %d redirects", defaultOIDCMaxRedirects)
+			}
+			if _, err := validateOIDCIssuerURL(req.URL.String()); err != nil {
+				return err
+			}
+			_, err := validateOIDCDiscoveryHost(req.Context(), req.URL.Hostname())
+			return err
+		},
+	}, nil
+}
+
+type oidcDiscoveryDialer struct {
+	dialer *net.Dialer
+}
+
+func (d *oidcDiscoveryDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+
+	addrs, err := validateOIDCDiscoveryHost(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, fmt.Errorf("issuer host %q did not resolve to any addresses", host)
+	}
+
+	return d.dialer.DialContext(ctx, network, net.JoinHostPort(addrs[0].String(), port))
+}
+
+func validateOIDCDiscoveryHost(ctx context.Context, host string) ([]netip.Addr, error) {
+	if addr, err := netip.ParseAddr(host); err == nil {
+		if isBlockedOIDCDiscoveryAddr(addr) {
+			return nil, fmt.Errorf("issuer host resolves to blocked address %s", addr)
+		}
+		return []netip.Addr{addr}, nil
+	}
+
+	addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+	if err != nil {
+		return nil, err
+	}
+	for _, addr := range addrs {
+		if isBlockedOIDCDiscoveryAddr(addr) {
+			return nil, fmt.Errorf("issuer host %q resolves to blocked address %s", host, addr)
 		}
 	}
+	return addrs, nil
+}
+
+func isBlockedOIDCDiscoveryAddr(addr netip.Addr) bool {
+	addr = addr.Unmap()
+
+	return !addr.IsValid() ||
+		addr.IsUnspecified() ||
+		addr.IsLoopback() ||
+		addr.IsLinkLocalUnicast() ||
+		addr.IsMulticast()
+}
+
+func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+	issuer, err := validateOIDCIssuerURL(issuerURL)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := newOIDCDiscoveryHTTPClient(providerTLS)
+	if err != nil {
+		return nil, err
+	}
+	discoveryURL := buildOIDCDiscoveryURL(issuer)
 
 	// Parse the OpenID configuration response
 	var config OpenIDConfig
 	if err = backoff.Retry(func() error {
-		resp, err := client.Get(fmt.Sprintf("%s/.well-known/openid-configuration", issuerURL))
+		resp, err := client.Get(discoveryURL)
 		// Retry on transport errors
 		if err != nil {
 			return err
@@ -2668,7 +2979,7 @@ func (t *Translator) buildExtAuth(
 		http              = policy.Spec.ExtAuth.HTTP
 		grpc              = policy.Spec.ExtAuth.GRPC
 		backendRefs       []egv1a1.BackendRef
-		backendSettings   *egv1a1.ClusterSettings
+		backendSettings   *egv1a1.BackendSettings
 		protocol          ir.AppProtocol
 		rd                *ir.RouteDestination
 		authority         string
@@ -2737,7 +3048,7 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(backendSettings); err != nil {
 		return nil, err
 	}
 
@@ -2775,7 +3086,8 @@ func (t *Translator) buildExtAuth(
 
 	if policy.Spec.ExtAuth.BodyToExtAuth != nil {
 		extAuth.BodyToExtAuth = &ir.BodyToExtAuth{
-			MaxRequestBytes: policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes,
+			MaxRequestBytes: ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes, defaultExtAuthMaxRequestBytes),
+			PackAsBytes:     ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.PackAsBytes, false),
 		}
 	}
 
@@ -2877,6 +3189,13 @@ func (t *Translator) backendRefAuthority(
 	if backendKind == resource.KindBackend {
 		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend != nil {
+			if isKubernetesServiceBackend(backend) && backend.Spec.KubernetesService != nil {
+				ref := kubernetesServiceBackendRef(backend)
+				return net.JoinHostPort(
+					fmt.Sprintf("%s.%s", ref.Name, backend.Namespace),
+					strconv.Itoa(int(*ref.Port)),
+				)
+			}
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {
 				if ep.FQDN != nil {
@@ -2907,7 +3226,17 @@ func (t *Translator) buildAuthorization(
 		irAuth        = &ir.Authorization{}
 		// The default action is Deny if not specified
 		defaultAction = egv1a1.AuthorizationActionDeny
+		// The JWT providers this policy resolves a rule's JWT principal against. For a
+		// merging policy this is the merged set, so a rule may reference a provider that
+		// only the parent policy defines.
+		jwtProviders = sets.New[string]()
 	)
+
+	if policy.Spec.JWT != nil {
+		for _, provider := range policy.Spec.JWT.Providers {
+			jwtProviders.Insert(provider.Name)
+		}
+	}
 
 	ownerPolicy := policyOwnerOr(owners.authorizationRules, policy)
 
@@ -2928,6 +3257,13 @@ func (t *Translator) buildAuthorization(
 				}
 
 				irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
+			}
+
+			// The JWT provider name is the key the JWT authn filter writes its payload
+			// under, so a rule naming a provider that is not configured can never match.
+			// Reject it here instead of silently never matching the rule.
+			if rule.Principal.JWT != nil && !jwtProviders.Has(rule.Principal.JWT.Provider) {
+				return nil, fmt.Errorf("unable to translate authorization rule: jwt provider %q is not defined in jwt.providers", rule.Principal.JWT.Provider)
 			}
 
 			irPrincipal.JWT = rule.Principal.JWT

@@ -50,6 +50,9 @@ __Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for examp
 
 * Run `make e2e` to perform end-to-end testing.
 
+* On macOS, run `make e2e-mac` to set up [Docker Mac Net Connect][mac_connect]
+  and use an isolated kind cluster without changing the current Kubernetes context.
+
 * Run `make testdata` to generate the golden YAML testdata files.
 
 #### Working with Test Data Files
@@ -165,7 +168,9 @@ workarounds to run conformance tests:
   `TAG=latest make kube-deploy run-conformance`. This will install Envoy Gateway using the latest [gateway-dev][] image
   to the Kubernetes cluster using the current kubectl context and run the conformance tests. Use `make kube-undeploy` to
   uninstall Envoy Gateway.
-* Install and run [Docker Mac Net Connect][mac_connect] and then run `TAG=latest make conformance`.
+* Run `TAG=latest make conformance-mac` to set up
+  [Docker Mac Net Connect][mac_connect] and use an isolated kind cluster without
+  changing the current Kubernetes context.
 
 __Note:__  Preface commands with `IMAGE` or replace `TAG` to use a different Envoy Gateway image or tag. If `TAG`
 is unspecified, the short SHA of your current branch is used.

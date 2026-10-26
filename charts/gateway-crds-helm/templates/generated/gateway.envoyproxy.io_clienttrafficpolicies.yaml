@@ -131,6 +131,7 @@ spec:
                           description: |-
                             CIDR defines a CIDR Address range.
                             A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+                          maxLength: 64
                           pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
                           type: string
                         minItems: 1
@@ -181,6 +182,16 @@ spec:
                           If not specified, there is no limit.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      maxConnectionDurationJitter:
+                        description: |-
+                          MaxConnectionDurationJitter adds a random extra amount of time to each connection's
+                          MaxConnectionDuration, up to this percentage of that duration. This keeps connections
+                          opened together from expiring at the same moment. Requires MaxConnectionDuration.
+                          If not specified, no jitter is added.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       maxRequestsPerConnection:
                         description: |-
                           MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
@@ -204,6 +215,9 @@ spec:
                     x-kubernetes-validations:
                     - message: closeDelay can only be configured when value is set
                       rule: '!has(self.closeDelay) || has(self.value)'
+                    - message: maxConnectionDurationJitter can only be configured
+                        when maxConnectionDuration is set
+                      rule: '!has(self.maxConnectionDurationJitter) || has(self.maxConnectionDuration)'
                   maxAcceptPerSocketEvent:
                     default: 1
                     description: |-
@@ -258,6 +272,11 @@ spec:
                     description: |-
                       DisableRateLimitHeaders configures Envoy Proxy to omit the "X-RateLimit-" response headers
                       when rate limiting is enabled.
+                    type: boolean
+                  disableRetryAfterHeader:
+                    description: |-
+                      DisableRetryAfterHeader configures Envoy Proxy to omit the "Retry-After" response header
+                      on rate-limited 429 responses.
                     type: boolean
                   earlyRequestHeaders:
                     description: |-
@@ -380,6 +399,122 @@ spec:
                         x-kubernetes-list-map-keys:
                         - name
                         x-kubernetes-list-type: map
+                      mutations:
+                        description: |-
+                          Mutations is an ordered list of header operations that are applied in
+                          exactly the order specified. Use this field when the sequence of
+                          operations matters, for example setting a header and then appending to
+                          it, or removing a header and then re-adding it.
+
+                          Mutations are always applied FIRST, in list order. The Set, Add,
+                          AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after
+                          the mutations, preserving their existing ordering (Add, then Set, then
+                          AddIfAbsent, then Remove, then RemoveOnMatch).
+                        items:
+                          description: HTTPHeaderMutation defines a single header
+                            mutation operation.
+                          maxProperties: 1
+                          minProperties: 1
+                          properties:
+                            remove:
+                              description: |-
+                                Remove removes the named header if it exists. Header names are
+                                case-insensitive.
+                              minLength: 1
+                              type: string
+                            removeOnMatch:
+                              description: |-
+                                RemoveOnMatch removes every header whose name matches the specified string
+                                matcher. Matching is performed on the header name (case-insensitive).
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            write:
+                              description: Write adds or modifies a header using the
+                                specified action.
+                              properties:
+                                action:
+                                  default: Add
+                                  description: |-
+                                    Action controls how the header value is written when a header with the
+                                    same name already exists. Defaults to Add.
+                                  enum:
+                                  - Add
+                                  - Set
+                                  - AddIfAbsent
+                                  - SetIfExists
+                                  type: string
+                                header:
+                                  description: |-
+                                    Header is the header name and value to write. The value may contain
+                                    Envoy substitution format operators such as "%REQ(x-foo)%", which are
+                                    evaluated per request.
+                                    See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                        case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                        If multiple entries specify equivalent header names, the first entry with
+                                        an equivalent name MUST be considered for a match. Subsequent entries
+                                        with an equivalent header name MUST be ignored. Due to the
+                                        case-insensitivity of header names, "foo" and "Foo" are considered
+                                        equivalent.
+                                      maxLength: 256
+                                      minLength: 1
+                                      pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                      type: string
+                                    value:
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+                                        <gateway:experimental:description>
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                        </gateway:experimental:description>
+
+                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                                      maxLength: 4096
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - value
+                                  type: object
+                                keepEmptyValue:
+                                  description: |-
+                                    KeepEmptyValue controls whether the header is still written when its
+                                    value is empty. This matters for values produced by substitution
+                                    formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+                                    request time. Envoy drops such headers by default; set this to true to
+                                    keep them with an empty value.
+
+                                    When unset, it defaults to true only if the configured value itself is
+                                    the empty string, so a literal empty header is always written.
+                                  type: boolean
+                              required:
+                              - header
+                              type: object
+                          type: object
+                        maxItems: 64
+                        type: array
                       remove:
                         description: |-
                           Remove the given header(s) from the HTTP request before the action. The
@@ -634,6 +769,122 @@ spec:
                         x-kubernetes-list-map-keys:
                         - name
                         x-kubernetes-list-type: map
+                      mutations:
+                        description: |-
+                          Mutations is an ordered list of header operations that are applied in
+                          exactly the order specified. Use this field when the sequence of
+                          operations matters, for example setting a header and then appending to
+                          it, or removing a header and then re-adding it.
+
+                          Mutations are always applied FIRST, in list order. The Set, Add,
+                          AddIfAbsent, Remove and RemoveOnMatch fields below are then applied after
+                          the mutations, preserving their existing ordering (Add, then Set, then
+                          AddIfAbsent, then Remove, then RemoveOnMatch).
+                        items:
+                          description: HTTPHeaderMutation defines a single header
+                            mutation operation.
+                          maxProperties: 1
+                          minProperties: 1
+                          properties:
+                            remove:
+                              description: |-
+                                Remove removes the named header if it exists. Header names are
+                                case-insensitive.
+                              minLength: 1
+                              type: string
+                            removeOnMatch:
+                              description: |-
+                                RemoveOnMatch removes every header whose name matches the specified string
+                                matcher. Matching is performed on the header name (case-insensitive).
+                              properties:
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    a string.
+                                  enum:
+                                  - Exact
+                                  - Prefix
+                                  - Suffix
+                                  - RegularExpression
+                                  type: string
+                                value:
+                                  description: Value specifies the string value that
+                                    the match must have.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            write:
+                              description: Write adds or modifies a header using the
+                                specified action.
+                              properties:
+                                action:
+                                  default: Add
+                                  description: |-
+                                    Action controls how the header value is written when a header with the
+                                    same name already exists. Defaults to Add.
+                                  enum:
+                                  - Add
+                                  - Set
+                                  - AddIfAbsent
+                                  - SetIfExists
+                                  type: string
+                                header:
+                                  description: |-
+                                    Header is the header name and value to write. The value may contain
+                                    Envoy substitution format operators such as "%REQ(x-foo)%", which are
+                                    evaluated per request.
+                                    See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                        case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                        If multiple entries specify equivalent header names, the first entry with
+                                        an equivalent name MUST be considered for a match. Subsequent entries
+                                        with an equivalent header name MUST be ignored. Due to the
+                                        case-insensitivity of header names, "foo" and "Foo" are considered
+                                        equivalent.
+                                      maxLength: 256
+                                      minLength: 1
+                                      pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                      type: string
+                                    value:
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+                                        <gateway:experimental:description>
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                        </gateway:experimental:description>
+
+                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                                      maxLength: 4096
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - value
+                                  type: object
+                                keepEmptyValue:
+                                  description: |-
+                                    KeepEmptyValue controls whether the header is still written when its
+                                    value is empty. This matters for values produced by substitution
+                                    formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at
+                                    request time. Envoy drops such headers by default; set this to true to
+                                    keep them with an empty value.
+
+                                    When unset, it defaults to true only if the configured value itself is
+                                    the empty string, so a literal empty header is always written.
+                                  type: boolean
+                              required:
+                              - header
+                              type: object
+                          type: object
+                        maxItems: 64
+                        type: array
                       remove:
                         description: |-
                           Remove the given header(s) from the HTTP request before the action. The
@@ -825,8 +1076,9 @@ spec:
                           - Chain
                           - DNS
                           - URI
+                          - Issuer
                           type: string
-                        maxItems: 5
+                        maxItems: 6
                         type: array
                       mode:
                         description: |-
@@ -875,12 +1127,23 @@ spec:
                       Has no effect unless maxConnectionDuration is set.
                     type: boolean
                   enableTrailers:
-                    description: EnableTrailers defines if HTTP/1 trailers should
-                      be proxied by Envoy.
+                    description: |-
+                      EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                   http10:
-                    description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
-                      requests.
+                    description: |-
+                      HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+
+                      Note: this field currently forces explicit HTTP/1 for backend connections when other
+                      backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.
+                      In a future release it will no longer force explicit HTTP/1 on backend connections.
+                      Use BackendTrafficPolicy.http1: {} to force HTTP/1 on a backend cluster explicitly.
                     properties:
                       useDefaultHost:
                         description: |-
@@ -937,6 +1200,12 @@ spec:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
                       By default, Envoy will lowercase all the headers.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                 type: object
               http2:
@@ -1014,6 +1283,17 @@ spec:
                 type: object
               http3:
                 description: HTTP3 provides HTTP/3 configuration on the listener.
+                properties:
+                  advertisedPort:
+                    description: |-
+                      AdvertisedPort specifies the port advertised to clients in the HTTP/3
+                      `alt-svc` response header. It does not change the listener or Service port.
+                      If unset, the Gateway listener port is advertised.
+                    format: int32
+                    type: integer
+                    x-kubernetes-validations:
+                    - message: advertisedPort must be between 1 and 65535
+                      rule: self >= 1 && self <= 65535
                 type: object
               path:
                 description: Path enables managing how the incoming path set by clients
@@ -1045,6 +1325,56 @@ spec:
                   If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
                 minProperties: 0
                 properties:
+                  forwardProtoConfig:
+                    description: |-
+                      ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+                      destination port. Only takes effect when PROXY protocol is enabled.
+
+                      This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and
+                      forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct
+                      scheme for the forwarded request.
+                    properties:
+                      httpDestinationPorts:
+                        description: |-
+                          HTTPDestinationPorts are the destination ports treated as HTTP.
+                          When the PROXY protocol destination port matches one of these, the
+                          x-forwarded-proto header is set to "http".
+                          Common values: 80, 8080.
+                        items:
+                          format: int32
+                          type: integer
+                          x-kubernetes-validations:
+                          - message: port must be in the range [1, 65535]
+                            rule: self >= 1 && self <= 65535
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                      httpsDestinationPorts:
+                        description: |-
+                          HTTPSDestinationPorts are the destination ports treated as HTTPS.
+                          When the PROXY protocol destination port matches one of these, the
+                          x-forwarded-proto header is set to "https".
+                          Common values: 443, 8443.
+                        items:
+                          format: int32
+                          type: integer
+                          x-kubernetes-validations:
+                          - message: port must be in the range [1, 65535]
+                            rule: self >= 1 && self <= 65535
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                    type: object
+                    x-kubernetes-validations:
+                    - message: at least one of httpsDestinationPorts or httpDestinationPorts
+                        must be set
+                      rule: '(has(self.httpsDestinationPorts) ? self.httpsDestinationPorts.size()
+                        : 0) + (has(self.httpDestinationPorts) ? self.httpDestinationPorts.size()
+                        : 0) >= 1'
+                    - message: httpsDestinationPorts and httpDestinationPorts must
+                        be disjoint
+                      rule: '!(has(self.httpsDestinationPorts) && has(self.httpDestinationPorts)
+                        && self.httpsDestinationPorts.exists(p, p in self.httpDestinationPorts))'
                   optional:
                     description: |-
                       Optional allows requests without a Proxy Protocol header to be proxied.

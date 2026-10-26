@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -85,6 +86,52 @@ func isNamespaceSelectorBypassInfrastructureResource(obj any) bool {
 	default:
 		return false
 	}
+}
+
+func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesListener(ctx context.Context) bool {
+	gtwList := &gwapiv1.GatewayList{}
+	if err := r.client.List(ctx, gtwList, &client.ListOptions{}); err != nil {
+		// If we can't list Gateways, we can't determine if
+		// any of them have SelectorAllowedRoutes set to true, so we return true.
+		return true
+	}
+
+	for i := range gtwList.Items {
+		gtw := &gtwList.Items[i]
+		for _, l := range gtw.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
+				return true
+			}
+		}
+	}
+
+	if !r.listenerSetCRDExists {
+		return false
+	}
+
+	listenerSetList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(ctx, listenerSetList, &client.ListOptions{}); err != nil {
+		// If we can't list ListenerSet, we can't determine if
+		// any of them have SelectorAllowedRoutes set to true, so we return true.
+		return true
+	}
+	for i := range listenerSetList.Items {
+		ls := &listenerSetList.Items[i]
+		for _, l := range ls.Spec.Listeners {
+			if hasNamespacesFromSelector(l.AllowedRoutes) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func hasNamespacesFromSelector(ar *gwapiv1.AllowedRoutes) bool {
+	if ar == nil || ar.Namespaces == nil {
+		return false
+	}
+	return ptr.Deref(ar.Namespaces.From, gwapiv1.NamespacesFromSame) == gwapiv1.NamespacesFromSelector
 }
 
 type NamespaceGetter interface {
@@ -550,7 +597,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		}
 	}
 
-	return false
+	return r.isServiceReferencedByBackend(&nsName)
 }
 
 // validateBackendForReconcile tries finding the owning Gateway of the Backend
@@ -599,6 +646,29 @@ func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.
 	}
 
 	return len(spList.Items) > 0
+}
+
+// isServiceReferencedByBackend returns true if a KubernetesService Backend that points at
+// the named Service is referenced by a route or policy, so the Service is part of the resource tree.
+func (r *gatewayAPIReconciler) isServiceReferencedByBackend(nsName *types.NamespacedName) bool {
+	if r.backendAPIDisabled() {
+		return false
+	}
+
+	backendList := &egv1a1.BackendList{}
+	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(serviceBackendIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated Backends")
+		return false
+	}
+
+	for i := range backendList.Items {
+		if r.validateBackendForReconcile(&backendList.Items[i]) {
+			return true
+		}
+	}
+	return false
 }
 
 // validateServiceImportForReconcile tries finding the owning Gateway of the ServiceImport
@@ -701,37 +771,17 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		return false
 	}
 
-	nsName := types.NamespacedName{
-		Namespace: obj.GetNamespace(),
-		Name:      svcName,
+	// A slice may carry both service-name labels (e.g. Cilium ClusterMesh MCS
+	// slices); it is relevant if either the Service or the ServiceImport is.
+	var backendNames []string
+	if ok {
+		backendNames = append(backendNames, svcName)
 	}
-
 	if isMCS {
-		nsName.Name = multiClusterSvcName
+		backendNames = append(backendNames, multiClusterSvcName)
 	}
-
-	if r.isRateLimitService(&nsName) {
-		return true
-	}
-
-	if r.isRouteReferencingBackend(&nsName) {
-		return true
-	}
-
-	if r.spCRDExists {
-		if r.isSecurityPolicyReferencingBackend(&nsName) {
-			return true
-		}
-	}
-
-	if r.epCRDExists {
-		if r.isEnvoyProxyReferencingBackend(&nsName) {
-			return true
-		}
-	}
-
-	if r.eepCRDExists {
-		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+	for _, name := range backendNames {
+		if r.isEndpointSliceBackendReferenced(&types.NamespacedName{Namespace: obj.GetNamespace(), Name: name}) {
 			return true
 		}
 	}
@@ -745,6 +795,38 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	}
 
 	return false
+}
+
+// isEndpointSliceBackendReferenced returns true if the named Service or
+// ServiceImport is referenced by a rate limit config, route or policy.
+func (r *gatewayAPIReconciler) isEndpointSliceBackendReferenced(nsName *types.NamespacedName) bool {
+	if r.isRateLimitService(nsName) {
+		return true
+	}
+
+	if r.isRouteReferencingBackend(nsName) {
+		return true
+	}
+
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingBackend(nsName) {
+			return true
+		}
+	}
+
+	if r.epCRDExists {
+		if r.isEnvoyProxyReferencingBackend(nsName) {
+			return true
+		}
+	}
+
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(nsName) {
+			return true
+		}
+	}
+
+	return r.isServiceReferencedByBackend(nsName)
 }
 
 // validateObjectForReconcile tries finding the owning Gateway of the Deployment or DaemonSet

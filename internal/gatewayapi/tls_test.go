@@ -81,9 +81,61 @@ func TestValidateCipherSuites(t *testing.T) {
 			},
 		},
 		{
+			name: "equal-preference groups",
+			ciphers: []string{
+				"[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]",
+				"[ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]",
+				"ECDHE-ECDSA-AES256-GCM-SHA384",
+				"ECDHE-RSA-AES256-GCM-SHA384",
+			},
+		},
+		{
+			name:    "equal-preference group with a single member",
+			ciphers: []string{"[ECDHE-ECDSA-AES128-GCM-SHA256]"},
+		},
+		{
+			name:    "equal-preference group of iana aliases",
+			ciphers: []string{"[TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256|TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256]"},
+		},
+		{
 			name:    "invalid name",
 			ciphers: []string{"INVALID-CIPHER"},
 			wantErr: "unsupported cipher suite: INVALID-CIPHER",
+		},
+		{
+			name:    "invalid name in an equal-preference group",
+			ciphers: []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|INVALID-CIPHER]"},
+			wantErr: "unsupported cipher suite INVALID-CIPHER in equal-preference group: [ECDHE-ECDSA-AES128-GCM-SHA256|INVALID-CIPHER]",
+		},
+		{
+			name:    "unclosed equal-preference group",
+			ciphers: []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305"},
+			wantErr: "unterminated equal-preference group: [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305",
+		},
+		{
+			name:    "empty equal-preference group",
+			ciphers: []string{"[]"},
+			wantErr: "empty equal-preference group: []",
+		},
+		{
+			name:    "empty member in an equal-preference group",
+			ciphers: []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|]"},
+			wantErr: "empty member in equal-preference group: [ECDHE-ECDSA-AES128-GCM-SHA256|]",
+		},
+		{
+			name:    "nested equal-preference group",
+			ciphers: []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|[ECDHE-ECDSA-CHACHA20-POLY1305]]"},
+			wantErr: "nested equal-preference group: [ECDHE-ECDSA-AES128-GCM-SHA256|[ECDHE-ECDSA-CHACHA20-POLY1305]]",
+		},
+		{
+			name:    "separator outside of an equal-preference group",
+			ciphers: []string{"ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305"},
+			wantErr: "| is only valid inside an equal-preference group: ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305",
+		},
+		{
+			name:    "unopened equal-preference group",
+			ciphers: []string{"ECDHE-ECDSA-AES128-GCM-SHA256]"},
+			wantErr: "unsupported cipher suite: ECDHE-ECDSA-AES128-GCM-SHA256]",
 		},
 		{
 			name:    "unsupported iana name",
