@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
@@ -86,9 +87,9 @@ func newGatewayClassStatusWriter(t *testing.T, funcs *interceptor.Funcs) *gatewa
 	return &gatewayClassStatusWriter{t: t, key: key, api: api, cache: cache, u: NewUpdateHandler(logr.Discard(), cache, api)}
 }
 
-func (w *gatewayClassStatusWriter) write(observedGeneration int64) {
-	w.u.apply(Update{
-		NamespacedName: w.key,
+func acceptedGatewayClassUpdate(key types.NamespacedName, observedGeneration int64) Update {
+	return Update{
+		NamespacedName: key,
 		Resource:       new(gwapiv1.GatewayClass),
 		Mutator: MutatorFunc(func(obj client.Object) client.Object {
 			gc := obj.(*gwapiv1.GatewayClass).DeepCopy()
@@ -100,7 +101,11 @@ func (w *gatewayClassStatusWriter) write(observedGeneration int64) {
 			}}
 			return gc
 		}),
-	})
+	}
+}
+
+func (w *gatewayClassStatusWriter) write(observedGeneration int64) {
+	w.u.apply(acceptedGatewayClassUpdate(w.key, observedGeneration))
 }
 
 func (w *gatewayClassStatusWriter) storedObservedGeneration() int64 {
@@ -201,4 +206,30 @@ func TestStatusUpdateRecordsOfSameKindInDifferentGroupsAreKeptApart(t *testing.T
 
 	write(policyA, 2)
 	require.Equal(t, int64(2), storedObservedGeneration(policyA))
+}
+
+func TestStatusUpdateRecordsExpire(t *testing.T) {
+	builder := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithStatusSubresource(&gwapiv1.GatewayClass{})
+	for i := range 100 {
+		builder = builder.WithObjects(&gwapiv1.GatewayClass{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gc-%d", i)},
+			Spec:       gwapiv1.GatewayClassSpec{ControllerName: egv1a1.GatewayControllerName},
+		})
+	}
+	api := builder.Build()
+	u := NewUpdateHandler(logr.Discard(), api, api)
+	now := time.Now()
+	u.now = func() time.Time { return now }
+
+	// The last update of most objects is a write, so its record is never looked up again.
+	for i := range 100 {
+		u.apply(acceptedGatewayClassUpdate(types.NamespacedName{Name: fmt.Sprintf("gc-%d", i)}, 1))
+	}
+	require.Len(t, u.lastWritten, 100)
+
+	now = now.Add(lastWriteTTL)
+	u.apply(acceptedGatewayClassUpdate(types.NamespacedName{Name: "gc-0"}, 1))
+	require.Empty(t, u.lastWritten)
 }
