@@ -2198,6 +2198,20 @@ spec:
                     - "1.2"
                     - "1.3"
                     type: string
+                  overlappingTLSHandling:
+                    description: |-
+                      OverlappingTLSHandling controls how overlapping TLS listeners handle HTTP/2
+                      requests. MisdirectedRequest keeps HTTP/2 enabled and returns 421 Misdirected Request
+                      when the request authority does not match the connection's SNI, as described
+                      in [GEP-3567](https://gateway-api.sigs.k8s.io/geps/gep-3567/).
+                      When unset or set to DowngradeToHTTP1, the existing ALPN downgrade is preserved
+                      unless alpnProtocols is explicitly configured. The downgrade is also preserved when
+                      the overlapping certificate cannot be determined (e.g. SDS), as no 421 routes can be
+                      generated in that case.
+                    enum:
+                    - DowngradeToHTTP1
+                    - MisdirectedRequest
+                    type: string
                   session:
                     description: Session defines settings related to TLS session management.
                     properties:
