@@ -62,9 +62,21 @@ type UpdateHandler struct {
 	apiReader     client.Reader
 	updateChannel chan Update
 	ready         chan struct{}
-	// Only apply touches lastWritten, on the single Start goroutine, so it needs no lock.
-	lastWritten map[string]string
+	// Only apply touches lastWritten and lastSwept, on the single Start goroutine, so they need no lock.
+	lastWritten map[string]lastWrite
+	lastSwept   time.Time
+	now         func() time.Time
 }
+
+// lastWrite records a status write of the handler.
+type lastWrite struct {
+	resourceVersion string
+	at              time.Time
+}
+
+// lastWriteTTL is how long a record of a status write is kept. The record is only needed until the
+// cache has seen the write, which takes far less.
+const lastWriteTTL = time.Minute
 
 func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Reader) *UpdateHandler {
 	u := &UpdateHandler{
@@ -73,10 +85,26 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 		apiReader:     apiReader,
 		updateChannel: make(chan Update, 1000),
 		ready:         make(chan struct{}),
-		lastWritten:   make(map[string]string),
+		lastWritten:   make(map[string]lastWrite),
+		now:           time.Now,
 	}
 
 	return u
+}
+
+// expireLastWrites drops records older than lastWriteTTL, at most once per lastWriteTTL. Most
+// records are never looked up again: an object's last update is usually a write.
+func (u *UpdateHandler) expireLastWrites() {
+	now := u.now()
+	if now.Sub(u.lastSwept) < lastWriteTTL {
+		return
+	}
+	u.lastSwept = now
+	for key, w := range u.lastWritten {
+		if now.Sub(w.at) >= lastWriteTTL {
+			delete(u.lastWritten, key)
+		}
+	}
 }
 
 func (u *UpdateHandler) apply(update Update) {
@@ -94,6 +122,7 @@ func (u *UpdateHandler) apply(update Update) {
 		updateDuration := time.Since(startTime)
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
+	u.expireLastWrites()
 
 	if err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
 		if kerrors.IsConflict(err) {
@@ -121,9 +150,9 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj := update.Mutator.Mutate(obj)
 
-		if rv, ok := u.lastWritten[writeKey]; ok {
+		if last, ok := u.lastWritten[writeKey]; ok {
 			switch {
-			case rv == obj.GetResourceVersion():
+			case last.resourceVersion == obj.GetResourceVersion():
 				delete(u.lastWritten, writeKey)
 			case isStatusEqual(obj, newObj):
 				// The cache may not have seen this handler's last write yet and still show a
@@ -156,7 +185,7 @@ func (u *UpdateHandler) apply(update Update) {
 		if err := u.client.Status().Update(context.Background(), newObj); err != nil {
 			return err
 		}
-		u.lastWritten[writeKey] = newObj.GetResourceVersion()
+		u.lastWritten[writeKey] = lastWrite{resourceVersion: newObj.GetResourceVersion(), at: u.now()}
 		return nil
 	}); err != nil {
 		log.Error(err, "unable to update status")
