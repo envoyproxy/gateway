@@ -50,6 +50,64 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              adaptiveConcurrency:
+                description: |-
+                  AdaptiveConcurrency defines the configuration for Envoy's adaptive
+                  concurrency filter, which dynamically adjusts the allowed request
+                  concurrency limit based on sampled latencies. This helps protect
+                  backends from overload by automatically shedding load when latency
+                  increases.
+                properties:
+                  concurrencyLimitExceededStatus:
+                    default: 503
+                    description: |-
+                      ConcurrencyLimitExceededStatus sets the HTTP status code returned to
+                      downstream clients when the concurrency limit is exceeded.
+                      Defaults to 503 (Service Unavailable).
+                    format: int32
+                    maximum: 599
+                    minimum: 400
+                    type: integer
+                  concurrencyUpdateInterval:
+                    default: 100ms
+                    description: |-
+                      ConcurrencyUpdateInterval is how often the concurrency limit is recalculated.
+                      Envoy requires a value greater than 0s. Defaults to 100ms.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  maxConcurrencyLimit:
+                    default: 1000
+                    description: |-
+                      MaxConcurrencyLimit is the upper bound on the calculated concurrency limit.
+                      Defaults to 1000.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  minConcurrencyLimit:
+                    default: 3
+                    description: |-
+                      MinConcurrencyLimit is the lower bound on the calculated concurrency limit.
+                      Defaults to 3. Raise this when a backend needs a higher in-flight floor so
+                      load-based autoscaling can still observe enough traffic.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  sampleAggregatePercentile:
+                    default: 50
+                    description: |-
+                      SampleAggregatePercentile is the latency percentile used when summarizing
+                      samples for the concurrency controller. Defaults to 50 (p50).
+                    maximum: 100
+                    minimum: 0
+                    type: number
+                type: object
+                x-kubernetes-validations:
+                - message: concurrencyUpdateInterval must be greater than 0s
+                  rule: '!has(self.concurrencyUpdateInterval) || duration(self.concurrencyUpdateInterval)
+                    > duration(''0s'')'
+                - message: minConcurrencyLimit must be less than or equal to maxConcurrencyLimit
+                  rule: '!has(self.minConcurrencyLimit) || !has(self.maxConcurrencyLimit)
+                    || self.minConcurrencyLimit <= self.maxConcurrencyLimit'
               admissionControl:
                 description: |-
                   AdmissionControl defines the admission control policy to be applied. This configuration
@@ -4124,6 +4182,18 @@ spec:
                 ''Service'', ''ServiceImport'', ''Backend''])) && (!has(self.targetSelectors)
                 || self.targetSelectors.all(sel, sel.kind in [''Gateway'', ''ListenerSet'',
                 ''HTTPRoute'', ''GRPCRoute''])))'
+            - message: adaptiveConcurrency can only be used with HTTPRoute, GRPCRoute,
+                Gateway, or ListenerSet targets
+              rule: '!has(self.adaptiveConcurrency) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''Gateway'', ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'']) &&
+                (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute''])) && (!has(self.targetSelectors)
+                || self.targetSelectors.all(sel, sel.kind in [''Gateway'', ''ListenerSet'',
+                ''HTTPRoute'', ''GRPCRoute''])))'
+            - message: adaptiveConcurrency is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.adaptiveConcurrency)'
             - message: timeout.http.requestTimeout and timeout.http.streamIdleTimeout
                 are not allowed when targeting a backend
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
