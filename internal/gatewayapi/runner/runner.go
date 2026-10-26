@@ -68,8 +68,18 @@ type Runner struct {
 	// Key tracking for mark and sweep - avoids expensive LoadAll operations
 	keyCache *KeyCache
 
+	// Only the translation goroutine touches lastGatewayClassStatus; see storeGatewayClassStatus.
+	lastGatewayClassStatus map[types.NamespacedName]storedGatewayClassStatus
+
 	// Goroutine synchronization
 	done sync.WaitGroup
+}
+
+// storedGatewayClassStatus is a GatewayClass status the runner stored, and the UID of the
+// GatewayClass it was computed for.
+type storedGatewayClassStatus struct {
+	uid    types.UID
+	status *gwapiv1.GatewayClassStatus
 }
 
 // uid is the identity of the object the status was computed from; see storeStatus.
@@ -153,8 +163,9 @@ func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a
 
 func New(cfg *Config) *Runner {
 	return &Runner{
-		Config:   *cfg,
-		keyCache: newKeyCache(),
+		Config:                 *cfg,
+		keyCache:               newKeyCache(),
+		lastGatewayClassStatus: make(map[types.NamespacedName]storedGatewayClassStatus),
 	}
 }
 
@@ -421,12 +432,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				_, statusUpdateSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
 				defer statusUpdateSpan.End()
 				if result.GatewayClass != nil {
-					key := utils.NamespacedName(result.GatewayClass)
-					// The provider stores a GatewayClass status as soon as it reconciles the class, so a
-					// translation of an older snapshot must not put back the status of an older generation.
-					if !hasNewerGatewayClassStatus(&r.ProviderResources.GatewayClassStatuses, key, result.GatewayClass.Generation) {
-						r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
-					}
+					r.storeGatewayClassStatus(result.GatewayClass)
 				}
 
 				// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
@@ -874,17 +880,41 @@ func storeStatus[K comparable, V any](
 	seen[key] = uid
 }
 
-func hasNewerGatewayClassStatus(
-	m *watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus],
-	key types.NamespacedName,
-	gen int64,
-) bool {
-	stored, ok := m.Load(key)
-	if !ok {
+// storeGatewayClassStatus stores the translated status of gc. The provider stores a GatewayClass
+// status as soon as it reconciles the class, so a translation of an older snapshot must not put
+// back the status of an older generation. The provider writes the map concurrently, so the check
+// and the store are one compare-and-swap.
+func (r *Runner) storeGatewayClassStatus(gc *gwapiv1.GatewayClass) {
+	m := &r.ProviderResources.GatewayClassStatuses
+	key := utils.NamespacedName(gc)
+	for {
+		stored, ok := m.Load(key)
+		if !ok {
+			if _, loaded := m.LoadOrStore(key, &gc.Status); loaded {
+				continue
+			}
+			break
+		}
+		if r.isNewerGatewayClassStatus(key, stored, gc) {
+			return
+		}
+		if m.CompareAndSwap(key, stored, &gc.Status) {
+			break
+		}
+	}
+	r.lastGatewayClassStatus[key] = storedGatewayClassStatus{uid: gc.UID, status: gc.Status.DeepCopy()}
+}
+
+// isNewerGatewayClassStatus reports whether stored was computed for a later generation of gc.
+// A status the runner stored for another object, one deleted and created again under the same
+// name, says nothing about gc. Any other stored status comes from the provider, which only stores
+// the status of a GatewayClass that exists.
+func (r *Runner) isNewerGatewayClassStatus(key types.NamespacedName, stored *gwapiv1.GatewayClassStatus, gc *gwapiv1.GatewayClass) bool {
+	if last, ok := r.lastGatewayClassStatus[key]; ok && last.uid != gc.UID && watchable.DeepEqual(last.status, stored) {
 		return false
 	}
 	for _, c := range stored.Conditions {
-		if c.ObservedGeneration > gen {
+		if c.ObservedGeneration > gc.Generation {
 			return true
 		}
 	}

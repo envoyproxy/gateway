@@ -11,6 +11,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -523,7 +524,27 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 }
 
-func TestTranslationOfOlderSnapshotKeepsNewerGatewayClassStatus(t *testing.T) {
+func acceptedGatewayClassStatus(generation int64) *gwapiv1.GatewayClassStatus {
+	return &gwapiv1.GatewayClassStatus{Conditions: []metav1.Condition{{
+		Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gwapiv1.GatewayClassReasonAccepted),
+		ObservedGeneration: generation,
+	}}}
+}
+
+// acceptedGatewayClass is a GatewayClass as the provider puts it in a snapshot: accepted at
+// its generation.
+func acceptedGatewayClass(name string, uid types.UID, generation int64) *gwapiv1.GatewayClass {
+	return &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid, Generation: generation},
+		Spec:       gwapiv1.GatewayClassSpec{ControllerName: egv1a1.GatewayControllerName},
+		Status:     *acceptedGatewayClassStatus(generation),
+	}
+}
+
+func startGatewayClassStatusRunner(t *testing.T) *message.ProviderResources {
+	t.Helper()
 	pResources := new(message.ProviderResources)
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
@@ -539,41 +560,77 @@ func TestTranslationOfOlderSnapshotKeepsNewerGatewayClassStatus(t *testing.T) {
 		ExtensionManager:  extMgr,
 	})
 	require.NoError(t, r.Start(t.Context()))
+	return pResources
+}
 
-	accepted := func(generation int64) gwapiv1.GatewayClassStatus {
-		return gwapiv1.GatewayClassStatus{Conditions: []metav1.Condition{{
-			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
-			Status:             metav1.ConditionTrue,
-			Reason:             string(gwapiv1.GatewayClassReasonAccepted),
-			ObservedGeneration: generation,
-		}}}
-	}
-	gatewayClassAt := func(name string, generation int64) *resource.Resources {
+// translateGatewayClasses publishes a snapshot with the given GatewayClasses and waits until the
+// runner has translated it. The runner translates the GatewayClasses of a snapshot in order, so
+// once the status of the sentinel added last is stored, the others have been translated too.
+func translateGatewayClasses(t *testing.T, pResources *message.ProviderResources, sentinel string, classes ...*gwapiv1.GatewayClass) {
+	t.Helper()
+	snapshot := make(resource.ControllerResources, 0, len(classes)+1)
+	for _, gc := range append(classes, acceptedGatewayClass(sentinel, types.UID(sentinel), 1)) {
 		res := resource.NewResources()
-		res.GatewayClass = &gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Generation: generation},
-			Spec:       gwapiv1.GatewayClassSpec{ControllerName: egv1a1.GatewayControllerName},
-			Status:     accepted(generation),
-		}
-		return res
+		res.GatewayClass = gc
+		snapshot = append(snapshot, res)
 	}
-
-	lagging := types.NamespacedName{Name: "a-lagging"}
-	sentinel := types.NamespacedName{Name: "z-sentinel"}
-	newer := accepted(2)
-	pResources.GatewayClassStatuses.Store(lagging, &newer)
 	pResources.GatewayAPIResources.Store(string(egv1a1.GatewayControllerName), &resource.ControllerResourcesContext{
-		Resources: &resource.ControllerResources{gatewayClassAt(lagging.Name, 1), gatewayClassAt(sentinel.Name, 1)},
+		Resources: &snapshot,
 		Context:   t.Context(),
 	})
-
-	// The runner translates the GatewayClasses of a snapshot in order, so once the sentinel's
-	// status is stored, the lagging GatewayClass has been translated too.
 	require.Eventually(t, func() bool {
-		_, ok := pResources.GatewayClassStatuses.Load(sentinel)
+		_, ok := pResources.GatewayClassStatuses.Load(types.NamespacedName{Name: sentinel})
 		return ok
 	}, 5*time.Second, 10*time.Millisecond)
-	got, ok := pResources.GatewayClassStatuses.Load(lagging)
+}
+
+func requireGatewayClassObservedGeneration(t *testing.T, pResources *message.ProviderResources, key types.NamespacedName, want int64) {
+	t.Helper()
+	got, ok := pResources.GatewayClassStatuses.Load(key)
 	require.True(t, ok)
-	require.Equal(t, int64(2), got.Conditions[0].ObservedGeneration)
+	require.Equal(t, want, got.Conditions[0].ObservedGeneration)
+}
+
+func TestTranslationOfOlderSnapshotKeepsNewerGatewayClassStatus(t *testing.T) {
+	pResources := startGatewayClassStatusRunner(t)
+	key := types.NamespacedName{Name: "a-lagging"}
+	pResources.GatewayClassStatuses.Store(key, acceptedGatewayClassStatus(2))
+
+	translateGatewayClasses(t, pResources, "z-sentinel", acceptedGatewayClass(key.Name, "uid", 1))
+	requireGatewayClassObservedGeneration(t, pResources, key, 2)
+}
+
+func TestTranslationOfRecreatedGatewayClassStoresItsOwnStatus(t *testing.T) {
+	pResources := startGatewayClassStatusRunner(t)
+	key := types.NamespacedName{Name: "a-recreated"}
+	// The GatewayClass was deleted at generation 5 and created again under the same name. The
+	// provider has stored the status of the new object, and a translation of the old one is late.
+	pResources.GatewayClassStatuses.Store(key, acceptedGatewayClassStatus(1))
+	translateGatewayClasses(t, pResources, "z-sentinel-1", acceptedGatewayClass(key.Name, "old-uid", 5))
+
+	translateGatewayClasses(t, pResources, "z-sentinel-2", acceptedGatewayClass(key.Name, "new-uid", 1))
+	requireGatewayClassObservedGeneration(t, pResources, key, 1)
+}
+
+func TestStoreGatewayClassStatusRacingProviderStore(t *testing.T) {
+	r := New(&Config{ProviderResources: new(message.ProviderResources)})
+	key := types.NamespacedName{Name: "gc"}
+	statuses := &r.ProviderResources.GatewayClassStatuses
+	for round := int64(1); round <= 20000; round++ {
+		older, newer := 2*round-1, 2*round
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Go(func() {
+			<-start
+			statuses.Store(key, acceptedGatewayClassStatus(newer))
+		})
+		wg.Go(func() {
+			<-start
+			r.storeGatewayClassStatus(acceptedGatewayClass(key.Name, "uid", older))
+		})
+		close(start)
+		wg.Wait()
+		got, _ := statuses.Load(key)
+		require.Equal(t, newer, got.Conditions[0].ObservedGeneration, "round %d: a translated status replaced a newer one stored concurrently", round)
+	}
 }
