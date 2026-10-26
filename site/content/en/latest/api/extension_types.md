@@ -1854,6 +1854,7 @@ _Appears in:_
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
 | `envoy.filters.http.bandwidth_limit` | EnvoyFilterBandwidthLimit defines the Envoy HTTP bandwidth limit filter.<br /> | 
 | `envoy.filters.http.grpc_web` | EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.<br /> | 
+| `envoy.filters.http.grpc_json_transcoder` | EnvoyFilterGRPCJSONTranscoder defines the Envoy HTTP gRPC-JSON transcoder filter.<br /> | 
 | `envoy.filters.http.grpc_stats` | EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.<br /> | 
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
 | `envoy.filters.http.compressor` | EnvoyFilterCompressor defines the Envoy HTTP compressor filter.<br /> | 
@@ -2519,7 +2520,7 @@ _Appears in:_
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.<br />Mutually exclusive with MergeBackends. |
 | `mergeBackends` | _[MergeBackendsConfig](#mergebackendsconfig)_ |  false  |  | MergeBackends configures cluster deduplication: routes that reference the same backend<br />share a single Envoy cluster instead of Envoy Gateway generating one cluster per route<br />rule. This reduces xDS size, active health-check traffic, and stats cardinality, and<br />improves upstream connection pooling.<br />Only a route's own backendRefs (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute) are<br />considered. A backend used any other way, such as a RequestMirror filter or an external<br />service of a SecurityPolicy or EnvoyExtensionPolicy, is never merged. A BackendTrafficPolicy<br />that targets a backend only reports status for Gateways where the backend is used as a route<br />backendRef.<br />Disabled when unset; specifying this field at all (even without further configuration)<br />enables it. Mutually exclusive with MergeGateways. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.alternate_protocols_cache<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_json_transcoder<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.alternate_protocols_cache<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
@@ -2962,6 +2963,24 @@ _Appears in:_
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. This field will be removed in v1.11. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[BackendSettings](#backendsettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
+
+
+#### GRPCJSONTranscoder
+
+
+
+GRPCJSONTranscoder defines the configuration for gRPC-JSON transcoding.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `protoDescriptor` | _[ProtoDescriptor](#protodescriptor)_ |  true  |  | ProtoDescriptor defines where to find the protobuf descriptor set of the gRPC services. |
+| `services` | _string array_ |  false  |  | Services defines the gRPC services to transcode.<br />If not specified, all the services defined in the descriptor are transcoded,<br />except the ones that come from imported files. |
+| `printOptions` | _[JSONPrintOptions](#jsonprintoptions)_ |  false  |  | PrintOptions defines how the gRPC response is printed as JSON. |
+| `ignoreUnknownQueryParameters` | _boolean_ |  false  |  | IgnoreUnknownQueryParameters ignores the query parameters that can't be mapped to<br />a field of the gRPC request.<br />If false, a request with such a parameter is not transcoded and is sent to the<br />backend as is. |
+| `convertGRPCStatus` | _boolean_ |  false  |  | ConvertGRPCStatus converts the gRPC status of an error response to the HTTP<br />status code and a JSON body. |
 
 
 #### GRPCSettings
@@ -3599,6 +3618,7 @@ _Appears in:_
 | `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  | DirectResponse returns a fixed response for matching requests.<br />When this filter is referenced from a GRPCRoute, only a non-2xx status code<br />is supported. gRPC signals success with a grpc-status trailer and a response<br />message, which a direct response cannot produce, so a 2xx status code (which<br />maps to the gRPC OK status) yields an invalid response for gRPC clients. Use a<br />non-2xx status code to deny or block gRPC requests (e.g. 403 maps to<br />PERMISSION_DENIED, 404 to UNIMPLEMENTED, 429/503 to UNAVAILABLE). |
 | `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
 | `requestMirror` | _[HTTPRequestMirrorFilter](#httprequestmirrorfilter)_ |  false  |  | RequestMirror defines configuration for request mirroring modifiers.<br />This configuration works together with the Gateway API RequestMirror filter<br />on the attached HTTPRoute rule. |
+| `grpcJSONTranscoder` | _[GRPCJSONTranscoder](#grpcjsontranscoder)_ |  false  |  | GRPCJSONTranscoder converts a JSON/HTTP request to a gRPC request, and the gRPC<br />response back to JSON.<br />It can only be used in the rule filters of an HTTPRoute. It is not supported in a<br />GRPCRoute or in the filters of a backendRef. |
 | `matches` | _[HTTPRouteMatchFilter](#httproutematchfilter) array_ |  false  |  | Matches defines additional matching criteria for the HTTPRoute rule.<br />As with HTTPRouteRule.Matches, the rule is matched if any one match applies.<br />When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the<br />effective matching is the logical AND of the two sets. |
 | `backendPriority` | _integer_ |  false  |  | BackendPriority sets the Envoy locality priority of the endpoints belonging to the<br />backendRef this filter is attached to, enabling priority-based failover between the<br />backendRefs of a single route rule. 0 is the highest priority.<br />Envoy sends traffic to the lowest priority value that has enough healthy endpoints,<br />and only spills over to the next value as that health degrades. It is highly<br />recommended to configure active or passive health checks so that failover can be<br />detected when the higher priority backends become unhealthy.<br />This overrides the priority derived from the referenced Backend's fallback field.<br />For additional details, see<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/priority<br />This filter is only valid when referenced from a backendRef's filters. Referencing it<br />from a route rule's filters is rejected: a rule-level filter applies uniformly to every<br />backendRef of the rule, and a uniform priority carries no failover meaning. |
 
@@ -4003,6 +4023,22 @@ JSONPatchOperationType specifies the JSON Patch operations that can be performed
 _Appears in:_
 - [JSONPatchOperation](#jsonpatchoperation)
 
+
+
+#### JSONPrintOptions
+
+
+
+JSONPrintOptions defines how the gRPC response is printed as JSON.
+
+_Appears in:_
+- [GRPCJSONTranscoder](#grpcjsontranscoder)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `addWhitespace` | _boolean_ |  false  |  | AddWhitespace adds spaces, line breaks and indentation to the JSON output. |
+| `alwaysPrintPrimitiveFields` | _boolean_ |  false  |  | AlwaysPrintPrimitiveFields prints the primitive fields even when they have<br />default values. |
+| `preserveProtoFieldNames` | _boolean_ |  false  |  | PreserveProtoFieldNames uses the field names in the proto file instead of<br />lowerCamelCase names. |
 
 
 #### JWT
@@ -5283,6 +5319,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `body` | _[ExtProcBodyProcessingMode](#extprocbodyprocessingmode)_ |  false  |  | Defines body processing mode |
 | `attributes` | _string array_ |  false  |  | Defines which attributes are sent to the external processor. Envoy Gateway currently<br />supports only the following attribute prefixes: connection, source, destination,<br />request, response, upstream and xds.route.<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes |
+
+
+#### ProtoDescriptor
+
+
+
+ProtoDescriptor defines where to find the protobuf descriptor set.
+
+_Appears in:_
+- [GRPCJSONTranscoder](#grpcjsontranscoder)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  true  |  | ValueRef references a ConfigMap in the same namespace that holds the descriptor set.<br />The descriptor set is read from the `proto-descriptor` key, either in `binaryData`<br />or in `data`, where it can be base64-encoded. If the ConfigMap has no `data` and only<br />one `binaryData` entry, that entry is used.<br />The descriptor set must include all the imported files. It can be generated with<br />`protoc --include_imports --descriptor_set_out=...`. |
 
 
 #### ProtocolUpgradeConfig
