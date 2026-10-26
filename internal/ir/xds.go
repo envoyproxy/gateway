@@ -897,11 +897,14 @@ type ResponseOverrideRule struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
-// When both statusCodes and responseHeaders are specified, both must match.
+// When more than one of statusCodes, requestHeaders and responseHeaders is specified, all of them must match.
 // +k8s:deepcopy-gen=true
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
 	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Request headers to match on. The match evaluates to true if all matches are successful.
+	RequestHeaders []StringMatch `json:"requestHeaders,omitempty"`
 
 	// Response headers to match on. The match evaluates to true if all matches are successful.
 	ResponseHeaders []StringMatch `json:"responseHeaders,omitempty"`
@@ -1830,6 +1833,10 @@ type BodyToExtAuth struct {
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+
+	// PackAsBytes sends the request body to the external authorization service as raw bytes.
+	// Only supported for gRPC external authorization services.
+	PackAsBytes bool `json:"packAsBytes,omitempty"`
 }
 
 // ContextExtension is analogous to http_request.headers, however these
@@ -2187,8 +2194,9 @@ type RouteDestination struct {
 	// reused
 	Name     string  `json:"name" yaml:"name"`
 	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
-	// Settings holds this destination's own, non-merged backends. Never shared with another
-	// route.
+	// Settings holds this destination's own, non-merged backends. Setting objects may
+	// be shared across matches and listeners of the same rule; consumers must not
+	// mutate them.
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// BackendClusterRefs holds references to backend clusters for this route rule. The
 	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
