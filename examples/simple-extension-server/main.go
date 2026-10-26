@@ -61,6 +61,16 @@ func main() {
 						DefaultText: "extserver",
 						Value:       "extserver",
 					},
+					&cli.BoolFlag{
+						Name:  "inference-pool",
+						Usage: "turn clusters built from InferencePool backendRefs into ORIGINAL_DST clusters that route to the endpoint in a request header (requires the Cluster hook)",
+						Value: false,
+					},
+					&cli.BoolFlag{
+						Name:  "log-requests",
+						Usage: "log the full request each hook receives (xDS Secrets are logged by name only, but listeners and clusters can still hold inline credentials)",
+						Value: false,
+					},
 				},
 			},
 		},
@@ -92,7 +102,7 @@ func startExtensionServer(cCtx *cli.Context) error {
 	if err := level.UnmarshalText([]byte(cCtx.String("log-level"))); err != nil {
 		level = slog.LevelInfo
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: level,
 	}))
 	address := net.JoinHostPort(cCtx.String("host"), cCtx.String("port"))
@@ -104,7 +114,9 @@ func startExtensionServer(cCtx *cli.Context) error {
 	var opts []grpc.ServerOption
 	grpcServer = grpc.NewServer(opts...)
 	sig := make(chan int, 1)
-	pb.RegisterEnvoyGatewayExtensionServer(grpcServer, New(logger, sig, cCtx.String("suffix")))
+	server := New(logger, sig, cCtx.String("suffix"), cCtx.Bool("inference-pool"))
+	server.logRequests = cCtx.Bool("log-requests")
+	pb.RegisterEnvoyGatewayExtensionServer(grpcServer, server)
 	return grpcServer.Serve(lis)
 }
 
@@ -113,18 +125,23 @@ type Server struct {
 	sig    chan int
 	log    *slog.Logger
 	suffix string
+	// inferencePool enables the InferencePool handling in PostClusterModify.
+	inferencePool bool
+	// logRequests logs the full request each hook receives, see logRequest.
+	logRequests bool
 }
 
-func New(logger *slog.Logger, sig chan int, suffix string) *Server {
+func New(logger *slog.Logger, sig chan int, suffix string, inferencePool bool) *Server {
 	return &Server{
-		log:    logger,
-		sig:    sig,
-		suffix: suffix,
+		log:           logger,
+		sig:           sig,
+		suffix:        suffix,
+		inferencePool: inferencePool,
 	}
 }
 
 func (s *Server) PostRouteModify(_ context.Context, req *pb.PostRouteModifyRequest) (*pb.PostRouteModifyResponse, error) {
-	s.log.Info("PostRouteModify callback was invoked")
+	s.logRequest("PostRouteModify", req)
 
 	if req.PostRouteContext != nil && len(req.PostRouteContext.ExtensionResources) > 0 {
 		s.log.Info("PostRouteModify received extension resources, adding response header",
@@ -143,7 +160,7 @@ func (s *Server) PostRouteModify(_ context.Context, req *pb.PostRouteModifyReque
 }
 
 func (s *Server) PostVirtualHostModify(_ context.Context, req *pb.PostVirtualHostModifyRequest) (*pb.PostVirtualHostModifyResponse, error) {
-	s.log.Info("PostVirtualHostModify callback was invoked")
+	s.logRequest("PostVirtualHostModify", req)
 
 	if strings.Contains(req.VirtualHost.Name, "fail") {
 		s.log.Info("PostVirtualHostModify returning unavailable error")
@@ -166,7 +183,7 @@ func (s *Server) PostVirtualHostModify(_ context.Context, req *pb.PostVirtualHos
 }
 
 func (s *Server) PostHTTPListenerModify(_ context.Context, req *pb.PostHTTPListenerModifyRequest) (*pb.PostHTTPListenerModifyResponse, error) {
-	s.log.Info("postHTTPListenerModify callback was invoked")
+	s.logRequest("PostHTTPListenerModify", req)
 
 	return &pb.PostHTTPListenerModifyResponse{
 		Listener: req.Listener,
@@ -174,7 +191,7 @@ func (s *Server) PostHTTPListenerModify(_ context.Context, req *pb.PostHTTPListe
 }
 
 func (s *Server) PostTranslateModify(_ context.Context, req *pb.PostTranslateModifyRequest) (*pb.PostTranslateModifyResponse, error) {
-	s.log.Info("PostTranslateModify callback was invoked")
+	s.logRequest("PostTranslateModify", req)
 
 	return &pb.PostTranslateModifyResponse{
 		Secrets:  req.Secrets,

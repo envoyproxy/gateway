@@ -1,0 +1,16 @@
+- clusterName: mixed-route-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway.extension:
+            hook: applied
+    loadBalancingWeight: 1
+    locality:
+      region: mixed-route-dest/backend/0
