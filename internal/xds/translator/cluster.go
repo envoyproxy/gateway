@@ -528,7 +528,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
 	}
 
-	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker, args.metrics)
 
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
@@ -655,6 +655,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 			MinSize: wrapperspb.UInt32(ptr.Deref(preferLocal.Force.MinEndpointsInZoneThreshold, 1)),
 		}
 	}
+	lbConfig.ZoneAwareLbConfig.FailTrafficOnPanic = ptr.Deref(preferLocal.FailTrafficOnPanic, false)
 	return lbConfig
 }
 
@@ -673,6 +674,9 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 	}
 	if healthcheck.HealthyThreshold != nil {
 		hc.HealthyThreshold = wrapperspb.UInt32(*healthcheck.HealthyThreshold)
+	}
+	if healthcheck.DisableConnectionReuse != nil {
+		hc.ReuseConnection = wrapperspb.Bool(!*healthcheck.DisableConnectionReuse)
 	}
 	switch {
 	case healthcheck.HTTP != nil:
@@ -850,7 +854,9 @@ func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_
 	return &hcp
 }
 
-func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
+func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker, metrics *ir.Metrics) *clusterv3.CircuitBreakers {
+	trackRemaining := metrics != nil && metrics.EnableCircuitBreakerRemainingStats
+
 	// Always allow the same amount of retries as regular requests to handle surges in retries
 	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
@@ -858,6 +864,7 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 		MaxRetries: &wrapperspb.UInt32Value{
 			Value: uint32(1024),
 		},
+		TrackRemaining: trackRemaining,
 	}
 	if circuitBreaker != nil {
 		cbt.RetryBudget = buildCircuitBreakerRetryBudget(circuitBreaker.RetryBudget)
@@ -1197,8 +1204,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresCommonHTTPOptions := hasTimeoutArgs(args) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
-	requiresHTTP1Options := args.http1Settings != nil &&
-		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
+	requiresHTTP1Options := args.http1Settings != nil
 
 	// Always uses HTTP/3 unconditionally; Auto only reaches for it once the backend has
 	// advertised support through alt-svc, and falls back to TCP otherwise.
@@ -1734,10 +1740,6 @@ func buildHTTP1Settings(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 					},
 				},
 			}
-		}
-		if opts.HTTP10 != nil {
-			http1Opts.AcceptHttp_10 = true
-			http1Opts.DefaultHostForHttp_10 = ptr.Deref(opts.HTTP10.DefaultHost, "")
 		}
 	}
 

@@ -54,8 +54,9 @@ spec:
             description: Spec defines the desired state of Backend.
             properties:
               appProtocols:
-                description: AppProtocols defines the application protocols to be
-                  supported when connecting to the backend.
+                description: |-
+                  AppProtocols defines the application protocols to be supported when connecting to the backend.
+                  For a KubernetesService backend, this takes precedence over the appProtocol of the Service port.
                 items:
                   description: AppProtocolType defines various backend applications
                     protocols supported by Envoy Gateway
@@ -161,6 +162,30 @@ spec:
                   The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
                   the health of the active backends falls below 72%.
                 type: boolean
+              kubernetesService:
+                description: |-
+                  KubernetesService defines the Kubernetes Service to be used when connecting to the backend.
+                  It must be set when Type is KubernetesService, and must not be set otherwise.
+
+                  The endpoints of the Service are discovered from its EndpointSlices, exactly as they
+                  are for a Service backendRef, so the resulting cluster keeps pod-level load balancing,
+                  health checking, session persistence, endpoint draining and zone awareness.
+                properties:
+                  name:
+                    description: Name is the name of the Kubernetes Service.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  port:
+                    description: Port is the port of the Kubernetes Service.
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                required:
+                - name
+                - port
+                type: object
               tls:
                 description: |-
                   TLS defines the TLS settings for the backend.
@@ -472,6 +497,7 @@ spec:
                 enum:
                 - Endpoints
                 - DynamicResolver
+                - KubernetesService
                 type: string
             type: object
             x-kubernetes-validations:
@@ -482,6 +508,15 @@ spec:
             - message: DynamicResolver type cannot use autoSNIFromEndpointHostname
               rule: self.type != 'DynamicResolver' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
                 && self.tls.autoSNIFromEndpointHostname)
+            - message: KubernetesService type cannot have endpoints specified
+              rule: self.type != 'KubernetesService' || !has(self.endpoints)
+            - message: KubernetesService type cannot use autoSNIFromEndpointHostname
+              rule: self.type != 'KubernetesService' || !has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
+                && self.tls.autoSNIFromEndpointHostname)
+            - message: kubernetesService must be specified if and only if type is
+                KubernetesService
+              rule: 'self.type == ''KubernetesService'' ? has(self.kubernetesService)
+                : !has(self.kubernetesService)'
             - message: when autoSNIFromEndpointHostname is enabled, IP and Unix endpoints
                 must define a hostname
               rule: '!has(self.tls) || !(has(self.tls.autoSNIFromEndpointHostname)
@@ -1472,6 +1507,14 @@ spec:
                   active:
                     description: Active health check configuration
                     properties:
+                      disableConnectionReuse:
+                        description: |-
+                          DisableConnectionReuse determines whether the active health check connection to a
+                          backend host is closed after each health check probe. When set to true, Envoy opens a
+                          new connection for each health check, which is useful for backends (such as
+                          haproxy-style agent checks) that do not expect a reused connection.
+                          Defaults to false, which reuses the connection across probes.
+                        type: boolean
                       grpc:
                         description: |-
                           GRPC defines the configuration of the GRPC health checker.
@@ -1900,6 +1943,32 @@ spec:
                           of errors between external and local origin.
                         type: boolean
                     type: object
+                type: object
+              http1:
+                description: |-
+                  HTTP1 provides HTTP/1 configuration for backend connections.
+                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                  this field takes precedence for backend (upstream) traffic.
+
+                  Behavior when targeting route kinds that do not use HTTP/1:
+                    - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                      directly adds a Warning condition on the policy; the field is ignored.
+                    - Gateway / ListenerSet / sectionName targets: this field is silently
+                      ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                      beneath that target; no warning is emitted.
+                    - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                      access log/metrics, tracing providers): rejected at admission on their
+                      own BackendSettings via separate validation rules.
+                properties:
+                  enableTrailers:
+                    description: EnableTrailers defines if HTTP/1 trailers should
+                      be proxied by Envoy.
+                    type: boolean
+                  preserveHeaderCase:
+                    description: |-
+                      PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                      By default, Envoy will lowercase all the headers.
+                    type: boolean
                 type: object
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
@@ -2337,6 +2406,16 @@ spec:
                         description: PreferLocalZone configures zone-aware routing
                           to prefer sending traffic to the local locality zone.
                         properties:
+                          failTrafficOnPanic:
+                            description: |-
+                              FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                              cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                              drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                              across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                              requests instead, applying backpressure to clients and giving the backend room to
+                              recover.
+                              Defaults to false.
+                            type: boolean
                           force:
                             description: |-
                               ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -3386,12 +3465,60 @@ spec:
                     match:
                       description: Match configuration.
                       properties:
+                        requestHeaders:
+                          description: |-
+                            Request headers to match on. The match evaluates to true if all matches are successful.
+                            Note that the request headers are not available for all Envoy-generated responses,
+                            in which case a request header match never evaluates to true.
+                          items:
+                            description: ResponseOverrideHeaderMatch defines the configuration
+                              for matching a request or response header.
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the HTTP header.
+                                  The header name is case-insensitive.
+                                  For example, "Foo" and "foo" are considered the same header.
+                                maxLength: 256
+                                minLength: 1
+                                pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                type: string
+                              value:
+                                description: Value within the HTTP header to match
+                                  against.
+                                properties:
+                                  type:
+                                    default: Exact
+                                    description: Type specifies how to match against
+                                      a string.
+                                    enum:
+                                    - Exact
+                                    - Prefix
+                                    - Suffix
+                                    - RegularExpression
+                                    type: string
+                                  value:
+                                    description: Value specifies the string value
+                                      that the match must have.
+                                    maxLength: 1024
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - value
+                                type: object
+                            required:
+                            - name
+                            - value
+                            type: object
+                          maxItems: 16
+                          minItems: 1
+                          type: array
                         responseHeaders:
                           description: Response headers to match on. The match evaluates
                             to true if all matches are successful.
                           items:
                             description: ResponseOverrideHeaderMatch defines the configuration
-                              for matching a response header.
+                              for matching a request or response header.
                             properties:
                               name:
                                 description: |-
@@ -3489,9 +3616,10 @@ spec:
                           type: array
                       type: object
                       x-kubernetes-validations:
-                      - message: at least one of statusCodes or responseHeaders must
-                          be specified
-                        rule: has(self.statusCodes) || has(self.responseHeaders)
+                      - message: at least one of statusCodes, requestHeaders or responseHeaders
+                          must be specified
+                        rule: has(self.statusCodes) || has(self.requestHeaders) ||
+                          has(self.responseHeaders)
                     redirect:
                       description: Redirect configuration
                       properties:
@@ -5104,6 +5232,16 @@ spec:
                           If not specified, there is no limit.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      maxConnectionDurationJitter:
+                        description: |-
+                          MaxConnectionDurationJitter adds a random extra amount of time to each connection's
+                          MaxConnectionDuration, up to this percentage of that duration. This keeps connections
+                          opened together from expiring at the same moment. Requires MaxConnectionDuration.
+                          If not specified, no jitter is added.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       maxRequestsPerConnection:
                         description: |-
                           MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
@@ -5127,6 +5265,9 @@ spec:
                     x-kubernetes-validations:
                     - message: closeDelay can only be configured when value is set
                       rule: '!has(self.closeDelay) || has(self.value)'
+                    - message: maxConnectionDurationJitter can only be configured
+                        when maxConnectionDuration is set
+                      rule: '!has(self.maxConnectionDurationJitter) || has(self.maxConnectionDuration)'
                   maxAcceptPerSocketEvent:
                     default: 1
                     description: |-
@@ -6036,12 +6177,23 @@ spec:
                       Has no effect unless maxConnectionDuration is set.
                     type: boolean
                   enableTrailers:
-                    description: EnableTrailers defines if HTTP/1 trailers should
-                      be proxied by Envoy.
+                    description: |-
+                      EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                   http10:
-                    description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
-                      requests.
+                    description: |-
+                      HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+
+                      Note: this field currently forces explicit HTTP/1 for backend connections when other
+                      backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.
+                      In a future release it will no longer force explicit HTTP/1 on backend connections.
+                      Use BackendTrafficPolicy.http1: {} to force HTTP/1 on a backend cluster explicitly.
                     properties:
                       useDefaultHost:
                         description: |-
@@ -6098,6 +6250,12 @@ spec:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
                       By default, Envoy will lowercase all the headers.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                 type: object
               http2:
@@ -6217,6 +6375,56 @@ spec:
                   If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
                 minProperties: 0
                 properties:
+                  forwardProtoConfig:
+                    description: |-
+                      ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+                      destination port. Only takes effect when PROXY protocol is enabled.
+
+                      This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and
+                      forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct
+                      scheme for the forwarded request.
+                    properties:
+                      httpDestinationPorts:
+                        description: |-
+                          HTTPDestinationPorts are the destination ports treated as HTTP.
+                          When the PROXY protocol destination port matches one of these, the
+                          x-forwarded-proto header is set to "http".
+                          Common values: 80, 8080.
+                        items:
+                          format: int32
+                          type: integer
+                          x-kubernetes-validations:
+                          - message: port must be in the range [1, 65535]
+                            rule: self >= 1 && self <= 65535
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                      httpsDestinationPorts:
+                        description: |-
+                          HTTPSDestinationPorts are the destination ports treated as HTTPS.
+                          When the PROXY protocol destination port matches one of these, the
+                          x-forwarded-proto header is set to "https".
+                          Common values: 443, 8443.
+                        items:
+                          format: int32
+                          type: integer
+                          x-kubernetes-validations:
+                          - message: port must be in the range [1, 65535]
+                            rule: self >= 1 && self <= 65535
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                    type: object
+                    x-kubernetes-validations:
+                    - message: at least one of httpsDestinationPorts or httpDestinationPorts
+                        must be set
+                      rule: '(has(self.httpsDestinationPorts) ? self.httpsDestinationPorts.size()
+                        : 0) + (has(self.httpDestinationPorts) ? self.httpDestinationPorts.size()
+                        : 0) >= 1'
+                    - message: httpsDestinationPorts and httpDestinationPorts must
+                        be disjoint
+                      rule: '!(has(self.httpsDestinationPorts) && has(self.httpDestinationPorts)
+                        && self.httpsDestinationPorts.exists(p, p in self.httpDestinationPorts))'
                   optional:
                     description: |-
                       Optional allows requests without a Proxy Protocol header to be proxied.
@@ -7931,6 +8139,14 @@ spec:
                             active:
                               description: Active health check configuration
                               properties:
+                                disableConnectionReuse:
+                                  description: |-
+                                    DisableConnectionReuse determines whether the active health check connection to a
+                                    backend host is closed after each health check probe. When set to true, Envoy opens a
+                                    new connection for each health check, which is useful for backends (such as
+                                    haproxy-style agent checks) that do not expect a reused connection.
+                                    Defaults to false, which reuses the connection across probes.
+                                  type: boolean
                                 grpc:
                                   description: |-
                                     GRPC defines the configuration of the GRPC health checker.
@@ -8378,6 +8594,32 @@ spec:
                                   type: boolean
                               type: object
                           type: object
+                        http1:
+                          description: |-
+                            HTTP1 provides HTTP/1 configuration for backend connections.
+                            When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                            this field takes precedence for backend (upstream) traffic.
+
+                            Behavior when targeting route kinds that do not use HTTP/1:
+                              - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                directly adds a Warning condition on the policy; the field is ignored.
+                              - Gateway / ListenerSet / sectionName targets: this field is silently
+                                ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                beneath that target; no warning is emitted.
+                              - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                access log/metrics, tracing providers): rejected at admission on their
+                                own BackendSettings via separate validation rules.
+                          properties:
+                            enableTrailers:
+                              description: EnableTrailers defines if HTTP/1 trailers
+                                should be proxied by Envoy.
+                              type: boolean
+                            preserveHeaderCase:
+                              description: |-
+                                PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                By default, Envoy will lowercase all the headers.
+                              type: boolean
+                          type: object
                         http2:
                           description: HTTP2 provides HTTP/2 configuration for backend
                             connections.
@@ -8792,6 +9034,16 @@ spec:
                                     routing to prefer sending traffic to the local
                                     locality zone.
                                   properties:
+                                    failTrafficOnPanic:
+                                      description: |-
+                                        FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                        cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                        drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                        across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                        requests instead, applying backpressure to clients and giving the backend room to
+                                        recover.
+                                        Defaults to false.
+                                      type: boolean
                                     force:
                                       description: |-
                                         ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -9268,6 +9520,9 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http1 is not supported for ExtProc backends, which always
+                      use gRPC.
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                   - message: http3 is only supported for route backends
                     rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                 maxItems: 16
@@ -11165,6 +11420,7 @@ spec:
                                 the dynamic module shared library (.so file).
                               maxLength: 4096
                               minLength: 1
+                              pattern: ^/.*
                               type: string
                           required:
                           - path
@@ -11539,6 +11795,7 @@ spec:
                 - IPv4
                 - IPv6
                 - DualStack
+                - PreferDualStack
                 type: string
               logging:
                 default:
@@ -11655,6 +11912,12 @@ spec:
                   share a single Envoy cluster instead of Envoy Gateway generating one cluster per route
                   rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
                   improves upstream connection pooling.
+
+                  Only a route's own backendRefs (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute) are
+                  considered. A backend used any other way, such as a RequestMirror filter or an external
+                  service of a SecurityPolicy or EnvoyExtensionPolicy, is never merged. A BackendTrafficPolicy
+                  that targets a backend only reports status for Gateways where the backend is used as a route
+                  backendRef.
 
                   Disabled when unset; specifying this field at all (even without further configuration)
                   enables it. Mutually exclusive with MergeGateways.
@@ -23008,6 +23271,14 @@ spec:
                                               active:
                                                 description: Active health check configuration
                                                 properties:
+                                                  disableConnectionReuse:
+                                                    description: |-
+                                                      DisableConnectionReuse determines whether the active health check connection to a
+                                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                                      new connection for each health check, which is useful for backends (such as
+                                                      haproxy-style agent checks) that do not expect a reused connection.
+                                                      Defaults to false, which reuses the connection across probes.
+                                                    type: boolean
                                                   grpc:
                                                     description: |-
                                                       GRPC defines the configuration of the GRPC health checker.
@@ -23503,6 +23774,33 @@ spec:
                                                     type: boolean
                                                 type: object
                                             type: object
+                                          http1:
+                                            description: |-
+                                              HTTP1 provides HTTP/1 configuration for backend connections.
+                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                              this field takes precedence for backend (upstream) traffic.
+
+                                              Behavior when targeting route kinds that do not use HTTP/1:
+                                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                                  directly adds a Warning condition on the policy; the field is ignored.
+                                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                                  beneath that target; no warning is emitted.
+                                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                                  access log/metrics, tracing providers): rejected at admission on their
+                                                  own BackendSettings via separate validation rules.
+                                            properties:
+                                              enableTrailers:
+                                                description: EnableTrailers defines
+                                                  if HTTP/1 trailers should be proxied
+                                                  by Envoy.
+                                                type: boolean
+                                              preserveHeaderCase:
+                                                description: |-
+                                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                                  By default, Envoy will lowercase all the headers.
+                                                type: boolean
+                                            type: object
                                           http2:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
@@ -23943,6 +24241,16 @@ spec:
                                                       sending traffic to the local
                                                       locality zone.
                                                     properties:
+                                                      failTrafficOnPanic:
+                                                        description: |-
+                                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                          requests instead, applying backpressure to clients and giving the backend room to
+                                                          recover.
+                                                          Defaults to false.
+                                                        type: boolean
                                                       force:
                                                         description: |-
                                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -24323,6 +24631,9 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: http1 is not supported for ALS backends,
+                                        which always use gRPC.
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                                     - message: http3 is only supported for route backends
                                       rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   file:
@@ -24738,6 +25049,14 @@ spec:
                                               active:
                                                 description: Active health check configuration
                                                 properties:
+                                                  disableConnectionReuse:
+                                                    description: |-
+                                                      DisableConnectionReuse determines whether the active health check connection to a
+                                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                                      new connection for each health check, which is useful for backends (such as
+                                                      haproxy-style agent checks) that do not expect a reused connection.
+                                                      Defaults to false, which reuses the connection across probes.
+                                                    type: boolean
                                                   grpc:
                                                     description: |-
                                                       GRPC defines the configuration of the GRPC health checker.
@@ -25233,6 +25552,33 @@ spec:
                                                     type: boolean
                                                 type: object
                                             type: object
+                                          http1:
+                                            description: |-
+                                              HTTP1 provides HTTP/1 configuration for backend connections.
+                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                              this field takes precedence for backend (upstream) traffic.
+
+                                              Behavior when targeting route kinds that do not use HTTP/1:
+                                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                                  directly adds a Warning condition on the policy; the field is ignored.
+                                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                                  beneath that target; no warning is emitted.
+                                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                                  access log/metrics, tracing providers): rejected at admission on their
+                                                  own BackendSettings via separate validation rules.
+                                            properties:
+                                              enableTrailers:
+                                                description: EnableTrailers defines
+                                                  if HTTP/1 trailers should be proxied
+                                                  by Envoy.
+                                                type: boolean
+                                              preserveHeaderCase:
+                                                description: |-
+                                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                                  By default, Envoy will lowercase all the headers.
+                                                type: boolean
+                                            type: object
                                           http2:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
@@ -25673,6 +26019,16 @@ spec:
                                                       sending traffic to the local
                                                       locality zone.
                                                     properties:
+                                                      failTrafficOnPanic:
+                                                        description: |-
+                                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                          requests instead, applying backpressure to clients and giving the backend room to
+                                                          recover.
+                                                          Defaults to false.
+                                                        type: boolean
                                                       force:
                                                         description: |-
                                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -26084,6 +26440,9 @@ spec:
                                     - message: either resources or resourceAttributes
                                         can be set, not both
                                       rule: '!has(self.resources) || !has(self.resourceAttributes)'
+                                    - message: http1 is not supported for OpenTelemetry
+                                        access log backends, which always use gRPC.
+                                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                                     - message: http3 is only supported for route backends
                                       rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                                   type:
@@ -26213,6 +26572,13 @@ spec:
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
                         type: string
+                      enableCircuitBreakerRemainingStats:
+                        description: |-
+                          EnableCircuitBreakerRemainingStats enables Envoy's circuit breaker `remaining_*` gauges,
+                          which expose the number of resources remaining before each circuit breaker opens.
+                          Enabling this adds 5 additional gauges per cluster, see:
+                          https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats#circuit-breakers-statistics
+                        type: boolean
                       enableGRPCStats:
                         description: |-
                           EnableGRPCStats enables the gRPC stats filter on listeners.
@@ -26873,6 +27239,14 @@ spec:
                                         active:
                                           description: Active health check configuration
                                           properties:
+                                            disableConnectionReuse:
+                                              description: |-
+                                                DisableConnectionReuse determines whether the active health check connection to a
+                                                backend host is closed after each health check probe. When set to true, Envoy opens a
+                                                new connection for each health check, which is useful for backends (such as
+                                                haproxy-style agent checks) that do not expect a reused connection.
+                                                Defaults to false, which reuses the connection across probes.
+                                              type: boolean
                                             grpc:
                                               description: |-
                                                 GRPC defines the configuration of the GRPC health checker.
@@ -27346,6 +27720,32 @@ spec:
                                               type: boolean
                                           type: object
                                       type: object
+                                    http1:
+                                      description: |-
+                                        HTTP1 provides HTTP/1 configuration for backend connections.
+                                        When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                        this field takes precedence for backend (upstream) traffic.
+
+                                        Behavior when targeting route kinds that do not use HTTP/1:
+                                          - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                            directly adds a Warning condition on the policy; the field is ignored.
+                                          - Gateway / ListenerSet / sectionName targets: this field is silently
+                                            ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                            beneath that target; no warning is emitted.
+                                          - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                            access log/metrics, tracing providers): rejected at admission on their
+                                            own BackendSettings via separate validation rules.
+                                      properties:
+                                        enableTrailers:
+                                          description: EnableTrailers defines if HTTP/1
+                                            trailers should be proxied by Envoy.
+                                          type: boolean
+                                        preserveHeaderCase:
+                                          description: |-
+                                            PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                            By default, Envoy will lowercase all the headers.
+                                          type: boolean
+                                      type: object
                                     http2:
                                       description: HTTP2 provides HTTP/2 configuration
                                         for backend connections.
@@ -27774,6 +28174,16 @@ spec:
                                                 zone-aware routing to prefer sending
                                                 traffic to the local locality zone.
                                               properties:
+                                                failTrafficOnPanic:
+                                                  description: |-
+                                                    FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                    cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                    drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                    across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                    requests instead, applying backpressure to clients and giving the backend room to
+                                                    recover.
+                                                    Defaults to false.
+                                                  type: boolean
                                                 force:
                                                   description: |-
                                                     ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -28178,6 +28588,9 @@ spec:
                                 rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                   f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                   : true'
+                              - message: http1 is not supported for OpenTelemetry
+                                  metrics backends, which always use gRPC.
+                                rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                               - message: http3 is only supported for route backends
                                 rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                             type:
@@ -28724,6 +29137,14 @@ spec:
                                   active:
                                     description: Active health check configuration
                                     properties:
+                                      disableConnectionReuse:
+                                        description: |-
+                                          DisableConnectionReuse determines whether the active health check connection to a
+                                          backend host is closed after each health check probe. When set to true, Envoy opens a
+                                          new connection for each health check, which is useful for backends (such as
+                                          haproxy-style agent checks) that do not expect a reused connection.
+                                          Defaults to false, which reuses the connection across probes.
+                                        type: boolean
                                       grpc:
                                         description: |-
                                           GRPC defines the configuration of the GRPC health checker.
@@ -29192,6 +29613,32 @@ spec:
                                         type: boolean
                                     type: object
                                 type: object
+                              http1:
+                                description: |-
+                                  HTTP1 provides HTTP/1 configuration for backend connections.
+                                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                  this field takes precedence for backend (upstream) traffic.
+
+                                  Behavior when targeting route kinds that do not use HTTP/1:
+                                    - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                      directly adds a Warning condition on the policy; the field is ignored.
+                                    - Gateway / ListenerSet / sectionName targets: this field is silently
+                                      ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                      beneath that target; no warning is emitted.
+                                    - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                      access log/metrics, tracing providers): rejected at admission on their
+                                      own BackendSettings via separate validation rules.
+                                properties:
+                                  enableTrailers:
+                                    description: EnableTrailers defines if HTTP/1
+                                      trailers should be proxied by Envoy.
+                                    type: boolean
+                                  preserveHeaderCase:
+                                    description: |-
+                                      PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                      By default, Envoy will lowercase all the headers.
+                                    type: boolean
+                                type: object
                               http2:
                                 description: HTTP2 provides HTTP/2 configuration for
                                   backend connections.
@@ -29613,6 +30060,16 @@ spec:
                                           routing to prefer sending traffic to the
                                           local locality zone.
                                         properties:
+                                          failTrafficOnPanic:
+                                            description: |-
+                                              FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                              cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                              drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                              across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                              requests instead, applying backpressure to clients and giving the backend room to
+                                              recover.
+                                              Defaults to false.
+                                            type: boolean
                                           force:
                                             description: |-
                                               ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -30077,6 +30534,10 @@ spec:
                         - message: openTelemetry can only be used with type OpenTelemetry
                           rule: 'has(self.openTelemetry) ? self.type == ''OpenTelemetry''
                             : true'
+                        - message: http1 is not supported for OpenTelemetry tracing
+                            backends, which use gRPC.
+                          rule: self.type != 'OpenTelemetry' || !has(self.backendSettings)
+                            || !has(self.backendSettings.http1)
                         - message: http3 is only supported for route backends
                           rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                       samplingFraction:
@@ -30871,6 +31332,41 @@ spec:
                   type: object
                 maxItems: 8
                 type: array
+              requestMirror:
+                description: |-
+                  RequestMirror defines configuration for request mirroring modifiers.
+                  This configuration works together with the Gateway API RequestMirror filter
+                  on the attached HTTPRoute rule.
+                properties:
+                  hostname:
+                    description: Hostname defines the configuration to rewrite the
+                      Host header for mirrored requests.
+                    properties:
+                      literal:
+                        description: |-
+                          Literal specifies a fixed hostname to rewrite the Host header to.
+                          Required when Type is "Literal". Must be empty when Type is "Backend".
+                          Note: gwapiv1.PreciseHostname already carries MinLength=1, MaxLength=253,
+                          and RFC 1123 pattern validation, which automatically flow into the generated CRD.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      type:
+                        description: Type defines the type of hostname rewrite.
+                        enum:
+                        - Backend
+                        - Literal
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: literal must be nil if the type is not Literal
+                      rule: '!(has(self.literal) && self.type != ''Literal'')'
+                    - message: literal must be specified for Literal type
+                      rule: '!(!has(self.literal) && self.type == ''Literal'')'
+                type: object
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
@@ -31334,14 +31830,17 @@ spec:
                                 You can use the `ClientIPDetection` or the `ProxyProtocol` field in
                                 the `ClientTrafficPolicy` to configure how the client IP is detected.
 
-                                For TCPRoute targets (raw TCP connections), HTTP headers such as
+                                For TCPRoute and UDPRoute targets (raw L4 traffic), HTTP headers such as
                                 X-Forwarded-For are not available. The client IP is obtained from the
-                                TCP connection's peer address. If intermediaries (load balancers, NAT)
-                                terminate or proxy TCP, the original client IP will only be available
-                                if the intermediary preserves the source address (for example by
-                                enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+                                TCP connection's peer address, or from the source address of the UDP
+                                datagram. If intermediaries (load balancers, NAT) terminate or proxy the
+                                traffic, the original client IP will only be available if the
+                                intermediary preserves the source address (for example by enabling the
+                                PROXY protocol or avoiding SNAT). Note that the PROXY protocol is not
+                                available on the UDP path, so a UDPRoute target relies entirely on the
+                                datagram source address being preserved. Ensure your L4 proxy is
                                 configured to preserve the source IP to enable correct client-IP
-                                matching for TCPRoute targets.
+                                matching for TCPRoute and UDPRoute targets.
                               items:
                                 description: |-
                                   CIDR defines a CIDR Address range.
@@ -31355,7 +31854,7 @@ spec:
                               description: |-
                                 ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
                                 This field is supported for HTTPRoute and GRPCRoute authorization.
-                                It is not supported for TCPRoute targets.
+                                It is not supported for TCPRoute or UDPRoute targets.
 
                                 If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 
@@ -32295,6 +32794,14 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
@@ -32747,6 +33254,32 @@ spec:
                                     type: boolean
                                 type: object
                             type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
+                            type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
@@ -33164,6 +33697,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -33471,6 +34014,9 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: http1 is not supported for gRPC ExtAuth backends, which
+                        always use gRPC.
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                     - message: http3 is only supported for route backends
                       rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                   headersToExtAuth:
@@ -33884,6 +34430,14 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
@@ -34336,6 +34890,32 @@ spec:
                                     type: boolean
                                 type: object
                             type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
+                            type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
@@ -34753,6 +35333,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -35790,6 +36380,14 @@ spec:
                                     active:
                                       description: Active health check configuration
                                       properties:
+                                        disableConnectionReuse:
+                                          description: |-
+                                            DisableConnectionReuse determines whether the active health check connection to a
+                                            backend host is closed after each health check probe. When set to true, Envoy opens a
+                                            new connection for each health check, which is useful for backends (such as
+                                            haproxy-style agent checks) that do not expect a reused connection.
+                                            Defaults to false, which reuses the connection across probes.
+                                          type: boolean
                                         grpc:
                                           description: |-
                                             GRPC defines the configuration of the GRPC health checker.
@@ -36259,6 +36857,32 @@ spec:
                                           type: boolean
                                       type: object
                                   type: object
+                                http1:
+                                  description: |-
+                                    HTTP1 provides HTTP/1 configuration for backend connections.
+                                    When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                    this field takes precedence for backend (upstream) traffic.
+
+                                    Behavior when targeting route kinds that do not use HTTP/1:
+                                      - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                        directly adds a Warning condition on the policy; the field is ignored.
+                                      - Gateway / ListenerSet / sectionName targets: this field is silently
+                                        ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                        beneath that target; no warning is emitted.
+                                      - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                        access log/metrics, tracing providers): rejected at admission on their
+                                        own BackendSettings via separate validation rules.
+                                  properties:
+                                    enableTrailers:
+                                      description: EnableTrailers defines if HTTP/1
+                                        trailers should be proxied by Envoy.
+                                      type: boolean
+                                    preserveHeaderCase:
+                                      description: |-
+                                        PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                        By default, Envoy will lowercase all the headers.
+                                      type: boolean
+                                  type: object
                                 http2:
                                   description: HTTP2 provides HTTP/2 configuration
                                     for backend connections.
@@ -36682,6 +37306,16 @@ spec:
                                             zone-aware routing to prefer sending traffic
                                             to the local locality zone.
                                           properties:
+                                            failTrafficOnPanic:
+                                              description: |-
+                                                FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                requests instead, applying backpressure to clients and giving the backend room to
+                                                recover.
+                                                Defaults to false.
+                                              type: boolean
                                             force:
                                               description: |-
                                                 ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -37866,6 +38500,14 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
@@ -38318,6 +38960,32 @@ spec:
                                     type: boolean
                                 type: object
                             type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
+                            type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
@@ -38735,6 +39403,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -39360,21 +40038,23 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute
+            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'',
-                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''] : true'
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) : true '
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])
+                : true '
             - message: mergeType can only be used with xRoute targets
               rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'']) && (!has(self.targetRefs)
-                || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'', ''GRPCRoute'',
-                ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
-                sel.kind in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute''])))'
+                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute'']) &&
+                (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'',
+                ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])) && (!has(self.targetSelectors)
+                || self.targetSelectors.all(sel, sel.kind in [''HTTPRoute'', ''GRPCRoute'',
+                ''TCPRoute'', ''UDPRoute''])))'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined,
                 unless mergeType is set and the jwt providers are inherited from the
                 parent policy
