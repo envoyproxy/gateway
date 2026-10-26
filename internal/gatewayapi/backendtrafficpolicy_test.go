@@ -351,6 +351,46 @@ func TestBuildTrafficFeaturesRequestBufferMode(t *testing.T) {
 	})
 }
 
+func TestBuildAdaptiveConcurrency(t *testing.T) {
+	policy := &egv1a1.BackendTrafficPolicy{
+		TypeMeta: metav1.TypeMeta{Kind: egv1a1.KindBackendTrafficPolicy},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "policy-for-route",
+			Namespace: "default",
+		},
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			AdaptiveConcurrency: &egv1a1.AdaptiveConcurrency{
+				SampleAggregatePercentile:      new(float64(90)),
+				MinConcurrencyLimit:            new(uint32(10)),
+				MaxConcurrencyLimit:            new(uint32(500)),
+				ConcurrencyUpdateInterval:      new(gwapiv1.Duration("200ms")),
+				ConcurrencyLimitExceededStatus: new(int32(429)),
+			},
+		},
+	}
+
+	require.Nil(t, buildAdaptiveConcurrency(&egv1a1.BackendTrafficPolicy{}))
+
+	empty := buildAdaptiveConcurrency(&egv1a1.BackendTrafficPolicy{
+		TypeMeta:   metav1.TypeMeta{Kind: egv1a1.KindBackendTrafficPolicy},
+		ObjectMeta: metav1.ObjectMeta{Name: "empty", Namespace: "default"},
+		Spec:       egv1a1.BackendTrafficPolicySpec{AdaptiveConcurrency: &egv1a1.AdaptiveConcurrency{}},
+	})
+	require.Equal(t, "backendtrafficpolicy/default/empty", empty.Name)
+	require.Nil(t, empty.SampleAggregatePercentile)
+	require.Nil(t, empty.MinConcurrencyLimit)
+	require.Nil(t, empty.MaxConcurrencyLimit)
+	require.Nil(t, empty.ConcurrencyUpdateInterval)
+
+	got := buildAdaptiveConcurrency(policy)
+	require.Equal(t, "backendtrafficpolicy/default/policy-for-route", got.Name)
+	require.Equal(t, new(float64(90)), got.SampleAggregatePercentile)
+	require.Equal(t, new(uint32(10)), got.MinConcurrencyLimit)
+	require.Equal(t, new(uint32(500)), got.MaxConcurrencyLimit)
+	require.Equal(t, &metav1.Duration{Duration: 200 * time.Millisecond}, got.ConcurrencyUpdateInterval)
+	require.Equal(t, new(int32(429)), got.ConcurrencyLimitExceededStatus)
+}
+
 func TestBuildPassiveHealthCheck(t *testing.T) {
 	cases := []struct {
 		name     string
