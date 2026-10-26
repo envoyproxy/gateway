@@ -655,6 +655,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 			MinSize: wrapperspb.UInt32(ptr.Deref(preferLocal.Force.MinEndpointsInZoneThreshold, 1)),
 		}
 	}
+	lbConfig.ZoneAwareLbConfig.FailTrafficOnPanic = ptr.Deref(preferLocal.FailTrafficOnPanic, false)
 	return lbConfig
 }
 

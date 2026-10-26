@@ -861,7 +861,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `maxRequestBytes` | _integer_ |  true  |  | MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.<br />Envoy will return HTTP 413 and will not initiate the authorization process when buffer<br />reaches the number set in this field.<br />Note that this setting will have precedence over failOpen mode. |
+| `maxRequestBytes` | _integer_ |  false  |  | MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.<br />Envoy will return HTTP 413 and will not initiate the authorization process when buffer<br />reaches the number set in this field.<br />Note that this setting will have precedence over failOpen mode.<br />Defaults to 32768 bytes (32KiB), which matches the default per-connection buffer limit. |
+| `packAsBytes` | _boolean_ |  false  |  | PackAsBytes, when true, sends the request body to the external authorization<br />service as raw bytes, populating the raw_body field of the HTTP request<br />attribute context. Otherwise, the body is sent as a UTF-8 string in the body field.<br />This field is only supported for gRPC external authorization services.<br />Defaults to false. |
 
 
 #### BootstrapType
@@ -1519,7 +1520,7 @@ _Appears in:_
 
 
 CustomResponseMatch defines the configuration for matching a user response to return a custom one.
-When both statusCodes and responseHeaders are specified, both must match.
+When more than one of statusCodes, requestHeaders and responseHeaders is specified, all of them must match.
 
 _Appears in:_
 - [ResponseOverride](#responseoverride)
@@ -1527,6 +1528,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  false  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `requestHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Request headers to match on. The match evaluates to true if all matches are successful.<br />Note that the request headers are not available for all Envoy-generated responses,<br />in which case a request header match never evaluates to true. |
 | `responseHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Response headers to match on. The match evaluates to true if all matches are successful. |
 
 
@@ -2908,6 +2910,25 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `minEndpointsInZoneThreshold` | _integer_ |  false  |  | MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone<br />override. This is useful for protecting zones with fewer endpoints. |
+
+
+#### ForwardProtoConfig
+
+
+
+ForwardProtoConfig configures the ports used to infer the x-forwarded-proto
+header from the PROXY protocol destination port. When the restored local address
+(populated by the PROXY protocol listener filter) has a destination port matching
+one of these lists, the x-forwarded-proto header is set to the corresponding scheme.
+At least one of httpsDestinationPorts or httpDestinationPorts must be set.
+
+_Appears in:_
+- [ProxyProtocolSettings](#proxyprotocolsettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `httpsDestinationPorts` | _integer array_ |  false  |  | HTTPSDestinationPorts are the destination ports treated as HTTPS.<br />When the PROXY protocol destination port matches one of these, the<br />x-forwarded-proto header is set to "https".<br />Common values: 443, 8443. |
+| `httpDestinationPorts` | _integer array_ |  false  |  | HTTPDestinationPorts are the destination ports treated as HTTP.<br />When the PROXY protocol destination port matches one of these, the<br />x-forwarded-proto header is set to "http".<br />Common values: 80, 8080. |
 
 
 #### GRPCActiveHealthChecker
@@ -5206,6 +5227,7 @@ _Appears in:_
 | `force` | _[ForceLocalZone](#forcelocalzone)_ |  false  |  | ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior<br />which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally. |
 | `minEndpointsThreshold` | _integer_ |  false  |  | MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing. |
 | `percentageEnabled` | _integer_ |  false  |  | Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, Envoy defaults to 100%. |
+| `failTrafficOnPanic` | _boolean_ |  false  |  | FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the<br />cluster is in panic mode. Panic mode is entered when the share of healthy endpoints<br />drops below HealthCheck.PanicThreshold, and by default Envoy then load balances<br />across every endpoint, healthy or not. Setting this to true makes Envoy fail the<br />requests instead, applying backpressure to clients and giving the backend room to<br />recover.<br />Defaults to false. |
 
 
 #### Principal
@@ -5615,6 +5637,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `optional` | _boolean_ |  false  |  | Optional allows requests without a Proxy Protocol header to be proxied.<br />If set to true, the listener will accept requests without a Proxy Protocol header.<br />If set to false, the listener will reject requests without a Proxy Protocol header.<br />If not set, the default behavior is to reject requests without a Proxy Protocol header.<br />Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.<br />For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt |
+| `forwardProtoConfig` | _[ForwardProtoConfig](#forwardprotoconfig)_ |  false  |  | ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol<br />destination port. Only takes effect when PROXY protocol is enabled.<br />This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and<br />forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct<br />scheme for the forwarded request. |
 
 
 #### ProxyProtocolVersion
@@ -6303,7 +6326,7 @@ _Appears in:_
 
 
 
-ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+ResponseOverrideHeaderMatch defines the configuration for matching a request or response header.
 
 _Appears in:_
 - [CustomResponseMatch](#customresponsematch)
