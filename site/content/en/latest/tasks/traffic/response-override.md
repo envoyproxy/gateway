@@ -438,3 +438,93 @@ Jwt is missing
 
 The body is Envoy's default message and the `content-type` is `text/plain` — no custom JSON,
 confirming that `source: Backend` only intercepts responses from the upstream backend.
+
+## Match on Request and Response Headers
+
+In addition to status codes, a `responseOverride` rule can match on the headers of the original
+request (`match.requestHeaders`) and on the headers of the response being overridden
+(`match.responseHeaders`). Within either list, every entry must match, and when `statusCodes`,
+`requestHeaders` and `responseHeaders` are combined, all of the specified criteria must match.
+`statusCodes` is the only list that matches when *any* of its entries match.
+
+The following policy only overrides a 503 when the request came from a browser client and the
+upstream flagged the failure as its own:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override-header-match
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  responseOverride:
+    - match:
+        statusCodes:
+          - type: Value
+            value: 503
+        requestHeaders:
+          - name: X-Client-Type
+            value:
+              type: Exact
+              value: browser
+        responseHeaders:
+          - name: X-Error-Type
+            value:
+              type: Prefix
+              value: upstream-
+      response:
+        contentType: text/html
+        body:
+          type: Inline
+          inline: "<html><body>The service is temporarily unavailable.</body></html>"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override-header-match
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  responseOverride:
+    - match:
+        statusCodes:
+          - type: Value
+            value: 503
+        requestHeaders:
+          - name: X-Client-Type
+            value:
+              type: Exact
+              value: browser
+        responseHeaders:
+          - name: X-Error-Type
+            value:
+              type: Prefix
+              value: upstream-
+      response:
+        contentType: text/html
+        body:
+          type: Inline
+          inline: "<html><body>The service is temporarily unavailable.</body></html>"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Request headers are not available for every Envoy-generated response, so a rule that matches on
+`requestHeaders` may never fire for some local replies.
