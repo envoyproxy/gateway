@@ -612,7 +612,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
-			if http3Enabled {
+			if http3Enabled && httpListener.ProxyProtocol == nil {
 				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
 					errs = errors.Join(errs, err)
 					continue
@@ -626,7 +626,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
-			if http3Enabled {
+			if http3Enabled && httpListener.ProxyProtocol == nil {
 				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
 					errs = errors.Join(errs, err)
 					continue

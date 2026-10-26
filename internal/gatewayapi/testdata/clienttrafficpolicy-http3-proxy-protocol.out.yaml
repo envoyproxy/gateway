@@ -27,7 +27,8 @@ clientTrafficPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: HTTP/3 was disabled for listener "https" because the proxy protocol
-          listener filter is not supported on QUIC listeners
+          listener filter is not supported on QUIC listeners. Note HTTP/3 may still
+          be active on the port via another listener.
         reason: UnsupportedHTTP3ProxyProtocol
         status: "True"
         type: Warning
