@@ -1388,9 +1388,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				for _, r := range tl.Routes {
-				// For TLSRoute: filter by route metadata to handle multiple routes per listener
+					// For TLSRoute: filter by route metadata to handle multiple routes per listener
 					if target.Kind == resource.KindTLSRoute {
 						if r.Metadata == nil ||
+							r.Metadata.Kind != string(target.Kind) ||
 							r.Metadata.Namespace != string(target.Namespace) ||
 							r.Metadata.Name != string(target.Name) {
 							continue
