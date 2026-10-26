@@ -679,7 +679,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if gCtx.envoyProxyFromGateway {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
+				// ep may be merged over the GatewayClass EnvoyProxy and the default spec, whose
+				// deprecated fields are reported on their own, so only scan the Gateway's own spec.
+				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(envoyproxyMap[key]))
 				if t.EnvoyProxyPatchDisabled {
 					status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
 				}

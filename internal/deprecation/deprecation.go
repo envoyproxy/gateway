@@ -42,10 +42,11 @@ func scheduledForRemoval(replacement string) DeprecatedField {
 // AddDeprecatedEnvoyProxySpecFields records the deprecated fields used in the EnvoyProxy spec at
 // path, which is "spec" for an EnvoyProxy resource and "envoyProxy" for the EnvoyGateway default.
 //
-// explicitPorts reports whether a nonzero telemetry port was set by the user. It is false for an
-// EnvoyProxy resource, whose ports always carry the CRD default, so only host is checked there. It
-// is true for the EnvoyGateway default, which is loaded from the EnvoyGateway configuration without
-// CRD defaulting, so a port there is explicit and is deprecated even without host.
+// explicitPorts reports whether every nonzero telemetry port was set by the user. It is false for
+// an EnvoyProxy resource, whose ports always carry the CRD default, so only a port other than that
+// default is known to be explicit there. It is true for the EnvoyGateway default, which is loaded
+// from the EnvoyGateway configuration without CRD defaulting, so any nonzero port there is explicit.
+// An explicit port is deprecated even without host.
 func AddDeprecatedEnvoyProxySpecFields(fields map[string]DeprecatedField, path string, spec *egv1a1.EnvoyProxySpec, explicitPorts bool) {
 	if spec == nil {
 		return
@@ -62,18 +63,14 @@ func AddDeprecatedEnvoyProxySpecFields(fields map[string]DeprecatedField, path s
 		providerPath := path + ".telemetry.tracing.provider"
 		AddDeprecatedBackendClusterFields(fields, providerPath,
 			&telemetry.Tracing.Provider.BackendCluster, telemetry.Tracing.Provider.Host)
-		if explicitPorts {
-			addDeprecatedPort(fields, providerPath, telemetry.Tracing.Provider.Host, telemetry.Tracing.Provider.Port)
-		}
+		addDeprecatedPort(fields, providerPath, telemetry.Tracing.Provider.Host, telemetry.Tracing.Provider.Port, explicitPorts)
 	}
 	if telemetry.Metrics != nil {
 		for i, sink := range telemetry.Metrics.Sinks {
 			if sink.OpenTelemetry != nil {
 				sinkPath := fmt.Sprintf("%s.telemetry.metrics.sinks[%d].openTelemetry", path, i)
 				AddDeprecatedBackendClusterFields(fields, sinkPath, &sink.OpenTelemetry.BackendCluster, sink.OpenTelemetry.Host)
-				if explicitPorts {
-					addDeprecatedPort(fields, sinkPath, sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
-				}
+				addDeprecatedPort(fields, sinkPath, sink.OpenTelemetry.Host, sink.OpenTelemetry.Port, explicitPorts)
 			}
 		}
 	}
@@ -84,9 +81,7 @@ func AddDeprecatedEnvoyProxySpecFields(fields map[string]DeprecatedField, path s
 				if sink.OpenTelemetry != nil {
 					AddDeprecatedBackendClusterFields(fields, sinkPath+".openTelemetry",
 						&sink.OpenTelemetry.BackendCluster, sink.OpenTelemetry.Host)
-					if explicitPorts {
-						addDeprecatedPort(fields, sinkPath+".openTelemetry", sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
-					}
+					addDeprecatedPort(fields, sinkPath+".openTelemetry", sink.OpenTelemetry.Host, sink.OpenTelemetry.Port, explicitPorts)
 				}
 				if sink.ALS != nil {
 					AddDeprecatedBackendClusterFields(fields, sinkPath+".als", &sink.ALS.BackendCluster, nil)
@@ -114,12 +109,17 @@ func AddDeprecatedBackendClusterFields(fields map[string]DeprecatedField, path s
 	}
 }
 
-// addDeprecatedPort records the legacy port of the telemetry sink at path, if it is set without the
-// legacy host. With host, the host warning already covers the pair.
-func addDeprecatedPort(fields map[string]DeprecatedField, path string, host *string, port int32) {
-	if host == nil && port != 0 {
-		fields[path+".port"] = scheduledForRemoval(path + ".backendRefs")
+// defaultTelemetryPort is the CRD default of the legacy port of the telemetry sinks.
+const defaultTelemetryPort = 4317
+
+// addDeprecatedPort records the legacy port of the telemetry sink at path, if it is explicitly set
+// without the legacy host. With host, the host warning already covers the pair. Unless explicitPorts
+// is set, a port equal to the CRD default may have been defaulted, so it is not reported.
+func addDeprecatedPort(fields map[string]DeprecatedField, path string, host *string, port int32, explicitPorts bool) {
+	if host != nil || port == 0 || (!explicitPorts && port == defaultTelemetryPort) {
+		return
 	}
+	fields[path+".port"] = scheduledForRemoval(path + ".backendRefs")
 }
 
 // AddDeprecatedLoadBalancerFields records the deprecated consistent hash fields used in the

@@ -105,4 +105,34 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 				"spec.telemetry.accessLog.settings[0].sinks[1].openTelemetry.backendRefs"),
 		}, deprecatedFieldsUsedInEnvoyProxy(ep))
 	})
+
+	t.Run("EnvoyProxy telemetry sinks with explicit port", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		ep.Spec.Telemetry = &egv1a1.ProxyTelemetry{
+			Tracing: &egv1a1.ProxyTracing{Provider: egv1a1.TracingProvider{
+				BackendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{}}},
+				Port:           1234,
+			}},
+			Metrics: &egv1a1.ProxyMetrics{Sinks: []egv1a1.ProxyMetricSink{
+				// The CRD default can't be told apart from an explicit port with the same value.
+				{OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+					BackendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{}}},
+					Port:           4317,
+				}},
+			}},
+			AccessLog: &egv1a1.ProxyAccessLog{Settings: []egv1a1.ProxyAccessLogSetting{
+				{Sinks: []egv1a1.ProxyAccessLogSink{
+					{OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+						BackendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{}}},
+						Port:           1234,
+					}},
+				}},
+			}},
+		}
+		require.Equal(t, map[string]status.DeprecatedField{
+			"spec.telemetry.tracing.provider.port": removed("spec.telemetry.tracing.provider.backendRefs"),
+			"spec.telemetry.accessLog.settings[0].sinks[0].openTelemetry.port": removed(
+				"spec.telemetry.accessLog.settings[0].sinks[0].openTelemetry.backendRefs"),
+		}, deprecatedFieldsUsedInEnvoyProxy(ep))
+	})
 }
