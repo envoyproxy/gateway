@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -69,17 +70,10 @@ type Runner struct {
 	keyCache *KeyCache
 
 	// Only the translation goroutine touches lastGatewayClassStatus; see storeGatewayClassStatus.
-	lastGatewayClassStatus map[types.NamespacedName]storedGatewayClassStatus
+	lastGatewayClassStatus map[types.NamespacedName]*gwapiv1.GatewayClassStatus
 
 	// Goroutine synchronization
 	done sync.WaitGroup
-}
-
-// storedGatewayClassStatus is a GatewayClass status the runner stored, and the UID of the
-// GatewayClass it was computed for.
-type storedGatewayClassStatus struct {
-	uid    types.UID
-	status *gwapiv1.GatewayClassStatus
 }
 
 // uid is the identity of the object the status was computed from; see storeStatus.
@@ -165,7 +159,7 @@ func New(cfg *Config) *Runner {
 	return &Runner{
 		Config:                 *cfg,
 		keyCache:               newKeyCache(),
-		lastGatewayClassStatus: make(map[types.NamespacedName]storedGatewayClassStatus),
+		lastGatewayClassStatus: make(map[types.NamespacedName]*gwapiv1.GatewayClassStatus),
 	}
 }
 
@@ -884,41 +878,29 @@ func storeStatus[K comparable, V any](
 // status as soon as it reconciles the class, so a translation of an older snapshot must not put
 // back the status of an older generation. The provider writes the map concurrently, so the check
 // and the store are one compare-and-swap.
+//
+// A status the runner stored itself is always replaced: the runner translates the generations of
+// a GatewayClass in order, so its own store holds a later generation only when it was computed
+// for an object deleted and created again under the same name.
 func (r *Runner) storeGatewayClassStatus(gc *gwapiv1.GatewayClass) {
 	m := &r.ProviderResources.GatewayClassStatuses
 	key := utils.NamespacedName(gc)
 	for {
-		stored, ok := m.Load(key)
-		if !ok {
-			if _, loaded := m.LoadOrStore(key, &gc.Status); loaded {
-				continue
-			}
+		stored, loaded := m.LoadOrStore(key, &gc.Status)
+		if !loaded {
 			break
 		}
-		if r.isNewerGatewayClassStatus(key, stored, gc) {
+		newer := slices.ContainsFunc(stored.Conditions, func(c metav1.Condition) bool {
+			return c.ObservedGeneration > gc.Generation
+		})
+		if newer && !watchable.DeepEqual(stored, r.lastGatewayClassStatus[key]) {
 			return
 		}
 		if m.CompareAndSwap(key, stored, &gc.Status) {
 			break
 		}
 	}
-	r.lastGatewayClassStatus[key] = storedGatewayClassStatus{uid: gc.UID, status: gc.Status.DeepCopy()}
-}
-
-// isNewerGatewayClassStatus reports whether stored was computed for a later generation of gc.
-// A status the runner stored for another object, one deleted and created again under the same
-// name, says nothing about gc. Any other stored status comes from the provider, which only stores
-// the status of a GatewayClass that exists.
-func (r *Runner) isNewerGatewayClassStatus(key types.NamespacedName, stored *gwapiv1.GatewayClassStatus, gc *gwapiv1.GatewayClass) bool {
-	if last, ok := r.lastGatewayClassStatus[key]; ok && last.uid != gc.UID && watchable.DeepEqual(last.status, stored) {
-		return false
-	}
-	for _, c := range stored.Conditions {
-		if c.ObservedGeneration > gc.Generation {
-			return true
-		}
-	}
-	return false
+	r.lastGatewayClassStatus[key] = gc.Status.DeepCopy()
 }
 
 func newKeyCache() *KeyCache {
