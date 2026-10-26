@@ -208,7 +208,10 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace())
+	containers, err := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace())
+	if err != nil {
+		return nil, err
+	}
 	selector := resource.GetSelector(rateLimitLabels())
 
 	podLabels := rateLimitLabels()
@@ -310,7 +313,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	// apply merge patch to deployment
 	// Patch is always applied here: the rate limit deployment config comes from
 	// EnvoyGateway.spec.rateLimit, which is admin-authored, not tenant-facing.
-	var err error
 	deploymentConfig := r.rateLimitDeployment
 	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch, false); err != nil {
 		return nil, err
