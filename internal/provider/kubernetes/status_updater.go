@@ -61,6 +61,8 @@ type UpdateHandler struct {
 	apiReader     client.Reader
 	updateChannel chan Update
 	ready         chan struct{}
+	// Only apply touches lastWritten, on the single Start goroutine, so it needs no lock.
+	lastWritten map[string]string
 }
 
 func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Reader) *UpdateHandler {
@@ -70,6 +72,7 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 		apiReader:     apiReader,
 		updateChannel: make(chan Update, 1000),
 		ready:         make(chan struct{}),
+		lastWritten:   make(map[string]string),
 	}
 
 	return u
@@ -83,6 +86,7 @@ func (u *UpdateHandler) apply(update Update) {
 	)
 	log := u.log.WithValues("name", update.NamespacedName.Name,
 		"namespace", update.NamespacedName.Namespace, "kind", objKind)
+	writeKey := objKind + "/" + update.NamespacedName.String()
 	defer func() {
 		updateDuration := time.Since(startTime)
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
@@ -114,6 +118,24 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj := update.Mutator.Mutate(obj)
 
+		if rv, ok := u.lastWritten[writeKey]; ok {
+			switch {
+			case rv == obj.GetResourceVersion():
+				delete(u.lastWritten, writeKey)
+			case isStatusEqual(obj, newObj):
+				// The cache may not have seen this handler's last write yet and still show a
+				// status the API server no longer has, so confirm against the server first.
+				delete(u.lastWritten, writeKey)
+				if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
+					if kerrors.IsNotFound(err) {
+						return nil
+					}
+					return err
+				}
+				newObj = update.Mutator.Mutate(obj)
+			}
+		}
+
 		if isStatusEqual(obj, newObj) {
 			log.Info("status unchanged, bypassing update")
 
@@ -123,7 +145,11 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj.SetUID(obj.GetUID())
 
-		return u.client.Status().Update(context.Background(), newObj)
+		if err := u.client.Status().Update(context.Background(), newObj); err != nil {
+			return err
+		}
+		u.lastWritten[writeKey] = newObj.GetResourceVersion()
+		return nil
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
