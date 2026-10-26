@@ -2943,6 +2943,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `service` | _string_ |  false  |  | Service to send in the health check request.<br />If this is not specified, then the health check request applies to the entire<br />server and not to a specific service. |
+| `hostname` | _string_ |  false  |  | Hostname defines the value of the :authority header sent with active gRPC<br />health checks. Authority selection uses this order: this field, the<br />associated Backend endpoint hostname if available, then the effective Route<br />hostname. If none of them is set, Envoy falls back to the name of the<br />cluster, which is not a valid authority and is rejected by some gRPC<br />servers. |
 
 
 #### GRPCExtAuthService
@@ -3314,6 +3315,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `hostname` | _string_ |  false  |  | Hostname defines the HTTP Host header used for active HTTP health checks.<br />Host selection uses this order: this field, the associated Backend endpoint<br />hostname if available, then the effective Route hostname. |
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
+| `protocol` | _[HTTPHealthCheckProtocol](#httphealthcheckprotocol)_ |  false  | Auto | Protocol is the HTTP protocol that active health check requests are sent with.<br />Defaults to Auto, which uses the same protocol as regular requests to the backend:<br />  - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,<br />    `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a<br />    GRPCRoute.<br />  - The protocol negotiated through ALPN for a TLS backend that negotiates it,<br />    with HTTP1 as the fallback when nothing is negotiated.<br />  - HTTP1 otherwise.<br />Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than<br />the application, for example a backend that serves HTTP/1.1 traffic but only<br />accepts HTTP/2 health checks. An explicit protocol is always used as is. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
 | `retriableStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | RetriableStatuses defines a list of HTTP response statuses considered retriable.<br />Responses matching these statuses count towards the unhealthy threshold but<br />do not result in the host being considered immediately unhealthy.<br />The expected statuses take precedence for any range overlaps with this field. |
@@ -3471,6 +3473,23 @@ _Appears in:_
 | `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. The value may contain<br />Envoy substitution format operators such as "%REQ(x-foo)%", which are<br />evaluated per request.<br />See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators |
 | `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Add | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Add. |
 | `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether the header is still written when its<br />value is empty. This matters for values produced by substitution<br />formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at<br />request time. Envoy drops such headers by default; set this to true to<br />keep them with an empty value.<br />When unset, it defaults to true only if the configured value itself is<br />the empty string, so a literal empty header is always written. |
+
+
+#### HTTPHealthCheckProtocol
+
+_Underlying type:_ _string_
+
+HTTPHealthCheckProtocol specifies the HTTP protocol used to send active HTTP
+health check requests to the backend.
+
+_Appears in:_
+- [HTTPActiveHealthChecker](#httpactivehealthchecker)
+
+| Value | Description |
+| ----- | ----------- |
+| `Auto` | HTTPHealthCheckProtocolAuto derives the health check protocol from the effective<br />upstream protocol of the backend.<br /> | 
+| `HTTP1` | HTTPHealthCheckProtocolHTTP1 sends health check requests using HTTP/1.1.<br /> | 
+| `HTTP2` | HTTPHealthCheckProtocolHTTP2 sends health check requests using HTTP/2.<br /> | 
 
 
 #### HTTPHostnameModifier
@@ -7228,6 +7247,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension.<br />When Code is omitted, Name is required and must match a module registered<br />in EnvoyProxy.spec.wasmModules. |
+| `vmSharingScope` | _[WasmVMSharingScope](#wasmvmsharingscope)_ |  false  | Policy | VMSharingScope defines the scope within which this extension may share a Wasm VM.<br />If Policy or unset, each policy's Wasm entry uses its own VM ID. The same<br />entry may reuse its VM across routes; different entries do not share a VM.<br />If Namespace, this extension may share a VM with other extensions that specify<br />Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM<br />compatibility using the Wasm code and VM configuration, including environment<br />variables. Each Envoy worker has its own VM.<br />Sharing a VM shares module-level state and VM failures. Plugin names and root<br />IDs are not changed; matching plugin identities may also share a root context. |
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  false  |  | Code is the Wasm code for the extension.<br />When omitted, Name must match a module in EnvoyProxy.spec.wasmModules. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
@@ -7340,6 +7360,21 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Local` | LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.<br /> | 
+
+
+#### WasmVMSharingScope
+
+_Underlying type:_ _string_
+
+WasmVMSharingScope defines the scope within which Wasm extensions may share a VM.
+
+_Appears in:_
+- [Wasm](#wasm)
+
+| Value | Description |
+| ----- | ----------- |
+| `Policy` | WasmVMSharingScopePolicy gives each policy's Wasm entry its own VM ID.<br />The same entry may reuse its VM across routes; different entries do not share a VM.<br /> | 
+| `Namespace` | WasmVMSharingScopeNamespace allows compatible extensions that specify this<br />scope in the same EnvoyExtensionPolicy namespace to share a VM.<br /> | 
 
 
 #### WeightedZoneConfig
