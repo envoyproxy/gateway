@@ -54,6 +54,9 @@ const (
 	defaultOIDCHTTPTimeout       = 5 * time.Second
 	defaultOIDCMaxRedirects      = 3
 
+	// defaultExtAuthMaxRequestBytes matches the default per-connection buffer limit.
+	defaultExtAuthMaxRequestBytes = 32768
+
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	oidcHMACSecretKey  = "hmac-secret"
@@ -515,9 +518,16 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// then run it once to keep the flow linear and easier to read.
 	validator := validateSecurityPolicy
 	errMsg := "invalid SecurityPolicy"
-	if currTarget.Kind == resource.KindTCPRoute || currTarget.Kind == resource.KindTLSRoute {
-		validator = validateSecurityPolicyForTCPAndTLS
-		errMsg = "invalid SecurityPolicy for TCP/TLS route"
+	switch currTarget.Kind {
+	case resource.KindTCPRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "TCP") }
+		errMsg = "invalid SecurityPolicy for TCP route"
+	case resource.KindTLSRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "TLS") }
+		errMsg = "invalid SecurityPolicy for TLS route"
+	case resource.KindUDPRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "UDP") }
+		errMsg = "invalid SecurityPolicy for UDP route"
 	}
 	if err := validator(policy); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
@@ -549,21 +559,21 @@ func (t *Translator) processSecurityPolicyForRoute(
 		// they intentionally skip Gateway listener policies because those are
 		// sibling scopes.
 		for _, parentRefCtx := range parentRefCtxs {
+			// The listeners can merge with different parent policies, and fail on some of them
+			// only, so collect their results and report them once for the parentRef.
+			errMsgs, mergedWith := sets.New[string](), sets.New[string]()
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 
 				var (
 					parentPolicy *egv1a1.SecurityPolicy
 					parentScope  policyScope
-					ancestorRef  gwapiv1.ParentReference
 				)
 				if listener.isFromListenerSet() {
 					lsNN := types.NamespacedName{
 						Namespace: listener.listenerSet.Namespace,
 						Name:      listener.listenerSet.Name,
 					}
-					ancestorRef = getAncestorRefForListenerSetPolicy(lsNN, &listener.Name)
-
 					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
@@ -576,8 +586,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
 				} else {
-					ancestorRef = getAncestorRefForPolicy(gwNN, &listener.Name)
-
 					listenerKey := NamespacedNameWithSection{NamespacedName: gwNN, SectionName: listener.Name}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
 
@@ -591,14 +599,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				if parentPolicy == nil {
 					// No parent policy found, fall back to current policy
 					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(err))
 					}
 					continue
 				}
@@ -606,56 +607,28 @@ func (t *Translator) processSecurityPolicyForRoute(
 				// Merge with parent policy
 				mergedPolicy, owners, err := mergeSecurityPolicy(policy, parentPolicy)
 				if err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						fmt.Sprintf("error merging policies: %v", err),
-						policy.Generation,
-					)
+					errMsgs.Insert(fmt.Sprintf("error merging policies: %v", err))
 					continue
 				}
 
 				if err := validator(mergedPolicy); err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
-					)
+					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
 
 				// Apply merged policy
 				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
-					)
+					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
 
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
+
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parentRefCtx.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
@@ -962,8 +935,8 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
-	// CEL covers these on Kubernetes, but not for the file provider or for a merged policy, which
-	// can combine a parent's uri with a route's disabled: true.
+	// CEL covers these on Kubernetes, but not for the file provider. A JSONMerge route can still
+	// combine a parent's uri with its own disabled: true, since JSONMerge merges keys one by one.
 	if oidc != nil && oidc.PostLogoutRedirect != nil {
 		switch plr := oidc.PostLogoutRedirect; {
 		case plr.URI != nil && ptr.Deref(plr.Disabled, false):
@@ -982,16 +955,19 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateSecurityPolicyForTCPAndTLS ensures SecurityPolicy usage on TCP/TLS is compatible.
+// validateSecurityPolicyForL4 ensures SecurityPolicy usage on an L4 protocol
+// (TCP, TLS, or UDP) is compatible. proto names the protocol in the returned errors.
 //
-// TCP and TLS support Authorization with ClientCIDRs ONLY.
+// L4 supports Authorization with ClientCIDRs ONLY, because there is no HTTP
+// request to inspect:
 // - Principals.JWT      => invalid (HTTP-only)
 // - Principals.Headers  => invalid (HTTP-only)
-// - Empty/no Authorization is allowed and results in no-op on TCP/TLS.
+// - Operation           => invalid (HTTP methods/paths)
+// - Empty/no Authorization is allowed and results in no-op on L4.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
-func validateSecurityPolicyForTCPAndTLS(p *egv1a1.SecurityPolicy) error {
+func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
 	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
-		return fmt.Errorf("only authorization is supported for TCP/TLS (routes/listeners)")
+		return fmt.Errorf("only authorization is supported for %s (routes/listeners)", proto)
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
@@ -999,19 +975,25 @@ func validateSecurityPolicyForTCPAndTLS(p *egv1a1.SecurityPolicy) error {
 	for i := range p.Spec.Authorization.Rules {
 		rule := &p.Spec.Authorization.Rules[i]
 		if rule.CEL != nil {
-			return fmt.Errorf("rule %d: CEL not supported for TCP/TLS", i)
+			return fmt.Errorf("rule %d: CEL not supported for %s", i, proto)
+		}
+		// Methods and paths are HTTP concepts. The L4 matcher only looks at the
+		// client CIDRs, so accepting an operation here would silently widen the
+		// rule to every datagram or connection from those CIDRs.
+		if rule.Operation != nil {
+			return fmt.Errorf("rule %d: operation not supported for %s", i, proto)
 		}
 		if rule.Principal == nil {
 			continue
 		}
 		if rule.Principal.JWT != nil {
-			return fmt.Errorf("rule %d: JWT not supported for TCP/TLS", i)
+			return fmt.Errorf("rule %d: JWT not supported for %s", i, proto)
 		}
 		if len(rule.Principal.Headers) > 0 {
-			return fmt.Errorf("rule %d: headers not supported for TCP/TLS", i)
+			return fmt.Errorf("rule %d: headers not supported for %s", i, proto)
 		}
 		if len(rule.Principal.ClientIPGeoLocations) > 0 {
-			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP/TLS", i)
+			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for %s", i, proto)
 		}
 		if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
 			return fmt.Errorf("rule %d: %w", i, err)
@@ -1020,7 +1002,7 @@ func validateSecurityPolicyForTCPAndTLS(p *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// validateCIDRs validates CIDR strings for TCP authorization rules.
+// validateCIDRs validates CIDR strings for L4 authorization rules.
 func validateCIDRs(cidrs []egv1a1.CIDR) error {
 	for _, c := range cidrs {
 		if _, _, err := net.ParseCIDR(string(c)); err != nil {
@@ -1406,11 +1388,20 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				for _, r := range tl.Routes {
-					// For TLSRoute: filter by route metadata to handle multiple routes per listener
+				// For TLSRoute: filter by route metadata to handle multiple routes per listener
 					if target.Kind == resource.KindTLSRoute {
 						if r.Metadata == nil ||
 							r.Metadata.Namespace != string(target.Namespace) ||
 							r.Metadata.Name != string(target.Name) {
+							continue
+						}
+					} else if target.Kind == resource.KindTCPRoute {
+						// Only the IR route built from the targeted TCPRoute may be
+						// modified. Several TCPRoutes can name the same listener while
+						// only one of them is attached, so without this check a policy
+						// targeting an unattached route would silently apply to
+						// whichever route is actually serving traffic.
+						if r.Name != irTCPRouteName(route) {
 							continue
 						}
 					}
@@ -1430,6 +1421,35 @@ func (t *Translator) translateSecurityPolicyForRoute(
 						authCopy := *authorization
 						r.Authorization = &authCopy
 					}
+				}
+			}
+		case resource.KindUDPRoute:
+			for _, listener := range parentRefCtx.listeners {
+				// If targetListener is set, only apply to that exact listener.
+				if targetListener != nil && targetListenerName != irListenerName(listener) {
+					continue
+				}
+				ul := xdsIR[irKey].GetUDPListener(irListenerName(listener))
+				// A UDP listener holds at most one route: when several UDPRoutes name the
+				// same listener only the oldest one is attached, so a policy targeting any
+				// of the others has nothing to apply to. Comparing the names keeps such a
+				// policy from restricting the route that is actually serving traffic.
+				if ul == nil || ul.Route == nil || ul.Route.Name != irUDPRouteName(route) {
+					continue
+				}
+				r := ul.Route
+				// As with TCP, the route-rule section name lives on the destination metadata.
+				if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
+					continue
+				}
+
+				if r.Authorization != nil {
+					continue
+				}
+				// Only authorization for UDP
+				if authorization != nil {
+					authCopy := *authorization
+					r.Authorization = &authCopy
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
@@ -1727,16 +1747,16 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		)
 	}
 
-	// Pre-create a TCP-only authorization object to avoid re-allocation
-	var tcpAuthorization *ir.Authorization
+	// Pre-create an L4-only authorization object to avoid re-allocation
+	var l4Authorization *ir.Authorization
 	if authorization != nil {
 		authCopy := *authorization
-		tcpAuthorization = &authCopy
+		l4Authorization = &authCopy
 	}
 
 	// Apply to TCP/TLS listeners (Authorization only).
 	// Both TCPRoute and TLSRoute translate to TCP listeners in the IR.
-	if tcpAuthorization != nil {
+	if l4Authorization != nil {
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {
 				continue
@@ -1751,8 +1771,27 @@ func (t *Translator) translateSecurityPolicyForListeners(
 				if r.Authorization != nil {
 					continue
 				}
-				r.Authorization = tcpAuthorization
+				r.Authorization = l4Authorization
 			}
+		}
+	}
+
+	// Apply to UDP listeners (Authorization only).
+	if l4Authorization != nil {
+		for _, ul := range x.UDP {
+			// A UDP listener holds at most one route.
+			if ul == nil || ul.Route == nil {
+				continue
+			}
+			if !listenerNames.Has(ul.Name) {
+				continue
+			}
+			// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
+			// targeting a lesser specific scope(Gateway).
+			if ul.Route.Authorization != nil {
+				continue
+			}
+			ul.Route.Authorization = l4Authorization
 		}
 	}
 
@@ -2031,7 +2070,7 @@ func (t *Translator) buildRemoteJWKS(
 	}
 
 	if remoteJWKS.BackendSettings != nil {
-		if traffic, err = translateTrafficFeatures(remoteJWKS.BackendSettings); err != nil {
+		if traffic, err = translateExtServiceBackendSettings(remoteJWKS.BackendSettings); err != nil {
 			return nil, err
 		}
 	}
@@ -2393,7 +2432,7 @@ func (t *Translator) buildOIDCProvider(
 		return nil, err
 	}
 
-	if traffic, err = translateTrafficFeatures(provider.BackendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(provider.BackendSettings); err != nil {
 		return nil, err
 	}
 
@@ -3023,7 +3062,7 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if traffic, err = translateTrafficFeatures(backendSettings); err != nil {
+	if traffic, err = translateExtServiceBackendSettings(backendSettings); err != nil {
 		return nil, err
 	}
 
@@ -3061,7 +3100,8 @@ func (t *Translator) buildExtAuth(
 
 	if policy.Spec.ExtAuth.BodyToExtAuth != nil {
 		extAuth.BodyToExtAuth = &ir.BodyToExtAuth{
-			MaxRequestBytes: policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes,
+			MaxRequestBytes: ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes, defaultExtAuthMaxRequestBytes),
+			PackAsBytes:     ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.PackAsBytes, false),
 		}
 	}
 
@@ -3163,6 +3203,13 @@ func (t *Translator) backendRefAuthority(
 	if backendKind == resource.KindBackend {
 		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend != nil {
+			if isKubernetesServiceBackend(backend) && backend.Spec.KubernetesService != nil {
+				ref := kubernetesServiceBackendRef(backend)
+				return net.JoinHostPort(
+					fmt.Sprintf("%s.%s", ref.Name, backend.Namespace),
+					strconv.Itoa(int(*ref.Port)),
+				)
+			}
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {
 				if ep.FQDN != nil {

@@ -396,7 +396,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 	// Patch is always applied here: the rate limit PDB config comes from
 	// EnvoyGateway.spec.rateLimit, which is admin-authored, not tenant-facing.
-	return common.GetPodDisruptionBudget(r.rateLimitPdb, resource.GetSelector(rateLimitLabels()), &types.NamespacedName{
+	return common.GetPodDisruptionBudget(r.rateLimitPdb, resource.GetSelector(rateLimitLabels()), rateLimitLabels(), &types.NamespacedName{
 		Name:      resourceName,
 		Namespace: r.Namespace(),
 	}, r.ownerReferences(), false)

@@ -370,253 +370,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// - Referenced resources: Services, ServiceImports, EndpointSlices, Secrets, ConfigMaps ...
 	gwcResources := make(resource.ControllerResources, 0, len(managedGCs))
 	for _, managedGC := range managedGCs {
-		// Initialize resource types.
-		gwcResource := resource.NewResources()
-		gwcResource.GatewayClass = managedGC
-
-		// Set default EnvoyProxySpec from EnvoyGateway configuration if available.
-		// This serves as the lowest priority fallback when no GatewayClass or Gateway level EnvoyProxy is specified.
-		if r.envoyGateway != nil {
-			gwcResource.EnvoyProxyDefaultSpec = r.envoyGateway.GetEnvoyProxyDefaultSpec()
+		gwcResource, err := r.reconcileGatewayClass(ctx, managedGC, gcStatusToDelete, logger)
+		if err != nil {
+			// A transient error here aborts the entire Reconcile call: managedGCs after this
+			// one are left unprocessed this pass, and GatewayAPIResources is never Store()'d
+			// below, so the previous snapshot is left untouched until the workqueue retries.
+			return reconcile.Result{}, err
 		}
-
-		gwcResourceMapping := newResourceMapping()
-		gcLogger := logger.WithValues("GatewayClass", managedGC.Name)
-		// Process the parametersRef of the accepted GatewayClass.
-		// This should run before processGateways and processBackendRefs
-		failToProcessGCParamsRef := false
-		if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
-			if err := r.processGatewayClassParamsRef(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error processing parametersRef for GatewayClass")
-					return reconcile.Result{}, err
-				}
-
-				gcLogger.Error(err, "failed to process ParametersRef for GatewayClass")
-				msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-				status.SetGatewayClassAccepted(
-					managedGC,
-					false,
-					string(gwapiv1.GatewayClassReasonInvalidParameters),
-					msg)
-				r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
-				message.PublishMetric(message.Metadata{
-					Runner:  string(egv1a1.LogComponentProviderRunner),
-					Message: message.GatewayClassStatusMessageName,
-				}, 1)
-				failToProcessGCParamsRef = true
-			}
-		}
-
-		// process envoy gateway secret refs
-		if err := r.processEnvoyProxySecretRef(ctx, gwcResource); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing TLS SecretRef for EnvoyProxy")
-				return reconcile.Result{}, err
-			}
-
-			gcLogger.Error(err, "failed to process TLS SecretRef for EnvoyProxy for GatewayClass")
-			status.SetGatewayClassAccepted(
-				managedGC,
-				false,
-				string(gwapiv1.GatewayClassReasonAccepted),
-				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
-			message.PublishMetric(message.Metadata{
-				Runner:  string(egv1a1.LogComponentProviderRunner),
-				Message: message.GatewayClassStatusMessageName,
-			}, 1)
-			failToProcessGCParamsRef = true
-		}
-
-		if !failToProcessGCParamsRef {
-			// GatewayClass is valid so far, mark it as accepted.
-			gcLogger.V(6).Info("Set GatewayClass Accepted")
-			status.SetGatewayClassAccepted(
-				managedGC,
-				true,
-				string(gwapiv1.GatewayClassReasonAccepted),
-				status.MsgValidGatewayClass)
-			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
-		}
-
-		// it's safe here to append gwcResource to gwcResources
 		gwcResources = append(gwcResources, gwcResource)
-		gcStatusToDelete.Delete(utils.NamespacedName(managedGC))
-		// process global resources
-		// add the OIDC HMAC Secret to the resourceTree
-		if err = r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing OIDC HMAC Secret")
-				return reconcile.Result{}, err
-			}
-			gcLogger.Error(err, "failed to process OIDC HMAC Secret for GatewayClass")
-		}
-
-		// add the Envoy TLS Secret to the resourceTree
-		if err = r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing Envoy TLS Secret")
-				return reconcile.Result{}, err
-			}
-			gcLogger.Error(err, "failed to process EnvoyTLSSecret")
-		}
-
-		// add the rate limit Service and its EndpointSlices to the resourceTree
-		if err = r.processRateLimitService(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing rate limit Service")
-				return reconcile.Result{}, err
-			}
-			gcLogger.Error(err, "failed to process rate limit Service")
-		}
-
-		// Add all Gateways, their associated ListenerSets, Routes, and referenced resources to the resourceTree
-		if err = r.processGateways(ctx, managedGC, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing gateways")
-				return reconcile.Result{}, err
-			}
-			gcLogger.Error(err, "failed process gateways for GatewayClass")
-		}
-
-		if r.eppCRDExists {
-			// Add all EnvoyPatchPolicies to the resourceTree
-			if err = r.processEnvoyPatchPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error processing EnvoyPatchPolicies")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed to process EnvoyPatchPolicies for GatewayClass")
-			}
-		}
-
-		if r.ctpCRDExists {
-			// Add all ClientTrafficPolicies and their referenced resources to the resourceTree
-			if err = r.processClientTrafficPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error processing ClientTrafficPolicies")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed process to ClientTrafficPolicies for GatewayClass")
-			}
-		}
-
-		if r.btpCRDExists {
-			// Add all BackendTrafficPolicies to the resourceTree
-			if err = r.processBackendTrafficPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error processing BackendTrafficPolicies")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed to process BackendTrafficPolicies for GatewayClass")
-			}
-		}
-
-		if r.spCRDExists {
-			// Add all SecurityPolicies and their referenced resources to the resourceTree
-			if err = r.processSecurityPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error processing SecurityPolicies")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed to process SecurityPolicies for GatewayClass")
-			}
-		}
-
-		// Add all BackendTLSPolies to the resourceTree
-		if r.btlsCRDExists {
-			if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error processing BackendTLSPolicies")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
-			}
-		}
-
-		if r.eepCRDExists {
-			// Add all EnvoyExtensionPolicies and their referenced resources to the resourceTree
-			if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error processing EnvoyExtensionPolicies")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed to process EnvoyExtensionPolicies for GatewayClass")
-			}
-		}
-
-		if err = r.processPolicyTargetReferenceGrants(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing policy target ReferenceGrants")
-				return reconcile.Result{}, err
-			}
-			gcLogger.Error(err, "failed to process policy target ReferenceGrants for GatewayClass")
-		}
-
-		if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing ExtensionServerPolicies")
-				return reconcile.Result{}, err
-			}
-			gcLogger.Error(err, "failed to process ExtensionServerPolicies for GatewayClass")
-		}
-
-		// Add the referenced services, ServiceImports, and EndpointSlices in
-		// the collected BackendRefs to the resourceTree.
-		// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
-		if err = r.processBackendRefs(ctx, gwcResource, gwcResourceMapping); err != nil {
-			if isTransientError(err) {
-				gcLogger.Error(err, "transient error processing BackendRefs")
-				return reconcile.Result{}, err
-			}
-
-			gcLogger.Error(err, "failed to process BackendRefs for GatewayClass")
-		}
-
-		// For this particular Gateway, and all associated objects, check whether the
-		// namespace exists. Add to the resourceTree.
-		for ns := range gwcResourceMapping.allAssociatedNamespaces {
-			namespace, err := r.getNamespace(ctx, ns)
-			if err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error getting namespace", "namespace", ns)
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "unable to find the namespace", "namespace", ns)
-				if kerrors.IsNotFound(err) {
-					continue
-				}
-				continue
-			}
-
-			gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
-		}
-
-		// Update merge gateways tracking based on EnvoyProxy configuration
-		r.setGatewayClassMerge(managedGC.Name, gatewayapi.IsMergeGatewaysEnabled(gwcResource))
-
-		if len(gwcResource.Gateways) == 0 {
-			gcLogger.Info("No gateways found for accepted GatewayClass")
-
-			// If needed, remove the finalizer from the accepted GatewayClass.
-			if err := r.removeFinalizer(ctx, managedGC); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error removing finalizer from GatewayClass")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed to remove finalizer from GatewayClass")
-			}
-		} else {
-			// finalize the accepted GatewayClass.
-			if err := r.addFinalizer(ctx, managedGC); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error adding finalizer to gatewayClass")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed adding finalizer to gatewayClass")
-			}
-		}
 	}
 
 	// Sort before storing to:
@@ -644,6 +405,267 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	logger.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
+}
+
+// reconcileGatewayClass reconciles a single managed GatewayClass: it processes its
+// parametersRef, referenced secrets/services, Gateways, policies, and BackendRefs, updates its
+// Accepted status and finalizer, and returns the collected resource.Resources for this class.
+//
+// A transient error aborts processing for this GatewayClass and is returned to the caller.
+// The caller (Reconcile) in turn aborts the entire Reconcile call on any such error, so the
+// workqueue retries the whole batch - this mirrors the original inline behavior exactly.
+func (r *gatewayAPIReconciler) reconcileGatewayClass(ctx context.Context, managedGC *gwapiv1.GatewayClass, gcStatusToDelete sets.Set[types.NamespacedName], logger logging.Logger) (*resource.Resources, error) {
+	// Initialize resource types.
+	gwcResource := resource.NewResources()
+	gwcResource.GatewayClass = managedGC
+
+	// Set default EnvoyProxySpec from EnvoyGateway configuration if available.
+	// This serves as the lowest priority fallback when no GatewayClass or Gateway level EnvoyProxy is specified.
+	if r.envoyGateway != nil {
+		gwcResource.EnvoyProxyDefaultSpec = r.envoyGateway.GetEnvoyProxyDefaultSpec()
+	}
+
+	gwcResourceMapping := newResourceMapping()
+	gcLogger := logger.WithValues("GatewayClass", managedGC.Name)
+	// Process the parametersRef of the accepted GatewayClass.
+	// This should run before processGateways and processBackendRefs
+	failToProcessGCParamsRef := false
+	if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
+		if err := r.processGatewayClassParamsRef(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing parametersRef for GatewayClass")
+				return nil, err
+			}
+
+			gcLogger.Error(err, "failed to process ParametersRef for GatewayClass")
+			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
+			status.SetGatewayClassAccepted(
+				managedGC,
+				false,
+				string(gwapiv1.GatewayClassReasonInvalidParameters),
+				msg)
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
+			message.PublishMetric(message.Metadata{
+				Runner:  string(egv1a1.LogComponentProviderRunner),
+				Message: message.GatewayClassStatusMessageName,
+			}, 1)
+			failToProcessGCParamsRef = true
+		}
+	}
+
+	// process envoy gateway secret refs
+	if err := r.processEnvoyProxySecretRef(ctx, gwcResource); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing TLS SecretRef for EnvoyProxy")
+			return nil, err
+		}
+
+		gcLogger.Error(err, "failed to process TLS SecretRef for EnvoyProxy for GatewayClass")
+		status.SetGatewayClassAccepted(
+			managedGC,
+			false,
+			string(gwapiv1.GatewayClassReasonAccepted),
+			fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
+		r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
+		message.PublishMetric(message.Metadata{
+			Runner:  string(egv1a1.LogComponentProviderRunner),
+			Message: message.GatewayClassStatusMessageName,
+		}, 1)
+		failToProcessGCParamsRef = true
+	}
+
+	if !failToProcessGCParamsRef {
+		// GatewayClass is valid so far, mark it as accepted.
+		gcLogger.V(6).Info("Set GatewayClass Accepted")
+		status.SetGatewayClassAccepted(
+			managedGC,
+			true,
+			string(gwapiv1.GatewayClassReasonAccepted),
+			status.MsgValidGatewayClass)
+		r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
+	}
+
+	// it's safe here to mark this GatewayClass as handled: gwcResource is returned to the
+	// caller regardless of what happens below, so it will end up in the caller's gwcResources.
+	gcStatusToDelete.Delete(utils.NamespacedName(managedGC))
+
+	// process global resources
+	// add the OIDC HMAC Secret to the resourceTree
+	var err error
+	if err = r.processOIDCHMACSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing OIDC HMAC Secret")
+			return nil, err
+		}
+		gcLogger.Error(err, "failed to process OIDC HMAC Secret for GatewayClass")
+	}
+
+	// add the Envoy TLS Secret to the resourceTree
+	if err = r.processEnvoyTLSSecret(ctx, gwcResource, gwcResourceMapping); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing Envoy TLS Secret")
+			return nil, err
+		}
+		gcLogger.Error(err, "failed to process EnvoyTLSSecret")
+	}
+
+	// add the rate limit Service and its EndpointSlices to the resourceTree
+	if err = r.processRateLimitService(ctx, gwcResource, gwcResourceMapping); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing rate limit Service")
+			return nil, err
+		}
+		gcLogger.Error(err, "failed to process rate limit Service")
+	}
+
+	// Add all Gateways, their associated ListenerSets, Routes, and referenced resources to the resourceTree
+	if err = r.processGateways(ctx, managedGC, gwcResource, gwcResourceMapping); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing gateways")
+			return nil, err
+		}
+		gcLogger.Error(err, "failed process gateways for GatewayClass")
+	}
+
+	if r.eppCRDExists {
+		// Add all EnvoyPatchPolicies to the resourceTree
+		if err = r.processEnvoyPatchPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing EnvoyPatchPolicies")
+				return nil, err
+			}
+			gcLogger.Error(err, "failed to process EnvoyPatchPolicies for GatewayClass")
+		}
+	}
+
+	if r.ctpCRDExists {
+		// Add all ClientTrafficPolicies and their referenced resources to the resourceTree
+		if err = r.processClientTrafficPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing ClientTrafficPolicies")
+				return nil, err
+			}
+			gcLogger.Error(err, "failed process to ClientTrafficPolicies for GatewayClass")
+		}
+	}
+
+	if r.btpCRDExists {
+		// Add all BackendTrafficPolicies to the resourceTree
+		if err = r.processBackendTrafficPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing BackendTrafficPolicies")
+				return nil, err
+			}
+			gcLogger.Error(err, "failed to process BackendTrafficPolicies for GatewayClass")
+		}
+	}
+
+	if r.spCRDExists {
+		// Add all SecurityPolicies and their referenced resources to the resourceTree
+		if err = r.processSecurityPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing SecurityPolicies")
+				return nil, err
+			}
+			gcLogger.Error(err, "failed to process SecurityPolicies for GatewayClass")
+		}
+	}
+
+	// Add all BackendTLSPolies to the resourceTree
+	if r.btlsCRDExists {
+		if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing BackendTLSPolicies")
+				return nil, err
+			}
+			gcLogger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
+		}
+	}
+
+	if r.eepCRDExists {
+		// Add all EnvoyExtensionPolicies and their referenced resources to the resourceTree
+		if err = r.processEnvoyExtensionPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing EnvoyExtensionPolicies")
+				return nil, err
+			}
+			gcLogger.Error(err, "failed to process EnvoyExtensionPolicies for GatewayClass")
+		}
+	}
+
+	if err = r.processPolicyTargetReferenceGrants(ctx, gwcResource, gwcResourceMapping); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing policy target ReferenceGrants")
+			return nil, err
+		}
+		gcLogger.Error(err, "failed to process policy target ReferenceGrants for GatewayClass")
+	}
+
+	if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing ExtensionServerPolicies")
+			return nil, err
+		}
+		gcLogger.Error(err, "failed to process ExtensionServerPolicies for GatewayClass")
+	}
+
+	// Add the referenced services, ServiceImports, and EndpointSlices in
+	// the collected BackendRefs to the resourceTree.
+	// BackendRefs are referred by various Route objects and the ExtAuth in SecurityPolicies.
+	if err = r.processBackendRefs(ctx, gwcResource, gwcResourceMapping); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing BackendRefs")
+			return nil, err
+		}
+
+		gcLogger.Error(err, "failed to process BackendRefs for GatewayClass")
+	}
+
+	// For this particular Gateway, and all associated objects, check whether the
+	// namespace exists. Add to the resourceTree.
+	for ns := range gwcResourceMapping.allAssociatedNamespaces {
+		namespace, err := r.getNamespace(ctx, ns)
+		if err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error getting namespace", "namespace", ns)
+				return nil, err
+			}
+			gcLogger.Error(err, "unable to find the namespace", "namespace", ns)
+			if kerrors.IsNotFound(err) {
+				continue
+			}
+			continue
+		}
+
+		gwcResource.Namespaces = append(gwcResource.Namespaces, namespace)
+	}
+
+	// Update merge gateways tracking based on EnvoyProxy configuration
+	r.setGatewayClassMerge(managedGC.Name, gatewayapi.IsMergeGatewaysEnabled(gwcResource))
+
+	if len(gwcResource.Gateways) == 0 {
+		gcLogger.Info("No gateways found for accepted GatewayClass")
+
+		// If needed, remove the finalizer from the accepted GatewayClass.
+		if err := r.removeFinalizer(ctx, managedGC); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error removing finalizer from GatewayClass")
+				return nil, err
+			}
+			gcLogger.Error(err, "failed to remove finalizer from GatewayClass")
+		}
+	} else {
+		// finalize the accepted GatewayClass.
+		if err := r.addFinalizer(ctx, managedGC); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error adding finalizer to gatewayClass")
+				return nil, err
+			}
+			gcLogger.Error(err, "failed adding finalizer to gatewayClass")
+		}
+	}
+
+	return gwcResource, nil
 }
 
 func (r *gatewayAPIReconciler) loadGatewayClassStatusToDelete() sets.Set[types.NamespacedName] {
@@ -723,6 +745,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		nn := types.NamespacedName{Namespace: backendNs, Name: backendName}
 		var endpointSliceLabelKey string
 		var endpointSliceIndex string
+		endpointSliceName := string(backendRef.Name)
 		switch backendRefKind {
 		case resource.KindService:
 			service := new(corev1.Service)
@@ -785,6 +808,30 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 					gwcResource.Backends = append(gwcResource.Backends, backend)
 					logger.Info("added Backend to resource tree")
 				}
+			}
+
+			// A KubernetesService Backend gets its endpoints from the Service it points at, so the
+			// Service and its EndpointSlices are added the same way a Service backendRef adds them.
+			if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeKubernetesService && backend.Spec.KubernetesService != nil {
+				svcNN := types.NamespacedName{Namespace: backend.Namespace, Name: string(backend.Spec.KubernetesService.Name)}
+				service := new(corev1.Service)
+				if err := r.client.Get(ctx, svcNN, service); err != nil {
+					if isTransientError(err) {
+						return err
+					}
+					logger.Error(err, "failed to get Service of KubernetesService Backend")
+				} else {
+					resourceMappings.allAssociatedNamespaces.Insert(service.Namespace)
+					svcKey := utils.NamespacedName(service).String()
+					if !resourceMappings.allAssociatedServices.Has(svcKey) {
+						resourceMappings.allAssociatedServices.Insert(svcKey)
+						gwcResource.Services = append(gwcResource.Services, service)
+						logger.Info("added Service of KubernetesService Backend to resource tree")
+					}
+				}
+				endpointSliceLabelKey = discoveryv1.LabelServiceName
+				endpointSliceIndex = serviceEndpointSliceIndex
+				endpointSliceName = svcNN.Name
 			}
 
 			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
@@ -862,11 +909,11 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			}
 			if r.endpointSliceIndexEnabled() {
 				opts = append(opts, client.MatchingFields{
-					endpointSliceIndex: string(backendRef.Name),
+					endpointSliceIndex: endpointSliceName,
 				})
 			} else {
 				opts = append(opts, client.MatchingLabels{
-					endpointSliceLabelKey: string(backendRef.Name),
+					endpointSliceLabelKey: endpointSliceName,
 				})
 			}
 			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
@@ -1663,17 +1710,20 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 
 func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1b1.ReferenceGrant, error) {
 	refGrantList := new(gwapiv1b1.ReferenceGrantList)
-	opts := &client.ListOptions{FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind)}
+	// A ReferenceGrant only applies to resources in its own namespace, so only list the grants in
+	// the target namespace, and of those only the ones that allow references from the source
+	// namespace to the target kind. The field index is kept per namespace, so this is a direct
+	// lookup instead of listing every grant for the kind across the cluster.
+	opts := &client.ListOptions{
+		Namespace:     to.namespace,
+		FieldSelector: fields.OneTermEqualSelector(refGrantFromNamespaceToKindIndex, refGrantFromNamespaceToKey(from.namespace, to.kind)),
+	}
 	if err := r.client.List(ctx, refGrantList, opts); err != nil {
 		return nil, fmt.Errorf("failed to list ReferenceGrants: %w", err)
 	}
 
 	for i := range refGrantList.Items {
 		refGrant := &refGrantList.Items[i]
-		if refGrant.Namespace != to.namespace {
-			continue
-		}
-
 		var fromAllowed bool
 		for _, refGrantFrom := range refGrant.Spec.From {
 			if string(refGrantFrom.Kind) == from.kind && string(refGrantFrom.Namespace) == from.namespace {
@@ -1786,6 +1836,7 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 			resource.KindGRPCRoute,
 			resource.KindTCPRoute,
 			resource.KindTLSRoute,
+			resource.KindUDPRoute,
 		),
 	}
 

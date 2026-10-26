@@ -644,6 +644,27 @@ func GetManagedParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	return managed
 }
 
+// GetManagedRouteParentContexts returns the RouteParentContexts of the route in
+// spec.parentRefs order. Iterating the ParentRefs map directly is nondeterministic,
+// which matters when several parentRefs compete for the same listener.
+func GetManagedRouteParentContexts(route RouteContext) []*RouteParentContext {
+	parentRefs := GetParentReferences(route)
+	ctxs := make([]*RouteParentContext, 0, len(parentRefs))
+	seen := make(map[*RouteParentContext]struct{}, len(parentRefs))
+	for _, parentRef := range parentRefs {
+		ctx := route.GetRouteParentContext(parentRef)
+		if ctx == nil {
+			continue
+		}
+		if _, ok := seen[ctx]; ok {
+			continue
+		}
+		seen[ctx] = struct{}{}
+		ctxs = append(ctxs, ctx)
+	}
+	return ctxs
+}
+
 // GetRouteStatus returns the RouteStatus object associated with the Route.
 func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 	return route.GetRouteStatus()
@@ -809,6 +830,35 @@ func (r *RouteParentContext) GetGateway() *GatewayContext {
 	return r.listeners[0].gateway
 }
 
+// PolicyAncestorRef returns this parent as a policy status ancestorRef, with group, kind
+// and namespace always filled in.
+func (r *RouteParentContext) PolicyAncestorRef() gwapiv1.ParentReference {
+	parentNN := types.NamespacedName{
+		Namespace: NamespaceDerefOr(r.Namespace, r.routeNamespace()),
+		Name:      string(r.Name),
+	}
+	if r.Kind != nil && *r.Kind == resource.KindListenerSet {
+		return getAncestorRefForListenerSetPolicy(parentNN, r.SectionName)
+	}
+	return getAncestorRefForPolicy(parentNN, r.SectionName)
+}
+
+func (r *RouteParentContext) routeNamespace() string {
+	switch {
+	case r.HTTPRoute != nil:
+		return r.HTTPRoute.Namespace
+	case r.GRPCRoute != nil:
+		return r.GRPCRoute.Namespace
+	case r.TLSRoute != nil:
+		return r.TLSRoute.Namespace
+	case r.TCPRoute != nil:
+		return r.TCPRoute.Namespace
+	case r.UDPRoute != nil:
+		return r.UDPRoute.Namespace
+	}
+	return ""
+}
+
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 	r.listeners = append(r.listeners, listeners...)
 }
@@ -918,9 +968,16 @@ type TranslatorContext struct {
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
 	ResolvedCAMap           map[ResolvedCAKey]string
+	protoDescriptors        map[types.NamespacedName]*parsedProtoDescriptor
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
+	BTPRejectedPolicies     map[types.NamespacedName]backendPolicyRejection
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
+	BackendTLSPolicyIndex   BackendTLSPolicyIndex
+	// ExtensionRefIndex is held by value, unlike the policy indexes above: it only holds maps, so
+	// copying it is cheap and shares the entries, and its zero value is an empty index whose
+	// lookups find nothing instead of panicking when a context is built without it.
+	ExtensionRefIndex ExtensionRefIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {

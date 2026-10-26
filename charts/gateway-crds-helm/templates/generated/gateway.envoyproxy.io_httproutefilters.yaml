@@ -379,6 +379,105 @@ spec:
                       (including the default 200) is rejected; a non-2xx status code must be set.
                     type: integer
                 type: object
+              grpcJSONTranscoder:
+                description: |-
+                  GRPCJSONTranscoder converts a JSON/HTTP request to a gRPC request, and the gRPC
+                  response back to JSON.
+
+                  It can only be used in the rule filters of an HTTPRoute. It is not supported in a
+                  GRPCRoute or in the filters of a backendRef.
+                properties:
+                  convertGRPCStatus:
+                    description: |-
+                      ConvertGRPCStatus converts the gRPC status of an error response to the HTTP
+                      status code and a JSON body.
+                    type: boolean
+                  ignoreUnknownQueryParameters:
+                    description: |-
+                      IgnoreUnknownQueryParameters ignores the query parameters that can't be mapped to
+                      a field of the gRPC request.
+
+                      If false, a request with such a parameter is not transcoded and is sent to the
+                      backend as is.
+                    type: boolean
+                  printOptions:
+                    description: PrintOptions defines how the gRPC response is printed
+                      as JSON.
+                    properties:
+                      addWhitespace:
+                        description: AddWhitespace adds spaces, line breaks and indentation
+                          to the JSON output.
+                        type: boolean
+                      alwaysPrintPrimitiveFields:
+                        description: |-
+                          AlwaysPrintPrimitiveFields prints the primitive fields even when they have
+                          default values.
+                        type: boolean
+                      preserveProtoFieldNames:
+                        description: |-
+                          PreserveProtoFieldNames uses the field names in the proto file instead of
+                          lowerCamelCase names.
+                        type: boolean
+                    type: object
+                  protoDescriptor:
+                    description: ProtoDescriptor defines where to find the protobuf
+                      descriptor set of the gRPC services.
+                    properties:
+                      valueRef:
+                        description: |-
+                          ValueRef references a ConfigMap in the same namespace that holds the descriptor set.
+
+                          The descriptor set is read from the `proto-descriptor` key, either in `binaryData`
+                          or in `data`, where it can be base64-encoded. If the ConfigMap has no `data` and only
+                          one `binaryData` entry, that entry is used.
+
+                          The descriptor set must include all the imported files. It can be generated with
+                          `protoc --include_imports --descriptor_set_out=...`.
+                        properties:
+                          group:
+                            description: |-
+                              Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                              When unspecified or empty string, core API group is inferred.
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            description: Kind is kind of the referent. For example
+                              "HTTPRoute" or "Service".
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            description: Name is the name of the referent.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - group
+                        - kind
+                        - name
+                        type: object
+                    required:
+                    - valueRef
+                    type: object
+                    x-kubernetes-validations:
+                    - message: valueRef must refer to a core ConfigMap
+                      rule: size(self.valueRef.group) == 0 && self.valueRef.kind ==
+                        'ConfigMap'
+                  services:
+                    description: |-
+                      Services defines the gRPC services to transcode.
+
+                      If not specified, all the services defined in the descriptor are transcoded,
+                      except the ones that come from imported files.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                required:
+                - protoDescriptor
+                type: object
               matches:
                 description: |-
                   Matches defines additional matching criteria for the HTTPRoute rule.
@@ -427,6 +526,41 @@ spec:
                   type: object
                 maxItems: 8
                 type: array
+              requestMirror:
+                description: |-
+                  RequestMirror defines configuration for request mirroring modifiers.
+                  This configuration works together with the Gateway API RequestMirror filter
+                  on the attached HTTPRoute rule.
+                properties:
+                  hostname:
+                    description: Hostname defines the configuration to rewrite the
+                      Host header for mirrored requests.
+                    properties:
+                      literal:
+                        description: |-
+                          Literal specifies a fixed hostname to rewrite the Host header to.
+                          Required when Type is "Literal". Must be empty when Type is "Backend".
+                          Note: gwapiv1.PreciseHostname already carries MinLength=1, MaxLength=253,
+                          and RFC 1123 pattern validation, which automatically flow into the generated CRD.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      type:
+                        description: Type defines the type of hostname rewrite.
+                        enum:
+                        - Backend
+                        - Literal
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: literal must be nil if the type is not Literal
+                      rule: '!(has(self.literal) && self.type != ''Literal'')'
+                    - message: literal must be specified for Literal type
+                      rule: '!(!has(self.literal) && self.type == ''Literal'')'
+                type: object
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
