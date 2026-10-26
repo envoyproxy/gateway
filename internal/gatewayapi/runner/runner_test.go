@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
@@ -519,4 +521,59 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.NotNil(t, tlsConfig.GetConfigForClient)
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+}
+
+func TestTranslationOfOlderSnapshotKeepsNewerGatewayClassStatus(t *testing.T) {
+	pResources := new(message.ProviderResources)
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	t.Cleanup(closeFunc)
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
+		XdsIR:             new(message.XdsIR),
+		InfraIR:           new(message.InfraIR),
+		ExtensionManager:  extMgr,
+	})
+	require.NoError(t, r.Start(t.Context()))
+
+	accepted := func(generation int64) gwapiv1.GatewayClassStatus {
+		return gwapiv1.GatewayClassStatus{Conditions: []metav1.Condition{{
+			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(gwapiv1.GatewayClassReasonAccepted),
+			ObservedGeneration: generation,
+		}}}
+	}
+	gatewayClassAt := func(name string, generation int64) *resource.Resources {
+		res := resource.NewResources()
+		res.GatewayClass = &gwapiv1.GatewayClass{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Generation: generation},
+			Spec:       gwapiv1.GatewayClassSpec{ControllerName: egv1a1.GatewayControllerName},
+			Status:     accepted(generation),
+		}
+		return res
+	}
+
+	lagging := types.NamespacedName{Name: "a-lagging"}
+	sentinel := types.NamespacedName{Name: "z-sentinel"}
+	newer := accepted(2)
+	pResources.GatewayClassStatuses.Store(lagging, &newer)
+	pResources.GatewayAPIResources.Store(string(egv1a1.GatewayControllerName), &resource.ControllerResourcesContext{
+		Resources: &resource.ControllerResources{gatewayClassAt(lagging.Name, 1), gatewayClassAt(sentinel.Name, 1)},
+		Context:   t.Context(),
+	})
+
+	// The runner translates the GatewayClasses of a snapshot in order, so once the sentinel's
+	// status is stored, the lagging GatewayClass has been translated too.
+	require.Eventually(t, func() bool {
+		_, ok := pResources.GatewayClassStatuses.Load(sentinel)
+		return ok
+	}, 5*time.Second, 10*time.Millisecond)
+	got, ok := pResources.GatewayClassStatuses.Load(lagging)
+	require.True(t, ok)
+	require.Equal(t, int64(2), got.Conditions[0].ObservedGeneration)
 }

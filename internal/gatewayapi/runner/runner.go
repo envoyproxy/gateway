@@ -422,7 +422,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				defer statusUpdateSpan.End()
 				if result.GatewayClass != nil {
 					key := utils.NamespacedName(result.GatewayClass)
-					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
+					// The provider stores a GatewayClass status as soon as it reconciles the class, so a
+					// translation of an older snapshot must not put back the status of an older generation.
+					if !hasNewerGatewayClassStatus(&r.ProviderResources.GatewayClassStatuses, key, result.GatewayClass.Generation) {
+						r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
+					}
 				}
 
 				// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
@@ -868,6 +872,23 @@ func storeStatus[K comparable, V any](
 	}
 	m.Store(key, status)
 	seen[key] = uid
+}
+
+func hasNewerGatewayClassStatus(
+	m *watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus],
+	key types.NamespacedName,
+	gen int64,
+) bool {
+	stored, ok := m.Load(key)
+	if !ok {
+		return false
+	}
+	for _, c := range stored.Conditions {
+		if c.ObservedGeneration > gen {
+			return true
+		}
+	}
+	return false
 }
 
 func newKeyCache() *KeyCache {
