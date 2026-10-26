@@ -79,6 +79,27 @@ func TestBuildXdsClusterDNSRefreshRateValidation(t *testing.T) {
 	require.ErrorContains(t, err, "DnsRefreshRate")
 }
 
+func TestBuildZoneAwareLbConfigFailTrafficOnPanic(t *testing.T) {
+	// fail_traffic_on_panic only exists inside zone_aware_lb_config, so it is
+	// reachable only when preferLocal selects that arm of the oneof.
+	tests := []struct {
+		name     string
+		fail     *bool
+		expected bool
+	}{
+		{"unset", nil, false},
+		{"true", new(true), true},
+		{"false", new(false), false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := buildZoneAwareLbConfig(&ir.PreferLocalZone{FailTrafficOnPanic: tc.fail})
+			require.NotNil(t, cfg)
+			require.Equal(t, tc.expected, cfg.ZoneAwareLbConfig.FailTrafficOnPanic)
+		})
+	}
+}
+
 func TestBuildXdsHealthCheckDisableConnectionReuse(t *testing.T) {
 	base := func() *ir.ActiveHealthCheck {
 		return &ir.ActiveHealthCheck{
@@ -101,7 +122,7 @@ func TestBuildXdsHealthCheckDisableConnectionReuse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			hc := base()
 			hc.DisableConnectionReuse = tc.disable
-			out, err := buildXdsHealthCheck(hc, "", nil)
+			out, err := buildXdsHealthCheck(hc, "", nil, nil, false, false)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			require.Equal(t, tc.expected, out[0].ReuseConnection)

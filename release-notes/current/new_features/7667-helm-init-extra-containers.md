@@ -1,0 +1,1 @@
+Added `deployment.pod.initContainers` and `deployment.pod.extraContainers` to the `gateway-helm` chart, passed through to the control-plane Deployment so additional init/sidecar containers (including native sidecars with `restartPolicy: Always`) can run alongside the Envoy Gateway controller.

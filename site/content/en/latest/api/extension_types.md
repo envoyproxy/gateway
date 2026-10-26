@@ -861,7 +861,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `maxRequestBytes` | _integer_ |  true  |  | MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.<br />Envoy will return HTTP 413 and will not initiate the authorization process when buffer<br />reaches the number set in this field.<br />Note that this setting will have precedence over failOpen mode. |
+| `maxRequestBytes` | _integer_ |  false  |  | MaxRequestBytes is the maximum size of a message body that the filter will hold in memory.<br />Envoy will return HTTP 413 and will not initiate the authorization process when buffer<br />reaches the number set in this field.<br />Note that this setting will have precedence over failOpen mode.<br />Defaults to 32768 bytes (32KiB), which matches the default per-connection buffer limit. |
+| `packAsBytes` | _boolean_ |  false  |  | PackAsBytes, when true, sends the request body to the external authorization<br />service as raw bytes, populating the raw_body field of the HTTP request<br />attribute context. Otherwise, the body is sent as a UTF-8 string in the body field.<br />This field is only supported for gRPC external authorization services.<br />Defaults to false. |
 
 
 #### BootstrapType
@@ -1519,7 +1520,7 @@ _Appears in:_
 
 
 CustomResponseMatch defines the configuration for matching a user response to return a custom one.
-When both statusCodes and responseHeaders are specified, both must match.
+When more than one of statusCodes, requestHeaders and responseHeaders is specified, all of them must match.
 
 _Appears in:_
 - [ResponseOverride](#responseoverride)
@@ -1527,6 +1528,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  false  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `requestHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Request headers to match on. The match evaluates to true if all matches are successful.<br />Note that the request headers are not available for all Envoy-generated responses,<br />in which case a request header match never evaluates to true. |
 | `responseHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | Response headers to match on. The match evaluates to true if all matches are successful. |
 
 
@@ -2911,6 +2913,25 @@ _Appears in:_
 | `minEndpointsInZoneThreshold` | _integer_ |  false  |  | MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone<br />override. This is useful for protecting zones with fewer endpoints. |
 
 
+#### ForwardProtoConfig
+
+
+
+ForwardProtoConfig configures the ports used to infer the x-forwarded-proto
+header from the PROXY protocol destination port. When the restored local address
+(populated by the PROXY protocol listener filter) has a destination port matching
+one of these lists, the x-forwarded-proto header is set to the corresponding scheme.
+At least one of httpsDestinationPorts or httpDestinationPorts must be set.
+
+_Appears in:_
+- [ProxyProtocolSettings](#proxyprotocolsettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `httpsDestinationPorts` | _integer array_ |  false  |  | HTTPSDestinationPorts are the destination ports treated as HTTPS.<br />When the PROXY protocol destination port matches one of these, the<br />x-forwarded-proto header is set to "https".<br />Common values: 443, 8443. |
+| `httpDestinationPorts` | _integer array_ |  false  |  | HTTPDestinationPorts are the destination ports treated as HTTP.<br />When the PROXY protocol destination port matches one of these, the<br />x-forwarded-proto header is set to "http".<br />Common values: 80, 8080. |
+
+
 #### GRPCActiveHealthChecker
 
 
@@ -3312,6 +3333,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `hostname` | _string_ |  false  |  | Hostname defines the HTTP Host header used for active HTTP health checks.<br />Host selection uses this order: this field, the associated Backend endpoint<br />hostname if available, then the effective Route hostname. |
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
+| `protocol` | _[HTTPHealthCheckProtocol](#httphealthcheckprotocol)_ |  false  | Auto | Protocol is the HTTP protocol that active health check requests are sent with.<br />Defaults to Auto, which uses the same protocol as regular requests to the backend:<br />  - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,<br />    `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a<br />    GRPCRoute.<br />  - The protocol negotiated through ALPN for a TLS backend that negotiates it,<br />    with HTTP1 as the fallback when nothing is negotiated.<br />  - HTTP1 otherwise.<br />Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than<br />the application, for example a backend that serves HTTP/1.1 traffic but only<br />accepts HTTP/2 health checks. An explicit protocol is always used as is. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
 | `retriableStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | RetriableStatuses defines a list of HTTP response statuses considered retriable.<br />Responses matching these statuses count towards the unhealthy threshold but<br />do not result in the host being considered immediately unhealthy.<br />The expected statuses take precedence for any range overlaps with this field. |
@@ -3469,6 +3491,23 @@ _Appears in:_
 | `header` | _[HTTPHeader](#httpheader)_ |  true  |  | Header is the header name and value to write. The value may contain<br />Envoy substitution format operators such as "%REQ(x-foo)%", which are<br />evaluated per request.<br />See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators |
 | `action` | _[HeaderWriteAction](#headerwriteaction)_ |  false  | Add | Action controls how the header value is written when a header with the<br />same name already exists. Defaults to Add. |
 | `keepEmptyValue` | _boolean_ |  false  |  | KeepEmptyValue controls whether the header is still written when its<br />value is empty. This matters for values produced by substitution<br />formatters, e.g. "%REQ(x-foo)%", which may resolve to an empty string at<br />request time. Envoy drops such headers by default; set this to true to<br />keep them with an empty value.<br />When unset, it defaults to true only if the configured value itself is<br />the empty string, so a literal empty header is always written. |
+
+
+#### HTTPHealthCheckProtocol
+
+_Underlying type:_ _string_
+
+HTTPHealthCheckProtocol specifies the HTTP protocol used to send active HTTP
+health check requests to the backend.
+
+_Appears in:_
+- [HTTPActiveHealthChecker](#httpactivehealthchecker)
+
+| Value | Description |
+| ----- | ----------- |
+| `Auto` | HTTPHealthCheckProtocolAuto derives the health check protocol from the effective<br />upstream protocol of the backend.<br /> | 
+| `HTTP1` | HTTPHealthCheckProtocolHTTP1 sends health check requests using HTTP/1.1.<br /> | 
+| `HTTP2` | HTTPHealthCheckProtocolHTTP2 sends health check requests using HTTP/2.<br /> | 
 
 
 #### HTTPHostnameModifier
@@ -5242,6 +5281,7 @@ _Appears in:_
 | `force` | _[ForceLocalZone](#forcelocalzone)_ |  false  |  | ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior<br />which maintains equal distribution among upstream endpoints while sending as much traffic as possible locally. |
 | `minEndpointsThreshold` | _integer_ |  false  |  | MinEndpointsThreshold is the minimum number of total upstream endpoints across all zones required to enable zone-aware routing. |
 | `percentageEnabled` | _integer_ |  false  |  | Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, Envoy defaults to 100%. |
+| `failTrafficOnPanic` | _boolean_ |  false  |  | FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the<br />cluster is in panic mode. Panic mode is entered when the share of healthy endpoints<br />drops below HealthCheck.PanicThreshold, and by default Envoy then load balances<br />across every endpoint, healthy or not. Setting this to true makes Envoy fail the<br />requests instead, applying backpressure to clients and giving the backend room to<br />recover.<br />Defaults to false. |
 
 
 #### Principal
@@ -5665,6 +5705,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `optional` | _boolean_ |  false  |  | Optional allows requests without a Proxy Protocol header to be proxied.<br />If set to true, the listener will accept requests without a Proxy Protocol header.<br />If set to false, the listener will reject requests without a Proxy Protocol header.<br />If not set, the default behavior is to reject requests without a Proxy Protocol header.<br />Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.<br />For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt |
+| `forwardProtoConfig` | _[ForwardProtoConfig](#forwardprotoconfig)_ |  false  |  | ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol<br />destination port. Only takes effect when PROXY protocol is enabled.<br />This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and<br />forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct<br />scheme for the forwarded request. |
 
 
 #### ProxyProtocolVersion
@@ -6353,7 +6394,7 @@ _Appears in:_
 
 
 
-ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+ResponseOverrideHeaderMatch defines the configuration for matching a request or response header.
 
 _Appears in:_
 - [CustomResponseMatch](#customresponsematch)
@@ -7255,6 +7296,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension.<br />When Code is omitted, Name is required and must match a module registered<br />in EnvoyProxy.spec.wasmModules. |
+| `vmSharingScope` | _[WasmVMSharingScope](#wasmvmsharingscope)_ |  false  | Policy | VMSharingScope defines the scope within which this extension may share a Wasm VM.<br />If Policy or unset, each policy's Wasm entry uses its own VM ID. The same<br />entry may reuse its VM across routes; different entries do not share a VM.<br />If Namespace, this extension may share a VM with other extensions that specify<br />Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM<br />compatibility using the Wasm code and VM configuration, including environment<br />variables. Each Envoy worker has its own VM.<br />Sharing a VM shares module-level state and VM failures. Plugin names and root<br />IDs are not changed; matching plugin identities may also share a root context. |
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  false  |  | Code is the Wasm code for the extension.<br />When omitted, Name must match a module in EnvoyProxy.spec.wasmModules. |
 | `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
@@ -7367,6 +7409,21 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `Local` | LocalWasmModuleSourceType loads the module from the Envoy proxy local filesystem.<br /> | 
+
+
+#### WasmVMSharingScope
+
+_Underlying type:_ _string_
+
+WasmVMSharingScope defines the scope within which Wasm extensions may share a VM.
+
+_Appears in:_
+- [Wasm](#wasm)
+
+| Value | Description |
+| ----- | ----------- |
+| `Policy` | WasmVMSharingScopePolicy gives each policy's Wasm entry its own VM ID.<br />The same entry may reuse its VM across routes; different entries do not share a VM.<br /> | 
+| `Namespace` | WasmVMSharingScopeNamespace allows compatible extensions that specify this<br />scope in the same EnvoyExtensionPolicy namespace to share a VM.<br /> | 
 
 
 #### WeightedZoneConfig

@@ -12421,6 +12421,28 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      protocol:
+                                                        default: Auto
+                                                        description: |-
+                                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                              GRPCRoute.
+                                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                              with HTTP1 as the fallback when nothing is negotiated.
+                                                            - HTTP1 otherwise.
+
+                                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                        enum:
+                                                        - Auto
+                                                        - HTTP1
+                                                        - HTTP2
+                                                        type: string
                                                       requestBody:
                                                         description: RequestBody defines
                                                           the HTTP request body payload
@@ -13194,6 +13216,16 @@ spec:
                                                       sending traffic to the local
                                                       locality zone.
                                                     properties:
+                                                      failTrafficOnPanic:
+                                                        description: |-
+                                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                          requests instead, applying backpressure to clients and giving the backend room to
+                                                          recover.
+                                                          Defaults to false.
+                                                        type: boolean
                                                       force:
                                                         description: |-
                                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -14177,6 +14209,28 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      protocol:
+                                                        default: Auto
+                                                        description: |-
+                                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                              GRPCRoute.
+                                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                              with HTTP1 as the fallback when nothing is negotiated.
+                                                            - HTTP1 otherwise.
+
+                                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                        enum:
+                                                        - Auto
+                                                        - HTTP1
+                                                        - HTTP2
+                                                        type: string
                                                       requestBody:
                                                         description: RequestBody defines
                                                           the HTTP request body payload
@@ -14950,6 +15004,16 @@ spec:
                                                       sending traffic to the local
                                                       locality zone.
                                                     properties:
+                                                      failTrafficOnPanic:
+                                                        description: |-
+                                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                          requests instead, applying backpressure to clients and giving the backend room to
+                                                          recover.
+                                                          Defaults to false.
+                                                        type: boolean
                                                       force:
                                                         description: |-
                                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -16340,6 +16404,28 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                protocol:
+                                                  default: Auto
+                                                  description: |-
+                                                    Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                    Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                      - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                        `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                        GRPCRoute.
+                                                      - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                        with HTTP1 as the fallback when nothing is negotiated.
+                                                      - HTTP1 otherwise.
+
+                                                    Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                    the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                    accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                  enum:
+                                                  - Auto
+                                                  - HTTP1
+                                                  - HTTP2
+                                                  type: string
                                                 requestBody:
                                                   description: RequestBody defines
                                                     the HTTP request body payload
@@ -17083,6 +17169,16 @@ spec:
                                                 zone-aware routing to prefer sending
                                                 traffic to the local locality zone.
                                               properties:
+                                                failTrafficOnPanic:
+                                                  description: |-
+                                                    FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                    cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                    drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                    across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                    requests instead, applying backpressure to clients and giving the backend room to
+                                                    recover.
+                                                    Defaults to false.
+                                                  type: boolean
                                                 force:
                                                   description: |-
                                                     ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -18212,6 +18308,28 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          protocol:
+                                            default: Auto
+                                            description: |-
+                                              Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                              Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                  `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                  GRPCRoute.
+                                                - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                  with HTTP1 as the fallback when nothing is negotiated.
+                                                - HTTP1 otherwise.
+
+                                              Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                              the application, for example a backend that serves HTTP/1.1 traffic but only
+                                              accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                            enum:
+                                            - Auto
+                                            - HTTP1
+                                            - HTTP2
+                                            type: string
                                           requestBody:
                                             description: RequestBody defines the HTTP
                                               request body payload sent during health
@@ -18947,6 +19065,16 @@ spec:
                                           routing to prefer sending traffic to the
                                           local locality zone.
                                         properties:
+                                          failTrafficOnPanic:
+                                            description: |-
+                                              FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                              cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                              drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                              across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                              requests instead, applying backpressure to clients and giving the backend room to
+                                              recover.
+                                              Defaults to false.
+                                            type: boolean
                                           force:
                                             description: |-
                                               ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
