@@ -938,6 +938,32 @@ spec:
                                   type: boolean
                               type: object
                           type: object
+                        http1:
+                          description: |-
+                            HTTP1 provides HTTP/1 configuration for backend connections.
+                            When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                            this field takes precedence for backend (upstream) traffic.
+
+                            Behavior when targeting route kinds that do not use HTTP/1:
+                              - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                directly adds a Warning condition on the policy; the field is ignored.
+                              - Gateway / ListenerSet / sectionName targets: this field is silently
+                                ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                beneath that target; no warning is emitted.
+                              - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                access log/metrics, tracing providers): rejected at admission on their
+                                own BackendSettings via separate validation rules.
+                          properties:
+                            enableTrailers:
+                              description: EnableTrailers defines if HTTP/1 trailers
+                                should be proxied by Envoy.
+                              type: boolean
+                            preserveHeaderCase:
+                              description: |-
+                                PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                By default, Envoy will lowercase all the headers.
+                              type: boolean
+                          type: object
                         http2:
                           description: HTTP2 provides HTTP/2 configuration for backend
                             connections.
@@ -1352,6 +1378,16 @@ spec:
                                     routing to prefer sending traffic to the local
                                     locality zone.
                                   properties:
+                                    failTrafficOnPanic:
+                                      description: |-
+                                        FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                        cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                        drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                        across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                        requests instead, applying backpressure to clients and giving the backend room to
+                                        recover.
+                                        Defaults to false.
+                                      type: boolean
                                     force:
                                       description: |-
                                         ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -1828,6 +1864,9 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http1 is not supported for ExtProc backends, which always
+                      use gRPC.
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                   - message: http3 is only supported for route backends
                     rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                 maxItems: 16
@@ -2467,6 +2506,23 @@ spec:
                         If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).
 
                         Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
+                      type: string
+                    vmSharingScope:
+                      default: Policy
+                      description: |-
+                        VMSharingScope defines the scope within which this extension may share a Wasm VM.
+                        If Policy or unset, each policy's Wasm entry uses its own VM ID. The same
+                        entry may reuse its VM across routes; different entries do not share a VM.
+                        If Namespace, this extension may share a VM with other extensions that specify
+                        Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM
+                        compatibility using the Wasm code and VM configuration, including environment
+                        variables. Each Envoy worker has its own VM.
+
+                        Sharing a VM shares module-level state and VM failures. Plugin names and root
+                        IDs are not changed; matching plugin identities may also share a root context.
+                      enum:
+                      - Policy
+                      - Namespace
                       type: string
                   type: object
                   x-kubernetes-validations:

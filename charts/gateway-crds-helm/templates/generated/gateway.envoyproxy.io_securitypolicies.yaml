@@ -797,11 +797,18 @@ spec:
                           Envoy will return HTTP 413 and will not initiate the authorization process when buffer
                           reaches the number set in this field.
                           Note that this setting will have precedence over failOpen mode.
+                          Defaults to 32768 bytes (32KiB), which matches the default per-connection buffer limit.
                         format: int32
                         minimum: 1
                         type: integer
-                    required:
-                    - maxRequestBytes
+                      packAsBytes:
+                        description: |-
+                          PackAsBytes, when true, sends the request body to the external authorization
+                          service as raw bytes, populating the raw_body field of the HTTP request
+                          attribute context. Otherwise, the body is sent as a UTF-8 string in the body field.
+                          This field is only supported for gRPC external authorization services.
+                          Defaults to false.
+                        type: boolean
                     type: object
                   contextExtensions:
                     description: |-
@@ -1737,6 +1744,32 @@ spec:
                                     type: boolean
                                 type: object
                             type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
+                            type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
@@ -2154,6 +2187,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -2461,6 +2504,9 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: http1 is not supported for gRPC ExtAuth backends, which
+                        always use gRPC.
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                     - message: http3 is only supported for route backends
                       rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                   headersToExtAuth:
@@ -3322,6 +3368,32 @@ spec:
                                     type: boolean
                                 type: object
                             type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
+                            type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
@@ -3739,6 +3811,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -4167,6 +4249,9 @@ spec:
                 - message: only one of grpc or http can be specified
                   rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
                     has(self.http))
+                - message: packAsBytes can only be enabled when grpc is specified
+                  rule: '!has(self.bodyToExtAuth) || !has(self.bodyToExtAuth.packAsBytes)
+                    || !self.bodyToExtAuth.packAsBytes || has(self.grpc)'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
@@ -5241,6 +5326,32 @@ spec:
                                           type: boolean
                                       type: object
                                   type: object
+                                http1:
+                                  description: |-
+                                    HTTP1 provides HTTP/1 configuration for backend connections.
+                                    When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                    this field takes precedence for backend (upstream) traffic.
+
+                                    Behavior when targeting route kinds that do not use HTTP/1:
+                                      - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                        directly adds a Warning condition on the policy; the field is ignored.
+                                      - Gateway / ListenerSet / sectionName targets: this field is silently
+                                        ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                        beneath that target; no warning is emitted.
+                                      - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                        access log/metrics, tracing providers): rejected at admission on their
+                                        own BackendSettings via separate validation rules.
+                                  properties:
+                                    enableTrailers:
+                                      description: EnableTrailers defines if HTTP/1
+                                        trailers should be proxied by Envoy.
+                                      type: boolean
+                                    preserveHeaderCase:
+                                      description: |-
+                                        PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                        By default, Envoy will lowercase all the headers.
+                                      type: boolean
+                                  type: object
                                 http2:
                                   description: HTTP2 provides HTTP/2 configuration
                                     for backend connections.
@@ -5664,6 +5775,16 @@ spec:
                                             zone-aware routing to prefer sending traffic
                                             to the local locality zone.
                                           properties:
+                                            failTrafficOnPanic:
+                                              description: |-
+                                                FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                requests instead, applying backpressure to clients and giving the backend room to
+                                                recover.
+                                                Defaults to false.
+                                              type: boolean
                                             force:
                                               description: |-
                                                 ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -7296,6 +7417,32 @@ spec:
                                     type: boolean
                                 type: object
                             type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
+                            type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
@@ -7713,6 +7860,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior

@@ -655,6 +655,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 			MinSize: wrapperspb.UInt32(ptr.Deref(preferLocal.Force.MinEndpointsInZoneThreshold, 1)),
 		}
 	}
+	lbConfig.ZoneAwareLbConfig.FailTrafficOnPanic = ptr.Deref(preferLocal.FailTrafficOnPanic, false)
 	return lbConfig
 }
 
@@ -1182,8 +1183,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresCommonHTTPOptions := hasTimeoutArgs(args) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
-	requiresHTTP1Options := args.http1Settings != nil &&
-		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
+	requiresHTTP1Options := args.http1Settings != nil
 
 	// Always uses HTTP/3 unconditionally; Auto only reaches for it once the backend has
 	// advertised support through alt-svc, and falls back to TCP otherwise.
@@ -1719,10 +1719,6 @@ func buildHTTP1Settings(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 					},
 				},
 			}
-		}
-		if opts.HTTP10 != nil {
-			http1Opts.AcceptHttp_10 = true
-			http1Opts.DefaultHostForHttp_10 = ptr.Deref(opts.HTTP10.DefaultHost, "")
 		}
 	}
 

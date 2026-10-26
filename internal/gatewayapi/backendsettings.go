@@ -77,6 +77,8 @@ func translateExtServiceBackendSettings(policy *egv1a1.BackendSettings) (*ir.Tra
 		ret.HTTP2 = h2
 	}
 
+	ret.HTTP1 = translateBackendHTTP1Settings(policy.HTTP1)
+
 	var err error
 	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
 		return nil, err
@@ -428,6 +430,7 @@ func buildLoadBalancer(policy *egv1a1.BackendSettings) (*ir.LoadBalancer, error)
 		lb.PreferLocal = &ir.PreferLocalZone{
 			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
 			PercentageEnabled:     preferLocal.PercentageEnabled,
+			FailTrafficOnPanic:    preferLocal.FailTrafficOnPanic,
 		}
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{

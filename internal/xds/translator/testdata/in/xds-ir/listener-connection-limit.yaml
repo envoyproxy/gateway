@@ -27,6 +27,7 @@ http:
     limit:
       value: 5
       maxConnectionDuration: 300s
+      maxConnectionDurationJitter: 20
       maxRequestsPerConnection: 100
       maxStreamDuration: 200s
   path:
