@@ -25,6 +25,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -714,7 +715,7 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 
 func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
 	deprecatedFields := make(map[string]status.DeprecatedField)
-	validation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
+	deprecation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
 	return deprecatedFields
 }
 

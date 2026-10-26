@@ -26,6 +26,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -252,7 +253,7 @@ func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPol
 	if len(policy.Spec.Compression) > 0 {
 		deprecatedFields["spec.compression"] = deprecatedFieldScheduledForRemoval("spec.compressor")
 	}
-	egv1a1validation.AddDeprecatedLoadBalancerFields(deprecatedFields, "spec.loadBalancer", policy.Spec.LoadBalancer)
+	deprecation.AddDeprecatedLoadBalancerFields(deprecatedFields, "spec.loadBalancer", policy.Spec.LoadBalancer)
 	return deprecatedFields
 }
 

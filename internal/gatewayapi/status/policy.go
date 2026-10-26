@@ -19,7 +19,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 )
 
 const (
@@ -268,10 +268,10 @@ func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 
 // DeprecatedFieldsRemovalRelease is the release that removes the deprecated fields tracked in
 // https://github.com/envoyproxy/gateway/issues/10211.
-const DeprecatedFieldsRemovalRelease = validation.DeprecatedFieldsRemovalRelease
+const DeprecatedFieldsRemovalRelease = deprecation.DeprecatedFieldsRemovalRelease
 
 // DeprecatedField describes the replacement for a deprecated field.
-type DeprecatedField = validation.DeprecatedField
+type DeprecatedField = deprecation.DeprecatedField
 
 // buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
 func buildDeprecationWarningMessage(deprecatedFields map[string]DeprecatedField) string {
