@@ -120,3 +120,76 @@ func TestDefaultClusterSettings(t *testing.T) {
 	require.Equal(t, new(uint32(3)), got.HealthCheck.Active.UnhealthyThreshold)
 	require.Equal(t, new(uint32(1)), got.HealthCheck.Active.HealthyThreshold)
 }
+
+func TestValidateRateLimitServiceSettings(t *testing.T) {
+	testCases := []struct {
+		name        string
+		cs          *egv1a1.ClusterSettings
+		expectedErr string
+	}{
+		{
+			name: "nil",
+		},
+		{
+			name: "supported fields",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Active: &egv1a1.ActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeGRPC},
+				},
+				LoadBalancer: &egv1a1.LoadBalancer{Type: egv1a1.RoundRobinLoadBalancerType},
+				Timeout: &egv1a1.Timeout{
+					HTTP: &egv1a1.HTTPTimeout{MaxConnectionDuration: new(gwapiv1.Duration("30s"))},
+				},
+			},
+		},
+		{
+			name:        "http1",
+			cs:          &egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}},
+			expectedErr: "rateLimit.serviceSettings.http1: Forbidden",
+		},
+		{
+			name:        "http3",
+			cs:          &egv1a1.ClusterSettings{HTTP3: &egv1a1.BackendHTTP3Settings{}},
+			expectedErr: "rateLimit.serviceSettings.http3: Forbidden",
+		},
+		{
+			name:        "proxyProtocol",
+			cs:          &egv1a1.ClusterSettings{ProxyProtocol: &egv1a1.ProxyProtocol{Version: egv1a1.ProxyProtocolVersionV2}},
+			expectedErr: "rateLimit.serviceSettings.proxyProtocol: Forbidden",
+		},
+		{
+			name: "HTTP active health check",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Active: &egv1a1.ActiveHealthCheck{Type: egv1a1.ActiveHealthCheckerTypeHTTP},
+				},
+			},
+			expectedErr: "rateLimit.serviceSettings.healthCheck.active.type: Unsupported value: \"HTTP\"",
+		},
+		{
+			name: "HTTP request timeout",
+			cs: &egv1a1.ClusterSettings{
+				Timeout: &egv1a1.Timeout{
+					HTTP: &egv1a1.HTTPTimeout{RequestTimeout: new(gwapiv1.Duration("1s"))},
+				},
+			},
+			expectedErr: "rateLimit.serviceSettings.timeout.http.requestTimeout: Forbidden",
+		},
+		{
+			name:        "consistent hash load balancer",
+			cs:          &egv1a1.ClusterSettings{LoadBalancer: &egv1a1.LoadBalancer{Type: egv1a1.ConsistentHashLoadBalancerType}},
+			expectedErr: "rateLimit.serviceSettings.loadBalancer.type: Forbidden",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateRateLimitServiceSettings(field.NewPath("rateLimit", "serviceSettings"), tc.cs)
+			if tc.expectedErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tc.expectedErr)
+		})
+	}
+}

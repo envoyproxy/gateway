@@ -48,9 +48,12 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 		return fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
 	}
 
+	// Don't return on error: that would also drop the rate limit cluster and the client
+	// certificate, which rate limiting and remote Wasm need for every Gateway. Fall back to
+	// the default cluster settings instead.
 	rateLimitTraffic, err := t.translateRateLimitClusterSettings()
 	if err != nil {
-		return err
+		t.Logger.Error(err, "Ignoring rate limit cluster settings")
 	}
 
 	for _, xdsIR := range xdsIRs {

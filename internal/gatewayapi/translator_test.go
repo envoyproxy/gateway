@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -137,6 +138,19 @@ func TestTranslate(t *testing.T) {
 			name:           "sds-listener-invalid",
 			BackendEnabled: true,
 			SDSEnabled:     true,
+		},
+		{
+			// Settings that fail translation fall back to the defaults rather than dropping the
+			// rate limit cluster and the Envoy client certificate.
+			name:                    "ratelimit-cluster-settings-invalid",
+			EnvoyPatchPolicyEnabled: true,
+			BackendEnabled:          true,
+			RateLimitClusterSettings: &egv1a1.ClusterSettings{
+				// Passes the schema, but is out of range for Envoy.
+				Connection: &egv1a1.BackendConnection{
+					BufferLimit: new(k8sresource.MustParse("8Gi")),
+				},
+			},
 		},
 		{
 			name:                    "ratelimit-cluster-settings",

@@ -146,10 +146,44 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	// The CRD schema, including its CEL rules, is the single source of truth for
 	// ClusterSettings, so validate against it rather than duplicating each rule in Go.
 	if eg.RateLimit != nil {
-		if err := ValidateClusterSettings(field.NewPath("rateLimit", "serviceSettings"), eg.RateLimit.ServiceSettings); err != nil {
+		fldPath := field.NewPath("rateLimit", "serviceSettings")
+		if err := ValidateClusterSettings(fldPath, eg.RateLimit.ServiceSettings); err != nil {
+			return fmt.Errorf("invalid rateLimit.serviceSettings: %w", err)
+		}
+		if err := validateRateLimitServiceSettings(fldPath, eg.RateLimit.ServiceSettings); err != nil {
 			return fmt.Errorf("invalid rateLimit.serviceSettings: %w", err)
 		}
 	}
 
 	return nil
+}
+
+// validateRateLimitServiceSettings rejects the ClusterSettings fields that can't be used for the
+// rate limit service cluster: it is a gRPC (HTTP/2) service reached over mTLS, with no associated route.
+func validateRateLimitServiceSettings(fldPath *field.Path, cs *egv1a1.ClusterSettings) error {
+	if cs == nil {
+		return nil
+	}
+
+	var errs field.ErrorList
+	if cs.HTTP1 != nil {
+		errs = append(errs, field.Forbidden(fldPath.Child("http1"), "the rate limit service only accepts gRPC over mTLS"))
+	}
+	if cs.HTTP3 != nil {
+		errs = append(errs, field.Forbidden(fldPath.Child("http3"), "the rate limit service only accepts gRPC over mTLS"))
+	}
+	if cs.ProxyProtocol != nil {
+		errs = append(errs, field.Forbidden(fldPath.Child("proxyProtocol"), "the rate limit service only accepts gRPC over mTLS"))
+	}
+	if cs.HealthCheck != nil && cs.HealthCheck.Active != nil && cs.HealthCheck.Active.Type == egv1a1.ActiveHealthCheckerTypeHTTP {
+		errs = append(errs, field.NotSupported(fldPath.Child("healthCheck", "active", "type"), cs.HealthCheck.Active.Type,
+			[]egv1a1.ActiveHealthCheckerType{egv1a1.ActiveHealthCheckerTypeGRPC, egv1a1.ActiveHealthCheckerTypeTCP}))
+	}
+	if cs.Timeout != nil && cs.Timeout.HTTP != nil && cs.Timeout.HTTP.RequestTimeout != nil {
+		errs = append(errs, field.Forbidden(fldPath.Child("timeout", "http", "requestTimeout"), "use rateLimit.timeout instead"))
+	}
+	if cs.LoadBalancer != nil && cs.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType {
+		errs = append(errs, field.Forbidden(fldPath.Child("loadBalancer", "type"), "there is no route to compute the hash from"))
+	}
+	return errs.ToAggregate()
 }
