@@ -469,7 +469,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute/UDPRoute targets"},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
 		},
 		{
 			desc: "sectionName rejected for TLSRoute - targetRefs",
@@ -489,7 +489,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute/UDPRoute targets"},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
 		},
 		{
 			desc: "sectionName rejected for TCPRoute - targetRef",
@@ -507,7 +507,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute/UDPRoute targets"},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
 		},
 		{
 			desc: "sectionName rejected for TCPRoute - targetRefs",
@@ -527,7 +527,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute/UDPRoute targets"},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
 		},
 
 		// cors
