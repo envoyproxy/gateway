@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
-	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -426,6 +425,17 @@ func (t *Translator) addHCMToXDSListener(
 		}
 	}
 
+	// Set forward_proto_config to infer the x-forwarded-proto header from the PROXY protocol
+	// destination port. Requires the PROXY protocol listener filter to be enabled, which is added
+	// from the same irListener.ProxyProtocol field.
+	if irListener.ProxyProtocol != nil && irListener.ProxyProtocol.ForwardProto != nil {
+		fpc := irListener.ProxyProtocol.ForwardProto
+		mgr.ForwardProtoConfig = &hcmv3.ForwardProtoConfig{
+			HttpsDestinationPorts: fpc.HTTPSDestinationPorts,
+			HttpDestinationPorts:  fpc.HTTPDestinationPorts,
+		}
+	}
+
 	if requestID := ptr.Deref(irListener.Headers, ir.HeaderSettings{}).RequestID; requestID != nil {
 		switch *requestID {
 		case ir.RequestIDActionPreserveOrGenerate:
@@ -495,6 +505,11 @@ func (t *Translator) addHCMToXDSListener(
 		if connLimit.MaxConnectionDuration != nil {
 			mgr.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(connLimit.MaxConnectionDuration.Duration)
 			mgr.Http1SafeMaxConnectionDuration = !ptr.Deref(irListener.HTTP1, ir.HTTP1Settings{}).DisableSafeMaxConnectionDuration
+			if connLimit.MaxConnectionDurationJitter != nil {
+				mgr.CommonHttpProtocolOptions.MaxConnectionDurationJitter = &typev3.Percent{
+					Value: float64(*connLimit.MaxConnectionDurationJitter),
+				}
+			}
 		}
 		if connLimit.MaxRequestsPerConnection != nil {
 			mgr.CommonHttpProtocolOptions.MaxRequestsPerConnection = wrapperspb.UInt32(*connLimit.MaxRequestsPerConnection)
@@ -1247,6 +1262,21 @@ func buildXdsUDPListener(
 		return nil, err
 	}
 
+	var authorization *ir.Authorization
+	if udpListener.Route != nil {
+		authorization = udpListener.Route.Authorization
+	}
+	routeMatcher, err := buildUDPProxyMatcher(
+		&xdscore.TypedExtensionConfig{
+			Name:        "route",
+			TypedConfig: routeAny,
+		},
+		authorization,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
 	if error != nil {
 		return nil, error
@@ -1261,16 +1291,7 @@ func buildXdsUDPListener(
 		AccessLog:    al,
 		HashPolicies: udpProxyHashPolicies,
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
-			Matcher: &matcher.Matcher{
-				OnNoMatch: &matcher.Matcher_OnMatch{
-					OnMatch: &matcher.Matcher_OnMatch_Action{
-						Action: &xdscore.TypedExtensionConfig{
-							Name:        "route",
-							TypedConfig: routeAny,
-						},
-					},
-				},
-			},
+			Matcher: routeMatcher,
 		},
 	}
 	udpProxyAny, err := proto.ToAnyWithValidation(udpProxy)
@@ -1449,6 +1470,8 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 			clientCertDetails.Subject = &wrapperspb.BoolValue{Value: true}
 		case egv1a1.XFCCCertDataURI:
 			clientCertDetails.Uri = true
+		case egv1a1.XFCCCertDataIssuer:
+			clientCertDetails.Issuer = true
 		}
 	}
 

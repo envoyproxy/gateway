@@ -25,7 +25,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
-func translateTrafficFeatures(policy *egv1a1.BackendSettings) (*ir.TrafficFeatures, error) {
+// translateExtServiceBackendSettings converts the BackendSettings of a non-route backend, such as
+// the ext-service clusters of SecurityPolicy and EnvoyExtensionPolicy or the EnvoyProxy telemetry
+// sinks, into traffic features.
+func translateExtServiceBackendSettings(policy *egv1a1.BackendSettings) (*ir.TrafficFeatures, error) {
 	if policy == nil {
 		return nil, nil
 	}
@@ -73,6 +76,8 @@ func translateTrafficFeatures(policy *egv1a1.BackendSettings) (*ir.TrafficFeatur
 	} else {
 		ret.HTTP2 = h2
 	}
+
+	ret.HTTP1 = translateBackendHTTP1Settings(policy.HTTP1)
 
 	var err error
 	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
@@ -425,6 +430,7 @@ func buildLoadBalancer(policy *egv1a1.BackendSettings) (*ir.LoadBalancer, error)
 		lb.PreferLocal = &ir.PreferLocalZone{
 			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
 			PercentageEnabled:     preferLocal.PercentageEnabled,
+			FailTrafficOnPanic:    preferLocal.FailTrafficOnPanic,
 		}
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{
@@ -592,9 +598,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 
 	hc := policy.Active
 	irHC := &ir.ActiveHealthCheck{
-		InitialJitter:      hc.InitialJitter,
-		UnhealthyThreshold: hc.UnhealthyThreshold,
-		HealthyThreshold:   hc.HealthyThreshold,
+		InitialJitter:          hc.InitialJitter,
+		UnhealthyThreshold:     hc.UnhealthyThreshold,
+		HealthyThreshold:       hc.HealthyThreshold,
+		DisableConnectionReuse: hc.DisableConnectionReuse,
 	}
 
 	if hc.Timeout != nil {
