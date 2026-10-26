@@ -704,7 +704,11 @@ func (t *Translator) processSecurityPolicyForRoute(
 					skipped := filterAuthorizationForTCP(&parentCopy)
 					mergeParent = &parentCopy
 
-					denyErr := unsupportedTCPDenyRule(parentPolicy)
+					var denyErr error
+					if policy.Spec.Authorization == nil ||
+						len(policy.Spec.Authorization.Rules) == 0 {
+						denyErr = unsupportedTCPDenyRule(parentPolicy)
+					}
 
 					if len(skipped) > 0 || denyErr != nil {
 						var parentAncestorRef gwapiv1.ParentReference
