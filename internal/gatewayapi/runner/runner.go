@@ -12,7 +12,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"slices"
 	"sync"
 	"time"
 
@@ -21,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -68,9 +68,6 @@ type Runner struct {
 
 	// Key tracking for mark and sweep - avoids expensive LoadAll operations
 	keyCache *KeyCache
-
-	// Only the translation goroutine touches lastGatewayClassStatus; see storeGatewayClassStatus.
-	lastGatewayClassStatus map[types.NamespacedName]*gwapiv1.GatewayClassStatus
 
 	// Goroutine synchronization
 	done sync.WaitGroup
@@ -157,9 +154,8 @@ func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a
 
 func New(cfg *Config) *Runner {
 	return &Runner{
-		Config:                 *cfg,
-		keyCache:               newKeyCache(),
-		lastGatewayClassStatus: make(map[types.NamespacedName]*gwapiv1.GatewayClassStatus),
+		Config:   *cfg,
+		keyCache: newKeyCache(),
 	}
 }
 
@@ -426,7 +422,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				_, statusUpdateSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
 				defer statusUpdateSpan.End()
 				if result.GatewayClass != nil {
-					r.storeGatewayClassStatus(result.GatewayClass)
+					storeGatewayClassStatus(&r.ProviderResources.GatewayClassStatuses, result.GatewayClass)
 				}
 
 				// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
@@ -874,33 +870,27 @@ func storeStatus[K comparable, V any](
 	seen[key] = uid
 }
 
-// storeGatewayClassStatus stores the translated status of gc. The provider stores a GatewayClass
-// status as soon as it reconciles the class, so a translation of an older snapshot must not put
-// back the status of an older generation. The provider writes the map concurrently, so the check
-// and the store are one compare-and-swap.
-//
-// A status the runner stored itself is always replaced: the runner translates the generations of
-// a GatewayClass in order, so its own store holds a later generation only when it was computed
-// for an object deleted and created again under the same name.
-func (r *Runner) storeGatewayClassStatus(gc *gwapiv1.GatewayClass) {
-	m := &r.ProviderResources.GatewayClassStatuses
+// storeGatewayClassStatus stores the translated status of gc unless the stored status was
+// computed for another generation. The provider stores the status of a GatewayClass before it
+// publishes a snapshot with it, and generations only grow, so a stored status of another
+// generation is either newer than this translation or belongs to an object created again under
+// the same name after gc was deleted. The provider writes the map concurrently, so the check and
+// the store are one compare-and-swap.
+func storeGatewayClassStatus(m *watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus], gc *gwapiv1.GatewayClass) {
 	key := utils.NamespacedName(gc)
 	for {
 		stored, loaded := m.LoadOrStore(key, &gc.Status)
 		if !loaded {
-			break
+			return
 		}
-		newer := slices.ContainsFunc(stored.Conditions, func(c metav1.Condition) bool {
-			return c.ObservedGeneration > gc.Generation
-		})
-		if newer && !watchable.DeepEqual(stored, r.lastGatewayClassStatus[key]) {
+		accepted := meta.FindStatusCondition(stored.Conditions, string(gwapiv1.GatewayClassConditionStatusAccepted))
+		if accepted != nil && accepted.ObservedGeneration != gc.Generation {
 			return
 		}
 		if m.CompareAndSwap(key, stored, &gc.Status) {
-			break
+			return
 		}
 	}
-	r.lastGatewayClassStatus[key] = gc.Status.DeepCopy()
 }
 
 func newKeyCache() *KeyCache {
