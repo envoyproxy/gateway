@@ -15,7 +15,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,10 +61,8 @@ type UpdateHandler struct {
 	apiReader     client.Reader
 	updateChannel chan Update
 	ready         chan struct{}
-	// Only apply touches lastWritten and lastSwept, on the single Start goroutine, so they need no lock.
-	lastWritten map[string]lastWrite
-	lastSwept   time.Time
-	now         func() time.Time
+	// Only the Start goroutine touches lastWritten, so it needs no lock.
+	lastWritten map[types.UID]lastWrite
 }
 
 // lastWrite records a status write of the handler.
@@ -85,24 +82,24 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 		apiReader:     apiReader,
 		updateChannel: make(chan Update, 1000),
 		ready:         make(chan struct{}),
-		lastWritten:   make(map[string]lastWrite),
-		now:           time.Now,
+		lastWritten:   make(map[types.UID]lastWrite),
 	}
 
 	return u
 }
 
-// expireLastWrites drops records older than lastWriteTTL, at most once per lastWriteTTL. Most
-// records are never looked up again: an object's last update is usually a write.
-func (u *UpdateHandler) expireLastWrites() {
-	now := u.now()
-	if now.Sub(u.lastSwept) < lastWriteTTL {
-		return
-	}
-	u.lastSwept = now
-	for key, w := range u.lastWritten {
+// cacheMayLag reports whether obj, read from the cache, may not show this handler's last write of it yet.
+func (u *UpdateHandler) cacheMayLag(obj client.Object) bool {
+	last, ok := u.lastWritten[obj.GetUID()]
+	return ok && last.resourceVersion != obj.GetResourceVersion()
+}
+
+// expireLastWrites drops the records of writes older than lastWriteTTL. Most records are never
+// looked up again: an object's last update is usually a write.
+func (u *UpdateHandler) expireLastWrites(now time.Time) {
+	for uid, w := range u.lastWritten {
 		if now.Sub(w.at) >= lastWriteTTL {
-			delete(u.lastWritten, key)
+			delete(u.lastWritten, uid)
 		}
 	}
 }
@@ -115,14 +112,10 @@ func (u *UpdateHandler) apply(update Update) {
 	)
 	log := u.log.WithValues("name", update.NamespacedName.Name,
 		"namespace", update.NamespacedName.Namespace, "kind", objKind)
-	// Extension policy kinds are unstructured and may share a Kind across groups.
-	writeKey := schema.GroupKind{Group: obj.GetObjectKind().GroupVersionKind().Group, Kind: objKind}.String() +
-		"/" + update.NamespacedName.String()
 	defer func() {
 		updateDuration := time.Since(startTime)
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
-	u.expireLastWrites()
 
 	if err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
 		if kerrors.IsConflict(err) {
@@ -150,27 +143,15 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj := update.Mutator.Mutate(obj)
 
-		if last, ok := u.lastWritten[writeKey]; ok {
-			switch {
-			case last.resourceVersion == obj.GetResourceVersion():
-				delete(u.lastWritten, writeKey)
-			case isStatusEqual(obj, newObj):
-				// The cache may not have seen this handler's last write yet and still show a
-				// status the API server no longer has, so confirm against the server first. The
-				// record stays until the server agrees or a write succeeds, so that a retry after
-				// a conflict confirms again.
-				if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
-					if kerrors.IsNotFound(err) {
-						delete(u.lastWritten, writeKey)
-						return nil
-					}
-					return err
+		if isStatusEqual(obj, newObj) && u.cacheMayLag(obj) {
+			// The cache may still show a status the API server no longer has, so confirm against the server.
+			if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil
 				}
-				newObj = update.Mutator.Mutate(obj)
-				if isStatusEqual(obj, newObj) {
-					delete(u.lastWritten, writeKey)
-				}
+				return err
 			}
+			newObj = update.Mutator.Mutate(obj)
 		}
 
 		if isStatusEqual(obj, newObj) {
@@ -185,7 +166,7 @@ func (u *UpdateHandler) apply(update Update) {
 		if err := u.client.Status().Update(context.Background(), newObj); err != nil {
 			return err
 		}
-		u.lastWritten[writeKey] = lastWrite{resourceVersion: newObj.GetResourceVersion(), at: u.now()}
+		u.lastWritten[newObj.GetUID()] = lastWrite{resourceVersion: newObj.GetResourceVersion(), at: time.Now()}
 		return nil
 	}); err != nil {
 		log.Error(err, "unable to update status")
@@ -208,10 +189,15 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	// Enable Updaters to start sending updates to this handler.
 	close(u.ready)
 
+	ticker := time.NewTicker(lastWriteTTL)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
+		case now := <-ticker.C:
+			u.expireLastWrites(now)
 		case update := <-u.updateChannel:
 			u.log.Info("received a status update", "namespace", update.NamespacedName.Namespace,
 				"name", update.NamespacedName.Name, "kind", KindOf(update.Resource))

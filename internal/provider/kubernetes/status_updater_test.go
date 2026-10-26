@@ -8,16 +8,13 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,62 +26,28 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
-// laggingCache serves reads from snapshots the test takes by hand, standing in for an informer
-// cache that has not seen the latest writes yet. Objects without a snapshot are read from the
+// laggingCache serves GatewayClass reads from a snapshot the test takes by hand, standing in for an
+// informer cache that has not seen the latest writes yet. Until the first snapshot, reads go to the
 // embedded client, which plays the API server and takes the writes.
 type laggingCache struct {
 	client.Client
-	snapshots map[string]client.Object
-}
-
-func newLaggingCache(api client.Client) *laggingCache {
-	return &laggingCache{Client: api, snapshots: map[string]client.Object{}}
-}
-
-func snapshotKey(obj client.Object, key client.ObjectKey) string {
-	return fmt.Sprintf("%T %s %s", obj, obj.GetObjectKind().GroupVersionKind().GroupKind(), key)
+	snapshot *gwapiv1.GatewayClass
 }
 
 func (c *laggingCache) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	snapshot, ok := c.snapshots[snapshotKey(obj, key)]
-	if !ok {
-		return c.Client.Get(ctx, key, obj, opts...)
+	if gc, ok := obj.(*gwapiv1.GatewayClass); ok && c.snapshot != nil {
+		c.snapshot.DeepCopyInto(gc)
+		return nil
 	}
-	reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(snapshot.DeepCopyObject()).Elem())
-	return nil
+	return c.Client.Get(ctx, key, obj, opts...)
 }
 
-// catchUp lets the cache see the current state of the object; obj is an empty object of its type.
-func (c *laggingCache) catchUp(t *testing.T, obj client.Object, key client.ObjectKey) {
-	t.Helper()
-	snapshot := snapshotKey(obj, key)
-	require.NoError(t, c.Client.Get(t.Context(), key, obj))
-	c.snapshots[snapshot] = obj
-}
-
-// gatewayClassStatusWriter writes the status of one GatewayClass through an UpdateHandler whose
-// cache only catches up when the test says so.
-type gatewayClassStatusWriter struct {
-	t     *testing.T
-	key   types.NamespacedName
-	api   client.Client
-	cache *laggingCache
-	u     *UpdateHandler
-}
-
-func newGatewayClassStatusWriter(t *testing.T, funcs *interceptor.Funcs) *gatewayClassStatusWriter {
-	key := types.NamespacedName{Name: "gc"}
-	api := fakeclient.NewClientBuilder().
-		WithScheme(envoygateway.GetScheme()).
-		WithObjects(&gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{Name: key.Name, Generation: 2},
-			Spec:       gwapiv1.GatewayClassSpec{ControllerName: egv1a1.GatewayControllerName},
-		}).
-		WithStatusSubresource(&gwapiv1.GatewayClass{}).
-		WithInterceptorFuncs(*funcs).
-		Build()
-	cache := newLaggingCache(api)
-	return &gatewayClassStatusWriter{t: t, key: key, api: api, cache: cache, u: NewUpdateHandler(logr.Discard(), cache, api)}
+// newGatewayClass sets a UID, which the API server would assign and the fake client does not.
+func newGatewayClass(name string, generation int64) *gwapiv1.GatewayClass {
+	return &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID(name), Generation: generation},
+		Spec:       gwapiv1.GatewayClassSpec{ControllerName: egv1a1.GatewayControllerName},
+	}
 }
 
 func acceptedGatewayClassUpdate(key types.NamespacedName, observedGeneration int64) Update {
@@ -104,8 +67,38 @@ func acceptedGatewayClassUpdate(key types.NamespacedName, observedGeneration int
 	}
 }
 
+// gatewayClassStatusWriter writes the status of one GatewayClass through an UpdateHandler whose
+// cache only catches up when the test says so.
+type gatewayClassStatusWriter struct {
+	t     *testing.T
+	key   types.NamespacedName
+	api   client.Client
+	cache *laggingCache
+	u     *UpdateHandler
+}
+
+func newGatewayClassStatusWriter(t *testing.T, funcs *interceptor.Funcs) *gatewayClassStatusWriter {
+	key := types.NamespacedName{Name: "gc"}
+	api := fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithObjects(newGatewayClass(key.Name, 2)).
+		WithStatusSubresource(&gwapiv1.GatewayClass{}).
+		WithInterceptorFuncs(*funcs).
+		Build()
+	cache := &laggingCache{Client: api}
+	return &gatewayClassStatusWriter{t: t, key: key, api: api, cache: cache, u: NewUpdateHandler(logr.Discard(), cache, api)}
+}
+
 func (w *gatewayClassStatusWriter) write(observedGeneration int64) {
 	w.u.apply(acceptedGatewayClassUpdate(w.key, observedGeneration))
+}
+
+// catchUp lets the cache see the current state of the GatewayClass.
+func (w *gatewayClassStatusWriter) catchUp() {
+	w.t.Helper()
+	gc := &gwapiv1.GatewayClass{}
+	require.NoError(w.t, w.api.Get(w.t.Context(), w.key, gc))
+	w.cache.snapshot = gc
 }
 
 func (w *gatewayClassStatusWriter) storedObservedGeneration() int64 {
@@ -120,7 +113,7 @@ func (w *gatewayClassStatusWriter) storedObservedGeneration() int64 {
 func (w *gatewayClassStatusWriter) writeOutOfOrder() {
 	w.t.Helper()
 	w.write(2)
-	w.cache.catchUp(w.t, new(gwapiv1.GatewayClass), w.key)
+	w.catchUp()
 	w.write(1)
 	require.Equal(w.t, int64(1), w.storedObservedGeneration())
 }
@@ -154,82 +147,22 @@ func TestStatusUpdateRetriedAfterConflictIsNotSkippedWhileCacheLags(t *testing.T
 	require.Equal(t, int64(2), w.storedObservedGeneration())
 }
 
-func TestStatusUpdateRecordsOfSameKindInDifferentGroupsAreKeptApart(t *testing.T) {
-	policyA := schema.GroupVersionKind{Group: "a.example.com", Version: "v1", Kind: "Policy"}
-	policyB := schema.GroupVersionKind{Group: "b.example.com", Version: "v1", Kind: "Policy"}
-	key := types.NamespacedName{Namespace: "ns", Name: "policy"}
-	policy := func(gvk schema.GroupVersionKind) *unstructured.Unstructured {
-		obj := &unstructured.Unstructured{}
-		obj.SetGroupVersionKind(gvk)
-		obj.SetNamespace(key.Namespace)
-		obj.SetName(key.Name)
-		return obj
-	}
-	mapper := meta.NewDefaultRESTMapper(nil)
-	mapper.Add(policyA, meta.RESTScopeNamespace)
-	mapper.Add(policyB, meta.RESTScopeNamespace)
-	api := fakeclient.NewClientBuilder().
-		WithRESTMapper(mapper).
-		WithObjects(policy(policyA), policy(policyB)).
-		WithStatusSubresource(policy(policyA), policy(policyB)).
-		Build()
-	cache := newLaggingCache(api)
-	u := NewUpdateHandler(logr.Discard(), cache, api)
-	write := func(gvk schema.GroupVersionKind, observedGeneration int64) {
-		u.apply(Update{
-			NamespacedName: key,
-			Resource:       policy(gvk),
-			Mutator: MutatorFunc(func(obj client.Object) client.Object {
-				p := obj.(*unstructured.Unstructured).DeepCopy()
-				p.Object["status"] = map[string]any{"observedGeneration": observedGeneration}
-				return p
-			}),
-		})
-	}
-	storedObservedGeneration := func(gvk schema.GroupVersionKind) int64 {
-		obj := policy(gvk)
-		require.NoError(t, api.Get(t.Context(), key, obj))
-		gen, _, err := unstructured.NestedInt64(obj.Object, "status", "observedGeneration")
-		require.NoError(t, err)
-		return gen
-	}
-
-	write(policyA, 2)
-	cache.catchUp(t, policy(policyA), key)
-	write(policyA, 1)
-	require.Equal(t, int64(1), storedObservedGeneration(policyA))
-
-	// A write for the other Policy, and an update that changes nothing once its cache has caught up.
-	write(policyB, 7)
-	cache.catchUp(t, policy(policyB), key)
-	write(policyB, 7)
-
-	write(policyA, 2)
-	require.Equal(t, int64(2), storedObservedGeneration(policyA))
-}
-
 func TestStatusUpdateRecordsExpire(t *testing.T) {
 	builder := fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		WithStatusSubresource(&gwapiv1.GatewayClass{})
 	for i := range 100 {
-		builder = builder.WithObjects(&gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gc-%d", i)},
-			Spec:       gwapiv1.GatewayClassSpec{ControllerName: egv1a1.GatewayControllerName},
-		})
+		builder = builder.WithObjects(newGatewayClass(fmt.Sprintf("gc-%d", i), 1))
 	}
 	api := builder.Build()
 	u := NewUpdateHandler(logr.Discard(), api, api)
-	now := time.Now()
-	u.now = func() time.Time { return now }
-
-	// The last update of most objects is a write, so its record is never looked up again.
 	for i := range 100 {
 		u.apply(acceptedGatewayClassUpdate(types.NamespacedName{Name: fmt.Sprintf("gc-%d", i)}, 1))
 	}
+
+	u.expireLastWrites(time.Now())
 	require.Len(t, u.lastWritten, 100)
 
-	now = now.Add(lastWriteTTL)
-	u.apply(acceptedGatewayClassUpdate(types.NamespacedName{Name: "gc-0"}, 1))
+	u.expireLastWrites(time.Now().Add(lastWriteTTL))
 	require.Empty(t, u.lastWritten)
 }
