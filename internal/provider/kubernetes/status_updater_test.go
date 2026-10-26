@@ -8,12 +8,15 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,20 +28,37 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
-// laggingCache serves GatewayClass reads from a snapshot that the test advances by hand,
-// standing in for an informer cache that has not seen the latest writes yet. Writes go
-// straight to the embedded client, which plays the API server.
+// laggingCache serves reads from snapshots the test takes by hand, standing in for an informer
+// cache that has not seen the latest writes yet. Objects without a snapshot are read from the
+// embedded client, which plays the API server and takes the writes.
 type laggingCache struct {
 	client.Client
-	snapshot *gwapiv1.GatewayClass
+	snapshots map[string]client.Object
+}
+
+func newLaggingCache(api client.Client) *laggingCache {
+	return &laggingCache{Client: api, snapshots: map[string]client.Object{}}
+}
+
+func snapshotKey(obj client.Object, key client.ObjectKey) string {
+	return fmt.Sprintf("%T %s %s", obj, obj.GetObjectKind().GroupVersionKind().GroupKind(), key)
 }
 
 func (c *laggingCache) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	if c.snapshot == nil {
+	snapshot, ok := c.snapshots[snapshotKey(obj, key)]
+	if !ok {
 		return c.Client.Get(ctx, key, obj, opts...)
 	}
-	c.snapshot.DeepCopyInto(obj.(*gwapiv1.GatewayClass))
+	reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(snapshot.DeepCopyObject()).Elem())
 	return nil
+}
+
+// catchUp lets the cache see the current state of the object; obj is an empty object of its type.
+func (c *laggingCache) catchUp(t *testing.T, obj client.Object, key client.ObjectKey) {
+	t.Helper()
+	snapshot := snapshotKey(obj, key)
+	require.NoError(t, c.Client.Get(t.Context(), key, obj))
+	c.snapshots[snapshot] = obj
 }
 
 // gatewayClassStatusWriter writes the status of one GatewayClass through an UpdateHandler whose
@@ -62,7 +82,7 @@ func newGatewayClassStatusWriter(t *testing.T, funcs *interceptor.Funcs) *gatewa
 		WithStatusSubresource(&gwapiv1.GatewayClass{}).
 		WithInterceptorFuncs(*funcs).
 		Build()
-	cache := &laggingCache{Client: api}
+	cache := newLaggingCache(api)
 	return &gatewayClassStatusWriter{t: t, key: key, api: api, cache: cache, u: NewUpdateHandler(logr.Discard(), cache, api)}
 }
 
@@ -83,12 +103,6 @@ func (w *gatewayClassStatusWriter) write(observedGeneration int64) {
 	})
 }
 
-func (w *gatewayClassStatusWriter) catchUp() {
-	w.t.Helper()
-	w.cache.snapshot = &gwapiv1.GatewayClass{}
-	require.NoError(w.t, w.api.Get(w.t.Context(), w.key, w.cache.snapshot))
-}
-
 func (w *gatewayClassStatusWriter) storedObservedGeneration() int64 {
 	w.t.Helper()
 	gc := &gwapiv1.GatewayClass{}
@@ -101,7 +115,7 @@ func (w *gatewayClassStatusWriter) storedObservedGeneration() int64 {
 func (w *gatewayClassStatusWriter) writeOutOfOrder() {
 	w.t.Helper()
 	w.write(2)
-	w.catchUp()
+	w.cache.catchUp(w.t, new(gwapiv1.GatewayClass), w.key)
 	w.write(1)
 	require.Equal(w.t, int64(1), w.storedObservedGeneration())
 }
@@ -133,4 +147,58 @@ func TestStatusUpdateRetriedAfterConflictIsNotSkippedWhileCacheLags(t *testing.T
 	conflictOnce = true
 	w.write(2)
 	require.Equal(t, int64(2), w.storedObservedGeneration())
+}
+
+func TestStatusUpdateRecordsOfSameKindInDifferentGroupsAreKeptApart(t *testing.T) {
+	policyA := schema.GroupVersionKind{Group: "a.example.com", Version: "v1", Kind: "Policy"}
+	policyB := schema.GroupVersionKind{Group: "b.example.com", Version: "v1", Kind: "Policy"}
+	key := types.NamespacedName{Namespace: "ns", Name: "policy"}
+	policy := func(gvk schema.GroupVersionKind) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(gvk)
+		obj.SetNamespace(key.Namespace)
+		obj.SetName(key.Name)
+		return obj
+	}
+	mapper := meta.NewDefaultRESTMapper(nil)
+	mapper.Add(policyA, meta.RESTScopeNamespace)
+	mapper.Add(policyB, meta.RESTScopeNamespace)
+	api := fakeclient.NewClientBuilder().
+		WithRESTMapper(mapper).
+		WithObjects(policy(policyA), policy(policyB)).
+		WithStatusSubresource(policy(policyA), policy(policyB)).
+		Build()
+	cache := newLaggingCache(api)
+	u := NewUpdateHandler(logr.Discard(), cache, api)
+	write := func(gvk schema.GroupVersionKind, observedGeneration int64) {
+		u.apply(Update{
+			NamespacedName: key,
+			Resource:       policy(gvk),
+			Mutator: MutatorFunc(func(obj client.Object) client.Object {
+				p := obj.(*unstructured.Unstructured).DeepCopy()
+				p.Object["status"] = map[string]any{"observedGeneration": observedGeneration}
+				return p
+			}),
+		})
+	}
+	storedObservedGeneration := func(gvk schema.GroupVersionKind) int64 {
+		obj := policy(gvk)
+		require.NoError(t, api.Get(t.Context(), key, obj))
+		gen, _, err := unstructured.NestedInt64(obj.Object, "status", "observedGeneration")
+		require.NoError(t, err)
+		return gen
+	}
+
+	write(policyA, 2)
+	cache.catchUp(t, policy(policyA), key)
+	write(policyA, 1)
+	require.Equal(t, int64(1), storedObservedGeneration(policyA))
+
+	// A write for the other Policy, and an update that changes nothing once its cache has caught up.
+	write(policyB, 7)
+	cache.catchUp(t, policy(policyB), key)
+	write(policyB, 7)
+
+	write(policyA, 2)
+	require.Equal(t, int64(2), storedObservedGeneration(policyA))
 }
