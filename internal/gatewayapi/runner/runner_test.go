@@ -543,8 +543,7 @@ func acceptedGatewayClass(name string, uid types.UID, generation int64) *gwapiv1
 	}
 }
 
-func startGatewayClassStatusRunner(t *testing.T) *message.ProviderResources {
-	t.Helper()
+func TestTranslationOfOlderSnapshotKeepsNewerGatewayClassStatus(t *testing.T) {
 	pResources := new(message.ProviderResources)
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
@@ -560,56 +559,41 @@ func startGatewayClassStatusRunner(t *testing.T) *message.ProviderResources {
 		ExtensionManager:  extMgr,
 	})
 	require.NoError(t, r.Start(t.Context()))
-	return pResources
-}
 
-// translateGatewayClasses publishes a snapshot with the given GatewayClasses and waits until the
-// runner has translated it. The runner translates the GatewayClasses of a snapshot in order, so
-// once the status of the sentinel added last is stored, the others have been translated too.
-func translateGatewayClasses(t *testing.T, pResources *message.ProviderResources, sentinel string, classes ...*gwapiv1.GatewayClass) {
-	t.Helper()
-	snapshot := make(resource.ControllerResources, 0, len(classes)+1)
-	for _, gc := range append(classes, acceptedGatewayClass(sentinel, types.UID(sentinel), 1)) {
-		res := resource.NewResources()
-		res.GatewayClass = gc
-		snapshot = append(snapshot, res)
-	}
+	lagging := types.NamespacedName{Name: "a-lagging"}
+	sentinel := types.NamespacedName{Name: "z-sentinel"}
+	pResources.GatewayClassStatuses.Store(lagging, acceptedGatewayClassStatus(2))
+	snapshot := resource.ControllerResources{resource.NewResources(), resource.NewResources()}
+	snapshot[0].GatewayClass = acceptedGatewayClass(lagging.Name, "lagging-uid", 1)
+	snapshot[1].GatewayClass = acceptedGatewayClass(sentinel.Name, "sentinel-uid", 1)
 	pResources.GatewayAPIResources.Store(string(egv1a1.GatewayControllerName), &resource.ControllerResourcesContext{
 		Resources: &snapshot,
 		Context:   t.Context(),
 	})
+
+	// The runner translates the GatewayClasses of a snapshot in order, so once the sentinel's
+	// status is stored, the lagging GatewayClass has been translated too.
 	require.Eventually(t, func() bool {
-		_, ok := pResources.GatewayClassStatuses.Load(types.NamespacedName{Name: sentinel})
+		_, ok := pResources.GatewayClassStatuses.Load(sentinel)
 		return ok
 	}, 5*time.Second, 10*time.Millisecond)
-}
-
-func requireGatewayClassObservedGeneration(t *testing.T, pResources *message.ProviderResources, key types.NamespacedName, want int64) {
-	t.Helper()
-	got, ok := pResources.GatewayClassStatuses.Load(key)
+	got, ok := pResources.GatewayClassStatuses.Load(lagging)
 	require.True(t, ok)
-	require.Equal(t, want, got.Conditions[0].ObservedGeneration)
-}
-
-func TestTranslationOfOlderSnapshotKeepsNewerGatewayClassStatus(t *testing.T) {
-	pResources := startGatewayClassStatusRunner(t)
-	key := types.NamespacedName{Name: "a-lagging"}
-	pResources.GatewayClassStatuses.Store(key, acceptedGatewayClassStatus(2))
-
-	translateGatewayClasses(t, pResources, "z-sentinel", acceptedGatewayClass(key.Name, "uid", 1))
-	requireGatewayClassObservedGeneration(t, pResources, key, 2)
+	require.Equal(t, int64(2), got.Conditions[0].ObservedGeneration)
 }
 
 func TestTranslationOfRecreatedGatewayClassStoresItsOwnStatus(t *testing.T) {
-	pResources := startGatewayClassStatusRunner(t)
-	key := types.NamespacedName{Name: "a-recreated"}
+	r := New(&Config{ProviderResources: new(message.ProviderResources)})
+	key := types.NamespacedName{Name: "gc"}
+	statuses := &r.ProviderResources.GatewayClassStatuses
 	// The GatewayClass was deleted at generation 5 and created again under the same name. The
 	// provider has stored the status of the new object, and a translation of the old one is late.
-	pResources.GatewayClassStatuses.Store(key, acceptedGatewayClassStatus(1))
-	translateGatewayClasses(t, pResources, "z-sentinel-1", acceptedGatewayClass(key.Name, "old-uid", 5))
+	statuses.Store(key, acceptedGatewayClassStatus(1))
+	r.storeGatewayClassStatus(acceptedGatewayClass(key.Name, "old-uid", 5))
 
-	translateGatewayClasses(t, pResources, "z-sentinel-2", acceptedGatewayClass(key.Name, "new-uid", 1))
-	requireGatewayClassObservedGeneration(t, pResources, key, 1)
+	r.storeGatewayClassStatus(acceptedGatewayClass(key.Name, "new-uid", 1))
+	got, _ := statuses.Load(key)
+	require.Equal(t, int64(1), got.Conditions[0].ObservedGeneration)
 }
 
 func TestStoreGatewayClassStatusRacingProviderStore(t *testing.T) {
