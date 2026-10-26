@@ -243,6 +243,9 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.ExtensionStats = ExtensionHookStats{}
 
 	tCtx := new(types.ResourceVersionTable)
+	if t.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) && t.ExtensionManager == nil {
+		tCtx.EndpointContexts = make(types.EndpointContexts)
+	}
 
 	// xDS translation is done in a best-effort manner, so we collect all errors
 	// and return them at the end.
@@ -375,6 +378,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	}
 	phases.End()
 
+	finalizeEndpointContexts(tCtx)
 	return tCtx, errs
 }
 
@@ -1451,6 +1455,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {
 		return err
 	}
+	captureEndpointContext(tCtx, args, xdsCluster, xdsEndpoints)
 
 	// Add the secrets used in the cluster filters. (Currently only used for Credential Injector filter)
 	for _, secret := range result.secrets {

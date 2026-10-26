@@ -23,6 +23,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/ir"
 	labelsutil "github.com/envoyproxy/gateway/internal/utils/labels"
 )
@@ -47,19 +48,21 @@ type Resources struct {
 	// This serves as the lowest priority fallback when no GatewayClass or Gateway level EnvoyProxy is specified.
 	EnvoyProxyDefaultSpec *egv1a1.EnvoyProxySpec `json:"envoyProxyDefaultSpec,omitempty" yaml:"envoyProxyDefaultSpec,omitempty"`
 
-	GatewayClass            *gwapiv1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
-	Gateways                []*gwapiv1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
-	ListenerSets            []*gwapiv1.ListenerSet         `json:"listenerSets,omitempty" yaml:"listenerSets,omitempty"`
-	HTTPRoutes              []*gwapiv1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
-	GRPCRoutes              []*gwapiv1.GRPCRoute           `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
-	TLSRoutes               []*gwapiv1.TLSRoute            `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
-	TCPRoutes               []*gwapiv1.TCPRoute            `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
-	UDPRoutes               []*gwapiv1.UDPRoute            `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
-	ReferenceGrants         []*gwapiv1b1.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
-	Namespaces              []*corev1.Namespace            `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
-	Services                []*corev1.Service              `json:"services,omitempty" yaml:"services,omitempty"`
-	ServiceImports          []*mcsapiv1a1.ServiceImport    `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
-	EndpointSlices          []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
+	GatewayClass    *gwapiv1.GatewayClass        `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
+	Gateways        []*gwapiv1.Gateway           `json:"gateways,omitempty" yaml:"gateways,omitempty"`
+	ListenerSets    []*gwapiv1.ListenerSet       `json:"listenerSets,omitempty" yaml:"listenerSets,omitempty"`
+	HTTPRoutes      []*gwapiv1.HTTPRoute         `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
+	GRPCRoutes      []*gwapiv1.GRPCRoute         `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
+	TLSRoutes       []*gwapiv1.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
+	TCPRoutes       []*gwapiv1.TCPRoute          `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
+	UDPRoutes       []*gwapiv1.UDPRoute          `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
+	ReferenceGrants []*gwapiv1b1.ReferenceGrant  `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
+	Namespaces      []*corev1.Namespace          `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
+	Services        []*corev1.Service            `json:"services,omitempty" yaml:"services,omitempty"`
+	ServiceImports  []*mcsapiv1a1.ServiceImport  `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
+	EndpointSlices  []*discoveryv1.EndpointSlice `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
+	// EndpointSnapshots are immutable inputs captured by the opt-in endpoint fast path.
+	EndpointSnapshots       []endpoint.Snapshot            `json:"-" yaml:"-"`
 	Secrets                 []*corev1.Secret               `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	ConfigMaps              []*corev1.ConfigMap            `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
 	ExtensionRefFilters     []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`

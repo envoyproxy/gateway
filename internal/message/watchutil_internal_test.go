@@ -95,6 +95,23 @@ func TestCoalesceUpdatesReleasesDiscardedValues(t *testing.T) {
 	runtime.KeepAlive(updates)
 }
 
+func TestCoalesceUpdatesPreservesDeletionBeforeRecreation(t *testing.T) {
+	logger := logging.DefaultLogger(io.Discard, egv1a1.LogLevelError)
+	updates := []watchable.Update[string, int]{
+		{Key: "a", Value: 1},
+		{Key: "b", Value: 1},
+		{Key: "a", Delete: true},
+		{Key: "a", Value: 2},
+		{Key: "b", Value: 2},
+		{Key: "a", Value: 3},
+	}
+	require.Equal(t, []watchable.Update[string, int]{
+		{Key: "a", Delete: true}, {Key: "b", Value: 2}, {Key: "a", Value: 3},
+	}, CoalesceUpdatesPreservingDeletes(logger, updates))
+	require.Equal(t, []watchable.Update[string, int]{{Key: "a", Delete: true}},
+		CoalesceUpdatesPreservingDeletes(logger, []watchable.Update[string, int]{{Key: "a", Value: 1}, {Key: "a", Delete: true}}))
+}
+
 func BenchmarkCoalesceUpdates(b *testing.B) {
 	logger := logging.DefaultLogger(io.Discard, egv1a1.LogLevelError)
 	for _, count := range []int{1, 8, 32, 128} {

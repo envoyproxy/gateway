@@ -17,12 +17,16 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // ProviderResources message
 type ProviderResources struct {
+	// Endpoints shares versioned inputs between Kubernetes collection and xDS publication.
+	Endpoints endpoint.Source
+
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources with trace context.
 	GatewayAPIResources watchable.Map[string, *resource.ControllerResourcesContext]

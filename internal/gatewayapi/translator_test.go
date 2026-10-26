@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -559,6 +560,17 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
+			if testName(inputFile) == "endpoint-fast-path" {
+				for _, service := range resources.Services {
+					snapshot := endpoint.NewSnapshot(ir.EndpointBackend{
+						Kind:      resource.KindService,
+						Namespace: service.Namespace, Name: service.Name, UID: string(service.UID),
+					},
+						resources.GetEndpointSlicesForBackend(service.Namespace, service.Name, resource.KindService))
+					snapshot.Revision = 42
+					resources.EndpointSnapshots = append(resources.EndpointSnapshots, *snapshot)
+				}
+			}
 			got, _ := translator.Translate(t.Context(), resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 

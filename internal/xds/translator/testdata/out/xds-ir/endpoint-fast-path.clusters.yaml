@@ -1,0 +1,41 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: orders
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      host: orders
+      path: /healthz
+    interval: 3s
+    timeout: 1s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: orders
+  perConnectionBufferLimitBytes: 32768
+  transportSocketMatches:
+  - match:
+      name: orders/tls/0
+    name: orders/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext: {}
+        sni: orders
+  type: EDS

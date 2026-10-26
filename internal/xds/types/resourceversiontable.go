@@ -32,6 +32,7 @@ type ResourceVersionTable struct {
 	XdsResources
 	EnvoyPatchPolicyStatuses
 	GlobalResourceStatus
+	EndpointContexts EndpointContexts
 }
 
 // GetXdsResources retrieves the translated xds resources saved in the translator context.

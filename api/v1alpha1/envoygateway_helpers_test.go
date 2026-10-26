@@ -488,3 +488,12 @@ func TestEnvoyProxyPatchRuntimeFlag(t *testing.T) {
 		})
 	}
 }
+
+func TestEndpointFastPathRuntimeFlag(t *testing.T) {
+	var defaults *RuntimeFlags
+	assert.False(t, defaults.IsEnabled(EndpointFastPath))
+	enabled := &RuntimeFlags{Enabled: []RuntimeFlag{EndpointFastPath}}
+	assert.True(t, enabled.IsEnabled(EndpointFastPath))
+	enabled.Disabled = []RuntimeFlag{EndpointFastPath}
+	assert.False(t, enabled.IsEnabled(EndpointFastPath))
+}

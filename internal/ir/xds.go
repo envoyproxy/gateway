@@ -2497,6 +2497,8 @@ type DestinationSetting struct {
 	// This is used for websocket backends where upstream HTTP/2 negotiation would break upgrades.
 	ForceHTTP1Upstream bool                   `json:"forceHTTP1Upstream,omitempty" yaml:"forceHTTP1Upstream,omitempty"`
 	Endpoints          []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	// EndpointSource identifies the immutable provider inputs used for these endpoints.
+	EndpointSource *EndpointSource `json:"endpointSource,omitempty" yaml:"endpointSource,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.

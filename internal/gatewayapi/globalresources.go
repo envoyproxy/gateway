@@ -90,15 +90,14 @@ func (t *Translator) processRateLimitServiceCluster(resources *resource.Resource
 		return nil
 	}
 
-	endpointSlices := resources.GetEndpointSlicesForBackend(
-		t.ControllerNamespace, rateLimitServiceName, resource.KindService)
-	endpoints, addressType := getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, servicePort.Protocol)
+	endpoints, addressType, source := t.serviceEndpoints(service, resource.KindService, servicePort.Name, servicePort.Protocol)
 	setting := &ir.DestinationSetting{
-		Name:        "ratelimit_cluster/backend/-1",
-		Protocol:    ir.GRPC,
-		Endpoints:   endpoints,
-		AddressType: addressType,
-		Metadata:    nil,
+		Name:           "ratelimit_cluster/backend/-1",
+		Protocol:       ir.GRPC,
+		Endpoints:      endpoints,
+		EndpointSource: source,
+		AddressType:    addressType,
+		Metadata:       nil,
 	}
 	return &ir.RouteDestination{
 		Name:     "ratelimit_cluster",
