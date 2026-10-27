@@ -8,6 +8,7 @@ package translator
 import (
 	"cmp"
 	"errors"
+	"maps"
 	"slices"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -39,7 +40,12 @@ func patchExtensionBackendMetadata(route *routev3.Route, irRoute *ir.HTTPRoute) 
 	route.Metadata.FilterMetadata[extensionBackendsMetadataNamespace] = bindings
 	// Lua's route:metadata() reads the namespace matching its filter name.
 	for slot := range irRoute.EnvoyExtensions.Luas {
-		route.Metadata.FilterMetadata[luaFilterName(slot)] = bindings
+		name := luaFilterName(slot)
+		existing := route.Metadata.FilterMetadata[name].GetFields()
+		fields := make(map[string]*structpb.Value, len(existing)+len(bindings.Fields))
+		maps.Copy(fields, existing)
+		maps.Copy(fields, bindings.Fields)
+		route.Metadata.FilterMetadata[name] = &structpb.Struct{Fields: fields}
 	}
 }
 

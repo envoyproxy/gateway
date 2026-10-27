@@ -47,6 +47,62 @@ func TestExtensionBackendMetadata(t *testing.T) {
 	}
 }
 
+func TestExtensionBackendMetadataMerge(t *testing.T) {
+	first := &structpb.Struct{Fields: map[string]*structpb.Value{
+		"setting":  structpb.NewStringValue("first"),
+		"resolver": structpb.NewStringValue("old-cluster"),
+	}}
+	second := &structpb.Struct{Fields: map[string]*structpb.Value{
+		"setting": structpb.NewStringValue("second"),
+	}}
+	unrelated := &structpb.Struct{Fields: map[string]*structpb.Value{
+		"other": structpb.NewStringValue("unchanged"),
+	}}
+	route := &routev3.Route{Metadata: &corev3.Metadata{FilterMetadata: map[string]*structpb.Struct{
+		luaFilterName(0): first,
+		luaFilterName(1): second,
+		luaFilterName(2): {},
+		"unrelated":      unrelated,
+	}}}
+	irRoute := &ir.HTTPRoute{EnvoyExtensions: &ir.EnvoyExtensionFeatures{
+		Backends: map[string]string{"resolver": "new-cluster"},
+		Luas:     []ir.Lua{{}, {}, {}, {}},
+	}}
+
+	patchExtensionBackendMetadata(route, irRoute)
+
+	metadata := route.Metadata.FilterMetadata
+	bindings := metadata[extensionBackendsMetadataNamespace]
+	require.Equal(t, map[string]*structpb.Value{"resolver": structpb.NewStringValue("new-cluster")}, bindings.Fields)
+	for slot := range irRoute.EnvoyExtensions.Luas {
+		require.Equal(t, "new-cluster", metadata[luaFilterName(slot)].Fields["resolver"].GetStringValue())
+	}
+	require.Equal(t, "first", metadata[luaFilterName(0)].Fields["setting"].GetStringValue())
+	require.Equal(t, "second", metadata[luaFilterName(1)].Fields["setting"].GetStringValue())
+	for _, slot := range []int{2, 3} {
+		require.Equal(t, bindings, metadata[luaFilterName(slot)])
+	}
+	require.Same(t, unrelated, metadata["unrelated"])
+
+	// Merging must not modify the original metadata structs or their field maps.
+	require.Equal(t, "old-cluster", first.Fields["resolver"].GetStringValue())
+	require.NotContains(t, second.Fields, "resolver")
+
+	// Each Lua namespace must have its own map, independent of the shared bindings.
+	for slot := range irRoute.EnvoyExtensions.Luas {
+		name := luaFilterName(slot)
+		metadata[name].Fields["added"] = structpb.NewStringValue("only-this-slot")
+		for other, value := range metadata {
+			if other != name {
+				require.NotContains(t, value.Fields, "added")
+			}
+		}
+		require.NotContains(t, first.Fields, "added")
+		require.NotContains(t, second.Fields, "added")
+		delete(metadata[name].Fields, "added")
+	}
+}
+
 func TestExtensionBackendSDS(t *testing.T) {
 	x := requireXdsIRFromInputTestData(t, "testdata/in/xds-ir/extension-backends.yaml")
 	tls := x.ExtensionBackends[1].Settings[0].TLS
