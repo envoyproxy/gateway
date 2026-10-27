@@ -236,11 +236,10 @@ func validateHostname(hostname, typeName string, runningOnHost bool) *status.Rou
 			status.RouteReasonInvalidAddress,
 		)
 	}
-	// Host mode is a dev configuration, so we do not enforce domain rules.
-	// Doing so would interfere with docker hostnames (e.g. "jaeger") or literal IPs.
-	if !runningOnHost && len(strings.Split(hostname, ".")) < 2 {
+	// Localhost is only allowed with Host infrastructure.
+	if !runningOnHost && hostnameToValidate == "localhost" {
 		return status.NewRouteStatusError(
-			fmt.Errorf("hostname %s should be a domain with at least two segments separated by dots", hostname),
+			fmt.Errorf("hostname %s is only supported when using the Host infrastructure", hostname),
 			status.RouteReasonInvalidAddress,
 		)
 	}

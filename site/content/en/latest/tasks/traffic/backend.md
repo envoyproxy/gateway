@@ -32,12 +32,28 @@ The Backend API is currently supported only in the following BackendReferences:
 The Backend API supports attachment the following policies:
 - [Backend TLS Policy][]
 
-Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range and the localhost hostname are forbidden.
+Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range and the `localhost` hostname (including `localhost.`) are forbidden unless the Host infrastructure provider is used.
 
 Envoy Gateway does not manage the lifecycle of unix domain sockets referenced by the Backend resource. Envoy Gateway admins are responsible for creating and mounting the sockets into the envoy proxy pod. The latter can be achieved by patching the envoy deployment using the [EnvoyProxy][] resource.
 
 Envoy Gateway does not resolve DNS for FQDN endpoints and defers this responsibility to Envoy. When targeting a Kubernetes `Service` using a FQDN endpoint, Envoy will not consider Kubernetes `Endpoint` information (such as zone, draining status, specific pod IP).
 As a result, features like load balancing, session persistence, draining and zone aware routing may not work as expected. When targeting a Kubernetes `Service`, consider using the `KubernetesService` endpoint type.
+
+Single-label DNS names such as `ml-service` are also accepted:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-short-dns
+spec:
+  endpoints:
+    - fqdn:
+        hostname: ml-service
+        port: 8080
+```
+
+Short names are resolved by Envoy using the DNS configuration of the Envoy proxy pods (e.g. search domains), not the namespace of the Backend resource. When the proxy pods run in a different namespace than the target Service, configure an explicit search domain via `dnsConfig` on the proxy pods using an [EnvoyProxy][] deployment patch. Allowing short names changes hostname validation only. DNS resolution does not by itself replace the HTTP `Host` header or TLS SNI with the canonical DNS target; configure the appropriate hostname and certificate validation for the upstream.
 
 ## Kubernetes Service Backends
 

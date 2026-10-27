@@ -31,10 +31,9 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			runningOnHost: false,
 		},
 		{
-			name:          "single label not ok when in k8s",
-			hostname:      "otel-tui",
+			name:          "single label ok when in k8s",
+			hostname:      "ml-service",
 			runningOnHost: false,
-			expectedErr:   "hostname otel-tui should be a domain with at least two segments separated by dots",
 		},
 		{
 			name:          "single label ok when running on host",
@@ -45,6 +44,52 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			name:          "IP not ok in any case",
 			hostname:      "127.0.0.1",
 			runningOnHost: true,
+			expectedErr:   "hostname 127.0.0.1 is an IP address",
+		},
+		{
+			name:          "localhost not ok when in k8s",
+			hostname:      "localhost",
+			runningOnHost: false,
+			expectedErr:   "hostname localhost is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "absolute localhost not ok when in k8s",
+			hostname:      "localhost.",
+			runningOnHost: false,
+			expectedErr:   "hostname localhost. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost ok when running on host",
+			hostname:      "localhost",
+			runningOnHost: true,
+		},
+		{
+			name:          "absolute localhost ok when running on host",
+			hostname:      "localhost.",
+			runningOnHost: true,
+		},
+		{
+			name:          "underscore not ok when in k8s",
+			hostname:      "bad_name",
+			runningOnHost: false,
+			expectedErr:   "hostname bad_name is not a valid hostname",
+		},
+		{
+			name:          "empty not ok when in k8s",
+			hostname:      "",
+			runningOnHost: false,
+			expectedErr:   "hostname  is not a valid hostname",
+		},
+		{
+			name:          "wildcard not ok when in k8s",
+			hostname:      "*.foo.com",
+			runningOnHost: false,
+			expectedErr:   "hostname *.foo.com is not a valid hostname",
+		},
+		{
+			name:          "IP not ok when in k8s",
+			hostname:      "127.0.0.1",
+			runningOnHost: false,
 			expectedErr:   "hostname 127.0.0.1 is an IP address",
 		},
 	}
