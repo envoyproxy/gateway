@@ -292,6 +292,9 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 
 	if len(eg.ExtensionManagers) > 0 {
 		names := make(map[string]struct{})
+		// The Secret hook calls only the extension that registered a secret kind, and certificate
+		// refs carry no version, so a group and kind may be registered by one extension only.
+		secretKindOwners := make(map[string]string)
 		for i := range eg.ExtensionManagers {
 			em := &eg.ExtensionManagers[i]
 			if em.Name == "" {
@@ -303,6 +306,13 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 			names[em.Name] = struct{}{}
 			if err := validateEnvoyGatewayExtensionManager(em); err != nil {
 				return fmt.Errorf("extension manager %q: %w", em.Name, err)
+			}
+			for _, rsrc := range em.SecretResources {
+				groupKind := rsrc.Group + "/" + rsrc.Kind
+				if owner, exists := secretKindOwners[groupKind]; exists && owner != em.Name {
+					return fmt.Errorf("extension manager %q: secret kind %s is already registered by %q", em.Name, groupKind, owner)
+				}
+				secretKindOwners[groupKind] = em.Name
 			}
 		}
 		return nil
