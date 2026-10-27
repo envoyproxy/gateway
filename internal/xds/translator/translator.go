@@ -119,6 +119,10 @@ type Translator struct {
 	// ControllerNamespace is the namespace of the Gateway API controller
 	ControllerNamespace string
 
+	// ProxyInfraName and ProxyInfraNamespace identify the data plane the xDS IR is translated for.
+	ProxyInfraName      string
+	ProxyInfraNamespace string
+
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings
@@ -528,7 +532,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// closed below rather than emitted without a certificate, which Envoy would reject along with
 		// every other filter chain sharing its port. Listeners without extension certificates are
 		// never affected here.
-		certResolutions, resolveErr := t.resolveExtensionCertificates(httpListener.TLS, httpListener.Metadata)
+		certResolutions, resolveErr := t.resolveExtensionCertificates(httpListener.TLS)
 		if resolveErr != nil {
 			errs = errors.Join(errs, resolveErr)
 			continue
@@ -1089,7 +1093,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	var unresolvedListeners []*ir.TCPListener
 	for _, tcpListener := range tcpListeners {
 		// Resolve extension-provided certificates; close the listener below if none resolved.
-		certResolutions, resolveErr := t.resolveExtensionCertificates(tcpListener.TLS, tcpListener.Metadata)
+		certResolutions, resolveErr := t.resolveExtensionCertificates(tcpListener.TLS)
 		if resolveErr != nil {
 			errs = errors.Join(errs, resolveErr)
 			continue

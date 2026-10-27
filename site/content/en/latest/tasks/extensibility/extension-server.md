@@ -115,8 +115,8 @@ The hooks are executed in the following order during xDS translation:
 #### Secret Hook (`ResolveSecretHook`)
 
 - **When called**: For each listener certificate that references a kind registered under `secretResources`
-- **Input**: The referenced resource (`secret_resource`), and the namespace and name of the Gateway the listener
-  belongs to (`gateway_namespace`, `gateway_name`)
+- **Input**: The referenced resource (`secret_resource`), and the name and namespace of the data plane the listener
+  is translated for (`proxy`)
 - **Output**: How Envoy obtains the secret (`sds_secret_config`), or a failure reason when it cannot be resolved
   yet (`failure_reason`, `failure_message`). `sds_secret_config` must have a name. Its `sds_config` may be left
   unset when the data plane resolves the name itself. A response with neither is treated as unresolved.

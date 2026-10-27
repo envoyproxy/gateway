@@ -81,8 +81,9 @@ type SecretContext struct {
 	// Secret is the resource that was referenced.
 	Secret *unstructured.Unstructured
 
-	GatewayNamespace string
-	GatewayName      string
+	// ProxyInfraName and ProxyInfraNamespace identify the data plane the listener is translated for.
+	ProxyInfraName      string
+	ProxyInfraNamespace string
 }
 
 // SecretResolution is how Envoy should obtain one secret.

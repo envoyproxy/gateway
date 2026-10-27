@@ -208,9 +208,11 @@ func (h *XDSHook) ResolveSecretHook(secretCtx *types.SecretContext) (*types.Secr
 	resp, err := h.grpcClient.ResolveSecret(ctx,
 		&extension.ResolveSecretRequest{
 			SecretContext: &extension.SecretExtensionContext{
-				SecretResource:   secretBytes[0],
-				GatewayNamespace: secretCtx.GatewayNamespace,
-				GatewayName:      secretCtx.GatewayName,
+				SecretResource: secretBytes[0],
+				Proxy: &extension.ProxyInfra{
+					Name:      secretCtx.ProxyInfraName,
+					Namespace: secretCtx.ProxyInfraNamespace,
+				},
 			},
 		})
 	if err != nil {

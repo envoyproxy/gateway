@@ -77,9 +77,14 @@ message SecretExtensionContext {
     // The secret resource that was referenced.
     ExtensionResource secret_resource = 1;
 
-    // Namespace and name of the Gateway owning the listener.
-    string gateway_namespace = 2;
-    string gateway_name = 3;
+    // The data plane the listener is translated for.
+    ProxyInfra proxy = 2;
+}
+
+// ProxyInfra identifies the data plane by name and namespace.
+message ProxyInfra {
+    string name = 1;
+    string namespace = 2;
 }
 
 

@@ -339,6 +339,8 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			// New directory is just to keep them separate and easy to understand
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
+				ProxyInfraName:      "team-a/web",
+				ProxyInfraNamespace: "envoy-gateway-system",
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},

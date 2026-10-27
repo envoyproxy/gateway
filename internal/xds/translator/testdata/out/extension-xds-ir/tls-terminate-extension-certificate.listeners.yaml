@@ -22,7 +22,7 @@
           - h2
           - http/1.1
           tlsCertificateSdsSecretConfigs:
-          - name: team-a/db/db-cert
+          - name: envoy-gateway-system/team-a/web/db-cert
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   - filterChainMatch:
@@ -44,7 +44,7 @@
           - h2
           - http/1.1
           tlsCertificateSdsSecretConfigs:
-          - name: team-a/db/db-cert
+          - name: envoy-gateway-system/team-a/web/db-cert
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   listenerFilters:

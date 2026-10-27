@@ -285,7 +285,7 @@ func Test_resolveExtensionCertificates(t *testing.T) {
 				tr.ExtensionManager = &extMgr
 			}
 
-			resolutions, err := tr.resolveExtensionCertificates(tt.tlsConfig, nil)
+			resolutions, err := tr.resolveExtensionCertificates(tt.tlsConfig)
 			if tt.wantErr != "" {
 				assert.ErrorContains(t, err, tt.wantErr)
 				return

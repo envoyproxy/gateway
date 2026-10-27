@@ -1510,7 +1510,6 @@ func buildRequestIDExtension(requestID *ir.RequestIDExtensionAction) *hcmv3.Requ
 // so a listener without any returns an empty result and no extension is called.
 func (t *Translator) resolveExtensionCertificates(
 	tlsConfig *ir.TLSConfig,
-	listenerMeta *ir.ResourceMetadata,
 ) (map[string]*tlsv3.SdsSecretConfig, error) {
 	if tlsConfig == nil {
 		return nil, nil
@@ -1540,10 +1539,10 @@ func (t *Translator) resolveExtensionCertificates(
 			return nil, fmt.Errorf("certificate %q references extension resource %q, which is not in the IR",
 				cert.Name, cert.ExtensionRef.Name)
 		}
-		secretCtx := &extensionTypes.SecretContext{Secret: secret}
-		if listenerMeta != nil {
-			secretCtx.GatewayNamespace = listenerMeta.Namespace
-			secretCtx.GatewayName = listenerMeta.Name
+		secretCtx := &extensionTypes.SecretContext{
+			Secret:              secret,
+			ProxyInfraName:      t.ProxyInfraName,
+			ProxyInfraNamespace: t.ProxyInfraNamespace,
 		}
 
 		resolution, err := hookClient.ResolveSecretHook(secretCtx)
