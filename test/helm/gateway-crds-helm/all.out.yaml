@@ -27482,10 +27482,13 @@ spec:
 
                   Envoy rejects a request as soon as it knows the body is too large: from the Content-Length header
                   when present, otherwise once the bytes received exceed the limit while the body is streamed to the
-                  backend. A request rejected on its Content-Length header always gets an HTTP 413 Content Too Large
-                  response. A streamed body gets a 413 only if no response headers have been sent to the client yet.
-                  Otherwise the response can no longer be replaced, so Envoy resets the stream instead, which closes
-                  an HTTP/1.1 connection.
+                  backend. The client gets a rejection reply if no response headers have been sent to it yet, which is
+                  always the case for a request rejected on its Content-Length header. Otherwise the response can no
+                  longer be replaced, so Envoy resets the stream instead, which closes an HTTP/1.1 connection.
+
+                  The rejection reply is an HTTP 413 Content Too Large response, except for gRPC requests (content type
+                  application/grpc), such as those on a GRPCRoute. Envoy answers those with a trailers-only gRPC
+                  response instead: HTTP status 200 with grpc-status 2 (UNKNOWN), the gRPC code Envoy maps HTTP 413 to.
 
                   Nothing is buffered, so unlike requestBuffer with mode BufferAndLimit it costs no memory and leaves
                   HTTP upgrades such as WebSocket enabled.
@@ -27495,7 +27498,7 @@ spec:
                   data, so a long-lived WebSocket or gRPC stream whose payload grows past the limit is terminated as
                   well. By then a WebSocket has always received its 101 Switching Protocols response, and a gRPC stream
                   has often received its response headers, so the client sees a reset stream or a closed connection
-                  rather than a 413. Do not set it on routes that carry such traffic.
+                  rather than a rejection reply. Do not set it on routes that carry such traffic.
 
                   Requires Envoy proxy v1.40 or later.
                 properties:
@@ -27508,8 +27511,8 @@ spec:
                     - type: string
                     description: |-
                       MaxSize is the maximum request body size. A request whose body is larger is rejected; see
-                      requestBodyLimit for when the client receives HTTP 413 Content Too Large. When the Content-Length
-                      header announces a larger body, the request is rejected with a 413 before any body byte is read.
+                      requestBodyLimit for what the client receives. When the Content-Length header announces a larger
+                      body, the request is rejected before any body byte is read.
 
                       Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
                     x-kubernetes-int-or-string: true
