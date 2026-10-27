@@ -583,6 +583,23 @@ explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
 
 Each cookie holds a different value, so all the resulting names must be distinct.
 
+A browser only accepts a cookie whose name starts with `__Host-` when the cookie is set with
+`Path=/` and without a `Domain`, which stops another host on the same registrable domain from
+planting or shadowing it. The nonce and code verifier cookies are scoped to the `redirectPath`
+so a flow that never completes does not leave them behind on every request, and that path would
+make the browser drop a `__Host-` cookie. When either of those two cookies is named with the
+prefix, its path is set to `/` instead:
+
+```yaml
+  oidc:
+    cookieNames:
+      oauthNonce: "__Host-nonce"
+      codeVerifier: "__Host-code-verifier"
+```
+
+A `__Host-` cookie can't carry a `Domain`, so leave `cookieDomain` unset when a cookie name
+uses the prefix.
+
 ## Logout
 
 Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
