@@ -536,8 +536,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"compression is not allowed when targeting a backend",
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
-				"requestBuffer is not allowed when targeting a backend",
-				"requestBodyLimit is not allowed when targeting a backend",
+				"requestBuffer and requestBodyLimit are not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
@@ -584,8 +583,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"compressor is not allowed when targeting a backend",
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
-				"requestBuffer is not allowed when targeting a backend",
-				"requestBodyLimit is not allowed when targeting a backend",
+				"requestBuffer and requestBodyLimit are not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
@@ -634,13 +632,31 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"compression is not allowed when targeting a backend",
 				"responseOverride is not allowed when targeting a backend",
 				"httpUpgrade is not allowed when targeting a backend",
-				"requestBuffer is not allowed when targeting a backend",
-				"requestBodyLimit is not allowed when targeting a backend",
+				"requestBuffer and requestBodyLimit are not allowed when targeting a backend",
 				"telemetry is not allowed when targeting a backend",
 				"routingType is not allowed when targeting a backend",
 				"retry is not allowed when targeting a backend",
 				"bandwidthLimit is not allowed when targeting a backend",
 			},
+		},
+		{
+			desc: "service targetRef rejects requestBodyLimit alone",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""),
+								Kind:  gwapiv1.Kind("Service"),
+								Name:  gwapiv1.ObjectName("my-svc"),
+							},
+						},
+					},
+					MergeType:        new(egv1a1.StrategicMerge),
+					RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10Mi")},
+				}
+			},
+			wantErrors: []string{"requestBuffer and requestBodyLimit are not allowed when targeting a backend"},
 		},
 		{
 			desc: "service targetRef with sectionName rejected",

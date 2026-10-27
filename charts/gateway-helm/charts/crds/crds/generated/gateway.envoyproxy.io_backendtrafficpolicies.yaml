@@ -4116,14 +4116,12 @@ spec:
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.httpUpgrade)'
-            - message: requestBuffer is not allowed when targeting a backend
+            - message: requestBuffer and requestBodyLimit are not allowed when targeting
+                a backend
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
-                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.requestBuffer)'
-            - message: requestBodyLimit is not allowed when targeting a backend
-              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
-                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
-                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.requestBodyLimit)'
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || (!has(self.requestBuffer)
+                && !has(self.requestBodyLimit))'
             - message: telemetry is not allowed when targeting a backend
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
