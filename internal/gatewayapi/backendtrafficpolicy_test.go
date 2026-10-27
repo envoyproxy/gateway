@@ -2617,6 +2617,71 @@ func TestBuildBTPClusterSettingsIndexCrossNamespace(t *testing.T) {
 	require.True(t, got)
 }
 
+func TestBtpSpecHasClusterScopedFieldsForRoute(t *testing.T) {
+	http1Only := &egv1a1.BackendTrafficPolicySpec{
+		BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}},
+	}
+	http1AndTimeout := &egv1a1.BackendTrafficPolicySpec{
+		BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{
+			HTTP1:   &egv1a1.BackendHTTP1Settings{},
+			Timeout: &egv1a1.Timeout{},
+		}},
+	}
+
+	for _, kind := range []string{gwapiresource.KindGRPCRoute, gwapiresource.KindTCPRoute, gwapiresource.KindTLSRoute, gwapiresource.KindUDPRoute} {
+		t.Run(kind, func(t *testing.T) {
+			require.False(t, btpSpecHasClusterScopedFieldsForRoute(http1Only, kind))
+			require.True(t, btpSpecHasClusterScopedFieldsForRoute(http1AndTimeout, kind))
+			// The policy itself is not modified.
+			require.NotNil(t, http1Only.HTTP1)
+		})
+	}
+
+	require.True(t, btpSpecHasClusterScopedFieldsForRoute(http1Only, gwapiresource.KindHTTPRoute))
+	require.False(t, btpSpecHasClusterScopedFieldsForRoute(nil, gwapiresource.KindGRPCRoute))
+}
+
+func TestBTPClusterSettingsIndexIgnoresHTTP1OnGRPCRoute(t *testing.T) {
+	strategicMerge := egv1a1.StrategicMerge
+	btps := []*egv1a1.BackendTrafficPolicy{
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-http1"},
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: gwapiv1.GroupName,
+							Kind:  gwapiresource.KindGRPCRoute,
+							Name:  "grpc-route",
+						}},
+					},
+				},
+				MergeType: &strategicMerge,
+				BackendSettings: egv1a1.BackendSettings{
+					ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}},
+				},
+			},
+		},
+	}
+	routes := []client.Object{
+		&gwapiv1.GRPCRoute{
+			TypeMeta:   metav1.TypeMeta{Kind: gwapiresource.KindGRPCRoute, APIVersion: "gateway.networking.k8s.io/v1"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "grpc-route"},
+		},
+	}
+
+	idx := BuildBTPIndexes(btps, routes, nil, nil, nil, nil, true)
+
+	require.False(t, idx.ClusterSettings.HasClusterSettingsBelowGateway(
+		gwapiresource.KindGRPCRoute,
+		types.NamespacedName{Namespace: "default", Name: "grpc-route"},
+		types.NamespacedName{},
+		nil,
+		nil,
+		nil,
+	))
+}
+
 func TestBTPClusterSettingsIndex(t *testing.T) {
 	httpRoute := &gwapiv1.HTTPRoute{
 		TypeMeta:   metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},

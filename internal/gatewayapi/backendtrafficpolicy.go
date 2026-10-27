@@ -105,6 +105,22 @@ func btpSpecHasClusterScopedFields(spec *egv1a1.BackendTrafficPolicySpec) bool {
 		spec.HTTP1 != nil
 }
 
+// btpSpecHasClusterScopedFieldsForRoute is btpSpecHasClusterScopedFields for a policy that
+// targets a route of routeKind. HTTP/1 settings are left out for the route kinds where
+// translation ignores them (see validateBackendTrafficPolicyForRoute), so a policy that only
+// sets http1 on such a route does not make its backends ineligible for merging.
+func btpSpecHasClusterScopedFieldsForRoute(spec *egv1a1.BackendTrafficPolicySpec, routeKind string) bool {
+	if spec != nil && spec.HTTP1 != nil {
+		switch routeKind {
+		case resource.KindGRPCRoute, resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
+			withoutHTTP1 := *spec
+			withoutHTTP1.HTTP1 = nil
+			return btpSpecHasClusterScopedFields(&withoutHTTP1)
+		}
+	}
+	return btpSpecHasClusterScopedFields(spec)
+}
+
 // BTPClusterSettingsIndex holds, per route-rule/route/listener target, whether a
 // BackendTrafficPolicy sets a cluster-scoped field, or has MergeType unset.
 type BTPClusterSettingsIndex struct {
@@ -228,9 +244,9 @@ func BuildBTPIndexes(
 				case kind == resource.KindListenerSet:
 					clusterSettingsIdx.setListenerSetLevel(nn, hasClusterScoped, true)
 				case ref.SectionName != nil:
-					clusterSettingsIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, hasClusterScoped, btp.Spec.MergeType)
+					clusterSettingsIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, btpSpecHasClusterScopedFieldsForRoute(&btp.Spec, kind), btp.Spec.MergeType)
 				default:
-					clusterSettingsIdx.setRouteLevel(nn, kind, hasClusterScoped, btp.Spec.MergeType)
+					clusterSettingsIdx.setRouteLevel(nn, kind, btpSpecHasClusterScopedFieldsForRoute(&btp.Spec, kind), btp.Spec.MergeType)
 				}
 			}
 		}
