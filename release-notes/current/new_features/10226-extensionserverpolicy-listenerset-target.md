@@ -1,0 +1,1 @@
+`ExtensionServerPolicy` can now target a `ListenerSet` (via `targetRefs` or `targetSelectors`), or a single `ListenerSet` listener via `sectionName`, attaching the policy to that ListenerSet's listeners and reporting status against the `ListenerSet`. Previously such policies were silently ignored.
