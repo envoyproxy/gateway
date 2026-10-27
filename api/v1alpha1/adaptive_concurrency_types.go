@@ -58,10 +58,10 @@ type AdaptiveConcurrency struct {
 	// ConcurrencyLimitExceededStatus sets the HTTP status code returned to
 	// downstream clients when the concurrency limit is exceeded.
 	// Defaults to 503 (Service Unavailable).
+	// Only 4xx and 5xx status codes are supported.
 	//
 	// +optional
 	// +kubebuilder:default=503
-	// +kubebuilder:validation:Minimum=400
-	// +kubebuilder:validation:Maximum=599
+	// +kubebuilder:validation:Enum=400;401;402;403;404;405;406;407;408;409;410;411;412;413;414;415;416;417;421;422;423;424;426;428;429;431;500;501;502;503;504;505;506;507;508;510;511
 	ConcurrencyLimitExceededStatus *int32 `json:"concurrencyLimitExceededStatus,omitempty"`
 }

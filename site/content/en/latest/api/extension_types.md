@@ -214,7 +214,7 @@ _Appears in:_
 | `minConcurrencyLimit` | _integer_ |  false  | 3 | MinConcurrencyLimit is the lower bound on the calculated concurrency limit.<br />Defaults to 3. Raise this when a backend needs a higher in-flight floor so<br />load-based autoscaling can still observe enough traffic. |
 | `maxConcurrencyLimit` | _integer_ |  false  | 1000 | MaxConcurrencyLimit is the upper bound on the calculated concurrency limit.<br />Defaults to 1000. |
 | `concurrencyUpdateInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  | 100ms | ConcurrencyUpdateInterval is how often the concurrency limit is recalculated.<br />Envoy requires a value greater than 0s. Defaults to 100ms. |
-| `concurrencyLimitExceededStatus` | _integer_ |  false  | 503 | ConcurrencyLimitExceededStatus sets the HTTP status code returned to<br />downstream clients when the concurrency limit is exceeded.<br />Defaults to 503 (Service Unavailable). |
+| `concurrencyLimitExceededStatus` | _integer_ |  false  | 503 | ConcurrencyLimitExceededStatus sets the HTTP status code returned to<br />downstream clients when the concurrency limit is exceeded.<br />Defaults to 503 (Service Unavailable).<br />Only 4xx and 5xx status codes are supported. |
 
 
 #### AdmissionControl

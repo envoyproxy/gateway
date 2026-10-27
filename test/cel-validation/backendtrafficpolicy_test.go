@@ -1111,6 +1111,26 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"minConcurrencyLimit must be less than or equal to maxConcurrencyLimit"},
 		},
 		{
+			desc: "adaptiveConcurrency exceeded status must be an Envoy StatusCode",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("HTTPRoute"),
+								Name:  gwapiv1.ObjectName("httpbin-route"),
+							},
+						},
+					},
+					AdaptiveConcurrency: &egv1a1.AdaptiveConcurrency{
+						ConcurrencyLimitExceededStatus: new(int32(599)),
+					},
+				}
+			},
+			wantErrors: []string{"concurrencyLimitExceededStatus"},
+		},
+		{
 			desc: "no targetRef",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{}
