@@ -170,7 +170,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly;OIDCTokenCookieChunking
 type RuntimeFlag string
 
 const (
@@ -209,6 +209,15 @@ const (
 	// to BackendTrafficPolicy.http1 for backend settings and enable this flag to opt in
 	// to the new behavior. This flag will be enabled by default in a future release.
 	ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly RuntimeFlag = "ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly"
+
+	// OIDCTokenCookieChunking splits an OIDC access, ID or refresh token too large for one
+	// browser cookie across several cookies, instead of the browser dropping it and the login
+	// looping back to the OIDC provider. It is enabled by default. Envoy Proxy older than v1.40
+	// can't read the split cookies, so a client that holds such a token in one cookie today, such
+	// as a non-browser client, is sent back to the OIDC provider when it reaches an older proxy.
+	// Disable this flag while proxies of an earlier Envoy Gateway release serve the same
+	// hostnames, for example during an upgrade.
+	OIDCTokenCookieChunking RuntimeFlag = "OIDCTokenCookieChunking"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.

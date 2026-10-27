@@ -156,6 +156,10 @@ type Translator struct {
 	// apply to client connections only and no longer seed backend HTTP/1 protocol settings.
 	CTPHTTP1ClientScopeOnly bool
 
+	// OIDCTokenCookieChunkingDisabled stops the OIDC filter from splitting a token
+	// too large for one cookie across several cookies.
+	OIDCTokenCookieChunkingDisabled bool
+
 	// LuaEnvoyExtensionPolicyDisabled when the Lua EnvoyExtensionPolicy feature is disabled.
 	LuaEnvoyExtensionPolicyDisabled bool
 
