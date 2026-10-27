@@ -40,14 +40,14 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 	}
 
 	// Get the envoy client TLS secret. It is used for envoy to establish a TLS connection with control plane components,
-	// including the rate limit server and the wasm HTTP server.
+	// including the rate limit server and the HTTP server serving Wasm and dynamic modules.
 	envoyTLSSecret := t.GetSecret(t.ControllerNamespace, envoyTLSSecretName)
 	if envoyTLSSecret == nil {
 		return fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
 	}
 
 	for _, xdsIR := range xdsIRs {
-		if containsGlobalRateLimit(xdsIR.HTTP) || containsRemoteWasms(xdsIR.HTTP) {
+		if containsGlobalRateLimit(xdsIR.HTTP) || ir.ContainsRemoteWasms(xdsIR.HTTP) || ir.ContainsImageDynamicModules(xdsIR.HTTP) {
 			if xdsIR.GlobalResources == nil {
 				xdsIR.GlobalResources = &ir.GlobalResources{}
 			}
@@ -152,25 +152,6 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 				route.Traffic.RateLimit != nil &&
 				route.Traffic.RateLimit.Global != nil {
 				return true
-			}
-		}
-	}
-	return false
-}
-
-// containsRemoteWasms reports whether any route uses a remote Wasm code source
-// (HTTP/Image). Name-only Wasm (path from EnvoyProxy.spec.wasmModules)
-// does not use the control-plane wasm HTTP service or its client certificate.
-func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
-	for _, httpListener := range httpListeners {
-		for _, route := range httpListener.Routes {
-			if route.EnvoyExtensions == nil {
-				continue
-			}
-			for _, w := range route.EnvoyExtensions.Wasms {
-				if w.Code != nil {
-					return true
-				}
 			}
 		}
 	}
