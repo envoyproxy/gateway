@@ -152,6 +152,44 @@ func (t *testingExtensionServer) PostVirtualHostModify(_ context.Context, req *p
 		return &pb.PostVirtualHostModifyResponse{
 			VirtualHost: modifiedVH,
 		}, nil
+	case "listener-foo/foo_example_io",
+		"listener-bar/bar_example_io":
+		if len(req.PostVirtualHostContext.ExtensionResources) == 0 {
+			return nil, fmt.Errorf("expected a policy in the extension resources array")
+		}
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(req.PostVirtualHostContext.ExtensionResources[0].UnstructuredBytes); err != nil {
+			return &pb.PostVirtualHostModifyResponse{
+				VirtualHost: req.VirtualHost,
+			}, err
+		}
+		spec, ok := extensionResource.Object["spec"].(map[string]any)
+		if !ok {
+			return &pb.PostVirtualHostModifyResponse{
+				VirtualHost: req.VirtualHost,
+			}, fmt.Errorf("can't find the spec section")
+		}
+		data, ok := spec["data"].(string)
+		if !ok {
+			return &pb.PostVirtualHostModifyResponse{
+				VirtualHost: req.VirtualHost,
+			}, fmt.Errorf("can't find the expected information")
+		}
+		modifiedVH := proto.Clone(req.VirtualHost).(*routeV3.VirtualHost)
+		modifiedVH.Routes = append(modifiedVH.Routes, &routeV3.Route{
+			Name: data,
+			Match: &routeV3.RouteMatch{
+				PathSpecifier: &routeV3.RouteMatch_Prefix{Prefix: "/" + data},
+			},
+			Action: &routeV3.Route_DirectResponse{
+				DirectResponse: &routeV3.DirectResponseAction{
+					Status: uint32(200),
+				},
+			},
+		})
+		return &pb.PostVirtualHostModifyResponse{
+			VirtualHost: modifiedVH,
+		}, nil
 	}
 	return &pb.PostVirtualHostModifyResponse{
 		VirtualHost: req.VirtualHost,

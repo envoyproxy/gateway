@@ -9,6 +9,7 @@ EXAMPLE_APPS := \
 	wasm-module-test \
 	backend-utilization \
 	sds-test-server \
+	grpc-health-backend \
 	remote-infra
 
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
