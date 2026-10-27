@@ -889,10 +889,18 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 				http3.AdvertisedPort = new(uint32(*policy.Spec.HTTP3.AdvertisedPort))
 			}
 			httpIR.HTTP3 = http3
+			// infraIR deduplicates ProxyListeners by port, so the surviving entry may be
+			// keyed under a different listener's name.
 			var proxyListenerIR *ir.ProxyListener
 			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
-				if proxyListener.Name == irListenerName {
-					proxyListenerIR = proxyListener
+				// Search by port so whichever entry was kept receives the HTTP3 marker.
+				for _, p := range proxyListener.Ports {
+					if uint32(p.ServicePort) == httpIR.Port {
+						proxyListenerIR = proxyListener
+						break
+					}
+				}
+				if proxyListenerIR != nil {
 					break
 				}
 			}
