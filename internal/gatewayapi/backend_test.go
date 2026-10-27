@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -91,6 +92,56 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			hostname:      "127.0.0.1",
 			runningOnHost: false,
 			expectedErr:   "hostname 127.0.0.1 is an IP address",
+		},
+		{
+			name:          "63 character single label ok in k8s",
+			hostname:      strings.Repeat("a", 63),
+			runningOnHost: false,
+		},
+		{
+			name:          "64 character single label not ok in k8s",
+			hostname:      strings.Repeat("a", 64),
+			runningOnHost: false,
+			expectedErr:   "hostname " + strings.Repeat("a", 64) + " is not a valid hostname",
+		},
+		{
+			name:          "253 character single label not ok in k8s",
+			hostname:      strings.Repeat("a", 253),
+			runningOnHost: false,
+			expectedErr:   "hostname " + strings.Repeat("a", 253) + " is not a valid hostname",
+		},
+		{
+			name:          "63 character absolute single label ok in k8s",
+			hostname:      strings.Repeat("a", 63) + ".",
+			runningOnHost: false,
+		},
+		{
+			name:          "64 character absolute single label not ok in k8s",
+			hostname:      strings.Repeat("a", 64) + ".",
+			runningOnHost: false,
+			expectedErr:   "hostname " + strings.Repeat("a", 64) + ". is not a valid hostname",
+		},
+		{
+			name:          "253 character absolute single label not ok in k8s",
+			hostname:      strings.Repeat("a", 253) + ".",
+			runningOnHost: false,
+			expectedErr:   "hostname " + strings.Repeat("a", 253) + ". is not a valid hostname",
+		},
+		{
+			name:          "63 character single label ok when running on host",
+			hostname:      strings.Repeat("a", 63),
+			runningOnHost: true,
+		},
+		{
+			name:          "64 character single label not ok when running on host",
+			hostname:      strings.Repeat("a", 64),
+			runningOnHost: true,
+			expectedErr:   "hostname " + strings.Repeat("a", 64) + " is not a valid hostname",
+		},
+		{
+			name:          "multi label domain ok in k8s",
+			hostname:      strings.Repeat("a", 63) + ".example.com",
+			runningOnHost: false,
 		},
 	}
 
