@@ -2146,6 +2146,12 @@ spec:
                         VerifyIfGiven or RequireAndVerify
                       rule: '!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate
                         || !has(self.mode) || self.mode in [''VerifyIfGiven'', ''RequireAndVerify'']'
+                    - message: subjectAltNames, certificateHashes and spkiHashes cannot
+                        be used with mode VerifyIfGiven, because Envoy requires a
+                        client certificate whenever they are set
+                      rule: '!((has(self.mode) ? self.mode == ''VerifyIfGiven'' :
+                        (has(self.optional) && self.optional)) && (has(self.subjectAltNames)
+                        || has(self.certificateHashes) || has(self.spkiHashes)))'
                   ecdhCurves:
                     description: |-
                       ECDHCurves specifies the set of supported ECDH curves.

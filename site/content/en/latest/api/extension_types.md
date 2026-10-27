@@ -1211,7 +1211,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Request` | Request indicates that a client certificate is requested<br />during the TLS handshake but does not require one.<br /> | 
 | `RequireAny` | RequireAny indicates that a client certificate is required during<br />the handshake, but the connection is permitted even when the<br />client certificate verification fails.<br /> | 
-| `VerifyIfGiven` | VerifyIfGiven indicates that a client certificate is requested<br />but not required. If presented, the certificate must be valid.<br /> | 
+| `VerifyIfGiven` | VerifyIfGiven indicates that a client certificate is requested<br />but not required. If presented, the certificate must be valid.<br />SubjectAltNames, CertificateHashes and SPKIHashes cannot be used with<br />this mode: Envoy requires a client certificate whenever they are set.<br /> | 
 | `RequireAndVerify` | RequireAndVerify indicates that a valid client certificate must be<br />presented during the handshake and validated<br />using CA certificates defined in CACertificateRefs.<br /> | 
 
 

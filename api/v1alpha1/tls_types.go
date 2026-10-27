@@ -187,6 +187,7 @@ const (
 // By default, no client specific configuration is validated.
 //
 // +kubebuilder:validation:XValidation:rule="!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate || !has(self.mode) || self.mode in ['VerifyIfGiven', 'RequireAndVerify']",message="allowExpiredCertificate can only be set when mode is VerifyIfGiven or RequireAndVerify"
+// +kubebuilder:validation:XValidation:rule="!((has(self.mode) ? self.mode == 'VerifyIfGiven' : (has(self.optional) && self.optional)) && (has(self.subjectAltNames) || has(self.certificateHashes) || has(self.spkiHashes)))",message="subjectAltNames, certificateHashes and spkiHashes cannot be used with mode VerifyIfGiven, because Envoy requires a client certificate whenever they are set"
 type ClientValidationContext struct {
 	// Optional set to true accepts connections even when a client doesn't present a certificate.
 	// Defaults to false, which rejects connections without a valid client certificate.
@@ -264,6 +265,8 @@ const (
 
 	// VerifyIfGiven indicates that a client certificate is requested
 	// but not required. If presented, the certificate must be valid.
+	// SubjectAltNames, CertificateHashes and SPKIHashes cannot be used with
+	// this mode: Envoy requires a client certificate whenever they are set.
 	ClientValidationVerifyIfGiven ClientValidationModeType = "VerifyIfGiven"
 
 	// RequireAndVerify indicates that a valid client certificate must be
