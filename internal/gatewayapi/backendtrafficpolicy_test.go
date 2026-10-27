@@ -4250,6 +4250,51 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 			spec:      egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{LoadBalancer: &egv1a1.LoadBalancer{}}}},
 			wantErr:   false,
 		},
+		// requestBodyLimit is enforced by an HTTP filter: allowed on HTTPRoute and GRPCRoute,
+		// rejected on TCPRoute, TLSRoute and UDPRoute
+		{
+			name:      "HTTPRoute with requestBodyLimit is allowed",
+			routeKind: gwapiresource.KindHTTPRoute,
+			spec:      egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:   false,
+		},
+		{
+			name:      "GRPCRoute with requestBodyLimit is allowed",
+			routeKind: gwapiresource.KindGRPCRoute,
+			spec:      egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:   false,
+		},
+		{
+			name:        "TCPRoute with requestBodyLimit is rejected",
+			routeKind:   gwapiresource.KindTCPRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:     true,
+			errContains: "requestBodyLimit has no effect when targeting a TCPRoute",
+		},
+		{
+			name:        "TLSRoute with requestBodyLimit is rejected",
+			routeKind:   gwapiresource.KindTLSRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:     true,
+			errContains: "requestBodyLimit has no effect when targeting a TLSRoute",
+		},
+		{
+			name:        "UDPRoute with requestBodyLimit is rejected",
+			routeKind:   gwapiresource.KindUDPRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:     true,
+			errContains: "requestBodyLimit has no effect when targeting a UDPRoute",
+		},
+		{
+			name:      "TCPRoute with http1 and requestBodyLimit reports both",
+			routeKind: gwapiresource.KindTCPRoute,
+			spec: egv1a1.BackendTrafficPolicySpec{
+				BackendSettings:  egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}},
+				RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")},
+			},
+			wantErr:     true,
+			errContains: "HTTP/1 settings have no effect when targeting a TCPRoute; requestBodyLimit has no effect when targeting a TCPRoute",
+		},
 	}
 
 	for _, tc := range tests {

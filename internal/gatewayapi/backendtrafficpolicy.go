@@ -3336,20 +3336,28 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 }
 
 // validateBackendTrafficPolicyForRoute returns an error when the policy carries
-// http1 settings that are silently ignored for the given route kind:
+// settings that are silently ignored for the given route kind:
 //
 //   - GRPCRoute: http1 is meaningless (gRPC always uses HTTP/2).
-//   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 has no effect.
+//   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 and
+//     requestBodyLimit, which is enforced by an HTTP filter, have no effect.
 func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeKind string) error {
+	var unsupported []string
 	switch routeKind {
 	case resource.KindGRPCRoute:
 		if p.Spec.HTTP1 != nil {
-			return fmt.Errorf("HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
+			unsupported = append(unsupported, "HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
 		}
 	case resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
 		if p.Spec.HTTP1 != nil {
-			return fmt.Errorf("HTTP/1 settings have no effect when targeting a %s", routeKind)
+			unsupported = append(unsupported, fmt.Sprintf("HTTP/1 settings have no effect when targeting a %s", routeKind))
+		}
+		if p.Spec.RequestBodyLimit != nil {
+			unsupported = append(unsupported, fmt.Sprintf("requestBodyLimit has no effect when targeting a %s", routeKind))
 		}
 	}
-	return nil
+	if len(unsupported) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(unsupported, "; "))
 }
