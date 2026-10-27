@@ -182,6 +182,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 					// It's weird for non-namespaced resource to have namespace.
+					// Labels are kept so GatewayClass targetSelectors on policies can match it.
+					Labels: un.GetLabels(),
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
@@ -409,6 +411,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 			resources.Secrets = append(resources.Secrets, secret)
 		case KindConfigMap:
 			typedData := data.Interface()
+			typedBinaryData := kobjVal.FieldByName("BinaryData").Interface()
 			configMap := &corev1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindConfigMap,
@@ -418,7 +421,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 					Name:      name,
 					Namespace: namespace,
 				},
-				Data: typedData.(map[string]string),
+				Data:       typedData.(map[string]string),
+				BinaryData: typedBinaryData.(map[string][]byte),
 			}
 			resources.ConfigMaps = append(resources.ConfigMaps, configMap)
 		case KindBackendTLSPolicy:

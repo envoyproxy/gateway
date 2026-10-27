@@ -2528,7 +2528,7 @@ func TestProcessListenerSets(t *testing.T) {
 				WithScheme(scheme).
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
-				WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
+				WithIndex(&gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc).
 				Build()
 
 			r := &gatewayAPIReconciler{
@@ -2565,7 +2565,7 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 	r.client = fakeclient.NewClientBuilder().
 		WithScheme(envoygateway.GetScheme()).
 		WithObjects(objs...).
-		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
+		WithIndex(&gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc).
 		Build()
 	return r
 }
@@ -2686,6 +2686,33 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 				refGrant("sp-tls-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTLSRoute),
 			},
 			expectedNames: sets.New("sp-gateway", "sp-listenerset", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
+		},
+		{
+			name: "ExtensionServerPolicy includes gateway, ListenerSet, and route target grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				policy := unstructured.Unstructured{}
+				policy.SetAPIVersion("foo.example.io/v1alpha1")
+				policy.SetKind("Bar")
+				policy.SetNamespace(policyNS)
+				policy.SetName("bar")
+				resourceTree.ExtensionServerPolicies = append(resourceTree.ExtensionServerPolicies, policy)
+			},
+			referenceGrants: func() []client.Object {
+				extGrant := func(name, namespace, fromGroup, fromKind, toKind string) *gwapiv1b1.ReferenceGrant {
+					rg := refGrant(name, namespace, fromKind, policyNS, gwapiv1.GroupName, toKind)
+					rg.Spec.From[0].Group = gwapiv1b1.Group(fromGroup)
+					return rg
+				}
+				return []client.Object{
+					extGrant("bar-gateway", gatewayNS, "foo.example.io", "Bar", resource.KindGateway),
+					extGrant("bar-listenerset", listenerSetNS, "foo.example.io", "Bar", resource.KindListenerSet),
+					extGrant("bar-route", routeNS, "foo.example.io", "Bar", resource.KindHTTPRoute),
+					extGrant("bar-tcp-route", routeNS, "foo.example.io", "Bar", resource.KindTCPRoute),
+					extGrant("bar-wrong-group", gatewayNS, "other.example.io", "Bar", resource.KindGateway),
+					extGrant("bar-wrong-kind", gatewayNS, "foo.example.io", "Baz", resource.KindGateway),
+				}
+			}(),
+			expectedNames: sets.New("bar-gateway", "bar-listenerset", "bar-route"),
 		},
 		{
 			name: "ignores non matching grants",

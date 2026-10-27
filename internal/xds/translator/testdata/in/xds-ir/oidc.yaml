@@ -51,6 +51,7 @@ http:
         defaultRefreshTokenTTL: 48h
         csrfTokenTTL: 35m
         codeVerifierTTL: 2m
+        tokenCookieChunking: true
   - name: "second-route"
     hostname: "*"
     pathMatch:
