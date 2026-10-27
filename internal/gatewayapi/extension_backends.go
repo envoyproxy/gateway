@@ -23,6 +23,9 @@ func (t *Translator) buildExtensionBackends(policy *egv1a1.EnvoyExtensionPolicy,
 	if len(policy.Spec.Backends) == 0 {
 		return nil, nil
 	}
+	if !t.ExtensionBackendsEnabled {
+		return nil, fmt.Errorf("extension backends must be enabled by setting extensionApis.enableExtensionBackends to true in the EnvoyGateway configuration")
+	}
 
 	// Inherited references use the namespace of the policy that declared them.
 	owner := policyOwnerOr(owners.backends, policy)

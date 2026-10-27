@@ -14,7 +14,28 @@ cluster names out of your extension configuration and lets you change the
 backend reference while keeping the same alias in your code. Envoy Gateway
 resolves endpoints, authorizes references and configures backend TLS.
 
-For the Lua example, first [enable Lua support](../lua/) in Envoy Gateway.
+## Enable extension backends
+
+Extension backend bindings are disabled by default. To enable them, set
+`extensionApis.enableExtensionBackends: true` in the EnvoyGateway configuration:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+provider:
+  type: Kubernetes
+extensionApis:
+  enableExtensionBackends: true
+```
+
+This setting applies to Service, ServiceImport and Backend references for all
+supported extension runtimes. References to Backend resources additionally require
+`extensionApis.enableBackend: true`. For the Lua example, also
+[enable Lua support](../lua/).
+
+While extension backends are disabled, policies that declare or inherit bindings
+are rejected with `Accepted=False`, and affected routes return HTTP 500. Policies
+without bindings continue to work.
 
 ## Declare a backend
 

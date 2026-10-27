@@ -31622,6 +31622,8 @@ spec:
               backends:
                 description: |-
                   Backends declares HTTP callout dependencies for Lua, Wasm and dynamic modules.
+                  Requires extensionApis.enableExtensionBackends to be set to true in the
+                  EnvoyGateway configuration.
                   Each name is an alias in this policy. Extensions read the generated cluster
                   name from route metadata during a request. Initialization and independent
                   background callbacks have no request route. Asynchronous callbacks can use

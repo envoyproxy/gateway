@@ -58,11 +58,17 @@ func extensionBackendResources(t *testing.T) *resource.Resources {
 
 func translateExtensionBackends(t *testing.T, resources *resource.Resources) (*TranslateResult, map[string]*ir.HTTPRoute) {
 	t.Helper()
+	return translateExtensionBackendsWithFeature(t, resources, true)
+}
+
+func translateExtensionBackendsWithFeature(t *testing.T, resources *resource.Resources, enabled bool) (*TranslateResult, map[string]*ir.HTTPRoute) {
+	t.Helper()
 	resources.Sort()
 	translator := &Translator{
 		GatewayControllerName: egv1a1.GatewayControllerName, GatewayClassName: "envoy-gateway-class",
 		ControllerNamespace: "envoy-gateway-system", EndpointRoutingDisabled: true, BackendEnabled: true,
-		MergeGateways: IsMergeGatewaysEnabled(resources), Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+		ExtensionBackendsEnabled: enabled,
+		MergeGateways:            IsMergeGatewaysEnabled(resources), Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	result, _ := translator.Translate(t.Context(), resources)
 	routes := make(map[string]*ir.HTTPRoute)
@@ -107,6 +113,72 @@ func extensionPolicyCondition(t *testing.T, result *TranslateResult, policyName 
 	return nil
 }
 
+func TestExtensionBackendsFeatureGate(t *testing.T) {
+	for _, scope := range []string{"route", "gateway", "inherited", "no bindings"} {
+		for _, enabled := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/enabled=%t", scope, enabled), func(t *testing.T) {
+				resources := extensionBackendResources(t)
+				parent, child := resources.EnvoyExtensionPolicies[0], resources.EnvoyExtensionPolicies[1]
+				affected := make(map[string]bool)
+				switch scope {
+				case "route":
+					parent.Spec.Backends = nil
+					affected["httproute-1"] = true
+				case "gateway":
+					child.Spec.Backends = nil
+					affected["httproute-2"] = true
+				case "inherited":
+					child.Spec.Backends = nil
+					child.Spec.MergeType = new(egv1a1.JSONMerge)
+					affected["httproute-1"] = true
+					affected["httproute-2"] = true
+				case "no bindings":
+					parent.Spec.Backends = nil
+					child.Spec.Backends = nil
+				}
+
+				// These bindings reference Services, and the Backend API is enabled
+				// by the helper. Neither bypasses the independent extension gate.
+				result, routes := translateExtensionBackendsWithFeature(t, resources, enabled)
+				for name, route := range routes {
+					if affected[name] && !enabled {
+						require.NotNil(t, route.DirectResponse)
+						require.EqualValues(t, 500, *route.DirectResponse.StatusCode)
+						require.Empty(t, route.EnvoyExtensions.Backends)
+						require.Empty(t, route.EnvoyExtensions.DynamicModules, "a parent must not restore extensions")
+					} else {
+						require.Nil(t, route.DirectResponse)
+						require.NotEmpty(t, route.EnvoyExtensions.DynamicModules)
+						if affected[name] {
+							require.Contains(t, route.EnvoyExtensions.Backends, "resolver")
+						} else {
+							require.Empty(t, route.EnvoyExtensions.Backends)
+						}
+					}
+				}
+				for _, policy := range resources.EnvoyExtensionPolicies {
+					condition := extensionPolicyCondition(t, result, policy.Name)
+					hasBindings := len(policy.Spec.Backends) > 0 || scope == "inherited"
+					if hasBindings && !enabled {
+						require.Equal(t, metav1.ConditionFalse, condition.Status)
+						require.Equal(t, string(gwapiv1.PolicyReasonInvalid), condition.Reason)
+						require.Contains(t, condition.Message, "extensionApis.enableExtensionBackends")
+					} else {
+						require.Equal(t, metav1.ConditionTrue, condition.Status)
+					}
+				}
+				for _, x := range result.XdsIR {
+					if !enabled || len(affected) == 0 {
+						require.Empty(t, x.ExtensionBackends, "disabled bindings must not register clusters")
+					} else {
+						require.Len(t, x.ExtensionBackends, 1)
+					}
+				}
+			})
+		}
+	}
+}
+
 func TestExtensionBackendIsolation(t *testing.T) {
 	for _, mergeGateways := range []bool{false, true} {
 		t.Run(fmt.Sprint("mergeGateways=", mergeGateways), func(t *testing.T) {
@@ -144,7 +216,8 @@ func TestExtensionBackendRegistry(t *testing.T) {
 	translator := &Translator{
 		GatewayControllerName: egv1a1.GatewayControllerName, GatewayClassName: "envoy-gateway-class",
 		ControllerNamespace: "envoy-gateway-system", EndpointRoutingDisabled: true, BackendEnabled: true,
-		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+		ExtensionBackendsEnabled: true,
+		Logger:                   logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	// Run the same translator with maxConnections 17, then 18. The second output
 	// must use the new setting, showing the lookup is rebuilt for each translation.
