@@ -221,18 +221,24 @@ type ClientValidationContext struct {
 	// An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will
 	// verify that the SHA-256 of the DER-encoded Subject Public Key Information
 	// (SPKI) of the presented certificate matches one of the specified values.
+	// Setting this requires a client certificate, so it cannot be combined with
+	// mode VerifyIfGiven or the deprecated optional: true.
 	// +optional
 	SPKIHashes []string `json:"spkiHashes,omitempty"`
 
 	// An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will
 	// verify that the SHA-256 of the DER-encoded presented certificate matches
 	// one of the specified values.
+	// Setting this requires a client certificate, so it cannot be combined with
+	// mode VerifyIfGiven or the deprecated optional: true.
 	// +optional
 	CertificateHashes []string `json:"certificateHashes,omitempty"`
 
 	// An optional list of Subject Alternative name matchers. If specified, Envoy
 	// will verify that the Subject Alternative Name of the presented certificate
-	// matches one of the specified matchers
+	// matches one of the specified matchers.
+	// Setting this requires a client certificate, so it cannot be combined with
+	// mode VerifyIfGiven or the deprecated optional: true.
 	// +optional
 	SubjectAltNames *SubjectAltNames `json:"subjectAltNames,omitempty"`
 
