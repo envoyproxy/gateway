@@ -895,7 +895,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
 				// Search by port so whichever entry was kept receives the HTTP3 marker.
 				for _, p := range proxyListener.Ports {
-					if uint32(p.ServicePort) == httpIR.Port {
+					if uint32(p.ContainerPort) == httpIR.Port {
 						proxyListenerIR = proxyListener
 						break
 					}
