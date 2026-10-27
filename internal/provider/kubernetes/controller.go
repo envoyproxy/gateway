@@ -1963,6 +1963,17 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 							r.log.Error(err, "failed to process TLS SecretRef for gateway",
 								"gateway", gtw, "secretRef", certRef)
 						}
+					} else if r.isExtensionSecretResource(certRef.Group, gatewayapi.KindDerefOr(certRef.Kind, resource.KindSecret)) {
+						if err := r.processExtensionSecretRef(ctx,
+							resourceMap, resourceTree,
+							resource.KindGateway, gtw.Namespace, gtw.Name,
+							certRef); err != nil {
+							if isTransientError(err) {
+								return err
+							}
+							r.log.Error(err, "failed to process TLS extension secret ref for gateway",
+								"gateway", gtw, "secretRef", certRef)
+						}
 					}
 				}
 			}
@@ -2273,6 +2284,17 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 							return err
 						}
 						r.log.Error(err, "failed to process TLS SecretRef for ListenerSet",
+							"listenerSet", ls, "secretRef", certRef)
+					}
+				} else if r.isExtensionSecretResource(certRef.Group, gatewayapi.KindDerefOr(certRef.Kind, resource.KindSecret)) {
+					if err := r.processExtensionSecretRef(ctx,
+						resourceMap, resourceTree,
+						resource.KindListenerSet, ls.Namespace, ls.Name,
+						certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err, "failed to process TLS extension secret ref for ListenerSet",
 							"listenerSet", ls, "secretRef", certRef)
 					}
 				}
@@ -3697,5 +3719,66 @@ func (r *gatewayAPIReconciler) processExtensionSecrets(
 		resourceTree.ExtensionSecrets = append(resourceTree.ExtensionSecrets, secretList.Items...)
 	}
 
+	return nil
+}
+
+// isExtensionSecretResource checks if the given group and kind match any of the configured extension secret resources.
+func (r *gatewayAPIReconciler) isExtensionSecretResource(group *gwapiv1.Group, kind string) bool {
+	groupStr := gatewayapi.GroupDerefOr(group, "")
+	for _, gvk := range r.extSecretGVKs {
+		if gvk.Group == groupStr && gvk.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// processExtensionSecretRef adds the ReferenceGrant permitting a cross-namespace reference to an
+// extension secret resource to the resourceTree. The resource itself is added by processExtensionSecrets.
+func (r *gatewayAPIReconciler) processExtensionSecretRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+	ownerKind string,
+	ownerNS string,
+	ownerName string,
+	secretRef gwapiv1.SecretObjectReference,
+) error {
+	kind := gatewayapi.KindDerefOr(secretRef.Kind, resource.KindSecret)
+	if !r.isExtensionSecretResource(secretRef.Group, kind) {
+		return nil
+	}
+	secretNS := gatewayapi.NamespaceDerefOr(secretRef.Namespace, ownerNS)
+	if secretNS == ownerNS {
+		return nil
+	}
+
+	from := ObjectKindNamespacedName{
+		kind:      ownerKind,
+		namespace: ownerNS,
+		name:      ownerName,
+	}
+	to := ObjectKindNamespacedName{
+		kind:      kind,
+		namespace: secretNS,
+		name:      string(secretRef.Name),
+	}
+	refGrant, err := r.findReferenceGrant(ctx, from, to)
+	switch {
+	case err != nil:
+		return fmt.Errorf("failed to find ReferenceGrant: %w", err)
+	case refGrant == nil:
+		return fmt.Errorf(
+			"no matching ReferenceGrants found: from %s/%s to %s/%s",
+			from.kind, from.namespace, to.kind, to.namespace)
+	default:
+		if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
+			resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
+			resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+			r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+				"name", refGrant.Name)
+		}
+	}
+	resourceMap.allAssociatedNamespaces.Insert(secretNS)
 	return nil
 }
