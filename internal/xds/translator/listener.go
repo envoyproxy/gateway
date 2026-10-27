@@ -423,6 +423,17 @@ func (t *Translator) addHCMToXDSListener(
 		}
 	}
 
+	// Set forward_proto_config to infer the x-forwarded-proto header from the PROXY protocol
+	// destination port. Requires the PROXY protocol listener filter to be enabled, which is added
+	// from the same irListener.ProxyProtocol field.
+	if irListener.ProxyProtocol != nil && irListener.ProxyProtocol.ForwardProto != nil {
+		fpc := irListener.ProxyProtocol.ForwardProto
+		mgr.ForwardProtoConfig = &hcmv3.ForwardProtoConfig{
+			HttpsDestinationPorts: fpc.HTTPSDestinationPorts,
+			HttpDestinationPorts:  fpc.HTTPDestinationPorts,
+		}
+	}
+
 	if requestID := ptr.Deref(irListener.Headers, ir.HeaderSettings{}).RequestID; requestID != nil {
 		switch *requestID {
 		case ir.RequestIDActionPreserveOrGenerate:
@@ -492,6 +503,11 @@ func (t *Translator) addHCMToXDSListener(
 		if connLimit.MaxConnectionDuration != nil {
 			mgr.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(connLimit.MaxConnectionDuration.Duration)
 			mgr.Http1SafeMaxConnectionDuration = !ptr.Deref(irListener.HTTP1, ir.HTTP1Settings{}).DisableSafeMaxConnectionDuration
+			if connLimit.MaxConnectionDurationJitter != nil {
+				mgr.CommonHttpProtocolOptions.MaxConnectionDurationJitter = &typev3.Percent{
+					Value: float64(*connLimit.MaxConnectionDurationJitter),
+				}
+			}
 		}
 		if connLimit.MaxRequestsPerConnection != nil {
 			mgr.CommonHttpProtocolOptions.MaxRequestsPerConnection = wrapperspb.UInt32(*connLimit.MaxRequestsPerConnection)

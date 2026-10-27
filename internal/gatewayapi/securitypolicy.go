@@ -54,6 +54,9 @@ const (
 	defaultOIDCHTTPTimeout       = 5 * time.Second
 	defaultOIDCMaxRedirects      = 3
 
+	// defaultExtAuthMaxRequestBytes matches the default per-connection buffer limit.
+	defaultExtAuthMaxRequestBytes = 32768
+
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	oidcHMACSecretKey  = "hmac-secret"
@@ -553,21 +556,21 @@ func (t *Translator) processSecurityPolicyForRoute(
 		// they intentionally skip Gateway listener policies because those are
 		// sibling scopes.
 		for _, parentRefCtx := range parentRefCtxs {
+			// The listeners can merge with different parent policies, and fail on some of them
+			// only, so collect their results and report them once for the parentRef.
+			errMsgs, mergedWith := sets.New[string](), sets.New[string]()
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 
 				var (
 					parentPolicy *egv1a1.SecurityPolicy
 					parentScope  policyScope
-					ancestorRef  gwapiv1.ParentReference
 				)
 				if listener.isFromListenerSet() {
 					lsNN := types.NamespacedName{
 						Namespace: listener.listenerSet.Namespace,
 						Name:      listener.listenerSet.Name,
 					}
-					ancestorRef = getAncestorRefForListenerSetPolicy(lsNN, &listener.Name)
-
 					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
@@ -580,8 +583,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
 				} else {
-					ancestorRef = getAncestorRefForPolicy(gwNN, &listener.Name)
-
 					listenerKey := NamespacedNameWithSection{NamespacedName: gwNN, SectionName: listener.Name}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
 
@@ -595,14 +596,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				if parentPolicy == nil {
 					// No parent policy found, fall back to current policy
 					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(err))
 					}
 					continue
 				}
@@ -610,56 +604,28 @@ func (t *Translator) processSecurityPolicyForRoute(
 				// Merge with parent policy
 				mergedPolicy, owners, err := mergeSecurityPolicy(policy, parentPolicy)
 				if err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						fmt.Sprintf("error merging policies: %v", err),
-						policy.Generation,
-					)
+					errMsgs.Insert(fmt.Sprintf("error merging policies: %v", err))
 					continue
 				}
 
 				if err := validator(mergedPolicy); err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
-					)
+					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
 
 				// Apply merged policy
 				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
-					)
+					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
 
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
+
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parentRefCtx.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
@@ -3120,7 +3086,8 @@ func (t *Translator) buildExtAuth(
 
 	if policy.Spec.ExtAuth.BodyToExtAuth != nil {
 		extAuth.BodyToExtAuth = &ir.BodyToExtAuth{
-			MaxRequestBytes: policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes,
+			MaxRequestBytes: ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes, defaultExtAuthMaxRequestBytes),
+			PackAsBytes:     ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.PackAsBytes, false),
 		}
 	}
 

@@ -733,6 +733,20 @@ type ProxyProtocolSettings struct {
 	// If set to false, the listener will reject requests without a Proxy Protocol header.
 	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
 	Optional bool `json:"optional,omitempty" yaml:"optional,omitempty"`
+	// ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+	// destination port. Only takes effect when PROXY protocol is enabled.
+	// +optional
+	ForwardProto *ForwardProtoConfig `json:"forwardProtoConfig,omitempty" yaml:"forwardProtoConfig,omitempty"`
+}
+
+// ForwardProtoConfig holds configuration for inferring the x-forwarded-proto header
+// from the PROXY protocol destination port.
+// +k8s:deepcopy-gen=true
+type ForwardProtoConfig struct {
+	// HTTPSDestinationPorts are the destination ports treated as HTTPS.
+	HTTPSDestinationPorts []uint32 `json:"httpsDestinationPorts,omitempty" yaml:"httpsDestinationPorts,omitempty"`
+	// HTTPDestinationPorts are the destination ports treated as HTTP.
+	HTTPDestinationPorts []uint32 `json:"httpDestinationPorts,omitempty" yaml:"httpDestinationPorts,omitempty"`
 }
 
 type WithUnderscoresAction egv1a1.WithUnderscoresAction
@@ -884,11 +898,14 @@ type ResponseOverrideRule struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
-// When both statusCodes and responseHeaders are specified, both must match.
+// When more than one of statusCodes, requestHeaders and responseHeaders is specified, all of them must match.
 // +k8s:deepcopy-gen=true
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
 	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Request headers to match on. The match evaluates to true if all matches are successful.
+	RequestHeaders []StringMatch `json:"requestHeaders,omitempty"`
 
 	// Response headers to match on. The match evaluates to true if all matches are successful.
 	ResponseHeaders []StringMatch `json:"responseHeaders,omitempty"`
@@ -1099,6 +1116,8 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// Credentials to be injected into the request.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// GRPCJSONTranscoder defines the gRPC-JSON transcoding configuration for this route.
+	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty" yaml:"grpcJSONTranscoder,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
@@ -1249,6 +1268,9 @@ type ClusterTrafficFeatures struct {
 	// HTTP3 provides HTTP/3 configuration for clusters
 	// +optional
 	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty" yaml:"http3,omitempty"`
+	// HTTP1 provides HTTP/1 upstream protocol configuration for clusters
+	// +optional
+	HTTP1 *HTTP1Settings `json:"http1,omitempty" yaml:"http1,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
 }
@@ -1819,6 +1841,10 @@ type BodyToExtAuth struct {
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+
+	// PackAsBytes sends the request body to the external authorization service as raw bytes.
+	// Only supported for gRPC external authorization services.
+	PackAsBytes bool `json:"packAsBytes,omitempty"`
 }
 
 // ContextExtension is analogous to http_request.headers, however these
@@ -2176,8 +2202,9 @@ type RouteDestination struct {
 	// reused
 	Name     string  `json:"name" yaml:"name"`
 	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
-	// Settings holds this destination's own, non-merged backends. Never shared with another
-	// route.
+	// Settings holds this destination's own, non-merged backends. Setting objects may
+	// be shared across matches and listeners of the same rule; consumers must not
+	// mutate them.
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// BackendClusterRefs holds references to backend clusters for this route rule. The
 	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
@@ -3846,6 +3873,10 @@ type HTTPHealthChecker struct {
 	Host string `json:"host" yaml:"host"`
 	// Path defines the HTTP path that will be requested during health checking.
 	Path string `json:"path" yaml:"path"`
+	// Protocol defines the HTTP protocol used to send health check requests.
+	// If unset or set to Auto, it's derived from the effective upstream protocol of
+	// the backend.
+	Protocol *egv1a1.HTTPHealthCheckProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	// Method defines the HTTP method used for health checking.
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
@@ -3922,6 +3953,10 @@ type GRPCHealthChecker struct {
 	// which the health check should be requested. If not specified, then the default
 	// is to send a health check request for the entire server.
 	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
+	// Authority is the value of the :authority header in the gRPC health check request.
+	// If not specified, the effective route hostname is used, and if that is not
+	// available either, Envoy falls back to the cluster name.
+	Authority string `json:"authority,omitempty" yaml:"authority,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.
@@ -4218,6 +4253,8 @@ type ConnectionLimit struct {
 	// MaxConnectionDuration is the maximum amount of time a connection can remain established
 	// before being drained and/or closed.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+	// MaxConnectionDurationJitter is the percentage (0-100) of MaxConnectionDuration added as random jitter.
+	MaxConnectionDurationJitter *uint32 `json:"maxConnectionDurationJitter,omitempty" yaml:"maxConnectionDurationJitter,omitempty"`
 	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
 	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
 	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
@@ -4320,6 +4357,10 @@ type Wasm struct {
 	// Name is a unique name for an Wasm configuration.
 	// The xds translator only generates one Wasm filter for each unique name.
 	Name string `json:"name"`
+
+	// VMID overrides the VM ID to allow compatible extensions to share a VM.
+	// If unset, Name is used to keep different Wasm entries in separate VMs.
+	VMID string `json:"vmID,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
@@ -4476,6 +4517,8 @@ type PreferLocalZone struct {
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty" yaml:"minEndpointsThreshold,omitempty"`
 	// Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, the default is 100%.
 	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty" yaml:"percentageEnabled,omitempty"`
+	// FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the cluster is in panic mode.
+	FailTrafficOnPanic *bool `json:"failTrafficOnPanic,omitempty" yaml:"failTrafficOnPanic,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -4508,6 +4551,20 @@ type EndpointOverride struct {
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// GRPCJSONTranscoder holds the gRPC-JSON transcoder configuration of a route.
+// +k8s:deepcopy-gen=true
+type GRPCJSONTranscoder struct {
+	// Name is the name of the transcoder filter.
+	Name string `json:"name" yaml:"name"`
+	// ProtoDescriptorBin is the binary FileDescriptorSet of the gRPC services.
+	ProtoDescriptorBin []byte `json:"protoDescriptorBin" yaml:"protoDescriptorBin"`
+	// Services are the full names of the gRPC services to transcode.
+	Services                     []string                 `json:"services" yaml:"services"`
+	PrintOptions                 *egv1a1.JSONPrintOptions `json:"printOptions,omitempty" yaml:"printOptions,omitempty"`
+	IgnoreUnknownQueryParameters *bool                    `json:"ignoreUnknownQueryParameters,omitempty" yaml:"ignoreUnknownQueryParameters,omitempty"`
+	ConvertGRPCStatus            *bool                    `json:"convertGRPCStatus,omitempty" yaml:"convertGRPCStatus,omitempty"`
 }
 
 // LoadBalancerType defines the type of load balancer for IR.
