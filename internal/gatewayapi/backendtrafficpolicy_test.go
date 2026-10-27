@@ -4313,6 +4313,74 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 	}
 }
 
+func TestValidateBackendTrafficPolicyForListeners(t *testing.T) {
+	limit := egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}}
+	tests := []struct {
+		name      string
+		spec      egv1a1.BackendTrafficPolicySpec
+		protocols []gwapiv1.ProtocolType
+		wantErr   string
+	}{
+		{
+			name:      "no requestBodyLimit on a TCP listener",
+			spec:      egv1a1.BackendTrafficPolicySpec{},
+			protocols: []gwapiv1.ProtocolType{gwapiv1.TCPProtocolType},
+		},
+		{
+			name:      "HTTP listener",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.HTTPProtocolType},
+		},
+		{
+			name:      "HTTPS listener",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.HTTPSProtocolType},
+		},
+		{
+			name:      "TCP and HTTP listeners",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.TCPProtocolType, gwapiv1.HTTPProtocolType},
+		},
+		{
+			name: "no listeners",
+			spec: limit,
+		},
+		{
+			name:      "TCP listener",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.TCPProtocolType},
+			wantErr:   "requestBodyLimit has no effect on TCP listeners",
+		},
+		{
+			name:      "TLS listener",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.TLSProtocolType},
+			wantErr:   "requestBodyLimit has no effect on TLS listeners",
+		},
+		{
+			name:      "UDP and TCP listeners",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.UDPProtocolType, gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType},
+			wantErr:   "requestBodyLimit has no effect on TCP, UDP listeners",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			listeners := make([]*ListenerContext, 0, len(tc.protocols))
+			for _, protocol := range tc.protocols {
+				listeners = append(listeners, &ListenerContext{Listener: &gwapiv1.Listener{Protocol: protocol}})
+			}
+			err := validateBackendTrafficPolicyForListeners(&egv1a1.BackendTrafficPolicy{Spec: tc.spec}, listeners)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, tc.wantErr)
+		})
+	}
+}
+
 func TestBuildRequestBodyLimit(t *testing.T) {
 	testCases := []struct {
 		name     string

@@ -1277,6 +1277,12 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
+	if err := validateBackendTrafficPolicyForListeners(policy,
+		listenerSetPolicyTargetListeners(gateway.GatewayContext, targeted, currTarget)); err != nil {
+		status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+			status.PolicyReasonUnsupportedField, err.Error(), policy.Generation)
+	}
+
 	h3Warnings, err := t.translateBackendTrafficPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, xdsIR)
 	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
@@ -1373,6 +1379,12 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	// target is a Gateway listener (sectionName set).
 	if currTarget.SectionName != nil {
 		overrides.Add(gatewayScope(gatewayNN), gatewayListenerScope(gatewayNN, *currTarget.SectionName))
+	}
+
+	if err := validateBackendTrafficPolicyForListeners(policy,
+		gatewayPolicyTargetListeners(targetedGateway, currTarget)); err != nil {
+		status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+			status.PolicyReasonUnsupportedField, err.Error(), policy.Generation)
 	}
 
 	// Set conditions for translation error if it got any
@@ -3360,4 +3372,23 @@ func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeK
 		return nil
 	}
 	return errors.New(strings.Join(unsupported, "; "))
+}
+
+// validateBackendTrafficPolicyForListeners returns an error when the policy sets
+// requestBodyLimit but none of the listeners it targets serves HTTP, for example
+// when sectionName selects a TCP, TLS or UDP listener. The limit is enforced by an
+// HTTP filter, so it has no effect on these listeners.
+func validateBackendTrafficPolicyForListeners(p *egv1a1.BackendTrafficPolicy, listeners []*ListenerContext) error {
+	if p.Spec.RequestBodyLimit == nil || len(listeners) == 0 {
+		return nil
+	}
+	protocols := sets.New[string]()
+	for _, listener := range listeners {
+		switch listener.Protocol {
+		case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
+			return nil
+		}
+		protocols.Insert(string(listener.Protocol))
+	}
+	return fmt.Errorf("requestBodyLimit has no effect on %s listeners", strings.Join(sets.List(protocols), ", "))
 }
