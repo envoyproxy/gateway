@@ -1193,15 +1193,32 @@ func isListener(target policyTargetReferenceWithSectionName) bool {
 	return target.Kind == resource.KindGateway && target.SectionName != nil
 }
 
-// isBackendTargetKind reports whether target's kind is Service, ServiceImport, or Backend -
-// i.e. the target is a backend, not a Gateway/ListenerSet/xRoute.
-func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {
-	switch target.Kind {
-	case gwapiv1.Kind(resource.KindService), gwapiv1.Kind(resource.KindServiceImport), gwapiv1.Kind(resource.KindBackend):
-		return true
-	default:
-		return false
+// backendGroupKinds are the group and kind pairs a BackendTrafficPolicy can target as a backend.
+var backendGroupKinds = []schema.GroupKind{
+	{Group: "", Kind: resource.KindService},
+	{Group: GroupMultiClusterService, Kind: resource.KindServiceImport},
+	{Group: egv1a1.GroupName, Kind: resource.KindBackend},
+}
+
+// isBackendGroupKind reports whether gk is a Service, ServiceImport, or Backend, i.e. a backend, not a
+// Gateway/ListenerSet/xRoute or an unrelated resource.
+func isBackendGroupKind(gk schema.GroupKind) bool {
+	return slices.Contains(backendGroupKinds, gk)
+}
+
+// backendGroupForKind maps a backend kind to its real group: a selector's group is pinned to
+// gateway.networking.k8s.io, so selectors are matched by kind and given the group the kind lives in.
+func backendGroupForKind(kind gwapiv1.Kind) (string, bool) {
+	for _, gk := range backendGroupKinds {
+		if gk.Kind == string(kind) {
+			return gk.Group, true
+		}
 	}
+	return "", false
+}
+
+func targetRefGroupKind(target policyTargetReferenceWithSectionName) schema.GroupKind {
+	return schema.GroupKind{Group: string(target.Group), Kind: string(target.Kind)}
 }
 
 func isListenerSet(target policyTargetReferenceWithSectionName) bool {

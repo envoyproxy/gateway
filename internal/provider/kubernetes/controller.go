@@ -593,20 +593,22 @@ func (r *gatewayAPIReconciler) reconcileGatewayClass(ctx context.Context, manage
 		}
 	}
 
-	if err = r.processPolicyTargetReferenceGrants(ctx, gwcResource, gwcResourceMapping); err != nil {
-		if isTransientError(err) {
-			gcLogger.Error(err, "transient error processing policy target ReferenceGrants")
-			return nil, err
-		}
-		gcLogger.Error(err, "failed to process policy target ReferenceGrants for GatewayClass")
-	}
-
+	// ExtensionServerPolicies must be processed before policy target ReferenceGrants,
+	// so that grants allowing them to target resources in other namespaces are collected.
 	if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
 		if isTransientError(err) {
 			gcLogger.Error(err, "transient error processing ExtensionServerPolicies")
 			return nil, err
 		}
 		gcLogger.Error(err, "failed to process ExtensionServerPolicies for GatewayClass")
+	}
+
+	if err = r.processPolicyTargetReferenceGrants(ctx, gwcResource, gwcResourceMapping); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing policy target ReferenceGrants")
+			return nil, err
+		}
+		gcLogger.Error(err, "failed to process policy target ReferenceGrants for GatewayClass")
 	}
 
 	// Add the referenced services, ServiceImports, and EndpointSlices in
@@ -1787,40 +1789,39 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 		return nil
 	}
 
-	policyFromNamespaces := map[string]sets.Set[string]{
-		resource.KindClientTrafficPolicy:  sets.New[string](),
-		resource.KindBackendTrafficPolicy: sets.New[string](),
-		resource.KindEnvoyExtensionPolicy: sets.New[string](),
-		resource.KindSecurityPolicy:       sets.New[string](),
+	egGroupKind := func(kind string) schema.GroupKind {
+		return schema.GroupKind{Group: egv1a1.GroupVersion.Group, Kind: kind}
+	}
+	clientTrafficPolicyGK := egGroupKind(resource.KindClientTrafficPolicy)
+	backendTrafficPolicyGK := egGroupKind(resource.KindBackendTrafficPolicy)
+	envoyExtensionPolicyGK := egGroupKind(resource.KindEnvoyExtensionPolicy)
+	securityPolicyGK := egGroupKind(resource.KindSecurityPolicy)
+
+	policyFromNamespaces := map[schema.GroupKind]sets.Set[string]{
+		clientTrafficPolicyGK:  sets.New[string](),
+		backendTrafficPolicyGK: sets.New[string](),
+		envoyExtensionPolicyGK: sets.New[string](),
+		securityPolicyGK:       sets.New[string](),
 	}
 	for _, policy := range resourceTree.ClientTrafficPolicies {
-		policyFromNamespaces[resource.KindClientTrafficPolicy].Insert(policy.Namespace)
+		policyFromNamespaces[clientTrafficPolicyGK].Insert(policy.Namespace)
 	}
 	for _, policy := range resourceTree.BackendTrafficPolicies {
-		policyFromNamespaces[resource.KindBackendTrafficPolicy].Insert(policy.Namespace)
+		policyFromNamespaces[backendTrafficPolicyGK].Insert(policy.Namespace)
 	}
 	for _, policy := range resourceTree.EnvoyExtensionPolicies {
-		policyFromNamespaces[resource.KindEnvoyExtensionPolicy].Insert(policy.Namespace)
+		policyFromNamespaces[envoyExtensionPolicyGK].Insert(policy.Namespace)
 	}
 	for _, policy := range resourceTree.SecurityPolicies {
-		policyFromNamespaces[resource.KindSecurityPolicy].Insert(policy.Namespace)
+		policyFromNamespaces[securityPolicyGK].Insert(policy.Namespace)
 	}
 
-	allowedTargetKinds := map[string]sets.Set[string]{
-		resource.KindClientTrafficPolicy: sets.New[string](
+	allowedTargetKinds := map[schema.GroupKind]sets.Set[string]{
+		clientTrafficPolicyGK: sets.New[string](
 			resource.KindGateway,
 			resource.KindListenerSet,
 		),
-		resource.KindBackendTrafficPolicy: sets.New[string](
-			resource.KindGateway,
-			resource.KindListenerSet,
-			resource.KindHTTPRoute,
-			resource.KindGRPCRoute,
-			resource.KindTLSRoute,
-			resource.KindTCPRoute,
-			resource.KindUDPRoute,
-		),
-		resource.KindEnvoyExtensionPolicy: sets.New[string](
+		backendTrafficPolicyGK: sets.New[string](
 			resource.KindGateway,
 			resource.KindListenerSet,
 			resource.KindHTTPRoute,
@@ -1829,7 +1830,16 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 			resource.KindTCPRoute,
 			resource.KindUDPRoute,
 		),
-		resource.KindSecurityPolicy: sets.New[string](
+		envoyExtensionPolicyGK: sets.New[string](
+			resource.KindGateway,
+			resource.KindListenerSet,
+			resource.KindHTTPRoute,
+			resource.KindGRPCRoute,
+			resource.KindTLSRoute,
+			resource.KindTCPRoute,
+			resource.KindUDPRoute,
+		),
+		securityPolicyGK: sets.New[string](
 			resource.KindGateway,
 			resource.KindListenerSet,
 			resource.KindHTTPRoute,
@@ -1837,6 +1847,22 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 			resource.KindTCPRoute,
 			resource.KindUDPRoute,
 		),
+	}
+	// ExtensionServerPolicies can target Gateways, ListenerSets, HTTPRoutes and GRPCRoutes in other namespaces
+	// through targetSelectors. GatewayClass is cluster-scoped and doesn't need a ReferenceGrant.
+	for i := range resourceTree.ExtensionServerPolicies {
+		policy := &resourceTree.ExtensionServerPolicies[i]
+		gk := policy.GroupVersionKind().GroupKind()
+		if _, ok := policyFromNamespaces[gk]; !ok {
+			policyFromNamespaces[gk] = sets.New[string]()
+			allowedTargetKinds[gk] = sets.New[string](
+				resource.KindGateway,
+				resource.KindListenerSet,
+				resource.KindHTTPRoute,
+				resource.KindGRPCRoute,
+			)
+		}
+		policyFromNamespaces[gk].Insert(policy.GetNamespace())
 	}
 
 	refGrantList := new(gwapiv1b1.ReferenceGrantList)
@@ -1870,14 +1896,12 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 // The detailed check is done in the Gateway API IR translation, where we check if the ReferenceGrant allows the specific reference from the specific policy to the specific gateway/route.
 func policyTargetReferenceGrantAllowed(
 	refGrant *gwapiv1b1.ReferenceGrant,
-	policyFromNamespaces map[string]sets.Set[string],
-	allowedTargetKinds map[string]sets.Set[string],
+	policyFromNamespaces map[schema.GroupKind]sets.Set[string],
+	allowedTargetKinds map[schema.GroupKind]sets.Set[string],
 ) bool {
 	for _, refGrantFrom := range refGrant.Spec.From {
-		if string(refGrantFrom.Group) != egv1a1.GroupVersion.Group {
-			continue
-		}
-		fromNamespaces, ok := policyFromNamespaces[string(refGrantFrom.Kind)]
+		fromGK := schema.GroupKind{Group: string(refGrantFrom.Group), Kind: string(refGrantFrom.Kind)}
+		fromNamespaces, ok := policyFromNamespaces[fromGK]
 		if !ok || !fromNamespaces.Has(string(refGrantFrom.Namespace)) {
 			continue
 		}
@@ -1886,7 +1910,7 @@ func policyTargetReferenceGrantAllowed(
 			if string(refGrantTo.Group) != gwapiv1.GroupName {
 				continue
 			}
-			if allowedTargetKinds[string(refGrantFrom.Kind)].Has(string(refGrantTo.Kind)) {
+			if allowedTargetKinds[fromGK].Has(string(refGrantTo.Kind)) {
 				return true
 			}
 		}

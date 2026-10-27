@@ -30,6 +30,9 @@ spec:
       prometheus:
         compression:
           type: Gzip
+          gzip:
+            compressionLevel: 1
+            windowBits: 15
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

@@ -54,6 +54,9 @@ const (
 	defaultOIDCHTTPTimeout       = 5 * time.Second
 	defaultOIDCMaxRedirects      = 3
 
+	// defaultExtAuthMaxRequestBytes matches the default per-connection buffer limit.
+	defaultExtAuthMaxRequestBytes = 32768
+
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	oidcHMACSecretKey  = "hmac-secret"
@@ -2267,6 +2270,7 @@ func (t *Translator) buildOIDC(
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
 		CookieDomain:           policy.Spec.OIDC.CookieDomain,
 		CookieConfig:           policy.Spec.OIDC.CookieConfig,
+		TokenCookieChunking:    !t.OIDCTokenCookieChunkingDisabled,
 		HMACSecret:             hmacData,
 		PassThroughAuthHeader:  passThroughAuthHeader,
 		DisableTokenEncryption: disableTokenEncryption,
@@ -3083,7 +3087,8 @@ func (t *Translator) buildExtAuth(
 
 	if policy.Spec.ExtAuth.BodyToExtAuth != nil {
 		extAuth.BodyToExtAuth = &ir.BodyToExtAuth{
-			MaxRequestBytes: policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes,
+			MaxRequestBytes: ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes, defaultExtAuthMaxRequestBytes),
+			PackAsBytes:     ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.PackAsBytes, false),
 		}
 	}
 

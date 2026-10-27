@@ -261,6 +261,12 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}
 	require.NoError(t, cli.Create(ctx, gw))
 
+	// The provider updates the Gateway status from the Service event below only if
+	// the Gateway is already in its cache, and nothing in this test triggers it again.
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, utils.NamespacedName(gw), &gwapiv1.Gateway{}) == nil
+	}, defaultWait, defaultTick)
+
 	labels := map[string]string{
 		gatewayapi.OwningGatewayNameLabel:      gw.Name,
 		gatewayapi.OwningGatewayNamespaceLabel: gw.Namespace,
@@ -1297,10 +1303,11 @@ func TestNamespacedProvider(t *testing.T) {
 	gw3 := test.GetGateway(types.NamespacedName{Name: "gw-ns3", Namespace: "ns3"}, gcName, 8080)
 	require.NoError(t, cli.Create(ctx, gw3))
 
-	// Ensure only 2 gateways are reconciled
-	gatewayList := &gwapiv1.GatewayList{}
-	require.NoError(t, cli.List(ctx, gatewayList))
-	require.Len(t, gatewayList.Items, 2)
+	// Wait for the cache to observe the gateways in the two watched namespaces.
+	require.Eventually(t, func() bool {
+		gatewayList := &gwapiv1.GatewayList{}
+		return cli.List(ctx, gatewayList) == nil && len(gatewayList.Items) == 2
+	}, defaultWait, defaultTick)
 }
 
 func TestNamespaceSelectorProvider(t *testing.T) {

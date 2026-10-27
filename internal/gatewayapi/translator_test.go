@@ -59,6 +59,7 @@ func TestTranslate(t *testing.T) {
 		PerResourceSystemCASecret       bool
 		EnvoyProxyPatchDisabled         bool
 		CTPHTTP1ClientScopeOnly         bool
+		OIDCTokenCookieChunkingDisabled bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -160,6 +161,10 @@ func TestTranslate(t *testing.T) {
 			name:                    "mergebackends-btp-backend-target-http1-ctp-client-scope",
 			CTPHTTP1ClientScopeOnly: true,
 		},
+		{
+			name:                            "securitypolicy-with-oidc-token-cookie-chunking-disabled",
+			OIDCTokenCookieChunkingDisabled: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -188,6 +193,7 @@ func TestTranslate(t *testing.T) {
 			perResourceSystemCASecret := false
 			envoyProxyPatchDisabled := false
 			ctpHTTP1ClientScopeOnly := false
+			oidcTokenCookieChunkingDisabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -200,6 +206,7 @@ func TestTranslate(t *testing.T) {
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
 					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
 					ctpHTTP1ClientScopeOnly = config.CTPHTTP1ClientScopeOnly
+					oidcTokenCookieChunkingDisabled = config.OIDCTokenCookieChunkingDisabled
 				}
 			}
 
@@ -221,6 +228,7 @@ func TestTranslate(t *testing.T) {
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
 				EnvoyProxyPatchDisabled:         envoyProxyPatchDisabled,
 				CTPHTTP1ClientScopeOnly:         ctpHTTP1ClientScopeOnly,
+				OIDCTokenCookieChunkingDisabled: oidcTokenCookieChunkingDisabled,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 

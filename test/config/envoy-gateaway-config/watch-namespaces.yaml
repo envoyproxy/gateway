@@ -55,6 +55,20 @@ data:
           envoyDeployment:
             container:
               image: envoyproxy/envoy:invalid-tag
+    extensionManager:
+      maxMessageSize: 1000M
+      policyResources:
+      - group: extserver.example.io
+        version: v1alpha1
+        kind: VHostMetadataPolicy
+      hooks:
+        xdsTranslator:
+          post:
+          - VirtualHost
+      service:
+        fqdn:
+          hostname: gateway-simple-extension-server.envoy-gateway-system.svc.cluster.local
+          port: 5005
     telemetry:
       traces:
         sink:

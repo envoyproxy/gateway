@@ -156,6 +156,10 @@ type Translator struct {
 	// apply to client connections only and no longer seed backend HTTP/1 protocol settings.
 	CTPHTTP1ClientScopeOnly bool
 
+	// OIDCTokenCookieChunkingDisabled stops the OIDC filter from splitting a token
+	// too large for one cookie across several cookies.
+	OIDCTokenCookieChunkingDisabled bool
+
 	// LuaEnvoyExtensionPolicyDisabled when the Lua EnvoyExtensionPolicy feature is disabled.
 	LuaEnvoyExtensionPolicyDisabled bool
 
@@ -375,6 +379,7 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	)
 	t.BTPRoutingTypeIndex = btpIndexes.RoutingType
 	t.BTPClusterSettingsIndex = btpIndexes.ClusterSettings
+	t.BTPRejectedPolicies = btpIndexes.RejectedPolicies
 
 	// Pre-compute which gateways/listeners have a ClientTrafficPolicy-sourced
 	// cluster-affecting override, for O(1) lookup during route processing.
