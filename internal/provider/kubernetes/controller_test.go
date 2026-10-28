@@ -2688,6 +2688,33 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			expectedNames: sets.New("sp-gateway", "sp-listenerset", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
 		},
 		{
+			name: "ExtensionServerPolicy includes gateway, ListenerSet, and route target grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				policy := unstructured.Unstructured{}
+				policy.SetAPIVersion("foo.example.io/v1alpha1")
+				policy.SetKind("Bar")
+				policy.SetNamespace(policyNS)
+				policy.SetName("bar")
+				resourceTree.ExtensionServerPolicies = append(resourceTree.ExtensionServerPolicies, policy)
+			},
+			referenceGrants: func() []client.Object {
+				extGrant := func(name, namespace, fromGroup, fromKind, toKind string) *gwapiv1b1.ReferenceGrant {
+					rg := refGrant(name, namespace, fromKind, policyNS, gwapiv1.GroupName, toKind)
+					rg.Spec.From[0].Group = gwapiv1b1.Group(fromGroup)
+					return rg
+				}
+				return []client.Object{
+					extGrant("bar-gateway", gatewayNS, "foo.example.io", "Bar", resource.KindGateway),
+					extGrant("bar-listenerset", listenerSetNS, "foo.example.io", "Bar", resource.KindListenerSet),
+					extGrant("bar-route", routeNS, "foo.example.io", "Bar", resource.KindHTTPRoute),
+					extGrant("bar-tcp-route", routeNS, "foo.example.io", "Bar", resource.KindTCPRoute),
+					extGrant("bar-wrong-group", gatewayNS, "other.example.io", "Bar", resource.KindGateway),
+					extGrant("bar-wrong-kind", gatewayNS, "foo.example.io", "Baz", resource.KindGateway),
+				}
+			}(),
+			expectedNames: sets.New("bar-gateway", "bar-listenerset", "bar-route"),
+		},
+		{
 			name: "ignores non matching grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{

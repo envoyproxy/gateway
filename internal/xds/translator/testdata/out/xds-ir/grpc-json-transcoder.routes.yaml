@@ -1,0 +1,18 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: /greet/world
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.grpc_json_transcoder/httproutefilter/default/transcode:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

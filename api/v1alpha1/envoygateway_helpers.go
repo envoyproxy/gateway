@@ -179,9 +179,10 @@ func (r *RateLimit) GetServiceSettings() *ClusterSettings {
 
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
 var defaultRuntimeFlags = map[RuntimeFlag]bool{
-	XDSNameSchemeV2:    false,
-	EndpointSliceIndex: true,
-	EnvoyProxyPatch:    true,
+	XDSNameSchemeV2:         false,
+	EndpointSliceIndex:      true,
+	EnvoyProxyPatch:         true,
+	OIDCTokenCookieChunking: true,
 }
 
 // IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.

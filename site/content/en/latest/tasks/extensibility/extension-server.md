@@ -51,7 +51,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 |-----------|------------------|---------|-------------------|-------------------|
 | `Route` | `PostRouteModifyHook` | Modify individual routes | Single `envoy.config.route.v3.Route` | Per-route, only for routes with extension filters or extension server policies targeting them |
 | `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
-| `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host |
+| `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host; receives extension server policies targeting the listener that owns the virtual host |
 | `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
 | `Translation` | `PostTranslateModifyHook` | Global modification of all xDS resources | All clusters, secrets, listeners, and routes | Once per translation cycle |
 
@@ -91,7 +91,7 @@ The hooks are executed in the following order during xDS translation:
 #### VirtualHost Hook (`PostVirtualHostModifyHook`)
 
 - **When called**: After all routes for a virtual host are processed
-- **Input**: Complete virtual host with all its routes
+- **Input**: Complete virtual host with all its routes, plus extension server policies targeting the listener that owns this virtual host
 - **Output**: Modified virtual host (can add/remove/modify routes)
 - **Use cases**: Add virtual host-level configuration, inject additional routes
 
@@ -118,9 +118,11 @@ Envoy Gateway resources through their `targetRefs`/`targetRef` (with an optional
 
 | `targetRef` kind | `sectionName` | Attaches to | Delivered to hook(s) |
 |------------------|---------------|-------------|----------------------|
-| `GatewayClass`   | _(unset)_     | Every listener of every Gateway in the class (requires `mergeGateways`) | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
-| `Gateway`        | _(unset)_     | Every listener of the Gateway | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
-| `Gateway`        | Listener name | A single Listener | `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `Gateway`        | _(unset)_     | The whole Gateway | `PostVirtualHostModifyHook` (once for each listener's virtual host), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `Gateway`        | Listener name | A single Listener | `PostVirtualHostModifyHook` (virtual host of that listener only), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `GatewayClass`   | _(unset)_     | Every listener of every Gateway in the class (requires `mergeGateways`) | `PostVirtualHostModifyHook` (once for each listener's virtual host), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` |
+| `ListenerSet`    | _(unset)_     | Every listener of the ListenerSet | `PostVirtualHostModifyHook` (once for each listener's virtual host), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` (of the parent Gateway) |
+| `ListenerSet`    | Listener name | A single Listener of the ListenerSet | `PostVirtualHostModifyHook` (virtual host of that listener only), `PostHTTPListenerModifyHook`, `PostTranslateModifyHook` (of the parent Gateway) |
 | `HTTPRoute` / `GRPCRoute` | _(unset)_ | All rules of the route | `PostRouteModifyHook` (every route generated from the HTTPRoute/GRPCRoute) |
 | `HTTPRoute` / `GRPCRoute` | Rule name (`sectionName`) | A single route rule | `PostRouteModifyHook` (routes generated from that rule only) |
 
@@ -131,7 +133,8 @@ merged Gateways, every Gateway of the class shares one Envoy fleet and one xDS t
 has a single, well-defined place to attach:
 
 - It is attached to every listener (HTTP, TCP and UDP) of every Gateway in the class, including listeners contributed
-  by ListenerSets, and is therefore delivered to `PostHTTPListenerModifyHook` for each of those listeners.
+  by ListenerSets, and is therefore delivered to `PostVirtualHostModifyHook` (once per listener's virtual host) and
+  `PostHTTPListenerModifyHook` for each of those listeners.
 - It is delivered once to `PostTranslateModifyHook` for the merged translation of the class.
 - `sectionName` is not supported on a `GatewayClass` target. To select a single listener, target the `Gateway` with
   `sectionName` instead.
@@ -152,14 +155,35 @@ spec:
 A `GatewayClass` can also be selected through `targetSelectors` by matching its labels. Because a GatewayClass is
 cluster-scoped, the selector's `namespaces` field and ReferenceGrants do not apply to it.
 
-**Important**: Policies targeting a `GatewayClass`, a `Gateway`, and policies targeting an `HTTPRoute` or `GRPCRoute` are evaluated independently. Envoy Gateway does not merge, override, or resolve conflicts between them. For example, a policy attached to an `HTTPRoute` does not override a policy of the same kind attached to its `Gateway`. Any merging, overriding, or conflict resolution behavior must be implemented by the Extension Server.
+#### Targeting a ListenerSet
+
+A policy can target a [`ListenerSet`][listenerset], or a single listener of it through `sectionName`. The policy is
+attached only to the ListenerSet's own listeners, and status is reported against the `ListenerSet` rather than its
+parent Gateway. A `Gateway` target without `sectionName` already covers the listeners contributed by its
+ListenerSets, while a `Gateway` target with `sectionName` only matches the Gateway's own listeners.
+
+```yaml
+apiVersion: example.extensions.io/v1alpha1
+kind: ListenerContextExample
+metadata:
+  name: listenerset-policy
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: team-a-listeners
+    sectionName: https     # optional, selects a single listener of the ListenerSet
+```
+
+**Important**: Policies targeting a `GatewayClass`, a `Gateway`, a `ListenerSet`, and policies targeting an `HTTPRoute` or `GRPCRoute` are evaluated independently. Envoy Gateway does not merge, override, or resolve conflicts between them. For example, a policy attached to an `HTTPRoute` does not override a policy of the same kind attached to its `Gateway`. Any merging, overriding, or conflict resolution behavior must be implemented by the Extension Server.
 
 #### Cross-namespace attachment
 
-Direct `targetRefs` / `targetRef` to a namespaced target (`Gateway`, `HTTPRoute`, `GRPCRoute`) are always resolved
+Direct `targetRefs` / `targetRef` to a namespaced target (`Gateway`, `ListenerSet`, `HTTPRoute`, `GRPCRoute`) are always resolved
 in the **policy's own namespace**, they cannot reference a target in another namespace. A `GatewayClass` is
 cluster-scoped, so a policy in any namespace can target it directly without a ReferenceGrant. To attach a policy across namespaces, use `targetSelectors`, which can select a whole
-`Gateway` or a whole `HTTPRoute`/`GRPCRoute` in another namespace:
+`Gateway`, `ListenerSet` or `HTTPRoute`/`GRPCRoute` in another namespace:
 
 ```yaml
 apiVersion: example.extensions.io/v1alpha1
@@ -207,7 +231,8 @@ always same-namespace.
 #### Status reporting
 
 Envoy Gateway records the outcome of attachment in the policy's `status.ancestors` conditions. The ancestor is the
-Gateway the target resolves to, or the `GatewayClass` itself for a `GatewayClass` target:
+Gateway the target resolves to, the `ListenerSet` itself for a `ListenerSet` target, or the `GatewayClass` itself for
+a `GatewayClass` target:
 
 - **Attached**: the policy is delivered to the relevant hook(s) and an `Accepted: True` condition (reason
   `Accepted`) is set.
@@ -223,7 +248,8 @@ Gateway the target resolves to, or the `GatewayClass` itself for a `GatewayClass
 - **GatewayClass with no listeners**: when `mergeGateways` is enabled but the class currently has no Gateways (or
   none of them have listeners), the policy does not attach and an `Accepted: False` condition with reason
   `TargetNotFound` is set.
-- **Target not found**: when the referenced `Gateway` / route does not exist (or the Gateway was not accepted), the
+- **Target not found**: when the referenced `Gateway` / `ListenerSet` / route does not exist (or the Gateway, or the
+  parent Gateway of the ListenerSet, was not accepted), the
   policy is skipped silently and no condition is written, since the target may be created (or become accepted) later.
 
 ### Configuration
@@ -545,3 +571,4 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 [SecurityPolicy]: /latest/api/extension_types/#securitypolicy
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#referencegrant
 [merge-gateways]: ../operations/deployment-mode/#merged-gateways-deployment
+[listenerset]: https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#listenerset

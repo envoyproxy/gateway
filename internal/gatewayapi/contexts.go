@@ -955,6 +955,12 @@ type ResolvedCAKey struct {
 	Name         string
 }
 
+// ExtensionBackendKey scopes a generated callout cluster name to its output IR.
+type ExtensionBackendKey struct {
+	GatewayIRKey string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -965,9 +971,11 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionBackendMap     map[ExtensionBackendKey]*ir.ExtensionBackend
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
 	ResolvedCAMap           map[ResolvedCAKey]string
+	protoDescriptors        map[types.NamespacedName]*parsedProtoDescriptor
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
 	BTPRejectedPolicies     map[types.NamespacedName]backendPolicyRejection

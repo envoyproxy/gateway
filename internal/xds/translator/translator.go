@@ -309,6 +309,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	}
 	phases.End()
 
+	if err := patchExtensionBackendResources(tCtx, xdsIR.ExtensionBackends); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -760,6 +764,11 @@ func (t *Translator) addRouteToRouteConfig(
 		errs      error                               // the accumulated errors
 		err       error
 
+		// vHostExtRefs maps each newly-created vHost to the IR extension refs from the listener
+		// that owns it, so PostVirtualHostModifyHook can be called after routes are fully
+		// populated while still carrying the correct per-listener policy context.
+		vHostExtRefs = map[*routev3.VirtualHost][]*ir.UnstructuredRef{}
+
 		maxDirectResponseBodySize uint32 = DefaultMaxDirectResponseBodySize
 	)
 
@@ -801,6 +810,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 			vHosts[httpRoute.Hostname] = vHost
 			vHostList = append(vHostList, vHost)
+
+			// Resolve the listener's extension refs now (while we have listener context),
+			// but defer the hook call until after routes are fully populated.
+			vHostExtRefs[vHost] = httpListener.ExtensionRefs
 		}
 
 		if dr := httpRoute.DirectResponse; dr != nil {
@@ -933,21 +946,29 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 
+	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+
+	// Call the vhost hook after all routes have been appended, so the extension server sees
+	// a fully-populated VirtualHost. Iterate vHostList to preserve creation order.
 	for _, vHost := range vHostList {
-		// Check if an extension want to modify the Virtual Host we just generated
-		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		err = processExtensionPostVHostHook(vHost, t.ExtensionManager, &t.ExtensionStats)
-		if err != nil {
-			// If the extension server returns an error, and the extension server is not configured to fail open,
-			// then propagate the error
+		refs := vHostExtRefs[vHost]
+		extResources := make([]*unstructured.Unstructured, 0, len(refs))
+		seen := make(map[*unstructured.Unstructured]struct{}, len(refs))
+		for _, ref := range refs {
+			obj := resolveUnstructuredRef(ref, t.extensionIndex)
+			if _, dup := seen[obj]; !dup {
+				seen[obj] = struct{}{}
+				extResources = append(extResources, obj)
+			}
+		}
+		if hookErr := processExtensionPostVHostHook(vHost, extResources, t.ExtensionManager, &t.ExtensionStats); hookErr != nil {
 			if !(*t.ExtensionManager).FailOpen() {
-				errs = errors.Join(errs, err)
+				errs = errors.Join(errs, hookErr)
 			} else {
-				t.Logger.Error(err, "Extension Manager PostVHost failure")
+				t.Logger.Error(hookErr, "Extension Manager PostVHost failure")
 			}
 		}
 	}
-	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.
