@@ -270,10 +270,9 @@ benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-
 
 .PHONY: resilience
 resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server enable-multiple-extension-managers run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
-
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
-	install-ratelimit install-eg-addons kube-install-examples-image \
+	install-ratelimit install-eg-addons kube-install-examples-image enable-simple-extension-server \
 	e2e-prepare setup-mac-net-connect run-e2e delete-cluster
 
 .PHONY: e2e-mac conformance-mac
@@ -311,6 +310,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl apply -f test/e2e/testdata/extension-server-crds.yaml
 	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml
 

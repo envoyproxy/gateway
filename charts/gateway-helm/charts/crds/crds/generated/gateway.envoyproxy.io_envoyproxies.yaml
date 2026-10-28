@@ -490,6 +490,8 @@ spec:
 
                   - envoy.filters.http.grpc_web
 
+                  - envoy.filters.http.grpc_json_transcoder
+
                   - envoy.filters.http.grpc_stats
 
                   - envoy.filters.http.credential_injector
@@ -535,6 +537,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
@@ -569,6 +572,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
@@ -601,6 +605,7 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
+                      - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
@@ -12243,6 +12248,18 @@ spec:
                                                       GRPC defines the configuration of the GRPC health checker.
                                                       It's optional, and can only be used if the specified type is GRPC.
                                                     properties:
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the value of the :authority header sent with active gRPC
+                                                          health checks. Authority selection uses this order: this field, the
+                                                          associated Backend endpoint hostname if available, then the effective Route
+                                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                                          servers.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       service:
                                                         description: |-
                                                           Service to send in the health check request.
@@ -12414,6 +12431,28 @@ spec:
                                                           checking.
                                                         maxLength: 1024
                                                         minLength: 1
+                                                        type: string
+                                                      protocol:
+                                                        default: Auto
+                                                        description: |-
+                                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                              GRPCRoute.
+                                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                              with HTTP1 as the fallback when nothing is negotiated.
+                                                            - HTTP1 otherwise.
+
+                                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                        enum:
+                                                        - Auto
+                                                        - HTTP1
+                                                        - HTTP2
                                                         type: string
                                                       requestBody:
                                                         description: RequestBody defines
@@ -14009,6 +14048,18 @@ spec:
                                                       GRPC defines the configuration of the GRPC health checker.
                                                       It's optional, and can only be used if the specified type is GRPC.
                                                     properties:
+                                                      hostname:
+                                                        description: |-
+                                                          Hostname defines the value of the :authority header sent with active gRPC
+                                                          health checks. Authority selection uses this order: this field, the
+                                                          associated Backend endpoint hostname if available, then the effective Route
+                                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                                          servers.
+                                                        maxLength: 253
+                                                        minLength: 1
+                                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                        type: string
                                                       service:
                                                         description: |-
                                                           Service to send in the health check request.
@@ -14180,6 +14231,28 @@ spec:
                                                           checking.
                                                         maxLength: 1024
                                                         minLength: 1
+                                                        type: string
+                                                      protocol:
+                                                        default: Auto
+                                                        description: |-
+                                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                              GRPCRoute.
+                                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                              with HTTP1 as the fallback when nothing is negotiated.
+                                                            - HTTP1 otherwise.
+
+                                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                        enum:
+                                                        - Auto
+                                                        - HTTP1
+                                                        - HTTP2
                                                         type: string
                                                       requestBody:
                                                         description: RequestBody defines
@@ -16187,6 +16260,18 @@ spec:
                                                 GRPC defines the configuration of the GRPC health checker.
                                                 It's optional, and can only be used if the specified type is GRPC.
                                               properties:
+                                                hostname:
+                                                  description: |-
+                                                    Hostname defines the value of the :authority header sent with active gRPC
+                                                    health checks. Authority selection uses this order: this field, the
+                                                    associated Backend endpoint hostname if available, then the effective Route
+                                                    hostname. If none of them is set, Envoy falls back to the name of the
+                                                    cluster, which is not a valid authority and is rejected by some gRPC
+                                                    servers.
+                                                  maxLength: 253
+                                                  minLength: 1
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                  type: string
                                                 service:
                                                   description: |-
                                                     Service to send in the health check request.
@@ -16353,6 +16438,28 @@ spec:
                                                     health checking.
                                                   maxLength: 1024
                                                   minLength: 1
+                                                  type: string
+                                                protocol:
+                                                  default: Auto
+                                                  description: |-
+                                                    Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                    Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                      - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                        `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                        GRPCRoute.
+                                                      - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                        with HTTP1 as the fallback when nothing is negotiated.
+                                                      - HTTP1 otherwise.
+
+                                                    Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                    the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                    accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                                  enum:
+                                                  - Auto
+                                                  - HTTP1
+                                                  - HTTP2
                                                   type: string
                                                 requestBody:
                                                   description: RequestBody defines
@@ -18073,6 +18180,18 @@ spec:
                                           GRPC defines the configuration of the GRPC health checker.
                                           It's optional, and can only be used if the specified type is GRPC.
                                         properties:
+                                          hostname:
+                                            description: |-
+                                              Hostname defines the value of the :authority header sent with active gRPC
+                                              health checks. Authority selection uses this order: this field, the
+                                              associated Backend endpoint hostname if available, then the effective Route
+                                              hostname. If none of them is set, Envoy falls back to the name of the
+                                              cluster, which is not a valid authority and is rejected by some gRPC
+                                              servers.
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                            type: string
                                           service:
                                             description: |-
                                               Service to send in the health check request.
@@ -18235,6 +18354,28 @@ spec:
                                               checking.
                                             maxLength: 1024
                                             minLength: 1
+                                            type: string
+                                          protocol:
+                                            default: Auto
+                                            description: |-
+                                              Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                              Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                  `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                  GRPCRoute.
+                                                - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                  with HTTP1 as the fallback when nothing is negotiated.
+                                                - HTTP1 otherwise.
+
+                                              Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                              the application, for example a backend that serves HTTP/1.1 traffic but only
+                                              accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                            enum:
+                                            - Auto
+                                            - HTTP1
+                                            - HTTP2
                                             type: string
                                           requestBody:
                                             description: RequestBody defines the HTTP

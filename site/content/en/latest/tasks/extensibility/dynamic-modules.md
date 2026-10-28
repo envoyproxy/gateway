@@ -254,3 +254,7 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
 [DynamicModules]: ../../../api/extension_types#dynamicmoduleentry
+
+## Backend dependencies
+
+Declare HTTP callout dependencies with [extension backend bindings](../extension-backends/).

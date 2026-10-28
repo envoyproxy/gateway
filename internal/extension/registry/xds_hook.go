@@ -113,13 +113,19 @@ func (h *XDSHook) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAs
 	return resp.LoadAssignment, nil
 }
 
-func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, types.HookResult, error) {
+func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost, extensionResources []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
+	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return vh, types.HookResult{}, err
+	}
 	// Make the request to the extension server
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostVirtualHostModify(ctx,
 		&extension.PostVirtualHostModifyRequest{
-			VirtualHost:            vh,
-			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
+			VirtualHost: vh,
+			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{
+				ExtensionResources: extensionResourceBytes,
+			},
 		})
 	// The RPC was attempted; count it regardless of whether the server returned an error.
 	if err != nil {

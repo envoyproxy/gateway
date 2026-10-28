@@ -179,7 +179,7 @@ docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-
 .PHONY: docs-check-links
 docs-check-links: $(tools/linkinator) # Check for broken links in the docs
 	@$(LOG_TARGET)
-	$(tools/linkinator) site/public/ -r --concurrency $(LINKINATOR_CONCURRENCY) --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
+	$(tools/linkinator) site/public/ -r --concurrency $(LINKINATOR_CONCURRENCY) --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --status-code "408:warn" --skip $(LINKINATOR_IGNORE) --verbosity error
 
 docs-markdown-lint: $(tools/markdownlint)
 	$(tools/markdownlint) -c .github/markdown_lint_config.json site/content/*

@@ -109,6 +109,11 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+    backends:
+    - name: resolver
+      backendRef:
+        name: service-1
+        port: 8080
     wasm:
     - name: wasm-filter-4
       code:

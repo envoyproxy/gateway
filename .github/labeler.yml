@@ -1,0 +1,13 @@
+# Labels applied automatically by .github/workflows/labeler.yaml based on the
+# files a PR touches.
+
+# Anything users configure against: the Go API types, the extension protos,
+# the generated CRDs, and the Helm values and templates.
+area/api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'api/**'
+          - 'proto/**'
+          - 'charts/*/templates/**'
+          - 'charts/*/values*.yaml'
+          - 'charts/gateway-helm/charts/crds/**'
