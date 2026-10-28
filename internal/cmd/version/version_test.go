@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestGetEnvoyProxyVersion(t *testing.T) {
