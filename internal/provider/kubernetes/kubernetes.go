@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"sync"
 	"time"
 
@@ -302,56 +303,56 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		// user refs such as policy/filter ConfigMaps and Route backend Services,
 		// and the controller namespace for EG-owned proxy/ratelimit infra
 		// ConfigMaps and Services.
-		mgrOpts.Cache.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
+		setByObject(mgrOpts.Cache.ByObject, &corev1.ConfigMap{}, cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
 			Namespaces:            watchedAndControllerNamespaces,
-		}
-		mgrOpts.Cache.ByObject[&corev1.Service{}] = cache.ByObject{
+		})
+		setByObject(mgrOpts.Cache.ByObject, &corev1.Service{}, cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Namespaces:            watchedAndControllerNamespaces,
-		}
-		mgrOpts.Cache.ByObject[&discoveryv1.EndpointSlice{}] = cache.ByObject{
+		})
+		setByObject(mgrOpts.Cache.ByObject, &discoveryv1.EndpointSlice{}, cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Namespaces:            watchedAndControllerNamespaces,
-		}
+		})
 		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
 			// GatewayNamespaceMode still needs controller namespace access for
 			// EG controller resources and the xDS CA Secret.
-			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+			setByObject(mgrOpts.Cache.ByObject, &corev1.ServiceAccount{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces:            watchedAndControllerNamespaces,
-			}
-			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+			})
+			setByObject(mgrOpts.Cache.ByObject, &appsv1.Deployment{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces:            watchedAndControllerNamespaces,
-			}
-			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+			})
+			setByObject(mgrOpts.Cache.ByObject, &corev1.Secret{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces:            watchedAndControllerNamespaces,
-			}
+			})
 		} else {
 			// In normal mode, ServiceAccounts and Deployments are controller
 			// namespace infra, while Secrets cover watched namespaces for user
 			// refs and the controller namespace for EG-managed infra Secrets,
 			// including the OIDC HMAC Secret and Envoy's TLS Secret for
 			// connections to EG-managed control-plane services.
-			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+			setByObject(mgrOpts.Cache.ByObject, &corev1.ServiceAccount{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces: map[string]cache.Config{
 					svrCfg.ControllerNamespace: {},
 				},
-			}
-			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+			})
+			setByObject(mgrOpts.Cache.ByObject, &appsv1.Deployment{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces: map[string]cache.Config{
 					svrCfg.ControllerNamespace: {},
 				},
-			}
-			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+			})
+			setByObject(mgrOpts.Cache.ByObject, &corev1.Secret{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces:            watchedAndControllerNamespaces,
-			}
+			})
 		}
 	}
 	if kubernetesInfrastructureConfigParams.TopologyInjector == nil || !ptr.Deref(kubernetesInfrastructureConfigParams.TopologyInjector.Disable, false) {
@@ -461,4 +462,17 @@ func signalProviderReady(
 	default:
 		close(providerReady)
 	}
+}
+
+// setByObject sets the cache options for obj's type, replacing any entry already
+// registered for that type. ByObject is keyed by object pointer, so a plain
+// assignment of a new &T{} adds a second entry for the same type instead of
+// replacing it, and the cache then keeps one of them at random.
+func setByObject(m map[client.Object]cache.ByObject, obj client.Object, opts cache.ByObject) {
+	for k := range m {
+		if reflect.TypeOf(k) == reflect.TypeOf(obj) {
+			delete(m, k)
+		}
+	}
+	m[obj] = opts
 }

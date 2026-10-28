@@ -42,11 +42,11 @@ type HTTPRouteFilterSpec struct {
 	// +optional
 	URLRewrite *HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
 	// Redirect returns a redirect response with a regex path transformation.
-    // Without a Gateway API RequestRedirect filter, the status code defaults to 302
-    // and the request scheme, hostname and port are preserved. An optional
-    // RequestRedirect filter on the same HTTPRoute rule can override the scheme,
-    // hostname, port and status code, but must not specify path. Filter order does
-    // not affect the resulting redirect.
+	// Without a Gateway API RequestRedirect filter, the status code defaults to 302
+	// and the request scheme, hostname and port are preserved. An optional
+	// RequestRedirect filter on the same HTTPRoute rule can override the scheme,
+	// hostname, port and status code, but must not specify path. Filter order does
+	// not affect the resulting redirect.
 	// Only one redirect extension is allowed per rule.
 	// Redirect cannot be combined with URL rewriting or direct responses, and is
 	// not supported on GRPCRoutes or backendRefs.
@@ -71,6 +71,14 @@ type HTTPRouteFilterSpec struct {
 	//
 	// +optional
 	RequestMirror *HTTPRequestMirrorFilter `json:"requestMirror,omitempty"`
+	// GRPCJSONTranscoder converts a JSON/HTTP request to a gRPC request, and the gRPC
+	// response back to JSON.
+	//
+	// It can only be used in the rule filters of an HTTPRoute. It is not supported in a
+	// GRPCRoute or in the filters of a backendRef.
+	//
+	// +optional
+	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty"`
 	// Matches defines additional matching criteria for the HTTPRoute rule.
 	// As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
 	// When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
@@ -97,7 +105,6 @@ type HTTPRouteFilterSpec struct {
 	// backendRef of the rule, and a uniform priority carries no failover meaning.
 	//
 	// +optional
-	// +notImplementedHide
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=128
 	BackendPriority *int32 `json:"backendPriority,omitempty"`

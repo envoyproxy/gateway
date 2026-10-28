@@ -636,6 +636,16 @@ func TestValidateXds(t *testing.T) {
 	}
 }
 
+func TestExtensionBackendValidation(t *testing.T) {
+	x := &Xds{HTTP: []*HTTPListener{happyHTTPListener.DeepCopy()}}
+	x.HTTP[0].Routes[0].EnvoyExtensions = &EnvoyExtensionFeatures{Backends: map[string]string{"resolver": "callout"}}
+	require.ErrorIs(t, x.Validate(), ErrExtensionBackendRefNotFound)
+	x.ExtensionBackends = []*ExtensionBackend{{RouteDestination: RouteDestination{Name: "callout"}}}
+	require.NoError(t, x.Validate())
+	x.ExtensionBackends[0].Name = ""
+	require.ErrorIs(t, x.Validate(), ErrDestinationNameEmpty)
+}
+
 func TestTLSCertificateValidateDistinguishesMissingSDSFields(t *testing.T) {
 	tests := []struct {
 		name string

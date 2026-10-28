@@ -36,6 +36,9 @@ Certain restrictions apply on the value of hostnames and addresses. For example,
 
 Envoy Gateway does not manage the lifecycle of unix domain sockets referenced by the Backend resource. Envoy Gateway admins are responsible for creating and mounting the sockets into the envoy proxy pod. The latter can be achieved by patching the envoy deployment using the [EnvoyProxy][] resource.
 
+Envoy Gateway does not resolve DNS for FQDN endpoints and defers this responsibility to Envoy. When targeting a Kubernetes `Service` using a FQDN endpoint, Envoy will not consider Kubernetes `Endpoint` information (such as zone, draining status, specific pod IP).
+As a result, features like load balancing, session persistence, draining and zone aware routing may not work as expected. When targeting a Kubernetes `Service`, consider using the `KubernetesService` endpoint type.
+
 ## Kubernetes Service Backends
 
 A `Backend` with `type: KubernetesService` points at a `Service` in the same namespace. Envoy Gateway discovers the endpoints from the Service's EndpointSlices, the same way it does for a `Service` backendRef, so pod-level load balancing, session persistence, health checking, endpoint draining and zone-aware routing still apply. Backend settings such as `tls` and `appProtocols` are layered on top.

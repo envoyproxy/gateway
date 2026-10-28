@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -517,21 +518,21 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 		// they intentionally skip Gateway listener policies because those are
 		// sibling scopes.
 		for _, parentRefCtx := range parentRefCtxs {
+			// The listeners can merge with different parent policies, and fail on some of them
+			// only, so collect their results and report them once for the parentRef.
+			errMsgs, mergedWith := sets.New[string](), sets.New[string]()
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 
 				var (
 					parentPolicy *egv1a1.EnvoyExtensionPolicy
 					parentScope  policyScope
-					ancestorRef  gwapiv1.ParentReference
 				)
 				if listener.isFromListenerSet() {
 					lsNN := types.NamespacedName{
 						Namespace: listener.listenerSet.Namespace,
 						Name:      listener.listenerSet.Name,
 					}
-					ancestorRef = getAncestorRefForListenerSetPolicy(lsNN, &listener.Name)
-
 					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
@@ -544,8 +545,6 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
 				} else {
-					ancestorRef = getAncestorRefForPolicy(gwNN, &listener.Name)
-
 					listenerKey := NamespacedNameWithSection{NamespacedName: gwNN, SectionName: listener.Name}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
 
@@ -559,14 +558,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 				if parentPolicy == nil {
 					// No parent policy found, fall back to current policy
 					if err := t.translateEnvoyExtensionPolicyForRoute(policy, &envoyExtensionPolicyOwners{}, targetedRoute, currTarget, xdsIR, resources, listener); err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(err))
 					}
 					continue
 				}
@@ -574,44 +566,23 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 				// Merge with parent policy
 				mergedPolicy, owners, err := mergeEnvoyExtensionPolicy(policy, parentPolicy)
 				if err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						fmt.Sprintf("error merging policies: %v", err),
-						policy.Generation,
-					)
+					errMsgs.Insert(fmt.Sprintf("error merging policies: %v", err))
 					continue
 				}
 
 				// Apply merged policy
 				if err := t.translateEnvoyExtensionPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, xdsIR, resources, listener); err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
-					)
+					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
 
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
+
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parentRefCtx.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
@@ -1047,10 +1018,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	targetListener *ListenerContext,
 ) error {
 	var (
-		luas                                                  []ir.Lua
-		extProcFailOpen                                       bool
-		luaError, extProcError, dynamicModuleError, wasmError error
-		errs                                                  error
+		luas                                                                []ir.Lua
+		extProcFailOpen                                                     bool
+		luaError, extProcError, dynamicModuleError, wasmError, backendError error
+		errs                                                                error
 	)
 
 	// Apply IR to all relevant routes
@@ -1120,6 +1091,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			errs = errors.Join(errs, dynamicModuleError)
 		}
 
+		var backends map[string]*ir.ExtensionBackend
+		var backendRefs map[string]string
+		if backends, backendError = t.buildExtensionBackends(policy, owners, resources, gtwCtx); backendError != nil {
+			errs = errors.Join(errs, backendError)
+		}
+
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
 			// If targetListener is set, only apply to that exact listener.
@@ -1142,7 +1119,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							continue
 						}
 
-						failRoute := false
+						// Declared backends remain required when a filter allows failures.
+						failRoute := backendError != nil
 						// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
 						// TODO: we may also add fail open option for Lua extension to align with other extensions
 						if luaError != nil {
@@ -1158,16 +1136,24 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							failRoute = true
 						}
 						if failRoute {
+							if backendError != nil {
+								// Mark this policy selected so a parent cannot restore extensions.
+								r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
+							}
 							r.DirectResponse = &ir.CustomResponse{
 								StatusCode: new(uint32(500)),
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
+							if backendRefs == nil {
+								backendRefs = t.registerExtensionBackends(xdsIR[irKey], gtwCtx, backends)
+							}
 							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 								ExtProcs:       extProcs,
 								Wasms:          wasms,
 								Luas:           luas,
 								DynamicModules: dynamicModules,
+								Backends:       backendRefs,
 							}
 						}
 					}
@@ -1227,13 +1213,13 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 	targetListeners []*ListenerContext,
 ) error {
 	var (
-		extProcs                                              []ir.ExtProc
-		wasms                                                 []ir.Wasm
-		luas                                                  []ir.Lua
-		dynamicModules                                        []ir.DynamicModule
-		wasmFailOpen, extProcFailOpen                         bool
-		wasmError, luaError, extProcError, dynamicModuleError error
-		errs                                                  error
+		extProcs                                                            []ir.ExtProc
+		wasms                                                               []ir.Wasm
+		luas                                                                []ir.Lua
+		dynamicModules                                                      []ir.DynamicModule
+		wasmFailOpen, extProcFailOpen                                       bool
+		wasmError, luaError, extProcError, dynamicModuleError, backendError error
+		errs                                                                error
 	)
 
 	noOwners := &envoyExtensionPolicyOwners{}
@@ -1252,6 +1238,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, noOwners, gateway.envoyProxy); dynamicModuleError != nil {
 		dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 		errs = errors.Join(errs, dynamicModuleError)
+	}
+
+	var backends map[string]*ir.ExtensionBackend
+	var backendRefs map[string]string
+	if backends, backendError = t.buildExtensionBackends(policy, noOwners, resources, gateway); backendError != nil {
+		errs = errors.Join(errs, backendError)
 	}
 
 	irKey := t.getIRKey(gateway.Gateway)
@@ -1277,7 +1269,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				continue
 			}
 
-			failRoute := false
+			// Declared backends remain required when a filter allows failures.
+			failRoute := backendError != nil
 			// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
 			// TODO: we may also add fail open option for Lua extension to align with other extensions
 			if luaError != nil {
@@ -1293,16 +1286,24 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				failRoute = true
 			}
 			if failRoute {
+				if backendError != nil {
+					// Mark this policy selected so a parent cannot restore extensions.
+					r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
+				}
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
+				if backendRefs == nil {
+					backendRefs = t.registerExtensionBackends(x, gateway, backends)
+				}
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 					ExtProcs:       extProcs,
 					Wasms:          wasms,
 					Luas:           luas,
 					DynamicModules: dynamicModules,
+					Backends:       backendRefs,
 				}
 			}
 		}
@@ -1812,6 +1813,22 @@ func (t *Translator) buildWasm(
 		wasmIR.HostKeys = config.Env.HostKeys
 	}
 
+	if ptr.Deref(config.VMSharingScope, egv1a1.WasmVMSharingScopePolicy) == egv1a1.WasmVMSharingScopeNamespace {
+		// Identify local modules by path and remote modules by their resolved
+		// checksum because Envoy computes the key before fetching remote code.
+		moduleID := wasmIR.Path
+		if wasmIR.Code != nil {
+			moduleID = wasmIR.Code.SHA256
+		}
+		wasmIR.VMID = fmt.Sprintf("envoyextensionpolicy/%s/wasm/%s", policy.Namespace, moduleID)
+
+		// Envoy includes the environment configuration in its VM identity. Emit
+		// equivalent host-key sets in the same order without modifying the policy.
+		wasmIR.HostKeys = slices.Clone(wasmIR.HostKeys)
+		slices.Sort(wasmIR.HostKeys)
+		wasmIR.HostKeys = slices.Compact(wasmIR.HostKeys)
+	}
+
 	return wasmIR, nil
 }
 
@@ -1922,6 +1939,7 @@ func (t *Translator) buildDynamicModules(
 }
 
 type envoyExtensionPolicyOwners struct {
+	backends      *egv1a1.EnvoyExtensionPolicy
 	wasm          *egv1a1.EnvoyExtensionPolicy
 	extProc       *egv1a1.EnvoyExtensionPolicy
 	lua           *egv1a1.EnvoyExtensionPolicy
@@ -1946,6 +1964,9 @@ func mergeEnvoyExtensionPolicy(routePolicy, parentPolicy *egv1a1.EnvoyExtensionP
 // and to derive IR resource names tied to the owning policy.
 func buildEnvoyExtensionPolicyOwners(route, parent *egv1a1.EnvoyExtensionPolicy) *envoyExtensionPolicyOwners {
 	return &envoyExtensionPolicyOwners{
+		backends: ownerOf(route, parent, func(p *egv1a1.EnvoyExtensionPolicy) bool {
+			return len(p.Spec.Backends) > 0
+		}),
 		wasm: ownerOf(route, parent, func(p *egv1a1.EnvoyExtensionPolicy) bool {
 			return len(p.Spec.Wasm) > 0
 		}),

@@ -44,6 +44,9 @@ type HTTPFiltersContext struct {
 	ParentRef *RouteParentContext
 	Route     RouteContext
 	RuleIdx   int
+
+	// Redirect rules collect match constraints before validating their actions.
+	redirectMatchesCollected bool
 }
 
 // HTTPFilterIR contains the ir processing results.
@@ -51,6 +54,7 @@ type HTTPFilterIR struct {
 	DirectResponse      *ir.CustomResponse
 	RedirectResponse    *ir.Redirect
 	CredentialInjection *ir.CredentialInjection
+	GRPCJSONTranscoder  *ir.GRPCJSONTranscoder
 
 	URLRewrite *ir.URLRewrite
 
@@ -69,6 +73,10 @@ type HTTPFilterIR struct {
 	// Matches holds matchers defined on HTTPRouteFilters that must be ANDed with HTTPRouteRule.Matches.
 	Matches []egv1a1.HTTPRouteMatchFilter
 
+	// BackendPriority is the locality priority set by an HTTPRouteFilter's backendPriority.
+	// It is only valid on a backendRef's filters.
+	BackendPriority *uint32
+
 	// RequestMirrorModifier holds the request mirror modifier defined on an attached HTTPRouteFilter.
 	RequestMirrorModifier *egv1a1.RequestMirrorHostnameModifier
 }
@@ -77,10 +85,44 @@ type HTTPFilterIR struct {
 var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 
 const (
-	requestMirrorDirectResponseConflictMsg = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
-	requestMirrorRedirectConflictMsg       = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
-	grpcDirectResponse2xxMsg               = "DirectResponse with a 2xx status code is not supported for GRPCRoute: a 2xx status maps to the gRPC OK status, but a direct response cannot carry a gRPC response message, so the client would receive an invalid response. Use a non-2xx status code to deny or block the request instead"
+	requestMirrorDirectResponseConflictMsg      = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
+	requestMirrorRedirectConflictMsg            = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
+	grpcJSONTranscoderConflictMsg               = "%s cannot be used when the rule also configures a grpcJSONTranscoder filter"
+	grpcJSONTranscoderDirectResponseConflictMsg = "DirectResponse filter cannot be used when the rule also configures a grpcJSONTranscoder filter"
+	grpcDirectResponse2xxMsg                    = "DirectResponse with a 2xx status code is not supported for GRPCRoute: a 2xx status maps to the gRPC OK status, but a direct response cannot carry a gRPC response message, so the client would receive an invalid response. Use a non-2xx status code to deny or block the request instead"
+	backendPriorityRuleLevelMsg                 = "backendPriority HTTPRouteFilter can only be referenced from a backendRef's filters, not from a route rule's filters"
+	multipleBackendPrioritiesMsg                = "cannot configure multiple backendPriority filters for a single backendRef"
 )
+
+// validateRuleLevelFilters rejects filters that are only valid on a backendRef's filters
+// but were referenced from a route rule's filters.
+func validateRuleLevelFilters(resources *resource.Resources, ns string, extRefs ...*gwapiv1.LocalObjectReference) status.Error {
+	if hasBackendPriorityFilter(resources, ns, extRefs...) {
+		return status.NewRouteStatusError(
+			errors.New(backendPriorityRuleLevelMsg),
+			gwapiv1.RouteReasonUnsupportedValue,
+		).WithType(gwapiv1.RouteConditionAccepted)
+	}
+	return nil
+}
+
+// hasBackendPriorityFilter reports whether any of extRefs resolves to an HTTPRouteFilter in
+// namespace ns that sets backendPriority.
+func hasBackendPriorityFilter(resources *resource.Resources, ns string, extRefs ...*gwapiv1.LocalObjectReference) bool {
+	for _, extRef := range extRefs {
+		if extRef == nil ||
+			string(extRef.Group) != egv1a1.GroupVersion.Group ||
+			string(extRef.Kind) != egv1a1.KindHTTPRouteFilter {
+			continue
+		}
+		for _, hrf := range resources.HTTPRouteFilters {
+			if hrf.Namespace == ns && hrf.Name == string(extRef.Name) && hrf.Spec.BackendPriority != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(
@@ -98,17 +140,20 @@ func (t *Translator) ProcessHTTPFilters(
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
 	var errs status.TypedErrorCollector
-	// Match constraints define the rule's scope, even if an earlier action fails
-	// or returns a direct response. Collect them independently of action processing.
-	for _, filter := range filters {
-		if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
-			errs.Add(collectExtensionRefMatches(filter.ExtensionRef, httpFiltersContext, resources))
-		}
-	}
 	// Resolve redirect extensions before processing filters so composition and
 	// conflict detection do not depend on filter order (including direct responses
 	// which otherwise stop filter processing early).
 	redirectPath, err := processRedirectExtension(filters, route, resources)
+	if redirectPath != nil || err != nil {
+		// Keep recovery and match collection scoped to the new redirect extension.
+		// Existing filters retain their short-circuit behavior.
+		httpFiltersContext.redirectMatchesCollected = true
+		for _, filter := range filters {
+			if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
+				errs.Add(collectExtensionRefMatches(filter.ExtensionRef, httpFiltersContext, resources))
+			}
+		}
+	}
 	if err != nil {
 		errs.Add(err)
 		for _, filter := range filters {
@@ -127,6 +172,10 @@ func (t *Translator) ProcessHTTPFilters(
 	}
 	for i := range filters {
 		filter := filters[i]
+		// Preserve existing filter processing unless this is a regex redirect rule.
+		if httpFiltersContext.DirectResponse != nil && redirectPath == nil {
+			break
+		}
 		if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
 			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
 			continue
@@ -212,6 +261,42 @@ func (t *Translator) ProcessHTTPFilters(
 			gwapiv1.RouteReasonIncompatibleFilters,
 		).WithType(gwapiv1.RouteConditionAccepted))
 	}
+	// The transcoder changes the path to the gRPC method before the router, so the filters
+	// that use the path, like a redirect or a path rewrite, would not work as expected.
+	if httpFiltersContext.GRPCJSONTranscoder != nil {
+		// The mirrored request is also transcoded.
+		for _, mirror := range httpFiltersContext.Mirrors {
+			for _, ds := range mirror.Destination.Settings {
+				if err := useGRPCUpstream(ds); err != nil {
+					errs.Add(err)
+				}
+			}
+		}
+
+		var conflict string
+		switch rw := httpFiltersContext.URLRewrite; {
+		case httpFiltersContext.RedirectResponse != nil:
+			conflict = "RequestRedirect"
+		case rw != nil && rw.Path != nil:
+			conflict = "URLRewrite with a path modifier"
+		case rw != nil && rw.Host != nil && rw.Host.PathRegex != nil:
+			conflict = "URLRewrite with a PathRegex hostname"
+		}
+		switch {
+		case conflict != "":
+			errs.Add(status.NewRouteStatusError(
+				fmt.Errorf(grpcJSONTranscoderConflictMsg, conflict),
+				gwapiv1.RouteReasonIncompatibleFilters,
+			).WithType(gwapiv1.RouteConditionAccepted))
+		// The transcoder is not enabled for a direct response.
+		// Note: an invalid filter also sets a DirectResponse, so only check it if there is no error.
+		case httpFiltersContext.DirectResponse != nil && errs.Empty():
+			errs.Add(status.NewRouteStatusError(
+				errors.New(grpcJSONTranscoderDirectResponseConflictMsg),
+				gwapiv1.RouteReasonIncompatibleFilters,
+			).WithType(gwapiv1.RouteConditionAccepted))
+		}
+	}
 
 	if httpFiltersContext.RequestMirrorModifier != nil && len(httpFiltersContext.Mirrors) > 0 {
 		if err := t.applyRequestMirrorModifier(httpFiltersContext); err != nil {
@@ -238,12 +323,6 @@ func (t *Translator) ProcessGRPCFilters(
 	}
 
 	var errs status.TypedErrorCollector
-	for _, filter := range filters {
-		if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
-			errs.Add(collectExtensionRefMatches(filter.ExtensionRef, httpFiltersContext, resources))
-		}
-	}
-
 	// Reject redirect extensions before processing actions: a direct response
 	// must not hide an unsupported GRPCRoute attachment.
 	for _, filter := range filters {
@@ -254,6 +333,11 @@ func (t *Translator) ProcessGRPCFilters(
 		}
 		for _, hrf := range resources.HTTPRouteFilters {
 			if hrf.Namespace == route.GetNamespace() && hrf.Name == string(ref.Name) && hrf.Spec.Redirect != nil {
+				for _, filter := range filters {
+					if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
+						errs.Add(collectExtensionRefMatches(filter.ExtensionRef, httpFiltersContext, resources))
+					}
+				}
 				errs.Add(status.NewRouteStatusError(
 					errors.New("HTTPRouteFilter redirect is only supported on HTTPRoute rules"),
 					gwapiv1.RouteReasonUnsupportedValue,
@@ -277,22 +361,12 @@ func (t *Translator) ProcessGRPCFilters(
 
 	for i := range filters {
 		filter := filters[i]
+		// If an invalid filter type has been configured then skip processing any more filters
+		if httpFiltersContext.DirectResponse != nil {
+			break
+		}
 		if err := ValidateGRPCRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
 			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
-			continue
-		}
-		if httpFiltersContext.DirectResponse != nil {
-			var err status.Error
-			switch filter.Type {
-			case gwapiv1.GRPCRouteFilterExtensionRef:
-				err = t.validateExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
-			case gwapiv1.GRPCRouteFilterRequestMirror:
-				err = t.validateRequestMirrorFilter(filter.RequestMirror, route, resources)
-			}
-			if err != nil {
-				errs.Add(err)
-				httpFiltersContext.DirectResponse = &ir.CustomResponse{StatusCode: new(uint32(500))}
-			}
 			continue
 		}
 
@@ -1027,7 +1101,8 @@ func validateRedirectSubstitution(substitution string, captures int) error {
 	return nil
 }
 
-// collectExtensionRefMatches runs once per reference, before actions can short-circuit.
+// collectExtensionRefMatches preserves the scope of regex redirect rules even when
+// an invalid action or reference prevents normal filter processing.
 func collectExtensionRefMatches(ref *gwapiv1.LocalObjectReference, context *HTTPFiltersContext, resources *resource.Resources) status.Error {
 	if ref == nil || string(ref.Group) != egv1a1.GroupName || string(ref.Kind) != egv1a1.KindHTTPRouteFilter {
 		return nil
@@ -1121,11 +1196,29 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 	filterNs := filterContext.Route.GetNamespace()
 
-	if string(extFilter.Group) == egv1a1.GroupName && string(extFilter.Kind) == egv1a1.KindHTTPRouteFilter {
+	if string(extFilter.Kind) == egv1a1.KindHTTPRouteFilter {
 		found := false
 		for _, hrf := range resources.HTTPRouteFilters {
 			if hrf.Namespace == filterNs && hrf.Name == string(extFilter.Name) {
 				found = true
+				if !filterContext.redirectMatchesCollected && len(hrf.Spec.Matches) > 0 && len(filterContext.Matches) > 0 {
+					return status.NewRouteStatusError(
+						errors.New("only one HTTPRouteFilter with matches is supported per HTTPRouteRule"),
+						gwapiv1.RouteReasonUnsupportedValue,
+					).WithType(gwapiv1.RouteConditionAccepted)
+				}
+				if !filterContext.redirectMatchesCollected && len(hrf.Spec.Matches) > 0 {
+					filterContext.Matches = hrf.Spec.Matches
+				}
+				if hrf.Spec.BackendPriority != nil {
+					if filterContext.BackendPriority != nil {
+						return status.NewRouteStatusError(
+							errors.New(multipleBackendPrioritiesMsg),
+							gwapiv1.RouteReasonUnsupportedValue,
+						).WithType(gwapiv1.RouteConditionAccepted)
+					}
+					filterContext.BackendPriority = new(uint32(*hrf.Spec.BackendPriority))
+				}
 				if hrf.Spec.URLRewrite != nil {
 
 					if filterContext.URLRewrite != nil {
@@ -1322,6 +1415,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					}
 					filterContext.RequestMirrorModifier = hrf.Spec.RequestMirror.Hostname
 				}
+
+				if hrf.Spec.GRPCJSONTranscoder != nil {
+					if err := t.applyGRPCJSONTranscoder(hrf, filterContext); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		if !found {
@@ -1333,29 +1432,19 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 	}
 
 	// This list of resources will be empty unless an extension is loaded (and introduces resources)
-	for _, res := range resources.ExtensionRefFilters {
-		if res.GetKind() == string(extFilter.Kind) && res.GetName() == string(extFilter.Name) && res.GetNamespace() == filterNs {
-			apiVers := res.GetAPIVersion()
-
-			// To get only the group we cut off the version.
-			// This could be a one liner but just to be safe we check that the APIVersion is properly formatted
-			idx := strings.IndexByte(apiVers, '/')
-			if idx == -1 {
-				errMsg := fmt.Sprintf("Unable to translate APIVersion for Extension Filter: kind: %s, %s/%s", res.GetKind(), filterNs, extFilter.Name)
-				return t.processUnresolvedHTTPFilter(errMsg, filterContext)
-			}
-			group := apiVers[:idx]
-			if group == string(extFilter.Group) {
-				res := res // Capture loop variable
-				var gwIR *ir.Xds
-				gatewayCtx := filterContext.ParentRef.GetGateway()
-				if gatewayCtx != nil {
-					gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
-				}
-				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gatewayCtx, &res))
-				return nil
-			}
+	res, malformed := t.getExtensionRef(resources, string(extFilter.Group), string(extFilter.Kind), filterNs, string(extFilter.Name))
+	if malformed {
+		errMsg := fmt.Sprintf("Unable to translate APIVersion for Extension Filter: kind: %s, %s/%s", extFilter.Kind, filterNs, extFilter.Name)
+		return t.processUnresolvedHTTPFilter(errMsg, filterContext)
+	}
+	if res != nil {
+		var gwIR *ir.Xds
+		gatewayCtx := filterContext.ParentRef.GetGateway()
+		if gatewayCtx != nil {
+			gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
 		}
+		filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gatewayCtx, res))
+		return nil
 	}
 
 	// Matching filter not found, so set negative status condition.
@@ -1391,10 +1480,8 @@ func (t *Translator) processRequestMirrorFilter(
 		return nil
 	}
 
-	if err := t.validateRequestMirrorFilter(mirrorFilter, filterContext.Route, resources); err != nil {
-		return err
-	}
-
+	// Get the route type from the filter context to determine the correct BackendRef type
+	routeType := filterContext.Route.GetRouteType()
 	weight := int32(1)
 	mirrorBackend := mirrorFilter.BackendRef
 
@@ -1404,6 +1491,16 @@ func (t *Translator) processRequestMirrorFilter(
 			BackendObjectReference: mirrorBackend,
 			Weight:                 &weight,
 		},
+	}
+
+	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
+	filterNs := filterContext.Route.GetNamespace()
+	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
+	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
+		resources, serviceNamespace, routeType)
+	if err != nil {
+		return status.NewRouteStatusError(
+			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
 	}
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
