@@ -30,6 +30,7 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http-plain
+  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http-plain
   perConnectionBufferLimitBytes: 32768
@@ -37,6 +38,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10443
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -90,6 +92,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 11443
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -143,6 +146,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 12443
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -199,6 +203,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 13443
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -255,6 +260,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 14443
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager

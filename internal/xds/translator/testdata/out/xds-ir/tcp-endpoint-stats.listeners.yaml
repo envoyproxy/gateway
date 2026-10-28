@@ -2,6 +2,7 @@
     socketAddress:
       address: '::'
       portValue: 10080
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy

@@ -2,6 +2,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10080
+  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -107,6 +108,7 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: test2
+  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: test2
   perConnectionBufferLimitBytes: 32768
@@ -114,6 +116,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10082
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy

@@ -58,6 +58,7 @@
           spawnUpstreamSpan: true
         useRemoteAddress: true
     name: first-listener
+  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768

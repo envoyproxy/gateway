@@ -30,6 +30,7 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: weighted-protocol-listener
+  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: weighted-protocol-listener
   perConnectionBufferLimitBytes: 32768

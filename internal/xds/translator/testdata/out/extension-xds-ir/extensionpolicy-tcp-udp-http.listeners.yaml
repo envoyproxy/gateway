@@ -30,6 +30,7 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http1
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy
@@ -46,6 +47,7 @@
       address: 0.0.0.0
       portValue: 10162
       protocol: UDP
+  drainType: MODIFY_ONLY
   listenerFilters:
   - name: envoy.filters.udp_listener.udp_proxy
     typedConfig:

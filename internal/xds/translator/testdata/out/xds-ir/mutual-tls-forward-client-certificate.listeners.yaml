@@ -2,6 +2,7 @@
     socketAddress:
       address: '::'
       portValue: 10001
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -62,6 +63,7 @@
     socketAddress:
       address: '::'
       portValue: 10002
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -123,6 +125,7 @@
     socketAddress:
       address: '::'
       portValue: 10003
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -184,6 +187,7 @@
     socketAddress:
       address: '::'
       portValue: 10004
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -245,6 +249,7 @@
     socketAddress:
       address: '::'
       portValue: 10005
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager

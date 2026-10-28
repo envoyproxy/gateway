@@ -3,6 +3,7 @@
       address: '::'
       portValue: 10080
       protocol: UDP
+  drainType: MODIFY_ONLY
   listenerFilters:
   - name: envoy.filters.udp_listener.udp_proxy
     typedConfig:

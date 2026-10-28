@@ -2,6 +2,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 8080
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy
@@ -17,6 +18,7 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 8081
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy

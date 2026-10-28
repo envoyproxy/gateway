@@ -3,6 +3,7 @@
       address: '::'
       portValue: 10080
       protocol: UDP
+  drainType: MODIFY_ONLY
   listenerFilters:
   - name: envoy.filters.udp_listener.udp_proxy
     typedConfig:
@@ -59,6 +60,7 @@
       address: '::'
       portValue: 10081
       protocol: UDP
+  drainType: MODIFY_ONLY
   listenerFilters:
   - name: envoy.filters.udp_listener.udp_proxy
     typedConfig:
@@ -109,6 +111,7 @@
       address: '::'
       portValue: 10082
       protocol: UDP
+  drainType: MODIFY_ONLY
   listenerFilters:
   - name: envoy.filters.udp_listener.udp_proxy
     typedConfig:
@@ -200,6 +203,7 @@
       address: '::'
       portValue: 10083
       protocol: UDP
+  drainType: MODIFY_ONLY
   listenerFilters:
   - name: envoy.filters.udp_listener.udp_proxy
     typedConfig:
@@ -212,6 +216,7 @@
       address: '::'
       portValue: 10084
       protocol: UDP
+  drainType: MODIFY_ONLY
   listenerFilters:
   - name: envoy.filters.udp_listener.udp_proxy
     typedConfig:

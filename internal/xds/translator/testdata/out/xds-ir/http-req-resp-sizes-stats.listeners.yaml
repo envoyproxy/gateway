@@ -30,6 +30,7 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: listener-enable-req-resp-sizes-stats
+  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: listener-enable-req-resp-sizes-stats
   perConnectionBufferLimitBytes: 32768

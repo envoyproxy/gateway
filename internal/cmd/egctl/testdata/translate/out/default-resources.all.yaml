@@ -1158,6 +1158,7 @@ xds:
                   statPrefix: http-10080
                   useRemoteAddress: true
               name: default/eg/http
+            drainType: MODIFY_ONLY
             maxConnectionsToAcceptPerSocketEvent: 1
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
@@ -1270,6 +1271,7 @@ xds:
                   statPrefix: http-8080
                   useRemoteAddress: true
               name: default/eg/grpc
+            drainType: MODIFY_ONLY
             maxConnectionsToAcceptPerSocketEvent: 1
             name: default/eg/grpc
             perConnectionBufferLimitBytes: 32768
@@ -1315,6 +1317,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 1234
+            drainType: MODIFY_ONLY
             filterChains:
             - filters:
               - name: envoy.filters.network.tcp_proxy
@@ -1399,6 +1402,7 @@ xds:
               socketAddress:
                 address: 0.0.0.0
                 portValue: 8443
+            drainType: MODIFY_ONLY
             filterChains:
             - filterChainMatch:
                 serverNames:
@@ -1491,6 +1495,7 @@ xds:
                 address: 0.0.0.0
                 portValue: 1234
                 protocol: UDP
+            drainType: MODIFY_ONLY
             listenerFilters:
             - name: envoy.filters.udp_listener.udp_proxy
               typedConfig:

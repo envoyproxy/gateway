@@ -231,6 +231,9 @@ func (t *Translator) buildXdsTCPListener(
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
 		MaxConnectionsToAcceptPerSocketEvent: maxAcceptPerSocketEvent,
+		// Drain on listener modification/removal and on the drain sequence started by the shutdown
+		// manager, but not on /healthcheck/fail, which would bypass the configured drain strategy.
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -323,8 +326,6 @@ func (t *Translator) buildXdsQuicListener(
 			DownstreamSocketConfig: &corev3.UdpSocketConfig{},
 			QuicOptions:            &listenerv3.QuicProtocolOptions{},
 		},
-		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
-		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
@@ -1253,6 +1254,7 @@ func buildXdsUDPListener(
 	xdsListener := &listenerv3.Listener{
 		Name:      xdsListenerName(udpListener.Name, udpListener.ExternalPort, corev3.SocketAddress_UDP, xdsNameSchemeV2),
 		AccessLog: al,
+		DrainType: listenerv3.Listener_MODIFY_ONLY,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{

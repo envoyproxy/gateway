@@ -155,14 +155,16 @@ func Shutdown(healthCheckFailureDelay, drainTimeout, minDrainDuration time.Durat
 	logger.Info(fmt.Sprintf("initiating drain with %.0f second minimum drain period and %.0f second timeout",
 		minDrainDuration.Seconds(), drainTimeout.Seconds()))
 
+	// Start the listener drain sequence, which honors the Envoy --drain-strategy. Listeners use
+	// the MODIFY_ONLY drain type, so failing health checks does not override the drain strategy.
+	if err := postEnvoyAdminAPI("drain_listeners?graceful&skip_exit"); err != nil {
+		logger.Error(err, "error starting listener drain")
+	}
+
 	if healthCheckFailureDelay > 0 {
-		if err := postEnvoyAdminAPI("drain_listeners?graceful&skip_exit"); err != nil {
-			logger.Error(err, "error starting listener drain")
-		}
 		logger.Info(fmt.Sprintf("delaying health check failure by %.0f seconds", healthCheckFailureDelay.Seconds()))
 		healthCheckFailurePending = true
 	} else {
-		// Failing active health checks also starts Envoy listener drain.
 		failActiveHealthChecks(postEnvoyAdminAPI)
 	}
 

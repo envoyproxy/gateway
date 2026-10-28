@@ -3,6 +3,7 @@
       address: 0.0.0.0
       ipv4Compat: true
       portValue: 8082
+  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy

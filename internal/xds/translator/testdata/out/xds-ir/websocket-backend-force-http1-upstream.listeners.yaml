@@ -30,6 +30,7 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: websocket-listener
+  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: websocket-listener
   perConnectionBufferLimitBytes: 32768

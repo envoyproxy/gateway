@@ -30,6 +30,7 @@
         statPrefix: http-10443
         useRemoteAddress: true
     name: default/gw/http
+  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
