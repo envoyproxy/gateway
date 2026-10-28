@@ -103,6 +103,17 @@ func xdsResourceCountAttrs(tCtx *types.ResourceVersionTable) []attribute.KeyValu
 	return append(attrs, attribute.Int("xds-resources.total.count", total))
 }
 
+// ExtensionHookStats accumulates extension server hook call counts and durations
+// across a single Translate() call. Reset at the start of every Translate() call.
+type ExtensionHookStats struct {
+	RouteCallCount    int64
+	RouteDuration     time.Duration
+	VHostCallCount    int64
+	VHostDuration     time.Duration
+	ListenerCallCount int64
+	ListenerDuration  time.Duration
+}
+
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
 	// ControllerNamespace is the namespace of the Gateway API controller
@@ -127,6 +138,19 @@ type Translator struct {
 	// backendIndex resolves BackendClusterRef.Name against the current Translate() call's
 	// xdsIR.BackendClusters registry. Rebuilt at the start of every Translate() call.
 	backendIndex backendClusterIndex
+
+	// extensionIndex resolves UnstructuredRef.Name against the current Translate() call's
+	// xdsIR.ExtensionResources registry. Rebuilt at the start of every Translate() call.
+	extensionIndex extensionResourceIndex
+
+	// caIndex resolves TLSCACertificate.Digest against the current Translate() call's
+	// xdsIR.CACertificates registry. Rebuilt at the start of every Translate() call.
+	caIndex caCertificateIndex
+
+	// ExtensionStats accumulates extension hook call counts and durations across a
+	// single Translate() call. Written by processExtension* functions in extension.go;
+	// read after Translate() returns to emit span attributes.
+	ExtensionStats ExtensionHookStats
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -134,6 +158,39 @@ func (t *Translator) xdsNameSchemeV2() bool {
 		return false
 	}
 	return t.RuntimeFlags.IsEnabled(egv1a1.XDSNameSchemeV2)
+}
+
+// clusterHTTP1Settings returns the http1 settings to seed into backend clusters.
+// When ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly is enabled, returns nil —
+// CTP http1 fields apply to the client connection only and must not configure backend
+// HTTP/1 protocol settings. Remove this method when that runtime flag is removed.
+// Listener-only fields (HTTP10, IgnoredUpgradeTypes, DisableSafeMaxConnectionDuration)
+// are stripped unconditionally. A non-nil return value acts as a sentinel that forces
+// explicit HTTP/1 protocol selection on the cluster.
+// nil is returned when s is nil, when the runtime flag applies HTTP/1 settings to
+// clients only, or when only listener-only fields are set (preserving legacy behavior
+// where those fields did not affect upstream protocol selection).
+func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	if t.RuntimeFlags != nil && t.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly) {
+		return nil
+	}
+	// Strip listener-only fields; keep only cluster-relevant ones.
+	stripped := ir.HTTP1Settings{
+		EnableTrailers:     s.EnableTrailers,
+		PreserveHeaderCase: s.PreserveHeaderCase,
+	}
+	// Only return a non-nil sentinel when at least one cluster-relevant field is
+	// set. If the CTP block contained only listener-only fields (e.g. ignoredUpgradeTypes,
+	// disableSafeMaxConnectionDuration) or explicitly-false trailer/case values,
+	// returning nil preserves the pre-flag behavior where those configurations did
+	// not affect upstream protocol selection.
+	if !stripped.EnableTrailers && !stripped.PreserveHeaderCase && s.HTTP10 == nil {
+		return nil
+	}
+	return &stripped
 }
 
 type GlobalRateLimitSettings struct {
@@ -181,6 +238,9 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	defer phases.EndInFlight()
 
 	t.backendIndex = newBackendClusterIndex(xdsIR)
+	t.extensionIndex = newExtensionResourceIndex(xdsIR)
+	t.caIndex = newCACertificateIndex(xdsIR)
+	t.ExtensionStats = ExtensionHookStats{}
 
 	tCtx := new(types.ResourceVersionTable)
 
@@ -207,6 +267,12 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	phases.SetAttributes(
+		attribute.Int64("extension.hook.route_call_count", t.ExtensionStats.RouteCallCount),
+		attribute.Float64("extension.hook.route_duration_ms", float64(t.ExtensionStats.RouteDuration.Microseconds())/1000.0),
+		attribute.Int64("extension.hook.vhost_call_count", t.ExtensionStats.VHostCallCount),
+		attribute.Float64("extension.hook.vhost_duration_ms", float64(t.ExtensionStats.VHostDuration.Microseconds())/1000.0),
+	)
 	phases.End()
 
 	// The TCP and UDP listeners get no phase span: they are cheap next to the HTTP
@@ -229,6 +295,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	if err := t.notifyExtensionServerAboutListeners(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	phases.SetAttributes(
+		attribute.Int64("extension.hook.listener_call_count", t.ExtensionStats.ListenerCallCount),
+		attribute.Float64("extension.hook.listener_duration_ms", float64(t.ExtensionStats.ListenerDuration.Microseconds())/1000.0),
+	)
 	phases.End()
 
 	phases.Start("XdsTranslator.processMergedBackendClusters",
@@ -275,7 +345,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	phases.Start("XdsTranslator.processExtensionPostTranslationHook",
 		attribute.Int("extension-server-policies.count", len(xdsIR.ExtensionServerPolicies)),
 	)
-	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies)
+	err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies, t.extensionIndex)
 	phases.End()
 	if err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
@@ -384,14 +454,16 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 		alreadyIncludedPolicies := sets.New[utils.NamespacedNameWithGroupKind]()
 		for _, irListener := range findIRListenersByXDSListener(xdsIR, listener) {
 			for _, pol := range irListener.GetExtensionRefs() {
-				key := utils.GetNamespacedNameWithGroupKind(pol.Object)
+				obj := resolveUnstructuredRef(pol, t.extensionIndex)
+				key := utils.GetNamespacedNameWithGroupKind(obj)
 				if !alreadyIncludedPolicies.Has(key) {
 					policies = append(policies, pol)
 					alreadyIncludedPolicies.Insert(key)
 				}
 			}
 		}
-		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager); err != nil {
+		err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager, t.extensionIndex, &t.ExtensionStats)
+		if err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -600,7 +672,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		//
 		// For example, the route config name is named after the ir Listener name "default/eg/http1", but the current
 		// ir Listener is "default/eg/http2".
-		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
+		//
+		// This only applies to non-TLS listeners, which share the default filter chain. A TLS listener
+		// has its own filter chain whose HCM always references the route config named after the listener.
+		if !tlsEnabled {
+			routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
+		}
 		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
 		if routeCfgName == "" {
 			routeCfgName = routeConfigName(httpListener, t.xdsNameSchemeV2())
@@ -649,7 +726,7 @@ func (t *Translator) processMergedBackendClusters(tCtx *types.ResourceVersionTab
 			useClientProtocol: bc.UseClientProtocol,
 			healthCheckLog:    xdsIR.HealthCheckLog,
 		}
-		if err := processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &BackendClusterTranslator{}, ea, bc.Metadata); err != nil {
+		if err := processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &BackendClusterTranslator{}, ea, bc.Metadata, t.caIndex); err != nil {
 			errs = errors.Join(errs, err)
 		}
 		if err := processClientCertificates(tCtx, []*ir.DestinationSetting{bc.Setting}); err != nil {
@@ -675,7 +752,7 @@ func (t *Translator) addRouteToRouteConfig(
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
 	healthCheckLog *ir.ProxyHealthCheckLog,
-	http3Enabled bool,
+	downstreamHTTP3Enabled bool,
 ) error {
 	var (
 		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
@@ -683,8 +760,16 @@ func (t *Translator) addRouteToRouteConfig(
 		errs      error                               // the accumulated errors
 		err       error
 
+		// vHostExtRefs maps each newly-created vHost to the IR extension refs from the listener
+		// that owns it, so PostVirtualHostModifyHook can be called after routes are fully
+		// populated while still carrying the correct per-listener policy context.
+		vHostExtRefs = map[*routev3.VirtualHost][]*ir.UnstructuredRef{}
+
 		maxDirectResponseBodySize uint32 = DefaultMaxDirectResponseBodySize
 	)
+
+	// Compute listener-wide GeoIP header removals once for all routes.
+	geoIPHeaders := geoIPHeadersToRemove(httpListener)
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
@@ -721,6 +806,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 			vHosts[httpRoute.Hostname] = vHost
 			vHostList = append(vHostList, vHost)
+
+			// Resolve the listener's extension refs now (while we have listener context),
+			// but defer the hook call until after routes are fully populated.
+			vHostExtRefs[vHost] = httpListener.ExtensionRefs
 		}
 
 		if dr := httpRoute.DirectResponse; dr != nil {
@@ -730,7 +819,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex, geoIPHeaders, downstreamHTTP3Enabled)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
@@ -739,7 +828,8 @@ func (t *Translator) addRouteToRouteConfig(
 
 		// Check if an extension want to modify the route we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
+		err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex, &t.ExtensionStats)
+		if err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -749,7 +839,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 
-		if http3Enabled {
+		// A route proxying over upstream HTTP/3 adds this header in its header mutation filter
+		// instead, after the alternate protocols cache filter has run, so the cache never
+		// records the gateway's own alt-svc as the backend's.
+		if downstreamHTTP3Enabled && !routeUsesUpstreamHTTP3(httpRoute, t.backendIndex) {
 			advertisedPort := httpListener.ExternalPort
 			if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
 				advertisedPort = *httpListener.HTTP3.AdvertisedPort
@@ -768,13 +861,13 @@ func (t *Translator) addRouteToRouteConfig(
 			if len(httpRoute.ExtensionRefs) > 0 {
 				extensionResources = make([]*unstructured.Unstructured, len(httpRoute.ExtensionRefs))
 				for refIdx, ref := range httpRoute.ExtensionRefs {
-					extensionResources[refIdx] = ref.Object
+					extensionResources[refIdx] = resolveUnstructuredRef(ref, t.extensionIndex)
 				}
 			}
 
 			ea := &ExtraArgs{
 				metrics:          metrics,
-				http1Settings:    httpListener.HTTP1,
+				http1Settings:    t.clusterHTTP1Settings(httpListener.HTTP1),
 				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
 				statName:         httpRoute.Destination.StatName,
 				unstructuredRefs: extensionResources,
@@ -805,6 +898,7 @@ func (t *Translator) addRouteToRouteConfig(
 						&HTTPRouteTranslator{httpRoute},
 						ea,
 						httpRoute.Destination.Metadata,
+						t.caIndex,
 					)
 					if err != nil {
 						errs = errors.Join(errs, err)
@@ -818,7 +912,8 @@ func (t *Translator) addRouteToRouteConfig(
 							tSettings,
 							&HTTPRouteTranslator{httpRoute},
 							ea,
-							httpRoute.Destination.Metadata)
+							httpRoute.Destination.Metadata,
+							t.caIndex)
 						if err != nil {
 							errs = errors.Join(errs, err)
 						}
@@ -838,6 +933,7 @@ func (t *Translator) addRouteToRouteConfig(
 						metrics:      metrics,
 						metadata:     mrr.Destination.Metadata,
 						isRoute:      true,
+						caIndex:      t.caIndex,
 					}); err != nil {
 						errs = errors.Join(errs, err)
 					}
@@ -846,20 +942,29 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 
+	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+
+	// Call the vhost hook after all routes have been appended, so the extension server sees
+	// a fully-populated VirtualHost. Iterate vHostList to preserve creation order.
 	for _, vHost := range vHostList {
-		// Check if an extension want to modify the Virtual Host we just generated
-		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
-			// If the extension server returns an error, and the extension server is not configured to fail open,
-			// then propagate the error
+		refs := vHostExtRefs[vHost]
+		extResources := make([]*unstructured.Unstructured, 0, len(refs))
+		seen := make(map[*unstructured.Unstructured]struct{}, len(refs))
+		for _, ref := range refs {
+			obj := resolveUnstructuredRef(ref, t.extensionIndex)
+			if _, dup := seen[obj]; !dup {
+				seen[obj] = struct{}{}
+				extResources = append(extResources, obj)
+			}
+		}
+		if hookErr := processExtensionPostVHostHook(vHost, extResources, t.ExtensionManager, &t.ExtensionStats); hookErr != nil {
 			if !(*t.ExtensionManager).FailOpen() {
-				errs = errors.Join(errs, err)
+				errs = errors.Join(errs, hookErr)
 			} else {
-				t.Logger.Error(err, "Extension Manager PostVHost failure")
+				t.Logger.Error(hookErr, "Extension Manager PostVHost failure")
 			}
 		}
 	}
-	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.
@@ -951,8 +1056,6 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs, err error
-	var sharedEmptyTCPRoute *ir.TCPRoute
-	emptyFilterChainAdded := make(map[string]bool)
 
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
@@ -991,7 +1094,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 					route.Destination.Settings,
 					&TCPRouteTranslator{route},
 					&ExtraArgs{metrics: metrics, healthCheckLog: healthCheckLog},
-					route.Destination.Metadata); err != nil {
+					route.Destination.Metadata,
+					t.caIndex); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -1031,12 +1135,10 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			}
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
+				tcpListener,
 				route,
 				singleClusterDestinationName(route.Destination),
 				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1045,37 +1147,29 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
-			// Reuse shared EmptyCluster across all listeners without routes
+			// The EmptyCluster itself is shared by every listener that needs a placeholder.
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
 
-			if sharedEmptyTCPRoute == nil {
-				sharedEmptyTCPRoute = &ir.TCPRoute{
+			// Name the placeholder after its listener so the chains stay distinguishable in
+			// config dumps when several listeners share one xDS listener.
+			emptyRoute := &ir.TCPRoute{
+				Name: tcpListener.Name + "/no-routes",
+				Destination: &ir.RouteDestination{
 					Name: emptyClusterName,
-					Destination: &ir.RouteDestination{
-						Name: emptyClusterName,
-					},
-				}
+				},
 			}
-
-			// Only add the filter chain once per xDS listener; multiple IR listeners may share
-			// the same address/port and map to the same xDS listener.
-			if !emptyFilterChainAdded[xdsListener.Name] {
-				if err := t.addXdsTCPFilterChain(
-					xdsListener,
-					sharedEmptyTCPRoute,
-					emptyClusterName,
-					accesslog,
-					tcpListener.Timeout,
-					tcpListener.Connection,
-					tcpListener.TLS,
-				); err != nil {
-					errs = errors.Join(errs, err)
-				}
-				emptyFilterChainAdded[xdsListener.Name] = true
+			if err := t.addXdsTCPFilterChain(
+				xdsListener,
+				tcpListener,
+				emptyRoute,
+				emptyClusterName,
+				accesslog,
+			); err != nil {
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
@@ -1105,7 +1199,8 @@ func (t *Translator) processUDPListenerXdsTranslation(
 					udpListener.Route.Destination.Settings,
 					&UDPRouteTranslator{udpListener.Route},
 					&ExtraArgs{metrics: metrics, healthCheckLog: healthCheckLog},
-					udpListener.Route.Destination.Metadata); err != nil {
+					udpListener.Route.Destination.Metadata,
+					t.caIndex); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -1261,8 +1356,10 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	route clusterArgs,
 	extras *ExtraArgs,
 	metadata *ir.ResourceMetadata,
+	caIndex caCertificateIndex,
 ) error {
 	args := route.asClusterArgs(name, settings, extras, metadata)
+	args.caIndex = caIndex
 	return addXdsCluster(tCtx, args)
 }
 
@@ -1326,7 +1423,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 				}
 			} else {
 				// Create an SDS secret for the CA certificate — inline bytes or filesystem ref.
-				secret := buildXdsUpstreamTLSCASecret(ds.TLS)
+				secret := buildXdsUpstreamTLSCASecret(ds.TLS, args.caIndex)
 				if secret != nil {
 					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
 						return err
@@ -1387,7 +1484,7 @@ const (
 	EDS
 )
 
-func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
+func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig, idx caCertificateIndex) *tlsv3.Secret {
 	// For SDS based CA certificate, the secret will be generated by SDS server, so we can skip adding the secret here
 	if tlsConfig.CACertificate.SDS != nil {
 		return nil
@@ -1398,7 +1495,7 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 		Type: &tlsv3.Secret_ValidationContext{
 			ValidationContext: &tlsv3.CertificateValidationContext{
 				TrustedCa: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.CACertificate.Certificate},
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: resolveCACertificate(tlsConfig.CACertificate, idx)},
 				},
 			},
 		},

@@ -495,11 +495,31 @@ spec:
                             active:
                               description: Active health check configuration
                               properties:
+                                disableConnectionReuse:
+                                  description: |-
+                                    DisableConnectionReuse determines whether the active health check connection to a
+                                    backend host is closed after each health check probe. When set to true, Envoy opens a
+                                    new connection for each health check, which is useful for backends (such as
+                                    haproxy-style agent checks) that do not expect a reused connection.
+                                    Defaults to false, which reuses the connection across probes.
+                                  type: boolean
                                 grpc:
                                   description: |-
                                     GRPC defines the configuration of the GRPC health checker.
                                     It's optional, and can only be used if the specified type is GRPC.
                                   properties:
+                                    hostname:
+                                      description: |-
+                                        Hostname defines the value of the :authority header sent with active gRPC
+                                        health checks. Authority selection uses this order: this field, the
+                                        associated Backend endpoint hostname if available, then the effective Route
+                                        hostname. If none of them is set, Envoy falls back to the name of the
+                                        cluster, which is not a valid authority and is rejected by some gRPC
+                                        servers.
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
                                     service:
                                       description: |-
                                         Service to send in the health check request.
@@ -656,6 +676,28 @@ spec:
                                         will be requested during health checking.
                                       maxLength: 1024
                                       minLength: 1
+                                      type: string
+                                    protocol:
+                                      default: Auto
+                                      description: |-
+                                        Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                        Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                          - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                            `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                            GRPCRoute.
+                                          - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                            with HTTP1 as the fallback when nothing is negotiated.
+                                          - HTTP1 otherwise.
+
+                                        Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                        the application, for example a backend that serves HTTP/1.1 traffic but only
+                                        accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                      enum:
+                                      - Auto
+                                      - HTTP1
+                                      - HTTP2
                                       type: string
                                     requestBody:
                                       description: RequestBody defines the HTTP request
@@ -930,6 +972,32 @@ spec:
                                   type: boolean
                               type: object
                           type: object
+                        http1:
+                          description: |-
+                            HTTP1 provides HTTP/1 configuration for backend connections.
+                            When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                            this field takes precedence for backend (upstream) traffic.
+
+                            Behavior when targeting route kinds that do not use HTTP/1:
+                              - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                directly adds a Warning condition on the policy; the field is ignored.
+                              - Gateway / ListenerSet / sectionName targets: this field is silently
+                                ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                beneath that target; no warning is emitted.
+                              - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                access log/metrics, tracing providers): rejected at admission on their
+                                own BackendSettings via separate validation rules.
+                          properties:
+                            enableTrailers:
+                              description: EnableTrailers defines if HTTP/1 trailers
+                                should be proxied by Envoy.
+                              type: boolean
+                            preserveHeaderCase:
+                              description: |-
+                                PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                By default, Envoy will lowercase all the headers.
+                              type: boolean
+                          type: object
                         http2:
                           description: HTTP2 provides HTTP/2 configuration for backend
                             connections.
@@ -1003,6 +1071,25 @@ spec:
                                 It's recommended for L2 Envoy deployments to set this value to TerminateStream.
                                 https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two
                                 Default: TerminateConnection
+                              type: string
+                          type: object
+                        http3:
+                          description: |-
+                            HTTP3 enables HTTP/3 for backend connections.
+                            HTTP/3 always runs over TLS, so the backend must be configured
+                            with TLS through a BackendTLSPolicy or the Backend's spec.tls.
+                            HTTP/3 is only supported for the backends of a route, through
+                            BackendTrafficPolicy. It is rejected for the backends of other
+                            resources, such as the external services of a SecurityPolicy
+                            or EnvoyExtensionPolicy and the sinks of an EnvoyProxy.
+                          properties:
+                            mode:
+                              description: |-
+                                Mode determines when HTTP/3 is used to reach the backend.
+                                Defaults to Auto, which only uses HTTP/3 for backends advertising it via alt-svc.
+                              enum:
+                              - Auto
+                              - Always
                               type: string
                           type: object
                         loadBalancer:
@@ -1325,6 +1412,16 @@ spec:
                                     routing to prefer sending traffic to the local
                                     locality zone.
                                   properties:
+                                    failTrafficOnPanic:
+                                      description: |-
+                                        FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                        cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                        drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                        across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                        requests instead, applying backpressure to clients and giving the backend room to
+                                        recover.
+                                        Defaults to false.
+                                      type: boolean
                                     force:
                                       description: |-
                                         ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -1614,6 +1711,8 @@ spec:
                           && has(self.connection.preconnect.predictivePercent)) &&
                           !(has(self.loadBalancer) && has(self.loadBalancer.type)
                           && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
+                      - message: proxyProtocol cannot be used together with http3
+                        rule: '!has(self.http3) || !has(self.proxyProtocol)'
                     failOpen:
                       default: false
                       description: |-
@@ -1799,6 +1898,11 @@ spec:
                       && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
                       && has(self.processingMode.response.body) && self.processingMode.response.body
                       != ''Streamed'')))'
+                  - message: http1 is not supported for ExtProc backends, which always
+                      use gRPC.
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
+                  - message: http3 is only supported for route backends
+                    rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                 maxItems: 16
                 type: array
               lua:
@@ -2145,7 +2249,9 @@ spec:
                     v8 is used as the VM runtime for the Wasm extensions.
                   properties:
                     code:
-                      description: Code is the Wasm code for the extension.
+                      description: |-
+                        Code is the Wasm code for the extension.
+                        When omitted, Name must match a module in EnvoyProxy.spec.wasmModules.
                       properties:
                         http:
                           description: |-
@@ -2370,7 +2476,6 @@ spec:
                           - enum:
                             - HTTP
                             - Image
-                            - ConfigMap
                           description: |-
                             Type is the type of the source of the Wasm code.
                             Valid WasmCodeSourceType values are "HTTP" or "Image".
@@ -2418,6 +2523,10 @@ spec:
                         Wasm extension if multiple extensions are handled by the same vm_id and root_id.
                         It's also used for logging/debugging.
                         If not specified, EG will generate a unique name for the Wasm extension.
+
+                        When Code is omitted, Name is required and must match a module registered
+                        in EnvoyProxy.spec.wasmModules.
+                      maxLength: 253
                       type: string
                     rootID:
                       description: |-
@@ -2427,9 +2536,28 @@ spec:
 
                         Note: RootID must match the root_id parameter used to register the Context in the Wasm code.
                       type: string
-                  required:
-                  - code
+                    vmSharingScope:
+                      default: Policy
+                      description: |-
+                        VMSharingScope defines the scope within which this extension may share a Wasm VM.
+                        If Policy or unset, each policy's Wasm entry uses its own VM ID. The same
+                        entry may reuse its VM across routes; different entries do not share a VM.
+                        If Namespace, this extension may share a VM with other extensions that specify
+                        Namespace in the same EnvoyExtensionPolicy namespace. Envoy determines VM
+                        compatibility using the Wasm code and VM configuration, including environment
+                        variables. Each Envoy worker has its own VM.
+
+                        Sharing a VM shares module-level state and VM failures. Plugin names and root
+                        IDs are not changed; matching plugin identities may also share a root context.
+                      enum:
+                      - Policy
+                      - Namespace
+                      type: string
                   type: object
+                  x-kubernetes-validations:
+                  - message: either code must be set, or name must be set and match
+                      the wasmModules name pattern
+                    rule: has(self.code) || (has(self.name) && self.name.matches('^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$'))
                 maxItems: 16
                 type: array
             type: object

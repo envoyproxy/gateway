@@ -128,6 +128,35 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    extensionResources:
+    - name: foo.example.io/bar/default/policy-1
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: policy-1
+          namespace: default
+        spec:
+          data: attached to a grpcroute
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: GRPCRoute
+            name: grpcroute-1
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+              sectionName: http
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -186,33 +215,7 @@ xdsIR:
             protocol: GRPC
             weight: 1
         extensionServerPolicies:
-        - object:
-            apiVersion: foo.example.io/v1alpha1
-            kind: Bar
-            metadata:
-              name: policy-1
-              namespace: default
-            spec:
-              data: attached to a grpcroute
-              targetRef:
-                group: gateway.networking.k8s.io
-                kind: GRPCRoute
-                name: grpcroute-1
-            status:
-              ancestors:
-              - ancestorRef:
-                  group: gateway.networking.k8s.io
-                  kind: Gateway
-                  name: gateway-1
-                  namespace: envoy-gateway
-                  sectionName: http
-                conditions:
-                - lastTransitionTime: null
-                  message: Policy has been accepted.
-                  reason: Accepted
-                  status: "True"
-                  type: Accepted
-                controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        - name: foo.example.io/bar/default/policy-1
         hostname: grpc.example.com
         isHTTP2: true
         metadata:

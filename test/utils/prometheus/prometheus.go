@@ -59,7 +59,7 @@ func NewClient(kubeClient client.Client, nn types.NamespacedName) (*Client, erro
 }
 
 func (c *Client) RawQuery(ctx context.Context, promQL string) (model.Value, error) {
-	v, _, err := prompapiv1.NewAPI(c.Client).Query(ctx, promQL, time.Now())
+	v, _, _, err := prompapiv1.NewAPI(c.Client).Query(ctx, promQL, time.Now())
 	if err != nil {
 		return nil, err
 	}

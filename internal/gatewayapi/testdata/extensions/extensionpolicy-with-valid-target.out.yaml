@@ -150,8 +150,9 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    extensionServerPolicies:
-    - object:
+    extensionResources:
+    - name: foo.example.io/bar/envoy-gateway/test2
+      object:
         apiVersion: foo.example.io/v1alpha1
         kind: Bar
         metadata:
@@ -179,7 +180,8 @@ xdsIR:
               status: "True"
               type: Accepted
             controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - object:
+    - name: foo.example.io/bar/envoy-gateway/test1
+      object:
         apiVersion: foo.example.io/v1alpha1
         kind: Bar
         metadata:
@@ -205,6 +207,9 @@ xdsIR:
               status: "True"
               type: Accepted
             controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionServerPolicies:
+    - name: foo.example.io/bar/envoy-gateway/test2
+    - name: foo.example.io/bar/envoy-gateway/test1
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -227,32 +232,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       extensionRefs:
-      - object:
-          apiVersion: foo.example.io/v1alpha1
-          kind: Bar
-          metadata:
-            name: test1
-            namespace: envoy-gateway
-          spec:
-            data: attached to all listeners
-            targetRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-          status:
-            ancestors:
-            - ancestorRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: gateway-1
-                namespace: envoy-gateway
-              conditions:
-              - lastTransitionTime: null
-                message: Policy has been accepted.
-                reason: Accepted
-                status: "True"
-                type: Accepted
-              controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      - name: foo.example.io/bar/envoy-gateway/test1
       externalPort: 81
       hostnames:
       - '*'
@@ -268,60 +248,8 @@ xdsIR:
       port: 10081
     - address: 0.0.0.0
       extensionRefs:
-      - object:
-          apiVersion: foo.example.io/v1alpha1
-          kind: Bar
-          metadata:
-            name: test2
-            namespace: envoy-gateway
-          spec:
-            data: attached only to listener on port 80
-            targetRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-              sectionName: http2
-          status:
-            ancestors:
-            - ancestorRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: gateway-1
-                namespace: envoy-gateway
-                sectionName: http2
-              conditions:
-              - lastTransitionTime: null
-                message: Policy has been accepted.
-                reason: Accepted
-                status: "True"
-                type: Accepted
-              controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      - object:
-          apiVersion: foo.example.io/v1alpha1
-          kind: Bar
-          metadata:
-            name: test1
-            namespace: envoy-gateway
-          spec:
-            data: attached to all listeners
-            targetRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-          status:
-            ancestors:
-            - ancestorRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: gateway-1
-                namespace: envoy-gateway
-              conditions:
-              - lastTransitionTime: null
-                message: Policy has been accepted.
-                reason: Accepted
-                status: "True"
-                type: Accepted
-              controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      - name: foo.example.io/bar/envoy-gateway/test2
+      - name: foo.example.io/bar/envoy-gateway/test1
       externalPort: 80
       hostnames:
       - '*'

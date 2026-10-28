@@ -8,12 +8,14 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/netip"
 	"regexp"
 	"strings"
 
 	"github.com/dominikbraun/graph"
+	"k8s.io/apimachinery/pkg/api/resource"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/utils/ptr"
 
@@ -54,6 +56,14 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 	validateProxyTelemetryErrs := validateProxyTelemetry(spec)
 	if len(validateProxyTelemetryErrs) != 0 {
 		errs = append(errs, validateProxyTelemetryErrs...)
+	}
+
+	// Mirrors the EnvoyProxySpec CEL rule "mergeGateways and mergeBackends cannot
+	// both be enabled". The CEL rule only runs through Kubernetes admission, which
+	// the embedded default EnvoyProxy spec loaded from an EnvoyGateway file never
+	// goes through, so this method has to enforce it explicitly too.
+	if spec != nil && ptr.Deref(spec.MergeGateways, false) && spec.MergeBackends != nil {
+		errs = append(errs, errors.New("mergeGateways and mergeBackends cannot both be enabled"))
 	}
 
 	// validate filter order
@@ -205,6 +215,14 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 		}
 	}
 
+	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Tracing != nil {
+		p := spec.Telemetry.Tracing.Provider
+		if p.Type == egv1a1.TracingProviderTypeOpenTelemetry &&
+			p.BackendSettings != nil && p.BackendSettings.HTTP1 != nil {
+			errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry tracing backends, which use gRPC"))
+		}
+	}
+
 	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Metrics != nil {
 		for _, sink := range spec.Telemetry.Metrics.Sinks {
 			if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
@@ -213,6 +231,12 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 					errs = append(errs, err)
 				}
 			}
+			// Check regardless of sink.Type: when sink.Type is omitted, CRD defaults are not
+			// applied to embedded EnvoyProxy templates, so processMetrics processes any non-nil
+			// sink.OpenTelemetry as gRPC, making http1 silently ignored.
+			if sink.OpenTelemetry != nil && sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
+				errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry metrics backends, which use gRPC"))
+			}
 		}
 
 		if spec.Telemetry.Metrics.ClusterStatName != nil {
@@ -220,9 +244,28 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, clusterStatErr)
 			}
 		}
+
+		if prometheus := spec.Telemetry.Metrics.Prometheus; prometheus != nil && prometheus.Compression != nil {
+			if err := ValidateMinContentLength(prometheus.Compression.MinContentLength); err != nil {
+				errs = append(errs, fmt.Errorf("invalid prometheus compression: %w", err))
+			}
+		}
 	}
 
 	return errs
+}
+
+// ValidateMinContentLength validates that the compression minContentLength fits the uint32 Envoy field.
+func ValidateMinContentLength(minContentLength *resource.Quantity) error {
+	if minContentLength == nil {
+		return nil
+	}
+
+	value, ok := minContentLength.AsInt64()
+	if !ok || value < 1 || value > math.MaxUint32 {
+		return fmt.Errorf("minContentLength must be between 1 and %d bytes, got %s", uint32(math.MaxUint32), minContentLength.String())
+	}
+	return nil
 }
 
 func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
@@ -256,6 +299,12 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 				if sink.OpenTelemetry == nil {
 					err := fmt.Errorf("unable to configure access log when using OpenTelemetry sink type but \"openTelemetry\" field being empty")
 					errs = append(errs, err)
+				} else if sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
+					errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry access log backends, which use gRPC"))
+				}
+			case egv1a1.ProxyAccessLogSinkTypeALS:
+				if sink.ALS != nil && sink.ALS.BackendSettings != nil && sink.ALS.BackendSettings.HTTP1 != nil {
+					errs = append(errs, fmt.Errorf("http1 is not supported for ALS backends, which use gRPC"))
 				}
 			}
 		}

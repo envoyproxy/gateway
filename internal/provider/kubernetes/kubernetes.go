@@ -9,6 +9,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
+	"sync"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -301,56 +303,56 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		// user refs such as policy/filter ConfigMaps and Route backend Services,
 		// and the controller namespace for EG-owned proxy/ratelimit infra
 		// ConfigMaps and Services.
-		mgrOpts.Cache.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
+		setByObject(mgrOpts.Cache.ByObject, &corev1.ConfigMap{}, cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
 			Namespaces:            watchedAndControllerNamespaces,
-		}
-		mgrOpts.Cache.ByObject[&corev1.Service{}] = cache.ByObject{
+		})
+		setByObject(mgrOpts.Cache.ByObject, &corev1.Service{}, cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Namespaces:            watchedAndControllerNamespaces,
-		}
-		mgrOpts.Cache.ByObject[&discoveryv1.EndpointSlice{}] = cache.ByObject{
+		})
+		setByObject(mgrOpts.Cache.ByObject, &discoveryv1.EndpointSlice{}, cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Namespaces:            watchedAndControllerNamespaces,
-		}
+		})
 		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
 			// GatewayNamespaceMode still needs controller namespace access for
 			// EG controller resources and the xDS CA Secret.
-			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+			setByObject(mgrOpts.Cache.ByObject, &corev1.ServiceAccount{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces:            watchedAndControllerNamespaces,
-			}
-			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+			})
+			setByObject(mgrOpts.Cache.ByObject, &appsv1.Deployment{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces:            watchedAndControllerNamespaces,
-			}
-			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+			})
+			setByObject(mgrOpts.Cache.ByObject, &corev1.Secret{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces:            watchedAndControllerNamespaces,
-			}
+			})
 		} else {
 			// In normal mode, ServiceAccounts and Deployments are controller
 			// namespace infra, while Secrets cover watched namespaces for user
 			// refs and the controller namespace for EG-managed infra Secrets,
 			// including the OIDC HMAC Secret and Envoy's TLS Secret for
 			// connections to EG-managed control-plane services.
-			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+			setByObject(mgrOpts.Cache.ByObject, &corev1.ServiceAccount{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces: map[string]cache.Config{
 					svrCfg.ControllerNamespace: {},
 				},
-			}
-			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+			})
+			setByObject(mgrOpts.Cache.ByObject, &appsv1.Deployment{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces: map[string]cache.Config{
 					svrCfg.ControllerNamespace: {},
 				},
-			}
-			mgrOpts.Cache.ByObject[&corev1.Secret{}] = cache.ByObject{
+			})
+			setByObject(mgrOpts.Cache.ByObject, &corev1.Secret{}, cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
 				Namespaces:            watchedAndControllerNamespaces,
-			}
+			})
 		}
 	}
 	if kubernetesInfrastructureConfigParams.TopologyInjector == nil || !ptr.Deref(kubernetesInfrastructureConfigParams.TopologyInjector.Disable, false) {
@@ -421,21 +423,28 @@ func (p *Provider) GetClient() client.Client {
 	return p.client
 }
 
-// Start starts the Provider synchronously until a message is received from ctx.
+// Start starts the Provider synchronously, blocking until the manager and
+// all of its registered runnables have exited.
 func (p *Provider) Start(ctx context.Context) error {
-	errChan := make(chan error)
-	go func() {
-		errChan <- p.manager.Start(ctx)
-	}()
-	go signalProviderReady(ctx, p.manager.GetCache().WaitForCacheSync, p.providerReady)
+	cacheCtx, cancel := context.WithCancel(ctx)
 
-	// Wait for the manager to exit or an explicit stop.
-	select {
-	case <-ctx.Done():
-		return nil
-	case err := <-errChan:
-		return err
-	}
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		signalProviderReady(cacheCtx, p.manager.GetCache().WaitForCacheSync, p.providerReady)
+	})
+	defer func() {
+		// Cancel first so WaitForCacheSync unblocks even if manager.Start returned
+		// before ctx was canceled -- e.g. a startup failure such as a health-probe or
+		// metrics listener bind error, which controller-runtime surfaces before it ever
+		// starts the caches. Without this, wg.Wait() below would block forever waiting
+		// on ctx, which the caller won't cancel until this Start call returns.
+		cancel()
+		wg.Wait()
+	}()
+
+	// manager.Start blocks until ctx is done and every registered Runnable,
+	// including the status subscription runnable, has returned.
+	return p.manager.Start(ctx)
 }
 
 func signalProviderReady(
@@ -453,4 +462,17 @@ func signalProviderReady(
 	default:
 		close(providerReady)
 	}
+}
+
+// setByObject sets the cache options for obj's type, replacing any entry already
+// registered for that type. ByObject is keyed by object pointer, so a plain
+// assignment of a new &T{} adds a second entry for the same type instead of
+// replacing it, and the cache then keeps one of them at random.
+func setByObject(m map[client.Object]cache.ByObject, obj client.Object, opts cache.ByObject) {
+	for k := range m {
+		if reflect.TypeOf(k) == reflect.TypeOf(obj) {
+			delete(m, k)
+		}
+	}
+	m[obj] = opts
 }

@@ -27,28 +27,32 @@ import (
 
 // mockXDSHookClient implements types.XDSHookClient for testing.
 type mockXDSHookClient struct {
-	postRouteModifyHook        func(r *route.Route, hostnames []string, resources, policies []*unstructured.Unstructured) (*route.Route, error)
-	postVirtualHostModifyHook  func(vh *route.VirtualHost) (*route.VirtualHost, error)
-	postEndpointsModifyHook    func(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error)
-	postHTTPListenerModifyHook func(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error)
-	postClusterModifyHook      func(c *cluster.Cluster, resources []*unstructured.Unstructured) (*cluster.Cluster, error)
-	postTranslateModifyHook    func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, policies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error)
+	postRouteModifyHook                func(r *route.Route, hostnames []string, resources, policies []*unstructured.Unstructured) (*route.Route, error)
+	postVirtualHostModifyHook          func(vh *route.VirtualHost) (*route.VirtualHost, error)
+	postVirtualHostModifyHookResources []*unstructured.Unstructured // captures last extensionResources arg
+	postEndpointsModifyHook            func(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error)
+	postHTTPListenerModifyHook         func(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error)
+	postClusterModifyHook              func(c *cluster.Cluster, resources []*unstructured.Unstructured) (*cluster.Cluster, error)
+	postTranslateModifyHook            func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, policies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error)
 }
 
 var _ types.XDSHookClient = (*mockXDSHookClient)(nil)
 
-func (m *mockXDSHookClient) PostRouteModifyHook(r *route.Route, hostnames []string, resources, policies []*unstructured.Unstructured) (*route.Route, error) {
+func (m *mockXDSHookClient) PostRouteModifyHook(r *route.Route, hostnames []string, resources, policies []*unstructured.Unstructured) (*route.Route, types.HookResult, error) {
 	if m.postRouteModifyHook != nil {
-		return m.postRouteModifyHook(r, hostnames, resources, policies)
+		r, err := m.postRouteModifyHook(r, hostnames, resources, policies)
+		return r, types.HookResult{CallCount: 1}, err
 	}
-	return r, nil
+	return r, types.HookResult{CallCount: 1}, nil
 }
 
-func (m *mockXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
+func (m *mockXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost, resources []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
+	m.postVirtualHostModifyHookResources = resources
 	if m.postVirtualHostModifyHook != nil {
-		return m.postVirtualHostModifyHook(vh)
+		vh, err := m.postVirtualHostModifyHook(vh)
+		return vh, types.HookResult{CallCount: 1}, err
 	}
-	return vh, nil
+	return vh, types.HookResult{CallCount: 1}, nil
 }
 
 func (m *mockXDSHookClient) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
@@ -58,11 +62,12 @@ func (m *mockXDSHookClient) PostEndpointsModifyHook(loadAssignment *endpoint.Clu
 	return loadAssignment, nil
 }
 
-func (m *mockXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error) {
+func (m *mockXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, types.HookResult, error) {
 	if m.postHTTPListenerModifyHook != nil {
-		return m.postHTTPListenerModifyHook(l, resources)
+		l, err := m.postHTTPListenerModifyHook(l, resources)
+		return l, types.HookResult{CallCount: 1}, err
 	}
-	return l, nil
+	return l, types.HookResult{CallCount: 1}, nil
 }
 
 func (m *mockXDSHookClient) PostClusterModifyHook(c *cluster.Cluster, resources []*unstructured.Unstructured) (*cluster.Cluster, error) {
@@ -102,7 +107,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		}
 
 		input := &route.Route{Name: "test"}
-		result, err := composite.PostRouteModifyHook(input, nil, nil, nil)
+		result, _, err := composite.PostRouteModifyHook(input, nil, nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, "test-ext1-ext2", result.Name)
 	})
@@ -128,7 +133,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		}
 
 		input := &route.Route{Name: "test"}
-		result, err := composite.PostRouteModifyHook(input, nil, nil, nil)
+		result, _, err := composite.PostRouteModifyHook(input, nil, nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, "test-ext2", result.Name)
 	})
@@ -156,7 +161,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		}
 
 		input := &route.Route{Name: "test"}
-		_, err := composite.PostRouteModifyHook(input, nil, nil, nil)
+		_, _, err := composite.PostRouteModifyHook(input, nil, nil, nil)
 		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
 		require.False(t, client2Called)
 	})
@@ -208,7 +213,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackendPolicy"}},
 		}
 
-		_, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, allResources, allResources)
+		_, _, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, allResources, allResources)
 		require.NoError(t, err)
 
 		require.Len(t, ext1Resources, 1)
@@ -253,7 +258,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 			{Object: map[string]interface{}{"apiVersion": "foo.io/v2", "kind": "FooPolicy"}},
 		}
 
-		_, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, servedAtV2, servedAtV2)
+		_, _, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, servedAtV2, servedAtV2)
 		require.NoError(t, err)
 		require.Len(t, receivedResources, 1)
 		require.Len(t, receivedPolicies, 1)
@@ -281,10 +286,55 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
 		}
 
-		_, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, allResources, allResources)
+		_, _, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, allResources, allResources)
 		require.NoError(t, err)
 		assert.Len(t, receivedResources, 2)
 		assert.Len(t, receivedPolicies, 2)
+	})
+
+	t.Run("call count equals number of servers invoked", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{}},
+				{name: "ext2", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, nil, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 2, hr.CallCount)
+	})
+
+	t.Run("failOpen erroring server still counted", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postRouteModifyHook: func(_ *route.Route, _ []string, _, _ []*unstructured.Unstructured) (*route.Route, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: true},
+				{name: "ext2", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, nil, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 2, hr.CallCount)
+	})
+
+	t.Run("failClosed erroring entry counted before stop", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{}},
+				{name: "ext2", client: &mockXDSHookClient{
+					postRouteModifyHook: func(_ *route.Route, _ []string, _, _ []*unstructured.Unstructured) (*route.Route, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: false},
+				{name: "ext3", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, nil, nil)
+		require.Error(t, err)
+		assert.Equal(t, 2, hr.CallCount)
 	})
 }
 
@@ -311,7 +361,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 		}
 
 		input := &route.VirtualHost{Name: "test"}
-		result, err := composite.PostVirtualHostModifyHook(input)
+		result, _, err := composite.PostVirtualHostModifyHook(input, nil)
 		require.NoError(t, err)
 		require.Equal(t, "test-ext1-ext2", result.Name)
 	})
@@ -333,7 +383,7 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 			},
 		}
 
-		result, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		result, _, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
 		require.NoError(t, err)
 		require.Equal(t, "test-ext2", result.Name)
 	})
@@ -357,9 +407,96 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 			},
 		}
 
-		_, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		_, _, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
 		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
 		require.False(t, client2Called)
+	})
+
+	t.Run("call count equals number of servers invoked", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{}},
+				{name: "ext2", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 2, hr.CallCount)
+	})
+
+	t.Run("failOpen erroring server still counted", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postVirtualHostModifyHook: func(_ *route.VirtualHost) (*route.VirtualHost, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: true},
+				{name: "ext2", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 2, hr.CallCount)
+	})
+
+	t.Run("failClosed erroring entry counted before stop", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{}},
+				{name: "ext2", client: &mockXDSHookClient{
+					postVirtualHostModifyHook: func(_ *route.VirtualHost) (*route.VirtualHost, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: false},
+				{name: "ext3", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"}, nil)
+		require.Error(t, err)
+		assert.Equal(t, 2, hr.CallCount)
+	})
+
+	t.Run("empty policyGKSet receives no resources, populated policyGKSet receives only matching resources", func(t *testing.T) {
+		ownerGK := schema.GroupKind{Group: "example.io", Kind: "MyPolicy"}
+		otherGK := schema.GroupKind{Group: "example.io", Kind: "OtherPolicy"}
+
+		ownerResource := &unstructured.Unstructured{}
+		ownerResource.SetGroupVersionKind(ownerGK.WithVersion("v1"))
+		otherResource := &unstructured.Unstructured{}
+		otherResource.SetGroupVersionKind(otherGK.WithVersion("v1"))
+
+		clientNoPolicy := &mockXDSHookClient{}
+		clientWithPolicy := &mockXDSHookClient{}
+
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{
+					name:        "no-policy-ext",
+					client:      clientNoPolicy,
+					policyGKSet: sets.New[schema.GroupKind](), // empty: declared no policyResources
+				},
+				{
+					name:        "owner-ext",
+					client:      clientWithPolicy,
+					policyGKSet: sets.New(ownerGK),
+				},
+			},
+		}
+
+		_, _, err := composite.PostVirtualHostModifyHook(
+			&route.VirtualHost{Name: "test"},
+			[]*unstructured.Unstructured{ownerResource, otherResource},
+		)
+		require.NoError(t, err)
+
+		// Manager with no declared policyResources must receive nothing, not all resources.
+		assert.Empty(t, clientNoPolicy.postVirtualHostModifyHookResources,
+			"empty policyGKSet should isolate the manager from all extension resources")
+
+		// Manager owning "MyPolicy" receives only that resource, not "OtherPolicy".
+		require.Len(t, clientWithPolicy.postVirtualHostModifyHookResources, 1)
+		assert.Equal(t, ownerResource, clientWithPolicy.postVirtualHostModifyHookResources[0])
 	})
 }
 
@@ -461,7 +598,7 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 		}
 
 		input := &listener.Listener{Name: "test"}
-		result, err := composite.PostHTTPListenerModifyHook(input, nil)
+		result, _, err := composite.PostHTTPListenerModifyHook(input, nil)
 		require.NoError(t, err)
 		require.Equal(t, "test-ext1-ext2", result.Name)
 	})
@@ -483,7 +620,7 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 			},
 		}
 
-		result, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
+		result, _, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
 		require.NoError(t, err)
 		require.Equal(t, "test-ext2", result.Name)
 	})
@@ -507,7 +644,7 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 			},
 		}
 
-		_, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
+		_, _, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
 		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
 		require.False(t, client2Called)
 	})
@@ -550,7 +687,7 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarPolicy"}},
 		}
 
-		_, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, allResources)
+		_, _, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, allResources)
 		require.NoError(t, err)
 
 		require.Len(t, ext1Resources, 1)
@@ -558,6 +695,51 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 
 		require.Len(t, ext2Resources, 1)
 		assert.Equal(t, barV1BarPolicyGVK, ext2Resources[0].GetObjectKind().GroupVersionKind())
+	})
+
+	t.Run("call count equals number of servers invoked", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{}},
+				{name: "ext2", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 2, hr.CallCount)
+	})
+
+	t.Run("failOpen erroring server still counted", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postHTTPListenerModifyHook: func(_ *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: true},
+				{name: "ext2", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 2, hr.CallCount)
+	})
+
+	t.Run("failClosed erroring entry counted before stop", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{}},
+				{name: "ext2", client: &mockXDSHookClient{
+					postHTTPListenerModifyHook: func(_ *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: false},
+				{name: "ext3", client: &mockXDSHookClient{}},
+			},
+		}
+		_, hr, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
+		require.Error(t, err)
+		assert.Equal(t, 2, hr.CallCount)
 	})
 }
 
