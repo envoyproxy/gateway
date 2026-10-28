@@ -143,6 +143,55 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			hostname:      strings.Repeat("a", 63) + ".example.com",
 			runningOnHost: false,
 		},
+		{
+			name:          "localhost subdomain not ok in k8s",
+			hostname:      "api.localhost",
+			runningOnHost: false,
+			expectedErr:   "hostname api.localhost is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost absolute subdomain not ok in k8s",
+			hostname:      "api.localhost.",
+			runningOnHost: false,
+			expectedErr:   "hostname api.localhost. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost nested subdomain not ok in k8s",
+			hostname:      "nested.api.localhost",
+			runningOnHost: false,
+			expectedErr:   "hostname nested.api.localhost is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost subdomain ok when running on host",
+			hostname:      "api.localhost",
+			runningOnHost: true,
+		},
+		{
+			name:          "localhost absolute subdomain ok when running on host",
+			hostname:      "api.localhost.",
+			runningOnHost: true,
+		},
+		{
+			name:          "name ending in localhost without dot ok in k8s",
+			hostname:      "notlocalhost",
+			runningOnHost: false,
+		},
+		{
+			name:          "localhost prefix domain ok in k8s",
+			hostname:      "localhost.example.com",
+			runningOnHost: false,
+		},
+		{
+			name:          "localhost subdomain of other domain ok in k8s",
+			hostname:      "api.localhost.example.com",
+			runningOnHost: false,
+		},
+		{
+			name:          "uppercase localhost subdomain not ok in k8s",
+			hostname:      "API.LOCALHOST",
+			runningOnHost: false,
+			expectedErr:   "hostname API.LOCALHOST is not a valid hostname",
+		},
 	}
 
 	for _, tc := range cases {

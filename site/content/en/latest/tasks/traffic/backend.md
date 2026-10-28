@@ -32,7 +32,7 @@ The Backend API is currently supported only in the following BackendReferences:
 The Backend API supports attachment the following policies:
 - [Backend TLS Policy][]
 
-Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range and the `localhost` hostname (including `localhost.`) are forbidden unless the Host infrastructure provider is used.
+Certain restrictions apply on the value of hostnames and addresses. For example, the loopback IP address range, `localhost`, and names ending in `.localhost` (with or without a trailing dot) are forbidden unless the Host infrastructure provider is used.
 
 Envoy Gateway does not manage the lifecycle of unix domain sockets referenced by the Backend resource. Envoy Gateway admins are responsible for creating and mounting the sockets into the envoy proxy pod. The latter can be achieved by patching the envoy deployment using the [EnvoyProxy][] resource.
 

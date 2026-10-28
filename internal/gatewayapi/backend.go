@@ -238,7 +238,8 @@ func validateHostname(hostname, typeName string, runningOnHost bool) *status.Rou
 		)
 	}
 	// Localhost is only allowed with Host infrastructure.
-	if !runningOnHost && hostnameToValidate == "localhost" {
+	if !runningOnHost &&
+		(hostnameToValidate == "localhost" || strings.HasSuffix(hostnameToValidate, ".localhost")) {
 		return status.NewRouteStatusError(
 			fmt.Errorf("hostname %s is only supported when using the Host infrastructure", hostname),
 			status.RouteReasonInvalidAddress,

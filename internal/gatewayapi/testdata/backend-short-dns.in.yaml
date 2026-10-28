@@ -30,3 +30,13 @@ backends:
         - fqdn:
             hostname: 'localhost.'
             port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-localhost-subdomain
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: 'api.localhost.'
+            port: 3000
