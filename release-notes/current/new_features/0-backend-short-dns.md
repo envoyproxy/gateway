@@ -1,1 +1,0 @@
-Added support for single-label DNS names (e.g. `ml-service`) in `Backend` endpoint hostnames, resolved by Envoy using the proxy pods' DNS configuration. Outside the Host infrastructure provider, `localhost`, subdomains ending in `.localhost`, and the loopback aliases `ip6-localhost` and `ip6-loopback` are rejected, including forms with a trailing dot.

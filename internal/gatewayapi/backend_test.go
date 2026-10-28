@@ -70,6 +70,33 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			runningOnHost: true,
 		},
 		{
+			name:          "localhost localdomain not ok when in k8s",
+			hostname:      "localhost.localdomain",
+			runningOnHost: false,
+			expectedErr:   "hostname localhost.localdomain is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost localdomain absolute not ok when in k8s",
+			hostname:      "localhost.localdomain.",
+			runningOnHost: false,
+			expectedErr:   "hostname localhost.localdomain. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost localdomain ok when running on host",
+			hostname:      "localhost.localdomain",
+			runningOnHost: true,
+		},
+		{
+			name:          "localhost localdomain absolute ok when running on host",
+			hostname:      "localhost.localdomain.",
+			runningOnHost: true,
+		},
+		{
+			name:          "localhost localdomain subdomain of other domain ok in k8s",
+			hostname:      "localhost.localdomain.example.com",
+			runningOnHost: false,
+		},
+		{
 			name:          "underscore not ok when in k8s",
 			hostname:      "bad_name",
 			runningOnHost: false,

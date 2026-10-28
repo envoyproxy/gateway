@@ -107,5 +107,23 @@ backends:
       reason: Accepted
       status: "False"
       type: Invalid
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-localhost-localdomain
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: localhost.localdomain.
+        port: 3000
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'The Backend was not accepted: hostname localhost.localdomain. is only
+        supported when using the Host infrastructure'
+      reason: Accepted
+      status: "False"
+      type: Invalid
 infraIR: {}
 xdsIR: {}
