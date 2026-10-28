@@ -42,11 +42,11 @@ type HTTPRouteFilterSpec struct {
 	// +optional
 	URLRewrite *HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
 	// Redirect returns a redirect response with a regex path transformation.
-	// Without a Gateway API RequestRedirect filter, the status code defaults to 302,
-	// the request scheme and hostname are preserved, and the port is derived from
-	// the Gateway listener. An optional RequestRedirect filter on the same HTTPRoute
-	// rule can override the scheme, hostname, port and status code, but must not
-	// specify path. Filter order does not affect the resulting redirect.
+    // Without a Gateway API RequestRedirect filter, the status code defaults to 302
+    // and the request scheme, hostname and port are preserved. An optional
+    // RequestRedirect filter on the same HTTPRoute rule can override the scheme,
+    // hostname, port and status code, but must not specify path. Filter order does
+    // not affect the resulting redirect.
 	// Only one redirect extension is allowed per rule.
 	// Redirect cannot be combined with URL rewriting or direct responses, and is
 	// not supported on GRPCRoutes or backendRefs.
