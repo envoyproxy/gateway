@@ -192,6 +192,60 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			runningOnHost: false,
 			expectedErr:   "hostname API.LOCALHOST is not a valid hostname",
 		},
+		{
+			name:          "ip6-localhost not ok in k8s",
+			hostname:      "ip6-localhost",
+			runningOnHost: false,
+			expectedErr:   "hostname ip6-localhost is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ip6-loopback not ok in k8s",
+			hostname:      "ip6-loopback",
+			runningOnHost: false,
+			expectedErr:   "hostname ip6-loopback is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ip6-localhost absolute not ok in k8s",
+			hostname:      "ip6-localhost.",
+			runningOnHost: false,
+			expectedErr:   "hostname ip6-localhost. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ip6-loopback absolute not ok in k8s",
+			hostname:      "ip6-loopback.",
+			runningOnHost: false,
+			expectedErr:   "hostname ip6-loopback. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ip6-localhost ok when running on host",
+			hostname:      "ip6-localhost",
+			runningOnHost: true,
+		},
+		{
+			name:          "ip6-loopback ok when running on host",
+			hostname:      "ip6-loopback",
+			runningOnHost: true,
+		},
+		{
+			name:          "ip6-localhost absolute ok when running on host",
+			hostname:      "ip6-localhost.",
+			runningOnHost: true,
+		},
+		{
+			name:          "ip6-loopback absolute ok when running on host",
+			hostname:      "ip6-loopback.",
+			runningOnHost: true,
+		},
+		{
+			name:          "ip6-localhost subdomain of other domain ok in k8s",
+			hostname:      "ip6-localhost.example.com",
+			runningOnHost: false,
+		},
+		{
+			name:          "ip6-loopback subdomain of other domain ok in k8s",
+			hostname:      "ip6-loopback.example.com",
+			runningOnHost: false,
+		},
 	}
 
 	for _, tc := range cases {
