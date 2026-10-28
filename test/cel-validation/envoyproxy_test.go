@@ -1554,7 +1554,37 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "tracing-service",
+												Kind: new(gwapiv1.Kind("Service")),
+												Port: new(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+									BackendSettings: &egv1a1.BackendSettings{
+										ClusterSettings: egv1a1.ClusterSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for OpenTelemetry tracing backends, which use gRPC."},
+		},
+		{
+			desc: "tracing provider without a type and with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
@@ -1585,7 +1615,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeZipkin,
+								Type: new(egv1a1.TracingProviderTypeZipkin),
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
