@@ -1407,6 +1407,13 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 		}
 	}
 
+	for _, backend := range envoyExtensionPolicy.Spec.Backends {
+		ret = append(ret, types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(backend.BackendRef.Namespace, envoyExtensionPolicy.Namespace),
+			Name:      string(backend.BackendRef.Name),
+		}.String())
+	}
+
 	return ret
 }
 

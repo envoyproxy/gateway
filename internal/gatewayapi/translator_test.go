@@ -216,6 +216,7 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:          true,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
+				ExtensionBackendsEnabled:        true,
 				SDSSecretRefEnabled:             sdsEnabled,
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
@@ -1261,6 +1262,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies []*ir.UnstructuredRef
 		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
+		ExtensionBackends       []*ir.ExtensionBackend
 		CACertificates          []*ir.CACertificateEntry
 	}{
 		ReadyListener:           a.ReadyListener,
@@ -1277,6 +1279,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
 		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
+		ExtensionBackends:       a.ExtensionBackends,
 		CACertificates:          a.CACertificates,
 	}
 

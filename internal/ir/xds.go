@@ -94,6 +94,7 @@ var (
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
 	ErrBackendClusterMergedDynamicResolver      = errors.New("a BackendCluster must not be a dynamic resolver")
 	ErrBackendClusterRefNotFound                = errors.New("field BackendClusterRefs references a BackendCluster name that does not exist")
+	ErrExtensionBackendRefNotFound              = errors.New("field Backends references an ExtensionBackend name that does not exist")
 
 	redacted = []byte("[redacted]")
 )
@@ -193,6 +194,9 @@ type Xds struct {
 	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
 	// source of truth for a cluster's Settings/Metadata.
 	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
+	// ExtensionBackends holds callout destinations once per generated cluster name.
+	// Routes reference these definitions through EnvoyExtensionFeatures.Backends.
+	ExtensionBackends []*ExtensionBackend `json:"extensionBackends,omitempty" yaml:"extensionBackends,omitempty"`
 	// ExtensionResources holds extension-introduced resources deduplicated into a single shared
 	// entry, keyed by their Name. Other IR fields reference these via UnstructuredRef.Name instead
 	// of embedding Object.
@@ -232,6 +236,35 @@ func (x *Xds) Validate() error {
 	}
 	if err := x.validateBackendClusterRefs(); err != nil {
 		errs = errors.Join(errs, err)
+	}
+	if err := x.validateExtensionBackends(); err != nil {
+		errs = errors.Join(errs, err)
+	}
+	return errs
+}
+
+// Routes store backend names instead of definitions. Check that the names resolve
+// before publishing the IR, so missing definitions cannot reach extension callouts.
+func (x *Xds) validateExtensionBackends() error {
+	names := make(map[string]struct{}, len(x.ExtensionBackends))
+	var errs error
+	for _, backend := range x.ExtensionBackends {
+		names[backend.Name] = struct{}{}
+		if err := backend.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, listener := range x.HTTP {
+		for _, route := range listener.Routes {
+			if route.EnvoyExtensions == nil {
+				continue
+			}
+			for alias, name := range route.EnvoyExtensions.Backends {
+				if _, ok := names[name]; !ok {
+					errs = errors.Join(errs, fmt.Errorf("%w: route %s alias %s: %s", ErrExtensionBackendRefNotFound, route.Name, alias, name))
+				}
+			}
+		}
 	}
 	return errs
 }
@@ -1404,6 +1437,8 @@ type SecurityFeatures struct {
 // EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
 // +k8s:deepcopy-gen=true
 type EnvoyExtensionFeatures struct {
+	// Backends maps extension aliases to cluster names in Xds.ExtensionBackends.
+	Backends map[string]string `json:"backends,omitempty" yaml:"backends,omitempty"`
 	// External Processing extensions
 	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
 	// Wasm extensions
@@ -1412,6 +1447,13 @@ type EnvoyExtensionFeatures struct {
 	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 	// Dynamic Module extensions
 	DynamicModules []DynamicModule `json:"dynamicModules,omitempty" yaml:"dynamicModules,omitempty"`
+}
+
+// ExtensionBackend holds a callout destination and its cluster settings.
+// +k8s:deepcopy-gen=true
+type ExtensionBackend struct {
+	RouteDestination `json:",inline" yaml:",inline"`
+	Traffic          *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
