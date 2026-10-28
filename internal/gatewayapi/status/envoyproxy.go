@@ -13,6 +13,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference,
@@ -86,6 +87,39 @@ func SetEnvoyProxyPatchDisabledWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.
 
 	cond := newCondition(string(egv1a1.EnvoyProxyConditionWarning), metav1.ConditionTrue,
 		string(egv1a1.EnvoyProxyReasonPatchDisabled), msg, ep.Generation)
+
+	for i := range ep.Status.Ancestors {
+		item := ep.Status.Ancestors[i]
+		if ancestorRefsEqual(&item.AncestorRef, ancestor) {
+			ep.Status.Ancestors[i].Conditions = MergeConditions(item.Conditions, cond)
+			return
+		}
+	}
+
+	// ancestor not found, append a new one
+	ep.Status.Ancestors = append(ep.Status.Ancestors, egv1a1.EnvoyProxyAncestorStatus{
+		AncestorRef: *ancestor,
+		Conditions: []metav1.Condition{
+			cond,
+		},
+	})
+}
+
+// SetEnvoyProxyInvalidFieldsWarning sets a Warning condition on the EnvoyProxy ancestor status
+// listing the invalid fields that were ignored. It is a no-op when invalidFields is empty.
+func SetEnvoyProxyInvalidFieldsWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, invalidFields []validation.InvalidField) {
+	if ep == nil || ancestor == nil || len(invalidFields) == 0 {
+		return
+	}
+
+	msgs := make([]string, 0, len(invalidFields))
+	for _, f := range invalidFields {
+		msgs = append(msgs, f.Error())
+	}
+	msg := fmt.Sprintf("The following invalid fields were ignored: %s", strings.Join(msgs, "; "))
+
+	cond := newCondition(string(egv1a1.EnvoyProxyConditionWarning), metav1.ConditionTrue,
+		string(egv1a1.EnvoyProxyReasonInvalidField), msg, ep.Generation)
 
 	for i := range ep.Status.Ancestors {
 		item := ep.Status.Ancestors[i]
