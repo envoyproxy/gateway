@@ -231,7 +231,7 @@ kubectl delete backendtrafficpolicy/request-body-limit
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
