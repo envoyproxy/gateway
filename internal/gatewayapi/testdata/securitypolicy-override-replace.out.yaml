@@ -736,6 +736,7 @@ xdsIR:
             - x-header-4
             maxAge: 16m40s
           jwt:
+            policyName: envoy-gateway/policy-for-gateway-1
             providers:
             - audiences:
               - one.foo.com
@@ -848,6 +849,7 @@ xdsIR:
             - x-header-4
             maxAge: 16m40s
           jwt:
+            policyName: envoy-gateway/policy-for-gateway-1
             providers:
             - audiences:
               - one.foo.com

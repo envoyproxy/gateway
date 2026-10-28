@@ -247,6 +247,7 @@ xdsIR:
                   - foo
                   - bar
           jwt:
+            policyName: envoy-gateway/policy-for-gateway
             providers:
             - audiences:
               - two.foo.com

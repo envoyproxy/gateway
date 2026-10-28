@@ -341,6 +341,7 @@ xdsIR:
               exact: https://www.test.org:8080
               name: ""
           jwt:
+            policyName: envoy-gateway/policy-for-gateway
             providers:
             - audiences:
               - one.foo.com
