@@ -309,6 +309,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	}
 	phases.End()
 
+	if err := patchExtensionBackendResources(tCtx, xdsIR.ExtensionBackends); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
