@@ -46,6 +46,25 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 		}, deprecatedFieldsUsedInEnvoyExtensionPolicy(policy))
 	})
 
+	t.Run("EnvoyExtensionPolicy extension backend consistent hash header", func(t *testing.T) {
+		policy := &egv1a1.EnvoyExtensionPolicy{}
+		policy.Spec.Backends = []egv1a1.ExtensionBackend{
+			{Name: "plain"},
+			{Name: "hashed", BackendSettings: &egv1a1.ClusterSettings{
+				LoadBalancer: &egv1a1.LoadBalancer{ConsistentHash: &egv1a1.ConsistentHash{
+					Type:   egv1a1.HeaderConsistentHashType,
+					Header: &egv1a1.Header{Name: "x-user"},
+				}},
+			}},
+		}
+		require.Equal(t, map[string]status.DeprecatedField{
+			"spec.backends[1].backendSettings.loadBalancer.consistentHash.type: Header": removed(
+				"spec.backends[1].backendSettings.loadBalancer.consistentHash.type: Headers"),
+			"spec.backends[1].backendSettings.loadBalancer.consistentHash.header": removed(
+				"spec.backends[1].backendSettings.loadBalancer.consistentHash.headers"),
+		}, deprecatedFieldsUsedInEnvoyExtensionPolicy(policy))
+	})
+
 	t.Run("SecurityPolicy JWT and OIDC backendRef", func(t *testing.T) {
 		policy := &egv1a1.SecurityPolicy{}
 		policy.Spec.JWT = &egv1a1.JWT{Providers: []egv1a1.JWTProvider{

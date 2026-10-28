@@ -51,6 +51,12 @@ func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPol
 		deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, fmt.Sprintf("spec.extProc[%d]", i),
 			&policy.Spec.ExtProc[i].BackendCluster, nil)
 	}
+	for i, backend := range policy.Spec.Backends {
+		if backend.BackendSettings != nil {
+			deprecation.AddDeprecatedLoadBalancerFields(deprecatedFields,
+				fmt.Sprintf("spec.backends[%d].backendSettings.loadBalancer", i), backend.BackendSettings.LoadBalancer)
+		}
+	}
 	return deprecatedFields
 }
 
