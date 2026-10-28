@@ -144,7 +144,7 @@ func processExtensionPostEndpointsHook(loadAssignment *endpointv3.ClusterLoadAss
 	return nil
 }
 
-func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager, stats *ExtensionHookStats) error {
+func processExtensionPostVHostHook(vHost *routev3.VirtualHost, extensionResources []*unstructured.Unstructured, em *extensionTypes.Manager, stats *ExtensionHookStats) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
 		return nil
@@ -160,7 +160,7 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 		return nil
 	}
 	start := time.Now()
-	modifiedVH, hookResult, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
+	modifiedVH, hookResult, err := extVHHookClient.PostVirtualHostModifyHook(vHost, extensionResources)
 	if stats != nil {
 		stats.VHostCallCount += int64(hookResult.CallCount)
 		stats.VHostDuration += time.Since(start)

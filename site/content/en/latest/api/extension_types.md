@@ -1224,6 +1224,7 @@ ClusterSettings contains CDS-only fields that configure the upstream Envoy Clust
 _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ExtensionBackend](#extensionbackend)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1814,6 +1815,7 @@ _Appears in:_
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing EnvoyExtensionPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent EnvoyExtensionPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
+| `backends` | _[ExtensionBackend](#extensionbackend) array_ |  false  |  | Backends declares HTTP callout dependencies for Lua, Wasm and dynamic modules.<br />Requires extensionApis.enableExtensionBackends to be set to true in the<br />EnvoyGateway configuration.<br />Each name is an alias in this policy. Extensions read the generated cluster<br />name from route metadata during a request. Initialization and independent<br />background callbacks have no request route. Asynchronous callbacks can use<br />bindings resolved for their request.<br />When merging policies, a nonempty list replaces the parent's list.<br />Inherited references keep the namespace of the policy that declared them. |
 | `wasm` | _[Wasm](#wasm) array_ |  false  |  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  false  |  | ExtProc is an ordered list of external processing filters<br />that should be added to the envoy filter chain |
 | `lua` | _[Lua](#lua) array_ |  false  |  | Lua is an ordered list of Lua filters<br />that should be added to the envoy filter chain |
@@ -2672,9 +2674,26 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  |  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources.<br />Warning: Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.<br />Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `enableBackend` | _boolean_ |  true  |  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
+| `enableExtensionBackends` | _boolean_ |  false  |  | EnableExtensionBackends enables HTTP callout backend bindings declared in<br />EnvoyExtensionPolicy for Lua, Wasm and dynamic modules.<br />Disabled by default. Backend resources also require EnableBackend.<br />Bindings can add destinations that Envoy contacts using its network<br />access and any client certificate selected by the backend TLS configuration. |
 | `disableLua` | _boolean_ |  false  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.<br />This field is mutually exclusive with EnableLua.<br />Deprecated: Use EnableLua instead. This field will be removed in a future release. |
 | `enableLua` | _boolean_ |  false  |  | EnableLua enables the Lua EnvoyExtensionPolicy feature.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be enabled.<br />By default, Lua policies are disabled.<br />This field is mutually exclusive with DisableLua. |
 | `enableSDSSecretRef` | _boolean_ |  true  |  | EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds). |
+
+
+#### ExtensionBackend
+
+
+
+ExtensionBackend binds an extension's backend alias to a backend resource.
+
+_Appears in:_
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the alias used by extensions. It must be a lowercase DNS label<br />and unique within this policy. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendobjectreference)_ |  true  |  | BackendRef references the backend for HTTP callouts. References to another<br />namespace require a ReferenceGrant allowing the policy that declares this binding. |
+| `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings configures connections and traffic for this binding's cluster.<br />Request timeouts and retries are controlled by the extension's callout API.<br />RequestTimeout and StreamIdleTimeout are not supported here.<br />DynamicModule load balancing is not supported here.<br />HTTP3 is not supported for extension backends. |
 
 
 #### ExtensionHooks
@@ -6544,6 +6563,7 @@ _Appears in:_
 | `PerResourceSystemCASecret` | PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per<br />BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead<br />of sharing a single system_ca_certificates secret across all of them.<br />Disabled by default (i.e. the shared secret is used). Enable this flag to opt out during<br />upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use<br />it, which may cause a brief disruption to new connections on first enable.<br /> | 
 | `EnvoyProxyPatch` | EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on<br />EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve<br />pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and<br />tenant-authored, a patch may grant arbitrary access to resources applied by Envoy<br />Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters<br />where tenants can author their own EnvoyProxy resources.<br /> | 
 | `ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly` | ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly restricts the ClientTrafficPolicy http1 fields<br />(enableTrailers, preserveHeaderCase, http10) to client connections only.<br />When enabled, these fields no longer affect backend HTTP/1 protocol settings.<br />Use BackendTrafficPolicy.http1 to configure backend HTTP/1 protocol settings.<br />Disabled by default to preserve existing behavior. Users are encouraged to migrate<br />to BackendTrafficPolicy.http1 for backend settings and enable this flag to opt in<br />to the new behavior. This flag will be enabled by default in a future release.<br /> | 
+| `OIDCTokenCookieChunking` | OIDCTokenCookieChunking splits an OIDC access, ID or refresh token too large for one<br />browser cookie across several cookies, instead of the browser dropping it and the login<br />looping back to the OIDC provider. It is enabled by default. Envoy Proxy older than v1.40<br />can't read the split cookies, so a client that holds such a token in one cookie today, such<br />as a non-browser client, is sent back to the OIDC provider when it reaches an older proxy.<br />Disable this flag while proxies of an earlier Envoy Gateway release serve the same<br />hostnames, for example during an upgrade.<br /> | 
 
 
 #### RuntimeFlags

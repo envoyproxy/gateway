@@ -430,6 +430,7 @@ xdsIR:
             - openid
             - email
             - profile
+            tokenCookieChunking: true
       - destination:
           metadata:
             kind: HTTPRoute
@@ -481,6 +482,7 @@ xdsIR:
             refreshToken: true
             scopes:
             - openid
+            tokenCookieChunking: true
       - destination:
           metadata:
             kind: HTTPRoute
@@ -534,6 +536,7 @@ xdsIR:
             refreshToken: true
             scopes:
             - openid
+            tokenCookieChunking: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
