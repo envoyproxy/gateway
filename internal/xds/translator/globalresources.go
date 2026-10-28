@@ -179,7 +179,10 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		endpointType = EndpointTypeDNS
 	}
 
-	tSocket, err := buildEnvoyClientTLSSocket(globalResources.EnvoyClientCertificate)
+	// The rate limit service is a gRPC service. Health check connections are created outside
+	// the connection pool, so they don't get h2 from the HTTP/2 protocol options and fall back
+	// to the ALPN of the TLS context instead. Without it, a gRPC health check fails.
+	tSocket, err := buildEnvoyClientTLSSocket(globalResources.EnvoyClientCertificate, "h2")
 	if err != nil {
 		return err
 	}
@@ -198,9 +201,10 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 }
 
 // buildEnvoyClientTLSSocket builds the TLS socket for Envoy to connect to the control plane components.
-func buildEnvoyClientTLSSocket(envoyClientCertificate *ir.TLSCertificate) (*corev3.TransportSocket, error) {
+func buildEnvoyClientTLSSocket(envoyClientCertificate *ir.TLSCertificate, alpnProtocols ...string) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
+			AlpnProtocols: alpnProtocols,
 			TlsParams: &tlsv3.TlsParameters{
 				TlsMaximumProtocolVersion: tlsv3.TlsParameters_TLSv1_3,
 			},

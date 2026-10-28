@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -185,5 +187,28 @@ func validateRateLimitServiceSettings(fldPath *field.Path, cs *egv1a1.ClusterSet
 	if cs.LoadBalancer != nil && cs.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType {
 		errs = append(errs, field.Forbidden(fldPath.Child("loadBalancer", "type"), "there is no route to compute the hash from"))
 	}
+	// The schema admits zero durations that the IR rejects, which would only surface when the
+	// xDS translator builds the cluster and stall every xDS update.
+	if hc := cs.HealthCheck; hc != nil {
+		hcPath := fldPath.Child("healthCheck")
+		if hc.Active != nil {
+			errs = append(errs, validateNonZeroDuration(hcPath.Child("active", "timeout"), hc.Active.Timeout)...)
+			errs = append(errs, validateNonZeroDuration(hcPath.Child("active", "interval"), hc.Active.Interval)...)
+		}
+		if hc.Passive != nil {
+			errs = append(errs, validateNonZeroDuration(hcPath.Child("passive", "interval"), hc.Passive.Interval)...)
+			errs = append(errs, validateNonZeroDuration(hcPath.Child("passive", "baseEjectionTime"), hc.Passive.BaseEjectionTime)...)
+		}
+	}
 	return errs.ToAggregate()
+}
+
+func validateNonZeroDuration(fldPath *field.Path, d *gwapiv1.Duration) field.ErrorList {
+	if d == nil {
+		return nil
+	}
+	if parsed, err := time.ParseDuration(string(*d)); err == nil && parsed == 0 {
+		return field.ErrorList{field.Invalid(fldPath, *d, "must be greater than zero")}
+	}
+	return nil
 }

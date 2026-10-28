@@ -180,6 +180,28 @@ func TestValidateRateLimitServiceSettings(t *testing.T) {
 			cs:          &egv1a1.ClusterSettings{LoadBalancer: &egv1a1.LoadBalancer{Type: egv1a1.ConsistentHashLoadBalancerType}},
 			expectedErr: "rateLimit.serviceSettings.loadBalancer.type: Forbidden",
 		},
+		{
+			name: "zero active health check durations",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Active: &egv1a1.ActiveHealthCheck{
+						Type:     egv1a1.ActiveHealthCheckerTypeTCP,
+						Timeout:  new(gwapiv1.Duration("0s")),
+						Interval: new(gwapiv1.Duration("0ms")),
+					},
+				},
+			},
+			expectedErr: "rateLimit.serviceSettings.healthCheck.active.timeout: Invalid value: \"0s\": must be greater than zero",
+		},
+		{
+			name: "zero passive health check durations",
+			cs: &egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{
+					Passive: &egv1a1.PassiveHealthCheck{BaseEjectionTime: new(gwapiv1.Duration("0s"))},
+				},
+			},
+			expectedErr: "rateLimit.serviceSettings.healthCheck.passive.baseEjectionTime: Invalid value: \"0s\": must be greater than zero",
+		},
 	}
 
 	for _, tc := range testCases {

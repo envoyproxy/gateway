@@ -6,6 +6,13 @@ globalResources:
   rateLimitServiceClusterTraffic:
     circuitBreaker:
       maxRequestsPerConnection: 10
+    healthCheck:
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 3
+        grpc: {}
     timeout:
       http:
         maxConnectionDuration: 30s

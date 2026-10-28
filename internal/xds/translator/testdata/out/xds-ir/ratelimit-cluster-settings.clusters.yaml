@@ -34,6 +34,12 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
+  healthChecks:
+  - grpcHealthCheck: {}
+    healthyThreshold: 3
+    interval: 5s
+    timeout: 1s
+    unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: ratelimit_cluster
@@ -63,6 +69,8 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
       commonTlsContext:
+        alpnProtocols:
+        - h2
         tlsCertificateSdsSecretConfigs:
         - name: envoy-gateway-system/envoy
           sdsConfig:
