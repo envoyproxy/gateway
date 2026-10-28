@@ -16,16 +16,19 @@ The shutdown manager sidecar coordinates graceful connection draining during pod
 
 1. Kubernetes sends SIGTERM to the pod's containers and marks the pod as
    terminating.
-2. Shutdown manager starts Envoy listener drain.
-   - Drain is initiated directly via
-     `/drain_listeners?graceful&skip_exit` or indirectly via `/healthcheck/fail`
-     when no health check failure delay is configured.
-   - Envoy continues to serve accepted connections while listeners are draining.
+2. Shutdown manager starts Envoy listener drain via
+   `/drain_listeners?graceful&skip_exit`.
+   - Connections are drained according to `drainStrategy`: `Immediate` drains
+     them as soon as the drain starts, while `Gradual` drains them progressively
+     over `drainTimeout`.
+   - Envoy continues to accept and serve connections while listeners are draining.
 3. Shutdown manager fails health checks via `/healthcheck/fail`, causing the
    pod's readiness probe to fail.
-   - By default this happens immediately and also starts listener drain.
+   - By default this happens immediately after listener drain starts.
    - When `healthCheckFailureDelay` is configured, this step is delayed without
      delaying listener drain, connection monitoring, or the drain timeout.
+   - Failing health checks does not drain connections by itself, so it does not
+     override `drainStrategy`.
 4. Connection monitoring begins, polling `server.total_connections`
 5. Process exits when connections reach zero or drain timeout is exceeded
 
@@ -39,6 +42,7 @@ Graceful shutdown behavior includes default values that can be overridden using 
 - `drainTimeout`: 60 seconds - Maximum time for connection draining
 - `minDrainDuration`: 10 seconds - Minimum wait before allowing exit
 - `healthCheckFailureDelay`: 0 seconds - Optional delay before failing health checks after drain starts
+- `drainStrategy`: `Immediate` - How connections are drained, either `Immediate` or `Gradual`
 
 `healthCheckFailureDelay` does not extend the drain sequence or keep the pod's
 containers running. If the drain completes before `healthCheckFailureDelay`
