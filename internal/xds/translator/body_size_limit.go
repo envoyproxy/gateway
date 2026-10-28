@@ -76,10 +76,6 @@ func bodySizeLimitFilterName(limit *ir.RequestBodyLimit) string {
 
 // buildHCMBodySizeLimitFilter returns a disabled Body Size Limit HTTP filter for the provided limit.
 func buildHCMBodySizeLimitFilter(limit *ir.RequestBodyLimit) (*hcmv3.HttpFilter, error) {
-	if limit.MaxSize == 0 {
-		return nil, errors.New("requestBodyLimit maxSize must be greater than 0")
-	}
-
 	bodySizeLimitProto := &bodysizelimitv3.BodySizeLimit{
 		MaxRequestBytes: wrapperspb.UInt64(limit.MaxSize),
 	}
