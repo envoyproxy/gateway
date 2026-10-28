@@ -762,7 +762,10 @@ type RateLimit struct {
 	//
 	// The rate limit service is a gRPC (HTTP/2) service reached over mTLS, with no
 	// associated route, so NOT all of the ClusterSettings fields are supported here.
-	// Envoy Gateway fails to start if any of these unsupported fields are set:
+	// Fields are supported on a best-effort basis: a field that only applies to routes
+	// or to other protocols (e.g. timeout.http.streamIdleTimeout) may have no effect.
+	//
+	// Envoy Gateway fails to start if any of these known-unsupported fields are set:
 	//
 	//   - http1, http3 and proxyProtocol: the rate limit service only accepts gRPC over mTLS.
 	//   - healthCheck.active of type HTTP: the rate limit service only serves its HTTP
