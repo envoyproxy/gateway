@@ -326,6 +326,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					CTPHTTP1ClientScopeOnly:         r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly),
 					OIDCTokenCookieChunkingDisabled: !r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.OIDCTokenCookieChunking),
 					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					ExtensionBackendsEnabled:        r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableExtensionBackends,
 					SDSSecretRefEnabled:             r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableSDSSecretRef,
 					ControllerNamespace:             r.ControllerNamespace,
 					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),

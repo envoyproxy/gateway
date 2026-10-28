@@ -431,6 +431,14 @@ type ExtensionAPISettings struct {
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.
 	EnableBackend bool `json:"enableBackend"`
+	// EnableExtensionBackends enables HTTP callout backend bindings declared in
+	// EnvoyExtensionPolicy for Lua, Wasm and dynamic modules.
+	// Disabled by default. Backend resources also require EnableBackend.
+	// Bindings can add destinations that Envoy contacts using its network
+	// access and any client certificate selected by the backend TLS configuration.
+	//
+	// +optional
+	EnableExtensionBackends bool `json:"enableExtensionBackends,omitempty"`
 	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
 	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
 	// This field is mutually exclusive with EnableLua.
