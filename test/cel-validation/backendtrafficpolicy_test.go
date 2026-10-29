@@ -25,24 +25,27 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func TestBackendTrafficPolicyTarget(t *testing.T) {
-	ctx := context.Background()
-	baseBTP := egv1a1.BackendTrafficPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "btp",
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: egv1a1.BackendTrafficPolicySpec{},
-	}
+var baseBTP = egv1a1.BackendTrafficPolicy{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "btp",
+		Namespace: metav1.NamespaceDefault,
+	},
+	Spec: egv1a1.BackendTrafficPolicySpec{},
+}
 
+type backendTrafficPolicyCase struct {
+	desc         string
+	mutate       func(btp *egv1a1.BackendTrafficPolicy)
+	mutateStatus func(btp *egv1a1.BackendTrafficPolicy)
+	wantErrors   []string
+}
+
+// backendTrafficPolicyCases are shared with TestRateLimitServiceSettings, which runs the
+// ClusterSettings in them through the in-code validator.
+func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 	sectionName := gwapiv1a2.SectionName("foo")
 
-	cases := []struct {
-		desc         string
-		mutate       func(btp *egv1a1.BackendTrafficPolicy)
-		mutateStatus func(btp *egv1a1.BackendTrafficPolicy)
-		wantErrors   []string
-	}{
+	return []backendTrafficPolicyCase{
 		{
 			desc: "valid gateway targetRef",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
@@ -5920,8 +5923,12 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{"proxyProtocol cannot be used together with http3"},
 		},
 	}
+}
 
-	for _, tc := range cases {
+func TestBackendTrafficPolicyTarget(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tc := range backendTrafficPolicyCases() {
 		t.Run(tc.desc, func(t *testing.T) {
 			btp := baseBTP.DeepCopy()
 			btp.Name = fmt.Sprintf("btp-%v", time.Now().UnixNano())
