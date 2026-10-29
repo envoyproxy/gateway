@@ -9,8 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -143,5 +146,70 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		}
 	}
 
+	// The CRD schema, including its CEL rules, is the single source of truth for
+	// ClusterSettings, so validate against it rather than duplicating each rule in Go.
+	if eg.RateLimit != nil {
+		fldPath := field.NewPath("rateLimit", "serviceSettings")
+		if err := ValidateClusterSettings(fldPath, eg.RateLimit.ServiceSettings); err != nil {
+			return fmt.Errorf("invalid rateLimit.serviceSettings: %w", err)
+		}
+		if err := validateRateLimitServiceSettings(fldPath, eg.RateLimit.ServiceSettings); err != nil {
+			return fmt.Errorf("invalid rateLimit.serviceSettings: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// validateRateLimitServiceSettings rejects the ClusterSettings fields that can't be used for the
+// rate limit service cluster: it is a gRPC (HTTP/2) service reached over mTLS, with no associated route.
+func validateRateLimitServiceSettings(fldPath *field.Path, cs *egv1a1.ClusterSettings) error {
+	if cs == nil {
+		return nil
+	}
+
+	var errs field.ErrorList
+	if cs.HTTP1 != nil {
+		errs = append(errs, field.Forbidden(fldPath.Child("http1"), "the rate limit service only accepts gRPC over mTLS"))
+	}
+	if cs.HTTP3 != nil {
+		errs = append(errs, field.Forbidden(fldPath.Child("http3"), "the rate limit service only accepts gRPC over mTLS"))
+	}
+	if cs.ProxyProtocol != nil {
+		errs = append(errs, field.Forbidden(fldPath.Child("proxyProtocol"), "the rate limit service only accepts gRPC over mTLS"))
+	}
+	if cs.HealthCheck != nil && cs.HealthCheck.Active != nil && cs.HealthCheck.Active.Type == egv1a1.ActiveHealthCheckerTypeHTTP {
+		errs = append(errs, field.NotSupported(fldPath.Child("healthCheck", "active", "type"), cs.HealthCheck.Active.Type,
+			[]egv1a1.ActiveHealthCheckerType{egv1a1.ActiveHealthCheckerTypeGRPC, egv1a1.ActiveHealthCheckerTypeTCP}))
+	}
+	if cs.Timeout != nil && cs.Timeout.HTTP != nil && cs.Timeout.HTTP.RequestTimeout != nil {
+		errs = append(errs, field.Forbidden(fldPath.Child("timeout", "http", "requestTimeout"), "use rateLimit.timeout instead"))
+	}
+	if cs.LoadBalancer != nil && cs.LoadBalancer.Type == egv1a1.ConsistentHashLoadBalancerType {
+		errs = append(errs, field.Forbidden(fldPath.Child("loadBalancer", "type"), "there is no route to compute the hash from"))
+	}
+	// The schema admits zero durations that the IR rejects, which would only surface when the
+	// xDS translator builds the cluster and stall every xDS update.
+	if hc := cs.HealthCheck; hc != nil {
+		hcPath := fldPath.Child("healthCheck")
+		if hc.Active != nil {
+			errs = append(errs, validateNonZeroDuration(hcPath.Child("active", "timeout"), hc.Active.Timeout)...)
+			errs = append(errs, validateNonZeroDuration(hcPath.Child("active", "interval"), hc.Active.Interval)...)
+		}
+		if hc.Passive != nil {
+			errs = append(errs, validateNonZeroDuration(hcPath.Child("passive", "interval"), hc.Passive.Interval)...)
+			errs = append(errs, validateNonZeroDuration(hcPath.Child("passive", "baseEjectionTime"), hc.Passive.BaseEjectionTime)...)
+		}
+	}
+	return errs.ToAggregate()
+}
+
+func validateNonZeroDuration(fldPath *field.Path, d *gwapiv1.Duration) field.ErrorList {
+	if d == nil {
+		return nil
+	}
+	if parsed, err := time.ParseDuration(string(*d)); err == nil && parsed == 0 {
+		return field.ErrorList{field.Invalid(fldPath, *d, "must be greater than zero")}
+	}
 	return nil
 }
