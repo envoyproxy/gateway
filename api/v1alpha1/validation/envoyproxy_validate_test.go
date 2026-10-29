@@ -1555,6 +1555,45 @@ func TestValidateEnvoyProxyFields(t *testing.T) {
 			},
 		},
 		{
+			name: "access log setting left without sinks is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{{Type: egv1a1.ProxyAccessLogSinkTypeFile}}},
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].sinks[0]"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "access log settings are unset when no setting is left",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{{Type: egv1a1.ProxyAccessLogSinkTypeFile}}},
+						},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].sinks[0]"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{AccessLog: &egv1a1.ProxyAccessLog{}},
+			},
+		},
+		{
 			name: "filterOrder with a cycle is dropped",
 			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
 				FilterOrder: []egv1a1.FilterPosition{

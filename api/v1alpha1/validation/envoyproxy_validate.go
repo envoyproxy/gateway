@@ -99,6 +99,15 @@ func DropInvalidFields(proxy *egv1a1.EnvoyProxy) *egv1a1.EnvoyProxy {
 				return validateProxyAccessLogSink(&sink) != nil
 			})
 		}
+		// A setting needs at least one sink, so one whose sinks were all invalid is dropped
+		// too. When no setting is left, settings is unset rather than empty, so that a merged
+		// EnvoyProxy keeps the settings of the less specific layer.
+		al.Settings = slices.DeleteFunc(al.Settings, func(setting egv1a1.ProxyAccessLogSetting) bool {
+			return len(setting.Sinks) == 0
+		})
+		if len(al.Settings) == 0 {
+			al.Settings = nil
+		}
 	}
 	if validateProxyTracing(spec.Telemetry.Tracing) != nil {
 		spec.Telemetry.Tracing = nil

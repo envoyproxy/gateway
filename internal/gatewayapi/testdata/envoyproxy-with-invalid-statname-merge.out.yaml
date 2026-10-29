@@ -9,24 +9,31 @@ envoyProxiesForGateways:
     mergeType: StrategicMerge
     telemetry:
       metrics:
-        clusterStatName: '%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%'
+        clusterStatName: '%ROUTE_NAME%/%ROUTE_RULE_NAME/%ROUTE_RULE_NUMBER%'
         enableVirtualHostStats: true
   status:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
-        name: envoy-gateway-class
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: EnvoyProxy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'The following invalid fields were ignored: telemetry.metrics.clusterStatName:
+          unable to configure Cluster Stat Name: unsupported operators: [%ROUTE_RULE_NAME/%]'
+        reason: InvalidField
+        status: "True"
+        type: Warning
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: gateway-1
+        name: gateway-2
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
@@ -229,23 +236,6 @@ infraIR:
               reason: Accepted
               status: "True"
               type: Accepted
-          - ancestorRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: gateway-1
-              namespace: envoy-gateway
-            conditions:
-            - lastTransitionTime: null
-              message: EnvoyProxy has been accepted.
-              reason: Accepted
-              status: "True"
-              type: Accepted
-            - lastTransitionTime: null
-              message: 'The following invalid fields were ignored: telemetry.metrics.clusterStatName:
-                unable to configure Cluster Stat Name: unsupported operators: [%ROUTE_RULE_NAME/%]'
-              reason: InvalidField
-              status: "True"
-              type: Warning
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -281,18 +271,8 @@ infraIR:
           ancestors:
           - ancestorRef:
               group: gateway.networking.k8s.io
-              kind: GatewayClass
-              name: envoy-gateway-class
-            conditions:
-            - lastTransitionTime: null
-              message: EnvoyProxy has been accepted.
-              reason: Accepted
-              status: "True"
-              type: Accepted
-          - ancestorRef:
-              group: gateway.networking.k8s.io
               kind: Gateway
-              name: gateway-2
+              name: gateway-1
               namespace: envoy-gateway
             conditions:
             - lastTransitionTime: null

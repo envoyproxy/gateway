@@ -240,10 +240,10 @@ func newTranslateResult(
 			translateResult.Gateways[i] = gateway.Gateway
 			// If the EnvoyProxy is from the Gateway itself, add it to the result so that the status can be updated in the provider layer.
 			// If it's inherited from GatewayClass, it should be handled in EnvoyProxyForGatewayClass(L164).
-			if gateway.envoyProxyFromGateway && gateway.envoyProxy != nil {
-				epKey := utils.NamespacedName(gateway.envoyProxy)
+			if gateway.envoyProxyFromGateway && gateway.gatewayEnvoyProxy != nil {
+				epKey := utils.NamespacedName(gateway.gatewayEnvoyProxy)
 				if !epProxiesSet.Has(epKey) {
-					translateResult.EnvoyProxiesForGateways = append(translateResult.EnvoyProxiesForGateways, gateway.envoyProxy)
+					translateResult.EnvoyProxiesForGateways = append(translateResult.EnvoyProxiesForGateways, gateway.gatewayEnvoyProxy)
 					epProxiesSet.Insert(epKey)
 				}
 			}
@@ -558,11 +558,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	// Invalid fields don't reject the EnvoyProxy; they are unset and reported as a warning.
 	envoyproxyInvalidFieldsMap := make(map[types.NamespacedName][]validation.InvalidField, len(resources.EnvoyProxiesForGateways))
 
-	// envoyproxyMap holds the EnvoyProxies with their invalid fields unset, sanitized once per
-	// EnvoyProxy so Gateways sharing one also share the object their status is written to.
 	for _, ep := range resources.EnvoyProxiesForGateways {
 		key := utils.NamespacedName(ep)
-		envoyproxyMap[key] = validation.DropInvalidFields(ep)
+		envoyproxyMap[key] = ep
 		invalidFields, err := validateEnvoyProxy(ep)
 		if err != nil {
 			envoyproxyValidationErrorMap[key] = err
@@ -609,21 +607,16 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 
 			key := utils.NamespacedName(ep)
-			envoyproxyMap[key] = validation.DropInvalidFields(ep)
+			envoyproxyMap[key] = ep
 			// we didn't append to envoyproxyValidatioErrorMap because it's valid.
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
-			if t.EnvoyProxyPatchDisabled {
-				status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
-			}
 			if len(invalidFields) > 0 {
 				t.Logger.Info("Ignoring invalid EnvoyProxy fields",
 					"envoyproxy", ep.Name, "namespace", ep.Namespace, "error", errors.Join(fieldErrors(invalidFields)...).Error())
 			}
-			// Also called without invalid fields to clear a warning left from a previous translation.
-			status.SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, invalidFields)
+			t.setEnvoyProxyWarnings(ep, ancestor, invalidFields)
 		}
 	}
 
@@ -690,26 +683,23 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 					fmt.Sprintf("%s: %v", "Invalid parametersRef:", err.Error()))
 
 				if gCtx.envoyProxyFromGateway {
-					status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+					status.UpdateEnvoyProxyStatusAccepted(gCtx.gatewayEnvoyProxy, ancestor,
 						egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
 				}
 				continue
 			}
 
-			if gCtx.envoyProxyFromGateway {
-				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+			// The status is set on the EnvoyProxy as provided by the user rather than on the
+			// merged and sanitized one, which is only used for translation.
+			if gwEP := gCtx.gatewayEnvoyProxy; gCtx.envoyProxyFromGateway {
+				status.UpdateEnvoyProxyStatusAccepted(gwEP, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
-				if t.EnvoyProxyPatchDisabled {
-					status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
-				}
-				invalidFields := envoyproxyInvalidFieldsMap[key]
+				invalidFields := envoyproxyInvalidFieldsMap[utils.NamespacedName(gwEP)]
 				if len(invalidFields) > 0 {
 					t.Logger.Info("Ignoring invalid EnvoyProxy fields", append(logKeysAndValues,
 						"error", errors.Join(fieldErrors(invalidFields)...).Error())...)
 				}
-				// Also called without invalid fields to clear a warning left from a previous translation.
-				status.SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, invalidFields)
+				t.setEnvoyProxyWarnings(gwEP, ancestor, invalidFields)
 			}
 		}
 
@@ -726,6 +716,17 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		acceptedGateways = append(acceptedGateways, gCtx)
 	}
 	return acceptedGateways, failedGateways
+}
+
+// setEnvoyProxyWarnings sets the Warning condition on the ancestor status of ep, combining
+// every reason the EnvoyProxy is warned about, or removes it when there is none.
+func (t *Translator) setEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, invalidFields []validation.InvalidField) {
+	warnings := []*status.EnvoyProxyWarning{status.DeprecatedFieldsWarning(deprecatedFieldsUsedInEnvoyProxy(ep))}
+	if t.EnvoyProxyPatchDisabled {
+		warnings = append(warnings, status.PatchDisabledWarning(disabledPatchFieldsUsedInEnvoyProxy(ep)))
+	}
+	warnings = append(warnings, status.InvalidFieldsWarning(invalidFields))
+	status.SetEnvoyProxyWarnings(ep, ancestor, warnings...)
 }
 
 // validateEnvoyProxy returns the fields of ep that are invalid but can be unset, and an error
