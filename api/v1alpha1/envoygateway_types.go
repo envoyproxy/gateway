@@ -756,6 +756,25 @@ type RateLimit struct {
 	// Telemetry defines telemetry configuration for RateLimit.
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+
+	// ServiceSettings holds configuration for the Envoy cluster that connects the proxies
+	// to the rate limit service, such as circuit breakers, timeouts and health checks.
+	//
+	// The rate limit service is a gRPC (HTTP/2) service reached over mTLS, with no
+	// associated route, so NOT all of the ClusterSettings fields are supported here.
+	// Fields are supported on a best-effort basis: a field that only applies to routes
+	// or to other protocols (e.g. timeout.http.streamIdleTimeout) may have no effect.
+	//
+	// Envoy Gateway fails to start if any of these known-unsupported fields are set:
+	//
+	//   - http1, http3 and proxyProtocol: the rate limit service only accepts gRPC over mTLS.
+	//   - healthCheck.active of type HTTP: the rate limit service only serves its HTTP
+	//     health endpoint in plaintext; use the GRPC or TCP type instead.
+	//   - timeout.http.requestTimeout: use RateLimit.Timeout instead.
+	//   - loadBalancer of type ConsistentHash: there is no route to compute the hash from.
+	//
+	// +optional
+	ServiceSettings *ClusterSettings `json:"serviceSettings,omitempty"`
 }
 
 type RateLimitTelemetry struct {

@@ -12530,6 +12530,10 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: interval must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   overrides:
                                                     description: |-
                                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -12636,6 +12640,10 @@ spec:
                                                       response.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: timeout must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   type:
                                                     allOf:
                                                     - enum:
@@ -12706,6 +12714,10 @@ spec:
                                                       on consecutive failures.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: baseEjectionTime must
+                                                        be greater than 0
+                                                      rule: duration(self) > duration('0s')
                                                   consecutive5XxErrors:
                                                     default: 5
                                                     description: Consecutive5xxErrors
@@ -12742,6 +12754,10 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: interval must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   maxEjectionPercent:
                                                     default: 10
                                                     description: MaxEjectionPercent
@@ -14330,6 +14346,10 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: interval must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   overrides:
                                                     description: |-
                                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -14436,6 +14456,10 @@ spec:
                                                       response.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: timeout must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   type:
                                                     allOf:
                                                     - enum:
@@ -14506,6 +14530,10 @@ spec:
                                                       on consecutive failures.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: baseEjectionTime must
+                                                        be greater than 0
+                                                      rule: duration(self) > duration('0s')
                                                   consecutive5XxErrors:
                                                     default: 5
                                                     description: Consecutive5xxErrors
@@ -14542,6 +14570,10 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: interval must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   maxEjectionPercent:
                                                     default: 10
                                                     description: MaxEjectionPercent
@@ -16532,6 +16564,10 @@ spec:
                                                 between active health checks.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: interval must be greater
+                                                  than 0
+                                                rule: duration(self) > duration('0s')
                                             overrides:
                                               description: |-
                                                 Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -16633,6 +16669,10 @@ spec:
                                                 to wait for a health check response.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: timeout must be greater than
+                                                  0
+                                                rule: duration(self) > duration('0s')
                                             type:
                                               allOf:
                                               - enum:
@@ -16698,6 +16738,10 @@ spec:
                                                 will be ejected on consecutive failures.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: baseEjectionTime must be
+                                                  greater than 0
+                                                rule: duration(self) > duration('0s')
                                             consecutive5XxErrors:
                                               default: 5
                                               description: Consecutive5xxErrors sets
@@ -16733,6 +16777,10 @@ spec:
                                                 between passive health checks.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: interval must be greater
+                                                  than 0
+                                                rule: duration(self) > duration('0s')
                                             maxEjectionPercent:
                                               default: 10
                                               description: MaxEjectionPercent sets
@@ -18447,6 +18495,9 @@ spec:
                                           active health checks.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: interval must be greater than 0
+                                          rule: duration(self) > duration('0s')
                                       overrides:
                                         description: |-
                                           Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -18548,6 +18599,9 @@ spec:
                                           for a health check response.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: timeout must be greater than 0
+                                          rule: duration(self) > duration('0s')
                                       type:
                                         allOf:
                                         - enum:
@@ -18613,6 +18667,10 @@ spec:
                                           on consecutive failures.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: baseEjectionTime must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
                                       consecutive5XxErrors:
                                         default: 5
                                         description: Consecutive5xxErrors sets the
@@ -18648,6 +18706,9 @@ spec:
                                           passive health checks.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: interval must be greater than 0
+                                          rule: duration(self) > duration('0s')
                                       maxEjectionPercent:
                                         default: 10
                                         description: MaxEjectionPercent sets the maximum

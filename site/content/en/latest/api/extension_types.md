@@ -1225,6 +1225,7 @@ _Appears in:_
 - [BackendSettings](#backendsettings)
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ExtensionBackend](#extensionbackend)
+- [RateLimit](#ratelimit)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5848,6 +5849,7 @@ _Appears in:_
 | `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | Timeout specifies the timeout period for the proxy to access the ratelimit server<br />If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  |  | FailClosed is a switch used to control the flow of traffic<br />when the response from the ratelimit server cannot be obtained.<br />If FailClosed is false, let the traffic pass,<br />otherwise, don't let the traffic pass and return 500.<br />If not set, FailClosed is False. |
 | `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  |  | Telemetry defines telemetry configuration for RateLimit. |
+| `serviceSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | ServiceSettings holds configuration for the Envoy cluster that connects the proxies<br />to the rate limit service, such as circuit breakers, timeouts and health checks.<br />The rate limit service is a gRPC (HTTP/2) service reached over mTLS, with no<br />associated route, so NOT all of the ClusterSettings fields are supported here.<br />Fields are supported on a best-effort basis: a field that only applies to routes<br />or to other protocols (e.g. timeout.http.streamIdleTimeout) may have no effect.<br />Envoy Gateway fails to start if any of these known-unsupported fields are set:<br />  - http1, http3 and proxyProtocol: the rate limit service only accepts gRPC over mTLS.<br />  - healthCheck.active of type HTTP: the rate limit service only serves its HTTP<br />    health endpoint in plaintext; use the GRPC or TCP type instead.<br />  - timeout.http.requestTimeout: use RateLimit.Timeout instead.<br />  - loadBalancer of type ConsistentHash: there is no route to compute the hash from. |
 
 
 #### RateLimitCost
