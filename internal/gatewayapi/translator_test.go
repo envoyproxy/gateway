@@ -1326,7 +1326,7 @@ func TestGetRelevantGatewaysClearsStaleEnvoyProxyWarning(t *testing.T) {
 	}
 	conditionTypes := func(ep *egv1a1.EnvoyProxy) []string {
 		require.Len(t, ep.Status.Ancestors, 1)
-		var types []string
+		types := make([]string, 0, len(ep.Status.Ancestors[0].Conditions))
 		for _, c := range ep.Status.Ancestors[0].Conditions {
 			types = append(types, c.Type)
 		}

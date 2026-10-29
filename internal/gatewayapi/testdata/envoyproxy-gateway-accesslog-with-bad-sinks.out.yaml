@@ -81,9 +81,10 @@ envoyProxiesForGateways:
       - lastTransitionTime: null
         message: 'The following invalid fields were ignored: telemetry.accessLog.settings[0].sinks[0]:
           unable to configure access log when using File sink type but "file" field
-          being empty; telemetry.accessLog.settings[0].sinks[2]: unable to configure
-          access log when using OpenTelemetry sink type but "openTelemetry" field
-          being empty'
+          being empty; telemetry.accessLog.settings[0].sinks[1]: unable to configure
+          access log when using ALS sink type but "als" field being empty; telemetry.accessLog.settings[0].sinks[2]:
+          unable to configure access log when using OpenTelemetry sink type but "openTelemetry"
+          field being empty'
         reason: InvalidField
         status: "True"
         type: Warning
@@ -192,14 +193,7 @@ infraIR:
                 type: LoadBalancer
             type: Kubernetes
           telemetry:
-            accessLog:
-              settings:
-              - format:
-                  text: |
-                    [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-                  type: Text
-                sinks:
-                - type: ALS
+            accessLog: {}
         status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http
@@ -219,7 +213,9 @@ infraIR:
       namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
-    accessLog: {}
+    accessLog:
+      json:
+      - path: /dev/stdout
     globalResources:
       proxyServiceCluster:
         metadata:

@@ -454,7 +454,9 @@ func validateProxyAccessLogSink(sink *egv1a1.ProxyAccessLogSink) error {
 			return fmt.Errorf("http1 is not supported for OpenTelemetry access log backends, which use gRPC")
 		}
 	case egv1a1.ProxyAccessLogSinkTypeALS:
-		if sink.ALS != nil && sink.ALS.BackendSettings != nil && sink.ALS.BackendSettings.HTTP1 != nil {
+		if sink.ALS == nil {
+			return fmt.Errorf("unable to configure access log when using ALS sink type but \"als\" field being empty")
+		} else if sink.ALS.BackendSettings != nil && sink.ALS.BackendSettings.HTTP1 != nil {
 			return fmt.Errorf("http1 is not supported for ALS backends, which use gRPC")
 		}
 	}
