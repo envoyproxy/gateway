@@ -25,6 +25,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -610,10 +611,11 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
+			var patchedFields []string
 			if t.EnvoyProxyPatchDisabled {
-				status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
+				patchedFields = disabledPatchFieldsUsedInEnvoyProxy(ep)
 			}
+			status.SetEnvoyProxyWarnings(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep), patchedFields)
 		}
 	}
 
@@ -689,10 +691,13 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if gCtx.envoyProxyFromGateway {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
+				// ep may be merged over the GatewayClass EnvoyProxy and the default spec, whose
+				// deprecated fields are reported on their own, so only scan the Gateway's own spec.
+				var patchedFields []string
 				if t.EnvoyProxyPatchDisabled {
-					status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
+					patchedFields = disabledPatchFieldsUsedInEnvoyProxy(ep)
 				}
+				status.SetEnvoyProxyWarnings(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(envoyproxyMap[key]), patchedFields)
 			}
 		}
 
@@ -723,12 +728,9 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 	return nil
 }
 
-func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
-	deprecatedFields := make(map[string]string)
-	if ep.Spec.LuaValidation != nil {
-		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
-	}
-
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
+	deprecation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
 	return deprecatedFields
 }
 
