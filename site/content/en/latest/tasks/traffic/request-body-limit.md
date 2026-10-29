@@ -33,8 +33,6 @@ payload grows past `maxSize` is terminated as well. By then a WebSocket has alwa
 gRPC stream has often received its response headers, so the client sees a closed connection or a reset stream rather than a rejection reply. Do not
 set `requestBodyLimit` on routes that carry such traffic.
 
-Note: `requestBodyLimit` requires Envoy proxy v1.40 or later, the first release that ships the body size limit filter.
-
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}

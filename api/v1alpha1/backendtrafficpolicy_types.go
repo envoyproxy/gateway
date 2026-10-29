@@ -163,28 +163,11 @@ type BackendTrafficPolicySpec struct {
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
 
 	// RequestBodyLimit caps the size of the request body on a route without buffering it.
+	// A request whose body exceeds the limit is rejected with HTTP 413 Content Too Large or its stream is
+	// reset if the response has already started.
 	//
-	// Envoy rejects a request as soon as it knows the body is too large: from the Content-Length header
-	// when present, otherwise once the bytes received exceed the limit while the body is streamed to the
-	// backend. The client gets a rejection reply if no response headers have been sent to it yet, which is
-	// always the case for a request rejected on its Content-Length header. Otherwise the response can no
-	// longer be replaced, so Envoy resets the stream instead, which closes an HTTP/1.1 connection.
-	//
-	// The rejection reply is an HTTP 413 Content Too Large response, except for gRPC requests (content type
-	// application/grpc), such as those on a GRPCRoute. Envoy answers those with a trailers-only gRPC
-	// response instead: HTTP status 200 with grpc-status 2 (UNKNOWN), the gRPC code Envoy maps HTTP 413 to.
-	//
-	// Nothing is buffered, so unlike requestBuffer with mode BufferAndLimit it costs no memory and leaves
-	// HTTP upgrades such as WebSocket enabled.
-	//
-	// The limit counts every request body byte of a stream. Envoy passes the client-to-server payload of
-	// an upgraded connection and of a streaming request through the HTTP filter chain as request body
-	// data, so a long-lived WebSocket or gRPC stream whose payload grows past the limit is terminated as
-	// well. By then a WebSocket has always received its 101 Switching Protocols response, and a gRPC stream
-	// has often received its response headers, so the client sees a reset stream or a closed connection
-	// rather than a rejection reply. Do not set it on routes that carry such traffic.
-	//
-	// Requires Envoy proxy v1.40 or later.
+	// The limit also counts the payload of WebSocket connections and gRPC streams, so do not set it on
+	// routes that carry long-lived streams.
 	//
 	// +optional
 	RequestBodyLimit *RequestBodyLimit `json:"requestBodyLimit,omitempty"`
