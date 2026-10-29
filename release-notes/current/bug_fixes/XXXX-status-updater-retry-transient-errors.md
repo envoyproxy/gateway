@@ -1,0 +1,1 @@
+Fixed status updates being dropped when the API server returned a timeout, throttling or another transient error. The status writer now retries these errors with backoff, in addition to conflicts, and gives each write attempt its own timeout so a hung request can no longer stall status updates indefinitely.
