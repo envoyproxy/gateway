@@ -2565,6 +2565,109 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "invalid active health check durations",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Timeout:  new(gwapiv1.Duration("0s")),
+									Interval: new(gwapiv1.Duration("0s")),
+									Type:     egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "/healthz",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.HealthCheck.active.timeout: Invalid value:",
+				": timeout must be greater than 0",
+				"spec.HealthCheck.active.interval: Invalid value:",
+				": interval must be greater than 0",
+			},
+		},
+		{
+			desc: "invalid passive health check durations",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Passive: &egv1a1.PassiveHealthCheck{
+									Interval:         new(gwapiv1.Duration("0s")),
+									BaseEjectionTime: new(gwapiv1.Duration("0s")),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.HealthCheck.passive.interval: Invalid value:",
+				": interval must be greater than 0",
+				"spec.HealthCheck.passive.baseEjectionTime: Invalid value:",
+				": baseEjectionTime must be greater than 0",
+			},
+		},
+		{
+			desc: "valid health check durations",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					BackendSettings: egv1a1.BackendSettings{
+						ClusterSettings: egv1a1.ClusterSettings{
+							HealthCheck: &egv1a1.HealthCheck{
+								Active: &egv1a1.ActiveHealthCheck{
+									Timeout:  new(gwapiv1.Duration("1s")),
+									Interval: new(gwapiv1.Duration("3s")),
+									Type:     egv1a1.ActiveHealthCheckerTypeHTTP,
+									HTTP: &egv1a1.HTTPActiveHealthChecker{
+										Path: "/healthz",
+									},
+								},
+								Passive: &egv1a1.PassiveHealthCheck{
+									Interval:         new(gwapiv1.Duration("10s")),
+									BaseEjectionTime: new(gwapiv1.Duration("10s")),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "invalid health checker type",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
