@@ -596,6 +596,8 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
+			// The EnvoyProxy is not applied at all, so no warning about it applies either.
+			status.SetEnvoyProxyWarnings(ep, ancestor)
 		} else {
 			// TODO: remove this nil check after we update all the testdata.
 			if resources.GatewayClass != nil {
@@ -685,6 +687,8 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				if gCtx.envoyProxyFromGateway {
 					status.UpdateEnvoyProxyStatusAccepted(gCtx.gatewayEnvoyProxy, ancestor,
 						egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
+					// The EnvoyProxy is not applied at all, so no warning about it applies either.
+					status.SetEnvoyProxyWarnings(gCtx.gatewayEnvoyProxy, ancestor)
 				}
 				continue
 			}
