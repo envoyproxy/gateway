@@ -86,9 +86,6 @@ var transientRetryBackoff = wait.Backoff{
 	Jitter:   0.1,
 }
 
-// statusWriteTimeout bounds each attempt, so a request that hangs fails and is retried.
-const statusWriteTimeout = 10 * time.Second
-
 func (u *UpdateHandler) apply(ctx context.Context, update Update) {
 	var (
 		startTime = time.Now()
@@ -101,27 +98,40 @@ func (u *UpdateHandler) apply(ctx context.Context, update Update) {
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
 
-	// Conflicts are retried quickly in the inner loop. Transient errors get the slower
-	// outer backoff; retrying stops once the handler is shutting down.
-	if err := retry.OnError(transientRetryBackoff, func(err error) bool {
-		if ctx.Err() != nil || !isTransientError(err) {
-			return false
-		}
-		log.Info("retrying status update after a transient error", "error", err.Error())
-		return true
-	}, func() error {
-		return retry.OnError(retry.DefaultBackoff, func(err error) bool {
+	// Conflicts are retried quickly inside each attempt. Transient errors get the slower
+	// backoff below, which stops waiting once the handler shuts down. The API calls use a
+	// background context so a write already in flight still finishes, and so client-side
+	// rate limiting waits for its turn instead of failing early.
+	backoff := transientRetryBackoff
+	var err error
+	for {
+		err = retry.OnError(retry.DefaultBackoff, func(err error) bool {
 			if kerrors.IsConflict(err) {
 				statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
 				return true
 			}
 			return false
 		}, func() error {
-			attemptCtx, cancel := context.WithTimeout(ctx, statusWriteTimeout)
-			defer cancel()
-			return u.writeStatus(attemptCtx, update, log)
+			return u.writeStatus(context.Background(), update, log)
 		})
-	}); err != nil {
+		if err == nil || !isTransientError(err) || backoff.Steps <= 1 {
+			break
+		}
+
+		delay := backoff.Step()
+		log.Info("retrying status update after a transient error", "error", err.Error(), "delay", delay)
+		select {
+		case <-ctx.Done():
+		case <-time.After(delay):
+		}
+		if ctx.Err() != nil {
+			// The next leader publishes every status again, so this one isn't lost.
+			log.Info("status update handler stopping, abandoning retry")
+			return
+		}
+	}
+
+	if err != nil {
 		log.Error(err, "unable to update status")
 
 		statusUpdateTotal.WithFailure(metrics.ReasonError, kindLabel.Value(objKind)).Increment()

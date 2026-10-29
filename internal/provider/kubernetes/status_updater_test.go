@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,11 @@ import (
 )
 
 func TestUpdateHandlerApplyRetries(t *testing.T) {
+	// Keep the number of retries but skip the real waits.
+	origBackoff := transientRetryBackoff
+	transientRetryBackoff.Duration = time.Millisecond
+	t.Cleanup(func() { transientRetryBackoff = origBackoff })
+
 	gvr := schema.GroupResource{Group: gwapiv1.GroupName, Resource: "gateways"}
 	key := types.NamespacedName{Namespace: "default", Name: "gw"}
 
