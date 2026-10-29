@@ -260,6 +260,13 @@ func TestTranslate(t *testing.T) {
 			expect: true,
 		},
 		{
+			name:   "envoyproxy-invalid-field",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
 			name:   "no-gateway-class-resources",
 			from:   "gateway-api",
 			to:     "xds",

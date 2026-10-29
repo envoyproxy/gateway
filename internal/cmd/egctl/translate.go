@@ -333,7 +333,9 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxyForGatewayClass != nil {
-		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxyForGatewayClass); err != nil {
+		// Match the translator: invalid fields that can be unset are ignored and reported on the
+		// EnvoyProxy status, so only errors that make the EnvoyProxy unusable reject the class.
+		if _, err := validation.ValidateEnvoyProxyFields(resources.EnvoyProxyForGatewayClass); err != nil {
 			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
@@ -391,10 +393,9 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
 			},
-			Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
-		}
-		if resources.EnvoyProxyForGatewayClass != nil {
-			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
+			// Use the order from the IR, which has invalid fields of the EnvoyProxy dropped.
+			FilterOrder: val.FilterOrder,
+			Logger:      logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		}
 		xRes, err := xTranslator.Translate(context.Background(), val)
 		if err != nil {

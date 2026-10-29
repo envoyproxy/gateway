@@ -1335,3 +1335,83 @@ func xdsWithoutEqual(a *ir.Xds) any {
 
 	return ret
 }
+
+func TestGetRelevantGatewaysClearsStaleEnvoyProxyWarning(t *testing.T) {
+	staleWarning := metav1.Condition{
+		Type:    string(egv1a1.EnvoyProxyConditionWarning),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(egv1a1.EnvoyProxyReasonInvalidField),
+		Message: "The following invalid fields were ignored: filterOrder: cycle",
+	}
+	// newProxy returns an EnvoyProxy that is invalid as a whole, carrying the warning from a
+	// previous translation in which it was accepted with an ignored invalid field.
+	newProxy := func(namespace string, ancestor gwapiv1.ParentReference) *egv1a1.EnvoyProxy {
+		return &egv1a1.EnvoyProxy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "proxy"},
+			Spec: egv1a1.EnvoyProxySpec{
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyService: &egv1a1.KubernetesServiceSpec{Type: new(egv1a1.ServiceType("foo"))},
+					},
+				},
+			},
+			Status: egv1a1.EnvoyProxyStatus{Ancestors: []egv1a1.EnvoyProxyAncestorStatus{{
+				AncestorRef: ancestor,
+				Conditions:  []metav1.Condition{staleWarning},
+			}}},
+		}
+	}
+	conditionTypes := func(ep *egv1a1.EnvoyProxy) []string {
+		require.Len(t, ep.Status.Ancestors, 1)
+		types := make([]string, 0, len(ep.Status.Ancestors[0].Conditions))
+		for _, c := range ep.Status.Ancestors[0].Conditions {
+			types = append(types, c.Type)
+		}
+		return types
+	}
+
+	translator := &Translator{
+		GatewayClassName: "eg",
+		Logger:           logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+	}
+
+	t.Run("GatewayClass", func(t *testing.T) {
+		ep := newProxy("envoy-gateway-system", gwapiv1.ParentReference{
+			Group: GroupPtr(gwapiv1.GroupName),
+			Kind:  KindPtr(resource.KindGatewayClass),
+			Name:  "eg",
+		})
+		translator.GetRelevantGateways(&resource.Resources{
+			GatewayClass:              &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "eg"}},
+			EnvoyProxyForGatewayClass: ep,
+		})
+		require.Equal(t, []string{string(egv1a1.EnvoyProxyConditionAccepted)}, conditionTypes(ep))
+	})
+
+	t.Run("Gateway", func(t *testing.T) {
+		ep := newProxy("default", gwapiv1.ParentReference{
+			Group:     GroupPtr(gwapiv1.GroupName),
+			Kind:      KindPtr(resource.KindGateway),
+			Name:      "gateway",
+			Namespace: NamespacePtr("default"),
+		})
+		translator.GetRelevantGateways(&resource.Resources{
+			EnvoyProxiesForGateways: []*egv1a1.EnvoyProxy{ep},
+			Gateways: []*gwapiv1.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway"},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "eg",
+					Infrastructure: &gwapiv1.GatewayInfrastructure{
+						ParametersRef: &gwapiv1.LocalParametersReference{
+							Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+							Kind:  egv1a1.KindEnvoyProxy,
+							Name:  "proxy",
+						},
+					},
+				},
+			}},
+		})
+		require.Equal(t, []string{string(egv1a1.EnvoyProxyConditionAccepted)}, conditionTypes(ep))
+	})
+}
