@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -75,11 +76,23 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 	return u
 }
 
-func (u *UpdateHandler) apply(update Update) {
+// transientRetryBackoff paces retries after errors that usually clear up on their own,
+// such as API server timeouts, throttling or a brief outage. It waits about 1.5s
+// in total, because every other status write queues up behind the one being retried.
+var transientRetryBackoff = wait.Backoff{
+	Steps:    5,
+	Duration: 100 * time.Millisecond,
+	Factor:   2.0,
+	Jitter:   0.1,
+}
+
+// statusWriteTimeout bounds each attempt, so a request that hangs fails and is retried.
+const statusWriteTimeout = 10 * time.Second
+
+func (u *UpdateHandler) apply(ctx context.Context, update Update) {
 	var (
 		startTime = time.Now()
-		obj       = update.Resource
-		objKind   = KindOf(obj)
+		objKind   = KindOf(update.Resource)
 	)
 	log := u.log.WithValues("name", update.NamespacedName.Name,
 		"namespace", update.NamespacedName.Namespace, "kind", objKind)
@@ -88,42 +101,26 @@ func (u *UpdateHandler) apply(update Update) {
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
 
-	if err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
-		if kerrors.IsConflict(err) {
-			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
-			return true
+	// Conflicts are retried quickly in the inner loop. Transient errors get the slower
+	// outer backoff; retrying stops once the handler is shutting down.
+	if err := retry.OnError(transientRetryBackoff, func(err error) bool {
+		if ctx.Err() != nil || !isTransientError(err) {
+			return false
 		}
-		return false
+		log.Info("retrying status update after a transient error", "error", err.Error())
+		return true
 	}, func() error {
-		// Get the resource.
-		if err := u.client.Get(context.Background(), update.NamespacedName, obj); err != nil {
-			if !kerrors.IsNotFound(err) {
-				return err
+		return retry.OnError(retry.DefaultBackoff, func(err error) bool {
+			if kerrors.IsConflict(err) {
+				statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
+				return true
 			}
-			// The cache-backed client may not have a freshly-created object yet.
-			// Confirm against the API server before dropping the status write;
-			// otherwise the update is silently lost under high cache churn, leaving
-			// the object with an empty status until a controller restart (issue #9536).
-			if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
-				if kerrors.IsNotFound(err) {
-					return nil // The object is genuinely gone.
-				}
-				return err
-			}
-		}
-
-		newObj := update.Mutator.Mutate(obj)
-
-		if isStatusEqual(obj, newObj) {
-			log.Info("status unchanged, bypassing update")
-
-			statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
-			return nil
-		}
-
-		newObj.SetUID(obj.GetUID())
-
-		return u.client.Status().Update(context.Background(), newObj)
+			return false
+		}, func() error {
+			attemptCtx, cancel := context.WithTimeout(ctx, statusWriteTimeout)
+			defer cancel()
+			return u.writeStatus(attemptCtx, update, log)
+		})
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
@@ -131,6 +128,42 @@ func (u *UpdateHandler) apply(update Update) {
 	} else {
 		statusUpdateTotal.WithSuccess(kindLabel.Value(objKind)).Increment()
 	}
+}
+
+// writeStatus makes one attempt to read the object and write its new status.
+func (u *UpdateHandler) writeStatus(ctx context.Context, update Update, log logr.Logger) error {
+	obj := update.Resource
+	objKind := KindOf(obj)
+
+	// Get the resource.
+	if err := u.client.Get(ctx, update.NamespacedName, obj); err != nil {
+		if !kerrors.IsNotFound(err) {
+			return err
+		}
+		// The cache-backed client may not have a freshly-created object yet.
+		// Confirm against the API server before dropping the status write;
+		// otherwise the update is silently lost under high cache churn, leaving
+		// the object with an empty status until a controller restart (issue #9536).
+		if err := u.apiReader.Get(ctx, update.NamespacedName, obj); err != nil {
+			if kerrors.IsNotFound(err) {
+				return nil // The object is genuinely gone.
+			}
+			return err
+		}
+	}
+
+	newObj := update.Mutator.Mutate(obj)
+
+	if isStatusEqual(obj, newObj) {
+		log.Info("status unchanged, bypassing update")
+
+		statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
+		return nil
+	}
+
+	newObj.SetUID(obj.GetUID())
+
+	return u.client.Status().Update(ctx, newObj)
 }
 
 func (u *UpdateHandler) NeedLeaderElection() bool {
@@ -153,7 +186,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 			u.log.Info("received a status update", "namespace", update.NamespacedName.Namespace,
 				"name", update.NamespacedName.Name, "kind", KindOf(update.Resource))
 
-			u.apply(update)
+			u.apply(ctx, update)
 		}
 	}
 }
