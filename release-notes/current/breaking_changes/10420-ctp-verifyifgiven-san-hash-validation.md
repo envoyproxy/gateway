@@ -1,0 +1,1 @@
+ClientTrafficPolicy now rejects `tls.clientValidation.subjectAltNames`, `certificateHashes` and `spkiHashes` when the client validation mode is `VerifyIfGiven` (or the deprecated `optional: true`). Envoy requires a client certificate whenever those matchers are set, so the combination silently behaved as `RequireAndVerify`; use `RequireAndVerify` when those fields are needed.
