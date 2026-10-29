@@ -66,10 +66,10 @@ func ValidateEnvoyProxyFields(proxy *egv1a1.EnvoyProxy) ([]InvalidField, error) 
 // nothing to drop.
 //
 // It is intentionally separate from ValidateEnvoyProxyFields rather than a single
-// validate-and-sanitize function: the translator validates each source EnvoyProxy only to
-// report status on it, and sanitizes only the merged EnvoyProxy that reaches the IR, so a
-// combined function would deep copy every EnvoyProxy on every translation just to throw the
-// copy away. The cost is that both functions must cover the same fields; when adding an
+// validate-and-sanitize function: the translator validates each source EnvoyProxy to report
+// status on it, and separately sanitizes each layer before merging it into the EnvoyProxy that
+// reaches the IR, so a combined function would deep copy every EnvoyProxy on the status path
+// just to throw the copy away. The cost is that both functions must cover the same fields; when adding an
 // InvalidField check, clear the field here too. TestValidateEnvoyProxyFields asserts that
 // nothing is reported after DropInvalidFields.
 func DropInvalidFields(proxy *egv1a1.EnvoyProxy) *egv1a1.EnvoyProxy {

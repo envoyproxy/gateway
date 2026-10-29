@@ -17,6 +17,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -114,9 +115,14 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 
 	// Merge all EnvoyProxy configs. On error, MergeEnvoyProxyConfigs returns a fallback
 	// configuration so the gateway can continue to function.
+	//
+	// Invalid fields are unset on each layer before merging, so an invalid override is ignored
+	// and the valid value it would have overridden in a less specific layer still applies. The
+	// Gateway-level EnvoyProxies in epMap are already sanitized, and the EnvoyGateway default
+	// spec is validated strictly when the configuration is loaded.
 	merged, err := MergeEnvoyProxyConfigs(
 		resources.EnvoyProxyDefaultSpec,
-		resources.EnvoyProxyForGatewayClass,
+		validation.DropInvalidFields(resources.EnvoyProxyForGatewayClass),
 		gatewayProxy,
 	)
 	g.envoyProxy = merged

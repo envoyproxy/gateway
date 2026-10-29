@@ -558,9 +558,11 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	// Invalid fields don't reject the EnvoyProxy; they are unset and reported as a warning.
 	envoyproxyInvalidFieldsMap := make(map[types.NamespacedName][]validation.InvalidField, len(resources.EnvoyProxiesForGateways))
 
+	// envoyproxyMap holds the EnvoyProxies with their invalid fields unset, sanitized once per
+	// EnvoyProxy so Gateways sharing one also share the object their status is written to.
 	for _, ep := range resources.EnvoyProxiesForGateways {
 		key := utils.NamespacedName(ep)
-		envoyproxyMap[key] = ep
+		envoyproxyMap[key] = validation.DropInvalidFields(ep)
 		invalidFields, err := validateEnvoyProxy(ep)
 		if err != nil {
 			envoyproxyValidationErrorMap[key] = err
@@ -607,7 +609,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 
 			key := utils.NamespacedName(ep)
-			envoyproxyMap[key] = ep
+			envoyproxyMap[key] = validation.DropInvalidFields(ep)
 			// we didn't append to envoyproxyValidatioErrorMap because it's valid.
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
@@ -715,10 +717,6 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				fmt.Sprintf("Gateway has an address with an unsupported type: %s", *addrType))
 			continue
 		}
-
-		// Unset the invalid fields of the merged EnvoyProxy so they don't reach the IR. This must run
-		// after the status updates above, which are written to gCtx.envoyProxy.
-		gCtx.envoyProxy = validation.DropInvalidFields(gCtx.envoyProxy)
 
 		// we cannot do this early, otherwise there's an error when updating status.
 		gCtx.ResetListeners()
