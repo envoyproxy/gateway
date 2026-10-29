@@ -76,19 +76,13 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		return fmt.Errorf("disableLua and enableLua must not have the same value")
 	}
 
-	return nil
-}
+	if eg.EnvoyProxy != nil {
+		if err := validateEnvoyProxySpec(eg.EnvoyProxy); err != nil {
+			return fmt.Errorf("invalid EnvoyProxy template: %w", err)
+		}
+	}
 
-// WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
-func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
-	if eg == nil || eg.ExtensionAPIs == nil {
-		return nil
-	}
-	var warnings []string
-	if eg.ExtensionAPIs.DisableLua != nil {
-		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
-	}
-	return warnings
+	return nil
 }
 
 func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {

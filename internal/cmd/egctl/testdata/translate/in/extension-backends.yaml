@@ -1,0 +1,80 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: default
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: default
+spec:
+  clusterIP: 10.0.0.1
+  ports:
+    - port: 8080
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lookup
+  namespace: default
+spec:
+  clusterIP: 10.0.0.2
+  ports:
+    - port: 8080
+      protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - name: app
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: lookup
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: app
+  backends:
+    - name: resolver
+      backendRef:
+        name: lookup
+        port: 8080
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(handle)
+          local cluster = handle:route():metadata():get("resolver")
+          handle:httpCall(cluster, {
+            [":method"] = "GET",
+            [":path"] = "/",
+            [":authority"] = "lookup"
+          }, nil, 2000)
+        end

@@ -1434,6 +1434,179 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"serviceName cannot be empty if provided"},
 		},
 		{
+			desc: "ALS access log with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "als-service",
+																Port: new(gwapiv1.PortNumber(9000)),
+															},
+														},
+													},
+													BackendSettings: &egv1a1.BackendSettings{
+														ClusterSettings: egv1a1.ClusterSettings{
+															HTTP1: &egv1a1.BackendHTTP1Settings{},
+														},
+													},
+												},
+												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for ALS backends, which always use gRPC."},
+		},
+		{
+			desc: "OpenTelemetry access log with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendRefs: []egv1a1.BackendRef{
+														{
+															BackendObjectReference: gwapiv1.BackendObjectReference{
+																Name: "otel-log-service",
+																Port: new(gwapiv1.PortNumber(4317)),
+															},
+														},
+													},
+													BackendSettings: &egv1a1.BackendSettings{
+														ClusterSettings: egv1a1.ClusterSettings{
+															HTTP1: &egv1a1.BackendHTTP1Settings{},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for OpenTelemetry access log backends, which always use gRPC."},
+		},
+		{
+			desc: "OpenTelemetry metrics sink with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{
+												{
+													BackendObjectReference: gwapiv1.BackendObjectReference{
+														Name: "otel-metrics-service",
+														Port: new(gwapiv1.PortNumber(4317)),
+													},
+												},
+											},
+											BackendSettings: &egv1a1.BackendSettings{
+												ClusterSettings: egv1a1.ClusterSettings{
+													HTTP1: &egv1a1.BackendHTTP1Settings{},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for OpenTelemetry metrics backends, which always use gRPC."},
+		},
+		{
+			desc: "OpenTelemetry tracing provider with http1 backendSettings is rejected",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "tracing-service",
+												Kind: new(gwapiv1.Kind("Service")),
+												Port: new(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+									BackendSettings: &egv1a1.BackendSettings{
+										ClusterSettings: egv1a1.ClusterSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for OpenTelemetry tracing backends, which use gRPC."},
+		},
+		{
+			desc: "Zipkin tracing provider with http1 backendSettings is accepted",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeZipkin,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "zipkin-service",
+												Kind: new(gwapiv1.Kind("Service")),
+												Port: new(gwapiv1.PortNumber(9411)),
+											},
+										},
+									},
+									BackendSettings: &egv1a1.BackendSettings{
+										ClusterSettings: egv1a1.ClusterSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "ProxyHpa-maxReplicas-is-required",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -2541,6 +2714,24 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
 		{
+			desc: "invalid: dynamicModules relative path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Local: &egv1a1.LocalDynamicModuleSource{
+									Path: "foo.so",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].source.local.path in body should match"},
+		},
+		{
 			desc: "lua-strict-valid",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -2693,6 +2884,139 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				envoy.Spec.MergeBackends = &egv1a1.MergeBackendsConfig{}
 			},
 			wantErrors: []string{},
+		},
+		// WasmModules
+		{
+			desc: "valid: wasmModules with local source",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: multiple wasmModules",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/security-filter.wasm",
+								},
+							},
+						},
+						{
+							Name: "metrics-filter",
+							Source: egv1a1.WasmModuleSource{
+								Type: new(egv1a1.LocalWasmModuleSourceType),
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/opt/wasm/metrics.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: wasmModules with empty name",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].name in body should be at least 1 chars long"},
+		},
+		{
+			desc: "invalid: wasmModules name with uppercase",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "My-Filter",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "/var/lib/envoy/filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].name in body should match"},
+		},
+		{
+			desc: "invalid: wasmModules Local type without local field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name:   "security-filter",
+							Source: egv1a1.WasmModuleSource{},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Local, local field needs to be set"},
+		},
+		{
+			desc: "invalid: wasmModules relative path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "relative/filter.wasm",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].source.local.path in body should match"},
+		},
+		{
+			desc: "invalid: wasmModules empty path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					WasmModules: []egv1a1.WasmModuleEntry{
+						{
+							Name: "security-filter",
+							Source: egv1a1.WasmModuleSource{
+								Local: &egv1a1.LocalWasmModuleSource{
+									Path: "",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.wasmModules[0].source.local.path in body should be at least 1 chars long"},
 		},
 	}
 

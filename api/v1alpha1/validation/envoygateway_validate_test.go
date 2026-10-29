@@ -1066,6 +1066,26 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			},
 			expect: true,
 		},
+		{
+			name: "invalid EnvoyProxy in EnvoyGateway",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					EnvoyProxy: &egv1a1.EnvoyProxySpec{
+						Provider: &egv1a1.EnvoyProxyProvider{
+							// Invalid provider type
+							Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+								EnvoyService: &egv1a1.KubernetesServiceSpec{
+									Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1443,60 +1463,6 @@ func TestGetExtensionManagers(t *testing.T) {
 		assert.Equal(t, "plural1", result[0].Name)
 		assert.Equal(t, "plural2", result[1].Name)
 	})
-}
-
-func TestWarnEnvoyGateway(t *testing.T) {
-	eg := egv1a1.DefaultEnvoyGateway()
-
-	testCases := []struct {
-		name     string
-		eg       *egv1a1.EnvoyGateway
-		expected []string
-	}{
-		{
-			name:     "nil EnvoyGateway",
-			eg:       nil,
-			expected: nil,
-		},
-		{
-			name:     "nil ExtensionAPIs",
-			eg:       eg,
-			expected: nil,
-		},
-		{
-			name: "disableLua is set",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						DisableLua: new(true),
-					},
-				},
-			},
-			expected: []string{"disableLua is deprecated, use enableLua instead"},
-		},
-		{
-			name: "enableLua is set",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						EnableLua: true,
-					},
-				},
-			},
-			expected: nil,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			warnings := WarnEnvoyGateway(tc.eg)
-			assert.Equal(t, tc.expected, warnings)
-		})
-	}
 }
 
 func TestLuaDisabled(t *testing.T) {
