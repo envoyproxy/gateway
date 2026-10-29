@@ -548,6 +548,19 @@ func (r *Resources) Sort() {
 		}
 		return tsI.Before(&tsJ)
 	})
+
+	// Sort ExtensionSecrets by creation timestamp, then namespace/name (unstructured resources)
+	sort.Slice(r.ExtensionSecrets, func(i, j int) bool {
+		tsI := r.ExtensionSecrets[i].GetCreationTimestamp()
+		tsJ := r.ExtensionSecrets[j].GetCreationTimestamp()
+		if tsI.Equal(&tsJ) {
+			if r.ExtensionSecrets[i].GetNamespace() != r.ExtensionSecrets[j].GetNamespace() {
+				return r.ExtensionSecrets[i].GetNamespace() < r.ExtensionSecrets[j].GetNamespace()
+			}
+			return r.ExtensionSecrets[i].GetName() < r.ExtensionSecrets[j].GetName()
+		}
+		return tsI.Before(&tsJ)
+	})
 }
 
 // StatusDeepCopy returns a shallow copy of Resources in which every status-bearing
