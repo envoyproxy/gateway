@@ -3166,6 +3166,9 @@ type GlobalResources struct {
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
 	// RateLimitServiceCluster holds the rate limit service endpoints discovered from Kubernetes resources.
 	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
+	// RateLimitServiceClusterTraffic holds the cluster-scoped traffic settings of the rate limit
+	// service cluster, translated from EnvoyGateway.RateLimit.ServiceSettings.
+	RateLimitServiceClusterTraffic *ClusterTrafficFeatures `json:"rateLimitServiceClusterTraffic,omitempty" yaml:"rateLimitServiceClusterTraffic,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.
