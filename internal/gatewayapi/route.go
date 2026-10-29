@@ -3300,6 +3300,10 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 	if httpFiltersContext.GRPCJSONTranscoder != nil {
 		return nil, nil, errors.New("grpcJSONTranscoder is not supported in the filters of a backendRef")
 	}
+	if httpFiltersContext.RedirectResponse != nil && httpFiltersContext.RedirectResponse.Path != nil &&
+		httpFiltersContext.RedirectResponse.Path.RegexMatchReplace != nil {
+		return nil, nil, errors.New("HTTPRouteFilter redirect is not supported on backendRefs")
+	}
 
 	destFilters := buildDestinationFilters(httpFiltersContext)
 	if destFilters == nil {

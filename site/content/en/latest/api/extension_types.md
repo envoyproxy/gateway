@@ -3570,6 +3570,7 @@ _Appears in:_
 
 
 _Appears in:_
+- [HTTPRedirectFilter](#httpredirectfilter)
 - [HTTPURLRewriteFilter](#httpurlrewritefilter)
 
 | Field | Type | Required | Default | Description |
@@ -3590,6 +3591,20 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> | 
+
+
+#### HTTPRedirectFilter
+
+
+
+HTTPRedirectFilter defines a redirect with a regex path transformation.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  true  |  | Path transforms the path in the redirect Location header using RE2 matching<br />and substitution. The query string is preserved. Capture groups use backslash<br />references such as \1, not $1. All matching portions are replaced.<br />If the pattern does not match, the path is unchanged but the redirect still<br />occurs. Constrain the HTTPRoute matches to avoid redirecting to the same URL.<br />An optional native RequestRedirect can override the scheme, hostname, port<br />and status code.<br />Substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'. |
 
 
 #### HTTPRequestMirrorFilter
@@ -3635,6 +3650,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |  |
+| `redirect` | _[HTTPRedirectFilter](#httpredirectfilter)_ |  false  |  | Redirect returns a redirect response with a regex path transformation.<br />Without a Gateway API RequestRedirect filter, the status code defaults to 302<br />and the request scheme, hostname and port are preserved. An optional<br />RequestRedirect filter on the same HTTPRoute rule can override the scheme,<br />hostname, port and status code, but must not specify path. Filter order does<br />not affect the resulting redirect.<br />Only one redirect extension is allowed per rule.<br />Redirect cannot be combined with URL rewriting or direct responses, and is<br />not supported on GRPCRoutes or backendRefs. |
 | `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  | DirectResponse returns a fixed response for matching requests.<br />When this filter is referenced from a GRPCRoute, only a non-2xx status code<br />is supported. gRPC signals success with a grpc-status trailer and a response<br />message, which a direct response cannot produce, so a 2xx status code (which<br />maps to the gRPC OK status) yields an invalid response for gRPC clients. Use a<br />non-2xx status code to deny or block gRPC requests (e.g. 403 maps to<br />PERMISSION_DENIED, 404 to UNIMPLEMENTED, 429/503 to UNAVAILABLE). |
 | `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
 | `requestMirror` | _[HTTPRequestMirrorFilter](#httprequestmirrorfilter)_ |  false  |  | RequestMirror defines configuration for request mirroring modifiers.<br />This configuration works together with the Gateway API RequestMirror filter<br />on the attached HTTPRoute rule. |
