@@ -1,0 +1,1 @@
+Fixed HTTPRoute and GRPCRoute rules with an invalid filter continuing to serve a RequestRedirect or a filter-configured DirectResponse. The Gateway API spec says implementations SHOULD treat those rules as invalid, so filter-processing errors now discard any redirect and return 500 while Accepted stays False.
