@@ -621,8 +621,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if len(invalidFields) > 0 {
 				t.Logger.Info("Ignoring invalid EnvoyProxy fields",
 					"envoyproxy", ep.Name, "namespace", ep.Namespace, "error", errors.Join(fieldErrors(invalidFields)...).Error())
-				status.SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, invalidFields)
 			}
+			// Also called without invalid fields to clear a warning left from a previous translation.
+			status.SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, invalidFields)
 		}
 	}
 
@@ -702,11 +703,13 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				if t.EnvoyProxyPatchDisabled {
 					status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
 				}
-				if invalidFields := envoyproxyInvalidFieldsMap[key]; len(invalidFields) > 0 {
+				invalidFields := envoyproxyInvalidFieldsMap[key]
+				if len(invalidFields) > 0 {
 					t.Logger.Info("Ignoring invalid EnvoyProxy fields", append(logKeysAndValues,
 						"error", errors.Join(fieldErrors(invalidFields)...).Error())...)
-					status.SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, invalidFields)
 				}
+				// Also called without invalid fields to clear a warning left from a previous translation.
+				status.SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, invalidFields)
 			}
 		}
 

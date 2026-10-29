@@ -7,6 +7,7 @@ package status
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,9 +107,14 @@ func SetEnvoyProxyPatchDisabledWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.
 }
 
 // SetEnvoyProxyInvalidFieldsWarning sets a Warning condition on the EnvoyProxy ancestor status
-// listing the invalid fields that were ignored. It is a no-op when invalidFields is empty.
+// listing the invalid fields that were ignored. When invalidFields is empty, it removes a
+// Warning condition left over from a previous translation in which fields were ignored.
 func SetEnvoyProxyInvalidFieldsWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, invalidFields []validation.InvalidField) {
-	if ep == nil || ancestor == nil || len(invalidFields) == 0 {
+	if ep == nil || ancestor == nil {
+		return
+	}
+	if len(invalidFields) == 0 {
+		clearEnvoyProxyInvalidFieldsWarning(ep, ancestor)
 		return
 	}
 
@@ -136,4 +142,17 @@ func SetEnvoyProxyInvalidFieldsWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.
 			cond,
 		},
 	})
+}
+
+func clearEnvoyProxyInvalidFieldsWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference) {
+	for i := range ep.Status.Ancestors {
+		if !ancestorRefsEqual(&ep.Status.Ancestors[i].AncestorRef, ancestor) {
+			continue
+		}
+		ep.Status.Ancestors[i].Conditions = slices.DeleteFunc(ep.Status.Ancestors[i].Conditions, func(c metav1.Condition) bool {
+			return c.Type == string(egv1a1.EnvoyProxyConditionWarning) &&
+				c.Reason == string(egv1a1.EnvoyProxyReasonInvalidField)
+		})
+		return
+	}
 }

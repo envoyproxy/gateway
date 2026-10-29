@@ -6,6 +6,7 @@
 package status
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 func TestSetEnvoyProxyDeprecatedFieldsWarning(t *testing.T) {
@@ -49,5 +51,44 @@ func TestSetEnvoyProxyDeprecatedFieldsWarning(t *testing.T) {
 		assert.Len(t, ep.Status.Ancestors, 1)
 		conds := ep.Status.Ancestors[0].Conditions
 		assert.Len(t, conds, 2)
+	})
+}
+
+func TestSetEnvoyProxyInvalidFieldsWarning(t *testing.T) {
+	ancestor := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName("eg")}
+	invalidFields := []validation.InvalidField{{Path: "filterOrder", Err: errors.New("cycle")}}
+
+	t.Run("sets a warning condition when fields are invalid", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, invalidFields)
+
+		assert.Len(t, ep.Status.Ancestors, 1)
+		conds := ep.Status.Ancestors[0].Conditions
+		assert.Len(t, conds, 1)
+		assert.Equal(t, string(egv1a1.EnvoyProxyReasonInvalidField), conds[0].Reason)
+		assert.Equal(t, "The following invalid fields were ignored: filterOrder: cycle", conds[0].Message)
+	})
+
+	t.Run("clears a stale warning once the fields are fixed", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		UpdateEnvoyProxyStatusAccepted(ep, ancestor, egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+		SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, invalidFields)
+		SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, nil)
+
+		conds := ep.Status.Ancestors[0].Conditions
+		assert.Len(t, conds, 1)
+		assert.Equal(t, string(egv1a1.EnvoyProxyConditionAccepted), conds[0].Type)
+	})
+
+	t.Run("keeps a warning set for another reason", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, map[string]string{
+			"spec.luaValidation": "spec.lua.validationType",
+		})
+		SetEnvoyProxyInvalidFieldsWarning(ep, ancestor, nil)
+
+		conds := ep.Status.Ancestors[0].Conditions
+		assert.Len(t, conds, 1)
+		assert.Equal(t, string(egv1a1.EnvoyProxyReasonDeprecatedField), conds[0].Reason)
 	})
 }

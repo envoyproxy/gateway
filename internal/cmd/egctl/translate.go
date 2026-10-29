@@ -393,10 +393,9 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
 			},
-			Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
-		}
-		if resources.EnvoyProxyForGatewayClass != nil {
-			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
+			// Use the order from the IR, which has invalid fields of the EnvoyProxy dropped.
+			FilterOrder: val.FilterOrder,
+			Logger:      logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		}
 		xRes, err := xTranslator.Translate(context.Background(), val)
 		if err != nil {
