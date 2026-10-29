@@ -22,6 +22,7 @@ data:
       enableEnvoyPatchPolicy: true
       enableBackend: true
       enableLua: true
+      enableExtensionBackends: true
       enableSDSSecretRef: true
     gatewayAPI:
       enabled: [XListenerSet]
@@ -37,6 +38,20 @@ data:
       # instead of erroring - which shows up as flaky "expected 429, got 200" e2e failures
       # rather than a hard, easily-diagnosed error.
       timeout: 1s
+    extensionManager:
+      maxMessageSize: 1000M
+      policyResources:
+      - group: extserver.example.io
+        version: v1alpha1
+        kind: VHostMetadataPolicy
+      hooks:
+        xdsTranslator:
+          post:
+          - VirtualHost
+      service:
+        fqdn:
+          hostname: gateway-simple-extension-server.envoy-gateway-system.svc.cluster.local
+          port: 5005
     telemetry:
       traces:
         sink:

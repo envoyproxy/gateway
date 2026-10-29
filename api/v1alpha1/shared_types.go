@@ -63,6 +63,11 @@ const (
 	// has been merged with another policy targeting the parent(e.g. Gateway).
 	PolicyReasonMerged gwapiv1.PolicyConditionReason = "Merged"
 
+	// PolicyReasonNotMerged is used with the "Accepted" condition when a policy targeting a
+	// backend cannot be applied because the backend was not merged into a cluster. It is used
+	// with the "Warning" condition when only some of the policy's backend targets were not merged.
+	PolicyReasonNotMerged gwapiv1.PolicyConditionReason = "NotMerged"
+
 	// PolicyConditionWarning indicates that the policy configuration contains
 	// non-critical issues that are accepted but requires attention.
 	PolicyConditionWarning gwapiv1.PolicyConditionType = "Warning"
@@ -636,7 +641,7 @@ type BackendCluster struct {
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	// +optional
 	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 
@@ -714,6 +719,36 @@ type ClusterSettings struct {
 	//
 	// +optional
 	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty"`
+
+	// HTTP1 provides HTTP/1 configuration for backend connections.
+	// When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+	// this field takes precedence for backend (upstream) traffic.
+	//
+	// Behavior when targeting route kinds that do not use HTTP/1:
+	//   - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+	//     directly adds a Warning condition on the policy; the field is ignored.
+	//   - Gateway / ListenerSet / sectionName targets: this field is silently
+	//     ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+	//     beneath that target; no warning is emitted.
+	//   - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+	//     access log/metrics, tracing providers): rejected at admission on their
+	//     own BackendSettings via separate validation rules.
+	//
+	// +optional
+	HTTP1 *BackendHTTP1Settings `json:"http1,omitempty"`
+}
+
+// BackendHTTP1Settings provides HTTP/1 configuration for backend connections.
+// Setting this field to an empty value (http1: {}), or configuring any of its members,
+// forces explicit HTTP/1 for backend connections.
+type BackendHTTP1Settings struct {
+	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+	// +optional
+	EnableTrailers *bool `json:"enableTrailers,omitempty"`
+	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+	// By default, Envoy will lowercase all the headers.
+	// +optional
+	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 }
 
 // BackendSettings provides the various knobs that can be set to control how traffic to a given
@@ -875,8 +910,8 @@ type ResponseOverride struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
-// When both statusCodes and responseHeaders are specified, both must match.
-// +kubebuilder:validation:XValidation:rule="has(self.statusCodes) || has(self.responseHeaders)",message="at least one of statusCodes or responseHeaders must be specified"
+// When more than one of statusCodes, requestHeaders and responseHeaders is specified, all of them must match.
+// +kubebuilder:validation:XValidation:rule="has(self.statusCodes) || has(self.requestHeaders) || has(self.responseHeaders)",message="at least one of statusCodes, requestHeaders or responseHeaders must be specified"
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
 	//
@@ -884,6 +919,15 @@ type CustomResponseMatch struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
 	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Request headers to match on. The match evaluates to true if all matches are successful.
+	// Note that the request headers are not available for all Envoy-generated responses,
+	// in which case a request header match never evaluates to true.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	RequestHeaders []ResponseOverrideHeaderMatch `json:"requestHeaders,omitempty"`
 
 	// Response headers to match on. The match evaluates to true if all matches are successful.
 	//
@@ -893,7 +937,7 @@ type CustomResponseMatch struct {
 	ResponseHeaders []ResponseOverrideHeaderMatch `json:"responseHeaders,omitempty"`
 }
 
-// ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+// ResponseOverrideHeaderMatch defines the configuration for matching a request or response header.
 type ResponseOverrideHeaderMatch struct {
 	// Name of the HTTP header.
 	// The header name is case-insensitive.

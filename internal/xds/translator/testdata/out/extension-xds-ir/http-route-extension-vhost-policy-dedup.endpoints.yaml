@@ -1,0 +1,16 @@
+- clusterName: foo-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway.extension:
+            hook: applied
+    loadBalancingWeight: 1
+    locality:
+      region: foo-route-dest/backend/0

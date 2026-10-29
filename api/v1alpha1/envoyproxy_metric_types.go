@@ -102,17 +102,18 @@ type ProxyMetricSink struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="http1 is not supported for OpenTelemetry metrics backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
 type ProxyOpenTelemetrySink struct {
 	BackendCluster `json:",inline"`
 	// Host define the service hostname.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the service is exposed on.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
