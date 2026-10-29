@@ -2,7 +2,6 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 8089
-  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy
@@ -21,7 +20,6 @@
       address: 0.0.0.0
       portValue: 8162
       protocol: UDP
-  drainType: MODIFY_ONLY
   listenerFilters:
   - name: envoy.filters.udp_listener.udp_proxy
     typedConfig:

@@ -41,7 +41,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: disable-request-id-extension-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: disable-request-id-extension-listener
   perConnectionBufferLimitBytes: 32768
@@ -80,7 +79,6 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: sample-request-id-extension-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: sample-request-id-extension-listener
   perConnectionBufferLimitBytes: 32768
@@ -119,7 +117,6 @@
         statPrefix: http-10082
         useRemoteAddress: true
     name: pack-request-id-extension-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: pack-request-id-extension-listener
   perConnectionBufferLimitBytes: 32768
@@ -153,7 +150,6 @@
         statPrefix: http-10083
         useRemoteAddress: true
     name: pack-and-sample-request-id-extension-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: pack-and-sample-request-id-extension-listener
   perConnectionBufferLimitBytes: 32768

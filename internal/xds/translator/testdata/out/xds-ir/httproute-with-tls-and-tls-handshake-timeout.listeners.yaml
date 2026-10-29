@@ -31,7 +31,6 @@
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
     transportSocketConnectTimeout: 5s
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768

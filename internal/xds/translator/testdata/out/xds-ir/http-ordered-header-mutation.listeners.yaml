@@ -62,7 +62,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: early-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: early-listener
   perConnectionBufferLimitBytes: 32768
@@ -111,7 +110,6 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: late-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: late-listener
   perConnectionBufferLimitBytes: 32768

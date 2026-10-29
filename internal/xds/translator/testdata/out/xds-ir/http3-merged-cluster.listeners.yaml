@@ -38,7 +38,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-http3/http
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-http3/http
   perConnectionBufferLimitBytes: 32768

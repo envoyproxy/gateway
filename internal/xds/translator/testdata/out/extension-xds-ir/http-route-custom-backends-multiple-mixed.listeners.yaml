@@ -30,7 +30,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: multiple-custom-backends-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: multiple-custom-backends-listener
   perConnectionBufferLimitBytes: 32768

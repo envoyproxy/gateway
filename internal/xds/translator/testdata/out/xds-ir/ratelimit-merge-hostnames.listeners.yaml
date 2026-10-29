@@ -42,7 +42,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-2/http-app1
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-2/http-app1
   perConnectionBufferLimitBytes: 32768

@@ -48,7 +48,6 @@
           upstreamOperation: '%UPSTREAM_HOST_NAME%%PATH(NQ:PATH)%'
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768
@@ -102,7 +101,6 @@
           upstreamOperation: '%UPSTREAM_HOST_NAME%%PATH(NQ:PATH)%'
         useRemoteAddress: true
     name: envoy-gateway/gateway-2/http-2
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-2/http-2
   perConnectionBufferLimitBytes: 32768

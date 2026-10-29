@@ -30,7 +30,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: health-check-host-hierarchy-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: health-check-host-hierarchy-listener
   perConnectionBufferLimitBytes: 32768

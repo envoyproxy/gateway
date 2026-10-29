@@ -30,7 +30,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
@@ -71,7 +70,6 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: second-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768
@@ -96,7 +94,6 @@
     socketAddress:
       address: '::'
       portValue: 10082
-  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -123,7 +120,6 @@
     socketAddress:
       address: '::'
       portValue: 10083
-  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy

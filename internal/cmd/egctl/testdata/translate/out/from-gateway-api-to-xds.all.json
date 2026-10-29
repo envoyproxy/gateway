@@ -999,7 +999,6 @@
                     ],
                     "name": "default/eg/http"
                   },
-                  "drainType": "MODIFY_ONLY",
                   "maxConnectionsToAcceptPerSocketEvent": 1,
                   "name": "default/eg/http",
                   "perConnectionBufferLimitBytes": 32768
@@ -1152,7 +1151,6 @@
                     ],
                     "name": "default/eg/grpc"
                   },
-                  "drainType": "MODIFY_ONLY",
                   "maxConnectionsToAcceptPerSocketEvent": 1,
                   "name": "default/eg/grpc",
                   "perConnectionBufferLimitBytes": 32768
@@ -1213,7 +1211,6 @@
                       "portValue": 1234
                     }
                   },
-                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filters": [
@@ -1326,7 +1323,6 @@
                       "portValue": 8443
                     }
                   },
-                  "drainType": "MODIFY_ONLY",
                   "filterChains": [
                     {
                       "filterChainMatch": {
@@ -1453,7 +1449,6 @@
                       "protocol": "UDP"
                     }
                   },
-                  "drainType": "MODIFY_ONLY",
                   "listenerFilters": [
                     {
                       "name": "envoy.filters.udp_listener.udp_proxy",

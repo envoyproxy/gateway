@@ -723,7 +723,6 @@
                     ],
                     "name": "envoy-gateway-system/eg/http"
                   },
-                  "drainType": "MODIFY_ONLY",
                   "maxConnectionsToAcceptPerSocketEvent": 1,
                   "name": "envoy-gateway-system/eg/http",
                   "perConnectionBufferLimitBytes": 32768

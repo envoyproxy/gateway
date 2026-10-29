@@ -30,7 +30,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
@@ -77,7 +76,6 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: second-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768
@@ -121,7 +119,6 @@
         statPrefix: http-10082
         useRemoteAddress: true
     name: third-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: third-listener
   perConnectionBufferLimitBytes: 32768
@@ -160,7 +157,6 @@
         statPrefix: http-10085
         useRemoteAddress: true
     name: sixth-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: sixth-listener
   perConnectionBufferLimitBytes: 32768
@@ -168,7 +164,6 @@
     socketAddress:
       address: '::'
       portValue: 10083
-  drainType: MODIFY_ONLY
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -195,7 +190,6 @@
     socketAddress:
       address: '::'
       portValue: 10084
-  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.connection_limit
@@ -216,7 +210,6 @@
     socketAddress:
       address: '::'
       portValue: 10086
-  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.tcp_proxy

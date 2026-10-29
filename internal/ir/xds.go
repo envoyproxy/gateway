@@ -177,6 +177,8 @@ type Xds struct {
 	Metrics *Metrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
 	// HealthCheckLog holds gateway-level HC event logging config.
 	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
+	// DrainStrategy is the drain strategy configured in the EnvoyProxy shutdown settings.
+	DrainStrategy egv1a1.DrainStrategy `json:"drainStrategy,omitempty" yaml:"drainStrategy,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.

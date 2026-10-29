@@ -231,9 +231,7 @@ func (t *Translator) buildXdsTCPListener(
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
 		MaxConnectionsToAcceptPerSocketEvent: maxAcceptPerSocketEvent,
-		// Drain on listener modification/removal and on the drain sequence started by the shutdown
-		// manager, but not on /healthcheck/fail, which would bypass the configured drain strategy.
-		DrainType: listenerv3.Listener_MODIFY_ONLY,
+		DrainType:                            t.listenerDrainType,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -257,6 +255,20 @@ func (t *Translator) buildXdsTCPListener(
 	}
 
 	return listener, nil
+}
+
+// buildListenerDrainType returns the drain type of the TCP listeners. UDP listeners are left
+// alone because the UDP proxy does not drain sessions, so the drain type has no effect on them.
+//
+// MODIFY_ONLY keeps /healthcheck/fail from drain-closing every connection at once, which would
+// bypass the gradual drain strategy. It is only used with the gradual strategy because changing
+// the drain type replaces the listeners and drains their connections, which must not happen on
+// existing proxies when upgrading with the default strategy.
+func buildListenerDrainType(strategy egv1a1.DrainStrategy) listenerv3.Listener_DrainType {
+	if strategy == egv1a1.DrainStrategyGradual {
+		return listenerv3.Listener_MODIFY_ONLY
+	}
+	return listenerv3.Listener_DEFAULT
 }
 
 // xdsListenerName returns the name of the xDS listener in two formats:
@@ -326,6 +338,8 @@ func (t *Translator) buildXdsQuicListener(
 			DownstreamSocketConfig: &corev3.UdpSocketConfig{},
 			QuicOptions:            &listenerv3.QuicProtocolOptions{},
 		},
+		// Remove /healthcheck/fail from endpoints that trigger a drain of listeners for better control
+		// over the drain process while still allowing the healthcheck to be failed during pod shutdown.
 		DrainType: listenerv3.Listener_MODIFY_ONLY,
 	}
 
@@ -1254,7 +1268,6 @@ func buildXdsUDPListener(
 	xdsListener := &listenerv3.Listener{
 		Name:      xdsListenerName(udpListener.Name, udpListener.ExternalPort, corev3.SocketAddress_UDP, xdsNameSchemeV2),
 		AccessLog: al,
-		DrainType: listenerv3.Listener_MODIFY_ONLY,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{

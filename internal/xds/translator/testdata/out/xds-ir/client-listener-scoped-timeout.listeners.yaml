@@ -32,7 +32,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   listenerFiltersTimeout: 15s
   maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener

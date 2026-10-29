@@ -647,8 +647,12 @@ type ShutdownConfig struct {
 	//
 	// +optional
 	MinDrainDuration *gwapiv1.Duration `json:"minDrainDuration,omitempty"`
-	// DrainStrategy defines how Envoy drains listener connections during the graceful drain process.
+	// DrainStrategy defines how Envoy drains HTTP connections during the graceful drain process.
+	// TCP and UDP proxy connections are not drained by either strategy.
 	// If unspecified, defaults to "Immediate".
+	//
+	// Switching to or from "Gradual" changes the listener configuration, which makes the running
+	// Envoy proxies replace their listeners and drain the existing connections.
 	//
 	// +optional
 	DrainStrategy *DrainStrategy `json:"drainStrategy,omitempty"`
@@ -660,9 +664,9 @@ type ShutdownConfig struct {
 type DrainStrategy string
 
 const (
-	// DrainStrategyGradual drains connections gradually over the drain timeout.
+	// DrainStrategyGradual drains HTTP connections progressively within the drain timeout.
 	DrainStrategyGradual DrainStrategy = "Gradual"
-	// DrainStrategyImmediate drains all connections as soon as the drain process starts.
+	// DrainStrategyImmediate drains all HTTP connections once the drain process starts.
 	DrainStrategyImmediate DrainStrategy = "Immediate"
 )
 

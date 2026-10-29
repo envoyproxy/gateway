@@ -30,7 +30,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
@@ -67,7 +66,6 @@
         streamIdleTimeout: 10s
         useRemoteAddress: true
     name: second-listener
-  drainType: MODIFY_ONLY
   maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768
