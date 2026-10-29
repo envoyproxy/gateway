@@ -121,6 +121,29 @@ func TestDefaultClusterSettings(t *testing.T) {
 	require.Equal(t, new(uint32(1)), got.HealthCheck.Active.HealthyThreshold)
 }
 
+func TestApplyEnvoyGatewaySchemaDefaults(t *testing.T) {
+	require.NoError(t, ApplyEnvoyGatewaySchemaDefaults(nil))
+	require.NoError(t, ApplyEnvoyGatewaySchemaDefaults(&egv1a1.EnvoyGateway{}))
+
+	eg := &egv1a1.EnvoyGateway{
+		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+			RateLimit: &egv1a1.RateLimit{
+				ServiceSettings: &egv1a1.ClusterSettings{
+					HealthCheck: &egv1a1.HealthCheck{
+						Active: &egv1a1.ActiveHealthCheck{
+							Type: egv1a1.ActiveHealthCheckerTypeGRPC,
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, ApplyEnvoyGatewaySchemaDefaults(eg))
+	active := eg.RateLimit.ServiceSettings.HealthCheck.Active
+	require.Equal(t, new(gwapiv1.Duration("1s")), active.Timeout)
+	require.Equal(t, new(gwapiv1.Duration("3s")), active.Interval)
+}
+
 func TestValidateRateLimitServiceSettings(t *testing.T) {
 	testCases := []struct {
 		name        string

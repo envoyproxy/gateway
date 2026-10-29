@@ -124,7 +124,8 @@ type Translator struct {
 	GlobalRateLimitEnabled bool
 
 	// RateLimitClusterSettings holds the settings of the rate limit service cluster,
-	// as configured on EnvoyGateway.RateLimit.ServiceSettings.
+	// as configured on EnvoyGateway.RateLimit.ServiceSettings. The CRD schema defaults are
+	// expected to be applied already, see config.ApplyEnvoyGatewaySchemaDefaults.
 	RateLimitClusterSettings *egv1a1.ClusterSettings
 
 	// EndpointRoutingDisabled can be set to true to use
