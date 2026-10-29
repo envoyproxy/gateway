@@ -466,7 +466,30 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
+								BackendCluster: egv1a1.BackendCluster{
+									BackendSettings: &egv1a1.BackendSettings{
+										HTTP1: &egv1a1.BackendHTTP1Settings{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when tracing backend without a type has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
 								BackendCluster: egv1a1.BackendCluster{
 									BackendSettings: &egv1a1.BackendSettings{
 										HTTP1: &egv1a1.BackendHTTP1Settings{},
@@ -490,7 +513,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Tracing: &egv1a1.ProxyTracing{
 							Provider: egv1a1.TracingProvider{
-								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
 							},
 						},
 					},

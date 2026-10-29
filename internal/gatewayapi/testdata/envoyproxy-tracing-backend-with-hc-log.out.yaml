@@ -245,6 +245,7 @@ xdsIR:
               timeout: 500ms
               type: HTTP
               unhealthyThreshold: 3
+        port: 4317
         type: OpenTelemetry
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway

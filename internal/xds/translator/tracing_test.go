@@ -34,7 +34,7 @@ func TestBuildHCMTracingSampling(t *testing.T) {
 					Name: "tracing",
 				},
 				Provider: egv1a1.TracingProvider{
-					Type: egv1a1.TracingProviderTypeOpenTelemetry,
+					Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
 				},
 			},
 			expectedRandomSampling:  10.0,
@@ -50,7 +50,7 @@ func TestBuildHCMTracingSampling(t *testing.T) {
 					Name: "tracing",
 				},
 				Provider: egv1a1.TracingProvider{
-					Type: egv1a1.TracingProviderTypeOpenTelemetry,
+					Type: new(egv1a1.TracingProviderTypeOpenTelemetry),
 				},
 			},
 			expectedRandomSampling:  10.0,

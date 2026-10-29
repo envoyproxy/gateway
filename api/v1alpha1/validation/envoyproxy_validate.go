@@ -217,7 +217,8 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 
 	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Tracing != nil {
 		p := spec.Telemetry.Tracing.Provider
-		if p.Type == egv1a1.TracingProviderTypeOpenTelemetry &&
+		// An unset type is defaulted to OpenTelemetry during translation.
+		if (p.Type == nil || *p.Type == egv1a1.TracingProviderTypeOpenTelemetry) &&
 			p.BackendSettings != nil && p.BackendSettings.HTTP1 != nil {
 			errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry tracing backends, which use gRPC"))
 		}
