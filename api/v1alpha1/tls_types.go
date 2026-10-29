@@ -187,6 +187,7 @@ const (
 // By default, no client specific configuration is validated.
 //
 // +kubebuilder:validation:XValidation:rule="!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate || !has(self.mode) || self.mode in ['VerifyIfGiven', 'RequireAndVerify']",message="allowExpiredCertificate can only be set when mode is VerifyIfGiven or RequireAndVerify"
+// +kubebuilder:validation:XValidation:rule="!((has(self.mode) ? self.mode == 'VerifyIfGiven' : (has(self.optional) && self.optional)) && (has(self.subjectAltNames) || has(self.certificateHashes) || has(self.spkiHashes)))",message="subjectAltNames, certificateHashes and spkiHashes cannot be used with mode VerifyIfGiven, because Envoy requires a client certificate whenever they are set"
 type ClientValidationContext struct {
 	// Optional set to true accepts connections even when a client doesn't present a certificate.
 	// Defaults to false, which rejects connections without a valid client certificate.
@@ -220,18 +221,24 @@ type ClientValidationContext struct {
 	// An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will
 	// verify that the SHA-256 of the DER-encoded Subject Public Key Information
 	// (SPKI) of the presented certificate matches one of the specified values.
+	// Setting this requires a client certificate, so it cannot be combined with
+	// mode VerifyIfGiven or the deprecated optional: true.
 	// +optional
 	SPKIHashes []string `json:"spkiHashes,omitempty"`
 
 	// An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will
 	// verify that the SHA-256 of the DER-encoded presented certificate matches
 	// one of the specified values.
+	// Setting this requires a client certificate, so it cannot be combined with
+	// mode VerifyIfGiven or the deprecated optional: true.
 	// +optional
 	CertificateHashes []string `json:"certificateHashes,omitempty"`
 
 	// An optional list of Subject Alternative name matchers. If specified, Envoy
 	// will verify that the Subject Alternative Name of the presented certificate
-	// matches one of the specified matchers
+	// matches one of the specified matchers.
+	// Setting this requires a client certificate, so it cannot be combined with
+	// mode VerifyIfGiven or the deprecated optional: true.
 	// +optional
 	SubjectAltNames *SubjectAltNames `json:"subjectAltNames,omitempty"`
 
@@ -264,6 +271,8 @@ const (
 
 	// VerifyIfGiven indicates that a client certificate is requested
 	// but not required. If presented, the certificate must be valid.
+	// SubjectAltNames, CertificateHashes and SPKIHashes cannot be used with
+	// this mode: Envoy requires a client certificate whenever they are set.
 	ClientValidationVerifyIfGiven ClientValidationModeType = "VerifyIfGiven"
 
 	// RequireAndVerify indicates that a valid client certificate must be
