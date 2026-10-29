@@ -200,16 +200,14 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:          "ext1",
-					client:        client1,
-					resourceGKSet: sets.New(fooV1FooFilterGVK.GroupKind()),
-					policyGKSet:   sets.New(fooV1FooPolicyrGVK.GroupKind()),
+					name:   "ext1",
+					client: client1,
+					gkSets: extensionGKSets{resource: sets.New(fooV1FooFilterGVK.GroupKind()), policy: sets.New(fooV1FooPolicyrGVK.GroupKind())},
 				},
 				{
-					name:          "ext2",
-					client:        client2,
-					resourceGKSet: sets.New(barV1BarBackendGVK.GroupKind()),
-					policyGKSet:   sets.New(barV1BarBackendPolicyGVK.GroupKind()),
+					name:   "ext2",
+					client: client2,
+					gkSets: extensionGKSets{resource: sets.New(barV1BarBackendGVK.GroupKind()), policy: sets.New(barV1BarBackendPolicyGVK.GroupKind())},
 				},
 			},
 		}
@@ -254,10 +252,9 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:          "ext1",
-					client:        client,
-					resourceGKSet: sets.New(declaredFilterGVK.GroupKind()),
-					policyGKSet:   sets.New(declaredPolicyGVK.GroupKind()),
+					name:   "ext1",
+					client: client,
+					gkSets: extensionGKSets{resource: sets.New(declaredFilterGVK.GroupKind()), policy: sets.New(declaredPolicyGVK.GroupKind())},
 				},
 			},
 		}
@@ -480,14 +477,14 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:        "no-policy-ext",
-					client:      clientNoPolicy,
-					policyGKSet: sets.New[schema.GroupKind](), // empty: declared no policyResources
+					name:   "no-policy-ext",
+					client: clientNoPolicy,
+					gkSets: extensionGKSets{policy: sets.New[schema.GroupKind]()}, // empty: declared no policyResources
 				},
 				{
-					name:        "owner-ext",
-					client:      clientWithPolicy,
-					policyGKSet: sets.New(ownerGK),
+					name:   "owner-ext",
+					client: clientWithPolicy,
+					gkSets: extensionGKSets{policy: sets.New(ownerGK)},
 				},
 			},
 		}
@@ -678,14 +675,14 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:        "ext1",
-					client:      client1,
-					policyGKSet: sets.New(fooV1FooPolicyGVK.GroupKind()),
+					name:   "ext1",
+					client: client1,
+					gkSets: extensionGKSets{policy: sets.New(fooV1FooPolicyGVK.GroupKind())},
 				},
 				{
-					name:        "ext2",
-					client:      client2,
-					policyGKSet: sets.New(barV1BarPolicyGVK.GroupKind()),
+					name:   "ext2",
+					client: client2,
+					gkSets: extensionGKSets{policy: sets.New(barV1BarPolicyGVK.GroupKind())},
 				},
 			},
 		}
@@ -846,14 +843,14 @@ func TestCompositeHookClient_PostClusterModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:          "ext1",
-					client:        client1,
-					resourceGKSet: sets.New(fooV1FooBackendGVK.GroupKind()),
+					name:   "ext1",
+					client: client1,
+					gkSets: extensionGKSets{resource: sets.New(fooV1FooBackendGVK.GroupKind())},
 				},
 				{
-					name:          "ext2",
-					client:        client2,
-					resourceGKSet: sets.New(barV1BarBackend.GroupKind()),
+					name:   "ext2",
+					client: client2,
+					gkSets: extensionGKSets{resource: sets.New(barV1BarBackend.GroupKind())},
 				},
 			},
 		}
@@ -945,14 +942,14 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:        "ext1",
-					client:      client1,
-					policyGKSet: sets.New(fooV1FooPolicyGVK.GroupKind()),
+					name:   "ext1",
+					client: client1,
+					gkSets: extensionGKSets{policy: sets.New(fooV1FooPolicyGVK.GroupKind())},
 				},
 				{
-					name:        "ext2",
-					client:      client2,
-					policyGKSet: sets.New(barV1BarPolicyGVK.GroupKind()),
+					name:   "ext2",
+					client: client2,
+					gkSets: extensionGKSets{policy: sets.New(barV1BarPolicyGVK.GroupKind())},
 				},
 			},
 		}
@@ -1242,8 +1239,8 @@ func TestCompositeHookClient_ResolveSecretHook(t *testing.T) {
 
 		// The non-owner is declared first, so a chaining implementation would let it win.
 		c := &compositeXDSHookClient{entries: []hookClientEntry{
-			{name: "other", client: other, secretGKSet: sets.New(otherGVK.GroupKind())},
-			{name: "owner", client: owner, secretGKSet: sets.New(certGVK.GroupKind())},
+			{name: "other", client: other, gkSets: extensionGKSets{secret: sets.New(otherGVK.GroupKind())}},
+			{name: "owner", client: owner, gkSets: extensionGKSets{secret: sets.New(certGVK.GroupKind())}},
 		}}
 
 		got, err := c.ResolveSecretHook(&types.SecretContext{Secret: newCert(certGVK)})
@@ -1276,7 +1273,7 @@ func TestCompositeHookClient_ResolveSecretHook(t *testing.T) {
 
 	t.Run("an unregistered kind is an error rather than a silent miss", func(t *testing.T) {
 		c := &compositeXDSHookClient{entries: []hookClientEntry{
-			{name: "owner", client: &mockXDSHookClient{}, secretGKSet: sets.New(certGVK.GroupKind())},
+			{name: "owner", client: &mockXDSHookClient{}, gkSets: extensionGKSets{secret: sets.New(certGVK.GroupKind())}},
 		}}
 
 		_, err := c.ResolveSecretHook(&types.SecretContext{Secret: newCert(otherGVK)})
@@ -1285,7 +1282,7 @@ func TestCompositeHookClient_ResolveSecretHook(t *testing.T) {
 
 	t.Run("an error is returned even with failOpen", func(t *testing.T) {
 		c := &compositeXDSHookClient{entries: []hookClientEntry{
-			{name: "owner", failOpen: true, secretGKSet: sets.New(certGVK.GroupKind()), client: &mockXDSHookClient{
+			{name: "owner", failOpen: true, gkSets: extensionGKSets{secret: sets.New(certGVK.GroupKind())}, client: &mockXDSHookClient{
 				resolveSecret: func(*types.SecretContext) (*types.SecretResolution, error) {
 					return nil, fmt.Errorf("extension error")
 				},
@@ -1298,7 +1295,7 @@ func TestCompositeHookClient_ResolveSecretHook(t *testing.T) {
 
 	t.Run("a missing certificate is rejected", func(t *testing.T) {
 		c := &compositeXDSHookClient{entries: []hookClientEntry{
-			{name: "owner", client: &mockXDSHookClient{}, secretGKSet: sets.New(certGVK.GroupKind())},
+			{name: "owner", client: &mockXDSHookClient{}, gkSets: extensionGKSets{secret: sets.New(certGVK.GroupKind())}},
 		}}
 
 		_, err := c.ResolveSecretHook(nil)
