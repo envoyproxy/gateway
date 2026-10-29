@@ -25,7 +25,7 @@ httpRoutes:
   # Attaches by hostname alone, with no sectionName, which is the shape that
   # reproduces the bug. test.dev.example.com is matched by both listeners, but
   # wildcard-dev-example-com matches it more specifically and therefore owns it,
-  # so the route must appear only there and not on wildcard-example-com.
+  # so the route must be programmed only there and not on wildcard-example-com.
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
@@ -68,7 +68,8 @@ httpRoutes:
               port: 8080
   # Pinned to the apex listener with sectionName. wildcard-dev-example-com still owns
   # test.dev.example.com, so nothing is programmed on the apex listener, but the route
-  # hostname intersects the listener it references, so the route stays Accepted.
+  # hostname intersects the listener it references, so the route stays Accepted and
+  # counts toward that listener's attachedRoutes.
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:

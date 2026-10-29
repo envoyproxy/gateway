@@ -26,7 +26,7 @@ gateways:
             namespaces:
               from: All
 tlsRoutes:
-  # Attaches by hostname alone, so it lands only on wildcard-dev-example-com, which
+  # Attaches by hostname alone, so it is programmed only on wildcard-dev-example-com, which
   # matches test.dev.example.com more specifically and therefore owns it.
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TLSRoute
@@ -45,7 +45,7 @@ tlsRoutes:
               port: 8080
   # Pinned to the apex listener with sectionName. Nothing is programmed there because
   # the nested listener owns the hostname, but the route still intersects the listener
-  # it references, so it stays Accepted.
+  # it references, so it stays Accepted and counts toward that listener's attachedRoutes.
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TLSRoute
     metadata:

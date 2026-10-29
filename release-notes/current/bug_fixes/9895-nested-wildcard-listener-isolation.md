@@ -9,8 +9,9 @@ any wildcard, a longer wildcard suffix above a shorter one, and an empty listene
 The failure was invisible in status - every listener stayed `Programmed: True`, the correct certificate
 was served on the HTTPS variant, and nothing was logged - so the only reliable detection was comparing
 each listener's `rds.route_config_name` against the names actually present in `RoutesConfigDump`.
-A route that references the less specific listener through `sectionName` stays `Accepted: True` when a
-more specific sibling listener owns all of its hostnames: acceptance only checks the listener the route
-references, and isolation only decides which listener programs the route. The same now applies to a
+A route that references the less specific listener through `sectionName` stays `Accepted: True`, and
+counted in that listener's `attachedRoutes`, when a more specific sibling listener owns all of its
+hostnames: acceptance and attachment only check a route's hostnames against the listener itself, and
+isolation only decides which listener programs the route. The same now applies to a
 route whose only hostname is a sibling listener's own hostname, which was previously rejected with
 `NoMatchingListenerHostname`.
