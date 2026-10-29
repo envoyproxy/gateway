@@ -25,9 +25,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -57,6 +59,7 @@ func TestTranslate(t *testing.T) {
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
+		RateLimitClusterSettings        *egv1a1.ClusterSettings
 		EnvoyProxyPatchDisabled         bool
 		CTPHTTP1ClientScopeOnly         bool
 		OIDCTokenCookieChunkingDisabled bool
@@ -138,6 +141,39 @@ func TestTranslate(t *testing.T) {
 			SDSEnabled:     true,
 		},
 		{
+			// Settings that fail translation fall back to the defaults rather than dropping the
+			// rate limit cluster and the Envoy client certificate.
+			name:                    "ratelimit-cluster-settings-invalid",
+			EnvoyPatchPolicyEnabled: true,
+			BackendEnabled:          true,
+			RateLimitClusterSettings: &egv1a1.ClusterSettings{
+				// Passes the schema, but is out of range for Envoy.
+				Connection: &egv1a1.BackendConnection{
+					BufferLimit: new(k8sresource.MustParse("8Gi")),
+				},
+			},
+		},
+		{
+			name:                    "ratelimit-cluster-settings",
+			EnvoyPatchPolicyEnabled: true,
+			BackendEnabled:          true,
+			RateLimitClusterSettings: &egv1a1.ClusterSettings{
+				CircuitBreaker: &egv1a1.CircuitBreaker{
+					MaxRequestsPerConnection: new(int64(10)),
+					PerEndpoint:              &egv1a1.PerEndpointCircuitBreakers{},
+				},
+				// Omitted fields are defaulted from the CRD schema, since EnvoyGateway isn't admitted as a CRD.
+				HealthCheck: &egv1a1.HealthCheck{
+					Passive: &egv1a1.PassiveHealthCheck{},
+				},
+				Timeout: &egv1a1.Timeout{
+					HTTP: &egv1a1.HTTPTimeout{
+						MaxConnectionDuration: new(gwapiv1.Duration("30s")),
+					},
+				},
+			},
+		},
+		{
 			name:                    "envoyproxy-patch-disabled",
 			EnvoyProxyPatchDisabled: true,
 		},
@@ -191,6 +227,7 @@ func TestTranslate(t *testing.T) {
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
 			perResourceSystemCASecret := false
+			var rateLimitClusterSettings *egv1a1.ClusterSettings
 			envoyProxyPatchDisabled := false
 			ctpHTTP1ClientScopeOnly := false
 			oidcTokenCookieChunkingDisabled := false
@@ -204,6 +241,7 @@ func TestTranslate(t *testing.T) {
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
+					rateLimitClusterSettings = config.RateLimitClusterSettings
 					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
 					ctpHTTP1ClientScopeOnly = config.CTPHTTP1ClientScopeOnly
 					oidcTokenCookieChunkingDisabled = config.OIDCTokenCookieChunkingDisabled
@@ -214,8 +252,10 @@ func TestTranslate(t *testing.T) {
 				GatewayControllerName:           egv1a1.GatewayControllerName,
 				GatewayClassName:                "envoy-gateway-class",
 				GlobalRateLimitEnabled:          true,
+				RateLimitClusterSettings:        rateLimitClusterSettings,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
+				ExtensionBackendsEnabled:        true,
 				SDSSecretRefEnabled:             sdsEnabled,
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
@@ -1261,6 +1301,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies []*ir.UnstructuredRef
 		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
+		ExtensionBackends       []*ir.ExtensionBackend
 		CACertificates          []*ir.CACertificateEntry
 	}{
 		ReadyListener:           a.ReadyListener,
@@ -1277,6 +1318,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
 		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
+		ExtensionBackends:       a.ExtensionBackends,
 		CACertificates:          a.CACertificates,
 	}
 

@@ -116,7 +116,7 @@ type ConsistentHash struct {
 
 	// Header configures the header hash policy when the consistent hash type is set to Header.
 	//
-	// Deprecated: use Headers instead
+	// Deprecated: use Headers instead. This field will be removed in v1.11.
 	// +optional
 	Header *Header `json:"header,omitempty"`
 
@@ -314,7 +314,7 @@ const (
 	SourceIPConsistentHashType ConsistentHashType = "SourceIP"
 	// HeaderConsistentHashType hashes based on a request header.
 	//
-	// Deprecated: use HeadersConsistentHashType instead
+	// Deprecated: use HeadersConsistentHashType instead. This value will be removed in v1.11.
 	HeaderConsistentHashType ConsistentHashType = "Header"
 	// HeadersConsistentHashType hashes based on multiple request headers.
 	HeadersConsistentHashType ConsistentHashType = "Headers"

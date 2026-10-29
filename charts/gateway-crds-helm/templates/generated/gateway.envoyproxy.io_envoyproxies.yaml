@@ -11841,7 +11841,7 @@ spec:
                                           BackendRef references a Kubernetes object that represents the
                                           backend server to which the authorization request will be sent.
 
-                                          Deprecated: Use BackendRefs instead.
+                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                         properties:
                                           group:
                                             default: ""
@@ -12531,6 +12531,10 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: interval must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   overrides:
                                                     description: |-
                                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -12637,6 +12641,10 @@ spec:
                                                       response.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: timeout must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   type:
                                                     allOf:
                                                     - enum:
@@ -12707,6 +12715,10 @@ spec:
                                                       on consecutive failures.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: baseEjectionTime must
+                                                        be greater than 0
+                                                      rule: duration(self) > duration('0s')
                                                   consecutive5XxErrors:
                                                     default: 5
                                                     description: Consecutive5xxErrors
@@ -12743,6 +12755,10 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: interval must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   maxEjectionPercent:
                                                     default: 10
                                                     description: MaxEjectionPercent
@@ -13024,7 +13040,7 @@ spec:
                                                     description: |-
                                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                                      Deprecated: use Headers instead
+                                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                                     properties:
                                                       name:
                                                         description: Name of the header
@@ -13641,7 +13657,7 @@ spec:
                                           BackendRef references a Kubernetes object that represents the
                                           backend server to which the authorization request will be sent.
 
-                                          Deprecated: Use BackendRefs instead.
+                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                         properties:
                                           group:
                                             default: ""
@@ -14331,6 +14347,10 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: interval must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   overrides:
                                                     description: |-
                                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -14437,6 +14457,10 @@ spec:
                                                       response.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: timeout must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   type:
                                                     allOf:
                                                     - enum:
@@ -14507,6 +14531,10 @@ spec:
                                                       on consecutive failures.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: baseEjectionTime must
+                                                        be greater than 0
+                                                      rule: duration(self) > duration('0s')
                                                   consecutive5XxErrors:
                                                     default: 5
                                                     description: Consecutive5xxErrors
@@ -14543,6 +14571,10 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                    x-kubernetes-validations:
+                                                    - message: interval must be greater
+                                                        than 0
+                                                      rule: duration(self) > duration('0s')
                                                   maxEjectionPercent:
                                                     default: 10
                                                     description: MaxEjectionPercent
@@ -14824,7 +14856,7 @@ spec:
                                                     description: |-
                                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                                      Deprecated: use Headers instead
+                                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                                     properties:
                                                       name:
                                                         description: Name of the header
@@ -15401,14 +15433,14 @@ spec:
                                         description: |-
                                           Host define the extension service hostname.
 
-                                          Deprecated: Use BackendRefs instead.
+                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                         type: string
                                       port:
                                         default: 4317
                                         description: |-
                                           Port defines the port the extension service is exposed on.
 
-                                          Deprecated: Use BackendRefs instead.
+                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                         format: int32
                                         minimum: 0
                                         type: integer
@@ -15859,7 +15891,7 @@ spec:
                                     BackendRef references a Kubernetes object that represents the
                                     backend server to which the authorization request will be sent.
 
-                                    Deprecated: Use BackendRefs instead.
+                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                   properties:
                                     group:
                                       default: ""
@@ -16533,6 +16565,10 @@ spec:
                                                 between active health checks.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: interval must be greater
+                                                  than 0
+                                                rule: duration(self) > duration('0s')
                                             overrides:
                                               description: |-
                                                 Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -16634,6 +16670,10 @@ spec:
                                                 to wait for a health check response.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: timeout must be greater than
+                                                  0
+                                                rule: duration(self) > duration('0s')
                                             type:
                                               allOf:
                                               - enum:
@@ -16699,6 +16739,10 @@ spec:
                                                 will be ejected on consecutive failures.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: baseEjectionTime must be
+                                                  greater than 0
+                                                rule: duration(self) > duration('0s')
                                             consecutive5XxErrors:
                                               default: 5
                                               description: Consecutive5xxErrors sets
@@ -16734,6 +16778,10 @@ spec:
                                                 between passive health checks.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                              x-kubernetes-validations:
+                                              - message: interval must be greater
+                                                  than 0
+                                                rule: duration(self) > duration('0s')
                                             maxEjectionPercent:
                                               default: 10
                                               description: MaxEjectionPercent sets
@@ -17007,7 +17055,7 @@ spec:
                                               description: |-
                                                 Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                                Deprecated: use Headers instead
+                                                Deprecated: use Headers instead. This field will be removed in v1.11.
                                               properties:
                                                 name:
                                                   description: Name of the header
@@ -17566,14 +17614,14 @@ spec:
                                   description: |-
                                     Host define the service hostname.
 
-                                    Deprecated: Use BackendRefs instead.
+                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                   type: string
                                 port:
                                   default: 4317
                                   description: |-
                                     Port defines the port the service is exposed on.
 
-                                    Deprecated: Use BackendRefs instead.
+                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                                   format: int32
                                   maximum: 65535
                                   minimum: 0
@@ -17781,7 +17829,7 @@ spec:
                               BackendRef references a Kubernetes object that represents the
                               backend server to which the authorization request will be sent.
 
-                              Deprecated: Use BackendRefs instead.
+                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                             properties:
                               group:
                                 default: ""
@@ -18448,6 +18496,9 @@ spec:
                                           active health checks.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: interval must be greater than 0
+                                          rule: duration(self) > duration('0s')
                                       overrides:
                                         description: |-
                                           Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -18549,6 +18600,9 @@ spec:
                                           for a health check response.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: timeout must be greater than 0
+                                          rule: duration(self) > duration('0s')
                                       type:
                                         allOf:
                                         - enum:
@@ -18614,6 +18668,10 @@ spec:
                                           on consecutive failures.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: baseEjectionTime must be greater
+                                            than 0
+                                          rule: duration(self) > duration('0s')
                                       consecutive5XxErrors:
                                         default: 5
                                         description: Consecutive5xxErrors sets the
@@ -18649,6 +18707,9 @@ spec:
                                           passive health checks.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: interval must be greater than 0
+                                          rule: duration(self) > duration('0s')
                                       maxEjectionPercent:
                                         default: 10
                                         description: MaxEjectionPercent sets the maximum
@@ -18919,7 +18980,7 @@ spec:
                                         description: |-
                                           Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                          Deprecated: use Headers instead
+                                          Deprecated: use Headers instead. This field will be removed in v1.11.
                                         properties:
                                           name:
                                             description: Name of the header to hash.
@@ -19424,7 +19485,7 @@ spec:
                             description: |-
                               Host define the provider service hostname.
 
-                              Deprecated: Use BackendRefs instead.
+                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                             type: string
                           openTelemetry:
                             description: OpenTelemetry defines the OpenTelemetry tracing
@@ -19528,7 +19589,7 @@ spec:
                             description: |-
                               Port defines the port the provider service is exposed on.
 
-                              Deprecated: Use BackendRefs instead.
+                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                             format: int32
                             minimum: 0
                             type: integer
