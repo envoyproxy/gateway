@@ -43,36 +43,48 @@ type compositeXDSHookClient struct {
 	entries []hookClientEntry
 }
 
-func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostnames []string, extensionResources, extensionPolicies []*unstructured.Unstructured) (*route.Route, error) {
+func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostnames []string, extensionResources, extensionPolicies []*unstructured.Unstructured) (*route.Route, types.HookResult, error) {
 	current := r
+	var called int
 	for _, entry := range c.entries {
 		filteredRefs := filterResourcesByGK(extensionResources, entry.resourceGKSet)
 		filteredPolicies := filterResourcesByGK(extensionPolicies, entry.policyGKSet)
-		result, err := entry.client.PostRouteModifyHook(current, routeHostnames, filteredRefs, filteredPolicies)
+		result, hr, err := entry.client.PostRouteModifyHook(current, routeHostnames, filteredRefs, filteredPolicies)
+		called += hr.CallCount
 		if err != nil {
 			if entry.failOpen {
 				continue
 			}
-			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
+			return nil, types.HookResult{CallCount: called}, fmt.Errorf("extension %q: %w", entry.name, err)
 		}
 		current = result
 	}
-	return current, nil
+	return current, types.HookResult{CallCount: called}, nil
 }
 
-func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
+func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost, extensionResources []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
 	current := vh
+	var called int
 	for _, entry := range c.entries {
-		result, err := entry.client.PostVirtualHostModifyHook(current)
+		// For the vhost hook, an empty policyGKSet means the manager declared no policy
+		// resources and therefore owns none — pass an empty slice rather than all resources.
+		// This differs from filterResourcesByGK's backward-compat behaviour (empty = pass all)
+		// which is only correct for single-manager mode.
+		var filtered []*unstructured.Unstructured
+		if entry.policyGKSet.Len() > 0 {
+			filtered = filterResourcesByGK(extensionResources, entry.policyGKSet)
+		}
+		result, hr, err := entry.client.PostVirtualHostModifyHook(current, filtered)
+		called += hr.CallCount
 		if err != nil {
 			if entry.failOpen {
 				continue
 			}
-			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
+			return nil, types.HookResult{CallCount: called}, fmt.Errorf("extension %q: %w", entry.name, err)
 		}
 		current = result
 	}
-	return current, nil
+	return current, types.HookResult{CallCount: called}, nil
 }
 
 func (c *compositeXDSHookClient) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
@@ -90,20 +102,22 @@ func (c *compositeXDSHookClient) PostEndpointsModifyHook(loadAssignment *endpoin
 	return current, nil
 }
 
-func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, error) {
+func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, types.HookResult, error) {
 	current := l
+	var called int
 	for _, entry := range c.entries {
 		filtered := filterResourcesByGK(extensionResources, entry.policyGKSet)
-		result, err := entry.client.PostHTTPListenerModifyHook(current, filtered)
+		result, hr, err := entry.client.PostHTTPListenerModifyHook(current, filtered)
+		called += hr.CallCount
 		if err != nil {
 			if entry.failOpen {
 				continue
 			}
-			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
+			return nil, types.HookResult{CallCount: called}, fmt.Errorf("extension %q: %w", entry.name, err)
 		}
 		current = result
 	}
-	return current, nil
+	return current, types.HookResult{CallCount: called}, nil
 }
 
 func (c *compositeXDSHookClient) PostClusterModifyHook(cl *cluster.Cluster, extensionResources []*unstructured.Unstructured) (*cluster.Cluster, error) {

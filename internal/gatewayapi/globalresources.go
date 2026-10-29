@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -46,13 +48,22 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 		return fmt.Errorf("envoy TLS secret %s/%s not found", t.ControllerNamespace, envoyTLSSecretName)
 	}
 
+	// Don't return on error: that would also drop the rate limit cluster and the client
+	// certificate, which rate limiting and remote Wasm need for every Gateway. Fall back to
+	// the default cluster settings instead.
+	rateLimitTraffic, err := t.translateRateLimitClusterSettings()
+	if err != nil {
+		t.Logger.Error(err, "Ignoring rate limit cluster settings")
+	}
+
 	for _, xdsIR := range xdsIRs {
-		if containsGlobalRateLimit(xdsIR.HTTP) || containsWasm(xdsIR.HTTP) {
+		if containsGlobalRateLimit(xdsIR.HTTP) || containsRemoteWasms(xdsIR.HTTP) {
 			if xdsIR.GlobalResources == nil {
 				xdsIR.GlobalResources = &ir.GlobalResources{}
 			}
 			if containsGlobalRateLimit(xdsIR.HTTP) {
 				xdsIR.GlobalResources.RateLimitServiceCluster = t.processRateLimitServiceCluster(resources)
+				xdsIR.GlobalResources.RateLimitServiceClusterTraffic = rateLimitTraffic
 			}
 			xdsIR.GlobalResources.EnvoyClientCertificate = &ir.TLSCertificate{
 				Name:        irGlobalConfigName(envoyTLSSecret),
@@ -158,14 +169,39 @@ func containsGlobalRateLimit(httpListeners []*ir.HTTPListener) bool {
 	return false
 }
 
-func containsWasm(httpListeners []*ir.HTTPListener) bool {
+// containsRemoteWasms reports whether any route uses a remote Wasm code source
+// (HTTP/Image). Name-only Wasm (path from EnvoyProxy.spec.wasmModules)
+// does not use the control-plane wasm HTTP service or its client certificate.
+func containsRemoteWasms(httpListeners []*ir.HTTPListener) bool {
 	for _, httpListener := range httpListeners {
 		for _, route := range httpListener.Routes {
-			if route.EnvoyExtensions != nil &&
-				len(route.EnvoyExtensions.Wasms) > 0 {
-				return true
+			if route.EnvoyExtensions == nil {
+				continue
+			}
+			for _, w := range route.EnvoyExtensions.Wasms {
+				if w.Code != nil {
+					return true
+				}
 			}
 		}
 	}
 	return false
+}
+
+// translateRateLimitClusterSettings translates EnvoyGateway.RateLimit.ServiceSettings into the
+// traffic settings of the rate limit service cluster.
+func (t *Translator) translateRateLimitClusterSettings() (*ir.ClusterTrafficFeatures, error) {
+	if t.RateLimitClusterSettings == nil {
+		return nil, nil
+	}
+	// EnvoyGateway isn't admitted as a CRD, so the schema defaults must be applied here.
+	cs, err := config.DefaultClusterSettings(t.RateLimitClusterSettings)
+	if err != nil {
+		return nil, fmt.Errorf("invalid rate limit cluster settings: %w", err)
+	}
+	traffic, err := translateExtServiceBackendSettings(&egv1a1.BackendSettings{ClusterSettings: *cs})
+	if err != nil {
+		return nil, fmt.Errorf("invalid rate limit cluster settings: %w", err)
+	}
+	return traffic.ClusterFeatures(), nil
 }

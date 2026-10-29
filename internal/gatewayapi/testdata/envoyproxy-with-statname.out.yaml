@@ -345,6 +345,7 @@ xdsIR:
           namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
     metrics:
+      enableCircuitBreakerRemainingStats: false
       enablePerEndpointStats: false
       enableRequestResponseSizesStats: false
       enableVirtualHostStats: false

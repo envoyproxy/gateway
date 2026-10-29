@@ -22,6 +22,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -912,7 +913,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 							{
 								Name:   new("wasm-filter"),
 								RootID: new("my_root_id"),
-								Code: egv1a1.WasmCodeSource{
+								Code: &egv1a1.WasmCodeSource{
 									Type: egv1a1.ImageWasmCodeSourceType,
 									Image: &egv1a1.ImageWasmCodeSource{
 										URL: "https://example.com/testwasm:v1.0.0",
@@ -1241,6 +1242,10 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 	sampleServiceImportBackendRef := test.GetServiceImportBackendRef(types.NamespacedName{Name: "imported-service"}, 80)
+	// MCS implementations such as Cilium ClusterMesh label a ServiceImport's
+	// EndpointSlices with both the derived Service and the ServiceImport name.
+	dualLabelledEndpointSlice := test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "derived-service", false)
+	dualLabelledEndpointSlice.Labels[mcsapiv1a1.LabelServiceName] = "imported-service"
 
 	testCases := []struct {
 		name          string
@@ -1287,6 +1292,26 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceImportBackendRef, ""),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "imported-service", true),
+			expect:        true,
+		},
+		{
+			name: "endpointslice labelled with both names, route references the Service",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", test.GetServiceBackendRef(types.NamespacedName{Name: "derived-service"}, 80), ""),
+			},
+			endpointSlice: dualLabelledEndpointSlice,
+			expect:        true,
+		},
+		{
+			name: "endpointslice labelled with both names, route references the ServiceImport",
+			configs: []client.Object{
+				sampleGatewayClass,
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceImportBackendRef, ""),
+			},
+			endpointSlice: dualLabelledEndpointSlice,
 			expect:        true,
 		},
 		{
@@ -1389,6 +1414,66 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 
 // TestValidateServiceForReconcile tests the validateServiceForReconcile
 // predicate function.
+func TestValidateServiceImportForReconcile(t *testing.T) {
+	backendRef := test.GetServiceImportBackendRef(types.NamespacedName{Name: "resolver"}, 8080)
+	policy := &egv1a1.EnvoyExtensionPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "extension", Namespace: "default"},
+		Spec: egv1a1.EnvoyExtensionPolicySpec{Backends: []egv1a1.ExtensionBackend{
+			{Name: "resolver", BackendRef: backendRef},
+		}},
+	}
+	remotePolicy := policy.DeepCopy()
+	remotePolicy.Spec.Backends[0].BackendRef.Namespace = new(gwapiv1.Namespace("other"))
+	route := test.GetHTTPRoute(types.NamespacedName{Name: "app", Namespace: "default"}, "gateway", backendRef, "")
+
+	testCases := []struct {
+		name         string
+		namespace    string
+		configs      []client.Object
+		eepCRDExists bool
+		expect       bool
+	}{
+		{
+			name: "extension backend in the policy namespace", namespace: "default",
+			configs: []client.Object{policy}, eepCRDExists: true, expect: true,
+		},
+		{
+			name: "extension backend in another namespace", namespace: "other",
+			configs: []client.Object{remotePolicy}, eepCRDExists: true, expect: true,
+		},
+		{
+			name: "same name in an unrelated namespace", namespace: "other",
+			configs: []client.Object{policy}, eepCRDExists: true,
+		},
+		{
+			name: "extension policy CRD absent", namespace: "default",
+			configs: []client.Object{policy},
+		},
+		{
+			name: "route backend without an extension policy", namespace: "default",
+			configs: []client.Object{route}, expect: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := gatewayAPIReconciler{
+				log:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				eepCRDExists: tc.eepCRDExists,
+				client: fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.configs...).
+					WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+					WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
+					Build(),
+			}
+			serviceImport := &mcsapiv1a1.ServiceImport{
+				ObjectMeta: metav1.ObjectMeta{Name: "resolver", Namespace: tc.namespace},
+			}
+			require.Equal(t, tc.expect, r.validateServiceImportForReconcile(serviceImport))
+		})
+	}
+}
+
 func TestValidateServiceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
@@ -2209,6 +2294,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	sampleService := test.GetService(types.NamespacedName{Name: "service"}, nil, nil)
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 	sampleHTTPRouteFilter := test.GetHTTPRouteFilter(types.NamespacedName{Name: "httproutefilter"})
+	// A route that references the filter only from a backendRef, with no rule-level filters.
+	backendRefFilterRoute := test.GetHTTPRoute(types.NamespacedName{Name: "httproute-backendref-filter"}, "scheduled-status-test", sampleServiceBackendRef, "")
+	backendRefFilterRoute.Spec.Rules[0].BackendRefs[0].Filters = []gwapiv1.HTTPRouteFilter{
+		{
+			Type: gwapiv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: egv1a1.GroupName,
+				Kind:  egv1a1.KindHTTPRouteFilter,
+				Name:  "httproutefilter",
+			},
+		},
+	}
 
 	testCases := []struct {
 		name string
@@ -2238,6 +2335,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 				sampleService,
 				sampleHTTPRouteFilter,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, "httproutefilter"),
+			},
+			httpRouteFilter: sampleHTTPRouteFilter,
+			expect:          true,
+		},
+		{
+			name: "httproutefilter referenced only by a backendRef of route",
+			configs: []client.Object{
+				sampleGWC,
+				sampleGateway,
+				sampleService,
+				sampleHTTPRouteFilter,
+				backendRefFilterRoute,
 			},
 			httpRouteFilter: sampleHTTPRouteFilter,
 			expect:          true,

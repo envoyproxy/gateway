@@ -1,0 +1,42 @@
+- ignorePortInHostMatching: true
+  name: default/gw/http
+  virtualHosts:
+  - domains:
+    - plain.example.com
+    name: default/gw/http/plain_example_com
+    routes:
+    - match:
+        prefix: /
+      name: http-route
+      route:
+        cluster: http-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: default/gw/https-a
+  virtualHosts:
+  - domains:
+    - a.example.com
+    name: default/gw/https-a/a_example_com
+    routes:
+    - match:
+        prefix: /
+      name: https-a-route
+      route:
+        cluster: https-a-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: default/gw/https-b
+  virtualHosts:
+  - domains:
+    - b.example.com
+    name: default/gw/https-b/b_example_com
+    routes:
+    - match:
+        prefix: /
+      name: https-b-route
+      route:
+        cluster: https-b-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

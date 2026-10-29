@@ -40,6 +40,7 @@ type PassiveHealthCheck struct {
 	// Interval defines the time between passive health checks.
 	//
 	// +kubebuilder:default="3s"
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="interval must be greater than 0"
 	// +optional
 	Interval *gwapiv1.Duration `json:"interval,omitempty"`
 
@@ -64,6 +65,7 @@ type PassiveHealthCheck struct {
 	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
 	//
 	// +kubebuilder:default="30s"
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="baseEjectionTime must be greater than 0"
 	// +optional
 	BaseEjectionTime *gwapiv1.Duration `json:"baseEjectionTime,omitempty"`
 
@@ -103,12 +105,14 @@ type ActiveHealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
 	//
 	// +kubebuilder:default="1s"
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="timeout must be greater than 0"
 	// +optional
 	Timeout *gwapiv1.Duration `json:"timeout"`
 
 	// Interval defines the time between active health checks.
 	//
 	// +kubebuilder:default="3s"
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="interval must be greater than 0"
 	// +optional
 	Interval *gwapiv1.Duration `json:"interval"`
 
@@ -134,6 +138,15 @@ type ActiveHealthCheck struct {
 	// +kubebuilder:default=1
 	// +optional
 	HealthyThreshold *uint32 `json:"healthyThreshold"`
+
+	// DisableConnectionReuse determines whether the active health check connection to a
+	// backend host is closed after each health check probe. When set to true, Envoy opens a
+	// new connection for each health check, which is useful for backends (such as
+	// haproxy-style agent checks) that do not expect a reused connection.
+	// Defaults to false, which reuses the connection across probes.
+	//
+	// +optional
+	DisableConnectionReuse *bool `json:"disableConnectionReuse,omitempty"`
 
 	// Type defines the type of health checker.
 	// +kubebuilder:validation:Enum=HTTP;TCP;GRPC
@@ -197,6 +210,24 @@ type HTTPActiveHealthChecker struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024
 	Path string `json:"path" yaml:"path"`
+	// Protocol is the HTTP protocol that active health check requests are sent with.
+	//
+	// Defaults to Auto, which uses the same protocol as regular requests to the backend:
+	//
+	//   - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+	//     `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+	//     GRPCRoute.
+	//   - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+	//     with HTTP1 as the fallback when nothing is negotiated.
+	//   - HTTP1 otherwise.
+	//
+	// Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+	// the application, for example a backend that serves HTTP/1.1 traffic but only
+	// accepts HTTP/2 health checks. An explicit protocol is always used as is.
+	//
+	// +kubebuilder:default=Auto
+	// +optional
+	Protocol *HTTPHealthCheckProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	// Method defines the HTTP method used for health checking.
 	// Defaults to GET
 	// +kubebuilder:validation:MaxLength=16
@@ -220,6 +251,21 @@ type HTTPActiveHealthChecker struct {
 	RequestBody *ActiveHealthCheckPayload `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
 }
 
+// HTTPHealthCheckProtocol specifies the HTTP protocol used to send active HTTP
+// health check requests to the backend.
+// +kubebuilder:validation:Enum=Auto;HTTP1;HTTP2
+type HTTPHealthCheckProtocol string
+
+const (
+	// HTTPHealthCheckProtocolAuto derives the health check protocol from the effective
+	// upstream protocol of the backend.
+	HTTPHealthCheckProtocolAuto HTTPHealthCheckProtocol = "Auto"
+	// HTTPHealthCheckProtocolHTTP1 sends health check requests using HTTP/1.1.
+	HTTPHealthCheckProtocolHTTP1 HTTPHealthCheckProtocol = "HTTP1"
+	// HTTPHealthCheckProtocolHTTP2 sends health check requests using HTTP/2.
+	HTTPHealthCheckProtocolHTTP2 HTTPHealthCheckProtocol = "HTTP2"
+)
+
 // TCPActiveHealthChecker defines the settings of tcp health check.
 type TCPActiveHealthChecker struct {
 	// Send defines the request payload.
@@ -237,6 +283,18 @@ type GRPCActiveHealthChecker struct {
 	// server and not to a specific service.
 	// +optional
 	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
+	// Hostname defines the value of the :authority header sent with active gRPC
+	// health checks. Authority selection uses this order: this field, the
+	// associated Backend endpoint hostname if available, then the effective Route
+	// hostname. If none of them is set, Envoy falls back to the name of the
+	// cluster, which is not a valid authority and is rejected by some gRPC
+	// servers.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +optional
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 }
 
 // HealthCheckOverrides allows overriding default health check behavior for specific use cases.

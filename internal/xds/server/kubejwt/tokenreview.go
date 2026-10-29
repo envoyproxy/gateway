@@ -63,7 +63,7 @@ func (i *JWTAuthInterceptor) validateKubeJWT(ctx context.Context, token, nodeID 
 	// This is used to prevent a client from accessing the xDS resource of another one.
 	if tokenReview.Status.User.Extra != nil {
 		podName := tokenReview.Status.User.Extra[serviceaccount.PodNameKey]
-		if podName[0] == "" {
+		if len(podName) == 0 || podName[0] == "" {
 			return status.Error(codes.Unauthenticated, "pod name not found in token review response")
 		}
 

@@ -376,6 +376,19 @@ func TestDecode(t *testing.T) {
 			expect: true,
 		},
 		{
+			in: inPath + "gateway-disable-envoy-proxy-patch.yaml",
+			out: &egv1a1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					RuntimeFlags: &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}},
+				},
+			},
+			expect: true,
+		},
+		{
 			in: inPath + "standalone-extension-server.yaml",
 			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{

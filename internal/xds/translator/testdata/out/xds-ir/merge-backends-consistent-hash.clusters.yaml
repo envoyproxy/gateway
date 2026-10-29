@@ -27,14 +27,6 @@
   name: service/default/service-1/8080/http
   perConnectionBufferLimitBytes: 32768
   type: EDS
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        httpProtocolOptions: {}
-      hashPolicy:
-      - connectionProperties:
-          sourceIp: true
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -64,11 +56,3 @@
   name: service/default/service-2/8080/http
   perConnectionBufferLimitBytes: 32768
   type: EDS
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        httpProtocolOptions: {}
-      hashPolicy:
-      - connectionProperties:
-          sourceIp: true

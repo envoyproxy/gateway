@@ -1,0 +1,35 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - directResponse:
+        status: 500
+      match:
+        pathSeparatedPrefix: /rejected
+      name: rejected-route
+    - match:
+        pathSeparatedPrefix: /compressed
+      name: compressed-route
+      requestHeadersToRemove:
+      - accept-encoding
+      route:
+        cluster: compressed-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.compressor.gzip:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
+          overrides:
+            responseDirectionConfig: {}
+        envoy.filters.http.grpc_json_transcoder/httproutefilter/default/transcode:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - match:
+        pathSeparatedPrefix: /redirected
+      name: redirected-route
+      redirect:
+        responseCode: FOUND
+        schemeRedirect: https
