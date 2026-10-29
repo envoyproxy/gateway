@@ -85,18 +85,6 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	return nil
 }
 
-// WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
-func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
-	if eg == nil || eg.ExtensionAPIs == nil {
-		return nil
-	}
-	var warnings []string
-	if eg.ExtensionAPIs.DisableLua != nil {
-		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
-	}
-	return warnings
-}
-
 func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {
 	if provider == nil || provider.Watch == nil {
 		return nil

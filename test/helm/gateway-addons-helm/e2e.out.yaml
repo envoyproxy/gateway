@@ -7,10 +7,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.14.0
+    helm.sh/chart: alloy-1.14.3
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.21.0"
+    app.kubernetes.io/version: "v1.21.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -22,7 +22,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -35,10 +35,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.176.1
+    helm.sh/chart: opentelemetry-collector-0.178.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.162.0"
+    app.kubernetes.io/version: "0.163.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -80,10 +80,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.14.0
+    helm.sh/chart: alloy-1.14.3
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.21.0"
+    app.kubernetes.io/version: "v1.21.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: config
@@ -192,7 +192,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -293,7 +293,7 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -308,10 +308,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.176.1
+    helm.sh/chart: opentelemetry-collector-0.178.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.162.0"
+    app.kubernetes.io/version: "0.163.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -454,12 +454,19 @@ data:
                   host: localhost
                   port: 8888
         resource:
-          host.name: ${env:OTEL_K8S_NODE_NAME}
-          k8s.namespace.name: ${env:OTEL_K8S_NAMESPACE}
-          k8s.node.ip: ${env:OTEL_K8S_NODE_IP}
-          k8s.node.name: ${env:OTEL_K8S_NODE_NAME}
-          k8s.pod.ip: ${env:OTEL_K8S_POD_IP}
-          k8s.pod.name: ${env:OTEL_K8S_POD_NAME}
+          attributes:
+          - name: host.name
+            value: ${env:OTEL_K8S_NODE_NAME}
+          - name: k8s.namespace.name
+            value: ${env:OTEL_K8S_NAMESPACE}
+          - name: k8s.node.ip
+            value: ${env:OTEL_K8S_NODE_IP}
+          - name: k8s.node.name
+            value: ${env:OTEL_K8S_NODE_NAME}
+          - name: k8s.pod.ip
+            value: ${env:OTEL_K8S_POD_IP}
+          - name: k8s.pod.name
+            value: ${env:OTEL_K8S_POD_NAME}
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/cm.yaml
 apiVersion: v1
@@ -10252,10 +10259,10 @@ kind: ClusterRole
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-1.14.0
+    helm.sh/chart: alloy-1.14.3
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.21.0"
+    app.kubernetes.io/version: "v1.21.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -10379,7 +10386,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10395,10 +10402,10 @@ kind: ClusterRole
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.176.1
+    helm.sh/chart: opentelemetry-collector-0.178.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.162.0"
+    app.kubernetes.io/version: "0.163.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10468,10 +10475,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-1.14.0
+    helm.sh/chart: alloy-1.14.3
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.21.0"
+    app.kubernetes.io/version: "v1.21.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -10490,7 +10497,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10509,10 +10516,10 @@ kind: ClusterRoleBinding
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.176.1
+    helm.sh/chart: opentelemetry-collector-0.178.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.162.0"
+    app.kubernetes.io/version: "0.163.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10553,10 +10560,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.14.0
+    helm.sh/chart: alloy-1.14.3
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.21.0"
+    app.kubernetes.io/version: "v1.21.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: networking
@@ -10578,7 +10585,7 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10603,7 +10610,7 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10628,7 +10635,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"
@@ -10656,10 +10663,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.176.1
+    helm.sh/chart: opentelemetry-collector-0.178.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.162.0"
+    app.kubernetes.io/version: "0.163.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10803,10 +10810,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.14.0
+    helm.sh/chart: alloy-1.14.3
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.21.0"
+    app.kubernetes.io/version: "v1.21.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
 spec:
@@ -10825,7 +10832,7 @@ spec:
       serviceAccountName: alloy
       containers:
         - name: alloy
-          image: docker.io/grafana/alloy:v1.21.0
+          image: docker.io/grafana/alloy:v1.21.2
           imagePullPolicy: IfNotPresent
           args:
             - run
@@ -10859,7 +10866,7 @@ spec:
             - name: config
               mountPath: /etc/alloy
         - name: config-reloader
-          image: quay.io/prometheus-operator/prometheus-config-reloader:v0.94.0@sha256:142a1f11df8dd165f00375b0b1826aecb9c9adeb05c39855893138d7c7575ff7
+          image: quay.io/prometheus-operator/prometheus-config-reloader:v0.94.2@sha256:a1897c67478bc23434534e91ad3855280771196b1daf17144db9dbcb655bef71
           imagePullPolicy: IfNotPresent
           args:
             - --watched-dir=/etc/alloy
@@ -10895,10 +10902,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.176.1
+    helm.sh/chart: opentelemetry-collector-0.178.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.162.0"
+    app.kubernetes.io/version: "0.163.2"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10915,7 +10922,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 10046696bced6897134940d332a3b63b84a429ce3e8384ca8d46803edc8e8242
+        checksum/config: a003920627c96683b9adfb3116b9cc4d944e48c0731d170bec7c6ebba5d03620
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -10934,7 +10941,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.163.1"
+          image: "otel/opentelemetry-collector-contrib:0.163.2"
           imagePullPolicy: IfNotPresent
           ports:
             
@@ -11138,7 +11145,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-7.3.0
+    helm.sh/chart: loki-7.5.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.11"

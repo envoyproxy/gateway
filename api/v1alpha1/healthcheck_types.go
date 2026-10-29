@@ -40,6 +40,7 @@ type PassiveHealthCheck struct {
 	// Interval defines the time between passive health checks.
 	//
 	// +kubebuilder:default="3s"
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="interval must be greater than 0"
 	// +optional
 	Interval *gwapiv1.Duration `json:"interval,omitempty"`
 
@@ -64,6 +65,7 @@ type PassiveHealthCheck struct {
 	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
 	//
 	// +kubebuilder:default="30s"
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="baseEjectionTime must be greater than 0"
 	// +optional
 	BaseEjectionTime *gwapiv1.Duration `json:"baseEjectionTime,omitempty"`
 
@@ -103,12 +105,14 @@ type ActiveHealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
 	//
 	// +kubebuilder:default="1s"
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="timeout must be greater than 0"
 	// +optional
 	Timeout *gwapiv1.Duration `json:"timeout"`
 
 	// Interval defines the time between active health checks.
 	//
 	// +kubebuilder:default="3s"
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="interval must be greater than 0"
 	// +optional
 	Interval *gwapiv1.Duration `json:"interval"`
 
