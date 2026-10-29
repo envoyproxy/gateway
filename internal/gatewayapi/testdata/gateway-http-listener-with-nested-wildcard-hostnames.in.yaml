@@ -66,6 +66,51 @@ httpRoutes:
           backendRefs:
             - name: service-1
               port: 8080
+  # Pinned to the apex listener with sectionName. wildcard-dev-example-com still owns
+  # test.dev.example.com, so nothing is programmed on the apex listener, but the route
+  # hostname intersects the listener it references, so the route stays Accepted.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-pinned-to-apex
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-1
+          namespace: envoy-gateway
+          sectionName: wildcard-example-com
+      hostnames:
+        - "test.dev.example.com"
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /pinned
+          backendRefs:
+            - name: service-1
+              port: 8080
+  # Same, with the sibling's own wildcard as the only hostname. This shape was already
+  # isolated by the literal-string delete, and it is accepted the same way.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-pinned-to-apex-sibling-wildcard
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-1
+          namespace: envoy-gateway
+          sectionName: wildcard-example-com
+      hostnames:
+        - "*.dev.example.com"
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /pinned-wildcard
+          backendRefs:
+            - name: service-1
+              port: 8080
 services:
   - apiVersion: v1
     kind: Service

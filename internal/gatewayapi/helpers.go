@@ -408,6 +408,15 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 	return sets.List(hostnamesSet)
 }
 
+// routeIntersectsListener reports whether the route hostnames intersect the listener's
+// own hostname. This decides route acceptance, so unlike computeHosts it ignores sibling
+// listeners: a route whose hostnames are all owned by a more specific sibling is still
+// accepted by the listener it references, it just has no hosts to program there.
+func routeIntersectsListener(routeHostnames []string, listener *ListenerContext) bool {
+	// Without a gateway, computeHosts has no sibling listeners to filter against.
+	return len(computeHosts(routeHostnames, &ListenerContext{Listener: listener.Listener})) > 0
+}
+
 // hostnameMatches reports whether listenerHostname matches hostname, treating a
 // leading "*" in listenerHostname as a wildcard. Identical strings match:
 // wildcardHostnameMatchesHostname deliberately returns false when both sides are the

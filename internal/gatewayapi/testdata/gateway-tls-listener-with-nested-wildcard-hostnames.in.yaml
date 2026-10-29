@@ -1,0 +1,95 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-1
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: wildcard-example-com
+          port: 443
+          protocol: TLS
+          hostname: "*.example.com"
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: wildcard-dev-example-com
+          port: 443
+          protocol: TLS
+          hostname: "*.dev.example.com"
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+tlsRoutes:
+  # Attaches by hostname alone, so it lands only on wildcard-dev-example-com, which
+  # matches test.dev.example.com more specifically and therefore owns it.
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
+    metadata:
+      name: tlsroute-nested
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-1
+          namespace: envoy-gateway
+      hostnames:
+        - "test.dev.example.com"
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  # Pinned to the apex listener with sectionName. Nothing is programmed there because
+  # the nested listener owns the hostname, but the route still intersects the listener
+  # it references, so it stays Accepted.
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
+    metadata:
+      name: tlsroute-pinned-to-apex
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-1
+          namespace: envoy-gateway
+          sectionName: wildcard-example-com
+      hostnames:
+        - "test.dev.example.com"
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: envoy-gateway
+      name: service-1
+    spec:
+      selector:
+        app: service-1
+      ports:
+        - name: tls
+          protocol: TCP
+          port: 8080
+endpointslices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: envoy-gateway
+      name: service-1
+      labels:
+        kubernetes.io/service-name: service-1
+    addressType: IPv4
+    ports:
+      - name: tls
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - 7.7.7.7
+        conditions:
+          ready: true
