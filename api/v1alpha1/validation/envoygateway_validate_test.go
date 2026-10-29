@@ -1465,60 +1465,6 @@ func TestGetExtensionManagers(t *testing.T) {
 	})
 }
 
-func TestWarnEnvoyGateway(t *testing.T) {
-	eg := egv1a1.DefaultEnvoyGateway()
-
-	testCases := []struct {
-		name     string
-		eg       *egv1a1.EnvoyGateway
-		expected []string
-	}{
-		{
-			name:     "nil EnvoyGateway",
-			eg:       nil,
-			expected: nil,
-		},
-		{
-			name:     "nil ExtensionAPIs",
-			eg:       eg,
-			expected: nil,
-		},
-		{
-			name: "disableLua is set",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						DisableLua: new(true),
-					},
-				},
-			},
-			expected: []string{"disableLua is deprecated, use enableLua instead"},
-		},
-		{
-			name: "enableLua is set",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						EnableLua: true,
-					},
-				},
-			},
-			expected: nil,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			warnings := WarnEnvoyGateway(tc.eg)
-			assert.Equal(t, tc.expected, warnings)
-		})
-	}
-}
-
 func TestLuaDisabled(t *testing.T) {
 	testCases := []struct {
 		name     string
