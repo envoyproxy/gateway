@@ -3801,7 +3801,13 @@ spec:
                           %ROUTE_KIND%: kind of Gateway API xRoute resource
                           Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
                           Disabled by default.
+                        maxLength: 1024
                         type: string
+                        x-kubernetes-validations:
+                        - message: routeStatName contains an unsupported or unterminated
+                            operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%,
+                            %ROUTE_KIND% and %ROUTE_RULE_NAME%
+                          rule: self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME)%)*$')
                     type: object
                   tracing:
                     description: |-
