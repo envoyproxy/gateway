@@ -1,1 +1,0 @@
-Fixed the Helm chart not granting Secret and EndpointSlice read in the controller namespace when `watch.namespaces` is set in the default deploy mode, which kept the controller from becoming Ready unless the controller namespace was listed in `watch.namespaces`.
