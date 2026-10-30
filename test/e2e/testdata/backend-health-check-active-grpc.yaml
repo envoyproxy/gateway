@@ -1,0 +1,163 @@
+# grpc-health-backend rejects requests whose :authority is not a valid
+# authority, like the Envoy cluster name (grpcroute/<ns>/<name>/rule/0) Envoy
+# falls back to when a gRPC health check has no authority.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-health-backend
+  namespace: gateway-conformance-infra
+  labels:
+    app: grpc-health-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-health-backend
+  template:
+    metadata:
+      labels:
+        app: grpc-health-backend
+    spec:
+      containers:
+        - name: grpc-health-backend
+          image: envoyproxy/gateway-grpc-health-backend
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+          resources:
+            requests:
+              cpu: 10m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-health-backend
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: grpc-health-backend
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+      appProtocol: kubernetes.io/h2c
+---
+# A wildcard route hostname is not a valid authority, so the authority must be
+# set explicitly with grpc.hostname.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpc-health-check-explicit-hostname
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames:
+    - "*.grpc-hc-explicit.example.com"
+  rules:
+    - matches:
+        - method:
+            service: grpc.health.v1.Health
+      backendRefs:
+        - name: grpc-health-backend
+          port: 9000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: grpc-health-check-explicit-hostname-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpc-health-check-explicit-hostname
+  healthCheck:
+    # Disable panic mode so that traffic fails when every endpoint is unhealthy.
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: GRPC
+      grpc:
+        hostname: grpc-hc-explicit.example.com
+---
+# Without grpc.hostname, the authority defaults to the route hostname.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpc-health-check-route-hostname
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames:
+    - grpc-hc-route.example.com
+  rules:
+    - matches:
+        - method:
+            service: grpc.health.v1.Health
+      backendRefs:
+        - name: grpc-health-backend
+          port: 9000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: grpc-health-check-route-hostname-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpc-health-check-route-hostname
+  healthCheck:
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: GRPC
+---
+# With a wildcard route hostname and no grpc.hostname, Envoy falls back to the
+# cluster name, which the backend rejects. This proves the backend enforces a
+# valid authority.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpc-health-check-cluster-name
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames:
+    - "*.grpc-hc-cluster-name.example.com"
+  rules:
+    - matches:
+        - method:
+            service: grpc.health.v1.Health
+      backendRefs:
+        - name: grpc-health-backend
+          port: 9000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: grpc-health-check-cluster-name-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpc-health-check-cluster-name
+  healthCheck:
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: GRPC

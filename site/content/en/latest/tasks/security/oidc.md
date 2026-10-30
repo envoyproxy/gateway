@@ -583,6 +583,124 @@ explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
 
 Each cookie holds a different value, so all the resulting names must be distinct.
 
+## Large Tokens
+
+Browsers don't store a cookie larger than 4096 bytes, and they drop it without an error.
+Some OIDC providers issue access, ID or refresh tokens larger than that, for example when
+the token carries many group claims. A browser that drops the token cookie never sends the
+token back: Envoy treats the session as missing and redirects the user to the OIDC provider
+again and again, until the browser reports too many redirects.
+
+Envoy Gateway therefore has Envoy split such a token across several cookies. A token that
+fits in one cookie is still written as one cookie. A larger token is written as `<name>_0`,
+`<name>_1`, and so on, plus a `<name>_chunks` cookie that holds the count, for example
+`AccessToken-myapp_0` and `AccessToken-myapp_chunks`. Each cookie stays within 4096 bytes,
+name and attributes included, and a token is split into at most 8 cookies. If a token needs
+more, Envoy fails the login with a `503` instead of setting cookies the browser could not
+send back.
+
+Every chunk is sent back on each request, so several large tokens together can exceed the
+listener's request header limit, 60Ki by default. Raise it with `headers.maxRequestHeaderLimit`
+in a [ClientTrafficPolicy] if requests with a full set of chunks start failing.
+
+Envoy Proxy older than v1.40 can't read the split cookies. While proxies of an earlier Envoy
+Gateway release serve the same hostnames, for example during an upgrade or while the clusters
+of a multi-cluster setup are upgraded one by one, a client that holds such a token in one
+cookie today, such as a non-browser client, is sent back to the OIDC provider whenever it
+reaches an older proxy. To avoid that, disable the `OIDCTokenCookieChunking` runtime flag in
+the [EnvoyGateway] configuration until every proxy is upgraded:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+runtimeFlags:
+  disabled:
+  - OIDCTokenCookieChunking
+```
+
+From v1.40 on, Envoy reads both a single cookie and split cookies whether or not the flag
+is enabled, so turning the flag on or off doesn't end existing sessions.
+
+## Logout
+
+Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
+specified, `logoutPath` defaults to `/logout`. Like `redirectURL`, it must match the target
+HTTPRoute or Gateway, otherwise the logout request can't be processed by the OIDC filter.
+
+Clearing the cookies only ends the session at the gateway; the user remains logged in at the OIDC
+provider. To also terminate the provider-side session, configure the provider's
+[end session endpoint](https://openid.net/specs/openid-connect-rpinitiated-1_0.html), which enables
+[RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html):
+
+```yaml
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+      endSessionEndpoint: "https://accounts.google.com/o/oauth2/v2/logout"
+    logoutPath: "/myapp/logout"
+```
+
+Envoy Gateway also discovers `endSessionEndpoint` from the provider's
+[Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse)
+when `authorizationEndpoint` or `tokenEndpoint` is not specified, so RP-Initiated Logout may be
+active even if you did not set the field explicitly.
+
+When an end session endpoint is in use, requesting the `logoutPath` returns a redirect to the
+provider that carries a `post_logout_redirect_uri` parameter telling the provider where to send the
+user once the logout completes. By default Envoy sends the root of the request's host,
+`<scheme>://<host>/`.
+
+### Setting the post logout redirect URI
+
+Most providers require the post logout redirect URI to be **registered for the client** and reject
+the logout request otherwise. If the default value is not registered, set an explicit URI:
+
+```yaml
+  oidc:
+    logoutPath: "/myapp/logout"
+    postLogoutRedirect:
+      uri: "https://www.example.com/loggedout"
+```
+
+Point the URI at a page that the OIDC policy does not protect. If it falls under a protected route,
+Envoy Gateway starts a new login as soon as the provider redirects the user there, and the provider
+may sign the user straight back in with its own session.
+
+The URI may contain the Envoy `%REQ(header)%` [command operator][command-operators], which is useful
+when the same policy serves more than one host:
+
+```yaml
+  oidc:
+    postLogoutRedirect:
+      uri: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout"
+```
+
+Only `%REQ(header)%` is accepted here, since it is the only operator meaningful in a URI derived from
+the request. Envoy Gateway rejects any other operator and reports the error on the SecurityPolicy
+status, so that a typo such as `%REQ(x-tenant)` or `%BOGUS%` surfaces on the policy rather than
+causing Envoy to reject the configuration. Envoy percent-encodes the URI when it builds the logout
+redirect, so write it unencoded; a literal percent is written as `%%`.
+
+### Omitting the post logout redirect URI
+
+`post_logout_redirect_uri` is optional in the OIDC specification. If you cannot register a URI with
+your provider, or you do not need the user redirected back to your application, omit the parameter
+entirely:
+
+```yaml
+  oidc:
+    logoutPath: "/myapp/logout"
+    postLogoutRedirect:
+      disabled: true
+```
+
+The logout itself still completes — Envoy Gateway clears its cookies and the provider terminates the
+session — but because the provider is not told where to send the user, the browser is left on a page
+controlled by the provider rather than returning to your application.
+
+`uri` cannot be set together with `disabled: true`. `postLogoutRedirect` has no effect when no end
+session endpoint is configured or discovered, because in that case Envoy Gateway does not redirect to
+the provider at all.
 
 ## Providers
 
@@ -662,6 +780,8 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[EnvoyGateway]: ../../../api/extension_types#envoygateway
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Backend]: ../../../api/extension_types#backend
@@ -669,3 +789,4 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [backend-routing]: ../traffic/backend
 [backend-tls]: ../backend-tls
 [BackendSettings]: ../../../api/extension_types/#clustersettings
+[command-operators]: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators

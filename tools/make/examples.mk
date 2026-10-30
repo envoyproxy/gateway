@@ -6,8 +6,10 @@ EXAMPLE_APPS := \
 	preserve-case-backend \
 	static-file-server \
 	dynamic-module-test \
+	wasm-module-test \
 	backend-utilization \
 	sds-test-server \
+	grpc-health-backend \
 	remote-infra
 
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-

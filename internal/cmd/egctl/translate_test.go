@@ -285,6 +285,19 @@ func TestTranslate(t *testing.T) {
 			expect: true,
 		},
 		{
+			name:         "extension-backends",
+			from:         "gateway-api",
+			to:           "gateway-api,xds",
+			resourceType: string(ClusterEnvoyConfigType),
+			expect:       true,
+		},
+		{
+			name:   "extension-backends",
+			from:   "gateway-api",
+			to:     "ir",
+			expect: true,
+		},
+		{
 			name:   "default-namespace",
 			from:   "gateway-api",
 			to:     "gateway-api",

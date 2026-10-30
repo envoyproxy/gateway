@@ -75,6 +75,7 @@ http:
           originalDownloadingURL: https://www.example.com/wasm-filter-1.wasm
           sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
+        vmID: envoyextensionpolicy/envoy-gateway/wasm/746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
         wasmName: wasm-filter-1
       - config:
           parameter1: value1

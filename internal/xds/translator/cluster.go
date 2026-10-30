@@ -34,6 +34,7 @@ import (
 	round_robinv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/round_robin/v3"
 	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
+	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -52,6 +53,7 @@ import (
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
@@ -80,6 +82,7 @@ type xdsClusterArgs struct {
 	routeHostname     string
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
+	http3Settings     *ir.BackendHTTP3Settings
 	timeout           *ir.ClusterTimeout
 	tcpkeepalive      *ir.TCPKeepalive
 	metrics           *ir.Metrics
@@ -95,6 +98,9 @@ type xdsClusterArgs struct {
 	logger            logging.Logger
 	healthCheckLog    *ir.ProxyHealthCheckLog
 	isRoute           bool
+	// caIndex resolves name-only TLSCACertificate references in settings against the
+	// current xdsIR's CACertificates registry. Nil when the settings carry their bytes.
+	caIndex caCertificateIndex
 }
 
 type EndpointType int
@@ -313,6 +319,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	// Set Proxy Protocol
 	proxyProtocolEnabled := args.proxyProtocol != nil
+
 	if proxyProtocolEnabled {
 		cluster.TransportSocket = buildProxyProtocolSocket(args.proxyProtocol, args.tSocket, requiresAutoHTTPConfig)
 	} else if args.tSocket != nil {
@@ -354,8 +361,34 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.TransportSocket = dummyTransportSocket
 	}
 
-	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol)
+	// The gatewayapi translator only leaves HTTP3 on routes and clusters whose backends can
+	// use it, see ir.HTTP3Incompatibilities.
+	requiresHTTP3 := args.http3Settings != nil
+
+	// When HTTP/3 is on, every transport socket is wrapped in QuicUpstreamTransport, which
+	// supports both QUIC and plain TLS over TCP. Envoy checks the cluster-level socket, so a
+	// cluster whose TLS lives in the matches gets the dummy one wrapped.
+	if requiresHTTP3 {
+		if cluster.TransportSocket == nil {
+			cluster.TransportSocket = dummyTransportSocket
+		}
+		quicSocket, err := buildQuicUpstreamTransportSocket(cluster.TransportSocket)
+		if err != nil {
+			return nil, err
+		}
+		cluster.TransportSocket = quicSocket
+		for _, match := range cluster.TransportSocketMatches {
+			if match.TransportSocket, err = buildQuicUpstreamTransportSocket(match.TransportSocket); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	requiresHTTP1Options := args.http1Settings != nil
+
+	// build common, HTTP/1, HTTP/2 and HTTP/3 protocol options for cluster
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options,
+		requiresHTTP1Options, requiresAutoSNI, forceHTTP1UpstreamProtocol, requiresHTTP3)
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +521,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
 		var err error
-		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog)
+		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
+		upstreamNegotiated := requiresAutoHTTPConfig && !requiresHTTP2Options &&
+			!requiresHTTP1Options && !forceHTTP1UpstreamProtocol && !args.useClientProtocol
+		cluster.HealthChecks, err = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname, args.healthCheckLog,
+			args.settings, upstreamHTTP2, upstreamNegotiated)
 		if err != nil {
 			return nil, err
 		}
@@ -498,7 +535,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
 	}
 
-	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker, args.metrics)
 
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
@@ -625,10 +662,13 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 			MinSize: wrapperspb.UInt32(ptr.Deref(preferLocal.Force.MinEndpointsInZoneThreshold, 1)),
 		}
 	}
+	lbConfig.ZoneAwareLbConfig.FailTrafficOnPanic = ptr.Deref(preferLocal.FailTrafficOnPanic, false)
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog) ([]*corev3.HealthCheck, error) {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string, hcLog *ir.ProxyHealthCheckLog,
+	settings []*ir.DestinationSetting, upstreamHTTP2, upstreamNegotiated bool,
+) ([]*corev3.HealthCheck, error) {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -643,6 +683,9 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 	}
 	if healthcheck.HealthyThreshold != nil {
 		hc.HealthyThreshold = wrapperspb.UInt32(*healthcheck.HealthyThreshold)
+	}
+	if healthcheck.DisableConnectionReuse != nil {
+		hc.ReuseConnection = wrapperspb.Bool(!*healthcheck.DisableConnectionReuse)
 	}
 	switch {
 	case healthcheck.HTTP != nil:
@@ -659,6 +702,13 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
 		httpChecker.Send = buildHealthCheckPayload(healthcheck.HTTP.RequestBody)
+		hcProtocol := ptr.Deref(healthcheck.HTTP.Protocol, egv1a1.HTTPHealthCheckProtocolAuto)
+		httpChecker.CodecClientType = buildHealthCheckCodecClientType(hcProtocol, upstreamHTTP2)
+		// A cluster that negotiates its upstream protocol through ALPN lets its health
+		// checks negotiate theirs the same way, unless a protocol was configured explicitly.
+		hcNegotiate := upstreamNegotiated && hcProtocol == egv1a1.HTTPHealthCheckProtocolAuto
+		httpChecker.UseAlpnProtocol = hcNegotiate
+		hc.TlsOptions = buildHealthCheckTLSOptions(settings, httpChecker.CodecClientType, hcNegotiate)
 		hc.HealthChecker = &corev3.HealthCheck_HttpHealthCheck_{
 			HttpHealthCheck: httpChecker,
 		}
@@ -673,9 +723,12 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 			TcpHealthCheck: tcpChecker,
 		}
 	case healthcheck.GRPC != nil:
+		// Envoy always sends gRPC health check requests over HTTP/2.
+		hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2, false)
 		hc.HealthChecker = &corev3.HealthCheck_GrpcHealthCheck_{
 			GrpcHealthCheck: &corev3.HealthCheck_GrpcHealthCheck{
 				ServiceName: ptr.Deref(healthcheck.GRPC.Service, ""),
+				Authority:   grpcHealthCheckAuthority(healthcheck.GRPC, routeHostname),
 			},
 		}
 	}
@@ -705,9 +758,96 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 	return []*corev3.HealthCheck{hc}, nil
 }
 
+// buildHealthCheckCodecClientType returns the codec of HTTP health check requests.
+func buildHealthCheckCodecClientType(protocol egv1a1.HTTPHealthCheckProtocol, upstreamHTTP2 bool) xdstype.CodecClientType {
+	// The explicitly configured protocol.
+	switch protocol {
+	case egv1a1.HTTPHealthCheckProtocolHTTP1:
+		return xdstype.CodecClientType_HTTP1
+	case egv1a1.HTTPHealthCheckProtocolHTTP2:
+		return xdstype.CodecClientType_HTTP2
+	}
+
+	// The protocol is not explicitly configured, so the health check follows the protocol of the backend.
+	if upstreamHTTP2 {
+		return xdstype.CodecClientType_HTTP2
+	}
+	return xdstype.CodecClientType_HTTP1
+}
+
+// buildHealthCheckTLSOptions returns the ALPN protocols that health check connections to a
+// TLS backend offer, so that a probe negotiates the same protocol as data connections.
+//
+// When the backend configures no ALPN, the cluster TLS context has none, and data connections
+// get it from the connection pool instead, derived from the cluster protocol options: h2 and
+// http/1.1 for auto_config, the single protocol for an explicit config. Health check
+// connections are created outside the pool, so they would offer nothing. The list the pool
+// would offer is set here instead:
+//
+//   - h2 and http/1.1 for a cluster that negotiates its protocol, letting each endpoint pick
+//     the one it speaks, with use_alpn_protocol selecting the codec from the result.
+//   - Only the protocol of the codec for a pinned health check, so that an endpoint that
+//     speaks the other one fails the probe, as it would fail the requests to it.
+//
+// When a destination configures ALPN, a negotiating health check keeps it and nothing is set
+// for the cluster, so a destination without one offers nothing and falls back to HTTP/1.1.
+func buildHealthCheckTLSOptions(settings []*ir.DestinationSetting, codec xdstype.CodecClientType,
+	negotiate bool,
+) *corev3.HealthCheck_TlsOptions {
+	tls := false
+	for _, ds := range settings {
+		if ds == nil || ds.TLS == nil {
+			continue
+		}
+		// tls_options is one ALPN list for the whole cluster, so setting it overrides the
+		// ALPN of every destination. A health check that picks its protocol from ALPN keeps
+		// the ALPN a destination configures, as data connections do, so nothing is set when
+		// any destination has one. A health check with a fixed protocol must offer that
+		// protocol, so it is set regardless.
+		if negotiate && ds.TLS.ALPNProtocols != nil {
+			return nil
+		}
+		tls = true
+	}
+	if !tls {
+		return nil
+	}
+
+	h2, http11 := string(egv1a1.HTTPProtocolVersion2), string(egv1a1.HTTPProtocolVersion1_1)
+	switch {
+	case negotiate:
+		return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{h2, http11}}
+	// With use_alpn_protocol off, Envoy runs the configured codec no matter what ALPN
+	// negotiates, while the backend picks its protocol from the ALPN result. Offering
+	// only the codec's protocol is what keeps the two sides on the same one; offering
+	// nothing lands most backends on HTTP/1.1 and breaks an HTTP/2 probe.
+	case codec == xdstype.CodecClientType_HTTP2:
+		return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{h2}}
+	default:
+		return &corev3.HealthCheck_TlsOptions{AlpnProtocols: []string{http11}}
+	}
+}
+
 func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
 	if healthcheck.Host != "" {
 		return healthcheck.Host
+	}
+	return routeHostname
+}
+
+// grpcHealthCheckAuthority returns the value of the :authority header sent with
+// active gRPC health checks. When left empty, Envoy falls back to the name of
+// the cluster, which contains slashes and is therefore not a valid authority:
+// gRPC servers built on recent versions of golang.org/x/net reject it with a
+// PROTOCOL_ERROR, marking every endpoint as unhealthy.
+func grpcHealthCheckAuthority(healthcheck *ir.GRPCHealthChecker, routeHostname string) string {
+	if healthcheck.Authority != "" {
+		return healthcheck.Authority
+	}
+	// A wildcard route hostname is not a valid authority either, so it is no
+	// better a default than the cluster name.
+	if strings.HasPrefix(routeHostname, "*") {
+		return ""
 	}
 	return routeHostname
 }
@@ -721,7 +861,9 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 		od.SplitExternalLocalOriginErrors = *outlierDetection.SplitExternalLocalOriginErrors
 	}
 
-	if outlierDetection.MaxEjectionPercent != nil && *outlierDetection.MaxEjectionPercent > 0 {
+	// Preserve an explicitly configured 0% limit; only an unset value falls back to Envoy's
+	// 10% default.
+	if outlierDetection.MaxEjectionPercent != nil {
 		od.MaxEjectionPercent = wrapperspb.UInt32(*outlierDetection.MaxEjectionPercent)
 	}
 
@@ -800,7 +942,9 @@ func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_
 	return &hcp
 }
 
-func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
+func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker, metrics *ir.Metrics) *clusterv3.CircuitBreakers {
+	trackRemaining := metrics != nil && metrics.EnableCircuitBreakerRemainingStats
+
 	// Always allow the same amount of retries as regular requests to handle surges in retries
 	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
@@ -808,6 +952,7 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 		MaxRetries: &wrapperspb.UInt32Value{
 			Value: uint32(1024),
 		},
+		TrackRemaining: trackRemaining,
 	}
 	if circuitBreaker != nil {
 		cbt.RetryBudget = buildCircuitBreakerRetryBudget(circuitBreaker.RetryBudget)
@@ -1089,16 +1234,48 @@ func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
 }
 
 func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) string {
-	// If active HTTP health check has an explicit hostname override, keep that
+	// If the active health check has an explicit hostname override, keep that
 	// cluster-level host. Route hostname is only a default, so Backend endpoint
 	// hostname can still override it through EndpointHealthCheckConfig.
 	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" && hc.Active.HTTP.Host != "*" {
+		return ""
+	}
+	if hc.Active.GRPC != nil && hc.Active.GRPC.Authority != "" {
 		return ""
 	}
 	if ep == nil || ep.Hostname == nil {
 		return ""
 	}
 	return *ep.Hostname
+}
+
+// buildQuicUpstreamTransportSocket wraps an upstream TLS transport socket in a
+// QuicUpstreamTransport, which is how Envoy knows the cluster speaks QUIC. A QuicUpstreamTransport
+// supports both QUIC and plain TLS over TCP: its UpstreamTlsContext drives the QUIC handshake, and
+// when auto_config falls back to TCP, the same context builds the plain TLS over TCP sockets.
+func buildQuicUpstreamTransportSocket(tlsSocket *corev3.TransportSocket) (*corev3.TransportSocket, error) {
+	tlsCtx := &tlsv3.UpstreamTlsContext{}
+	if err := tlsSocket.GetTypedConfig().UnmarshalTo(tlsCtx); err != nil {
+		return nil, err
+	}
+	if tlsCtx.CommonTlsContext != nil {
+		// The ALPN list is dropped: Envoy would send it on the QUIC connection too, and QUIC only accepts h3.
+		// The Gateway API translator warns on the policy status when HTTP/3 drops a configured ALPN list.
+		tlsCtx.CommonTlsContext.AlpnProtocols = nil
+	}
+
+	quicCtx := &quicv3.QuicUpstreamTransport{UpstreamTlsContext: tlsCtx}
+	quicCtxAny, err := proto.ToAnyWithValidation(quicCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev3.TransportSocket{
+		Name: wellknown.TransportSocketQuic,
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: quicCtxAny,
+		},
+	}, nil
 }
 
 func hasTimeoutArgs(args *xdsClusterArgs) bool {
@@ -1111,12 +1288,16 @@ func hasTimeoutArgs(args *xdsClusterArgs) bool {
 		(!args.isRoute && timeout.MaxStreamDuration != nil) // Only set cluster-level maxStreamDuration for non-route clusters
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options,
+	requiresHTTP1Options, requiresAutoSNI, forceHTTP1UpstreamProtocol, requiresHTTP3 bool,
+) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresCommonHTTPOptions := hasTimeoutArgs(args) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
 
-	requiresHTTP1Options := args.http1Settings != nil &&
-		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
+	// Always uses HTTP/3 unconditionally; Auto only reaches for it once the backend has
+	// advertised support through alt-svc, and falls back to TCP otherwise.
+	alwaysHTTP3 := requiresHTTP3 && args.http3Settings.Mode == string(egv1a1.BackendHTTP3ModeAlways)
+	autoHTTP3 := requiresHTTP3 && !alwaysHTTP3
 
 	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
 		args.admissionControl != nil
@@ -1128,7 +1309,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
 		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI ||
-		forceHTTP1UpstreamProtocol || len(clusterHashPolicy) > 0
+		forceHTTP1UpstreamProtocol || requiresHTTP3 || len(clusterHashPolicy) > 0
 
 	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
@@ -1179,6 +1360,35 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
 					HttpProtocolOptions: http1Opts,
+				},
+			},
+		}
+	// HTTP/3 only, with no TCP fallback.
+	case alwaysHTTP3:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http3ProtocolOptions{
+					Http3ProtocolOptions: &corev3.Http3ProtocolOptions{},
+				},
+			},
+		}
+	// In Auto mode Envoy decides per request whether to use QUIC, based on the alt-svc cache named below:
+	//  1. A backend with no cache entry is dialed over TLS on TCP, with ALPN picking h2 or http/1.1.
+	//  2. A backend that supports HTTP/3 says so with an alt-svc header on that h2 or http/1.1
+	//     response. The alternate_protocols_cache filter on the listener stores it in the cache,
+	//     which is in memory only.
+	//  3. Once the cache says the backend advertises h3 on the dialed port, Envoy tries QUIC
+	//     first and opens a TCP connection too if QUIC has not connected within ~300ms.
+	// A backend that supports HTTP/3 but never sends alt-svc is never discovered and stays on
+	// TCP. Always mode skips the discovery and sends every request over QUIC.
+	case autoHTTP3:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_AutoConfig{
+			AutoConfig: &httpv3.HttpProtocolOptions_AutoHttpConfig{
+				HttpProtocolOptions:  http1Opts,
+				Http2ProtocolOptions: http2Opts,
+				Http3ProtocolOptions: &corev3.Http3ProtocolOptions{},
+				AlternateProtocolsCacheOptions: &corev3.AlternateProtocolsCacheOptions{
+					Name: alternateProtocolsCacheName(args),
 				},
 			},
 		}
@@ -1286,6 +1496,28 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 		filters = append(filters, upstreamCodec)
 	}
 	return filters, secrets, nil
+}
+
+// alternateProtocolsCacheName names the alt-svc cache after the cluster's set of backends, so
+// route rules with the same backends share one cache instead of each relearning the same
+// alt-svc advertisement. Rules with different backend sets get separate caches, which also
+// keeps dynamic resolver backends, with one origin per Host header, from evicting entries of
+// clusters that do not reach them. Entries are keyed by origin, so sharing is always safe.
+func alternateProtocolsCacheName(args *xdsClusterArgs) string {
+	backends := make([]string, 0, len(args.settings))
+	for _, ds := range args.settings {
+		if ds == nil || ds.Metadata == nil || ds.Metadata.Name == "" {
+			// Without backend metadata there is nothing stable to share on, so fall back to a
+			// cache private to this cluster.
+			return args.name
+		}
+		backends = append(backends, fmt.Sprintf("%s/%s/%s", ds.Metadata.Kind, ds.Metadata.Namespace, ds.Metadata.Name))
+	}
+	if len(backends) == 0 {
+		return args.name
+	}
+	sort.Strings(backends)
+	return utils.GetHashedName(strings.Join(backends, ","), 48)
 }
 
 func buildUpstreamCodecFilter() (*hcmv3.HttpFilter, error) {
@@ -1543,7 +1775,6 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		isRoute:           true,
 	}
 
-	// Populate traffic features.
 	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
 
 	return clusterArgs
@@ -1597,10 +1828,6 @@ func buildHTTP1Settings(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 					},
 				},
 			}
-		}
-		if opts.HTTP10 != nil {
-			http1Opts.AcceptHttp_10 = true
-			http1Opts.DefaultHostForHttp_10 = ptr.Deref(opts.HTTP10.DefaultHost, "")
 		}
 	}
 

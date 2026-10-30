@@ -6,8 +6,6 @@
 package registry
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -23,8 +21,7 @@ var _ extTypes.Manager = (*CompositeManager)(nil)
 type namedManager struct {
 	name            string
 	manager         extTypes.Manager
-	resourceGKSet   sets.Set[schema.GroupKind] // Resources + BackendResources GKs
-	policyGKSet     sets.Set[schema.GroupKind] // PolicyResources GKs
+	gkSets          extensionGKSets
 	cleanupHookConn func()
 }
 
@@ -151,11 +148,10 @@ func (c *CompositeManager) collectHookClients(
 		}
 		if client != nil {
 			entry := hookClientEntry{
-				name:          nm.name,
-				client:        client,
-				failOpen:      nm.manager.FailOpen(),
-				resourceGKSet: nm.resourceGKSet,
-				policyGKSet:   nm.policyGKSet,
+				name:     nm.name,
+				client:   client,
+				failOpen: nm.manager.FailOpen(),
+				gkSets:   nm.gkSets,
 			}
 			if includeTranslationConfig {
 				entry.translationConfig = nm.manager.GetTranslationHookConfig()
