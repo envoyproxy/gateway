@@ -324,6 +324,117 @@ func (x *PostTranslateExtensionContext) GetExtensionResources() []*ExtensionReso
 	return nil
 }
 
+// SecretExtensionContext identifies the secret reference being resolved. The referenced
+// resource is a kind registered in ExtensionManager.SecretResources; Envoy Gateway has
+// confirmed the reference is permitted and the resource exists. Whether it can be served is
+// the extension's decision.
+type SecretExtensionContext struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The secret resource that was referenced.
+	SecretResource *ExtensionResource `protobuf:"bytes,1,opt,name=secret_resource,json=secretResource,proto3" json:"secret_resource,omitempty"`
+	// The data plane the listener is translated for.
+	Proxy         *ProxyInfra `protobuf:"bytes,2,opt,name=proxy,proto3" json:"proxy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SecretExtensionContext) Reset() {
+	*x = SecretExtensionContext{}
+	mi := &file_proto_extension_context_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SecretExtensionContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SecretExtensionContext) ProtoMessage() {}
+
+func (x *SecretExtensionContext) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_extension_context_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SecretExtensionContext.ProtoReflect.Descriptor instead.
+func (*SecretExtensionContext) Descriptor() ([]byte, []int) {
+	return file_proto_extension_context_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SecretExtensionContext) GetSecretResource() *ExtensionResource {
+	if x != nil {
+		return x.SecretResource
+	}
+	return nil
+}
+
+func (x *SecretExtensionContext) GetProxy() *ProxyInfra {
+	if x != nil {
+		return x.Proxy
+	}
+	return nil
+}
+
+// ProxyInfra identifies the data plane by name and namespace.
+type ProxyInfra struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProxyInfra) Reset() {
+	*x = ProxyInfra{}
+	mi := &file_proto_extension_context_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProxyInfra) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProxyInfra) ProtoMessage() {}
+
+func (x *ProxyInfra) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_extension_context_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProxyInfra.ProtoReflect.Descriptor instead.
+func (*ProxyInfra) Descriptor() ([]byte, []int) {
+	return file_proto_extension_context_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ProxyInfra) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ProxyInfra) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
 // ExtensionResource stores the data for a K8s API object referenced in an HTTPRouteFilter
 // extensionRef. It is constructed from an unstructured.Unstructured marshalled to JSON. An extension
 // can marshal the bytes from this resource back into an unstructured.Unstructured and then
@@ -337,7 +448,7 @@ type ExtensionResource struct {
 
 func (x *ExtensionResource) Reset() {
 	*x = ExtensionResource{}
-	mi := &file_proto_extension_context_proto_msgTypes[6]
+	mi := &file_proto_extension_context_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -349,7 +460,7 @@ func (x *ExtensionResource) String() string {
 func (*ExtensionResource) ProtoMessage() {}
 
 func (x *ExtensionResource) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_extension_context_proto_msgTypes[6]
+	mi := &file_proto_extension_context_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -362,7 +473,7 @@ func (x *ExtensionResource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExtensionResource.ProtoReflect.Descriptor instead.
 func (*ExtensionResource) Descriptor() ([]byte, []int) {
-	return file_proto_extension_context_proto_rawDescGZIP(), []int{6}
+	return file_proto_extension_context_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ExtensionResource) GetUnstructuredBytes() []byte {
@@ -428,12 +539,27 @@ var file_proto_extension_context_proto_rawDesc = string([]byte{
 	0x79, 0x2e, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x2e, 0x45, 0x78, 0x74, 0x65,
 	0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x52, 0x12, 0x65,
 	0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
-	0x73, 0x22, 0x42, 0x0a, 0x11, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65,
-	0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x12, 0x2d, 0x0a, 0x12, 0x75, 0x6e, 0x73, 0x74, 0x72, 0x75,
-	0x63, 0x74, 0x75, 0x72, 0x65, 0x64, 0x5f, 0x62, 0x79, 0x74, 0x65, 0x73, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x0c, 0x52, 0x11, 0x75, 0x6e, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x64,
-	0x42, 0x79, 0x74, 0x65, 0x73, 0x42, 0x11, 0x5a, 0x0f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65,
-	0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x73, 0x22, 0xa6, 0x01, 0x0a, 0x16, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x45, 0x78, 0x74, 0x65,
+	0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x12, 0x52, 0x0a, 0x0f,
+	0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x5f, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x29, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61, 0x74,
+	0x65, 0x77, 0x61, 0x79, 0x2e, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x2e, 0x45,
+	0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
+	0x52, 0x0e, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
+	0x12, 0x38, 0x0a, 0x05, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x22, 0x2e, 0x65, 0x6e, 0x76, 0x6f, 0x79, 0x67, 0x61, 0x74, 0x65, 0x77, 0x61, 0x79, 0x2e, 0x65,
+	0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x2e, 0x50, 0x72, 0x6f, 0x78, 0x79, 0x49, 0x6e,
+	0x66, 0x72, 0x61, 0x52, 0x05, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x22, 0x3e, 0x0a, 0x0a, 0x50, 0x72,
+	0x6f, 0x78, 0x79, 0x49, 0x6e, 0x66, 0x72, 0x61, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1c, 0x0a, 0x09,
+	0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x09, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x22, 0x42, 0x0a, 0x11, 0x45, 0x78,
+	0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x12,
+	0x2d, 0x0a, 0x12, 0x75, 0x6e, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x64, 0x5f,
+	0x62, 0x79, 0x74, 0x65, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x11, 0x75, 0x6e, 0x73,
+	0x74, 0x72, 0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x64, 0x42, 0x79, 0x74, 0x65, 0x73, 0x42, 0x11,
+	0x5a, 0x0f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f,
+	0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -448,7 +574,7 @@ func file_proto_extension_context_proto_rawDescGZIP() []byte {
 	return file_proto_extension_context_proto_rawDescData
 }
 
-var file_proto_extension_context_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_extension_context_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_extension_context_proto_goTypes = []any{
 	(*PostRouteExtensionContext)(nil),        // 0: envoygateway.extension.PostRouteExtensionContext
 	(*PostVirtualHostExtensionContext)(nil),  // 1: envoygateway.extension.PostVirtualHostExtensionContext
@@ -456,20 +582,24 @@ var file_proto_extension_context_proto_goTypes = []any{
 	(*PostEndpointsExtensionContext)(nil),    // 3: envoygateway.extension.PostEndpointsExtensionContext
 	(*PostHTTPListenerExtensionContext)(nil), // 4: envoygateway.extension.PostHTTPListenerExtensionContext
 	(*PostTranslateExtensionContext)(nil),    // 5: envoygateway.extension.PostTranslateExtensionContext
-	(*ExtensionResource)(nil),                // 6: envoygateway.extension.ExtensionResource
+	(*SecretExtensionContext)(nil),           // 6: envoygateway.extension.SecretExtensionContext
+	(*ProxyInfra)(nil),                       // 7: envoygateway.extension.ProxyInfra
+	(*ExtensionResource)(nil),                // 8: envoygateway.extension.ExtensionResource
 }
 var file_proto_extension_context_proto_depIdxs = []int32{
-	6, // 0: envoygateway.extension.PostRouteExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
-	6, // 1: envoygateway.extension.PostRouteExtensionContext.extension_policies:type_name -> envoygateway.extension.ExtensionResource
-	6, // 2: envoygateway.extension.PostVirtualHostExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
-	6, // 3: envoygateway.extension.PostClusterExtensionContext.backend_extension_resources:type_name -> envoygateway.extension.ExtensionResource
-	6, // 4: envoygateway.extension.PostHTTPListenerExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
-	6, // 5: envoygateway.extension.PostTranslateExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	8, // 0: envoygateway.extension.PostRouteExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
+	8, // 1: envoygateway.extension.PostRouteExtensionContext.extension_policies:type_name -> envoygateway.extension.ExtensionResource
+	8, // 2: envoygateway.extension.PostVirtualHostExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
+	8, // 3: envoygateway.extension.PostClusterExtensionContext.backend_extension_resources:type_name -> envoygateway.extension.ExtensionResource
+	8, // 4: envoygateway.extension.PostHTTPListenerExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
+	8, // 5: envoygateway.extension.PostTranslateExtensionContext.extension_resources:type_name -> envoygateway.extension.ExtensionResource
+	8, // 6: envoygateway.extension.SecretExtensionContext.secret_resource:type_name -> envoygateway.extension.ExtensionResource
+	7, // 7: envoygateway.extension.SecretExtensionContext.proxy:type_name -> envoygateway.extension.ProxyInfra
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_proto_extension_context_proto_init() }
@@ -483,7 +613,7 @@ func file_proto_extension_context_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_extension_context_proto_rawDesc), len(file_proto_extension_context_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

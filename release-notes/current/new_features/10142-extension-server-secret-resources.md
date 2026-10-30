@@ -1,0 +1,1 @@
+Added support for listener TLS certificates via extension server using the `Secret` hook. A Gateway or ListenerSet listener's `tls.certificateRefs` can reference a kind registered in the Extension Manager's `secretResources`, and the extension server resolves it to the SDS secret config Envoy uses.
