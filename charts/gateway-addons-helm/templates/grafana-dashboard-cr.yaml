@@ -6,7 +6,7 @@ apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
   name: {{ $dashboardName | trunc 63 | trimSuffix "-" }}
-  namespace: {{ $.Release.Namespace }}
+  namespace: {{ $.Release.Namespace | quote }}
   {{- with $.Values.dashboard.labels }}
   labels: {{- . | toYaml | nindent 4 }}
   {{- end }}
