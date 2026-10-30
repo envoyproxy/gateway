@@ -52,6 +52,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches, httpRoute.CookieMatches),
 		Metadata: buildXdsMetadata(httpRoute.Metadata),
 	}
+	patchExtensionBackendMetadata(router, httpRoute)
 
 	if len(httpRoute.AddRequestHeaders) > 0 {
 		router.RequestHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddRequestHeaders)

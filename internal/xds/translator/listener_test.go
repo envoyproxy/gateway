@@ -12,11 +12,17 @@ import (
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 func Test_toNetworkFilter(t *testing.T) {
@@ -100,4 +106,231 @@ func Test_buildTCPProxyHashPolicy(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newExtensionCertificate(name string) ir.TLSCertificate {
+	obj := &unstructured.Unstructured{}
+	obj.SetAPIVersion("cert.example.io/v1alpha1")
+	obj.SetKind("ExampleCertificate")
+	obj.SetNamespace("default")
+	obj.SetName(name)
+	return ir.TLSCertificate{Name: name, ExtensionRef: &ir.UnstructuredRef{Object: obj}}
+}
+
+func newSecretCertificate() ir.TLSCertificate {
+	return ir.TLSCertificate{Name: "secret", Certificate: []byte("cert"), PrivateKey: []byte("key")}
+}
+
+func Test_allExtensionCertificatesUnresolved(t *testing.T) {
+	resolved := map[string]*tlsv3.SdsSecretConfig{"ext": {Name: "resolved"}}
+	tests := []struct {
+		name        string
+		tlsConfig   *ir.TLSConfig
+		resolutions map[string]*tlsv3.SdsSecretConfig
+		want        bool
+	}{
+		{
+			name:      "no TLS",
+			tlsConfig: nil,
+			want:      false,
+		},
+		{
+			name:      "no certificates",
+			tlsConfig: &ir.TLSConfig{},
+			want:      false,
+		},
+		{
+			name:      "secret certificate only",
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newSecretCertificate()}},
+			want:      false,
+		},
+		{
+			name: "secret certificate next to an unresolved extension certificate",
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{
+				newSecretCertificate(), newExtensionCertificate("ext"),
+			}},
+			want: false,
+		},
+		{
+			name:        "extension certificate resolved",
+			tlsConfig:   &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("ext")}},
+			resolutions: resolved,
+			want:        false,
+		},
+		{
+			name: "one of two extension certificates resolved",
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{
+				newExtensionCertificate("ext"), newExtensionCertificate("other"),
+			}},
+			resolutions: resolved,
+			want:        false,
+		},
+		{
+			name:        "extension certificate resolved to an empty name",
+			tlsConfig:   &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("ext")}},
+			resolutions: map[string]*tlsv3.SdsSecretConfig{"ext": {}},
+			want:        true,
+		},
+		{
+			name:      "extension certificate unresolved",
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("ext")}},
+			want:      true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, allExtensionCertificatesUnresolved(tt.tlsConfig, tt.resolutions))
+		})
+	}
+}
+
+func Test_buildXdsTLSCertSecret(t *testing.T) {
+	tests := []struct {
+		name       string
+		cert       ir.TLSCertificate
+		wantSecret bool
+	}{
+		{
+			name:       "secret certificate",
+			cert:       newSecretCertificate(),
+			wantSecret: true,
+		},
+		{
+			name:       "extension certificate carries no key material",
+			cert:       newExtensionCertificate("ext"),
+			wantSecret: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantSecret, buildXdsTLSCertSecret(&tt.cert) != nil)
+		})
+	}
+}
+
+// The success and refusal paths are covered by the extension-xds-ir golden tests. These cover the
+// failures, which fail translation and so have no golden output.
+func Test_resolveExtensionCertificates(t *testing.T) {
+	withTLSCertificateHook := buildExtensionManagerConfig(false)
+	failOpen := buildExtensionManagerConfig(true)
+	withoutTLSCertificateHook := buildExtensionManagerConfig(false)
+	withoutTLSCertificateHook.Hooks.XDSTranslator.Post = []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute}
+
+	tests := []struct {
+		name      string
+		extension *egv1a1.ExtensionManager
+		tlsConfig *ir.TLSConfig
+		wantErr   string
+	}{
+		{
+			name:      "no TLS needs no extension",
+			tlsConfig: nil,
+		},
+		{
+			name:      "secret certificate needs no extension",
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newSecretCertificate()}},
+		},
+		{
+			name:      "extension certificate without an extension manager",
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("ext")}},
+			wantErr:   "requires an extension server but none is configured",
+		},
+		{
+			name:      "extension certificate without the Secret hook",
+			extension: &withoutTLSCertificateHook,
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("ext")}},
+			wantErr:   "requires the Secret hook but no extension registered it",
+		},
+		{
+			name:      "extension server error",
+			extension: &withTLSCertificateHook,
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("error-cert")}},
+			wantErr:   "secret resolve error",
+		},
+		{
+			// failOpen does not apply to the Secret hook: the error still fails translation.
+			name:      "extension server error with failOpen",
+			extension: &failOpen,
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{newExtensionCertificate("error-cert")}},
+			wantErr:   "secret resolve error",
+		},
+		{
+			// A name-only reference must be in the IR's extension resources.
+			name:      "extension certificate referencing a resource not in the IR",
+			extension: &withTLSCertificateHook,
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{{
+				Name:         "ext",
+				ExtensionRef: &ir.UnstructuredRef{Name: "cert.example.io/examplecertificate/default/missing"},
+			}}},
+			wantErr: "which is not in the IR",
+		},
+		{
+			// A resolution to a secret Envoy Gateway provides itself is ignored, not an error.
+			name:      "resolution to a reserved secret is ignored",
+			extension: &withTLSCertificateHook,
+			tlsConfig: &ir.TLSConfig{Certificates: []ir.TLSCertificate{
+				newExtensionCertificate("reserved-xds_certificate"),
+				newExtensionCertificate("reserved-" + SystemTrustStoreSecretName),
+				newExtensionCertificate("reserved-envoy-gateway-system/envoy"),
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := &Translator{ControllerNamespace: "envoy-gateway-system"}
+			if tt.extension != nil {
+				extMgr, closeFunc, err := registry.NewInMemoryManager(tt.extension, &testingExtensionServer{})
+				require.NoError(t, err)
+				defer closeFunc()
+				tr.ExtensionManager = &extMgr
+			}
+
+			resolutions, err := tr.resolveExtensionCertificates(tt.tlsConfig)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Empty(t, resolutions)
+		})
+	}
+}
+
+func Test_isReservedSecretName(t *testing.T) {
+	tr := &Translator{ControllerNamespace: "envoy-gateway-system"}
+	tests := []struct {
+		name     string
+		sdsName  string
+		reserved bool
+	}{
+		{name: "xds client certificate", sdsName: "xds_certificate", reserved: true},
+		{name: "xds trusted CA", sdsName: "xds_trusted_ca", reserved: true},
+		{name: "service account token", sdsName: "jwt-sa-bearer", reserved: true},
+		{name: "envoy client certificate", sdsName: "envoy-gateway-system/envoy", reserved: true},
+		{name: "system trust store", sdsName: SystemTrustStoreSecretName, reserved: true},
+		{name: "envoy secret in another namespace", sdsName: "default/envoy", reserved: false},
+		{name: "name chosen by the extension", sdsName: "example-provider-cert", reserved: false},
+		{name: "listener certificate from a Secret", sdsName: "default/app-cert", reserved: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.reserved, tr.isReservedSecretName(tt.sdsName))
+		})
+	}
+}
+
+// The reserved bootstrap secret names must match the names the bootstrap gives Envoy.
+func Test_isReservedSecretName_matchesBootstrap(t *testing.T) {
+	tr := &Translator{}
+	cfg, err := bootstrap.GetRenderedBootstrapConfig(nil)
+	require.NoError(t, err)
+	nsModeCfg, err := bootstrap.GetRenderedBootstrapConfig(&bootstrap.RenderBootstrapConfigOptions{GatewayNamespaceMode: true})
+	require.NoError(t, err)
+
+	for _, name := range []string{"xds_certificate", "xds_trusted_ca"} {
+		assert.Contains(t, cfg, "name: "+name+"\n")
+		assert.True(t, tr.isReservedSecretName(name))
+	}
+	assert.Contains(t, nsModeCfg, "name: jwt-sa-bearer\n")
+	assert.True(t, tr.isReservedSecretName("jwt-sa-bearer"))
 }

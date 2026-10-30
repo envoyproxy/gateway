@@ -170,7 +170,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly;DropBackendRefsWithoutEndpoints
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly;OIDCTokenCookieChunking;DropBackendRefsWithoutEndpoints
 type RuntimeFlag string
 
 const (
@@ -209,6 +209,15 @@ const (
 	// to BackendTrafficPolicy.http1 for backend settings and enable this flag to opt in
 	// to the new behavior. This flag will be enabled by default in a future release.
 	ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly RuntimeFlag = "ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly"
+
+	// OIDCTokenCookieChunking splits an OIDC access, ID or refresh token too large for one
+	// browser cookie across several cookies, instead of the browser dropping it and the login
+	// looping back to the OIDC provider. It is enabled by default. Envoy Proxy older than v1.40
+	// can't read the split cookies, so a client that holds such a token in one cookie today, such
+	// as a non-browser client, is sent back to the OIDC provider when it reaches an older proxy.
+	// Disable this flag while proxies of an earlier Envoy Gateway release serve the same
+	// hostnames, for example during an upgrade.
+	OIDCTokenCookieChunking RuntimeFlag = "OIDCTokenCookieChunking"
 
 	// DropBackendRefsWithoutEndpoints excludes backendRefs without ready endpoints from an HTTPRoute
 	// or GRPCRoute rule when at least one other backendRef in the same rule is available, so the
@@ -430,6 +439,14 @@ type ExtensionAPISettings struct {
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.
 	EnableBackend bool `json:"enableBackend"`
+	// EnableExtensionBackends enables HTTP callout backend bindings declared in
+	// EnvoyExtensionPolicy for Lua, Wasm and dynamic modules.
+	// Disabled by default. Backend resources also require EnableBackend.
+	// Bindings can add destinations that Envoy contacts using its network
+	// access and any client certificate selected by the backend TLS configuration.
+	//
+	// +optional
+	EnableExtensionBackends bool `json:"enableExtensionBackends,omitempty"`
 	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
 	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
 	// This field is mutually exclusive with EnableLua.
@@ -747,6 +764,25 @@ type RateLimit struct {
 	// Telemetry defines telemetry configuration for RateLimit.
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+
+	// ServiceSettings holds configuration for the Envoy cluster that connects the proxies
+	// to the rate limit service, such as circuit breakers, timeouts and health checks.
+	//
+	// The rate limit service is a gRPC (HTTP/2) service reached over mTLS, with no
+	// associated route, so NOT all of the ClusterSettings fields are supported here.
+	// Fields are supported on a best-effort basis: a field that only applies to routes
+	// or to other protocols (e.g. timeout.http.streamIdleTimeout) may have no effect.
+	//
+	// Envoy Gateway fails to start if any of these known-unsupported fields are set:
+	//
+	//   - http1, http3 and proxyProtocol: the rate limit service only accepts gRPC over mTLS.
+	//   - healthCheck.active of type HTTP: the rate limit service only serves its HTTP
+	//     health endpoint in plaintext; use the GRPC or TCP type instead.
+	//   - timeout.http.requestTimeout: use RateLimit.Timeout instead.
+	//   - loadBalancer of type ConsistentHash: there is no route to compute the hash from.
+	//
+	// +optional
+	ServiceSettings *ClusterSettings `json:"serviceSettings,omitempty"`
 }
 
 type RateLimitTelemetry struct {
@@ -895,6 +931,15 @@ type ExtensionManager struct {
 	// +optional
 	BackendResources []GroupVersionKind `json:"backendResources,omitempty"`
 
+	// SecretResources defines the set of K8s resources the extension will handle as secret
+	// sources. These resources can be referenced in place of a Kubernetes Secret by group
+	// and kind, allowing Envoy to use a secret held by an external provider. Currently this
+	// covers a Gateway or ListenerSet listener's tls.certificateRefs; other secret consumers
+	// may be added over time.
+	//
+	// +optional
+	SecretResources []GroupVersionKind `json:"secretResources,omitempty"`
+
 	// Hooks defines the set of hooks the extension supports
 	//
 	// +kubebuilder:validation:Required
@@ -914,6 +959,8 @@ type ExtensionManager struct {
 	// When set to true, if the Extension Service hooks return an error, no changes will be applied to the
 	// source of the configuration which was sent to the extension server. The errors are ignored and the resulting
 	// xDS configuration is updated in the xDS snapshot.
+	//
+	// FailOpen does not apply to the Secret hook: its errors are never ignored.
 	//
 	// Default: false
 	//
@@ -1004,14 +1051,14 @@ type ExtensionService struct {
 
 	// Host define the extension service hostname.
 	//
-	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix). This field will be removed in v1.11.
 	//
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
 	//
-	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix). This field will be removed in v1.11.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

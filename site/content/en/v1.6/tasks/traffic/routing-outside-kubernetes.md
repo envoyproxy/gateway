@@ -165,4 +165,4 @@ curl -I -HHost:httpbin.org --resolve "httpbin.org:443:${GATEWAY_HOST}" https://h
 [Backend]: ../../api/extension_types#backend
 [Backend Task]: ./backend.md
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
-[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#tlsroute
+[TLSRoute]: {{<gateway-api-spec>}}#tlsroute

@@ -1,1 +1,0 @@
-Fixed an HTTPRoute or GRPCRoute rule with `sessionPersistence.sessionName: ""` producing an empty cookie or header name that Envoy rejects, which blocked the xDS update for the whole listener; such a rule is now rejected with reason `UnsupportedValue`.

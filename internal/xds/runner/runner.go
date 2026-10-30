@@ -13,6 +13,7 @@ import (
 	"net"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -102,6 +103,17 @@ type Runner struct {
 
 func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
+}
+
+// proxyInfraNameAndNamespace returns the ProxyInfra name and namespace for the xDS IR with the
+// given key.
+func proxyInfraNameAndNamespace(irKey, controllerNamespace string, gatewayNamespaceMode bool) (string, string) {
+	if gatewayNamespaceMode {
+		if namespace, name, ok := strings.Cut(irKey, "/"); ok {
+			return name, namespace
+		}
+	}
+	return irKey, controllerNamespace
 }
 
 func (r *Runner) Name() string {
@@ -316,8 +328,11 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				}
 			} else {
 				// Translate to xds resources
+				proxyInfraName, proxyInfraNamespace := proxyInfraNameAndNamespace(key, r.ControllerNamespace, r.EnvoyGateway.GatewayNamespaceMode())
 				t := &translator.Translator{
 					ControllerNamespace: r.ControllerNamespace,
+					ProxyInfraName:      proxyInfraName,
+					ProxyInfraNamespace: proxyInfraNamespace,
 					FilterOrder:         val.XdsIR.FilterOrder,
 					RuntimeFlags:        r.EnvoyGateway.RuntimeFlags,
 					Logger:              traceLogger,

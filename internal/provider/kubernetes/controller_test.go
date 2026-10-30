@@ -2304,6 +2304,7 @@ func TestProcessListenerSets(t *testing.T) {
 		gatewayNamespace string
 		expectXLSCount   int
 		expectSecretRef  bool
+		expectRefGrant   bool
 	}{
 		{
 			name: "matching gateway with TLS secret and XLS in same namespace",
@@ -2443,6 +2444,62 @@ func TestProcessListenerSets(t *testing.T) {
 		},
 
 		{
+			name: "matching gateway with extension secret ref in different namespace with valid ReferenceGrant",
+			xls: &gwapiv1.ListenerSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-xls",
+					Namespace: "xls",
+				},
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
+						Namespace: new(gwapiv1.Namespace("gateway")),
+					},
+					Listeners: []gwapiv1.ListenerEntry{
+						{
+							Name:     gwapiv1.SectionName("https"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8443),
+							TLS: &gwapiv1.ListenerTLSConfig{
+								Mode: new(gwapiv1.TLSModeTerminate),
+								CertificateRefs: []gwapiv1.SecretObjectReference{{
+									Group:     gatewayapi.GroupPtr("example.io"),
+									Kind:      gatewayapi.KindPtr("ExampleCertificate"),
+									Name:      gwapiv1.ObjectName("listener-cert"),
+									Namespace: new(gwapiv1.Namespace("secret")),
+								}},
+							},
+						},
+					},
+				},
+			},
+			referenceGrant: &gwapiv1b1.ReferenceGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "listenerset-to-cert",
+					Namespace: "secret",
+				},
+				Spec: gwapiv1b1.ReferenceGrantSpec{
+					From: []gwapiv1b1.ReferenceGrantFrom{
+						{
+							Group:     gwapiv1.Group(gwapiv1.GroupName),
+							Kind:      gwapiv1.Kind(resource.KindListenerSet),
+							Namespace: gwapiv1.Namespace("xls"),
+						},
+					},
+					To: []gwapiv1b1.ReferenceGrantTo{
+						{
+							Group: gwapiv1.Group("example.io"),
+							Kind:  gwapiv1.Kind("ExampleCertificate"),
+						},
+					},
+				},
+			},
+			gatewayNamespace: "gateway",
+			expectXLSCount:   1,
+			expectRefGrant:   true,
+		},
+
+		{
 			name: "matching gateway with TLS secret and XLS all in different namespaces",
 			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
@@ -2532,8 +2589,9 @@ func TestProcessListenerSets(t *testing.T) {
 				Build()
 
 			r := &gatewayAPIReconciler{
-				client: fakeClient,
-				log:    logger,
+				client:        fakeClient,
+				log:           logger,
+				extSecretGVKs: []schema.GroupVersionKind{{Group: "example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}},
 			}
 
 			resourceTree := resource.NewResources()
@@ -2549,6 +2607,10 @@ func TestProcessListenerSets(t *testing.T) {
 			require.Len(t, resourceTree.ListenerSets, tc.expectXLSCount)
 			if tc.expectSecretRef {
 				require.Contains(t, resourceTree.Secrets, tc.secret)
+			}
+			if tc.expectRefGrant {
+				require.Len(t, resourceTree.ReferenceGrants, 1)
+				require.Equal(t, tc.referenceGrant.Name, resourceTree.ReferenceGrants[0].Name)
 			}
 		})
 	}
@@ -2568,6 +2630,96 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 		WithIndex(&gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc).
 		Build()
 	return r
+}
+
+func TestProcessExtensionSecretRef(t *testing.T) {
+	certGVK := schema.GroupVersionKind{Group: "example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}
+	certRef := func(namespace string) gwapiv1.SecretObjectReference {
+		ref := gwapiv1.SecretObjectReference{
+			Group: gatewayapi.GroupPtr(certGVK.Group),
+			Kind:  gatewayapi.KindPtr(certGVK.Kind),
+			Name:  "app-cert",
+		}
+		if namespace != "" {
+			ref.Namespace = gatewayapi.NamespacePtr(namespace)
+		}
+		return ref
+	}
+	refGrant := func(fromKind string) *gwapiv1b1.ReferenceGrant {
+		return &gwapiv1b1.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "certs", Name: "allow-certs"},
+			Spec: gwapiv1b1.ReferenceGrantSpec{
+				From: []gwapiv1b1.ReferenceGrantFrom{{
+					Group:     gwapiv1.GroupName,
+					Kind:      gwapiv1.Kind(fromKind),
+					Namespace: "gateway",
+				}},
+				To: []gwapiv1b1.ReferenceGrantTo{{
+					Group: gwapiv1.Group(certGVK.Group),
+					Kind:  gwapiv1.Kind(certGVK.Kind),
+				}},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name      string
+		ref       gwapiv1.SecretObjectReference
+		grant     *gwapiv1b1.ReferenceGrant
+		wantGrant bool
+		wantErr   bool
+	}{
+		{
+			name:      "cross-namespace ref adds the matching grant",
+			ref:       certRef("certs"),
+			grant:     refGrant(resource.KindGateway),
+			wantGrant: true,
+		},
+		{
+			name:    "cross-namespace ref without a grant is an error",
+			ref:     certRef("certs"),
+			grant:   refGrant(resource.KindListenerSet),
+			wantErr: true,
+		},
+		{
+			name:  "same-namespace ref needs no grant",
+			ref:   certRef(""),
+			grant: refGrant(resource.KindGateway),
+		},
+		{
+			name: "unregistered kind is ignored",
+			ref: gwapiv1.SecretObjectReference{
+				Group:     gatewayapi.GroupPtr("other.example.io"),
+				Kind:      gatewayapi.KindPtr(certGVK.Kind),
+				Namespace: gatewayapi.NamespacePtr("certs"),
+				Name:      "app-cert",
+			},
+			grant: refGrant(resource.KindGateway),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := setupReferenceGrantReconciler([]client.Object{tc.grant})
+			r.extSecretGVKs = []schema.GroupVersionKind{certGVK}
+
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+			err := r.processExtensionSecretRef(t.Context(), resourceMap, resourceTree,
+				resource.KindGateway, "gateway", "gw", tc.ref)
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			if tc.wantGrant {
+				require.Len(t, resourceTree.ReferenceGrants, 1)
+				require.Equal(t, tc.grant.Name, resourceTree.ReferenceGrants[0].Name)
+			} else {
+				require.Empty(t, resourceTree.ReferenceGrants)
+			}
+		})
+	}
 }
 
 func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
@@ -2686,6 +2838,33 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 				refGrant("sp-tls-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTLSRoute),
 			},
 			expectedNames: sets.New("sp-gateway", "sp-listenerset", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
+		},
+		{
+			name: "ExtensionServerPolicy includes gateway, ListenerSet, and route target grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				policy := unstructured.Unstructured{}
+				policy.SetAPIVersion("foo.example.io/v1alpha1")
+				policy.SetKind("Bar")
+				policy.SetNamespace(policyNS)
+				policy.SetName("bar")
+				resourceTree.ExtensionServerPolicies = append(resourceTree.ExtensionServerPolicies, policy)
+			},
+			referenceGrants: func() []client.Object {
+				extGrant := func(name, namespace, fromGroup, fromKind, toKind string) *gwapiv1b1.ReferenceGrant {
+					rg := refGrant(name, namespace, fromKind, policyNS, gwapiv1.GroupName, toKind)
+					rg.Spec.From[0].Group = gwapiv1b1.Group(fromGroup)
+					return rg
+				}
+				return []client.Object{
+					extGrant("bar-gateway", gatewayNS, "foo.example.io", "Bar", resource.KindGateway),
+					extGrant("bar-listenerset", listenerSetNS, "foo.example.io", "Bar", resource.KindListenerSet),
+					extGrant("bar-route", routeNS, "foo.example.io", "Bar", resource.KindHTTPRoute),
+					extGrant("bar-tcp-route", routeNS, "foo.example.io", "Bar", resource.KindTCPRoute),
+					extGrant("bar-wrong-group", gatewayNS, "other.example.io", "Bar", resource.KindGateway),
+					extGrant("bar-wrong-kind", gatewayNS, "foo.example.io", "Baz", resource.KindGateway),
+				}
+			}(),
+			expectedNames: sets.New("bar-gateway", "bar-listenerset", "bar-route"),
 		},
 		{
 			name: "ignores non matching grants",

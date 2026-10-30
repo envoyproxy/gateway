@@ -8,6 +8,7 @@ package validation
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -83,18 +84,6 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	}
 
 	return nil
-}
-
-// WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
-func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
-	if eg == nil || eg.ExtensionAPIs == nil {
-		return nil
-	}
-	var warnings []string
-	if eg.ExtensionAPIs.DisableLua != nil {
-		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
-	}
-	return warnings
 }
 
 func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {
@@ -291,7 +280,11 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 
 	if len(eg.ExtensionManagers) > 0 {
 		names := make(map[string]struct{})
-		for i, em := range eg.ExtensionManagers {
+		// The Secret hook calls only the extension that registered a secret kind, and certificate
+		// refs carry no version, so a group and kind may be registered by one extension only.
+		secretKindOwners := make(map[string]string)
+		for i := range eg.ExtensionManagers {
+			em := &eg.ExtensionManagers[i]
 			if em.Name == "" {
 				return fmt.Errorf("extension manager at index %d: name is required", i)
 			}
@@ -299,8 +292,15 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 				return fmt.Errorf("extension manager at index %d: duplicate name %q", i, em.Name)
 			}
 			names[em.Name] = struct{}{}
-			if err := validateEnvoyGatewayExtensionManager(&eg.ExtensionManagers[i]); err != nil {
+			if err := validateEnvoyGatewayExtensionManager(em); err != nil {
 				return fmt.Errorf("extension manager %q: %w", em.Name, err)
+			}
+			for _, rsrc := range em.SecretResources {
+				groupKind := rsrc.Group + "/" + rsrc.Kind
+				if owner, exists := secretKindOwners[groupKind]; exists && owner != em.Name {
+					return fmt.Errorf("extension manager %q: secret kind %s is already registered by %q", em.Name, groupKind, owner)
+				}
+				secretKindOwners[groupKind] = em.Name
 			}
 		}
 		return nil
@@ -320,6 +320,11 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 
 	if len(extensionManager.Hooks.XDSTranslator.Pre) == 0 && len(extensionManager.Hooks.XDSTranslator.Post) == 0 {
 		return fmt.Errorf("registered extension has no hooks specified")
+	}
+
+	if len(extensionManager.SecretResources) > 0 &&
+		!slices.Contains(extensionManager.Hooks.XDSTranslator.Post, egv1a1.XDSSecret) {
+		return fmt.Errorf("secretResources requires the %s hook to be registered", egv1a1.XDSSecret)
 	}
 
 	err := validateExtensionService(extensionManager.Service)
