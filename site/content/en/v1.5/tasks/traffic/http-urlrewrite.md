@@ -694,6 +694,6 @@ You can see that the host is rewritten from `host.header.rewrite.example`, to th
 `x-custom-host` header `foo`. The original host header is preserved in the `X-Forwarded-Host` header.
 
 
-[HTTPURLRewriteFilter]: {{< gateway-api-spec >}}#httpurlrewritefilter
+[HTTPURLRewriteFilter]: {{<gateway-api-spec>}}#httpurlrewritefilter
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
 [RE2]: https://github.com/google/re2/wiki/Syntax

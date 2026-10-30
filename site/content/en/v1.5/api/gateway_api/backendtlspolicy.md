@@ -137,10 +137,10 @@ Status defines the observed state of the BackendTLSPolicy and is not user-config
 way you do for other Gateway API objects to verify correct operation.  Note that the status in BackendTLSPolicy
 uses `PolicyAncestorStatus` to allow you to know which parentReference set that particular status.
 
-[backendtlspolicy]: {{< gateway-api-spec >}}#backendtlspolicy
-[validation]: {{< gateway-api-spec >}}#backendtlspolicyvalidation
-[caCertificateRefs]: {{< gateway-api-spec >}}#localobjectreference
-[wellKnownCACertificates]: {{< gateway-api-spec >}}#wellknowncacertificatestype
-[hostname]: {{< gateway-api-spec >}}#precisehostname
+[backendtlspolicy]: {{<gateway-api-spec>}}#backendtlspolicy
+[validation]: {{<gateway-api-spec>}}#backendtlspolicyvalidation
+[caCertificateRefs]: {{<gateway-api-spec>}}#localobjectreference
+[wellKnownCACertificates]: {{<gateway-api-spec>}}#wellknowncacertificatestype
+[hostname]: {{<gateway-api-spec>}}#precisehostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[targetRefs]: {{< gateway-api-spec >}}#localpolicytargetreferencewithsectionname
+[targetRefs]: {{<gateway-api-spec>}}#localpolicytargetreferencewithsectionname

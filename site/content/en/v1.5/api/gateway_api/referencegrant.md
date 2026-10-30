@@ -90,7 +90,7 @@ While the API is simplistic in nature, it comes with a few notable decisions:
    other. This makes it impossible for them to conflict with each other.
 
 Please see the [API
-Specification]({{< gateway-api-spec >}}#referencegrant)
+Specification]({{<gateway-api-spec>}}#referencegrant)
 for more details on how specific ReferenceGrant fields are interpreted.
 
 ## Implementation Guidelines

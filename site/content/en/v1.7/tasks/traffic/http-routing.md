@@ -396,4 +396,4 @@ The HTTP traffic will not be routed and a `404` should be returned.
 [GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
-[spec]: {{< gateway-api-spec >}}#httproutespec
+[spec]: {{<gateway-api-spec>}}#httproutespec

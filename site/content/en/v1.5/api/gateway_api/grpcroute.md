@@ -368,12 +368,12 @@ Multiple GRPCRoutes can be attached to a single Gateway resource. Importantly,
 only one Route rule may match each request. For more information on how conflict
 resolution applies to merging, refer to the [API specification][grpcrouterule].
 
-[grpcroute]: {{< gateway-api-spec >}}#grpcroute
-[grpcrouterule]: {{< gateway-api-spec >}}#grpcrouterule
-[hostname]: {{< gateway-api-spec >}}#hostname
+[grpcroute]: {{<gateway-api-spec>}}#grpcroute
+[grpcrouterule]: {{<gateway-api-spec>}}#grpcrouterule
+[hostname]: {{<gateway-api-spec>}}#hostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[matches]: {{< gateway-api-spec >}}#grpcroutematch
-[filters]: {{< gateway-api-spec >}}#grpcroutefilter
-[backendRef]: {{< gateway-api-spec >}}#grpcbackendref
-[parentRef]: {{< gateway-api-spec >}}#parentref
-[name]: {{< gateway-api-spec >}}#sectionname
+[matches]: {{<gateway-api-spec>}}#grpcroutematch
+[filters]: {{<gateway-api-spec>}}#grpcroutefilter
+[backendRef]: {{<gateway-api-spec>}}#grpcbackendref
+[parentRef]: {{<gateway-api-spec>}}#parentref
+[name]: {{<gateway-api-spec>}}#sectionname

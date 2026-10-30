@@ -523,4 +523,4 @@ $ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}/get"
 ```
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
-[backendRefs]: {{< gateway-api-spec >}}#backendref
+[backendRefs]: {{<gateway-api-spec>}}#backendref

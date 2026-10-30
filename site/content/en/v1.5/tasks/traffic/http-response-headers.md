@@ -442,4 +442,4 @@ spec:
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: {{< gateway-api-spec >}}#httpheaderfilter
+[req_filter]: {{<gateway-api-spec>}}#httpheaderfilter

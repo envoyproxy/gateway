@@ -96,25 +96,25 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 
 [system design]: /community/design/system-design
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[GatewayClass]: {{< gateway-api-spec >}}#gatewayclass
-[parameters reference]: {{< gateway-api-spec >}}#parametersreference
-[Gateway]: {{< gateway-api-spec >}}#gateway
-[HTTPRoute]: {{< gateway-api-spec >}}#httproute
+[GatewayClass]: {{<gateway-api-spec>}}#gatewayclass
+[parameters reference]: {{<gateway-api-spec>}}#parametersreference
+[Gateway]: {{<gateway-api-spec>}}#gateway
+[HTTPRoute]: {{<gateway-api-spec>}}#httproute
 [Service]: https://kubernetes.io/docs/concepts/services-networking/service/
-[BackendRef]: {{< gateway-api-spec >}}#backendref
-[HTTPBackendRef]: {{< gateway-api-spec >}}#httpbackendref
-[TCPRoute]: {{< gateway-api-spec >}}#tcproute
-[UDPRoute]: {{< gateway-api-spec >}}#udproute
-[GRPCRoute]: {{< gateway-api-spec >}}#grpcroute
-[GRPCBackendRef]: {{< gateway-api-spec >}}#grpcbackendref
+[BackendRef]: {{<gateway-api-spec>}}#backendref
+[HTTPBackendRef]: {{<gateway-api-spec>}}#httpbackendref
+[TCPRoute]: {{<gateway-api-spec>}}#tcproute
+[UDPRoute]: {{<gateway-api-spec>}}#udproute
+[GRPCRoute]: {{<gateway-api-spec>}}#grpcroute
+[GRPCBackendRef]: {{<gateway-api-spec>}}#grpcbackendref
 [gRPC]: https://grpc.io/
-[TLSRoute]: {{< gateway-api-spec >}}#tlsroute
-[ReferenceGrant]: {{< gateway-api-spec >}}#referencegrant
-[SecretObjectReference]: {{< gateway-api-spec >}}#secretobjectreference
+[TLSRoute]: {{<gateway-api-spec>}}#tlsroute
+[ReferenceGrant]: {{<gateway-api-spec>}}#referencegrant
+[SecretObjectReference]: {{<gateway-api-spec>}}#secretobjectreference
 [rate limiting]: /community/design/rate-limit
 [request authentication]: ../security/jwt-authentication
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [resolving conflicts]: https://gateway-api.sigs.k8s.io/guides/api-design/?h=conflict#conflicts
-[ExtensionRefs]: {{< gateway-api-spec >}}#httproutefiltertype
-[grpc-filter]: {{< gateway-api-spec >}}#grpcroutefilter
-[http-filter]: {{< gateway-api-spec >}}#httproutefilter
+[ExtensionRefs]: {{<gateway-api-spec>}}#httproutefiltertype
+[grpc-filter]: {{<gateway-api-spec>}}#grpcroutefilter
+[http-filter]: {{<gateway-api-spec>}}#httproutefilter

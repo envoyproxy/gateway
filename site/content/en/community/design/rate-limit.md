@@ -429,12 +429,12 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
   * A Status field within the RateLimitFilter API will be added to reflect whether the specific configuration was programmed correctly in these multiple locations or not.
 
 [PolicyAttachment]: https://gateway-api.sigs.k8s.io/reference/policy-attachment/
-[HTTPRoute]: {{< gateway-api-spec >}}#httproute
-[HTTPRouteRule]: {{< gateway-api-spec >}}#httprouteRule
-[HTTPBackendRef]: {{< gateway-api-spec >}}#httpbackendref
-[matches]: {{< gateway-api-spec >}}#httprouteMatch
-[rule]: {{< gateway-api-spec >}}#httprouteMatch
-[extensionRef]: {{< gateway-api-spec >}}#httproutefiltertype
+[HTTPRoute]: {{<gateway-api-spec>}}#httproute
+[HTTPRouteRule]: {{<gateway-api-spec>}}#httprouteRule
+[HTTPBackendRef]: {{<gateway-api-spec>}}#httpbackendref
+[matches]: {{<gateway-api-spec>}}#httprouteMatch
+[rule]: {{<gateway-api-spec>}}#httprouteMatch
+[extensionRef]: {{<gateway-api-spec>}}#httproutefiltertype
 [IP subnet]: https://en.wikipedia.org/wiki/Subnetwork
 [Actions]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-ratelimit-action
 [descriptors]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rate_limit_filter.html?highlight=descriptor#example-1

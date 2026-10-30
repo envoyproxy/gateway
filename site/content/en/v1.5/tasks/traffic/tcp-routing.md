@@ -478,7 +478,7 @@ Content-Length: 267
 
 You can see that the traffic routing to `bar` service when sending request to `8089` port.
 
-[TCPRoute]: {{< gateway-api-spec >}}#tcproute
+[TCPRoute]: {{<gateway-api-spec>}}#tcproute
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/

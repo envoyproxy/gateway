@@ -377,5 +377,5 @@ spec:
 
 [Issue 31]: https://github.com/envoyproxy/gateway/issues/31
 [EnvoyProxy]: ../../latest/api/extension_types#envoyproxy
-[GatewayClass]: {{< gateway-api-spec >}}#gatewayclass
-[parametersRef]: {{< gateway-api-spec >}}#parametersreference
+[GatewayClass]: {{<gateway-api-spec>}}#gatewayclass
+[parametersRef]: {{<gateway-api-spec>}}#parametersreference

@@ -104,26 +104,26 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 
 [system design]: /community/design/system-design
 [Gateway API]: https://gateway-api.sigs.k8s.io/
-[GatewayClass]: {{< gateway-api-spec >}}#gatewayclass
-[parameters reference]: {{< gateway-api-spec >}}#ParametersReference
-[Gateway]: {{< gateway-api-spec >}}#Gateway
-[HTTPRoute]: {{< gateway-api-spec >}}#HTTPRoute
+[GatewayClass]: {{<gateway-api-spec>}}#gatewayclass
+[parameters reference]: {{<gateway-api-spec>}}#ParametersReference
+[Gateway]: {{<gateway-api-spec>}}#Gateway
+[HTTPRoute]: {{<gateway-api-spec>}}#HTTPRoute
 [Service]: https://kubernetes.io/docs/concepts/services-networking/service/
-[BackendRef]: {{< gateway-api-spec >}}#BackendRef
-[HTTPBackendRef]: {{< gateway-api-spec >}}#HTTPBackendRef
-[TCPRoute]: {{< gateway-api-spec >}}#gateway.networking.k8s.io/v1alpha2.TCPRoute
-[UDPRoute]: {{< gateway-api-spec >}}#gateway.networking.k8s.io/v1alpha2.UDPRoute
-[GRPCRoute]: {{< gateway-api-spec >}}#gateway.networking.k8s.io/v1alpha2.GRPCRoute
-[GRPCBackendRef]: {{< gateway-api-spec >}}#GRPCBackendRef
+[BackendRef]: {{<gateway-api-spec>}}#BackendRef
+[HTTPBackendRef]: {{<gateway-api-spec>}}#HTTPBackendRef
+[TCPRoute]: {{<gateway-api-spec>}}#gateway.networking.k8s.io/v1alpha2.TCPRoute
+[UDPRoute]: {{<gateway-api-spec>}}#gateway.networking.k8s.io/v1alpha2.UDPRoute
+[GRPCRoute]: {{<gateway-api-spec>}}#gateway.networking.k8s.io/v1alpha2.GRPCRoute
+[GRPCBackendRef]: {{<gateway-api-spec>}}#GRPCBackendRef
 [gRPC]: https://grpc.io/
-[TLSRoute]: {{< gateway-api-spec >}}#tlsroute
-[ReferenceGrant]: {{< gateway-api-spec >}}#gateway.networking.k8s.io/v1alpha2.ReferenceGrant
-[SecretObjectReference]: {{< gateway-api-spec >}}#SecretObjectReference
+[TLSRoute]: {{<gateway-api-spec>}}#tlsroute
+[ReferenceGrant]: {{<gateway-api-spec>}}#gateway.networking.k8s.io/v1alpha2.ReferenceGrant
+[SecretObjectReference]: {{<gateway-api-spec>}}#SecretObjectReference
 [rate limiting]: /community/design/rate-limit
 [request authentication]: ../tasks/security/jwt-authentication
 [EnvoyProxy]: ../api/extension_types#envoyproxy
 [resolving conflicts]: https://gateway-api.sigs.k8s.io/guides/api-design/?h=conflict#conflicts
-[ExtensionRefs]: {{< gateway-api-spec >}}#HTTPRouteFilterType
-[grpc-filter]: {{< gateway-api-spec >}}#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter
-[http-filter]: {{< gateway-api-spec >}}#HTTPRouteFilter
+[ExtensionRefs]: {{<gateway-api-spec>}}#HTTPRouteFilterType
+[grpc-filter]: {{<gateway-api-spec>}}#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter
+[http-filter]: {{<gateway-api-spec>}}#HTTPRouteFilter
 [HTTPRouteFilter]: ../api/extension_types#httproutefilter

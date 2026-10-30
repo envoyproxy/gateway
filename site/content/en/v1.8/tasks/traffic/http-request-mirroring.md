@@ -440,5 +440,5 @@ spec:
 
 [Traffic Splitting]: ../http-traffic-splitting/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
-[backendRefs]: {{< gateway-api-spec >}}#backendref
-[HTTPRequestMirrorFilter]: {{< gateway-api-spec >}}#httprequestmirrorfilter
+[backendRefs]: {{<gateway-api-spec>}}#backendref
+[HTTPRequestMirrorFilter]: {{<gateway-api-spec>}}#httprequestmirrorfilter

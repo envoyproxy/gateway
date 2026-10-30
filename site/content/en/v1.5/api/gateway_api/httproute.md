@@ -471,14 +471,14 @@ only one Route rule may match each request. For more information on how conflict
 resolution applies to merging, refer to the [API specification][httprouterule].
 
 
-[httproute]: {{< gateway-api-spec >}}#httproute
-[httprouterule]: {{< gateway-api-spec >}}#httprouterule
-[hostname]: {{< gateway-api-spec >}}#hostname
+[httproute]: {{<gateway-api-spec>}}#httproute
+[httprouterule]: {{<gateway-api-spec>}}#httprouterule
+[hostname]: {{<gateway-api-spec>}}#hostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[matches]: {{< gateway-api-spec >}}#httproutematch
-[filters]: {{< gateway-api-spec >}}#httproutefilter
-[backendRef]: {{< gateway-api-spec >}}#httpbackendref
-[parentRef]: {{< gateway-api-spec >}}#parentref
-[timeouts]: {{< gateway-api-spec >}}#httproutetimeouts
+[matches]: {{<gateway-api-spec>}}#httproutematch
+[filters]: {{<gateway-api-spec>}}#httproutefilter
+[backendRef]: {{<gateway-api-spec>}}#httpbackendref
+[parentRef]: {{<gateway-api-spec>}}#parentref
+[timeouts]: {{<gateway-api-spec>}}#httproutetimeouts
 [appProtocol]: https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol
-[sectionName]: {{< gateway-api-spec >}}#sectionname
+[sectionName]: {{<gateway-api-spec>}}#sectionname

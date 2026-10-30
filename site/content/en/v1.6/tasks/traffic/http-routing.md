@@ -300,4 +300,4 @@ The request should return the pod name, for example `bar-backend-6688b8944c-s8ht
 [GatewayClass]: https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
-[spec]: {{< gateway-api-spec >}}#httproutespec
+[spec]: {{<gateway-api-spec>}}#httproutespec
