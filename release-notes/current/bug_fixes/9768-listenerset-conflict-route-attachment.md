@@ -1,1 +1,0 @@
-Fixed HTTPRoutes attached to a listener that won a hostname conflict being rejected with `NoMatchingListenerHostname` and omitted from xDS by excluding conflict-losing listeners from route hostname filtering.

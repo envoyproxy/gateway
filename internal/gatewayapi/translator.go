@@ -25,6 +25,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -123,6 +124,11 @@ type Translator struct {
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
 
+	// RateLimitClusterSettings holds the settings of the rate limit service cluster,
+	// as configured on EnvoyGateway.RateLimit.ServiceSettings. The CRD schema defaults are
+	// expected to be applied already, see config.ApplyEnvoyGatewaySchemaDefaults.
+	RateLimitClusterSettings *egv1a1.ClusterSettings
+
 	// EndpointRoutingDisabled can be set to true to use
 	// the Service Cluster IP for routing to the backend
 	// instead.
@@ -156,11 +162,18 @@ type Translator struct {
 	// apply to client connections only and no longer seed backend HTTP/1 protocol settings.
 	CTPHTTP1ClientScopeOnly bool
 
+	// OIDCTokenCookieChunkingDisabled stops the OIDC filter from splitting a token
+	// too large for one cookie across several cookies.
+	OIDCTokenCookieChunkingDisabled bool
+
 	// LuaEnvoyExtensionPolicyDisabled when the Lua EnvoyExtensionPolicy feature is disabled.
 	LuaEnvoyExtensionPolicyDisabled bool
 
 	// BackendEnabled when the Backend feature is enabled.
 	BackendEnabled bool
+
+	// ExtensionBackendsEnabled allows EnvoyExtensionPolicy HTTP callout backend bindings.
+	ExtensionBackendsEnabled bool
 
 	// SDSSecretRefEnabled is true if EnvoyProxy can reference SDS secrets using the sds-ref type Secret.
 	// This could be enabled by Envoy Gateway configuration.
@@ -170,6 +183,11 @@ type Translator struct {
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
+
+	// ExtensionSecretGroupKinds stores the group/kind for resources registered in
+	// ExtensionManager.SecretResources. A listener's tls.certificateRefs may
+	// reference these kinds.
+	ExtensionSecretGroupKinds []schema.GroupKind
 
 	// ControllerNamespace is the namespace that Envoy Gateway controller runs in.
 	ControllerNamespace string
@@ -599,10 +617,11 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
+			var patchedFields []string
 			if t.EnvoyProxyPatchDisabled {
-				status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
+				patchedFields = disabledPatchFieldsUsedInEnvoyProxy(ep)
 			}
+			status.SetEnvoyProxyWarnings(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep), patchedFields)
 		}
 	}
 
@@ -678,10 +697,13 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if gCtx.envoyProxyForGateway != nil {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
+				// ep may be merged over the GatewayClass EnvoyProxy and the default spec, whose
+				// deprecated fields are reported on their own, so only scan the Gateway's own spec.
+				var patchedFields []string
 				if t.EnvoyProxyPatchDisabled {
-					status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
+					patchedFields = disabledPatchFieldsUsedInEnvoyProxy(ep)
 				}
+				status.SetEnvoyProxyWarnings(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(envoyproxyMap[key]), patchedFields)
 			}
 		}
 
@@ -712,12 +734,9 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 	return nil
 }
 
-func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
-	deprecatedFields := make(map[string]string)
-	if ep.Spec.LuaValidation != nil {
-		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
-	}
-
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
+	deprecation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
 	return deprecatedFields
 }
 

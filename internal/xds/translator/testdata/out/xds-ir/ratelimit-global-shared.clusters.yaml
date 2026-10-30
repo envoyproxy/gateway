@@ -167,6 +167,8 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
       commonTlsContext:
+        alpnProtocols:
+        - h2
         tlsCertificateSdsSecretConfigs:
         - name: envoy-gateway-system/envoy
           sdsConfig:

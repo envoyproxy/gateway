@@ -51,7 +51,8 @@ var (
 	ErrTLSSDSSecretNameEmpty                    = errors.New("field SDS SecretName must be specified")
 	ErrTLSSDSSchemeEmpty                        = errors.New("field SDS Scheme must be specified")
 	ErrTLSSDSAddressEmpty                       = errors.New("field SDS Address must be specified")
-	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS or inline certificate fields may be specified")
+	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS, ExtensionRef or inline certificate fields may be specified")
+	ErrTLSExtensionRefEmpty                     = errors.New("field ExtensionRef Object or Name must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
@@ -94,6 +95,7 @@ var (
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
 	ErrBackendClusterMergedDynamicResolver      = errors.New("a BackendCluster must not be a dynamic resolver")
 	ErrBackendClusterRefNotFound                = errors.New("field BackendClusterRefs references a BackendCluster name that does not exist")
+	ErrExtensionBackendRefNotFound              = errors.New("field Backends references an ExtensionBackend name that does not exist")
 
 	redacted = []byte("[redacted]")
 )
@@ -193,6 +195,9 @@ type Xds struct {
 	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
 	// source of truth for a cluster's Settings/Metadata.
 	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
+	// ExtensionBackends holds callout destinations once per generated cluster name.
+	// Routes reference these definitions through EnvoyExtensionFeatures.Backends.
+	ExtensionBackends []*ExtensionBackend `json:"extensionBackends,omitempty" yaml:"extensionBackends,omitempty"`
 	// ExtensionResources holds extension-introduced resources deduplicated into a single shared
 	// entry, keyed by their Name. Other IR fields reference these via UnstructuredRef.Name instead
 	// of embedding Object.
@@ -232,6 +237,35 @@ func (x *Xds) Validate() error {
 	}
 	if err := x.validateBackendClusterRefs(); err != nil {
 		errs = errors.Join(errs, err)
+	}
+	if err := x.validateExtensionBackends(); err != nil {
+		errs = errors.Join(errs, err)
+	}
+	return errs
+}
+
+// Routes store backend names instead of definitions. Check that the names resolve
+// before publishing the IR, so missing definitions cannot reach extension callouts.
+func (x *Xds) validateExtensionBackends() error {
+	names := make(map[string]struct{}, len(x.ExtensionBackends))
+	var errs error
+	for _, backend := range x.ExtensionBackends {
+		names[backend.Name] = struct{}{}
+		if err := backend.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, listener := range x.HTTP {
+		for _, route := range listener.Routes {
+			if route.EnvoyExtensions == nil {
+				continue
+			}
+			for alias, name := range route.EnvoyExtensions.Backends {
+				if _, ok := names[name]; !ok {
+					errs = errors.Join(errs, fmt.Errorf("%w: route %s alias %s: %s", ErrExtensionBackendRefNotFound, route.Name, alias, name))
+				}
+			}
+		}
 	}
 	return errs
 }
@@ -557,6 +591,10 @@ type TLSCertificate struct {
 	Name string `json:"name" yaml:"name"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
+	// ExtensionRef holds the custom resource this certificate was resolved from, for a
+	// kind registered in ExtensionManager.SecretResources. How Envoy obtains the
+	// certificate is decided by the extension server via the Secret hook.
+	ExtensionRef *UnstructuredRef `json:"extensionRef,omitempty" yaml:"extensionRef,omitempty"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
@@ -661,6 +699,18 @@ type SubjectAltName struct {
 
 func (t *TLSCertificate) Validate() error {
 	var errs error
+	if t.SDS != nil && t.ExtensionRef != nil {
+		return errors.Join(errs, ErrTLSCertificateMultipleSources)
+	}
+	if t.ExtensionRef != nil {
+		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
+			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
+		}
+		if t.ExtensionRef.Object == nil && t.ExtensionRef.Name == "" {
+			errs = errors.Join(errs, ErrTLSExtensionRefEmpty)
+		}
+		return errs
+	}
 	if t.SDS != nil {
 		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
 			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
@@ -1115,6 +1165,8 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// Credentials to be injected into the request.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// GRPCJSONTranscoder defines the gRPC-JSON transcoding configuration for this route.
+	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty" yaml:"grpcJSONTranscoder,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
@@ -1402,6 +1454,8 @@ type SecurityFeatures struct {
 // EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
 // +k8s:deepcopy-gen=true
 type EnvoyExtensionFeatures struct {
+	// Backends maps extension aliases to cluster names in Xds.ExtensionBackends.
+	Backends map[string]string `json:"backends,omitempty" yaml:"backends,omitempty"`
 	// External Processing extensions
 	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
 	// Wasm extensions
@@ -1410,6 +1464,13 @@ type EnvoyExtensionFeatures struct {
 	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 	// Dynamic Module extensions
 	DynamicModules []DynamicModule `json:"dynamicModules,omitempty" yaml:"dynamicModules,omitempty"`
+}
+
+// ExtensionBackend holds a callout destination and its cluster settings.
+// +k8s:deepcopy-gen=true
+type ExtensionBackend struct {
+	RouteDestination `json:",inline" yaml:",inline"`
+	Traffic          *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1639,6 +1700,10 @@ type OIDC struct {
 	// If a specific cookie is not configured, it will use the default xds value of disabled.
 	// +optional
 	CookieConfig *egv1a1.OIDCCookieConfig `json:"cookieConfig,omitempty"`
+
+	// TokenCookieChunking splits a token too large for one cookie across several cookies,
+	// within Envoy's default limits.
+	TokenCookieChunking bool `json:"tokenCookieChunking,omitempty"`
 
 	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
@@ -3118,6 +3183,9 @@ type GlobalResources struct {
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
 	// RateLimitServiceCluster holds the rate limit service endpoints discovered from Kubernetes resources.
 	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
+	// RateLimitServiceClusterTraffic holds the cluster-scoped traffic settings of the rate limit
+	// service cluster, translated from EnvoyGateway.RateLimit.ServiceSettings.
+	RateLimitServiceClusterTraffic *ClusterTrafficFeatures `json:"rateLimitServiceClusterTraffic,omitempty" yaml:"rateLimitServiceClusterTraffic,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.
@@ -3865,6 +3933,10 @@ type HTTPHealthChecker struct {
 	Host string `json:"host" yaml:"host"`
 	// Path defines the HTTP path that will be requested during health checking.
 	Path string `json:"path" yaml:"path"`
+	// Protocol defines the HTTP protocol used to send health check requests.
+	// If unset or set to Auto, it's derived from the effective upstream protocol of
+	// the backend.
+	Protocol *egv1a1.HTTPHealthCheckProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	// Method defines the HTTP method used for health checking.
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
@@ -3941,6 +4013,10 @@ type GRPCHealthChecker struct {
 	// which the health check should be requested. If not specified, then the default
 	// is to send a health check request for the entire server.
 	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
+	// Authority is the value of the :authority header in the gRPC health check request.
+	// If not specified, the effective route hostname is used, and if that is not
+	// available either, Envoy falls back to the cluster name.
+	Authority string `json:"authority,omitempty" yaml:"authority,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.
@@ -4528,6 +4604,20 @@ type EndpointOverride struct {
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// GRPCJSONTranscoder holds the gRPC-JSON transcoder configuration of a route.
+// +k8s:deepcopy-gen=true
+type GRPCJSONTranscoder struct {
+	// Name is the name of the transcoder filter.
+	Name string `json:"name" yaml:"name"`
+	// ProtoDescriptorBin is the binary FileDescriptorSet of the gRPC services.
+	ProtoDescriptorBin []byte `json:"protoDescriptorBin" yaml:"protoDescriptorBin"`
+	// Services are the full names of the gRPC services to transcode.
+	Services                     []string                 `json:"services" yaml:"services"`
+	PrintOptions                 *egv1a1.JSONPrintOptions `json:"printOptions,omitempty" yaml:"printOptions,omitempty"`
+	IgnoreUnknownQueryParameters *bool                    `json:"ignoreUnknownQueryParameters,omitempty" yaml:"ignoreUnknownQueryParameters,omitempty"`
+	ConvertGRPCStatus            *bool                    `json:"convertGRPCStatus,omitempty" yaml:"convertGRPCStatus,omitempty"`
 }
 
 // LoadBalancerType defines the type of load balancer for IR.

@@ -37,6 +37,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -67,18 +68,28 @@ const (
 var newOIDCDiscoveryHTTPClient = newGuardedOIDCDiscoveryHTTPClient
 
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
 	}
 	if policy.Spec.ExtAuth != nil {
-		if policy.Spec.ExtAuth.GRPC != nil && policy.Spec.ExtAuth.GRPC.BackendRef != nil {
-			deprecatedFields["spec.extAuth.grpc.backendRef"] = "spec.extAuth.grpc.backendRefs"
+		if policy.Spec.ExtAuth.GRPC != nil {
+			deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.extAuth.grpc", &policy.Spec.ExtAuth.GRPC.BackendCluster, nil)
 		}
-		if policy.Spec.ExtAuth.HTTP != nil && policy.Spec.ExtAuth.HTTP.BackendRef != nil {
-			deprecatedFields["spec.extAuth.http.backendRef"] = "spec.extAuth.http.backendRefs"
+		if policy.Spec.ExtAuth.HTTP != nil {
+			deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.extAuth.http", &policy.Spec.ExtAuth.HTTP.BackendCluster, nil)
 		}
+	}
+	if policy.Spec.JWT != nil {
+		for i := range policy.Spec.JWT.Providers {
+			if jwks := policy.Spec.JWT.Providers[i].RemoteJWKS; jwks != nil {
+				deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, fmt.Sprintf("spec.jwt.providers[%d].remoteJWKS", i), &jwks.BackendCluster, nil)
+			}
+		}
+	}
+	if policy.Spec.OIDC != nil {
+		deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.oidc.provider", &policy.Spec.OIDC.Provider.BackendCluster, nil)
 	}
 	return deprecatedFields
 }
@@ -510,7 +521,10 @@ func (t *Translator) processSecurityPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
-
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -533,7 +547,9 @@ func (t *Translator) processSecurityPolicyForRoute(
 			policy.Generation,
 			status.Error2ConditionMsg(fmt.Errorf("%s: %w", errMsg, err)),
 		)
-
+		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -710,6 +726,10 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -813,6 +833,10 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -2270,6 +2294,7 @@ func (t *Translator) buildOIDC(
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
 		CookieDomain:           policy.Spec.OIDC.CookieDomain,
 		CookieConfig:           policy.Spec.OIDC.CookieConfig,
+		TokenCookieChunking:    !t.OIDCTokenCookieChunkingDisabled,
 		HMACSecret:             hmacData,
 		PassThroughAuthHeader:  passThroughAuthHeader,
 		DisableTokenEncryption: disableTokenEncryption,

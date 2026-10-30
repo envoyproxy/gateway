@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -172,6 +173,8 @@ type ListenerTLSConfig struct {
 	secrets               []*corev1.Secret
 	certDNSNames          []string
 	frontendTLSValidation *ListenerFrontendTLSValidation
+	// extensionCertificates are certificate resources of a kind registered in ExtensionManager.SecretResources.
+	extensionCertificates []unstructured.Unstructured
 }
 
 type ListenerFrontendTLSValidation struct {
@@ -334,6 +337,10 @@ func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionTy
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
 	l.tls.secrets = tlsSecrets
+}
+
+func (l *ListenerContext) SetTLSExtensionCertificates(certs []unstructured.Unstructured) {
+	l.tls.extensionCertificates = certs
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
@@ -957,6 +964,12 @@ type ResolvedCAKey struct {
 	Name         string
 }
 
+// ExtensionBackendKey scopes a generated callout cluster name to its output IR.
+type ExtensionBackendKey struct {
+	GatewayIRKey string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -967,9 +980,11 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionBackendMap     map[ExtensionBackendKey]*ir.ExtensionBackend
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
 	ResolvedCAMap           map[ResolvedCAKey]string
+	protoDescriptors        map[types.NamespacedName]*parsedProtoDescriptor
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
 	BTPRejectedPolicies     map[types.NamespacedName]backendPolicyRejection

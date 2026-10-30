@@ -910,7 +910,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -1308,6 +1308,18 @@ spec:
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
@@ -1465,6 +1477,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -1533,6 +1567,9 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   overrides:
                                     description: |-
                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -1629,6 +1666,9 @@ spec:
                                       for a health check response.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: timeout must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   type:
                                     allOf:
                                     - enum:
@@ -1692,6 +1732,10 @@ spec:
                                       consecutive failures.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: baseEjectionTime must be greater than
+                                        0
+                                      rule: duration(self) > duration('0s')
                                   consecutive5XxErrors:
                                     default: 5
                                     description: Consecutive5xxErrors sets the number
@@ -1726,6 +1770,9 @@ spec:
                                       passive health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   maxEjectionPercent:
                                     default: 10
                                     description: MaxEjectionPercent sets the maximum
@@ -1994,7 +2041,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -2534,7 +2581,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -2932,6 +2979,18 @@ spec:
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
@@ -3089,6 +3148,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -3157,6 +3238,9 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   overrides:
                                     description: |-
                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -3253,6 +3337,9 @@ spec:
                                       for a health check response.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: timeout must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   type:
                                     allOf:
                                     - enum:
@@ -3316,6 +3403,10 @@ spec:
                                       consecutive failures.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: baseEjectionTime must be greater than
+                                        0
+                                      rule: duration(self) > duration('0s')
                                   consecutive5XxErrors:
                                     default: 5
                                     description: Consecutive5xxErrors sets the number
@@ -3350,6 +3441,9 @@ spec:
                                       passive health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   maxEjectionPercent:
                                     default: 10
                                     description: MaxEjectionPercent sets the maximum
@@ -3618,7 +3712,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -4473,7 +4567,7 @@ spec:
                                 BackendRef references a Kubernetes object that represents the
                                 backend server to which the authorization request will be sent.
 
-                                Deprecated: Use BackendRefs instead.
+                                Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                               properties:
                                 group:
                                   default: ""
@@ -4873,6 +4967,18 @@ spec:
                                             GRPC defines the configuration of the GRPC health checker.
                                             It's optional, and can only be used if the specified type is GRPC.
                                           properties:
+                                            hostname:
+                                              description: |-
+                                                Hostname defines the value of the :authority header sent with active gRPC
+                                                health checks. Authority selection uses this order: this field, the
+                                                associated Backend endpoint hostname if available, then the effective Route
+                                                hostname. If none of them is set, Envoy falls back to the name of the
+                                                cluster, which is not a valid authority and is rejected by some gRPC
+                                                servers.
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                              type: string
                                             service:
                                               description: |-
                                                 Service to send in the health check request.
@@ -5037,6 +5143,28 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            protocol:
+                                              default: Auto
+                                              description: |-
+                                                Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                  - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                    `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                    GRPCRoute.
+                                                  - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                    with HTTP1 as the fallback when nothing is negotiated.
+                                                  - HTTP1 otherwise.
+
+                                                Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                              enum:
+                                              - Auto
+                                              - HTTP1
+                                              - HTTP2
+                                              type: string
                                             requestBody:
                                               description: RequestBody defines the
                                                 HTTP request body payload sent during
@@ -5107,6 +5235,10 @@ spec:
                                             active health checks.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                          x-kubernetes-validations:
+                                          - message: interval must be greater than
+                                              0
+                                            rule: duration(self) > duration('0s')
                                         overrides:
                                           description: |-
                                             Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -5208,6 +5340,10 @@ spec:
                                             wait for a health check response.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                          x-kubernetes-validations:
+                                          - message: timeout must be greater than
+                                              0
+                                            rule: duration(self) > duration('0s')
                                         type:
                                           allOf:
                                           - enum:
@@ -5273,6 +5409,10 @@ spec:
                                             ejected on consecutive failures.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                          x-kubernetes-validations:
+                                          - message: baseEjectionTime must be greater
+                                              than 0
+                                            rule: duration(self) > duration('0s')
                                         consecutive5XxErrors:
                                           default: 5
                                           description: Consecutive5xxErrors sets the
@@ -5308,6 +5448,10 @@ spec:
                                             passive health checks.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                          x-kubernetes-validations:
+                                          - message: interval must be greater than
+                                              0
+                                            rule: duration(self) > duration('0s')
                                         maxEjectionPercent:
                                           default: 10
                                           description: MaxEjectionPercent sets the
@@ -5579,7 +5723,7 @@ spec:
                                           description: |-
                                             Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                            Deprecated: use Headers instead
+                                            Deprecated: use Headers instead. This field will be removed in v1.11.
                                           properties:
                                             name:
                                               description: Name of the header to hash.
@@ -6583,7 +6727,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -6981,6 +7125,18 @@ spec:
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
@@ -7138,6 +7294,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -7206,6 +7384,9 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   overrides:
                                     description: |-
                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -7302,6 +7483,9 @@ spec:
                                       for a health check response.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: timeout must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   type:
                                     allOf:
                                     - enum:
@@ -7365,6 +7549,10 @@ spec:
                                       consecutive failures.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: baseEjectionTime must be greater than
+                                        0
+                                      rule: duration(self) > duration('0s')
                                   consecutive5XxErrors:
                                     default: 5
                                     description: Consecutive5xxErrors sets the number
@@ -7399,6 +7587,9 @@ spec:
                                       passive health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   maxEjectionPercent:
                                     default: 10
                                     description: MaxEjectionPercent sets the maximum
@@ -7667,7 +7858,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -8247,7 +8438,7 @@ spec:
                   This policy and the TargetRef MUST be in the same namespace for this
                   Policy to have effect
 
-                  Deprecated: use targetRefs/targetSelectors instead
+                  Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
                 properties:
                   group:
                     description: Group is the group of the target resource.

@@ -1,1 +1,0 @@
-The global rate limit cluster is now built from the in-cluster `envoy-ratelimit` Service/EndpointSlices using EDS instead of resolving a static DNS hostname, so requests keep hitting rate limit service replicas correctly as they scale up or down. When the Service or its endpoints can't be discovered, Envoy Gateway falls back to the previous STRICT_DNS behavior.

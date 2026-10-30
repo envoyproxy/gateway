@@ -1,1 +1,0 @@
-Fixed route status.parents accumulating duplicate entries until the 32-entry limit when another controller writes status for the same parentRef, by matching parent status entries on both parentRef and controllerName.

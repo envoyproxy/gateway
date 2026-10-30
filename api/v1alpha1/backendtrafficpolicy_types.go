@@ -111,7 +111,7 @@ type BackendTrafficPolicySpec struct {
 
 	// The compression config for the http streams.
 	//
-	// Deprecated: Use Compressor instead.
+	// Deprecated: Use Compressor instead. This field will be removed in v1.11.
 	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -199,6 +199,8 @@ type BackendMetrics struct {
 	// Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
 	// Disabled by default.
 	//
+	// +kubebuilder:validation:MaxLength=1024
+	// +kubebuilder:validation:XValidation:rule="self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME)%)*$')",message="routeStatName contains an unsupported or unterminated operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%, %ROUTE_KIND% and %ROUTE_RULE_NAME%"
 	// +optional
 	RouteStatName *string `json:"routeStatName,omitempty"`
 }
