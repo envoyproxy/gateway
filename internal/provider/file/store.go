@@ -272,6 +272,11 @@ func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resour
 			errs = errors.Join(errs, err)
 		}
 	}
+	for _, obj := range re.ExtensionSecrets {
+		if err := r.storeObjectWithKeys(ctx, &obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
 
 	for _, obj := range re.Backends {
 		if err := r.storeObjectWithKeys(ctx, obj, collectKeys); err != nil {

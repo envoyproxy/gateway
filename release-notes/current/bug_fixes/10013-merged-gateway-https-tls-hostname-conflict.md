@@ -1,1 +1,0 @@
-Fixed HTTPS and TLS listeners from different merged Gateways sharing a port and a hostname being accepted, which produced two Envoy filter chains with the same SNI match and caused Envoy to reject the listener.

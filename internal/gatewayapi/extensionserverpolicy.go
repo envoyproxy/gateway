@@ -59,6 +59,10 @@ func (t *Translator) ProcessExtensionServerPolicies(
 		key := utils.NamespacedName(gw)
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
+	listenerSetMap := make(map[types.NamespacedName]*gwapiv1.ListenerSet, len(resources.ListenerSets))
+	for _, ls := range resources.ListenerSets {
+		listenerSetMap[utils.NamespacedName(ls)] = ls
+	}
 
 	handledPolicies := make(map[policyKey]*unstructured.Unstructured, len(policies))
 	// handledPoliciesOrder tracks insertion order so we can build res deterministically.
@@ -97,9 +101,11 @@ func (t *Translator) ProcessExtensionServerPolicies(
 	// Translate, in order:
 	// 1. Policies targeting route rules (HTTPRoute/GRPCRoute rules)
 	// 2. Policies targeting routes (HTTPRoute/GRPCRoute)
-	// 3. Policies targeting Listeners
-	// 4. Policies targeting Gateways
-	// 5. Policies targeting a GatewayClass (only meaningful when mergeGateways is enabled)
+	// 3. Policies targeting ListenerSet Listeners
+	// 4. Policies targeting ListenerSets
+	// 5. Policies targeting Listeners
+	// 6. Policies targeting Gateways
+	// 7. Policies targeting a GatewayClass (only meaningful when mergeGateways is enabled)
 
 	// Process the policies targeting route rules.
 	for i := range policies {
@@ -131,6 +137,45 @@ func (t *Translator) ProcessExtensionServerPolicies(
 		for _, currTarget := range targetRefs {
 			if isRoute(currTarget) {
 				t.processExtensionServerPolicyForRoute(xdsIR, routeMap, getOrInitPolicy(i), currTarget)
+			}
+		}
+	}
+
+	// Only run the ListenerSet-specific translation when at least one ListenerSet exists, since no
+	// policy can attach to a ListenerSet otherwise.
+	if len(resources.ListenerSets) > 0 {
+		// Process the policies targeting ListenerSet Listeners
+		for i := range policies {
+			if !validPolicy[i] {
+				continue
+			}
+			// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+			targetRefs := resolvePolicyTargetsFromReferences(targetRefsList[i], policies[i].GetNamespace())
+			for _, currTarget := range targetRefs {
+				if isListenerSetListener(currTarget) && isGatewayAPIGroup(currTarget) {
+					t.processExtensionServerPolicyForListenerSet(xdsIR, gatewayMap, listenerSetMap, getOrInitPolicy(i), currTarget)
+				}
+			}
+		}
+
+		// Process the policies targeting ListenerSets
+		for i := range policies {
+			if !validPolicy[i] {
+				continue
+			}
+			gvk := policies[i].GroupVersionKind()
+			targetRefs := resolvePolicyTargets(
+				targetRefsList[i],
+				resources.ListenerSets,
+				resources.ReferenceGrants,
+				gvk.Group,
+				gvk.Kind,
+				policies[i].GetNamespace(),
+				t.GetNamespace)
+			for _, currTarget := range targetRefs {
+				if isListenerSet(currTarget) && isGatewayAPIGroup(currTarget) {
+					t.processExtensionServerPolicyForListenerSet(xdsIR, gatewayMap, listenerSetMap, getOrInitPolicy(i), currTarget)
+				}
 			}
 		}
 	}
@@ -169,12 +214,6 @@ func (t *Translator) ProcessExtensionServerPolicies(
 		}
 	}
 
-	// TODO: ExtensionServerPolicy does not support targeting a ListenerSet, unlike SecurityPolicy,
-	// EnvoyExtensionPolicy, and BackendTrafficPolicy, which all have isListenerSet/isListenerSetListener
-	// branches here. A policy with targetRef.kind: ListenerSet falls through every bucket above and
-	// is silently dropped with no ancestor status set. Needs a processExtensionServerPolicyForListenerSet
-	// and a corresponding processing loop, mirroring the other policy types.
-
 	// Process the policies targeting a GatewayClass (only meaningful when mergeGateways is enabled).
 	for i := range policies {
 		if !validPolicy[i] {
@@ -202,6 +241,13 @@ func (t *Translator) ProcessExtensionServerPolicies(
 	}
 
 	return res, errs
+}
+
+// isGatewayAPIGroup reports whether target belongs to the Gateway API group. Extension server policies are
+// arbitrary CRDs without CEL validation on their targetRefs, so the group must be checked explicitly to avoid
+// attaching to a Gateway API resource a policy intended for a same-named kind in another API group.
+func isGatewayAPIGroup(target policyTargetReferenceWithSectionName) bool {
+	return string(target.Group) == gwapiv1.GroupName
 }
 
 // resolveGatewayClassTargetsFromSelectors returns gatewayClass as a target for every selector of
@@ -376,6 +422,70 @@ func (t *Translator) processExtensionServerPolicyForGateway(
 		status.SetAcceptedForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration())
 		policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
 	}
+}
+
+// processExtensionServerPolicyForListenerSet handles a policy targeting a ListenerSet, or a single
+// listener of a ListenerSet when sectionName is set. The policy attaches to the ListenerSet's
+// listeners in its parent Gateway's xDS IR and reports status against the ListenerSet itself.
+func (t *Translator) processExtensionServerPolicyForListenerSet(
+	xdsIR resource.XdsIRMap,
+	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
+	listenerSetMap map[types.NamespacedName]*gwapiv1.ListenerSet,
+	policy *unstructured.Unstructured,
+	currTarget policyTargetReferenceWithSectionName,
+) {
+	listenerSetNN := types.NamespacedName{
+		Name:      string(currTarget.Name),
+		Namespace: string(currTarget.Namespace),
+	}
+	listenerSet, ok := listenerSetMap[listenerSetNN]
+	// The ListenerSet may be managed by another controller, so it's not an error if it's not found.
+	if !ok {
+		return
+	}
+
+	parentGatewayNN := types.NamespacedName{
+		Name:      string(listenerSet.Spec.ParentRef.Name),
+		Namespace: NamespaceDerefOr(listenerSet.Spec.ParentRef.Namespace, listenerSet.Namespace),
+	}
+	gateway := resolveExtServerPolicyGatewayTargetRef(policyTargetReferenceWithSectionName{
+		Name:      gwapiv1.ObjectName(parentGatewayNN.Name),
+		Namespace: gwapiv1.Namespace(parentGatewayNN.Namespace),
+	}, gatewayMap)
+	// The ListenerSet may exist while its parent Gateway is not in the accepted Gateway set for
+	// this translation run.
+	if gateway == nil {
+		return
+	}
+
+	ancestorRef := getAncestorRefForListenerSetPolicy(listenerSetNN, currTarget.SectionName)
+
+	if currTarget.SectionName != nil {
+		if resolveErr := validateListenerSetListenerSectionName(*currTarget.SectionName, listenerSetNN, listenerSet.Spec.Listeners); resolveErr != nil {
+			policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
+			status.SetResolveErrorForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration(), resolveErr)
+			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+			return
+		}
+	}
+
+	listenerNames := sets.New[string]()
+	for _, listener := range listenerSetPolicyTargetListeners(gateway, listenerSet, currTarget) {
+		listenerNames.Insert(irListenerName(listener))
+	}
+
+	gwIR := xdsIR[t.getIRKey(gateway.Gateway)]
+	if !t.attachExtensionRefToListeners(gwIR, gateway, policy, listenerNames) {
+		return
+	}
+
+	// Like a Gateway listener target, the policy is also forwarded to the PostTranslation hook
+	// for the parent Gateway's xDS IR.
+	gwIR.ExtensionServerPolicies = t.appendUnstructuredRefIfAbsent(gwIR, gateway, gwIR.ExtensionServerPolicies, policy)
+
+	policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
+	status.SetAcceptedForPolicyAncestor(&policyStatus, &ancestorRef, t.GatewayControllerName, policy.GetGeneration())
+	policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
 }
 
 func resolveExtServerPolicyGatewayTargetRef(
@@ -657,4 +767,63 @@ func (t *Translator) getOrCreateExtensionResource(
 		gwIR.ExtensionResources = append(gwIR.ExtensionResources, canonical)
 	}
 	return &ir.UnstructuredRef{Name: name}
+}
+
+// extensionRefKey identifies an extension resource by group, kind, namespace and name.
+type extensionRefKey struct {
+	Group     string
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+// ExtensionRefIndex locates extension resources (extensionRef filters and custom backends) in
+// resources.ExtensionRefFilters, so routes can find the resource they reference without scanning
+// them all and re-reading each resource's fields.
+type ExtensionRefIndex struct {
+	// valid maps each resource to its position. When several resources share a key, the first wins.
+	valid map[extensionRefKey]int
+	// malformed maps the kind, namespace and name of each resource whose apiVersion has no
+	// group/version separator (so it has no group) to the position of the first such resource.
+	malformed map[extensionRefKey]int
+}
+
+// BuildExtensionRefIndex indexes resources by group, kind, namespace and name.
+func BuildExtensionRefIndex(resources []unstructured.Unstructured) ExtensionRefIndex {
+	idx := ExtensionRefIndex{
+		valid:     make(map[extensionRefKey]int, len(resources)),
+		malformed: map[extensionRefKey]int{},
+	}
+	for i := range resources {
+		res := &resources[i]
+		key := extensionRefKey{Kind: res.GetKind(), Namespace: res.GetNamespace(), Name: res.GetName()}
+		group, _, ok := strings.Cut(res.GetAPIVersion(), "/")
+		target := idx.valid
+		if ok {
+			key.Group = group
+		} else {
+			target = idx.malformed
+		}
+		if _, exists := target[key]; !exists {
+			target[key] = i
+		}
+	}
+	return idx
+}
+
+// getExtensionRef returns a copy of the extension resource with the given group, kind, namespace
+// and name, or nil if there is none. It returns a copy of the list element, as callers register
+// it with getOrCreateExtensionResource and later phases may update it in place.
+//
+// malformed reports that a resource with the same kind, namespace and name but an apiVersion with
+// no group comes before any match in resources.ExtensionRefFilters (or that there is no match).
+// The match, if any, is returned regardless, so callers that skip malformed resources can use it.
+func (t *Translator) getExtensionRef(resources *resource.Resources, group, kind, namespace, name string) (res *unstructured.Unstructured, malformed bool) {
+	i, found := t.ExtensionRefIndex.valid[extensionRefKey{Group: group, Kind: kind, Namespace: namespace, Name: name}]
+	j, hasMalformed := t.ExtensionRefIndex.malformed[extensionRefKey{Kind: kind, Namespace: namespace, Name: name}]
+	if !found {
+		return nil, hasMalformed
+	}
+	r := resources.ExtensionRefFilters[i]
+	return &r, hasMalformed && j < i
 }
