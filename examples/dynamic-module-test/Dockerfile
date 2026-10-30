@@ -1,6 +1,6 @@
 # ENVOY_VERSION must match the SDK version in go.mod to ensure ABI compatibility.
 # Update both together when changing the target Envoy version.
-ARG ENVOY_VERSION=dev
+ARG ENVOY_VERSION=v1.40.2
 
 FROM golang:1.27.3@sha256:957861185dbf29d93668ace41e011d091c6e779953d47f0316ef2cc58e28fe2b AS builder
 
