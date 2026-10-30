@@ -281,18 +281,13 @@ func TestExtensionBackendRegistryOnlyIncludesAttachedPolicies(t *testing.T) {
 					require.Len(t, x.ExtensionBackends, 1)
 					require.Contains(t, x.ExtensionBackends[0].Name, child.Name)
 					require.NotContains(t, x.ExtensionBackends[0].Name, parent.Name)
-				case "invalid backend":
+				case "invalid backend", "invalid filter":
 					require.Empty(t, x.ExtensionBackends)
-				case "invalid filter":
-					// Existing filter failure handling allows the parent to attach,
-					// while preserving the child's 500 response.
-					require.Len(t, x.ExtensionBackends, 1)
-					require.Contains(t, x.ExtensionBackends[0].Name, parent.Name)
-					require.NotContains(t, x.ExtensionBackends[0].Name, child.Name)
 				}
 				if failure != "overridden" {
 					for _, route := range routes {
 						require.EqualValues(t, 500, *route.DirectResponse.StatusCode)
+						require.Equal(t, &ir.EnvoyExtensionFeatures{}, route.EnvoyExtensions, "a failed child must block parent extensions")
 					}
 				}
 			}

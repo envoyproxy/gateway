@@ -2,6 +2,38 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
+    name: policy-for-invalid-rule
+    namespace: default
+  spec:
+    lua:
+    - type: ValueRef
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: missing
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-invalid-rule
+      sectionName: invalid
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: 'Lua: can''t find the referenced configmap missing in namespace default.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
     name: policy-for-http-route
     namespace: default
   spec:
@@ -56,6 +88,75 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
+    name: policy-for-route-with-invalid-rule
+    namespace: default
+  spec:
+    lua:
+    - inline: |
+        function envoy_on_response(handle)
+          handle:headers():add("x-route-parent", "true")
+        end
+      type: Inline
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-invalid-rule
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other envoyExtensionPolicies
+          for these route rules: [invalid]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    name: policy-for-invalid-listener
+    namespace: envoy-gateway
+  spec:
+    lua:
+    - type: ValueRef
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: missing
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-invalid
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-invalid
+      conditions:
+      - lastTransitionTime: null
+        message: 'Lua: can''t find the referenced configmap missing in namespace envoy-gateway.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
@@ -88,7 +189,8 @@ envoyExtensionPolicies:
         type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
-          for these routes: [default/httproute-1]'
+          for these gateway listeners: [envoy-gateway/gateway-1/http-invalid] and
+          these routes: [default/httproute-1 default/httproute-invalid-rule]'
         reason: Overridden
         status: "True"
         type: Overridden
@@ -108,9 +210,15 @@ gateways:
       name: http
       port: 80
       protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http-invalid
+      port: 81
+      protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -128,6 +236,29 @@ gateways:
         status: "True"
         type: ResolvedRefs
       name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-invalid
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -208,6 +339,81 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-invalid-listener
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-invalid
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-invalid
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-invalid-rule
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /invalid-rule
+      name: invalid
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /valid-rule
+      name: valid
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -218,6 +424,12 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
+      - name: envoy-gateway/gateway-1/http-invalid
+        ports:
+        - containerPort: 10081
+          name: http-81
+          protocol: HTTP
+          servicePort: 81
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -272,6 +484,81 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: httproute-invalid-rule
+            namespace: default
+            sectionName: invalid
+          name: httproute/default/httproute-invalid-rule/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-invalid-rule/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        envoyExtensions: {}
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-invalid-rule
+          namespace: default
+          sectionName: invalid
+        name: httproute/default/httproute-invalid-rule/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /invalid-rule
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-invalid-rule
+            namespace: default
+            sectionName: valid
+          name: httproute/default/httproute-invalid-rule/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-invalid-rule/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions:
+          luas:
+          - Code: |
+              function envoy_on_response(handle)
+                handle:headers():add("x-route-parent", "true")
+              end
+            FilterContext: null
+            Name: envoyextensionpolicy/default/policy-for-route-with-invalid-rule/lua/0
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-invalid-rule
+          namespace: default
+          sectionName: valid
+        name: httproute/default/httproute-invalid-rule/rule/1/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /valid-rule
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
@@ -290,12 +577,7 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
-        envoyExtensions:
-          luas:
-          - Code: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+        envoyExtensions: {}
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -343,6 +625,50 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+    - address: 0.0.0.0
+      externalPort: 81
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-invalid
+      name: envoy-gateway/gateway-1/http-invalid
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10081
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-invalid-listener
+            namespace: default
+          name: httproute/default/httproute-invalid-listener/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-invalid-listener/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        envoyExtensions: {}
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-invalid-listener
+          namespace: default
+        name: httproute/default/httproute-invalid-listener/rule/0/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

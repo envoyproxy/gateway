@@ -226,3 +226,7 @@ and find the following entries
 ```
 
 this likely indicates a configuration issue. Review the relevant [resource status](#checking-resource-status) for resolution steps.
+
+### EnvoyExtensionPolicy errors
+
+When an [`EnvoyExtensionPolicy`](../../api/extension_types#envoyextensionpolicy) translation error causes a route to return HTTP 500, extensions from less specific policies do not attach to that route. Check the selected policy's [status conditions](#checking-resource-status) for the cause. Wasm and ExtProc errors permitted by `failOpen` still allow the selected policy's valid extensions to apply.

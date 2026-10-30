@@ -152,3 +152,83 @@ spec:
         group: v1
       filterContext:
         custom_value: hello_from_filter_context
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: lua-translation-error
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: lua-invalid-child
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: lua-translation-error
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /invalid
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: lua-inherited
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: lua-translation-error
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /inherited
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: lua-error-parent
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: lua-translation-error
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_response(handle)
+          handle:headers():add("X-Parent-Lua", "true")
+        end
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: lua-error-child
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: lua-invalid-child
+  lua:
+    - type: ValueRef
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: missing-lua-translation-error
