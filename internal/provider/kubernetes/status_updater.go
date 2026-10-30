@@ -61,7 +61,19 @@ type UpdateHandler struct {
 	apiReader     client.Reader
 	updateChannel chan Update
 	ready         chan struct{}
+	// Only the Start goroutine touches lastWritten, so it needs no lock.
+	lastWritten map[types.UID]lastWrite
 }
+
+// lastWrite records a status write of the handler.
+type lastWrite struct {
+	resourceVersion string
+	at              time.Time
+}
+
+// lastWriteTTL is how long a record of a status write is kept. The record is only needed until the
+// cache has seen the write, which takes far less.
+const lastWriteTTL = time.Minute
 
 func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Reader) *UpdateHandler {
 	u := &UpdateHandler{
@@ -70,9 +82,26 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 		apiReader:     apiReader,
 		updateChannel: make(chan Update, 1000),
 		ready:         make(chan struct{}),
+		lastWritten:   make(map[types.UID]lastWrite),
 	}
 
 	return u
+}
+
+// cacheMayLag reports whether obj, read from the cache, may not show this handler's last write of it yet.
+func (u *UpdateHandler) cacheMayLag(obj client.Object) bool {
+	last, ok := u.lastWritten[obj.GetUID()]
+	return ok && last.resourceVersion != obj.GetResourceVersion()
+}
+
+// expireLastWrites drops the records of writes older than lastWriteTTL. Most records are never
+// looked up again: an object's last update is usually a write.
+func (u *UpdateHandler) expireLastWrites(now time.Time) {
+	for uid, w := range u.lastWritten {
+		if now.Sub(w.at) >= lastWriteTTL {
+			delete(u.lastWritten, uid)
+		}
+	}
 }
 
 func (u *UpdateHandler) apply(update Update) {
@@ -114,6 +143,17 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj := update.Mutator.Mutate(obj)
 
+		if isStatusEqual(obj, newObj) && u.cacheMayLag(obj) {
+			// The cache may still show a status the API server no longer has, so confirm against the server.
+			if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+			newObj = update.Mutator.Mutate(obj)
+		}
+
 		if isStatusEqual(obj, newObj) {
 			log.Info("status unchanged, bypassing update")
 
@@ -123,7 +163,11 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj.SetUID(obj.GetUID())
 
-		return u.client.Status().Update(context.Background(), newObj)
+		if err := u.client.Status().Update(context.Background(), newObj); err != nil {
+			return err
+		}
+		u.lastWritten[newObj.GetUID()] = lastWrite{resourceVersion: newObj.GetResourceVersion(), at: time.Now()}
+		return nil
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
@@ -145,10 +189,15 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	// Enable Updaters to start sending updates to this handler.
 	close(u.ready)
 
+	ticker := time.NewTicker(lastWriteTTL)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
+		case now := <-ticker.C:
+			u.expireLastWrites(now)
 		case update := <-u.updateChannel:
 			u.log.Info("received a status update", "namespace", update.NamespacedName.Namespace,
 				"name", update.NamespacedName.Name, "kind", KindOf(update.Resource))
