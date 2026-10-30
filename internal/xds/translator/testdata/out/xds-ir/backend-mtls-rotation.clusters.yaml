@@ -1,0 +1,202 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: httproute/default/backend-tls-route/rule/1
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: tls-backend-1.default.svc.cluster.local
+              portValue: 443
+        loadBalancingWeight: 1
+        metadata:
+          filterMetadata:
+            envoy.transport_socket_match:
+              name: httproute/default/backend-tls-route/rule/1/tls/0
+      loadBalancingWeight: 1
+      locality:
+        region: httproute/default/backend-tls-route/rule/1/backend/0
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: Backend
+              name: backend-tls-1
+              namespace: default
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: tls-backend-2.default.svc.cluster.local
+              portValue: 443
+        loadBalancingWeight: 1
+        metadata:
+          filterMetadata:
+            envoy.transport_socket_match:
+              name: httproute/default/backend-tls-route/rule/1/tls/1
+      loadBalancingWeight: 1
+      locality:
+        region: httproute/default/backend-tls-route/rule/1/backend/1
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: Backend
+              name: backend-tls-2
+              namespace: default
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: backend-tls-route
+          namespace: default
+  name: httproute/default/backend-tls-route/rule/1
+  perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
+  transportSocketMatches:
+  - match:
+      name: httproute/default/backend-tls-route/rule/1/tls/0
+    name: httproute/default/backend-tls-route/rule/1/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          tlsCertificateSdsSecretConfigs:
+          - name: default/example-client-cert1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          tlsParams:
+            tlsMaximumProtocolVersion: TLSv1_3
+            tlsMinimumProtocolVersion: TLSv1_2
+        sni: www.example.com
+  - match:
+      name: httproute/default/backend-tls-route/rule/1/tls/1
+    name: httproute/default/backend-tls-route/rule/1/tls/1
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          tlsCertificateSdsSecretConfigs:
+          - name: default/example-client-cert2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          tlsParams:
+            tlsMaximumProtocolVersion: TLSv1_3
+            tlsMinimumProtocolVersion: TLSv1_2
+        sni: www.example.com
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      autoConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+        httpProtocolOptions: {}
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: httproute/default/backend-tls-route/rule/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: backend-tls-route
+          namespace: default
+  name: httproute/default/backend-tls-route/rule/0
+  perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
+  transportSocketMatches:
+  - match:
+      name: httproute/default/backend-tls-route/rule/0/tls/0
+    name: httproute/default/backend-tls-route/rule/0/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          tlsCertificateSdsSecretConfigs:
+          - name: default/example-client-cert1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          tlsParams:
+            tlsMaximumProtocolVersion: TLSv1_3
+            tlsMinimumProtocolVersion: TLSv1_2
+        sni: www.example.com
+  - match:
+      name: httproute/default/backend-tls-route/rule/0/tls/1
+    name: httproute/default/backend-tls-route/rule/0/tls/1
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          tlsCertificateSdsSecretConfigs:
+          - name: default/example-client-cert2
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          tlsParams:
+            tlsMaximumProtocolVersion: TLSv1_3
+            tlsMinimumProtocolVersion: TLSv1_2
+        sni: www.example.com
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      autoConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+        httpProtocolOptions: {}

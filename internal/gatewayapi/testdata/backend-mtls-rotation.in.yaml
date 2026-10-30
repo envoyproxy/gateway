@@ -1,0 +1,201 @@
+# Rotating a Backend's mTLS client certificate: each path has two Backends with the same
+# endpoint but different client certificates, so the old and new certs are in use side by side.
+#
+# Known issue: the /ip rule's two Backends share the same address (10.244.0.62:8443). Both end up
+# as localities of one cluster, each with its own transport socket match, but Envoy merges
+# endpoints with the same ip+port, so it keeps only the first one and the second client
+# certificate is never used.
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: backend-tls-route
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /ip
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-tls-1-ip
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-tls-2-ip
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /fqdn
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-tls-1
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-tls-2
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-tls-1
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: tls-backend-1.default.svc.cluster.local
+            port: 443
+      tls:
+        clientCertificateRef:
+          kind: Secret
+          name: example-client-cert1
+        insecureSkipVerify: true
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-tls-1-ip
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: 10.244.0.62
+            port: 8443
+      tls:
+        clientCertificateRef:
+          kind: Secret
+          name: example-client-cert1
+        insecureSkipVerify: true
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-tls-2
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: tls-backend-2.default.svc.cluster.local
+            port: 443
+      tls:
+        clientCertificateRef:
+          kind: Secret
+          name: example-client-cert2
+        insecureSkipVerify: true
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-tls-2-ip
+      namespace: default
+    spec:
+      endpoints:
+        - ip:
+            address: 10.244.0.62
+            port: 8443
+      tls:
+        clientCertificateRef:
+          kind: Secret
+          name: example-client-cert2
+        insecureSkipVerify: true
+backendTLSPolicies:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: BackendTLSPolicy
+    metadata:
+      name: backend-tls-1
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-tls-1
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-tls-1-ip
+      validation:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+        hostname: www.example.com
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: BackendTLSPolicy
+    metadata:
+      name: backend-tls-2
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-tls-2
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-tls-2-ip
+      validation:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+        hostname: www.example.com
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ca-cmap
+      namespace: default
+    data:
+      ca.crt: |
+        -----BEGIN CERTIFICATE-----
+        MIIDJzCCAg+gAwIBAgIUAl6UKIuKmzte81cllz5PfdN2IlIwDQYJKoZIhvcNAQEL
+        BQAwIzEQMA4GA1UEAwwHbXljaWVudDEPMA0GA1UECgwGa3ViZWRiMB4XDTIzMTAw
+        MjA1NDE1N1oXDTI0MTAwMTA1NDE1N1owIzEQMA4GA1UEAwwHbXljaWVudDEPMA0G
+        A1UECgwGa3ViZWRiMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwSTc
+        1yj8HW62nynkFbXo4VXKv2jC0PM7dPVky87FweZcTKLoWQVPQE2p2kLDK6OEszmM
+        yyr+xxWtyiveremrWqnKkNTYhLfYPhgQkczib7eUalmFjUbhWdLvHakbEgCodn3b
+        kz57mInX2VpiDOKg4kyHfiuXWpiBqrCx0KNLpxo3DEQcFcsQTeTHzh4752GV04RU
+        Ti/GEWyzIsl4Rg7tGtAwmcIPgUNUfY2Q390FGqdH4ahn+mw/6aFbW31W63d9YJVq
+        ioyOVcaMIpM5B/c7Qc8SuhCI1YGhUyg4cRHLEw5VtikioyE3X04kna3jQAj54YbR
+        bpEhc35apKLB21HOUQIDAQABo1MwUTAdBgNVHQ4EFgQUyvl0VI5vJVSuYFXu7B48
+        6PbMEAowHwYDVR0jBBgwFoAUyvl0VI5vJVSuYFXu7B486PbMEAowDwYDVR0TAQH/
+        BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAMLxrgFVMuNRq2wAwcBt7SnNR5Cfz
+        2MvXq5EUmuawIUi9kaYjwdViDREGSjk7JW17vl576HjDkdfRwi4E28SydRInZf6J
+        i8HZcZ7caH6DxR335fgHVzLi5NiTce/OjNBQzQ2MJXVDd8DBmG5fyatJiOJQ4bWE
+        A7FlP0RdP3CO3GWE0M5iXOB2m1qWkE2eyO4UHvwTqNQLdrdAXgDQlbam9e4BG3Gg
+        d/6thAkWDbt/QNT+EJHDCvhDRKh1RuGHyg+Y+/nebTWWrFWsktRrbOoHCZiCpXI1
+        3eXE6nt0YkgtDxG22KqnhpAg9gUSs2hlhoxyvkzyF0mu6NhPlwAgnq7+/Q==
+        -----END CERTIFICATE-----
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: example-client-cert1
+      namespace: default
+    type: kubernetes.io/tls
+    data:
+      tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ3RTYzR6eUlsb042cUIKMHF3SFhaSGlZMmpEL1lzakU0dndUNlBYQ1Q2RVJQR1l1MW1xVksxeS8vUVBhL294ek1oaUdUV1RYWEdlWEdObAo3OUN6L0djVmN0cFpOUHQ4TFdNeDU2Um1CbGJjcXRyWHJRNFJiSWo1Zk5tRVl3dEpzMW11RURNK0VsOHhSellDCkE2VVhZWDY2TDVySHJsaGtCUEtWZUZIZlZDdjBpb3BURHFyUWVTWXF5ejlsYk9VOWFGb25GaTBMMzJ4c0wrN0IKUTNhL1d4dEY3VWtLZGV4MG9LT2RFZ3hPZmdZMHBxYlJjTlZYQ2k1YW1vVEZ3UXc0cUs0TUlTSVJoaXFSRW5qTgpEKzJ4WVZacEROMnJJZHNVa3diaFZBUTVST0NUbW9jOExBMTY3cVZJUTNVdFlYWE5uejY0NFJRSlNYMWhHR2VnClpXWThySWxWQWdNQkFBRUNnZ0VBSmpONGpTcmV1OFpWeE5QY0Q2MmRmUEpjUktTT3VUZFVhTEF0MXJoWGUxSTEKam0xeXlWMXNkVWNlbHcyL05KNUg2SFJWUHJ6aFVMOWVQRGtmWWFZNVZWMmg2L3VGbXl6b1NyYWRvODR1OU91SApYZmRzL0FOWXVPTkFrbkpCS1Vpcjh2Ym9UUDFBMWZ5MFY4SlU4VEFSZjFzQ1BKWGZMNEYxdHVTMDY4NUMrRi82CmRqclJxOGlqdzd3QmdmcHRYZWVjVkIxdXFyS2ZsS1U0aTg2Z0NYNmZDOUtJYTRZT0hVVXJSL2QxZXBlMUt1alcKNUpadGJnSXJzV1Q4WWsvbTQ3UjZBemsxVW90WlZ4S2JaeUNZc1FCOWlUZkxTWFU5bUlDN3VQdVl3OXF3QmlSbwpZUjAwQlZJM0J0VXJjdm9RdEwzUDdqV0EvZjBFSG1PS0NSTEdPYU5Ga1FLQmdRRHlCK01TU3FiV2h1d1hWYzJnClJWaU9VcVF0dGhxa3UrOWtaY2UxTzhOWlREakFvQ1A3SzVUSXM4Um9aTG5JUzEycjRWM1g5QjROa2t4RHdCdmoKbmdNMU1CcHBObEtyUnZHVExJcXRzdTlkc1N6ek51ZVpaTEF0b3ZJZzRhRVAyY0JMbW9jNFhjRFFpRGRVL0VqQgpUeXBUYkRtNDB6OXBCbDNFQlJYZEZDeGxhUUtCZ1FDM1NqZWpTUkMzdkF1QThRTmVYMlJ5T0I3cVU1TS81RU1KCkZlTkIzS056cGVyL2IxN2JndW1oRzhYRStmdzlPaHlXZzhraXBIYmljZGRPM1VzTllGNndPcFRmNVhVbVBoSkoKcnhYM2liQjNpbWp1TW5yQkJjOW9FUVlySFllN2U4aHFiOGU4dHNybDIzdDF6TlRZZkVBVi9tZ0dHdlNLTGtiKwp4NHprZkRUckRRS0JnUURodzFHZ29sbjJDbXozWjJZamRnd2cxaDJuTmhLc1QxSUN5SjM5QS80NHNjek9nWktPCm5CeHhDcDdPOGdZS082TG96WlFIK1FKL2psUHRicW1WTExPNVRXR1Zlc0txV2NiRmplcmVFK2NMOGxVSG1kTjMKVm1Dd2NTcUNXWFV2bitLcm96MDI2dDBNcDhOVlZ1OVd3azJzKzJyc2FNRGhhcnJVT2hvbTJzWis0UUtCZ1FDcApRWURsYVNobDh1RlFuYjkxbTNOZlFsSFNJNEU3bytiL2NkWGRVUWtqVjFrTnJtT1RJMjNwRjRObXBVNTNuNzBjCmhPL3M3S0RYOVRaVkhtY2JJQjN3Y1BoZlZUMzhKWit2cVY0SXEzNW90VWkyaGFqenJCRGVVYkkzaUZwNkdCRjMKc0dkcTdnV3BneWVjSFoyRG1DRjU3ZWRUay9xenk0NUY0akpLSUNTaDFRS0JnRG9IUk5CYzg0T2doQzNtbnBrcQpoL2RFUkhIaHNlQ3FGYTc5Wi80N2hHTTAyWU9obThQZGtJRkJ1YndHWllPOHNseCtPTEZtZzloZGYxdmFoSkJnCkczNnVOaWM1VmFyQ0w0eDNSc01pWkN3bW9rUDlBUjUyRC92dm54UjQ3amJQL3grNEIycWM2ZndKVkFRTmhGZzAKS3RPcXAwa1dlNjFvMkNPY05WL1BWeGozCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: example-client-cert2
+      namespace: default
+    type: kubernetes.io/tls
+    data:
+      tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lVU3JTYktMZjBiTEVHb2dXeC9nQ3cyR0N0dnhFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lWR1Z6ZENCSmJtTXdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVRNUkV3RHdZRFZRUUREQWhVWlhOMElFbHVZekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBSzFKempQSWlXZzNxb0hTckFkZGtlSmphTVA5aXlNVGkvQlBvOWNKUG9SRThaaTcKV2FwVXJYTC85QTlyK2pITXlHSVpOWk5kY1o1Y1kyWHYwTFA4WnhWeTJsazArM3d0WXpIbnBHWUdWdHlxMnRldApEaEZzaVBsODJZUmpDMG16V2E0UU16NFNYekZITmdJRHBSZGhmcm92bXNldVdHUUU4cFY0VWQ5VUsvU0tpbE1PCnF0QjVKaXJMUDJWczVUMW9XaWNXTFF2ZmJHd3Y3c0ZEZHI5YkcwWHRTUXAxN0hTZ281MFNERTUrQmpTbXB0RncKMVZjS0xscWFoTVhCRERpb3Jnd2hJaEdHS3BFU2VNMFA3YkZoVm1rTTNhc2gyeFNUQnVGVUJEbEU0Sk9haHp3cwpEWHJ1cFVoRGRTMWhkYzJmUHJqaEZBbEpmV0VZWjZCbFpqeXNpVlVDQXdFQUFhTndNRzR3SFFZRFZSME9CQllFCkZCUXVmSzFMaWJ1Vm05VHMvVmpCeDhMM3VpTmVNQjhHQTFVZEl3UVlNQmFBRkJRdWZLMUxpYnVWbTlUcy9WakIKeDhMM3VpTmVNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdHd1lEVlIwUkJCUXdFb0lCS29JTktpNWxlR0Z0Y0d4bApMbU52YlRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWZQUzQxYWdldldNVjNaWHQwQ09GRzN1WWZQRlhuVnc2ClA0MXA5TzZHa2RZc3VxRnZQZVR5eUgyL2RBSUtLd1N6TS9wdGhnOEtuOExabG1KeUZObkExc3RKeG41WGRiVjEKcFBxajhVdllDQnp5ak1JcW1SeW9peUxpUWxib2hNYTBVZEVCS2NIL1BkTEU5SzhUR0pyWmdvR1hxcTFXbWl0RAozdmNQalNlUEtFaVVKVlM5bENoeVNzMEtZNUIraFVRRDBKajZucEZENFprMHhxZHhoMHJXdWVDcXE3dmpxRVl6CnBqNFB3cnVmbjFQQlRtZnhNdVYvVUpWNWViaWtldVpQMzVrV3pMUjdaV0FMN3d1RGRXcC82bzR5azNRTGFuRFEKQ3dnQ0ZjWCtzcyswVnl1TTNZZXJUT1VVOFFWSkp4NFVaQU5aeDYrNDNwZEpaT2NudFBaNENBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ3RTYzR6eUlsb042cUIKMHF3SFhaSGlZMmpEL1lzakU0dndUNlBYQ1Q2RVJQR1l1MW1xVksxeS8vUVBhL294ek1oaUdUV1RYWEdlWEdObAo3OUN6L0djVmN0cFpOUHQ4TFdNeDU2Um1CbGJjcXRyWHJRNFJiSWo1Zk5tRVl3dEpzMW11RURNK0VsOHhSellDCkE2VVhZWDY2TDVySHJsaGtCUEtWZUZIZlZDdjBpb3BURHFyUWVTWXF5ejlsYk9VOWFGb25GaTBMMzJ4c0wrN0IKUTNhL1d4dEY3VWtLZGV4MG9LT2RFZ3hPZmdZMHBxYlJjTlZYQ2k1YW1vVEZ3UXc0cUs0TUlTSVJoaXFSRW5qTgpEKzJ4WVZacEROMnJJZHNVa3diaFZBUTVST0NUbW9jOExBMTY3cVZJUTNVdFlYWE5uejY0NFJRSlNYMWhHR2VnClpXWThySWxWQWdNQkFBRUNnZ0VBSmpONGpTcmV1OFpWeE5QY0Q2MmRmUEpjUktTT3VUZFVhTEF0MXJoWGUxSTEKam0xeXlWMXNkVWNlbHcyL05KNUg2SFJWUHJ6aFVMOWVQRGtmWWFZNVZWMmg2L3VGbXl6b1NyYWRvODR1OU91SApYZmRzL0FOWXVPTkFrbkpCS1Vpcjh2Ym9UUDFBMWZ5MFY4SlU4VEFSZjFzQ1BKWGZMNEYxdHVTMDY4NUMrRi82CmRqclJxOGlqdzd3QmdmcHRYZWVjVkIxdXFyS2ZsS1U0aTg2Z0NYNmZDOUtJYTRZT0hVVXJSL2QxZXBlMUt1alcKNUpadGJnSXJzV1Q4WWsvbTQ3UjZBemsxVW90WlZ4S2JaeUNZc1FCOWlUZkxTWFU5bUlDN3VQdVl3OXF3QmlSbwpZUjAwQlZJM0J0VXJjdm9RdEwzUDdqV0EvZjBFSG1PS0NSTEdPYU5Ga1FLQmdRRHlCK01TU3FiV2h1d1hWYzJnClJWaU9VcVF0dGhxa3UrOWtaY2UxTzhOWlREakFvQ1A3SzVUSXM4Um9aTG5JUzEycjRWM1g5QjROa2t4RHdCdmoKbmdNMU1CcHBObEtyUnZHVExJcXRzdTlkc1N6ek51ZVpaTEF0b3ZJZzRhRVAyY0JMbW9jNFhjRFFpRGRVL0VqQgpUeXBUYkRtNDB6OXBCbDNFQlJYZEZDeGxhUUtCZ1FDM1NqZWpTUkMzdkF1QThRTmVYMlJ5T0I3cVU1TS81RU1KCkZlTkIzS056cGVyL2IxN2JndW1oRzhYRStmdzlPaHlXZzhraXBIYmljZGRPM1VzTllGNndPcFRmNVhVbVBoSkoKcnhYM2liQjNpbWp1TW5yQkJjOW9FUVlySFllN2U4aHFiOGU4dHNybDIzdDF6TlRZZkVBVi9tZ0dHdlNLTGtiKwp4NHprZkRUckRRS0JnUURodzFHZ29sbjJDbXozWjJZamRnd2cxaDJuTmhLc1QxSUN5SjM5QS80NHNjek9nWktPCm5CeHhDcDdPOGdZS082TG96WlFIK1FKL2psUHRicW1WTExPNVRXR1Zlc0txV2NiRmplcmVFK2NMOGxVSG1kTjMKVm1Dd2NTcUNXWFV2bitLcm96MDI2dDBNcDhOVlZ1OVd3azJzKzJyc2FNRGhhcnJVT2hvbTJzWis0UUtCZ1FDcApRWURsYVNobDh1RlFuYjkxbTNOZlFsSFNJNEU3bytiL2NkWGRVUWtqVjFrTnJtT1RJMjNwRjRObXBVNTNuNzBjCmhPL3M3S0RYOVRaVkhtY2JJQjN3Y1BoZlZUMzhKWit2cVY0SXEzNW90VWkyaGFqenJCRGVVYkkzaUZwNkdCRjMKc0dkcTdnV3BneWVjSFoyRG1DRjU3ZWRUay9xenk0NUY0akpLSUNTaDFRS0JnRG9IUk5CYzg0T2doQzNtbnBrcQpoL2RFUkhIaHNlQ3FGYTc5Wi80N2hHTTAyWU9obThQZGtJRkJ1YndHWllPOHNseCtPTEZtZzloZGYxdmFoSkJnCkczNnVOaWM1VmFyQ0w0eDNSc01pWkN3bW9rUDlBUjUyRC92dm54UjQ3amJQL3grNEIycWM2ZndKVkFRTmhGZzAKS3RPcXAwa1dlNjFvMkNPY05WL1BWeGozCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
