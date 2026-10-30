@@ -6,6 +6,9 @@ gateways:
     name: gateway-1
   spec:
     gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
     listeners:
     - name: http
       protocol: HTTP
@@ -16,6 +19,28 @@ gateways:
     - name: http-8080
       protocol: HTTP
       port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: listenerset-1
+  spec:
+    parentRef:
+      name: gateway-1
+    listeners:
+    - name: ls-http-8081
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: ls-http-8082
+      protocol: HTTP
+      port: 8082
       allowedRoutes:
         namespaces:
           from: All
@@ -42,6 +67,32 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - bar.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: listenerset-1
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      port: 8081
+    - namespace: envoy-gateway
+      name: listenerset-1
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      port: 8082
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
 extensionServerPolicies:
 # The parentRefs differ only by port, so the policy reports an ancestor for each of them.
 - apiVersion: foo.example.io/v1alpha1
@@ -55,3 +106,17 @@ extensionServerPolicies:
       group: gateway.networking.k8s.io
       name: httproute-1
     data: "attached to an httproute with parentRefs differing only by port"
+
+# The parentRefs to the ListenerSet differ only by port, so the policy reports an ancestor for each of them,
+# against the ListenerSet rather than its parent Gateway.
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-2
+    namespace: default
+  spec:
+    targetRef:
+      kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: httproute-2
+    data: "attached to an httproute with ListenerSet parentRefs differing only by port"

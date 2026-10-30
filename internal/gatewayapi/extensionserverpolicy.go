@@ -341,12 +341,7 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 		}
 
 		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
-		gatewayNN := utils.NamespacedName(gtwCtx)
-		// Keep the port of the parentRef, so that parentRefs to the same Gateway that differ only by port get their own ancestors.
-		// TODO: once ExtensionServerPolicy supports ListenerSet, report a ListenerSet parentRef against the ListenerSet
-		// instead of its parent Gateway, and build the ancestor with getAncestorRefForRouteParent as the other route policies do.
-		ancestorRef := getAncestorRefForPolicy(gatewayNN, p.SectionName)
-		ancestorRef.Port = p.Port
+		ancestorRef := parentRefCtx.PolicyAncestorRef()
 
 		if !supportedRouteKind {
 			status.SetTranslationErrorForPolicyAncestor(

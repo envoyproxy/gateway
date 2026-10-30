@@ -38,6 +38,45 @@ extensionServerPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: policy-2
+    namespace: default
+  spec:
+    data: attached to an httproute with ListenerSet parentRefs differing only by port
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: listenerset-1
+        namespace: envoy-gateway
+        port: 8081
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: listenerset-1
+        namespace: envoy-gateway
+        port: 8082
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -45,6 +84,9 @@ gateways:
     name: gateway-1
     namespace: envoy-gateway
   spec:
+    allowedListeners:
+      namespaces:
+        from: All
     gatewayClassName: envoy-gateway-class
     listeners:
     - allowedRoutes:
@@ -60,6 +102,7 @@ gateways:
       port: 8080
       protocol: HTTP
   status:
+    attachedListenerSets: 1
     listeners:
     - attachedRoutes: 1
       conditions:
@@ -164,6 +207,70 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - bar.example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: listenerset-1
+      namespace: envoy-gateway
+      port: 8081
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: listenerset-1
+      namespace: envoy-gateway
+      port: 8082
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /bar
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: listenerset-1
+        namespace: envoy-gateway
+        port: 8081
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: listenerset-1
+        namespace: envoy-gateway
+        port: 8082
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -180,6 +287,18 @@ infraIR:
           name: http-8080
           protocol: HTTP
           servicePort: 8080
+      - name: envoy-gateway/gateway-1/envoy-gateway/listenerset-1/ls-http-8081
+        ports:
+        - containerPort: 8081
+          name: http-8081
+          protocol: HTTP
+          servicePort: 8081
+      - name: envoy-gateway/gateway-1/envoy-gateway/listenerset-1/ls-http-8082
+        ports:
+        - containerPort: 8082
+          name: http-8082
+          protocol: HTTP
+          servicePort: 8082
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -189,6 +308,97 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: ""
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listenerset-1
+    namespace: envoy-gateway
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: ls-http-8081
+      port: 8081
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: ls-http-8082
+      port: 8082
+      protocol: HTTP
+    parentRef:
+      name: gateway-1
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: ls-http-8081
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: ls-http-8082
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:
@@ -229,6 +439,48 @@ xdsIR:
               name: gateway-1
               namespace: envoy-gateway
               port: 8080
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - name: foo.example.io/bar/default/policy-2
+      object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: Bar
+        metadata:
+          name: policy-2
+          namespace: default
+        spec:
+          data: attached to an httproute with ListenerSet parentRefs differing only
+            by port
+          targetRef:
+            group: gateway.networking.k8s.io
+            kind: HTTPRoute
+            name: httproute-2
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: listenerset-1
+              namespace: envoy-gateway
+              port: 8081
+            conditions:
+            - lastTransitionTime: null
+              message: Policy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            controllerName: gateway.envoyproxy.io/gatewayclass-controller
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: listenerset-1
+              namespace: envoy-gateway
+              port: 8082
             conditions:
             - lastTransitionTime: null
               message: Policy has been accepted.
@@ -350,6 +602,100 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+    - address: 0.0.0.0
+      externalPort: 8081
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: ls-http-8081
+      name: envoy-gateway/gateway-1/envoy-gateway/listenerset-1/ls-http-8081
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8081
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        extensionServerPolicies:
+        - name: foo.example.io/bar/default/policy-2
+        hostname: bar.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/bar_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar
+    - address: 0.0.0.0
+      externalPort: 8082
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: ls-http-8082
+      name: envoy-gateway/gateway-1/envoy-gateway/listenerset-1/ls-http-8082
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8082
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        extensionServerPolicies:
+        - name: foo.example.io/bar/default/policy-2
+        hostname: bar.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/bar_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /bar
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
