@@ -6569,6 +6569,7 @@ _Appears in:_
 | `OIDCTokenCookieChunking` | OIDCTokenCookieChunking splits an OIDC access, ID or refresh token too large for one<br />browser cookie across several cookies, instead of the browser dropping it and the login<br />looping back to the OIDC provider. It is enabled by default. Envoy Proxy older than v1.40<br />can't read the split cookies, so a client that holds such a token in one cookie today, such<br />as a non-browser client, is sent back to the OIDC provider when it reaches an older proxy.<br />Disable this flag while proxies of an earlier Envoy Gateway release serve the same<br />hostnames, for example during an upgrade.<br /> | 
 | `DropBackendRefsWithoutEndpoints` | DropBackendRefsWithoutEndpoints excludes backendRefs without ready endpoints from an HTTPRoute<br />or GRPCRoute rule when at least one other backendRef in the same rule is available, so the<br />remaining backends receive all the traffic per their relative weights instead of returning 503<br />for the share of the excluded backendRefs.<br />Rules that also have invalid backendRefs are unchanged.<br />Disabled by default.<br /> | 
 
+
 #### RuntimeFlags
 
 
