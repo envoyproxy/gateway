@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -1208,17 +1209,24 @@ func (h *HTTPRoute) GetRetry() *Retry {
 }
 
 func (h *HTTPRoute) NeedsClusterPerSetting() bool {
+	return len(h.ClusterPerSettingReasons()) > 0
+}
+
+// ClusterPerSettingReasons returns why each of HTTPRoute's destination settings needs its own cluster,
+// or nil when they can share one.
+func (h *HTTPRoute) ClusterPerSettingReasons() []string {
+	var reasons []string
 	if h.Traffic != nil &&
 		h.Traffic.LoadBalancer != nil &&
 		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
-		return true
+		reasons = append(reasons, "the load balancer uses preferLocal or weightedZones")
 	}
 	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
 	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
-		return true
+	if weights := h.Destination.ToBackendWeights(); weights.Invalid > 0 || weights.NoEndpoints > 0 {
+		reasons = append(reasons, "some backendRefs are invalid or have no endpoints")
 	}
-	return h.Destination.NeedsClusterPerSetting()
+	return append(reasons, h.Destination.ClusterPerSettingReasons()...)
 }
 
 // IsDynamicResolverRoute reports whether h's destination is a dynamic resolver.
@@ -2294,11 +2302,43 @@ func (r *RouteDestination) Validate() error {
 }
 
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
-	return r.HasMixedEndpoints() ||
-		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
-		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings()
+	return len(r.ClusterPerSettingReasons()) > 0
+}
+
+// ClusterPerSettingReasons returns why each of RouteDestination's settings needs its own cluster, or nil when
+// they can share one.
+func (r *RouteDestination) ClusterPerSettingReasons() []string {
+	var reasons []string
+	if r.HasMixedEndpoints() {
+		reasons = append(reasons, "FQDN endpoints are mixed with IP or UDS endpoints")
+	}
+	if r.HasFiltersInSettings() {
+		reasons = append(reasons, "backendRefs have filters other than backendPriority")
+	}
+	if len(r.Settings) > 1 && r.HasPreferLocalZone() {
+		reasons = append(reasons, "backends use preferLocal")
+	}
+	if r.HasMixedUpstreamProtocolRequirements() {
+		reasons = append(reasons, "backends require different upstream protocols")
+	}
+	if r.HasMixedAutoSNISettings() {
+		reasons = append(reasons, "only some backends use autoSNI from the endpoint hostname")
+	}
+	return reasons
+}
+
+// HasPriorityFailover reports whether RouteDestination's usable settings span more than one locality priority,
+// i.e. traffic is expected to fail over between them.
+func (r *RouteDestination) HasPriorityFailover() bool {
+	priorities := sets.New[uint32]()
+	for _, s := range r.Settings {
+		if s == nil || s.Invalid || (s.Weight != nil && *s.Weight == 0) ||
+			(len(s.Endpoints) == 0 && !s.IsDynamicResolver) {
+			continue
+		}
+		priorities.Insert(ptr.Deref(s.Priority, 0))
+	}
+	return priorities.Len() > 1
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types

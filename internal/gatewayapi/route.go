@@ -10,7 +10,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -2176,6 +2178,105 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 				msg,
 			)
 		}
+	}
+}
+
+// routeIdentity identifies a route resource without building a string key.
+type routeIdentity struct {
+	kind, namespace, name string
+}
+
+// checkIneffectiveBackendPriority sets a BackendPriorityIneffective condition on HTTPRoutes and
+// GRPCRoutes with a rule whose backends span several locality priorities (set by a
+// backendPriority filter or a fallback Backend) but are split into separate clusters. Envoy
+// only fails over between priorities within one cluster, so the priorities have no effect.
+func (t *Translator) checkIneffectiveBackendPriority(httpRoutes []*HTTPRouteContext, grpcRoutes []*GRPCRouteContext, xdsIR resource.XdsIRMap) {
+	// route -> IR listener name -> IR destination name -> reasons the rule is split.
+	// A rule shows up once per match and hostname, all sharing one destination.
+	type splitRules map[string][]string
+	ineffective := make(map[routeIdentity]map[string]splitRules)
+
+	for _, xds := range xdsIR {
+		for _, httpListener := range xds.HTTP {
+			for _, r := range httpListener.Routes {
+				if r.Metadata == nil || r.Destination == nil || r.DirectResponse != nil || r.Redirect != nil ||
+					!r.Destination.HasPriorityFailover() {
+					continue
+				}
+				reasons := r.ClusterPerSettingReasons()
+				// The weighted route action names a merged backend's shared cluster separately
+				// from this rule's own backends, so those get a cluster each too.
+				if len(r.Destination.BackendClusterRefs) > 0 {
+					reasons = append(reasons, "other backendRefs are merged into shared clusters")
+				}
+				if len(reasons) == 0 {
+					continue
+				}
+				id := routeIdentity{r.Metadata.Kind, r.Metadata.Namespace, r.Metadata.Name}
+				if ineffective[id] == nil {
+					ineffective[id] = make(map[string]splitRules)
+				}
+				if ineffective[id][httpListener.Name] == nil {
+					ineffective[id][httpListener.Name] = make(splitRules)
+				}
+				ineffective[id][httpListener.Name][r.Destination.Name] = reasons
+			}
+		}
+	}
+
+	if len(ineffective) == 0 {
+		return
+	}
+
+	report := func(route RouteContext) {
+		byListener, ok := ineffective[routeIdentity{string(route.GetRouteType()), route.GetNamespace(), route.GetName()}]
+		if !ok {
+			return
+		}
+		rulePrefix := irRoutePrefix(route) + "rule/"
+		routeStatus := GetRouteStatus(route)
+		for _, parentRef := range GetParentReferences(route) {
+			routeParent := route.GetRouteParentContext(parentRef)
+			if routeParent == nil {
+				continue
+			}
+			// Only report the rules split on the listeners this parentRef attaches to, since
+			// load balancer settings and backend merging can differ per Gateway.
+			rules := make(map[int][]string)
+			for _, listener := range routeParent.listeners {
+				for destName, reasons := range byListener[irListenerName(listener)] {
+					ruleIdx, err := strconv.Atoi(strings.TrimPrefix(destName, rulePrefix))
+					if err != nil {
+						continue
+					}
+					rules[ruleIdx] = reasons
+				}
+			}
+			if len(rules) == 0 {
+				continue
+			}
+
+			msgs := make([]string, 0, len(rules))
+			for _, ruleIdx := range slices.Sorted(maps.Keys(rules)) {
+				msgs = append(msgs, fmt.Sprintf(
+					"Backend priority has no effect on rule %d because its backends are split into separate clusters: %s.",
+					ruleIdx, strings.Join(rules[ruleIdx], ", ")))
+			}
+			status.SetRouteStatusCondition(routeStatus,
+				routeParent.routeParentStatusIdx,
+				route.GetGeneration(),
+				status.RouteConditionBackendPriorityIneffective,
+				metav1.ConditionTrue,
+				status.RouteReasonBackendPriorityIneffective,
+				strings.Join(msgs, " "),
+			)
+		}
+	}
+	for _, hr := range httpRoutes {
+		report(hr)
+	}
+	for _, gr := range grpcRoutes {
+		report(gr)
 	}
 }
 
