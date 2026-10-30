@@ -1,0 +1,56 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.envoyproxy.io"
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-directresponse-then-invalid-rewrite
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    # DirectResponse first. The later invalid rewrite must still fail the rule.
+    - matches:
+      - path:
+          value: "/direct-response-then-invalid"
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-inline
+      - type: URLRewrite
+        urlRewrite:
+          hostname: "192.168.1.1"
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: direct-response-inline
+    namespace: default
+  spec:
+    directResponse:
+      contentType: text/plain
+      statusCode: 418
+      body:
+        type: Inline
+        inline: "OK"
