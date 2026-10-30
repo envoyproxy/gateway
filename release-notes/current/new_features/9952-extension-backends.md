@@ -1,1 +1,0 @@
-Added named backend dependencies to EnvoyExtensionPolicy for Lua, Wasm and dynamic module HTTP callouts, with optional backend connection settings and alias bindings exposed through static route metadata. Disabled by default and enabled by setting `extensionApis.enableExtensionBackends` to `true` in the EnvoyGateway configuration.

@@ -462,12 +462,12 @@ spec:
 
 [Backend]: ../../../api/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md
-[BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#backendobjectreference
+[BackendObjectReference]: {{<gateway-api-spec>}}#backendobjectreference
 [extension resource]: https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/#approach-to-extensibility
 [CVE-2021-25740]: https://nvd.nist.gov/vuln/detail/CVE-2021-25740
 [upstream recommendations]: https://github.com/kubernetes/kubernetes/issues/103675
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
-[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#tlsroute
+[TLSRoute]: {{<gateway-api-spec>}}#tlsroute
 [Envoy Extension Policy]: ../../../api/extension_types#envoyextensionpolicy
 [Security Policy]: ../../../api/extension_types#oidcprovider
 [Backend TLS Policy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/

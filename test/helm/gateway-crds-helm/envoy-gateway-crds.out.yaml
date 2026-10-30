@@ -4398,7 +4398,13 @@ spec:
                           %ROUTE_KIND%: kind of Gateway API xRoute resource
                           Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
                           Disabled by default.
+                        maxLength: 1024
                         type: string
+                        x-kubernetes-validations:
+                        - message: routeStatName contains an unsupported or unterminated
+                            operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%,
+                            %ROUTE_KIND% and %ROUTE_RULE_NAME%
+                          rule: self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME)%)*$')
                     type: object
                   tracing:
                     description: |-
@@ -28221,7 +28227,14 @@ spec:
                           Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
+                        maxLength: 1024
                         type: string
+                        x-kubernetes-validations:
+                        - message: clusterStatName contains an unsupported or unterminated
+                            operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%,
+                            %ROUTE_KIND%, %ROUTE_RULE_NAME%, %ROUTE_RULE_NUMBER% and
+                            %BACKEND_REFS%
+                          rule: self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME|ROUTE_RULE_NUMBER|BACKEND_REFS)%)*$')
                       enableCircuitBreakerRemainingStats:
                         description: |-
                           EnableCircuitBreakerRemainingStats enables Envoy's circuit breaker `remaining_*` gauges,

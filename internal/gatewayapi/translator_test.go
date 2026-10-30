@@ -247,6 +247,12 @@ func TestTranslate(t *testing.T) {
 					oidcTokenCookieChunkingDisabled = config.OIDCTokenCookieChunkingDisabled
 				}
 			}
+			// The config loader applies the schema defaults before settings reach the translator.
+			if rateLimitClusterSettings != nil {
+				var err error
+				rateLimitClusterSettings, err = config.DefaultClusterSettings(rateLimitClusterSettings)
+				require.NoError(t, err)
+			}
 
 			translator := &Translator{
 				GatewayControllerName:           egv1a1.GatewayControllerName,
