@@ -1,2 +1,0 @@
-Active HTTP health checks now use the HTTP protocol of the requests to the backend instead of always using HTTP/1.1. Health checks to TLS backends offer h2 and http/1.1 through ALPN and use the protocol that's negotiated, and health checks to backends that use HTTP/2, such as GRPCRoute backends or those with the `kubernetes.io/h2c` appProtocol, use HTTP/2.
-Set `healthCheck.active.http.protocol` to `HTTP1` in the BackendTrafficPolicy to keep the previous behavior for a backend whose health check endpoint only serves HTTP/1.1.

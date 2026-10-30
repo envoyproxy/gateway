@@ -15,6 +15,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,6 +28,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -591,16 +593,20 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 }
 
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
-	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
+func (t *Translator) irTLSConfigs(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
+	if len(config.secrets) == 0 && len(config.extensionCertificates) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
-		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
+		Certificates: make([]ir.TLSCertificate, len(config.secrets), len(config.secrets)+len(config.extensionCertificates)),
 	}
 	for i, tlsSecret := range config.secrets {
 		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(tlsSecret)
+	}
+	for i := range config.extensionCertificates {
+		tlsListenerConfigs.Certificates = append(tlsListenerConfigs.Certificates,
+			t.getTLSCertificateFromExtensionRef(&config.extensionCertificates[i], gwIR, gatewayCtx))
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
@@ -656,10 +662,29 @@ func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
 	return cert
 }
 
+// getTLSCertificateFromExtensionRef builds the IR certificate for a listener certificate
+// resolved from an extension-registered kind. No key material is carried: how Envoy obtains
+// the certificate is decided by the extension server via the Secret hook.
+func (t *Translator) getTLSCertificateFromExtensionRef(obj *unstructured.Unstructured, gwIR *ir.Xds, gatewayCtx *GatewayContext) ir.TLSCertificate {
+	return ir.TLSCertificate{
+		Name:         irTLSExtensionCertificateName(obj),
+		ExtensionRef: t.getOrCreateExtensionResource(gwIR, gatewayCtx, obj),
+	}
+}
+
+// irTLSExtensionCertificateName is the IR-level identifier for an extension-resolved
+// certificate. It is scoped by group and kind as well as namespace and name, so two
+// providers may use the same resource name without colliding. This is not the xDS secret
+// name -- that is chosen by the extension server.
+func irTLSExtensionCertificateName(obj *unstructured.Unstructured) string {
+	gvk := obj.GroupVersionKind()
+	return fmt.Sprintf("%s/%s/%s/%s", gvk.Group, gvk.Kind, obj.GetNamespace(), obj.GetName())
+}
+
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
-	tlsListenerConfigs := irTLSConfigs(config)
+func (t *Translator) irTLSConfigsForTCPListener(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
+	tlsListenerConfigs := t.irTLSConfigs(config, gwIR, gatewayCtx)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice
@@ -1679,4 +1704,27 @@ func getOverriddenTargetsMessageForRoute(
 		return fmt.Sprintf("these route rules: %v", routes)
 	}
 	return ""
+}
+
+// deprecatedField describes a deprecated field replaced by replacement, with no planned removal.
+func deprecatedField(replacement string) status.DeprecatedField {
+	return status.DeprecatedField{Replacement: replacement}
+}
+
+// deprecatedFieldScheduledForRemoval describes a deprecated field replaced by replacement that is
+// scheduled for removal in status.DeprecatedFieldsRemovalRelease.
+func deprecatedFieldScheduledForRemoval(replacement string) status.DeprecatedField {
+	return status.DeprecatedField{Replacement: replacement, RemovedIn: status.DeprecatedFieldsRemovalRelease}
+}
+
+// isExtensionSecretRef reports whether a listener certificate ref points at a kind
+// registered in ExtensionManager.SecretResources. Gateway API certificate refs carry
+// no version, so only group and kind are compared.
+func (t *Translator) isExtensionSecretRef(group, kind string) bool {
+	for _, gk := range t.ExtensionSecretGroupKinds {
+		if gk.Group == group && gk.Kind == kind {
+			return true
+		}
+	}
+	return false
 }

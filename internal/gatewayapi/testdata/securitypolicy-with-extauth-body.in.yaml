@@ -90,10 +90,10 @@ securityPolicies:
       namespace: default
       name: policy-for-http-route-1
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       extAuth:
         failOpen: true
         headersToExtAuth:
@@ -114,10 +114,10 @@ securityPolicies:
       namespace: default
       name: policy-for-http-route-2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-2
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
       extAuth:
         bodyToExtAuth:
           maxRequestBytes: 16384

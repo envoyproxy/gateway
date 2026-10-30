@@ -119,6 +119,10 @@ type Translator struct {
 	// ControllerNamespace is the namespace of the Gateway API controller
 	ControllerNamespace string
 
+	// ProxyInfraName and ProxyInfraNamespace identify the data plane the xDS IR is translated for.
+	ProxyInfraName      string
+	ProxyInfraNamespace string
+
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings
@@ -529,7 +533,23 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 	}
 
+	var unresolvedListeners []*ir.HTTPListener
 	for _, httpListener := range httpListeners {
+		// Resolve extension-provided certificates once, before anything is built. A listener whose
+		// certificates are all extension-resolved and none resolved has nothing to serve, so it is
+		// closed below rather than emitted without a certificate, which Envoy would reject along with
+		// every other filter chain sharing its port. Listeners without extension certificates are
+		// never affected here.
+		certResolutions, resolveErr := t.resolveExtensionCertificates(httpListener.TLS)
+		if resolveErr != nil {
+			errs = errors.Join(errs, resolveErr)
+			continue
+		}
+		if allExtensionCertificatesUnresolved(httpListener.TLS, certResolutions) {
+			unresolvedListeners = append(unresolvedListeners, httpListener)
+			continue
+		}
+
 		var (
 			http3Enabled                       bool
 			tcpXDSListener                     *listenerv3.Listener // TCP Listener for HTTP1/HTTP2 traffic
@@ -616,12 +636,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addHCM {
-			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, httpListener.Connection); err != nil {
+			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, httpListener.Connection, certResolutions); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
+				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection, certResolutions); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -713,6 +733,19 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
 		if err = patchResources(tCtx, httpListener.Routes); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	// Close the listeners none of whose extension certificates resolved. This runs after the other
+	// listeners are built, so it joins the xDS listener they share a port with. HTTP/3 is not
+	// closed this way, as a QUIC filter chain cannot be built without a certificate.
+	for _, httpListener := range unresolvedListeners {
+		t.Logger.Info("closing listener: none of its extension certificates resolved",
+			"listener", httpListener.Name)
+		if err := t.addClosedFilterChains(tCtx, &httpListener.CoreListenerDetails, httpListener.TCPKeepalive,
+			httpListener.Connection, httpListener.Timeout, httpListener.ProxyProtocol, accessLog,
+			[]closedFilterChain{{name: httpListener.Name, snis: httpListener.Hostnames}}); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -1065,7 +1098,19 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// errors and return them at the end.
 	var errs, err error
 
+	var unresolvedListeners []*ir.TCPListener
 	for _, tcpListener := range tcpListeners {
+		// Resolve extension-provided certificates; close the listener below if none resolved.
+		certResolutions, resolveErr := t.resolveExtensionCertificates(tcpListener.TLS)
+		if resolveErr != nil {
+			errs = errors.Join(errs, resolveErr)
+			continue
+		}
+		if allExtensionCertificatesUnresolved(tcpListener.TLS, certResolutions) {
+			unresolvedListeners = append(unresolvedListeners, tcpListener)
+			continue
+		}
+
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
@@ -1147,6 +1192,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				route,
 				singleClusterDestinationName(route.Destination),
 				accesslog,
+				certResolutions,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1176,9 +1222,33 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				emptyRoute,
 				emptyClusterName,
 				accesslog,
+				certResolutions,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
+		}
+	}
+
+	// Close the listeners none of whose extension certificates resolved, after the other listeners
+	// are built. Each route gets a closed filter chain matching the server names its own filter
+	// chain would have matched.
+	for _, tcpListener := range unresolvedListeners {
+		t.Logger.Info("closing listener: none of its extension certificates resolved",
+			"listener", tcpListener.Name)
+		chains := make([]closedFilterChain, 0, len(tcpListener.Routes))
+		for _, route := range tcpListener.Routes {
+			snis := tcpListener.Hostnames
+			if route.TLS != nil && route.TLS.TLSInspectorConfig != nil && len(route.TLS.TLSInspectorConfig.SNIs) > 0 {
+				snis = route.TLS.TLSInspectorConfig.SNIs
+			}
+			chains = append(chains, closedFilterChain{name: route.Name, snis: snis})
+		}
+		if len(chains) == 0 {
+			chains = append(chains, closedFilterChain{name: tcpListener.Name, snis: tcpListener.Hostnames})
+		}
+		if err := t.addClosedFilterChains(tCtx, &tcpListener.CoreListenerDetails, tcpListener.TCPKeepalive,
+			tcpListener.Connection, tcpListener.Timeout, tcpListener.ProxyProtocol, accesslog, chains); err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -1269,6 +1339,59 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 		}); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// closedFilterChain is a filter chain that closes the connections matching its server names.
+type closedFilterChain struct {
+	name string
+	snis []string
+}
+
+// addClosedFilterChains adds closed filter chains for a listener none of whose extension
+// certificates resolved, to the xDS listener for its address and port, building that listener if
+// needed. Each chain matches the listener's server names, so its connections are closed rather than
+// handled by another filter chain on the same port, such as one with a wildcard hostname. A chain
+// does not terminate TLS, as there is no certificate, and proxies to the empty cluster.
+func (t *Translator) addClosedFilterChains(
+	tCtx *types.ResourceVersionTable,
+	listener *ir.CoreListenerDetails,
+	keepalive *ir.TCPKeepalive,
+	connection *ir.ClientConnection,
+	timeout *ir.ClientTimeout,
+	proxyProtocol *ir.ProxyProtocolSettings,
+	accessLog *ir.AccessLog,
+	chains []closedFilterChain,
+) error {
+	xdsListener := findXdsListenerByHostPort(tCtx, listener.Address, listener.Port, corev3.SocketAddress_TCP)
+	if xdsListener == nil {
+		var err error
+		if xdsListener, err = t.buildXdsTCPListener(listener, keepalive, connection, timeout, accessLog); err != nil {
+			return err
+		}
+		if err = tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
+			return err
+		}
+	}
+	patchProxyProtocolFilter(xdsListener, proxyProtocol)
+
+	if findXdsCluster(tCtx, emptyClusterName) == nil {
+		if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
+			return err
+		}
+	}
+	statPrefix := fmt.Sprintf("unresolved-certificate-%d", xdsListener.GetAddress().GetSocketAddress().GetPortValue())
+	for _, chain := range chains {
+		filterChain, err := buildTCPFilterChain(&ir.TCPRoute{Name: chain.name + "/unresolved-certificate"},
+			emptyClusterName, statPrefix, accessLog, timeout, nil)
+		if err != nil {
+			return err
+		}
+		if err := addServerNamesMatch(xdsListener, filterChain, chain.snis, nil); err != nil {
+			return err
+		}
+		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	}
 	return nil
 }

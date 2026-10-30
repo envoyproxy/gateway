@@ -2476,6 +2476,11 @@ func (in *GlobalResources) DeepCopyInto(out *GlobalResources) {
 		*out = new(RouteDestination)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RateLimitServiceClusterTraffic != nil {
+		in, out := &in.RateLimitServiceClusterTraffic, &out.RateLimitServiceClusterTraffic
+		*out = new(ClusterTrafficFeatures)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ProxyServiceCluster != nil {
 		in, out := &in.ProxyServiceCluster, &out.ProxyServiceCluster
 		*out = new(RouteDestination)
@@ -5423,6 +5428,11 @@ func (in *TLSCertificate) DeepCopyInto(out *TLSCertificate) {
 		in, out := &in.SDS, &out.SDS
 		*out = new(SDSConfig)
 		**out = **in
+	}
+	if in.ExtensionRef != nil {
+		in, out := &in.ExtensionRef, &out.ExtensionRef
+		*out = new(UnstructuredRef)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Certificate != nil {
 		in, out := &in.Certificate, &out.Certificate

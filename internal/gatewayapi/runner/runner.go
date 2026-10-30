@@ -325,6 +325,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
 					GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
+					RateLimitClusterSettings:        r.EnvoyGateway.RateLimit.GetServiceSettings(),
 					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					EnvoyProxyPatchDisabled:         !r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
 					CTPHTTP1ClientScopeOnly:         r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly),
@@ -346,8 +347,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 				// If extensions are loaded, pass their supported groups/kinds to the translator
 				if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
-					var extGKs []schema.GroupKind
-					for _, em := range extensions {
+					var extGKs, extSecretGKs []schema.GroupKind
+					for i := range extensions {
+						em := &extensions[i]
 						for _, gvk := range em.Resources {
 							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 						}
@@ -355,8 +357,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						for _, gvk := range em.BackendResources {
 							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 						}
+						for _, gvk := range em.SecretResources {
+							extSecretGKs = append(extSecretGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+						}
 					}
 					t.ExtensionGroupKinds = extGKs
+					t.ExtensionSecretGroupKinds = extSecretGKs
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}
 				// Translate to IR.
