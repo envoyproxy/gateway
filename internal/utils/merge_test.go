@@ -12,6 +12,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -81,4 +84,29 @@ func readObject[T client.Object](t *testing.T, path string) T {
 	err = yaml.Unmarshal(b, btp)
 	require.NoError(t, err)
 	return *btp
+}
+
+func TestMergeWithPatchDisabled(t *testing.T) {
+	original := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "original",
+		},
+	}
+
+	patch := &egv1a1.KubernetesPatchSpec{
+		Value: apiextensionsv1.JSON{
+			Raw: []byte(`{"metadata":{"name":"patched"}}`),
+		},
+	}
+
+	// With patching disabled, MergeWithPatch must return the original object
+	// unchanged, even though the patch is well-formed and would otherwise apply.
+	got, err := MergeWithPatch(original, patch, true)
+	require.NoError(t, err)
+	require.Equal(t, original, got)
+
+	// Sanity check: with patching enabled, the same patch does apply.
+	got, err = MergeWithPatch(original, patch, false)
+	require.NoError(t, err)
+	require.Equal(t, "patched", got.Name)
 }

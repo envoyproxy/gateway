@@ -1,0 +1,235 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  # Multi-tier failover: service-1 (priority 0, no filter) -> service-2 (priority 1)
+  # -> be-fallback (priority 2, overriding the priority derived from its fallback field).
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-1
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-1
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: be-fallback
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-2
+  # Rejected: backendPriority referenced from the rule's filters.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-3
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: priority-1
+          backendRefs:
+            - name: service-1
+              port: 8080
+  # Rejected: multiple backendPriority filters on a single backendRef.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-3
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-4
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-1
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-2
+  # Rejected: backendPriority referenced from the rule's filters after a DirectResponse filter.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-4
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-5
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: direct-response
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: priority-1
+          backendRefs:
+            - name: service-1
+              port: 8080
+grpcRoutes:
+  # Rejected: GRPCRoute backendRefs don't support ExtensionRef filters.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GRPCRoute
+    metadata:
+      namespace: default
+      name: grpc-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-1
+  # Rejected: backendPriority referenced from the rule's filters.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GRPCRoute
+    metadata:
+      namespace: default
+      name: grpc-route-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: priority-1
+          backendRefs:
+            - name: service-1
+              port: 8080
+  # Rejected: backendPriority referenced from the rule's filters after a DirectResponse filter.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GRPCRoute
+    metadata:
+      namespace: default
+      name: grpc-route-3
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: direct-response
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: priority-1
+          backendRefs:
+            - name: service-1
+              port: 8080
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: priority-1
+    spec:
+      backendPriority: 1
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: priority-2
+    spec:
+      backendPriority: 2
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: direct-response
+    spec:
+      directResponse:
+        statusCode: 503
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      namespace: default
+      name: be-fallback
+    spec:
+      fallback: true
+      endpoints:
+        - ip:
+            address: 2.2.2.2
+            port: 3001

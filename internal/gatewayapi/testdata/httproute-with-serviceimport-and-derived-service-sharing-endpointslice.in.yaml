@@ -1,0 +1,98 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-service-import
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/service-import"
+      backendRefs:
+      - group: multicluster.x-k8s.io
+        kind: ServiceImport
+        name: service-import-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-derived-service
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/derived-service"
+      backendRefs:
+      - name: derived-service-1
+        port: 8080
+serviceImports:
+- apiVersion: multicluster.x-k8s.io/v1alpha1
+  kind: ServiceImport
+  metadata:
+    namespace: default
+    name: service-import-1
+  spec:
+    ips:
+    - 7.7.7.7
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: derived-service-1
+  spec:
+    clusterIP: 7.7.7.7
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+# MCS implementations such as Cilium ClusterMesh label the EndpointSlices of a
+# ServiceImport with both the ServiceImport name and the derived Service name.
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    namespace: default
+    name: service-import-1-abcde
+    labels:
+      kubernetes.io/service-name: derived-service-1
+      multicluster.kubernetes.io/service-name: service-import-1
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true

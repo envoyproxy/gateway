@@ -101,6 +101,12 @@ type EnvoyProxySpec struct {
 	// rule. This reduces xDS size, active health-check traffic, and stats cardinality, and
 	// improves upstream connection pooling.
 	//
+	// Only a route's own backendRefs (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute) are
+	// considered. A backend used any other way, such as a RequestMirror filter or an external
+	// service of a SecurityPolicy or EnvoyExtensionPolicy, is never merged. A BackendTrafficPolicy
+	// that targets a backend only reports status for Gateways where the backend is used as a route
+	// backendRef.
+	//
 	// Disabled when unset; specifying this field at all (even without further configuration)
 	// enables it. Mutually exclusive with MergeGateways.
 	//
@@ -161,6 +167,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.grpc_web
 	//
+	// - envoy.filters.http.grpc_json_transcoder
+	//
 	// - envoy.filters.http.grpc_stats
 	//
 	// - envoy.filters.http.credential_injector
@@ -168,6 +176,8 @@ type EnvoyProxySpec struct {
 	// - envoy.filters.http.compressor
 	//
 	// - envoy.filters.http.dynamic_forward_proxy
+	//
+	// - envoy.filters.http.alternate_protocols_cache
 	//
 	// - envoy.filters.http.router
 	//
@@ -187,7 +197,7 @@ type EnvoyProxySpec struct {
 	// - It defaults to IPv4 only.
 	// - IPv6 and dual-stack environments are not supported in this default configuration.
 	// Note: To enable IPv6 or dual-stack functionality, explicit configuration is required.
-	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack
+	// +kubebuilder:validation:Enum=IPv4;IPv6;DualStack;PreferDualStack
 	// +optional
 	IPFamily *IPFamily `json:"ipFamily,omitempty"`
 
@@ -228,6 +238,22 @@ type EnvoyProxySpec struct {
 	// +listMapKey=name
 	// +optional
 	DynamicModules []DynamicModuleEntry `json:"dynamicModules,omitempty"`
+
+	// WasmModules defines the set of Wasm modules that are allowed to be used by
+	// EnvoyExtensionPolicy resources. Each entry registers a module by a logical
+	// name and a source (currently Local path).
+	//
+	// When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up
+	// in this list.
+	//
+	// The EnvoyProxy owner is responsible for ensuring Local modules are available
+	// on the proxy container's filesystem (e.g., via init containers, custom images,
+	// or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path.
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	WasmModules []WasmModuleEntry `json:"wasmModules,omitempty"`
 
 	// GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet.
 	//
@@ -392,7 +418,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_json_transcoder;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy;envoy.filters.http.alternate_protocols_cache
 type EnvoyFilter string
 
 const (
@@ -466,6 +492,9 @@ const (
 	// EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.
 	EnvoyFilterGRPCWeb EnvoyFilter = "envoy.filters.http.grpc_web"
 
+	// EnvoyFilterGRPCJSONTranscoder defines the Envoy HTTP gRPC-JSON transcoder filter.
+	EnvoyFilterGRPCJSONTranscoder EnvoyFilter = "envoy.filters.http.grpc_json_transcoder"
+
 	// EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.
 	EnvoyFilterGRPCStats EnvoyFilter = "envoy.filters.http.grpc_stats"
 
@@ -477,6 +506,9 @@ const (
 
 	// EnvoyFilterDynamicForwardProxy defines the Envoy HTTP dynamic forward proxy filter.
 	EnvoyFilterDynamicForwardProxy EnvoyFilter = "envoy.filters.http.dynamic_forward_proxy"
+
+	// EnvoyFilterAlternateProtocolsCache defines the Envoy HTTP alternate protocols cache filter.
+	EnvoyFilterAlternateProtocolsCache EnvoyFilter = "envoy.filters.http.alternate_protocols_cache"
 
 	// EnvoyFilterRouter defines the Envoy HTTP router filter.
 	EnvoyFilterRouter EnvoyFilter = "envoy.filters.http.router"
@@ -806,6 +838,15 @@ const (
 	EnvoyProxyReasonInvalidParameters EnvoyProxyConditionReason = "InvalidParameters"
 
 	EnvoyProxyReasonDeprecatedField EnvoyProxyConditionReason = "DeprecatedField"
+
+	// EnvoyProxyReasonPatchDisabled indicates that one or more Kubernetes resource
+	// `patch` fields configured on this EnvoyProxy were ignored because patching is
+	// disabled in the EnvoyGateway configuration.
+	EnvoyProxyReasonPatchDisabled EnvoyProxyConditionReason = "PatchDisabled"
+
+	// EnvoyProxyReasonMultipleWarnings is used with the "Warning" condition when the EnvoyProxy
+	// has warnings with different reasons; the condition message lists all of them.
+	EnvoyProxyReasonMultipleWarnings EnvoyProxyConditionReason = "Warnings"
 )
 
 // +kubebuilder:object:root=true
@@ -830,6 +871,9 @@ const (
 	// When set to DualStack, Envoy proxy will listen on both IPv4 and IPv6 addresses
 	// for incoming client traffic, enabling support for both IP protocol versions.
 	DualStack IPFamily = "DualStack"
+	// PreferDualStack defines the dual-stack family, degrading to the single family
+	// the cluster provides instead of failing when the cluster is not dual-stack.
+	PreferDualStack IPFamily = "PreferDualStack"
 )
 
 func init() {
