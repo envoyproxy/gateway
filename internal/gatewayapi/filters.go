@@ -121,6 +121,23 @@ func hasBackendPriorityFilter(resources *resource.Resources, ns string, extRefs 
 	return false
 }
 
+// filterEvalContext returns the context used to evaluate the next filter.
+// A DirectResponse is terminal for traffic, but later filters must still be
+// validated so listing it first cannot hide an invalid filter. Successful IR
+// mutations from those later filters are discarded; processFilterError then
+// installs 500 when any error was collected.
+func filterEvalContext(ctx *HTTPFiltersContext) *HTTPFiltersContext {
+	if ctx.DirectResponse == nil {
+		return ctx
+	}
+	return &HTTPFiltersContext{
+		ParentRef:    ctx.ParentRef,
+		Route:        ctx.Route,
+		RuleIdx:      ctx.RuleIdx,
+		HTTPFilterIR: &HTTPFilterIR{},
+	}
+}
+
 // ProcessHTTPFilters translates gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(
 	parentRef *RouteParentContext,
@@ -139,45 +156,45 @@ func (t *Translator) ProcessHTTPFilters(
 	var errs status.TypedErrorCollector
 	for i := range filters {
 		filter := filters[i]
-		// If an invalid filter type has been configured then skip processing any more filters
-		if httpFiltersContext.DirectResponse != nil {
-			break
-		}
+		// Keep validating later filters after a DirectResponse so filter
+		// order cannot skip an invalid filter. Effects go to a throwaway
+		// context when DirectResponse is already set.
+		ctx := filterEvalContext(httpFiltersContext)
 		if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
-			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
+			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), ctx, err))
 			continue
 		}
 
 		switch filter.Type {
 		case gwapiv1.HTTPRouteFilterURLRewrite:
-			if err := t.processURLRewriteFilter(filter.URLRewrite, httpFiltersContext); err != nil {
+			if err := t.processURLRewriteFilter(filter.URLRewrite, ctx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestRedirect:
-			if err := t.processRedirectFilter(filter.RequestRedirect, httpFiltersContext); err != nil {
+			if err := t.processRedirectFilter(filter.RequestRedirect, ctx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestHeaderModifier:
-			err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext)
+			err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, ctx)
 			if err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterResponseHeaderModifier:
-			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext); err != nil {
+			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, ctx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestMirror:
-			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources, xdsIR); err != nil {
+			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, ctx, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterCORS:
-			t.processCORSFilter(filter.CORS, httpFiltersContext)
+			t.processCORSFilter(filter.CORS, ctx)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, ctx, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
-			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
+			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), ctx))
 		}
 	}
 
@@ -266,34 +283,34 @@ func (t *Translator) ProcessGRPCFilters(
 	var errs status.TypedErrorCollector
 	for i := range filters {
 		filter := filters[i]
-		// If an invalid filter type has been configured then skip processing any more filters
-		if httpFiltersContext.DirectResponse != nil {
-			break
-		}
+		// Keep validating later filters after a DirectResponse so filter
+		// order cannot skip an invalid filter. Effects go to a throwaway
+		// context when DirectResponse is already set.
+		ctx := filterEvalContext(httpFiltersContext)
 		if err := ValidateGRPCRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
-			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
+			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), ctx, err))
 			continue
 		}
 
 		switch filter.Type {
 		case gwapiv1.GRPCRouteFilterRequestHeaderModifier:
-			if err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext); err != nil {
+			if err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, ctx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
-			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext); err != nil {
+			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, ctx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources, xdsIR); err != nil {
+			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, ctx, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, ctx, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
-			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
+			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), ctx))
 		}
 	}
 

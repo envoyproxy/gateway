@@ -1,0 +1,75 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-directresponse-and-invalid-rewrite
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    # Invalid rewrite first so the filter-set DirectResponse is still processed.
+    # A second valid rule keeps the route accepted so this rule stays in xDS.
+    - matches:
+      - method:
+          method: "DirectResponse"
+          service: "com.example"
+          type: Exact
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: invalid-rewrite
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-inline
+    - matches:
+      - method:
+          method: "Valid"
+          service: "com.example"
+          type: Exact
+      backendRefs:
+      - name: service-1
+        port: 8080
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: invalid-rewrite
+    namespace: default
+  spec:
+    urlRewrite:
+      hostname:
+        type: Header
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: direct-response-inline
+    namespace: default
+  spec:
+    directResponse:
+      contentType: text/plain
+      statusCode: 404
+      body:
+        type: Inline
+        inline: "blocked"
