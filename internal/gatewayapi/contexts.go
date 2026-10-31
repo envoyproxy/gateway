@@ -29,9 +29,11 @@ import (
 type GatewayContext struct {
 	*gwapiv1.Gateway
 
-	listeners             []*ListenerContext
-	envoyProxy            *egv1a1.EnvoyProxy
-	envoyProxyFromGateway bool
+	listeners  []*ListenerContext
+	envoyProxy *egv1a1.EnvoyProxy
+	// envoyProxyForGateway is the unmerged Gateway-level EnvoyProxy, nil when the
+	// Gateway has none. Merged fields are traced back to it to find their owner.
+	envoyProxyForGateway *egv1a1.EnvoyProxy
 
 	backendTLS *egv1a1.BackendTLSConfig
 }
@@ -107,7 +109,6 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
-				g.envoyProxyFromGateway = true
 				gatewayProxy = ep
 			}
 		}
@@ -121,6 +122,7 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 		gatewayProxy,
 	)
 	g.envoyProxy = merged
+	g.envoyProxyForGateway = gatewayProxy
 	return err
 }
 

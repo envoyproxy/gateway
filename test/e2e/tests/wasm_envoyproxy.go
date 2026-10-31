@@ -22,7 +22,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, WasmEnvoyProxyTest)
+	ConformanceTests = append(ConformanceTests, WasmEnvoyProxyTest, WasmRegisteredHTTPTest)
 }
 
 // WasmEnvoyProxyTest loads Wasm from a local path registered on EnvoyProxy.
@@ -60,6 +60,55 @@ var WasmEnvoyProxyTest = suite.ConformanceTest{
 				// Empty ExpectedRequest: the example Wasm appends "Hello, world" to the
 				// response body, which invalidates the JSON format used to extract request
 				// properties (same workaround as the HTTP Wasm e2e).
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host:    "",
+						Method:  "",
+						Path:    "",
+						Headers: nil,
+					},
+				},
+				Namespace: "",
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers: map[string]string{
+						"x-wasm-custom": "FOO",
+					},
+				},
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+	},
+}
+
+// WasmRegisteredHTTPTest loads Wasm from an HTTP module registered on EnvoyProxy.
+// Envoy Gateway fetches the module and serves it to the proxy.
+var WasmRegisteredHTTPTest = suite.ConformanceTest{
+	ShortName:   "WasmRegisteredHTTP",
+	Description: "Test name-only Wasm that loads an HTTP module registered on EnvoyProxy and adds response headers",
+	Manifests:   []string{"testdata/wasm-registered-http.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("http route with envoy proxy HTTP module wasm", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-with-wasm-module-http", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "wasm-module-http-gateway", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "wasm-module-http-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/wasm-module-http",
+				},
+				// Empty ExpectedRequest: the example Wasm appends to the response body,
+				// which breaks the JSON echo used to extract request properties.
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host:    "",

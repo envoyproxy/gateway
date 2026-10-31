@@ -47,6 +47,11 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.wasm.code is deprecated, use EnvoyProxy spec.wasmModules instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -59,6 +64,11 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.wasm.code is deprecated, use EnvoyProxy spec.wasmModules instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
           for these routes: [envoy-gateway/httproute-1]'

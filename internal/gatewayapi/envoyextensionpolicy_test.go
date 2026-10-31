@@ -143,9 +143,10 @@ func TestBuildLocalWasmVMSharing(t *testing.T) {
 					},
 				}},
 			}}
+			gateway := &GatewayContext{envoyProxy: envoyProxy, envoyProxyForGateway: envoyProxy}
 			original := config.DeepCopy()
 			translator := &Translator{TranslatorContext: &TranslatorContext{}}
-			got, err := translator.buildWasm(irConfigNameForWasm(policy, 0), config, policy, 0, &resource.Resources{}, envoyProxy)
+			got, err := translator.buildWasm(irConfigNameForWasm(policy, 0), config, policy, 0, &resource.Resources{}, gateway)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantVMID, got.VMID)
 			assert.Equal(t, tt.wantHostKeys, got.HostKeys)
