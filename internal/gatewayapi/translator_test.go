@@ -61,6 +61,7 @@ func TestTranslate(t *testing.T) {
 		PerResourceSystemCASecret       bool
 		RateLimitClusterSettings        *egv1a1.ClusterSettings
 		EnvoyProxyPatchDisabled         bool
+		DropBackendRefsWithoutEndpoints bool
 		CTPHTTP1ClientScopeOnly         bool
 		OIDCTokenCookieChunkingDisabled bool
 	}{
@@ -178,6 +179,10 @@ func TestTranslate(t *testing.T) {
 			EnvoyProxyPatchDisabled: true,
 		},
 		{
+			name:                            "httproute-with-multiple-backendrefs-some-without-endpoints",
+			DropBackendRefsWithoutEndpoints: true,
+		},
+		{
 			name:                    "mergebackends-http-merge-listenerset-http1-ctp-client-scope",
 			CTPHTTP1ClientScopeOnly: true,
 		},
@@ -229,6 +234,7 @@ func TestTranslate(t *testing.T) {
 			perResourceSystemCASecret := false
 			var rateLimitClusterSettings *egv1a1.ClusterSettings
 			envoyProxyPatchDisabled := false
+			dropBackendRefsWithoutEndpoints := false
 			ctpHTTP1ClientScopeOnly := false
 			oidcTokenCookieChunkingDisabled := false
 
@@ -243,6 +249,7 @@ func TestTranslate(t *testing.T) {
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
 					rateLimitClusterSettings = config.RateLimitClusterSettings
 					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
+					dropBackendRefsWithoutEndpoints = config.DropBackendRefsWithoutEndpoints
 					ctpHTTP1ClientScopeOnly = config.CTPHTTP1ClientScopeOnly
 					oidcTokenCookieChunkingDisabled = config.OIDCTokenCookieChunkingDisabled
 				}
@@ -264,6 +271,7 @@ func TestTranslate(t *testing.T) {
 				ExtensionBackendsEnabled:        true,
 				SDSSecretRefEnabled:             sdsEnabled,
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
+				DropBackendRefsWithoutEndpoints: dropBackendRefsWithoutEndpoints,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
 				MergeBackends:                   ResolveMergeBackendsConfig(resources),
