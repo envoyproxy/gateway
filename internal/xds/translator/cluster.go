@@ -1191,12 +1191,11 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 		Metadata:    buildXdsMetadata(ds.Metadata),
 	}
 
-	// Set locality weight
-	var weight uint32
-	if ds.Weight != nil {
+	// Set locality weight. A zero-weight setting has a cluster of its own (NeedsClusterPerSetting),
+	// and Envoy requires a locality weight of at least 1.
+	weight := uint32(1)
+	if ds.Weight != nil && *ds.Weight > 0 {
 		weight = *ds.Weight
-	} else {
-		weight = 1
 	}
 	locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
 	locality.Priority = ptr.Deref(ds.Priority, 0)

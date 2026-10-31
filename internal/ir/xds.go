@@ -2298,7 +2298,20 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 		r.HasFiltersInSettings() ||
 		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
 		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings()
+		r.HasMixedAutoSNISettings() ||
+		r.HasZeroWeightSettings()
+}
+
+// HasZeroWeightSettings returns true if any setting has an explicit zero weight. A zero locality
+// weight is invalid in a shared cluster, so such a setting gets its own cluster and a zero-weight
+// weighted_clusters entry.
+func (r *RouteDestination) HasZeroWeightSettings() bool {
+	for _, s := range r.Settings {
+		if s.Weight != nil && *s.Weight == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types

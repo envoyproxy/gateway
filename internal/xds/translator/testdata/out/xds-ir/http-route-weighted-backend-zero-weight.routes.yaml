@@ -1,0 +1,33 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /first
+      name: first-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: first-route-dest/backend/0
+            weight: 100
+          - name: first-route-dest/backend/1
+            weight: 0
+    - match:
+        pathSeparatedPrefix: /merged
+      name: merged-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: canary/stable
+            weight: 100
+          - name: canary/preview
+            weight: 0
