@@ -1351,6 +1351,8 @@ type TrafficFeatures struct {
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
 	// RequestBodyBufferLimit is the maximum number of bytes Envoy may buffer for an individual request body.
 	RequestBodyBufferLimit *uint64 `json:"requestBodyBufferLimit,omitempty" yaml:"requestBodyBufferLimit,omitempty"`
+	// AdaptiveConcurrency defines the schema for the adaptive concurrency filter.
+	AdaptiveConcurrency *AdaptiveConcurrency `json:"adaptiveConcurrency,omitempty" yaml:"adaptiveConcurrency,omitempty"`
 }
 
 // ClusterFeatures returns the cluster-scoped subset of these traffic features, or nil if there are
@@ -2070,6 +2072,23 @@ type FaultInjectionAbort struct {
 	GrpcStatus *uint32 `json:"grpcStatus,omitempty" yaml:"grpcStatus,omitempty"`
 	// Percentage defines the percentage of requests to be aborted.
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+}
+
+// AdaptiveConcurrency defines the adaptive concurrency filter settings.
+// +k8s:deepcopy-gen=true
+type AdaptiveConcurrency struct {
+	// Name is a unique name for this adaptive concurrency config (used for filter naming).
+	Name string `json:"name" yaml:"name"`
+	// SampleAggregatePercentile is the percentile to use when summarizing aggregated samples.
+	SampleAggregatePercentile *float64 `json:"sampleAggregatePercentile,omitempty" yaml:"sampleAggregatePercentile,omitempty"`
+	// MinConcurrencyLimit is the allowed lower-bound on the calculated concurrency limit.
+	MinConcurrencyLimit *uint32 `json:"minConcurrencyLimit,omitempty" yaml:"minConcurrencyLimit,omitempty"`
+	// MaxConcurrencyLimit is the allowed upper-bound on the calculated concurrency limit.
+	MaxConcurrencyLimit *uint32 `json:"maxConcurrencyLimit,omitempty" yaml:"maxConcurrencyLimit,omitempty"`
+	// ConcurrencyUpdateInterval is the period of time between recalculations of the concurrency limit.
+	ConcurrencyUpdateInterval *metav1.Duration `json:"concurrencyUpdateInterval,omitempty" yaml:"concurrencyUpdateInterval,omitempty"`
+	// ConcurrencyLimitExceededStatus is the HTTP status code returned when the limit is exceeded.
+	ConcurrencyLimitExceededStatus *int32 `json:"concurrencyLimitExceededStatus,omitempty" yaml:"concurrencyLimitExceededStatus,omitempty"`
 }
 
 // AdmissionControl defines the schema for admission control based on success rate.
