@@ -536,6 +536,9 @@ func (t *Translator) processSecurityPolicyForRoute(
 	case resource.KindTCPRoute:
 		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "TCP") }
 		errMsg = "invalid SecurityPolicy for TCP route"
+	case resource.KindTLSRoute:
+		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "TLS") }
+		errMsg = "invalid SecurityPolicy for TLS route"
 	case resource.KindUDPRoute:
 		validator = func(p *egv1a1.SecurityPolicy) error { return validateSecurityPolicyForL4(p, "UDP") }
 		errMsg = "invalid SecurityPolicy for UDP route"
@@ -977,7 +980,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 }
 
 // validateSecurityPolicyForL4 ensures SecurityPolicy usage on an L4 protocol
-// (TCP or UDP) is compatible. proto names the protocol in the returned errors.
+// (TCP, TLS, or UDP) is compatible. proto names the protocol in the returned errors.
 //
 // L4 supports Authorization with ClientCIDRs ONLY, because there is no HTTP
 // request to inspect:
@@ -1398,7 +1401,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		switch route.GetRouteType() {
-		case resource.KindTCPRoute:
+		case resource.KindTCPRoute, resource.KindTLSRoute:
 			for _, listener := range parentRefCtx.listeners {
 				// If targetListener is set, only apply to that exact listener.
 				if targetListener != nil && targetListenerName != irListenerName(listener) {
@@ -1409,16 +1412,27 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					continue
 				}
 				for _, r := range tl.Routes {
-					// Only the IR route built from the targeted TCPRoute may be
-					// modified. Several TCPRoutes can name the same listener while
-					// only one of them is attached, so without this check a policy
-					// targeting an unattached route would silently apply to
-					// whichever route is actually serving traffic.
-					if r.Name != irTCPRouteName(route) {
-						continue
+					// For TLSRoute: filter by route metadata to handle multiple routes per listener
+					if target.Kind == resource.KindTLSRoute {
+						if r.Metadata == nil ||
+							r.Metadata.Kind != string(target.Kind) ||
+							r.Metadata.Namespace != string(target.Namespace) ||
+							r.Metadata.Name != string(target.Name) {
+							continue
+						}
+					} else if target.Kind == resource.KindTCPRoute {
+						// Only the IR route built from the targeted TCPRoute may be
+						// modified. Several TCPRoutes can name the same listener while
+						// only one of them is attached, so without this check a policy
+						// targeting an unattached route would silently apply to
+						// whichever route is actually serving traffic.
+						if r.Name != irTCPRouteName(route) {
+							continue
+						}
 					}
+
 					// If target.SectionName is specified it must match the route-rule section name
-					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP
+					// in the IR. For HTTP/GRPC routes this is r.Metadata.SectionName; for TCP/TLS
 					// routes the section name is currently stored on r.Destination.Metadata.SectionName.
 					if target.SectionName != nil && string(*target.SectionName) != r.Destination.Metadata.SectionName {
 						continue
@@ -1427,7 +1441,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					if r.Authorization != nil {
 						continue
 					}
-					// Only authorization for TCP
+					// Only authorization for TCP/TLS
 					if authorization != nil {
 						authCopy := *authorization
 						r.Authorization = &authCopy
@@ -1765,7 +1779,8 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		l4Authorization = &authCopy
 	}
 
-	// Apply to TCP listeners (Authorization only).
+	// Apply to TCP/TLS listeners (Authorization only).
+	// Both TCPRoute and TLSRoute translate to TCP listeners in the IR.
 	if l4Authorization != nil {
 		for _, tl := range x.TCP {
 			if tl == nil || len(tl.Routes) == 0 {

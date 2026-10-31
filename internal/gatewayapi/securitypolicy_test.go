@@ -1992,8 +1992,8 @@ func Test_validateSecurityPolicyForL4_Table(t *testing.T) {
 		},
 	}
 
-	// TCP and UDP share the same rules, so every case must hold for both.
-	for _, proto := range []string{"TCP", "UDP"} {
+	// TCP, TLS, and UDP share the same rules, so every case must hold for all three.
+	for _, proto := range []string{"TCP", "TLS", "UDP"} {
 		for _, tc := range tests {
 			t.Run(proto+"/"+tc.name, func(t *testing.T) {
 				p := &egv1a1.SecurityPolicy{Spec: tc.spec}

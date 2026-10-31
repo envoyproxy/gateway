@@ -2837,7 +2837,7 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 				refGrant("sp-tcp-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTCPRoute),
 				refGrant("sp-tls-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTLSRoute),
 			},
-			expectedNames: sets.New("sp-gateway", "sp-listenerset", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
+			expectedNames: sets.New("sp-gateway", "sp-listenerset", "sp-http-route", "sp-grpc-route", "sp-tcp-route", "sp-tls-route"),
 		},
 		{
 			name: "ExtensionServerPolicy includes gateway, ListenerSet, and route target grants",
