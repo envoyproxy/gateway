@@ -615,6 +615,11 @@ func TestTranslate(t *testing.T) {
 
 			got, _ := translator.Translate(t.Context(), resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+			// The supported features list is derived from the Gateway API module and
+			// covered by the status package tests, keep it out of the golden files.
+			if got.GatewayClass != nil {
+				got.GatewayClass.Status.SupportedFeatures = nil
+			}
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -926,6 +931,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			// Also fix lastTransitionTime in unstructured members
 			for i := range got.ExtensionServerPolicies {
 				field.SetMapValues(got.ExtensionServerPolicies[i].Object, "lastTransitionTime", nil)
+			}
+			// The supported features list is derived from the Gateway API module and
+			// covered by the status package tests, keep it out of the golden files.
+			if got.GatewayClass != nil {
+				got.GatewayClass.Status.SupportedFeatures = nil
 			}
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")

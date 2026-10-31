@@ -76,8 +76,13 @@ go.testdata.complete: ## Override test ouputdata
 
 GO_TEST_COVERAGE_ARGS ?= --tags=integration,conformance_unit_test -race
 
+.PHONY: go.test.conformance.unit
+go.test.conformance.unit: ## Run the conformance suite configuration unit tests (no cluster needed)
+	@$(LOG_TARGET)
+	cd test && go test -race -tags conformance_unit_test ./conformance
+
 .PHONY: go.test.coverage
-go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions
+go.test.coverage: go.test.cel go.test.conformance.unit ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$$($(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
 		go test ./... $(GO_TEST_COVERAGE_ARGS) -coverprofile=coverage.xml -covermode=atomic -coverpkg=./...
@@ -167,7 +172,7 @@ build-multiarch: go.build.multiarch
 
 .PHONY: test
 test: ## Run all Go test of code sources.
-test: go.test.unit
+test: go.test.unit go.test.conformance.unit
 
 .PHONY: format
 format: ## Update and check dependences with go mod tidy.
