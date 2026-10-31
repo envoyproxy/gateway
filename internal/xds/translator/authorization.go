@@ -193,6 +193,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			// Predicate for HTTP path.
 			pathPredicate *matcherv3.Matcher_MatcherList_Predicate
 
+			// Predicate for HTTP hosts.
+			hostPredicate *matcherv3.Matcher_MatcherList_Predicate
+
 			// Predicates for HTTP headers.
 			headerPredicate []*matcherv3.Matcher_MatcherList_Predicate
 
@@ -260,6 +263,30 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			}
 		}
 
+		var hostPredicates []*matcherv3.Matcher_MatcherList_Predicate
+		if rule.Operation != nil && len(rule.Operation.Hosts) > 0 {
+			if hostPredicates, err = buildHostsPredicate(rule.Operation.Hosts); err != nil {
+				return nil, err
+			}
+		}
+
+		// If there are multiple hosts, OR them together.
+		// Hosts are matched if any of them match.
+		switch {
+		case len(hostPredicates) > 1:
+			hostPredicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: hostPredicates,
+					},
+				},
+			}
+		case len(hostPredicates) == 1:
+			hostPredicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: hostPredicates[0].MatchType.(*matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_),
+			}
+		}
+
 		if len(rule.Principal.Headers) > 0 {
 			if headerPredicate, err = buildHeadersPredicate(rule.Principal.Headers); err != nil {
 				return nil, err
@@ -285,6 +312,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		}
 		if pathPredicate != nil {
 			allPredicates = append(allPredicates, pathPredicate)
+		}
+		if hostPredicate != nil {
+			allPredicates = append(allPredicates, hostPredicate)
 		}
 		if ipPredicate != nil {
 			allPredicates = append(allPredicates, ipPredicate)
@@ -705,6 +735,43 @@ func buildMethodsPredicate(methods []gwapiv1.HTTPMethod) ([]*matcherv3.Matcher_M
 
 	// Match the HTTP method as a pesudo-header.
 	return buildHeaderPredicate(":method", methodStrings, true)
+}
+
+func buildHostsPredicate(hosts []gwapiv1.Hostname) ([]*matcherv3.Matcher_MatcherList_Predicate, error) {
+	var (
+		headerMatchInput *anypb.Any
+		err              error
+	)
+
+	// Match the HTTP host as a pseudo-header.
+	if headerMatchInput, err = proto.ToAnyWithValidation(&envoymatcherv3.HttpRequestHeaderMatchInput{
+		HeaderName: AuthorityHeaderKey,
+	}); err != nil {
+		return nil, err
+	}
+
+	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(hosts))
+	for _, host := range hosts {
+		predicates = append(predicates, buildHTTPHeaderSinglePredicate(headerMatchInput, hostStringMatcher(string(host))))
+	}
+	return predicates, nil
+}
+
+func hostStringMatcher(host string) *matcherv3.StringMatcher {
+	if strings.HasPrefix(host, "*.") {
+		// Wildcard hostnames such as "*.example.com" match any subdomain via suffix.
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Suffix{
+				Suffix: host[1:],
+			},
+		}
+	}
+
+	return &matcherv3.StringMatcher{
+		MatchPattern: &matcherv3.StringMatcher_Exact{
+			Exact: host,
+		},
+	}
 }
 
 func buildHeadersPredicate(headers []egv1a1.AuthorizationHeaderMatch) ([]*matcherv3.Matcher_MatcherList_Predicate, error) {
