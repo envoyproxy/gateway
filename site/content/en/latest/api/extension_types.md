@@ -1650,6 +1650,21 @@ _Appears in:_
 
 
 
+#### DrainStrategy
+
+_Underlying type:_ _string_
+
+DrainStrategy defines the strategy Envoy uses to drain listener connections.
+
+_Appears in:_
+- [ShutdownConfig](#shutdownconfig)
+
+| Value | Description |
+| ----- | ----------- |
+| `Gradual` | DrainStrategyGradual drains HTTP connections progressively within the drain timeout.<br /> | 
+| `Immediate` | DrainStrategyImmediate drains all HTTP connections once the drain process starts.<br /> | 
+
+
 #### DynamicModule
 
 
@@ -6746,6 +6761,7 @@ _Appears in:_
 | `healthCheckFailureDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | HealthCheckFailureDelay defines the delay before failing health checks during the graceful drain process.<br />If unspecified, defaults to 0 seconds. |
 | `drainTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 60 seconds. |
 | `minDrainDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 10 seconds. |
+| `drainStrategy` | _[DrainStrategy](#drainstrategy)_ |  false  |  | DrainStrategy defines how Envoy drains HTTP connections during the graceful drain process.<br />TCP and UDP proxy connections are not drained by either strategy.<br />If unspecified, defaults to "Immediate".<br />Switching to or from "Gradual" changes the listener configuration, which makes the running<br />Envoy proxies replace their listeners and drain the existing connections. |
 
 
 #### ShutdownManager

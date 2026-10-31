@@ -232,6 +232,7 @@ func (t *Translator) buildXdsTCPListener(
 		SocketOptions:                        socketOptions,
 		PerConnectionBufferLimitBytes:        bufferLimitBytes,
 		MaxConnectionsToAcceptPerSocketEvent: maxAcceptPerSocketEvent,
+		DrainType:                            t.listenerDrainType,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -255,6 +256,20 @@ func (t *Translator) buildXdsTCPListener(
 	}
 
 	return listener, nil
+}
+
+// buildListenerDrainType returns the drain type of the TCP listeners. UDP listeners are left
+// alone because the UDP proxy does not drain sessions, so the drain type has no effect on them.
+//
+// MODIFY_ONLY keeps /healthcheck/fail from drain-closing every connection at once, which would
+// bypass the gradual drain strategy. It is only used with the gradual strategy because changing
+// the drain type replaces the listeners and drains their connections, which must not happen on
+// existing proxies when upgrading with the default strategy.
+func buildListenerDrainType(strategy egv1a1.DrainStrategy) listenerv3.Listener_DrainType {
+	if strategy == egv1a1.DrainStrategyGradual {
+		return listenerv3.Listener_MODIFY_ONLY
+	}
+	return listenerv3.Listener_DEFAULT
 }
 
 // xdsListenerName returns the name of the xDS listener in two formats:
