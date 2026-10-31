@@ -1,0 +1,1 @@
+Fixed merge backends treating a BackendTrafficPolicy that only sets http1 on a GRPCRoute, TCPRoute, TLSRoute or UDPRoute as cluster-affecting. Translation ignores http1 for those routes, but the route still got inline cluster settings instead of a merged backend cluster.
