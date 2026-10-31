@@ -8,11 +8,6 @@ package message
 import "github.com/envoyproxy/gateway/internal/metrics"
 
 var (
-	watchableDepth = metrics.NewGauge(
-		"watchable_depth",
-		"Current depth of watchable queue.",
-	)
-
 	panicCounter = metrics.NewCounter(
 		"watchable_panics_recovered_total",
 		"Total number of panics recovered while handling items in queue.",
