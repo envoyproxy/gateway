@@ -89,7 +89,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 
 // supportsNativeSidecar reports whether gitVersion is Kubernetes 1.33 or newer.
 // Comparison uses major.minor so patch, prerelease, and build suffixes still
-// count (v1.35.9+k3s1, v1.33.0-rc.1, v1.33.0-gke.1). Unparseable and empty
+// count (v1.35.9+k3s1, v1.33.0-rc.1, v1.33.0-gke.1). Unparsable and empty
 // versions return false so rendering keeps the legacy container layout.
 func supportsNativeSidecar(gitVersion string) bool {
 	gitVersion = strings.TrimSpace(gitVersion)

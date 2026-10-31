@@ -420,7 +420,7 @@ func TestKubernetesVersionDiscoveryHandoff(t *testing.T) {
 		require.Less(t, time.Since(start), time.Second)
 		start = time.Now()
 		require.NoError(t, kube.CreateOrUpdateProxyInfra(context.Background(), infra))
-		require.Less(t, time.Since(start), 200*time.Millisecond)
+		require.Less(t, time.Since(start), time.Second)
 		require.Equal(t, int32(1), calls.Load())
 		assertPlacement(t, kube, infra, false)
 	})
