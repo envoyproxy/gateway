@@ -1402,6 +1402,17 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "zero-weight setting",
+			input: RouteDestination{
+				Name: "zero-weight",
+				Settings: []*DestinationSetting{
+					{Weight: new(uint32(1))},
+					{Weight: new(uint32(0))},
+				},
+			},
+			expected: true,
+		},
 	}
 
 	for _, test := range tests {
