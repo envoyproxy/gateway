@@ -340,7 +340,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
-				tlsConfig := irTLSConfigs(&listener.tls)
+				tlsConfig := t.irTLSConfigs(&listener.tls, xdsIR[irKey], gateway)
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -371,7 +371,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
-				tlsConfig := irTLSConfigsForTCPListener(&listener.tls)
+				tlsConfig := t.irTLSConfigsForTCPListener(&listener.tls, xdsIR[irKey], gateway)
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -555,6 +555,11 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			continue
 		}
 		validListenerCountByPort[listener.Port]++
+
+		if len(listener.tls.extensionCertificates) > 0 {
+			sdsListenersByPort[listener.Port] = append(sdsListenersByPort[listener.Port], listener)
+			continue
+		}
 
 		for _, secret := range listener.tls.secrets {
 			if secret.Type == egv1a1.SDSSecretType {
@@ -749,8 +754,8 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 		address  = netutils.IPv4ListenerAddress
 	)
 
-	if envoyProxy != nil && envoyProxy.Spec.IPFamily != nil {
-		ipFamily = *envoyProxy.Spec.IPFamily
+	if envoyIPFamily := getEnvoyIPFamily(envoyProxy); envoyIPFamily != nil {
+		ipFamily = *envoyIPFamily
 	}
 	if ipFamily == egv1a1.IPv6 || ipFamily == egv1a1.DualStack {
 		address = netutils.IPv6ListenerAddress
@@ -1313,9 +1318,10 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	return &ir.Metrics{
-		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
-		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
-		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
+		EnableVirtualHostStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
+		EnablePerEndpointStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
+		EnableRequestResponseSizesStats:    ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
+		EnableCircuitBreakerRemainingStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableCircuitBreakerRemainingStats, false),
 	}, resolvedSinks, nil
 }
 
@@ -1339,7 +1345,7 @@ func (t *Translator) processProxyGRPCSettings(
 func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, gwCtx *GatewayContext,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
-	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
+	traffic, err := translateExtServiceBackendSettings(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1368,10 +1374,13 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 				return nil, nil, err
 			}
 		case resource.KindBackend:
-			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP, true); err != nil {
 				return nil, nil, err
 			}
-			ds = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
+			ds, err = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy, nil)
+			if err != nil {
+				return nil, nil, err
+			}
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")
@@ -1381,7 +1390,7 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		}
 
 		// Apply TLS from Backend resource, BackendTLSPolicy, and EnvoyProxy.
-		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, resources, gwCtx, nil)
+		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, gwCtx, nil)
 		if err != nil {
 			return nil, nil, err
 		}

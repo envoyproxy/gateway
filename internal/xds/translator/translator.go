@@ -103,10 +103,25 @@ func xdsResourceCountAttrs(tCtx *types.ResourceVersionTable) []attribute.KeyValu
 	return append(attrs, attribute.Int("xds-resources.total.count", total))
 }
 
+// ExtensionHookStats accumulates extension server hook call counts and durations
+// across a single Translate() call. Reset at the start of every Translate() call.
+type ExtensionHookStats struct {
+	RouteCallCount    int64
+	RouteDuration     time.Duration
+	VHostCallCount    int64
+	VHostDuration     time.Duration
+	ListenerCallCount int64
+	ListenerDuration  time.Duration
+}
+
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
 	// ControllerNamespace is the namespace of the Gateway API controller
 	ControllerNamespace string
+
+	// ProxyInfraName and ProxyInfraNamespace identify the data plane the xDS IR is translated for.
+	ProxyInfraName      string
+	ProxyInfraNamespace string
 
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
@@ -135,6 +150,11 @@ type Translator struct {
 	// caIndex resolves TLSCACertificate.Digest against the current Translate() call's
 	// xdsIR.CACertificates registry. Rebuilt at the start of every Translate() call.
 	caIndex caCertificateIndex
+
+	// ExtensionStats accumulates extension hook call counts and durations across a
+	// single Translate() call. Written by processExtension* functions in extension.go;
+	// read after Translate() returns to emit span attributes.
+	ExtensionStats ExtensionHookStats
 }
 
 func (t *Translator) xdsNameSchemeV2() bool {
@@ -142,6 +162,39 @@ func (t *Translator) xdsNameSchemeV2() bool {
 		return false
 	}
 	return t.RuntimeFlags.IsEnabled(egv1a1.XDSNameSchemeV2)
+}
+
+// clusterHTTP1Settings returns the http1 settings to seed into backend clusters.
+// When ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly is enabled, returns nil —
+// CTP http1 fields apply to the client connection only and must not configure backend
+// HTTP/1 protocol settings. Remove this method when that runtime flag is removed.
+// Listener-only fields (HTTP10, IgnoredUpgradeTypes, DisableSafeMaxConnectionDuration)
+// are stripped unconditionally. A non-nil return value acts as a sentinel that forces
+// explicit HTTP/1 protocol selection on the cluster.
+// nil is returned when s is nil, when the runtime flag applies HTTP/1 settings to
+// clients only, or when only listener-only fields are set (preserving legacy behavior
+// where those fields did not affect upstream protocol selection).
+func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings {
+	if s == nil {
+		return nil
+	}
+	if t.RuntimeFlags != nil && t.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly) {
+		return nil
+	}
+	// Strip listener-only fields; keep only cluster-relevant ones.
+	stripped := ir.HTTP1Settings{
+		EnableTrailers:     s.EnableTrailers,
+		PreserveHeaderCase: s.PreserveHeaderCase,
+	}
+	// Only return a non-nil sentinel when at least one cluster-relevant field is
+	// set. If the CTP block contained only listener-only fields (e.g. ignoredUpgradeTypes,
+	// disableSafeMaxConnectionDuration) or explicitly-false trailer/case values,
+	// returning nil preserves the pre-flag behavior where those configurations did
+	// not affect upstream protocol selection.
+	if !stripped.EnableTrailers && !stripped.PreserveHeaderCase && s.HTTP10 == nil {
+		return nil
+	}
+	return &stripped
 }
 
 type GlobalRateLimitSettings struct {
@@ -191,6 +244,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 	t.extensionIndex = newExtensionResourceIndex(xdsIR)
 	t.caIndex = newCACertificateIndex(xdsIR)
+	t.ExtensionStats = ExtensionHookStats{}
 
 	tCtx := new(types.ResourceVersionTable)
 
@@ -217,6 +271,12 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		tCtx, xdsIR.HTTP, xdsIR.AccessLog, xdsIR.Tracing, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	phases.SetAttributes(
+		attribute.Int64("extension.hook.route_call_count", t.ExtensionStats.RouteCallCount),
+		attribute.Float64("extension.hook.route_duration_ms", float64(t.ExtensionStats.RouteDuration.Microseconds())/1000.0),
+		attribute.Int64("extension.hook.vhost_call_count", t.ExtensionStats.VHostCallCount),
+		attribute.Float64("extension.hook.vhost_duration_ms", float64(t.ExtensionStats.VHostDuration.Microseconds())/1000.0),
+	)
 	phases.End()
 
 	// The TCP and UDP listeners get no phase span: they are cheap next to the HTTP
@@ -239,6 +299,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	if err := t.notifyExtensionServerAboutListeners(tCtx, xdsIR); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	phases.SetAttributes(
+		attribute.Int64("extension.hook.listener_call_count", t.ExtensionStats.ListenerCallCount),
+		attribute.Float64("extension.hook.listener_duration_ms", float64(t.ExtensionStats.ListenerDuration.Microseconds())/1000.0),
+	)
 	phases.End()
 
 	phases.Start("XdsTranslator.processMergedBackendClusters",
@@ -248,6 +312,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		errs = errors.Join(errs, err)
 	}
 	phases.End()
+
+	if err := patchExtensionBackendResources(tCtx, xdsIR.ExtensionBackends); err != nil {
+		errs = errors.Join(errs, err)
+	}
 
 	if err := processClusterForAccessLog(tCtx, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
@@ -402,7 +470,8 @@ func (t *Translator) notifyExtensionServerAboutListeners(
 				}
 			}
 		}
-		if err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager, t.extensionIndex); err != nil {
+		err := processExtensionPostListenerHook(tCtx, listener, policies, t.ExtensionManager, t.extensionIndex, &t.ExtensionStats)
+		if err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -460,7 +529,23 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 	}
 
+	var unresolvedListeners []*ir.HTTPListener
 	for _, httpListener := range httpListeners {
+		// Resolve extension-provided certificates once, before anything is built. A listener whose
+		// certificates are all extension-resolved and none resolved has nothing to serve, so it is
+		// closed below rather than emitted without a certificate, which Envoy would reject along with
+		// every other filter chain sharing its port. Listeners without extension certificates are
+		// never affected here.
+		certResolutions, resolveErr := t.resolveExtensionCertificates(httpListener.TLS)
+		if resolveErr != nil {
+			errs = errors.Join(errs, resolveErr)
+			continue
+		}
+		if allExtensionCertificatesUnresolved(httpListener.TLS, certResolutions) {
+			unresolvedListeners = append(unresolvedListeners, httpListener)
+			continue
+		}
+
 		var (
 			http3Enabled                       bool
 			tcpXDSListener                     *listenerv3.Listener // TCP Listener for HTTP1/HTTP2 traffic
@@ -547,12 +632,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addHCM {
-			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, httpListener.Connection); err != nil {
+			if err = t.addHCMToXDSListener(tcpXDSListener, httpListener, accessLog, tracing, false, httpListener.Connection, certResolutions); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection); err != nil {
+				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection, certResolutions); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -611,7 +696,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		//
 		// For example, the route config name is named after the ir Listener name "default/eg/http1", but the current
 		// ir Listener is "default/eg/http2".
-		routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
+		//
+		// This only applies to non-TLS listeners, which share the default filter chain. A TLS listener
+		// has its own filter chain whose HCM always references the route config named after the listener.
+		if !tlsEnabled {
+			routeCfgName = findXdsHTTPRouteConfigName(tcpXDSListener)
+		}
 		// If the route config name is not found, we use the current ir Listener name as the route config name to create a new route config.
 		if routeCfgName == "" {
 			routeCfgName = routeConfigName(httpListener, t.xdsNameSchemeV2())
@@ -639,6 +729,19 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// Add all the other needed resources referenced by this filter to the
 		// resource version table.
 		if err = patchResources(tCtx, httpListener.Routes); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	// Close the listeners none of whose extension certificates resolved. This runs after the other
+	// listeners are built, so it joins the xDS listener they share a port with. HTTP/3 is not
+	// closed this way, as a QUIC filter chain cannot be built without a certificate.
+	for _, httpListener := range unresolvedListeners {
+		t.Logger.Info("closing listener: none of its extension certificates resolved",
+			"listener", httpListener.Name)
+		if err := t.addClosedFilterChains(tCtx, &httpListener.CoreListenerDetails, httpListener.TCPKeepalive,
+			httpListener.Connection, httpListener.Timeout, httpListener.ProxyProtocol, accessLog,
+			[]closedFilterChain{{name: httpListener.Name, snis: httpListener.Hostnames}}); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -686,13 +789,18 @@ func (t *Translator) addRouteToRouteConfig(
 	httpListener *ir.HTTPListener,
 	metrics *ir.Metrics,
 	healthCheckLog *ir.ProxyHealthCheckLog,
-	http3Enabled bool,
+	downstreamHTTP3Enabled bool,
 ) error {
 	var (
 		vHosts    = map[string]*routev3.VirtualHost{} // store virtual hosts by domain
 		vHostList []*routev3.VirtualHost              // keep track of order by using a list as well as the map
 		errs      error                               // the accumulated errors
 		err       error
+
+		// vHostExtRefs maps each newly-created vHost to the IR extension refs from the listener
+		// that owns it, so PostVirtualHostModifyHook can be called after routes are fully
+		// populated while still carrying the correct per-listener policy context.
+		vHostExtRefs = map[*routev3.VirtualHost][]*ir.UnstructuredRef{}
 
 		maxDirectResponseBodySize uint32 = DefaultMaxDirectResponseBodySize
 	)
@@ -735,6 +843,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 			vHosts[httpRoute.Hostname] = vHost
 			vHostList = append(vHostList, vHost)
+
+			// Resolve the listener's extension refs now (while we have listener context),
+			// but defer the hook call until after routes are fully populated.
+			vHostExtRefs[vHost] = httpListener.ExtensionRefs
 		}
 
 		if dr := httpRoute.DirectResponse; dr != nil {
@@ -744,7 +856,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 		var xdsRoute *routev3.Route
 		// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex, geoIPHeaders)
+		xdsRoute, err = buildXdsRoute(httpRoute, httpListener, t.backendIndex, geoIPHeaders, downstreamHTTP3Enabled)
 		if err != nil {
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
@@ -753,7 +865,8 @@ func (t *Translator) addRouteToRouteConfig(
 
 		// Check if an extension want to modify the route we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex); err != nil {
+		err = processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager, t.extensionIndex, &t.ExtensionStats)
+		if err != nil {
 			// If the extension server returns an error, and the extension server is not configured to fail open,
 			// then propagate the error
 			if !(*t.ExtensionManager).FailOpen() {
@@ -763,7 +876,10 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 		}
 
-		if http3Enabled {
+		// A route proxying over upstream HTTP/3 adds this header in its header mutation filter
+		// instead, after the alternate protocols cache filter has run, so the cache never
+		// records the gateway's own alt-svc as the backend's.
+		if downstreamHTTP3Enabled && !routeUsesUpstreamHTTP3(httpRoute, t.backendIndex) {
 			advertisedPort := httpListener.ExternalPort
 			if httpListener.HTTP3 != nil && httpListener.HTTP3.AdvertisedPort != nil {
 				advertisedPort = *httpListener.HTTP3.AdvertisedPort
@@ -788,7 +904,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 			ea := &ExtraArgs{
 				metrics:          metrics,
-				http1Settings:    httpListener.HTTP1,
+				http1Settings:    t.clusterHTTP1Settings(httpListener.HTTP1),
 				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
 				statName:         httpRoute.Destination.StatName,
 				unstructuredRefs: extensionResources,
@@ -863,20 +979,29 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 
+	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+
+	// Call the vhost hook after all routes have been appended, so the extension server sees
+	// a fully-populated VirtualHost. Iterate vHostList to preserve creation order.
 	for _, vHost := range vHostList {
-		// Check if an extension want to modify the Virtual Host we just generated
-		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
-			// If the extension server returns an error, and the extension server is not configured to fail open,
-			// then propagate the error
+		refs := vHostExtRefs[vHost]
+		extResources := make([]*unstructured.Unstructured, 0, len(refs))
+		seen := make(map[*unstructured.Unstructured]struct{}, len(refs))
+		for _, ref := range refs {
+			obj := resolveUnstructuredRef(ref, t.extensionIndex)
+			if _, dup := seen[obj]; !dup {
+				seen[obj] = struct{}{}
+				extResources = append(extResources, obj)
+			}
+		}
+		if hookErr := processExtensionPostVHostHook(vHost, extResources, t.ExtensionManager, &t.ExtensionStats); hookErr != nil {
 			if !(*t.ExtensionManager).FailOpen() {
-				errs = errors.Join(errs, err)
+				errs = errors.Join(errs, hookErr)
 			} else {
-				t.Logger.Error(err, "Extension Manager PostVHost failure")
+				t.Logger.Error(hookErr, "Extension Manager PostVHost failure")
 			}
 		}
 	}
-	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.
@@ -969,7 +1094,19 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// errors and return them at the end.
 	var errs, err error
 
+	var unresolvedListeners []*ir.TCPListener
 	for _, tcpListener := range tcpListeners {
+		// Resolve extension-provided certificates; close the listener below if none resolved.
+		certResolutions, resolveErr := t.resolveExtensionCertificates(tcpListener.TLS)
+		if resolveErr != nil {
+			errs = errors.Join(errs, resolveErr)
+			continue
+		}
+		if allExtensionCertificatesUnresolved(tcpListener.TLS, certResolutions) {
+			unresolvedListeners = append(unresolvedListeners, tcpListener)
+			continue
+		}
+
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
@@ -1051,6 +1188,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				route,
 				singleClusterDestinationName(route.Destination),
 				accesslog,
+				certResolutions,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1080,9 +1218,33 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				emptyRoute,
 				emptyClusterName,
 				accesslog,
+				certResolutions,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
+		}
+	}
+
+	// Close the listeners none of whose extension certificates resolved, after the other listeners
+	// are built. Each route gets a closed filter chain matching the server names its own filter
+	// chain would have matched.
+	for _, tcpListener := range unresolvedListeners {
+		t.Logger.Info("closing listener: none of its extension certificates resolved",
+			"listener", tcpListener.Name)
+		chains := make([]closedFilterChain, 0, len(tcpListener.Routes))
+		for _, route := range tcpListener.Routes {
+			snis := tcpListener.Hostnames
+			if route.TLS != nil && route.TLS.TLSInspectorConfig != nil && len(route.TLS.TLSInspectorConfig.SNIs) > 0 {
+				snis = route.TLS.TLSInspectorConfig.SNIs
+			}
+			chains = append(chains, closedFilterChain{name: route.Name, snis: snis})
+		}
+		if len(chains) == 0 {
+			chains = append(chains, closedFilterChain{name: tcpListener.Name, snis: tcpListener.Hostnames})
+		}
+		if err := t.addClosedFilterChains(tCtx, &tcpListener.CoreListenerDetails, tcpListener.TCPKeepalive,
+			tcpListener.Connection, tcpListener.Timeout, tcpListener.ProxyProtocol, accesslog, chains); err != nil {
+			errs = errors.Join(errs, err)
 		}
 	}
 
@@ -1173,6 +1335,59 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 		}); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// closedFilterChain is a filter chain that closes the connections matching its server names.
+type closedFilterChain struct {
+	name string
+	snis []string
+}
+
+// addClosedFilterChains adds closed filter chains for a listener none of whose extension
+// certificates resolved, to the xDS listener for its address and port, building that listener if
+// needed. Each chain matches the listener's server names, so its connections are closed rather than
+// handled by another filter chain on the same port, such as one with a wildcard hostname. A chain
+// does not terminate TLS, as there is no certificate, and proxies to the empty cluster.
+func (t *Translator) addClosedFilterChains(
+	tCtx *types.ResourceVersionTable,
+	listener *ir.CoreListenerDetails,
+	keepalive *ir.TCPKeepalive,
+	connection *ir.ClientConnection,
+	timeout *ir.ClientTimeout,
+	proxyProtocol *ir.ProxyProtocolSettings,
+	accessLog *ir.AccessLog,
+	chains []closedFilterChain,
+) error {
+	xdsListener := findXdsListenerByHostPort(tCtx, listener.Address, listener.Port, corev3.SocketAddress_TCP)
+	if xdsListener == nil {
+		var err error
+		if xdsListener, err = t.buildXdsTCPListener(listener, keepalive, connection, timeout, accessLog); err != nil {
+			return err
+		}
+		if err = tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
+			return err
+		}
+	}
+	patchProxyProtocolFilter(xdsListener, proxyProtocol)
+
+	if findXdsCluster(tCtx, emptyClusterName) == nil {
+		if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
+			return err
+		}
+	}
+	statPrefix := fmt.Sprintf("unresolved-certificate-%d", xdsListener.GetAddress().GetSocketAddress().GetPortValue())
+	for _, chain := range chains {
+		filterChain, err := buildTCPFilterChain(&ir.TCPRoute{Name: chain.name + "/unresolved-certificate"},
+			emptyClusterName, statPrefix, accessLog, timeout, nil)
+		if err != nil {
+			return err
+		}
+		if err := addServerNamesMatch(xdsListener, filterChain, chain.snis, nil); err != nil {
+			return err
+		}
+		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	}
 	return nil
 }

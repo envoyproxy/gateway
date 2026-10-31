@@ -24,6 +24,7 @@
               fillInterval: 1s
               maxTokens: 20
               tokensPerFill: 20
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -66,6 +67,7 @@
               fillInterval: 1s
               maxTokens: 200
               tokensPerFill: 200
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -108,6 +110,7 @@
               fillInterval: 1s
               maxTokens: 30
               tokensPerFill: 30
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -150,6 +153,7 @@
               fillInterval: 1s
               maxTokens: 10
               tokensPerFill: 10
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -206,6 +210,7 @@
               fillInterval: 60s
               maxTokens: 20
               tokensPerFill: 20
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
@@ -268,6 +273,7 @@
               fillInterval: 3600s
               maxTokens: 1000
               tokensPerFill: 1000
+          enableRetryAfterHeader: true
           enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
