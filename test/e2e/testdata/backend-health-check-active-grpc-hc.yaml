@@ -1,0 +1,126 @@
+# Applied once grpc-health-backend serves. Envoy health checks a cluster that
+# has seen no traffic only every 60s (no_traffic_interval), so a first check
+# that fails because the backend is still starting is not retried in time.
+#
+# Each BackendTrafficPolicy precedes its GRPCRoute so that Envoy receives every
+# cluster with its health check right away. A cluster first sent without one is
+# then updated, and that update waits for EDS until initial_fetch_timeout (15s).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: grpc-health-check-explicit-hostname-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpc-health-check-explicit-hostname
+  healthCheck:
+    # Disable panic mode so that traffic fails when every endpoint is unhealthy.
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: GRPC
+      grpc:
+        hostname: grpc-hc-explicit.example.com
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: grpc-health-check-route-hostname-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpc-health-check-route-hostname
+  healthCheck:
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: GRPC
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: grpc-health-check-cluster-name-btp
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpc-health-check-cluster-name
+  healthCheck:
+    panicThreshold: 0
+    active:
+      timeout: 3s
+      interval: 5s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+      type: GRPC
+---
+# A wildcard route hostname is not a valid authority, so the authority must be
+# set explicitly with grpc.hostname.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpc-health-check-explicit-hostname
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames:
+    - "*.grpc-hc-explicit.example.com"
+  rules:
+    - matches:
+        - method:
+            service: grpc.health.v1.Health
+      backendRefs:
+        - name: grpc-health-backend
+          port: 9000
+---
+# Without grpc.hostname, the authority defaults to the route hostname.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpc-health-check-route-hostname
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames:
+    - grpc-hc-route.example.com
+  rules:
+    - matches:
+        - method:
+            service: grpc.health.v1.Health
+      backendRefs:
+        - name: grpc-health-backend
+          port: 9000
+---
+# With a wildcard route hostname and no grpc.hostname, Envoy falls back to the
+# cluster name, which the backend rejects. This proves the backend enforces a
+# valid authority.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpc-health-check-cluster-name
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames:
+    - "*.grpc-hc-cluster-name.example.com"
+  rules:
+    - matches:
+        - method:
+            service: grpc.health.v1.Health
+      backendRefs:
+        - name: grpc-health-backend
+          port: 9000
