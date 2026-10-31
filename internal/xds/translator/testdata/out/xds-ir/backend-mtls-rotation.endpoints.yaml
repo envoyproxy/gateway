@@ -1,0 +1,44 @@
+- clusterName: httproute/default/backend-tls-route/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.62
+            portValue: 8443
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/backend-tls-route/rule/0/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/backend-tls-route/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: backend-tls-1-ip
+            namespace: default
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.244.0.62
+            portValue: 8443
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: httproute/default/backend-tls-route/rule/0/tls/1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/backend-tls-route/rule/0/backend/1
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: backend-tls-2-ip
+            namespace: default
