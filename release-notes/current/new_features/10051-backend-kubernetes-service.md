@@ -1,1 +1,0 @@
-Added `Backend` `type: KubernetesService` to route to an in-cluster Service through its EndpointSlices, so Backend `tls` and `appProtocols` apply on top of the same endpoint handling as a Service backendRef.

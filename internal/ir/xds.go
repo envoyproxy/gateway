@@ -51,7 +51,8 @@ var (
 	ErrTLSSDSSecretNameEmpty                    = errors.New("field SDS SecretName must be specified")
 	ErrTLSSDSSchemeEmpty                        = errors.New("field SDS Scheme must be specified")
 	ErrTLSSDSAddressEmpty                       = errors.New("field SDS Address must be specified")
-	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS or inline certificate fields may be specified")
+	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS, ExtensionRef or inline certificate fields may be specified")
+	ErrTLSExtensionRefEmpty                     = errors.New("field ExtensionRef Object or Name must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
@@ -592,6 +593,10 @@ type TLSCertificate struct {
 	Name string `json:"name" yaml:"name"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
+	// ExtensionRef holds the custom resource this certificate was resolved from, for a
+	// kind registered in ExtensionManager.SecretResources. How Envoy obtains the
+	// certificate is decided by the extension server via the Secret hook.
+	ExtensionRef *UnstructuredRef `json:"extensionRef,omitempty" yaml:"extensionRef,omitempty"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
@@ -696,6 +701,18 @@ type SubjectAltName struct {
 
 func (t *TLSCertificate) Validate() error {
 	var errs error
+	if t.SDS != nil && t.ExtensionRef != nil {
+		return errors.Join(errs, ErrTLSCertificateMultipleSources)
+	}
+	if t.ExtensionRef != nil {
+		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
+			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
+		}
+		if t.ExtensionRef.Object == nil && t.ExtensionRef.Name == "" {
+			errs = errors.Join(errs, ErrTLSExtensionRefEmpty)
+		}
+		return errs
+	}
 	if t.SDS != nil {
 		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
 			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
@@ -3168,6 +3185,9 @@ type GlobalResources struct {
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
 	// RateLimitServiceCluster holds the rate limit service endpoints discovered from Kubernetes resources.
 	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
+	// RateLimitServiceClusterTraffic holds the cluster-scoped traffic settings of the rate limit
+	// service cluster, translated from EnvoyGateway.RateLimit.ServiceSettings.
+	RateLimitServiceClusterTraffic *ClusterTrafficFeatures `json:"rateLimitServiceClusterTraffic,omitempty" yaml:"rateLimitServiceClusterTraffic,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.

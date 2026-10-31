@@ -3908,6 +3908,11 @@ func (in *ExtensionManager) DeepCopyInto(out *ExtensionManager) {
 		*out = make([]GroupVersionKind, len(*in))
 		copy(*out, *in)
 	}
+	if in.SecretResources != nil {
+		in, out := &in.SecretResources, &out.SecretResources
+		*out = make([]GroupVersionKind, len(*in))
+		copy(*out, *in)
+	}
 	if in.Hooks != nil {
 		in, out := &in.Hooks, &out.Hooks
 		*out = new(ExtensionHooks)
@@ -8071,6 +8076,11 @@ func (in *RateLimit) DeepCopyInto(out *RateLimit) {
 	if in.Telemetry != nil {
 		in, out := &in.Telemetry, &out.Telemetry
 		*out = new(RateLimitTelemetry)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ServiceSettings != nil {
+		in, out := &in.ServiceSettings, &out.ServiceSettings
+		*out = new(ClusterSettings)
 		(*in).DeepCopyInto(*out)
 	}
 }
