@@ -544,10 +544,10 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 // checkOverlappingCertificates checks for overlapping certificates SANs between HTTPSlisteners and sets
 // the `OverlappingTLSConfig` condition if there are overlapping certificates.
 func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
-	// Envoy Gateway cannot inspect certificates served over SDS. When multiple
-	// valid listeners share a port, disable HTTP/2 on SDS-backed listeners and on
-	// peers whose known certificate SANs may overlap the SDS listener hostname. A
-	// nil SDS listener hostname matches every peer because it accepts all hostnames.
+	// Envoy Gateway cannot inspect certificates served over SDS, and an SDS
+	// certificate may cover more names than its listener hostname. When multiple
+	// valid listeners share a port with an SDS-backed listener, disable HTTP/2 on
+	// all of them so clients cannot coalesce requests onto the SDS listener.
 	validListenerCountByPort := make(map[gwapiv1.PortNumber]int)
 	sdsListenersByPort := make(map[gwapiv1.PortNumber][]*ListenerContext)
 	for _, listener := range httpsListeners {
@@ -574,23 +574,7 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			continue
 		}
 
-		disableHTTP2 := false
-		for _, sdsListener := range sdsListenersByPort[listener.Port] {
-			if listener == sdsListener || sdsListener.Hostname == nil {
-				disableHTTP2 = true
-				break
-			}
-			for _, dnsName := range listener.tls.certDNSNames {
-				if areOverlappingHostnames(sdsListener.Hostname, new(gwapiv1.Hostname(dnsName))) {
-					disableHTTP2 = true
-					break
-				}
-			}
-			if disableHTTP2 {
-				break
-			}
-		}
-		if !disableHTTP2 {
+		if len(sdsListenersByPort[listener.Port]) == 0 {
 			continue
 		}
 		if listener.httpIR != nil {
