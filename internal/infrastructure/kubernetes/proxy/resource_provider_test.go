@@ -3065,9 +3065,13 @@ func assertShutdownManagerLayout(t *testing.T, pod *corev1.PodSpec, native bool,
 		require.Equal(t, shutdownManagerContainerName, shutdown.Name)
 		require.NotNil(t, shutdown.RestartPolicy)
 		require.Equal(t, corev1.ContainerRestartPolicyAlways, *shutdown.RestartPolicy)
+		require.Equal(t, int32(1), shutdown.StartupProbe.PeriodSeconds)
+		require.Equal(t, int32(300), shutdown.StartupProbe.FailureThreshold)
 	} else {
 		require.NotNil(t, shutdownInContainers)
 		require.Nil(t, shutdownInContainers.RestartPolicy)
+		require.Equal(t, int32(10), shutdownInContainers.StartupProbe.PeriodSeconds)
+		require.Equal(t, int32(30), shutdownInContainers.StartupProbe.FailureThreshold)
 		require.Equal(t, userInit, pod.InitContainers)
 		shutdown = shutdownInContainers
 	}

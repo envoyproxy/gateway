@@ -48,6 +48,11 @@ const (
 	// terminate regular containers concurrently. Native sidecars (GA in 1.33)
 	// are stopped after app containers, so shutdown-manager outlives Envoy's preStop.
 	nativeSidecarMinor = 33
+	// nativeSidecarStartupProbePeriodSeconds and nativeSidecarStartupProbeFailureThreshold
+	// keep the 300 second startup budget of the regular container probe. Kubelet starts
+	// Envoy only after this probe passes, so a 10 second period delays every new proxy pod.
+	nativeSidecarStartupProbePeriodSeconds    = 1
+	nativeSidecarStartupProbeFailureThreshold = 300
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -299,6 +304,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	if supportsNativeSidecar(kubeVersion) {
 		shutdown := containers[1]
 		shutdown.RestartPolicy = new(corev1.ContainerRestartPolicyAlways)
+		shutdown.StartupProbe.PeriodSeconds = nativeSidecarStartupProbePeriodSeconds
+		shutdown.StartupProbe.FailureThreshold = nativeSidecarStartupProbeFailureThreshold
 		return []corev1.Container{containers[0]}, []corev1.Container{shutdown}, nil
 	}
 	return containers, nil, nil
