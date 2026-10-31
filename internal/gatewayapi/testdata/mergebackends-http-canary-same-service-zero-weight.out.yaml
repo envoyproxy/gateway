@@ -130,6 +130,24 @@ xdsIR:
           sectionName: "3000"
         name: service/default/canary/3000/http
         protocol: HTTP
+    - metadata:
+        kind: Service
+        name: canary
+        namespace: default
+        sectionName: "4000"
+      name: service/default/canary/4000/http
+      setting:
+        addressType: IP
+        endpoints:
+        - host: 10.244.0.11
+          port: 3000
+        metadata:
+          kind: Service
+          name: canary
+          namespace: default
+          sectionName: "4000"
+        name: service/default/canary/4000/http
+        protocol: HTTP
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -171,6 +189,8 @@ xdsIR:
           backendClusterRefs:
           - name: service/default/canary/3000/http
             weight: 50
+          - name: service/default/canary/4000/http
+            weight: 0
           metadata:
             kind: HTTPRoute
             name: canary
