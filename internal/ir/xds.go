@@ -54,6 +54,7 @@ var (
 	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS, ExtensionRef or inline certificate fields may be specified")
 	ErrTLSExtensionRefEmpty                     = errors.New("field ExtensionRef Object or Name must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
+	ErrRequestBodyLimitMaxSizeInvalid           = errors.New("field MaxSize of RequestBodyLimit must be greater than 0")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid                  = errors.New("field Address must be a valid IP or FQDN address")
@@ -1351,6 +1352,8 @@ type TrafficFeatures struct {
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
 	// RequestBodyBufferLimit is the maximum number of bytes Envoy may buffer for an individual request body.
 	RequestBodyBufferLimit *uint64 `json:"requestBodyBufferLimit,omitempty" yaml:"requestBodyBufferLimit,omitempty"`
+	// RequestBodyLimit defines the maximum request body size enforced by the Body Size Limit filter.
+	RequestBodyLimit *RequestBodyLimit `json:"requestBodyLimit,omitempty" yaml:"requestBodyLimit,omitempty"`
 }
 
 // ClusterFeatures returns the cluster-scoped subset of these traffic features, or nil if there are
@@ -1425,6 +1428,9 @@ func (b *TrafficFeatures) Validate() error {
 		if err := b.HealthCheck.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
+	}
+	if b.RequestBodyLimit != nil && b.RequestBodyLimit.MaxSize == 0 {
+		errs = errors.Join(errs, ErrRequestBodyLimitMaxSizeInvalid)
 	}
 
 	return errs
@@ -4558,6 +4564,13 @@ type PolicyMetadata struct {
 type RequestBuffer struct {
 	// Limit defines the maximum buffer size for requests
 	Limit resource.Quantity `json:"limit" yaml:"limit"`
+}
+
+// RequestBodyLimit holds the information for the Body Size Limit filter
+// +k8s:deepcopy-gen=true
+type RequestBodyLimit struct {
+	// MaxSize is the maximum request body size in bytes. A request whose body is larger is rejected with HTTP 413.
+	MaxSize uint64 `json:"maxSize" yaml:"maxSize"`
 }
 
 // PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone.

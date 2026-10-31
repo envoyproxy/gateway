@@ -1287,6 +1287,12 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
+	if err := validateBackendTrafficPolicyForListeners(policy,
+		listenerSetPolicyTargetListeners(gateway.GatewayContext, targeted, currTarget)); err != nil {
+		status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+			status.PolicyReasonUnsupportedField, err.Error(), policy.Generation)
+	}
+
 	h3Warnings, err := t.translateBackendTrafficPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, xdsIR)
 	if err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
@@ -1387,6 +1393,12 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	// target is a Gateway listener (sectionName set).
 	if currTarget.SectionName != nil {
 		overrides.Add(gatewayScope(gatewayNN), gatewayListenerScope(gatewayNN, *currTarget.SectionName))
+	}
+
+	if err := validateBackendTrafficPolicyForListeners(policy,
+		gatewayPolicyTargetListeners(targetedGateway, currTarget)); err != nil {
+		status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+			status.PolicyReasonUnsupportedField, err.Error(), policy.Generation)
 	}
 
 	// Set conditions for translation error if it got any
@@ -1970,6 +1982,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
 		rbbl        *uint64
+		rbl         *ir.RequestBodyLimit
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		err         error
@@ -2006,6 +2019,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
+	if rbl, err = buildRequestBodyLimit(policy.Spec.RequestBodyLimit); err != nil {
+		err = perr.WithMessage(err, "RequestBodyLimit")
+		errs = errors.Join(errs, err)
+	}
+
 	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
 		err = perr.WithMessage(err, "Telemetry")
 		errs = errors.Join(errs, err)
@@ -2031,6 +2049,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		Telemetry:              buildBackendTelemetry(policy.Spec.Telemetry),
 		RequestBuffer:          rb,
 		RequestBodyBufferLimit: rbbl,
+		RequestBodyLimit:       rbl,
 	}, errs
 }
 
@@ -2996,6 +3015,34 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, *uint64,
 	}, nil, nil
 }
 
+// buildRequestBodyLimit translates the request body limit spec into its IR representation, which is
+// translated into the Envoy Body Size Limit filter.
+func buildRequestBodyLimit(spec *egv1a1.RequestBodyLimit) (*ir.RequestBodyLimit, error) {
+	if spec == nil {
+		return nil, nil
+	}
+
+	// A zero limit would reject every request that carries a body, so treat it as invalid rather than
+	// propagating it.
+	if spec.MaxSize.Sign() <= 0 {
+		return nil, fmt.Errorf("maxSize value %s is out of range, must be greater than 0", spec.MaxSize.String())
+	}
+
+	// AsInt64 only converts a quantity held as an int64, so it fails for values the CRD admits that the
+	// parser holds as a big decimal, such as 9Ei or a 19-digit byte count. Value converts both forms and
+	// rounds a fractional value up to whole bytes. The parser already caps binary values such as 9Ei at
+	// the int64 maximum; cap decimal values such as 10E there as well rather than failing the routes,
+	// since no request body comes anywhere near that size.
+	maxBytes := int64(math.MaxInt64)
+	if spec.MaxSize.CmpInt64(math.MaxInt64) < 0 {
+		maxBytes = spec.MaxSize.Value()
+	}
+
+	return &ir.RequestBodyLimit{
+		MaxSize: uint64(maxBytes),
+	}, nil
+}
+
 func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, owners *backendTrafficPolicyOwners) (*ir.ResponseOverride, error) {
 	if len(policy.Spec.ResponseOverride) == 0 {
 		return nil, nil
@@ -3315,20 +3362,47 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 }
 
 // validateBackendTrafficPolicyForRoute returns an error when the policy carries
-// http1 settings that are silently ignored for the given route kind:
+// settings that are silently ignored for the given route kind:
 //
 //   - GRPCRoute: http1 is meaningless (gRPC always uses HTTP/2).
-//   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 has no effect.
+//   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 and
+//     requestBodyLimit, which is enforced by an HTTP filter, have no effect.
 func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeKind string) error {
+	var unsupported []string
 	switch routeKind {
 	case resource.KindGRPCRoute:
 		if p.Spec.HTTP1 != nil {
-			return fmt.Errorf("HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
+			unsupported = append(unsupported, "HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
 		}
 	case resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
 		if p.Spec.HTTP1 != nil {
-			return fmt.Errorf("HTTP/1 settings have no effect when targeting a %s", routeKind)
+			unsupported = append(unsupported, fmt.Sprintf("HTTP/1 settings have no effect when targeting a %s", routeKind))
+		}
+		if p.Spec.RequestBodyLimit != nil {
+			unsupported = append(unsupported, fmt.Sprintf("requestBodyLimit has no effect when targeting a %s", routeKind))
 		}
 	}
-	return nil
+	if len(unsupported) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(unsupported, "; "))
+}
+
+// validateBackendTrafficPolicyForListeners returns an error when the policy sets
+// requestBodyLimit but none of the listeners it targets serves HTTP, for example
+// when sectionName selects a TCP, TLS or UDP listener. The limit is enforced by an
+// HTTP filter, so it has no effect on these listeners.
+func validateBackendTrafficPolicyForListeners(p *egv1a1.BackendTrafficPolicy, listeners []*ListenerContext) error {
+	if p.Spec.RequestBodyLimit == nil || len(listeners) == 0 {
+		return nil
+	}
+	protocols := sets.New[string]()
+	for _, listener := range listeners {
+		switch listener.Protocol {
+		case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
+			return nil
+		}
+		protocols.Insert(string(listener.Protocol))
+	}
+	return fmt.Errorf("requestBodyLimit has no effect on %s listeners", strings.Join(sets.List(protocols), ", "))
 }

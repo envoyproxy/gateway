@@ -1073,6 +1073,36 @@ func TestValidateHTTPRoute(t *testing.T) {
 			input: requestMirrorFilter,
 			want:  nil,
 		},
+		{
+			name: "request-body-limit",
+			input: HTTPRoute{
+				Name:     "request-body-limit",
+				Hostname: "*",
+				PathMatch: &StringMatch{
+					Exact: new("request-body-limit"),
+				},
+				Destination: &happyRouteDestination,
+				Traffic: &TrafficFeatures{
+					RequestBodyLimit: &RequestBodyLimit{MaxSize: 1024},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "request-body-limit-zero-max-size",
+			input: HTTPRoute{
+				Name:     "request-body-limit-zero-max-size",
+				Hostname: "*",
+				PathMatch: &StringMatch{
+					Exact: new("request-body-limit-zero-max-size"),
+				},
+				Destination: &happyRouteDestination,
+				Traffic: &TrafficFeatures{
+					RequestBodyLimit: &RequestBodyLimit{MaxSize: 0},
+				},
+			},
+			want: []error{ErrRequestBodyLimitMaxSizeInvalid},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -3142,6 +3142,7 @@ func TestBtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"ResponseOverride":  false,
 		"HTTPUpgrade":       false,
 		"RequestBuffer":     false,
+		"RequestBodyLimit":  false,
 		"Telemetry":         false,
 		"RoutingType":       false,
 	}
@@ -4249,6 +4250,51 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 			spec:      egv1a1.BackendTrafficPolicySpec{BackendSettings: egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{LoadBalancer: &egv1a1.LoadBalancer{}}}},
 			wantErr:   false,
 		},
+		// requestBodyLimit is enforced by an HTTP filter: allowed on HTTPRoute and GRPCRoute,
+		// rejected on TCPRoute, TLSRoute and UDPRoute
+		{
+			name:      "HTTPRoute with requestBodyLimit is allowed",
+			routeKind: gwapiresource.KindHTTPRoute,
+			spec:      egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:   false,
+		},
+		{
+			name:      "GRPCRoute with requestBodyLimit is allowed",
+			routeKind: gwapiresource.KindGRPCRoute,
+			spec:      egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:   false,
+		},
+		{
+			name:        "TCPRoute with requestBodyLimit is rejected",
+			routeKind:   gwapiresource.KindTCPRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:     true,
+			errContains: "requestBodyLimit has no effect when targeting a TCPRoute",
+		},
+		{
+			name:        "TLSRoute with requestBodyLimit is rejected",
+			routeKind:   gwapiresource.KindTLSRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:     true,
+			errContains: "requestBodyLimit has no effect when targeting a TLSRoute",
+		},
+		{
+			name:        "UDPRoute with requestBodyLimit is rejected",
+			routeKind:   gwapiresource.KindUDPRoute,
+			spec:        egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}},
+			wantErr:     true,
+			errContains: "requestBodyLimit has no effect when targeting a UDPRoute",
+		},
+		{
+			name:      "TCPRoute with http1 and requestBodyLimit reports both",
+			routeKind: gwapiresource.KindTCPRoute,
+			spec: egv1a1.BackendTrafficPolicySpec{
+				BackendSettings:  egv1a1.BackendSettings{ClusterSettings: egv1a1.ClusterSettings{HTTP1: &egv1a1.BackendHTTP1Settings{}}},
+				RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")},
+			},
+			wantErr:     true,
+			errContains: "HTTP/1 settings have no effect when targeting a TCPRoute; requestBodyLimit has no effect when targeting a TCPRoute",
+		},
 	}
 
 	for _, tc := range tests {
@@ -4265,4 +4311,167 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateBackendTrafficPolicyForListeners(t *testing.T) {
+	limit := egv1a1.BackendTrafficPolicySpec{RequestBodyLimit: &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1Mi")}}
+	tests := []struct {
+		name      string
+		spec      egv1a1.BackendTrafficPolicySpec
+		protocols []gwapiv1.ProtocolType
+		wantErr   string
+	}{
+		{
+			name:      "no requestBodyLimit on a TCP listener",
+			spec:      egv1a1.BackendTrafficPolicySpec{},
+			protocols: []gwapiv1.ProtocolType{gwapiv1.TCPProtocolType},
+		},
+		{
+			name:      "HTTP listener",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.HTTPProtocolType},
+		},
+		{
+			name:      "HTTPS listener",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.HTTPSProtocolType},
+		},
+		{
+			name:      "TCP and HTTP listeners",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.TCPProtocolType, gwapiv1.HTTPProtocolType},
+		},
+		{
+			name: "no listeners",
+			spec: limit,
+		},
+		{
+			name:      "TCP listener",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.TCPProtocolType},
+			wantErr:   "requestBodyLimit has no effect on TCP listeners",
+		},
+		{
+			name:      "TLS listener",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.TLSProtocolType},
+			wantErr:   "requestBodyLimit has no effect on TLS listeners",
+		},
+		{
+			name:      "UDP and TCP listeners",
+			spec:      limit,
+			protocols: []gwapiv1.ProtocolType{gwapiv1.UDPProtocolType, gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType},
+			wantErr:   "requestBodyLimit has no effect on TCP, UDP listeners",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			listeners := make([]*ListenerContext, 0, len(tc.protocols))
+			for _, protocol := range tc.protocols {
+				listeners = append(listeners, &ListenerContext{Listener: &gwapiv1.Listener{Protocol: protocol}})
+			}
+			err := validateBackendTrafficPolicyForListeners(&egv1a1.BackendTrafficPolicy{Spec: tc.spec}, listeners)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.EqualError(t, err, tc.wantErr)
+		})
+	}
+}
+
+func TestBuildRequestBodyLimit(t *testing.T) {
+	testCases := []struct {
+		name     string
+		spec     *egv1a1.RequestBodyLimit
+		expected *ir.RequestBodyLimit
+		errMsg   string
+	}{
+		{
+			name: "nil spec",
+		},
+		{
+			name:     "quantity",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("4Mi")},
+			expected: &ir.RequestBodyLimit{MaxSize: 4194304},
+		},
+		{
+			name:     "plain bytes",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1")},
+			expected: &ir.RequestBodyLimit{MaxSize: 1},
+		},
+		{
+			name:     "above the uint32 range of the buffer filter",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("8Gi")},
+			expected: &ir.RequestBodyLimit{MaxSize: 8589934592},
+		},
+		{
+			// The parser holds a 19-digit value as a big decimal, which AsInt64 cannot convert.
+			name:     "int64 maximum",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("9223372036854775807")},
+			expected: &ir.RequestBodyLimit{MaxSize: math.MaxInt64},
+		},
+		{
+			// The CRD admits this value, and the parser caps it at the int64 maximum.
+			name:     "binary value above the int64 range",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("9Ei")},
+			expected: &ir.RequestBodyLimit{MaxSize: math.MaxInt64},
+		},
+		{
+			// The CRD admits this value, and the parser does not cap decimal values.
+			name:     "decimal value above the int64 range",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("10E")},
+			expected: &ir.RequestBodyLimit{MaxSize: math.MaxInt64},
+		},
+		{
+			name:     "fractional value rounds up",
+			spec:     &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("1500m")},
+			expected: &ir.RequestBodyLimit{MaxSize: 2},
+		},
+		{
+			name:   "zero",
+			spec:   &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("0")},
+			errMsg: "maxSize value 0 is out of range, must be greater than 0",
+		},
+		{
+			name:   "negative",
+			spec:   &egv1a1.RequestBodyLimit{MaxSize: resource.MustParse("-1")},
+			errMsg: "maxSize value -1 is out of range, must be greater than 0",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := buildRequestBodyLimit(tc.spec)
+			if tc.errMsg != "" {
+				require.ErrorContains(t, err, tc.errMsg)
+				require.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestBuildTrafficFeaturesRequestBodyLimitWithHTTPUpgrade(t *testing.T) {
+	tr := &Translator{}
+	policy := &egv1a1.BackendTrafficPolicy{
+		Spec: egv1a1.BackendTrafficPolicySpec{
+			RequestBodyLimit: &egv1a1.RequestBodyLimit{
+				MaxSize: resource.MustParse("1Mi"),
+			},
+			HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+				{Type: "websocket"},
+			},
+		},
+	}
+
+	// A request body limit does not buffer, so unlike requestBuffer with mode BufferAndLimit it is
+	// allowed together with HTTP upgrades.
+	tf, err := tr.buildTrafficFeatures(policy, nil)
+	require.NoError(t, err)
+	require.Equal(t, &ir.RequestBodyLimit{MaxSize: 1048576}, tf.RequestBodyLimit)
+	require.Len(t, tf.HTTPUpgrade, 1)
 }
