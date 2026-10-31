@@ -1,10 +1,9 @@
 # Rotating a Backend's mTLS client certificate: each path has two Backends with the same
 # endpoint but different client certificates, so the old and new certs are in use side by side.
 #
-# Known issue: the /ip rule's two Backends share the same address (10.244.0.62:8443). Both end up
-# as localities of one cluster, each with its own transport socket match, but Envoy merges
-# endpoints with the same ip+port, so it keeps only the first one and the second client
-# certificate is never used.
+# The /ip rule's two Backends share the same address (10.244.0.62:8443). Envoy merges EDS
+# endpoints with the same ip+port, so the xDS translator gives each Backend its own cluster
+# instead of a locality in a shared one, and both client certificates are used.
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
