@@ -47,6 +47,8 @@ const (
 // scope. This avoids an O(BTPs) lookup for every iteration of processDestination.
 type BTPRoutingTypeIndex struct {
 	*policyIndex[*egv1a1.RoutingType]
+	// listenerRouting records whether any listener- or ListenerSet-level policy sets a RoutingType.
+	listenerRouting bool
 }
 
 // newBTPRoutingTypeIndex allocates a BTPRoutingTypeIndex.
@@ -71,6 +73,26 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	}
 	routingType, _ := idx.Lookup(routeKind, routeNN, gatewayNN, listenerName, listenerSetNN, routeRuleName)
 	return routingType
+}
+
+// HasListenerRoutingType reports whether any listener- or ListenerSet-level policy sets a
+// RoutingType, the only way for listeners of the same Gateway to resolve different ones.
+func (idx *BTPRoutingTypeIndex) HasListenerRoutingType() bool {
+	return idx != nil && idx.listenerRouting
+}
+
+// LookupInheritedBTPRoutingType resolves the RoutingType a listener, ListenerSet, or the Gateway
+// itself passes down to routes that don't set their own, ignoring route- and route-rule-level
+// policies. Returns nil if no matching BTP RoutingType is found, or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupInheritedBTPRoutingType(
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	listenerSetNN *types.NamespacedName,
+) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+	return idx.resolveParentLevels(gatewayNN, listenerName, listenerSetNN)
 }
 
 // LookupGatewayBTRoutingType resolves the RoutingType pinned directly at gatewayNN, ignoring any
@@ -203,12 +225,15 @@ func BuildBTPIndexes(
 			switch {
 			case kind == resource.KindGateway && ref.SectionName != nil:
 				routingTypeIdx.setGatewayListenerLevel(nn, *ref.SectionName, btp.Spec.RoutingType, hasRoutingType)
+				routingTypeIdx.listenerRouting = routingTypeIdx.listenerRouting || hasRoutingType
 			case kind == resource.KindGateway:
 				routingTypeIdx.setGatewayLevel(nn, btp.Spec.RoutingType)
 			case kind == resource.KindListenerSet && ref.SectionName != nil:
 				routingTypeIdx.setListenerSetListenerLevel(nn, *ref.SectionName, btp.Spec.RoutingType, hasRoutingType)
+				routingTypeIdx.listenerRouting = routingTypeIdx.listenerRouting || hasRoutingType
 			case kind == resource.KindListenerSet:
 				routingTypeIdx.setListenerSetLevel(nn, btp.Spec.RoutingType, hasRoutingType)
+				routingTypeIdx.listenerRouting = routingTypeIdx.listenerRouting || hasRoutingType
 			case ref.SectionName != nil:
 				routingTypeIdx.setRouteRuleLevel(nn, kind, *ref.SectionName, btp.Spec.RoutingType, btp.Spec.MergeType)
 			default:
