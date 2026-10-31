@@ -172,6 +172,21 @@ backendTrafficPolicies:
               metadata:
                 namespace: something.com
                 key: some_cost_set_by_foo
+        - clientSelectors:
+          - headers:
+            - name: x-tenant-id
+              type: Distinct
+          limit:
+            requests: 8
+            unit: Hour
+          cost:
+            request:
+              from: Number
+              number: 1
+            response:
+              from: Number
+              number: 1
+              negative: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
