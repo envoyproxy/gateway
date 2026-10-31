@@ -94,6 +94,7 @@ type Config struct {
 
 type Runner struct {
 	Config
+	publishers *endpointPublishers
 
 	// done tracks goroutines started by Start so that Close can block until
 	// they have all exited, ensuring shared state they write to is not
@@ -247,6 +248,11 @@ func (r *Runner) Start(ctx context.Context) error {
 		r.serveXdsServer(ctx)
 	})
 
+	if r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) {
+		r.publishers = newEndpointPublishers(ctx, &r.ProviderResources.Endpoints, r.cache.PublishSnapshot, r.Logger)
+		r.done.Go(r.publishers.run)
+	}
+
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	sub := r.XdsIR.Subscribe(ctx)
@@ -294,6 +300,10 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 }
 
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
+	var options []message.SubscriptionOption
+	if r.publishers != nil {
+		options = append(options, message.PreserveDeletes)
+	}
 	// Subscribe to resources
 	message.HandleSubscription(
 		r.Logger,
@@ -322,7 +332,13 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 			)
 
 			if update.Delete {
-				if err := r.cache.GenerateNewSnapshot(key, nil, traceCtx); err != nil {
+				var err error
+				if r.publishers != nil {
+					err = r.publishers.submit(key, &fullPublication{ctx: traceCtx})
+				} else {
+					err = r.cache.GenerateNewSnapshot(key, nil, traceCtx)
+				}
+				if err != nil {
 					traceLogger.Error(err, "failed to delete the snapshot")
 					errChan <- err
 				}
@@ -391,7 +407,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 							errChan <- err
 						} else {
 							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, traceCtx); err != nil {
+							if err := r.publishFullResult(key, result, traceCtx); err != nil {
 								r.Logger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}
@@ -432,8 +448,20 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				}
 			}
 		},
+		options...,
 	)
 	r.Logger.Info("subscriber shutting down")
+}
+
+func (r *Runner) publishFullResult(key string, result *xtypes.ResourceVersionTable, ctx context.Context) error {
+	if r.publishers == nil {
+		return r.cache.GenerateNewSnapshot(key, result.XdsResources, ctx)
+	}
+	snapshot, err := cache.PrepareSnapshot(result.XdsResources)
+	if err != nil {
+		return err
+	}
+	return r.publishers.submit(key, &fullPublication{snapshot: snapshot, contexts: result.EndpointContexts, ctx: ctx})
 }
 
 func (r *Runner) loadTLSConfig() (*tls.Config, error) {

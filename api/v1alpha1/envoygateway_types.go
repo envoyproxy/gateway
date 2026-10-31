@@ -170,7 +170,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly;OIDCTokenCookieChunking
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;EndpointFastPath;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly;OIDCTokenCookieChunking
 type RuntimeFlag string
 
 const (
@@ -183,6 +183,10 @@ const (
 	// If the additional controller memory usage for the indexes becomes a concern,
 	// consider disabling this flag.
 	EndpointSliceIndex RuntimeFlag = "EndpointSliceIndex"
+
+	// EndpointFastPath enables publishing eligible Kubernetes endpoint changes without
+	// waiting for full translation. Full reconciliation remains enabled. Disabled by default.
+	EndpointFastPath RuntimeFlag = "EndpointFastPath"
 
 	// PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per
 	// BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead

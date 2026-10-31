@@ -62,6 +62,9 @@ var skipNameValidation = func() *bool {
 var tracer = otel.Tracer("envoy-gateway/provider/runner")
 
 type gatewayAPIReconciler struct {
+	endpointQueueMu sync.RWMutex
+	endpointQueue   workqueue.TypedRateLimitingInterface[reconcile.Request]
+
 	client               client.Client
 	log                  logging.Logger
 	statusUpdater        Updater
@@ -235,10 +238,14 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 				Name:            controllerName,
 				MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
 			})
-			if !debounce.Enabled() {
-				return q
+			result := q
+			if debounce.Enabled() {
+				result = newDebouncingQueue(q, debounceAfter, debounceMax)
 			}
-			return newDebouncingQueue(q, debounceAfter, debounceMax)
+			r.endpointQueueMu.Lock()
+			r.endpointQueue = result
+			r.endpointQueueMu.Unlock()
+			return result
 		},
 	})
 	if err != nil {
@@ -249,6 +256,11 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	// Watch resources
 	if err := r.watchResources(ctx, mgr, c); err != nil {
 		return fmt.Errorf("error watching resources: %w", err)
+	}
+	if r.endpointFastPathEnabled() {
+		if err := r.watchEndpointUpdates(mgr, name+"-endpoints"); err != nil {
+			return fmt.Errorf("error watching endpoint updates: %w", err)
+		}
 	}
 
 	leaderElectionEnabled := cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
@@ -367,6 +379,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	if managedGCs == nil {
+		if r.endpointFastPathEnabled() {
+			r.resources.Endpoints.SetReferences("provider", nil)
+		}
 		r.resources.GatewayAPIResources.Delete(string(r.classController))
 		logger.Info("no accepted gatewayclass")
 		return reconcile.Result{}, nil
@@ -389,6 +404,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 		gwcResources = append(gwcResources, gwcResource)
+	}
+
+	if r.endpointFastPathEnabled() {
+		if err := r.captureEndpointSnapshots(ctx, gwcResources); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Sort before storing to:
@@ -923,7 +944,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		}
 
 		// Retrieve the EndpointSlices associated with the Service and ServiceImport
-		if endpointSliceLabelKey != "" {
+		if endpointSliceLabelKey != "" && !r.endpointFastPathEnabled() {
 			endpointSliceList := new(discoveryv1.EndpointSliceList)
 			opts := []client.ListOption{
 				client.InNamespace(string(*backendRef.Namespace)),
@@ -1396,6 +1417,10 @@ func (r *gatewayAPIReconciler) processRateLimitService(ctx context.Context, reso
 		r.log.Info("processing rate limit Service", "namespace", r.namespace, "name", rateLimitServiceName)
 	}
 
+	if r.endpointFastPathEnabled() {
+		// Full and fast collection share a serialized capture at the end of reconcile.
+		return nil
+	}
 	endpointSliceList := new(discoveryv1.EndpointSliceList)
 	opts := []client.ListOption{client.InNamespace(r.namespace)}
 	if r.endpointSliceIndexEnabled() {

@@ -1,0 +1,65 @@
+http:
+- name: listener
+  address: 0.0.0.0
+  port: 10080
+  hostnames: ["*"]
+  routes:
+  - name: route
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: 1s
+          interval: 3s
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          http:
+            host: orders
+            path: /healthz
+          overrides:
+            port: 9090
+    destination:
+      name: orders
+      settings:
+      - name: orders/backend/0
+        addressType: IP
+        protocol: HTTP
+        weight: 3
+        tls:
+          sni: orders
+          insecureSkipVerify: true
+        metadata:
+          kind: Service
+          namespace: default
+          name: orders
+          sectionName: "8080"
+        endpoints:
+        - host: 10.0.0.1
+          port: 8080
+          zone: zone-a
+        endpointSource:
+          backend:
+            kind: Service
+            namespace: default
+            name: orders
+            uid: orders-uid
+          portName: http
+          protocol: TCP
+          revision: 1
+      - name: orders/backend/1
+        addressType: IP
+        protocol: HTTP
+        weight: 1
+        priority: 1
+        endpoints:
+        - host: 10.0.1.7
+          port: 9090
+        endpointSource:
+          backend:
+            kind: Service
+            namespace: default
+            name: backup
+            uid: backup-uid
+          portName: http
+          protocol: TCP
+          revision: 7

@@ -11,6 +11,7 @@ package resource
 
 import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -179,6 +180,13 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 				*out = new(discoveryv1.EndpointSlice)
 				(*in).DeepCopyInto(*out)
 			}
+		}
+	}
+	if in.EndpointSnapshots != nil {
+		in, out := &in.EndpointSnapshots, &out.EndpointSnapshots
+		*out = make([]endpoint.Snapshot, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Secrets != nil {

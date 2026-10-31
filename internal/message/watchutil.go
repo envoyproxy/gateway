@@ -130,7 +130,12 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 	meta Metadata,
 	subscription <-chan watchable.Snapshot[K, V],
 	handle func(updateFunc Update[K, V], errChans chan error),
+	options ...SubscriptionOption,
 ) {
+	var preserveDeletes bool
+	for _, option := range options {
+		preserveDeletes = preserveDeletes || option == PreserveDeletes
+	}
 	// TODO: find a suitable value
 	errChans := make(chan error, 10)
 	go func() {
@@ -154,7 +159,7 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 	for snapshot := range subscription {
 		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
 
-		for _, update := range coalesceUpdates(l, snapshot.Updates) {
+		for _, update := range coalesceUpdatesWithDeletes(l, snapshot.Updates, preserveDeletes) {
 			handleWithCrashRecovery(l, handle, Update[K, V]{
 				Key:    update.Key,
 				Value:  update.Value,
@@ -164,10 +169,25 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 	}
 }
 
+type SubscriptionOption int
+
+// PreserveDeletes keeps deletion barriers when later updates recreate a key.
+const PreserveDeletes SubscriptionOption = iota
+
+// CoalesceUpdatesPreservingDeletes reuses subscription coalescing for a publication
+// queue whose deletions must clear previously applied endpoint state.
+func CoalesceUpdatesPreservingDeletes[K comparable, V any](logger logging.Logger, updates []watchable.Update[K, V]) []watchable.Update[K, V] {
+	return coalesceUpdatesWithDeletes(logger, updates, true)
+}
+
 // coalesceUpdates merges multiple updates for the same key into a single update,
 // preserving the latest state for each key.
 // This helps reduce redundant processing and ensures that only the most recent update per key is handled.
 func coalesceUpdates[K comparable, V any](logger logging.Logger, updates []watchable.Update[K, V]) []watchable.Update[K, V] {
+	return coalesceUpdatesWithDeletes(logger, updates, false)
+}
+
+func coalesceUpdatesWithDeletes[K comparable, V any](logger logging.Logger, updates []watchable.Update[K, V], preserveDeletes bool) []watchable.Update[K, V] {
 	if len(updates) <= 1 {
 		return updates
 	}
@@ -177,7 +197,7 @@ func coalesceUpdates[K comparable, V any](logger logging.Logger, updates []watch
 
 	for read := len(updates) - 1; read >= 0; read-- {
 		update := updates[read]
-		if _, ok := seen[update.Key]; ok {
+		if _, ok := seen[update.Key]; ok && (!preserveDeletes || !update.Delete) {
 			continue
 		}
 		seen[update.Key] = struct{}{}

@@ -8,13 +8,16 @@ package translator
 import (
 	"embed"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -22,11 +25,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/testing/protocmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -49,6 +54,7 @@ type testFileConfig struct {
 	dnsDomain                 string
 	errMsg                    string
 	runtimeFlags              *egv1a1.RuntimeFlags
+	endpointContexts          []string
 }
 
 type rateLimitOutput struct {
@@ -58,6 +64,13 @@ type rateLimitOutput struct {
 
 func TestTranslateXds(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
+		"endpoint-fast-path": {
+			runtimeFlags:     &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EndpointFastPath}},
+			endpointContexts: []string{"orders"},
+		},
+		"endpoint-fast-path-patched": {
+			runtimeFlags: &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.EndpointFastPath}},
+		},
 		"ratelimit-custom-domain": {
 			dnsDomain: "example-cluster.local",
 		},
@@ -172,6 +185,37 @@ func TestTranslateXds(t *testing.T) {
 				RuntimeFlags: cfg.runtimeFlags,
 			}
 			tCtx, err := tr.Translate(t.Context(), x)
+			if strings.HasPrefix(inputFileName, "endpoint-fast-path") {
+				require.NoError(t, err)
+				require.ElementsMatch(t, cfg.endpointContexts, slices.Collect(maps.Keys(tCtx.EndpointContexts)))
+				updates := map[ir.EndpointBackend]*endpoint.Snapshot{
+					{Kind: "Service", Namespace: "default", Name: "orders", UID: "orders-uid"}: {
+						Backend:  ir.EndpointBackend{Kind: "Service", Namespace: "default", Name: "orders", UID: "orders-uid"},
+						Revision: 2, AddressType: new(ir.IP),
+						Ports: map[endpoint.Port][]*ir.DestinationEndpoint{
+							{Name: "http", Protocol: "TCP"}: {{Host: "10.0.0.2", Port: 8080, Draining: true, Zone: new("zone-b")}},
+						},
+					},
+				}
+				_, replacements, err := RefreshEndpoints(tCtx.EndpointContexts, updates)
+				require.NoError(t, err)
+				for i, value := range tCtx.XdsResources[resourcev3.EndpointType] {
+					name := value.(*endpointv3.ClusterLoadAssignment).ClusterName
+					if replacement := replacements[name]; replacement != nil {
+						tCtx.XdsResources[resourcev3.EndpointType][i] = replacement
+					}
+				}
+				if len(replacements) != 0 {
+					// Compare with the same input through a complete translation, so
+					// refresh cannot silently discard locality metadata or other settings.
+					nextIR := x.DeepCopy()
+					setting := nextIR.HTTP[0].Routes[0].Destination.Settings[0]
+					setting.Endpoints = updates[setting.EndpointSource.Backend].Ports[endpoint.Port{Name: "http", Protocol: "TCP"}]
+					full, err := tr.Translate(t.Context(), nextIR)
+					require.NoError(t, err)
+					require.Empty(t, cmp.Diff(full.XdsResources[resourcev3.EndpointType], tCtx.XdsResources[resourcev3.EndpointType], protocmp.Transform()))
+				}
+			}
 
 			// Handle EnvoyPatchPolicy statuses first, even if there are errors
 			// because errors are captured in the policy status conditions

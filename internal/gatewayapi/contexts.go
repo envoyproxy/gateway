@@ -18,6 +18,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -977,6 +978,7 @@ type TranslatorContext struct {
 	ConfigMapMap            map[types.NamespacedName]*corev1.ConfigMap
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
+	EndpointSnapshotMap     map[endpoint.Key]*endpoint.Snapshot
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 	ExtensionBackendMap     map[ExtensionBackendKey]*ir.ExtensionBackend
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
