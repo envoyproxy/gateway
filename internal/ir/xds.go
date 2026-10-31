@@ -12,8 +12,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/netip"
+	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -2298,7 +2301,8 @@ func (r *RouteDestination) NeedsClusterPerSetting() bool {
 		r.HasFiltersInSettings() ||
 		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
 		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings()
+		r.HasMixedAutoSNISettings() ||
+		r.HasSharedEndpointsWithDifferentTLS()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -2379,6 +2383,30 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	}
 
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
+}
+
+// HasSharedEndpointsWithDifferentTLS returns true if two settings share a static (IP or UDS) endpoint
+// but have different TLS settings. EDS merges hosts with the same address, so Envoy would keep only
+// the first one and its transport socket match; each setting needs its own cluster instead.
+func (r *RouteDestination) HasSharedEndpointsWithDifferentTLS() bool {
+	tlsByEndpoint := map[string]*TLSUpstreamConfig{}
+	for _, s := range r.Settings {
+		// FQDN endpoints use a STRICT_DNS cluster, which doesn't merge hosts.
+		if s == nil || (s.AddressType != nil && *s.AddressType == FQDN) {
+			continue
+		}
+		for _, ep := range s.Endpoints {
+			key := net.JoinHostPort(ep.Host, strconv.FormatUint(uint64(ep.Port), 10))
+			if ep.Path != nil {
+				key = *ep.Path
+			}
+			if tls, ok := tlsByEndpoint[key]; ok && !reflect.DeepEqual(tls, s.TLS) {
+				return true
+			}
+			tlsByEndpoint[key] = s.TLS
+		}
+	}
+	return false
 }
 
 // AllSettingsHaveTLS returns true if every destination setting is configured with TLS.
