@@ -266,6 +266,7 @@ xdsIR:
           prefix: /
         security:
           jwt:
+            policyName: default/policy-for-route
             providers:
             - audiences:
               - foo.bar.com

@@ -1547,6 +1547,15 @@ type JWT struct {
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+
+	// PolicyName is the namespace/name of the SecurityPolicy that owns the providers:
+	// the policy itself, or for a merged policy whichever of the route and parent
+	// policies supplied the providers list.
+	// When set, the jwt_authn requirement is named after it rather than after a hash
+	// of its content, so editing the providers does not rename the requirement that
+	// routes refer to. The name combines PolicyName with the AllowMissing and
+	// AllowMissingOrFailed mode, so routes that share both must carry the same JWT.
+	PolicyName string `json:"policyName,omitempty" yaml:"policyName,omitempty"`
 }
 
 // JWTProvider defines the schema for the JWT Provider.

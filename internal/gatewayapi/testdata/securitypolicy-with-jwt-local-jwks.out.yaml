@@ -452,6 +452,7 @@ xdsIR:
           prefix: /foo
         security:
           jwt:
+            policyName: default/securitypolicy-with-jwt-local-jwks-inline
             providers:
             - issuer: https://one.example.com
               localJWKS: |
@@ -498,6 +499,7 @@ xdsIR:
           prefix: /bar
         security:
           jwt:
+            policyName: default/securitypolicy-with-jwt-local-jwks-valueref
             providers:
             - issuer: https://one.example.com
               localJWKS: |
@@ -544,6 +546,7 @@ xdsIR:
           prefix: /baz
         security:
           jwt:
+            policyName: default/securitypolicy-with-jwt-local-jwks-valueref-missing-key
             providers:
             - issuer: https://one.example.com
               localJWKS: |

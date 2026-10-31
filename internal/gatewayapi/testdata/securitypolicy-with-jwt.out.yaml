@@ -351,6 +351,7 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         security:
           jwt:
+            policyName: envoy-gateway/policy-for-gateway
             providers:
             - audiences:
               - one.foo.com
@@ -448,6 +449,7 @@ xdsIR:
           prefix: /
         security:
           jwt:
+            policyName: default/policy-for-route
             providers:
             - audiences:
               - three.foo.com

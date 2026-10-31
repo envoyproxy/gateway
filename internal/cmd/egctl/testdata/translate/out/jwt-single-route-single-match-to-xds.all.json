@@ -691,7 +691,7 @@
                                   }
                                 },
                                 "requirementMap": {
-                                  "example_610fd14578c340be": {
+                                  "envoy-gateway-system/jwt-example": {
                                     "providerName": "example_7815c684b265ae47"
                                   }
                                 }
@@ -789,7 +789,7 @@
                         "typedPerFilterConfig": {
                           "envoy.filters.http.jwt_authn": {
                             "@type": "type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig",
-                            "requirementName": "example_610fd14578c340be"
+                            "requirementName": "envoy-gateway-system/jwt-example"
                           }
                         }
                       }

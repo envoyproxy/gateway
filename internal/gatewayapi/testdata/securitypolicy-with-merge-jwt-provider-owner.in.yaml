@@ -1,0 +1,205 @@
+# The jwt requirement is named after the policy that supplies the providers list.
+# httproute-1's policy brings its own providers and inherits only `optional` from
+# the gateway policy, so its jwt IR names the route policy. httproute-2's policy
+# brings no providers and inherits the gateway policy's, so its jwt IR names the
+# gateway policy.
+#
+# httproute-3 is attached to two plain-HTTP listeners of gateway-2 that share one
+# port, so their routes share one jwt_authn requirement_map. Each listener has
+# its own parent policy, and the route policy merges with each. The route
+# policy's providers replace the list whole, so both routes carry the same
+# providers under the same policyName. If JWT.Providers gained a patch merge key,
+# the two routes would carry different providers under one policyName.
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: a
+      protocol: HTTP
+      port: 80
+      hostname: a.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: b
+      protocol: HTTP
+      port: 80
+      hostname: b.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/route-owned"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/parent-owned"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: a
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: b
+    rules:
+    - matches:
+      - path:
+          value: "/shared-port"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http
+    jwt:
+      optional: true
+      providers:
+      - name: gateway-provider
+        issuer: https://gateway.example.com
+        remoteJWKS:
+          uri: https://gateway.example.com/.well-known/jwks.json
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-route-owned
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    jwt:
+      providers:
+      - name: route-provider
+        issuer: https://route.example.com
+        remoteJWKS:
+          uri: https://route.example.com/.well-known/jwks.json
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-parent-owned
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    cors:
+      allowOrigins:
+      - "https://api.example.com"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-listener-a
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      sectionName: a
+    jwt:
+      providers:
+      - name: issuer-a
+        issuer: https://a.example.com
+        remoteJWKS:
+          uri: https://a.example.com/.well-known/jwks.json
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-listener-b
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      sectionName: b
+    jwt:
+      providers:
+      - name: issuer-b
+        issuer: https://b.example.com
+        remoteJWKS:
+          uri: https://b.example.com/.well-known/jwks.json
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-shared-port
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    jwt:
+      providers:
+      - name: route-provider
+        issuer: https://route.example.com
+        remoteJWKS:
+          uri: https://route.example.com/.well-known/jwks.json

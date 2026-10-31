@@ -209,6 +209,7 @@ xdsIR:
         security:
           jwt:
             allowMissingOrFailed: true
+            policyName: default/policy-for-route
             providers:
             - issuer: https://www.example.com
               name: example

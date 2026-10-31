@@ -310,6 +310,7 @@ xdsIR:
           prefix: /foo
         security:
           jwt:
+            policyName: envoy-gateway/policy-for-gateway
             providers:
             - audiences:
               - one.foo.com
@@ -354,6 +355,7 @@ xdsIR:
           prefix: /bar
         security:
           jwt:
+            policyName: default/policy-for-http-route
             providers:
             - audiences:
               - two.foo.com

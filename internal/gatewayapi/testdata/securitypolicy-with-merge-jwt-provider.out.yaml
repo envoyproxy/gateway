@@ -534,6 +534,7 @@ xdsIR:
                     - mygroup
                   provider: example
           jwt:
+            policyName: envoy-gateway/policy-for-gateway
             providers:
             - issuer: https://www.example.com
               name: example
@@ -573,6 +574,7 @@ xdsIR:
           prefix: /unknown
         security:
           jwt:
+            policyName: envoy-gateway/policy-for-gateway
             providers:
             - issuer: https://www.example.com
               name: example
@@ -660,6 +662,7 @@ xdsIR:
           prefix: /typo
         security:
           jwt:
+            policyName: default/policy-typo-provider
             providers:
             - issuer: https://www.example.com
               name: example
