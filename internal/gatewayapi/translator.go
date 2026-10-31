@@ -502,6 +502,10 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
 	phases.End()
 
+	// Runs after BackendTrafficPolicies too, since their load balancer settings can split a
+	// rule into one cluster per backendRef.
+	t.checkIneffectiveBackendPriority(httpRoutes, grpcRoutes, xdsIR)
+
 	// Process SecurityPolicies
 	phases.Start("GatewayApiTranslator.ProcessSecurityPolicies",
 		attribute.Int("security-policies.count", len(resources.SecurityPolicies)),
