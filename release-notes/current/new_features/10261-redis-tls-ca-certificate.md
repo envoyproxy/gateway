@@ -1,0 +1,1 @@
+Added `caCertificateRef` to `rateLimit.backend.redis.tls` in the EnvoyGateway configuration, which references a ConfigMap or Secret holding the CA certificate (key `ca.crt`) used to verify the Redis server certificate for the global rate limit backend.
