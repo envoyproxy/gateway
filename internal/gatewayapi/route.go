@@ -1956,12 +1956,14 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	hasHostnameIntersection := len(parentRef.listeners) == 0
 
 	for _, listener := range parentRef.listeners {
+		if routeIntersectsListener(GetHostnames(route), listener) {
+			hasHostnameIntersection = true
+			listener.IncrementAttachedRoutes()
+		}
 		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
 			continue
 		}
-		hasHostnameIntersection = true
-		listener.IncrementAttachedRoutes()
 		if !listener.IsReady() {
 			continue
 		}
@@ -2463,12 +2465,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// need to check hostname intersection if there are listeners
 		hasHostnameIntersection := len(parentRef.listeners) == 0
 		for _, listener := range parentRef.listeners {
+			if routeIntersectsListener(GetHostnames(tlsRoute), listener) {
+				hasHostnameIntersection = true
+				listener.IncrementAttachedRoutes()
+			}
 			hosts := computeHosts(GetHostnames(tlsRoute), listener)
 			if len(hosts) == 0 {
 				continue
 			}
-			hasHostnameIntersection = true
-			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}

@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"slices"
 	"sort"
@@ -373,16 +374,81 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		if listener.hostnameConflictLoser {
 			continue
 		}
+		// A listener that will not be programmed cannot own a hostname. Letting it delete
+		// one would strip the route from the valid listener and leave it attached to
+		// nothing. The condition is read directly rather than through
+		// isSpecValidForConflictChecks, which short-circuits on specValid and so misses a
+		// listener that validated cleanly and was only conflicted afterwards - duplicate
+		// hostnames with no winner being the case that leaves no flag behind.
+		if hasInvalidCondition(listener) || listener.protocolConflicted {
+			continue
+		}
 		if listenerContext != nil && listenerContext.Port != listener.Port {
 			continue
 		}
 		if listener.Hostname == nil {
 			continue
 		}
-		hostnamesSet.Delete(string(*listener.Hostname))
+		siblingHostname := string(*listener.Hostname)
+
+		// A sibling listener owns a hostname when it matches that hostname at least as
+		// specifically as this listener does. Deleting the sibling's own hostname as a
+		// literal string only landed when the set happened to hold that same string, so
+		// a concrete route hostname under a nested wildcard sibling was never removed.
+		//
+		// Equal specificity means an identical hostname, where the winner is picked by
+		// the hostnameConflictLoser guard above: only the loser reaches this loop with
+		// the winner as its sibling, so the two can never delete each other's hosts.
+		for _, h := range hostnamesSet.UnsortedList() {
+			if hostnameMatches(siblingHostname, h) &&
+				hostnameSpecificity(siblingHostname) >= hostnameSpecificity(listenerHostnameVal) {
+				hostnamesSet.Delete(h)
+			}
+		}
 	}
 
 	return sets.List(hostnamesSet)
+}
+
+// routeIntersectsListener reports whether the route hostnames intersect the listener's
+// own hostname. This decides route acceptance and attachment, so unlike computeHosts it
+// ignores sibling listeners: a route whose hostnames are all owned by a more specific
+// sibling is still accepted by and attached to the listener it references, it just has
+// no hosts to program there.
+func routeIntersectsListener(routeHostnames []string, listener *ListenerContext) bool {
+	// Without a gateway, computeHosts has no sibling listeners to filter against.
+	return len(computeHosts(routeHostnames, &ListenerContext{Listener: listener.Listener})) > 0
+}
+
+// hostnameMatches reports whether listenerHostname matches hostname, treating a
+// leading "*" in listenerHostname as a wildcard. Identical strings match:
+// wildcardHostnameMatchesHostname deliberately returns false when both sides are the
+// same wildcard, so that case is handled here rather than there.
+func hostnameMatches(listenerHostname, hostname string) bool {
+	if listenerHostname == hostname {
+		return true
+	}
+	if strings.HasPrefix(listenerHostname, "*") {
+		return wildcardHostnameMatchesHostname(listenerHostname, hostname)
+	}
+	return false
+}
+
+// hostnameSpecificity ranks how narrowly a listener hostname matches. An exact
+// hostname is more specific than any wildcard; between two wildcards the longer
+// suffix wins, so "*.dev.example.com" outranks "*.example.com"; and an empty
+// hostname, which matches everything, is less specific than either.
+func hostnameSpecificity(hostname string) int {
+	// An empty listener hostname matches every hostname, making it the least specific
+	// listener there is. It has no "*" prefix, so without this it would fall through
+	// to the exact-hostname branch and rank as the most specific instead.
+	if hostname == "" {
+		return -1
+	}
+	if !strings.HasPrefix(hostname, "*") {
+		return math.MaxInt
+	}
+	return len(strings.TrimPrefix(hostname, "*"))
 }
 
 // wildcardHostnameMatchesHostname returns true if wildcardHostname matches hostname.
