@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -50,9 +51,10 @@ type fakeKubernetesInfraProvider struct {
 	ControllerServiceAccountName string
 	DNSDomain                    string
 	EnvoyGateway                 *egv1a1.EnvoyGateway
+	KubernetesVersion            string
 }
 
-func newFakeKubernetesInfraProvider(cfg *config.Server) KubernetesInfraProvider {
+func newFakeKubernetesInfraProvider(cfg *config.Server) *fakeKubernetesInfraProvider {
 	return &fakeKubernetesInfraProvider{
 		ControllerNamespace:          cfg.ControllerNamespace,
 		ControllerName:               cfg.ControllerName,
@@ -103,6 +105,10 @@ func (f *fakeKubernetesInfraProvider) GetResourceNamespace(infra *ir.Infra) stri
 		return infra.Proxy.Namespace
 	}
 	return f.ControllerNamespace
+}
+
+func (f *fakeKubernetesInfraProvider) GetKubernetesVersion(context.Context) string {
+	return f.KubernetesVersion
 }
 
 func newTestInfra() *ir.Infra {
@@ -2951,4 +2957,154 @@ func TestServiceSelectorGatewayName(t *testing.T) {
 		require.Contains(t, svc.Spec.Selector, gatewayapi.GatewayNameLabel,
 			"gateway namespace mode keeps gateway-name in the Service selector")
 	})
+}
+
+func TestShutdownManagerNativeSidecar(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	const shutdownImage = "privaterepo/envoyproxy/gateway-dev:v1.2.3"
+	cfg.EnvoyGateway.Provider.Kubernetes.ShutdownManager = &egv1a1.ShutdownManager{
+		Image: new(shutdownImage),
+	}
+
+	userInit := []corev1.Container{{
+		Name:  "install-filter-foo",
+		Image: "alpine:3.11.3",
+	}}
+
+	cases := []struct {
+		name    string
+		version string
+		native  bool
+	}{
+		{name: "v1.33.0", version: "v1.33.0", native: true},
+		{name: "v1.35.9+k3s1", version: "v1.35.9+k3s1", native: true},
+		{name: "v1.33.0-rc.1+k3s1", version: "v1.33.0-rc.1+k3s1", native: true},
+		{name: "v1.32.8", version: "v1.32.8", native: false},
+		{name: "v1.32.x", version: "v1.32.x", native: false},
+		{name: "unavailable", version: "", native: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, kind := range []string{"Deployment", "DaemonSet"} {
+				t.Run(kind, func(t *testing.T) {
+					infra := newTestInfra()
+					infra.Proxy.GetProxyConfig().Spec.Shutdown = &egv1a1.ShutdownConfig{
+						DrainTimeout:     new(gwapiv1.Duration("30s")),
+						MinDrainDuration: new(gwapiv1.Duration("15s")),
+					}
+					kubeProvider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+					if kind == "DaemonSet" {
+						kubeProvider.EnvoyDeployment = nil
+						kubeProvider.EnvoyDaemonSet = egv1a1.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage)
+					} else {
+						kubeProvider.EnvoyDeployment.InitContainers = userInit
+					}
+
+					fake := newFakeKubernetesInfraProvider(cfg)
+					fake.KubernetesVersion = tc.version
+					r, err := NewResourceRender(context.Background(), fake, infra)
+					require.NoError(t, err)
+
+					var pod corev1.PodSpec
+					if kind == "Deployment" {
+						dp, err := r.Deployment()
+						require.NoError(t, err)
+						require.NotNil(t, dp)
+						pod = dp.Spec.Template.Spec
+					} else {
+						ds, err := r.DaemonSet()
+						require.NoError(t, err)
+						require.NotNil(t, ds)
+						pod = ds.Spec.Template.Spec
+					}
+
+					var wantInit []corev1.Container
+					if kind == "Deployment" {
+						wantInit = userInit
+					}
+					assertShutdownManagerLayout(t, &pod, tc.native, wantInit, shutdownImage)
+				})
+			}
+		})
+	}
+}
+
+func assertShutdownManagerLayout(t *testing.T, pod *corev1.PodSpec, native bool, userInit []corev1.Container, image string) {
+	t.Helper()
+
+	var envoyContainer *corev1.Container
+	var shutdownInContainers *corev1.Container
+	for i := range pod.Containers {
+		c := &pod.Containers[i]
+		switch c.Name {
+		case envoyContainerName:
+			envoyContainer = c
+		case shutdownManagerContainerName:
+			shutdownInContainers = c
+		}
+	}
+	require.NotNil(t, envoyContainer)
+	require.NotNil(t, envoyContainer.Lifecycle)
+	require.NotNil(t, envoyContainer.Lifecycle.PreStop)
+	require.NotNil(t, envoyContainer.Lifecycle.PreStop.HTTPGet)
+	require.Equal(t, envoy.ShutdownManagerReadyPath, envoyContainer.Lifecycle.PreStop.HTTPGet.Path)
+	require.Equal(t, intstr.FromInt32(envoy.ShutdownManagerPort), envoyContainer.Lifecycle.PreStop.HTTPGet.Port)
+
+	var shutdown *corev1.Container
+	if native {
+		require.Nil(t, shutdownInContainers)
+		require.Len(t, pod.InitContainers, len(userInit)+1)
+		for i := range userInit {
+			require.Equal(t, userInit[i].Name, pod.InitContainers[i].Name)
+			require.Equal(t, userInit[i].Image, pod.InitContainers[i].Image)
+		}
+		shutdown = &pod.InitContainers[len(pod.InitContainers)-1]
+		require.Equal(t, shutdownManagerContainerName, shutdown.Name)
+		require.NotNil(t, shutdown.RestartPolicy)
+		require.Equal(t, corev1.ContainerRestartPolicyAlways, *shutdown.RestartPolicy)
+	} else {
+		require.NotNil(t, shutdownInContainers)
+		require.Nil(t, shutdownInContainers.RestartPolicy)
+		require.Equal(t, userInit, pod.InitContainers)
+		shutdown = shutdownInContainers
+	}
+
+	require.Equal(t, image, shutdown.Image)
+	require.Equal(t, []string{"envoy-gateway"}, shutdown.Command)
+	require.Equal(t, []string{"envoy", "shutdown-manager", "--ready-timeout=40s"}, shutdown.Args)
+	require.Equal(t, []corev1.VolumeMount{{
+		Name:      shutdownManagerTmpVolumeName,
+		MountPath: "/tmp",
+	}}, shutdown.VolumeMounts)
+	for _, probe := range []*corev1.Probe{shutdown.StartupProbe, shutdown.ReadinessProbe, shutdown.LivenessProbe} {
+		require.NotNil(t, probe)
+		require.NotNil(t, probe.HTTPGet)
+		require.Equal(t, envoy.ShutdownManagerHealthCheckPath, probe.HTTPGet.Path)
+		require.Equal(t, intstr.IntOrString{Type: intstr.Int, IntVal: envoy.ShutdownManagerPort}, probe.HTTPGet.Port)
+	}
+	require.NotNil(t, shutdown.Lifecycle)
+	require.NotNil(t, shutdown.Lifecycle.PreStop)
+	require.NotNil(t, shutdown.Lifecycle.PreStop.Exec)
+	require.Equal(t, []string{
+		"envoy-gateway", "envoy", "shutdown",
+		"--drain-timeout=30s",
+		"--min-drain-duration=15s",
+	}, shutdown.Lifecycle.PreStop.Exec.Command)
+	require.NotNil(t, shutdown.SecurityContext)
+	require.Equal(t, new(int64(65532)), shutdown.SecurityContext.RunAsUser)
+	require.Equal(t, new(int64(65532)), shutdown.SecurityContext.RunAsGroup)
+	require.Nil(t, shutdown.SecurityContext.ReadOnlyRootFilesystem)
+
+	var tmpVolume bool
+	for i := range pod.Volumes {
+		vol := &pod.Volumes[i]
+		if vol.Name == shutdownManagerTmpVolumeName {
+			tmpVolume = true
+			require.NotNil(t, vol.EmptyDir)
+		}
+	}
+	require.True(t, tmpVolume)
 }

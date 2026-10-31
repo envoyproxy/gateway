@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -303,4 +305,123 @@ func setupOwnerReferenceResources(ctx context.Context, client *InfraClient) erro
 		},
 	}
 	return client.Create(ctx, gw)
+}
+
+func TestKubernetesVersionDiscoveryHandoff(t *testing.T) {
+	origTimeout := kubernetesVersionDiscoveryTimeout
+	kubernetesVersionDiscoveryTimeout = 50 * time.Millisecond
+	t.Cleanup(func() { kubernetesVersionDiscoveryTimeout = origTimeout })
+
+	newLabeledInfra := func() *ir.Infra {
+		infra := ir.NewInfra()
+		infra.GetProxyInfra().GetProxyMetadata().Labels = proxy.EnvoyAppLabel()
+		infra.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+		infra.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
+		infra.GetProxyInfra().GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+			Kind: resource.KindGatewayClass,
+			Name: testGatewayClass,
+		}
+		return infra
+	}
+
+	newKube := func(t *testing.T, discover func(context.Context) (string, error)) *Infra {
+		t.Helper()
+		cli := fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithInterceptorFuncs(interceptorFunc).
+			Build()
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+		cfg.KubernetesServerVersion.Set(discover)
+		kube := NewInfra(cli, cfg, message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}})
+		require.NoError(t, setupOwnerReferenceResources(context.Background(), kube.Client))
+		return kube
+	}
+
+	assertPlacement := func(t *testing.T, kube *Infra, infra *ir.Infra, native bool) {
+		t.Helper()
+		deploy := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: kube.ControllerNamespace,
+				Name:      expectedName(infra.Proxy, false),
+			},
+		}
+		require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
+		pod := deploy.Spec.Template.Spec
+
+		var envoyFound, shutdownInContainers, shutdownInInit bool
+		var restart *corev1.ContainerRestartPolicy
+		for i := range pod.Containers {
+			switch pod.Containers[i].Name {
+			case "envoy":
+				envoyFound = true
+				require.NotNil(t, pod.Containers[i].Lifecycle)
+				require.NotNil(t, pod.Containers[i].Lifecycle.PreStop)
+				require.NotNil(t, pod.Containers[i].Lifecycle.PreStop.HTTPGet)
+				require.Equal(t, "/shutdown/ready", pod.Containers[i].Lifecycle.PreStop.HTTPGet.Path)
+			case "shutdown-manager":
+				shutdownInContainers = true
+			}
+		}
+		for i := range pod.InitContainers {
+			if pod.InitContainers[i].Name == "shutdown-manager" {
+				shutdownInInit = true
+				restart = pod.InitContainers[i].RestartPolicy
+			}
+		}
+		require.True(t, envoyFound)
+		if native {
+			require.False(t, shutdownInContainers)
+			require.True(t, shutdownInInit)
+			require.NotNil(t, restart)
+			require.Equal(t, corev1.ContainerRestartPolicyAlways, *restart)
+			return
+		}
+		require.True(t, shutdownInContainers)
+		require.False(t, shutdownInInit)
+	}
+
+	t.Run("discovered once and used for native sidecar", func(t *testing.T) {
+		var calls atomic.Int32
+		infra := newLabeledInfra()
+		kube := newKube(t, func(context.Context) (string, error) {
+			calls.Add(1)
+			return "v1.35.9+k3s1", nil
+		})
+		require.NoError(t, kube.CreateOrUpdateProxyInfra(context.Background(), infra))
+		require.NoError(t, kube.CreateOrUpdateProxyInfra(context.Background(), infra))
+		require.Equal(t, int32(1), calls.Load())
+		assertPlacement(t, kube, infra, true)
+	})
+
+	t.Run("discovery error keeps legacy layout", func(t *testing.T) {
+		var calls atomic.Int32
+		infra := newLabeledInfra()
+		kube := newKube(t, func(context.Context) (string, error) {
+			calls.Add(1)
+			return "", errors.New("discovery failed")
+		})
+		require.NoError(t, kube.CreateOrUpdateProxyInfra(context.Background(), infra))
+		require.NoError(t, kube.CreateOrUpdateProxyInfra(context.Background(), infra))
+		require.Equal(t, int32(1), calls.Load())
+		assertPlacement(t, kube, infra, false)
+	})
+
+	t.Run("discovery timeout does not block reconciliation", func(t *testing.T) {
+		var calls atomic.Int32
+		infra := newLabeledInfra()
+		kube := newKube(t, func(ctx context.Context) (string, error) {
+			calls.Add(1)
+			<-ctx.Done()
+			return "", ctx.Err()
+		})
+		start := time.Now()
+		require.NoError(t, kube.CreateOrUpdateProxyInfra(context.Background(), infra))
+		require.Less(t, time.Since(start), time.Second)
+		start = time.Now()
+		require.NoError(t, kube.CreateOrUpdateProxyInfra(context.Background(), infra))
+		require.Less(t, time.Since(start), 200*time.Millisecond)
+		require.Equal(t, int32(1), calls.Load())
+		assertPlacement(t, kube, infra, false)
+	})
 }
