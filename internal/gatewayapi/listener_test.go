@@ -672,7 +672,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 			expectedTLSOverlaps: []string{"listener-1", "listener-2"},
 		},
 		{
-			name: "SDS certificate leaves distinct-hostname peers on HTTP/2",
+			name: "SDS certificate disables HTTP/2 on distinct-hostname peers",
 			listeners: []*ListenerContext{
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("foo.example.com"))},
@@ -693,7 +693,16 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					},
 				},
 			},
+			// The SDS certificate may also cover the peers' hostnames, so clients could
+			// coalesce their requests onto an HTTP/2 connection to the SDS listener.
 			expectedStatus: []expectedListenerStatus{
+				{
+					listenerName: "listener-1",
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
+					status:       metav1.ConditionTrue,
+					reason:       status.ListenerReasonSDSCertificateOpaque,
+					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
+				},
 				{
 					listenerName: "listener-2",
 					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
@@ -701,8 +710,15 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 					reason:       status.ListenerReasonSDSCertificateOpaque,
 					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
 				},
+				{
+					listenerName: "listener-3",
+					condition:    gwapiv1.ListenerConditionOverlappingTLSConfig,
+					status:       metav1.ConditionTrue,
+					reason:       status.ListenerReasonSDSCertificateOpaque,
+					message:      "HTTP/2 is disabled by default because one or more HTTPS listeners on this port use an SDS-backed certificate whose DNS names cannot be inspected. Configure ALPN explicitly with ClientTrafficPolicy to override this default.",
+				},
 			},
-			expectedTLSOverlaps: []string{"listener-2"},
+			expectedTLSOverlaps: []string{"listener-1", "listener-2", "listener-3"},
 		},
 		{
 			name: "SDS listener hostname overlaps a peer certificate SAN",
