@@ -924,6 +924,17 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		tcpIR.Timeout = timeout
 	}
 
+	udpIR := gwXdsIR.GetUDPListener(irListenerName)
+	if udpIR != nil {
+		// Ignore errors from settings that do not apply to UDP.
+		// Keep the UDPRoute since the timeout can use its default.
+		udpTimeout, udpErr := buildUDPClientTimeout(policy.Spec.Timeout)
+		if udpErr == nil && udpTimeout != nil {
+			udpIR.Timeout = &ir.ClientTimeout{UDP: udpTimeout}
+		}
+		return perr.WithMessage(udpErr, "Timeout")
+	}
+
 	return nil
 }
 
@@ -1075,7 +1086,29 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
 
+	irUDPTimeout, err := buildUDPClientTimeout(clientTimeout)
+	if err != nil {
+		return nil, err
+	}
+	irClientTimeout.UDP = irUDPTimeout
+
 	return irClientTimeout, nil
+}
+
+func buildUDPClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.UDPClientTimeout, error) {
+	if clientTimeout == nil || clientTimeout.UDP == nil {
+		return nil, nil
+	}
+
+	irUDPTimeout := &ir.UDPClientTimeout{}
+	if clientTimeout.UDP.IdleTimeout != nil {
+		d, err := time.ParseDuration(string(*clientTimeout.UDP.IdleTimeout))
+		if err != nil {
+			return nil, fmt.Errorf("invalid UDP IdleTimeout value %s", *clientTimeout.UDP.IdleTimeout)
+		}
+		irUDPTimeout.IdleTimeout = ir.MetaV1DurationPtr(d)
+	}
+	return irUDPTimeout, nil
 }
 
 func translateClientIPDetection(clientIPDetection *egv1a1.ClientIPDetectionSettings, httpIR *ir.HTTPListener) {
