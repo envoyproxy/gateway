@@ -52,7 +52,7 @@ func TestSetConditionForPolicyAncestorBounded(t *testing.T) {
 
 	// Final truncation still cuts to the CRD limit.
 	TruncatePolicyAncestors(policyStatus, controller, 1)
-	assert.Len(t, policyStatus.Ancestors, maxPolicyAncestors)
+	assert.Len(t, policyStatus.Ancestors, MaxPolicyAncestors)
 }
 
 func BenchmarkSetConditionForPolicyAncestorsAtScale(b *testing.B) {
