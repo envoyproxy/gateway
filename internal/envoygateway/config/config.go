@@ -6,6 +6,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -66,6 +67,11 @@ type Server struct {
 	// KubernetesClient holds the controller-runtime client created by the Kubernetes provider.
 	// This is used by the infrastructure runner to create the envoy proxy and rate limit infra resources.
 	KubernetesClient *KubernetesClientHolder
+	// KubernetesServerVersion shares API server version discovery with the infrastructure runner.
+	// Runner configs copy Server by value, so this is a pointer created in New and mutated
+	// by the provider before infrastructure starts. A nil func, an error, or an unusable
+	// version keeps the legacy shutdown-manager container layout.
+	KubernetesServerVersion *KubernetesServerVersionHolder
 }
 
 type KubernetesClientHolder struct {
@@ -89,6 +95,32 @@ func (h *KubernetesClientHolder) Get() client.Client {
 	return h.client
 }
 
+// KubernetesServerVersionHolder stores the func that reads the Kubernetes API
+// server git version. Infrastructure calls it at most once.
+type KubernetesServerVersionHolder struct {
+	discover func(context.Context) (string, error)
+}
+
+// NewKubernetesServerVersionHolder returns an empty holder.
+func NewKubernetesServerVersionHolder() *KubernetesServerVersionHolder {
+	return &KubernetesServerVersionHolder{}
+}
+
+// Set installs the discovery func. A nil holder is ignored.
+func (h *KubernetesServerVersionHolder) Set(discover func(context.Context) (string, error)) {
+	if h != nil {
+		h.discover = discover
+	}
+}
+
+// Get returns the discovery func, or nil when discovery was not installed.
+func (h *KubernetesServerVersionHolder) Get() func(context.Context) (string, error) {
+	if h == nil {
+		return nil
+	}
+	return h.discover
+}
+
 // New returns a Server with default parameters.
 func New(stdout, stderr io.Writer) (*Server, error) {
 	return &Server{
@@ -104,6 +136,7 @@ func New(stdout, stderr io.Writer) (*Server, error) {
 		Elected:                      make(chan struct{}),
 		ProviderReady:                make(chan struct{}),
 		KubernetesClient:             NewKubernetesClientHolder(),
+		KubernetesServerVersion:      NewKubernetesServerVersionHolder(),
 	}, nil
 }
 

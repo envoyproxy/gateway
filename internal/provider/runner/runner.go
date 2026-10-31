@@ -9,7 +9,10 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -19,6 +22,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/file"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
+
+// kubernetesServerVersionRequestTimeout bounds the /version request installed
+// for the infrastructure runner. The runner applies its own deadline as well.
+const kubernetesServerVersionRequestTimeout = 10 * time.Second
 
 type Config struct {
 	config.Server
@@ -87,6 +94,10 @@ func (r *Runner) createKubernetesProvider(ctx context.Context, errors message.Ru
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}
 
+	// Install version discovery before the provider starts. The holder is shared
+	// with the infrastructure runner, which calls it at most once.
+	r.KubernetesServerVersion.Set(kubernetesServerVersion(cfg))
+
 	p, err := kubernetes.New(ctx, cfg, &r.Server, r.ProviderResources, errors)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
@@ -97,6 +108,29 @@ func (r *Runner) createKubernetesProvider(ctx context.Context, errors message.Ru
 	r.KubernetesClient.Set(p.GetClient())
 
 	return p, err
+}
+
+// kubernetesServerVersion returns a func that reads the API server git version.
+// The rest config is copied so the request timeout is not applied to the provider client.
+func kubernetesServerVersion(cfg *rest.Config) func(context.Context) (string, error) {
+	cfg = rest.CopyConfig(cfg)
+	if cfg.Timeout <= 0 || cfg.Timeout > kubernetesServerVersionRequestTimeout {
+		cfg.Timeout = kubernetesServerVersionRequestTimeout
+	}
+	return func(ctx context.Context) (string, error) {
+		disco, err := discovery.NewDiscoveryClientForConfig(cfg)
+		if err != nil {
+			return "", fmt.Errorf("failed to create kubernetes discovery client: %w", err)
+		}
+		info, err := disco.ServerVersionWithContext(ctx)
+		if err != nil {
+			return "", fmt.Errorf("failed to discover kubernetes server version: %w", err)
+		}
+		if info == nil || info.GitVersion == "" {
+			return "", fmt.Errorf("kubernetes server version is empty")
+		}
+		return info.GitVersion, nil
+	}
 }
 
 func (r *Runner) createCustomResourceProvider(ctx context.Context, errors message.RunnerErrorNotifier) (provider.Provider, error) {

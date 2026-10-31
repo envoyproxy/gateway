@@ -8,8 +8,10 @@ package proxy
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/containers/image/v5/docker/reference"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -40,6 +42,12 @@ const (
 	// securityContext replicated from the Envoy container enforces
 	// readOnlyRootFilesystem: true.
 	shutdownManagerTmpVolumeName = "shutdown-manager-tmp"
+	// shutdownManagerContainerName is the container that drains Envoy on pod shutdown.
+	shutdownManagerContainerName = "shutdown-manager"
+	// nativeSidecarMinor is the first Kubernetes minor release whose kubelet can
+	// terminate regular containers concurrently. Native sidecars (GA in 1.33)
+	// are stopped after app containers, so shutdown-manager outlives Envoy's preStop.
+	nativeSidecarMinor = 33
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
@@ -79,13 +87,34 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 	return true
 }
 
-// expectedProxyContainers returns expected proxy containers.
+// supportsNativeSidecar reports whether gitVersion is Kubernetes 1.33 or newer.
+// Comparison uses major.minor so patch, prerelease, and build suffixes still
+// count (v1.35.9+k3s1, v1.33.0-rc.1, v1.33.0-gke.1). Unparsable and empty
+// versions return false so rendering keeps the legacy container layout.
+func supportsNativeSidecar(gitVersion string) bool {
+	gitVersion = strings.TrimSpace(gitVersion)
+	gitVersion = strings.TrimPrefix(gitVersion, "v")
+	if gitVersion == "" {
+		return false
+	}
+	v, err := semver.StrictNewVersion(gitVersion)
+	if err != nil {
+		return false
+	}
+	return v.Major() > 1 || (v.Major() == 1 && v.Minor() >= nativeSidecarMinor)
+}
+
+// expectedProxyContainers returns the Envoy container and, on Kubernetes 1.33+,
+// the shutdown-manager init container. The init container uses RestartPolicy
+// Always so kubelet treats it as a native sidecar and stops it after Envoy.
+// Older clusters and unavailable versions keep shutdown-manager beside Envoy.
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
 	topologyInjectorDisabled bool,
 	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
-) ([]corev1.Container, error) {
+	kubeVersion string,
+) ([]corev1.Container, []corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
 		ports = append(ports, corev1.ContainerPort{
@@ -130,12 +159,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	proxyImage, err := resolveProxyImage(containerSpec)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	containers := []corev1.Container{
@@ -202,7 +231,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			},
 		},
 		{
-			Name:                     "shutdown-manager",
+			Name:                     shutdownManagerContainerName,
 			Image:                    expectedShutdownManagerImage(shutdownManager),
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
@@ -267,7 +296,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		},
 	}
 
-	return containers, nil
+	if supportsNativeSidecar(kubeVersion) {
+		shutdown := containers[1]
+		shutdown.RestartPolicy = new(corev1.ContainerRestartPolicyAlways)
+		return []corev1.Container{containers[0]}, []corev1.Container{shutdown}, nil
+	}
+	return containers, nil, nil
 }
 
 func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) string {

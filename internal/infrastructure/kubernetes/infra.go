@@ -8,6 +8,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -72,7 +75,18 @@ type Infra struct {
 
 	// errors is the notifier used to send async errors to the main control loop.
 	errors message.RunnerErrorNotifier
+
+	// kubeServerVersion discovers the API server git version. The result is cached
+	// in kubeVersion so proxy renders do not call discovery again.
+	kubeServerVersion *config.KubernetesServerVersionHolder
+	kubeVersionOnce   sync.Once
+	kubeVersion       string
 }
+
+// kubernetesVersionDiscoveryTimeout bounds a single API server version lookup.
+// A timeout, error, or empty result selects the legacy shutdown-manager layout
+// and is cached so reconciliation is not blocked again.
+var kubernetesVersionDiscoveryTimeout = 10 * time.Second
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client, cfg *config.Server, errors message.RunnerErrorNotifier) *Infra {
@@ -88,6 +102,64 @@ func NewInfra(cli client.Client, cfg *config.Server, errors message.RunnerErrorN
 		Client:                       New(cli),
 		logger:                       cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
 		errors:                       errors,
+		kubeServerVersion:            cfg.KubernetesServerVersion,
+	}
+}
+
+// ResolveKubernetesVersion discovers the API server version at most once.
+// Failures are cached as an empty version so callers keep the legacy layout.
+func (i *Infra) ResolveKubernetesVersion(ctx context.Context) {
+	i.kubeVersionOnce.Do(func() {
+		i.kubeVersion = i.discoverKubernetesVersion(ctx)
+	})
+}
+
+func (i *Infra) discoverKubernetesVersion(ctx context.Context) string {
+	if i.kubeServerVersion == nil {
+		return ""
+	}
+	discover := i.kubeServerVersion.Get()
+	if discover == nil {
+		return ""
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, kubernetesVersionDiscoveryTimeout)
+	defer cancel()
+	version, err := callKubernetesVersionDiscover(ctx, discover)
+	if err != nil || strings.TrimSpace(version) == "" {
+		if err != nil {
+			i.logger.Error(err, "failed to discover Kubernetes server version; using legacy shutdown-manager layout")
+		} else {
+			i.logger.Info("Kubernetes server version unavailable; using legacy shutdown-manager layout")
+		}
+		return ""
+	}
+	i.logger.Info("discovered Kubernetes server version", "version", version)
+	return strings.TrimSpace(version)
+}
+
+// callKubernetesVersionDiscover runs discover until it returns or ctx is done, so a
+// stuck client cannot block proxy reconciliation indefinitely.
+func callKubernetesVersionDiscover(ctx context.Context, discover func(context.Context) (string, error)) (string, error) {
+	type result struct {
+		version string
+		err     error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		version, err := discover(ctx)
+		ch <- result{version: version, err: err}
+	}()
+	select {
+	case res := <-ch:
+		return res.version, res.err
+	case <-ctx.Done():
+		select {
+		case res := <-ch:
+			return res.version, res.err
+		default:
+			return "", ctx.Err()
+		}
 	}
 }
 
