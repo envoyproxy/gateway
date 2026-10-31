@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,10 +32,9 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			runningOnHost: false,
 		},
 		{
-			name:          "single label not ok when in k8s",
-			hostname:      "otel-tui",
+			name:          "single label ok when in k8s",
+			hostname:      "ml-service",
 			runningOnHost: false,
-			expectedErr:   "hostname otel-tui should be a domain with at least two segments separated by dots",
 		},
 		{
 			name:          "single label ok when running on host",
@@ -46,6 +46,232 @@ func TestValidateHostnameRunningOnHost(t *testing.T) {
 			hostname:      "127.0.0.1",
 			runningOnHost: true,
 			expectedErr:   "hostname 127.0.0.1 is an IP address",
+		},
+		{
+			name:          "localhost not ok when in k8s",
+			hostname:      "localhost",
+			runningOnHost: false,
+			expectedErr:   "hostname localhost is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "absolute localhost not ok when in k8s",
+			hostname:      "localhost.",
+			runningOnHost: false,
+			expectedErr:   "hostname localhost. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost ok when running on host",
+			hostname:      "localhost",
+			runningOnHost: true,
+		},
+		{
+			name:          "absolute localhost ok when running on host",
+			hostname:      "localhost.",
+			runningOnHost: true,
+		},
+		{
+			name:          "localhost localdomain not ok when in k8s",
+			hostname:      "localhost.localdomain",
+			runningOnHost: false,
+			expectedErr:   "hostname localhost.localdomain is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost localdomain absolute not ok when in k8s",
+			hostname:      "localhost.localdomain.",
+			runningOnHost: false,
+			expectedErr:   "hostname localhost.localdomain. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost localdomain ok when running on host",
+			hostname:      "localhost.localdomain",
+			runningOnHost: true,
+		},
+		{
+			name:          "localhost localdomain absolute ok when running on host",
+			hostname:      "localhost.localdomain.",
+			runningOnHost: true,
+		},
+		{
+			name:          "localhost localdomain subdomain of other domain ok in k8s",
+			hostname:      "localhost.localdomain.example.com",
+			runningOnHost: false,
+		},
+		{
+			name:          "underscore not ok when in k8s",
+			hostname:      "bad_name",
+			runningOnHost: false,
+			expectedErr:   "hostname bad_name is not a valid hostname",
+		},
+		{
+			name:          "empty not ok when in k8s",
+			hostname:      "",
+			runningOnHost: false,
+			expectedErr:   "hostname  is not a valid hostname",
+		},
+		{
+			name:          "wildcard not ok when in k8s",
+			hostname:      "*.foo.com",
+			runningOnHost: false,
+			expectedErr:   "hostname *.foo.com is not a valid hostname",
+		},
+		{
+			name:          "IP not ok when in k8s",
+			hostname:      "127.0.0.1",
+			runningOnHost: false,
+			expectedErr:   "hostname 127.0.0.1 is an IP address",
+		},
+		{
+			name:          "63 character single label ok in k8s",
+			hostname:      strings.Repeat("a", 63),
+			runningOnHost: false,
+		},
+		{
+			name:          "64 character single label not ok in k8s",
+			hostname:      strings.Repeat("a", 64),
+			runningOnHost: false,
+			expectedErr:   "hostname " + strings.Repeat("a", 64) + " is not a valid hostname",
+		},
+		{
+			name:          "253 character single label not ok in k8s",
+			hostname:      strings.Repeat("a", 253),
+			runningOnHost: false,
+			expectedErr:   "hostname " + strings.Repeat("a", 253) + " is not a valid hostname",
+		},
+		{
+			name:          "63 character absolute single label ok in k8s",
+			hostname:      strings.Repeat("a", 63) + ".",
+			runningOnHost: false,
+		},
+		{
+			name:          "64 character absolute single label not ok in k8s",
+			hostname:      strings.Repeat("a", 64) + ".",
+			runningOnHost: false,
+			expectedErr:   "hostname " + strings.Repeat("a", 64) + ". is not a valid hostname",
+		},
+		{
+			name:          "253 character absolute single label not ok in k8s",
+			hostname:      strings.Repeat("a", 253) + ".",
+			runningOnHost: false,
+			expectedErr:   "hostname " + strings.Repeat("a", 253) + ". is not a valid hostname",
+		},
+		{
+			name:          "63 character single label ok when running on host",
+			hostname:      strings.Repeat("a", 63),
+			runningOnHost: true,
+		},
+		{
+			name:          "64 character single label not ok when running on host",
+			hostname:      strings.Repeat("a", 64),
+			runningOnHost: true,
+			expectedErr:   "hostname " + strings.Repeat("a", 64) + " is not a valid hostname",
+		},
+		{
+			name:          "multi label domain ok in k8s",
+			hostname:      strings.Repeat("a", 63) + ".example.com",
+			runningOnHost: false,
+		},
+		{
+			name:          "localhost subdomain not ok in k8s",
+			hostname:      "api.localhost",
+			runningOnHost: false,
+			expectedErr:   "hostname api.localhost is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost absolute subdomain not ok in k8s",
+			hostname:      "api.localhost.",
+			runningOnHost: false,
+			expectedErr:   "hostname api.localhost. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost nested subdomain not ok in k8s",
+			hostname:      "nested.api.localhost",
+			runningOnHost: false,
+			expectedErr:   "hostname nested.api.localhost is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "localhost subdomain ok when running on host",
+			hostname:      "api.localhost",
+			runningOnHost: true,
+		},
+		{
+			name:          "localhost absolute subdomain ok when running on host",
+			hostname:      "api.localhost.",
+			runningOnHost: true,
+		},
+		{
+			name:          "name ending in localhost without dot ok in k8s",
+			hostname:      "notlocalhost",
+			runningOnHost: false,
+		},
+		{
+			name:          "localhost prefix domain ok in k8s",
+			hostname:      "localhost.example.com",
+			runningOnHost: false,
+		},
+		{
+			name:          "localhost subdomain of other domain ok in k8s",
+			hostname:      "api.localhost.example.com",
+			runningOnHost: false,
+		},
+		{
+			name:          "uppercase localhost subdomain not ok in k8s",
+			hostname:      "API.LOCALHOST",
+			runningOnHost: false,
+			expectedErr:   "hostname API.LOCALHOST is not a valid hostname",
+		},
+		{
+			name:          "ip6-localhost not ok in k8s",
+			hostname:      "ip6-localhost",
+			runningOnHost: false,
+			expectedErr:   "hostname ip6-localhost is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ip6-loopback not ok in k8s",
+			hostname:      "ip6-loopback",
+			runningOnHost: false,
+			expectedErr:   "hostname ip6-loopback is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ip6-localhost absolute not ok in k8s",
+			hostname:      "ip6-localhost.",
+			runningOnHost: false,
+			expectedErr:   "hostname ip6-localhost. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ip6-loopback absolute not ok in k8s",
+			hostname:      "ip6-loopback.",
+			runningOnHost: false,
+			expectedErr:   "hostname ip6-loopback. is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ip6-localhost ok when running on host",
+			hostname:      "ip6-localhost",
+			runningOnHost: true,
+		},
+		{
+			name:          "ip6-loopback ok when running on host",
+			hostname:      "ip6-loopback",
+			runningOnHost: true,
+		},
+		{
+			name:          "ip6-localhost absolute ok when running on host",
+			hostname:      "ip6-localhost.",
+			runningOnHost: true,
+		},
+		{
+			name:          "ip6-loopback absolute ok when running on host",
+			hostname:      "ip6-loopback.",
+			runningOnHost: true,
+		},
+		{
+			name:          "ip6-localhost subdomain of other domain ok in k8s",
+			hostname:      "ip6-localhost.example.com",
+			runningOnHost: false,
+		},
+		{
+			name:          "ip6-loopback subdomain of other domain ok in k8s",
+			hostname:      "ip6-loopback.example.com",
+			runningOnHost: false,
 		},
 	}
 

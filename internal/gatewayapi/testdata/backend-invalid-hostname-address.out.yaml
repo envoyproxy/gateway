@@ -29,8 +29,8 @@ backends:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'The Backend was not accepted: hostname localhost should be a domain
-        with at least two segments separated by dots'
+      message: 'The Backend was not accepted: hostname localhost is only supported
+        when using the Host infrastructure'
       reason: Accepted
       status: "False"
       type: Invalid
