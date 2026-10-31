@@ -84,6 +84,10 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 					r.logger.Error(err, "failed to validate EnvoyGateway config")
 					continue
 				}
+				if err := config.ApplyEnvoyGatewaySchemaDefaults(eg); err != nil {
+					r.logger.Error(err, "failed to apply EnvoyGateway config defaults")
+					continue
+				}
 
 				r.cfgMu.Lock()
 				r.cfg.EnvoyGateway = eg

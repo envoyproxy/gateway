@@ -125,7 +125,8 @@ type Translator struct {
 	GlobalRateLimitEnabled bool
 
 	// RateLimitClusterSettings holds the settings of the rate limit service cluster,
-	// as configured on EnvoyGateway.RateLimit.ServiceSettings.
+	// as configured on EnvoyGateway.RateLimit.ServiceSettings. The CRD schema defaults are
+	// expected to be applied already, see config.ApplyEnvoyGatewaySchemaDefaults.
 	RateLimitClusterSettings *egv1a1.ClusterSettings
 
 	// EndpointRoutingDisabled can be set to true to use
@@ -182,6 +183,11 @@ type Translator struct {
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
+
+	// ExtensionSecretGroupKinds stores the group/kind for resources registered in
+	// ExtensionManager.SecretResources. A listener's tls.certificateRefs may
+	// reference these kinds.
+	ExtensionSecretGroupKinds []schema.GroupKind
 
 	// ControllerNamespace is the namespace that Envoy Gateway controller runs in.
 	ControllerNamespace string
