@@ -90,9 +90,59 @@ func mergeEnvoyProxies(
 		return override, nil
 	}
 
-	merged, err := utils.Merge(*base, *override, mergeType)
+	merged, err := utils.Merge(*alignWorkloadKind(base, override), *override, mergeType)
 	if err != nil {
 		return nil, err
 	}
 	return &merged, nil
+}
+
+// alignWorkloadKind returns base with its Envoy workload converted to the kind
+// that override selects, so a merge never yields both an envoyDeployment and an
+// envoyDaemonSet. The container, pod and name settings carry over to the new
+// kind; settings that only apply to the previous kind are dropped, including
+// its patch and, when switching to a DaemonSet, envoyHpa.
+func alignWorkloadKind(base, override *egv1a1.EnvoyProxy) *egv1a1.EnvoyProxy {
+	baseKube, overrideKube := kubernetesProvider(base), kubernetesProvider(override)
+	if baseKube == nil || overrideKube == nil {
+		return base
+	}
+
+	switch {
+	case overrideKube.EnvoyDaemonSet != nil && overrideKube.EnvoyDeployment == nil && baseKube.EnvoyDeployment != nil:
+		aligned := base.DeepCopy()
+		kube := aligned.Spec.Provider.Kubernetes
+		if kube.EnvoyDaemonSet == nil {
+			deployment := kube.EnvoyDeployment
+			kube.EnvoyDaemonSet = &egv1a1.KubernetesDaemonSetSpec{
+				Pod:       deployment.Pod,
+				Container: deployment.Container,
+				Name:      deployment.Name,
+			}
+		}
+		kube.EnvoyDeployment = nil
+		kube.EnvoyHpa = nil
+		return aligned
+	case overrideKube.EnvoyDeployment != nil && overrideKube.EnvoyDaemonSet == nil && baseKube.EnvoyDaemonSet != nil:
+		aligned := base.DeepCopy()
+		kube := aligned.Spec.Provider.Kubernetes
+		if kube.EnvoyDeployment == nil {
+			daemonSet := kube.EnvoyDaemonSet
+			kube.EnvoyDeployment = &egv1a1.KubernetesDeploymentSpec{
+				Pod:       daemonSet.Pod,
+				Container: daemonSet.Container,
+				Name:      daemonSet.Name,
+			}
+		}
+		kube.EnvoyDaemonSet = nil
+		return aligned
+	}
+	return base
+}
+
+func kubernetesProvider(ep *egv1a1.EnvoyProxy) *egv1a1.EnvoyProxyKubernetesProvider {
+	if ep.Spec.Provider == nil {
+		return nil
+	}
+	return ep.Spec.Provider.Kubernetes
 }

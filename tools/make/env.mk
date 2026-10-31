@@ -15,6 +15,9 @@ IMAGE_NAME ?= gateway-dev
 IMAGE ?= ${REGISTRY}/${IMAGE_NAME}
 # Tag is the tag to use for build and push image targets.
 TAG ?= $(REV)
+# ENVOY_PROXY_IMAGE is the default Envoy proxy image rendered by the gateway-helm chart.
+# It is sourced from DefaultEnvoyProxyImage so the chart and the controller never drift apart.
+ENVOY_PROXY_IMAGE ?= $(shell grep -m1 'DefaultEnvoyProxyImage *=' api/v1alpha1/shared_types.go | cut -d '"' -f2)
 
 # Fuzzing variables
 

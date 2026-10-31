@@ -189,29 +189,33 @@ imagePullSecrets: {{ toYaml list }}
 
 {{/*
 The default Envoy Gateway configuration.
+The envoy-gateway-config ConfigMap merges .Values.config.envoyGateway over this, so inline
+settings (such as an Envoy Proxy image under config.envoyGateway.envoyProxy) take precedence.
 */}}
 {{- define "eg.default-envoy-gateway-config" -}}
-{{- if or .Values.global.images.envoyProxy.image .Values.config.envoyGateway.envoyProxy }}
-{{- $envoyProxyBase := .Values.config.envoyGateway.envoyProxy | default dict }}
-{{- $imageOverride := dict }}
 {{- if .Values.global.images.envoyProxy.image }}
   {{- $container := dict "image" (include "eg.envoyProxy.image" .) }}
   {{- if .Values.global.images.envoyProxy.pullPolicy }}
     {{- $_ := set $container "imagePullPolicy" .Values.global.images.envoyProxy.pullPolicy }}
   {{- end }}
-  {{- $deployment := dict "container" $container }}
+  {{- $workload := dict "container" $container }}
   {{- if or .Values.global.imagePullSecrets .Values.global.images.envoyProxy.pullSecrets }}
     {{- $pullSecretsYaml := include "eg.envoyProxy.image.pullSecrets" . }}
     {{- $pullSecrets := dict "imagePullSecrets" ($pullSecretsYaml | fromYaml).imagePullSecrets }}
-    {{- $_ := set $deployment "pod" $pullSecrets }}
+    {{- $_ := set $workload "pod" $pullSecrets }}
   {{- end }}
-  {{- $kubernetes := dict "envoyDeployment" $deployment }}
-  {{- $provider := dict "type" "Kubernetes" "kubernetes" $kubernetes }}
-  {{- $imageOverride = dict "provider" $provider }}
-{{- end }}
-{{- $merged := mustMergeOverwrite (dict) $envoyProxyBase $imageOverride }}
+  {{- /* Target the workload kind the user configured; envoyDeployment and envoyDaemonSet are mutually exclusive. */}}
+  {{- $workloadKind := "envoyDeployment" }}
+  {{- $userKubernetes := dig "provider" "kubernetes" dict (.Values.config.envoyGateway.envoyProxy | default dict) }}
+  {{- if hasKey ($userKubernetes | default dict) "envoyDaemonSet" }}
+    {{- $workloadKind = "envoyDaemonSet" }}
+  {{- end }}
 envoyProxy:
-{{ toYaml $merged | indent 2 }}
+  provider:
+    type: Kubernetes
+    kubernetes:
+      {{ $workloadKind }}:
+        {{- toYaml $workload | nindent 8 }}
 {{- end }}
 provider:
   type: Kubernetes
