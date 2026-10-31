@@ -123,6 +123,9 @@ type Translator struct {
 	ProxyInfraName      string
 	ProxyInfraNamespace string
 
+	// DNSDomain is the DNS domain used by k8s services. Defaults to "cluster.local".
+	DNSDomain string
+
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings
