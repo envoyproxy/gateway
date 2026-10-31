@@ -1158,10 +1158,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							failRoute = true
 						}
 						if failRoute {
-							if backendError != nil {
-								// Mark this policy selected so a parent cannot restore extensions.
-								r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
-							}
+							// Keep the failed policy selected so a parent cannot restore extensions.
+							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
 							r.DirectResponse = &ir.CustomResponse{
 								StatusCode: new(uint32(500)),
 							}
@@ -1308,10 +1306,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				failRoute = true
 			}
 			if failRoute {
-				if backendError != nil {
-					// Mark this policy selected so a parent cannot restore extensions.
-					r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
-				}
+				// Keep the failed policy selected so a parent cannot restore extensions.
+				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}

@@ -464,14 +464,7 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
-        envoyExtensions:
-          luas:
-          - Code: |
-              function envoy_on_request(request_handle)
-              request_handle:logInfo('Goodbye.')
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+        envoyExtensions: {}
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -504,14 +497,7 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
-        envoyExtensions:
-          luas:
-          - Code: |
-              function envoy_on_request(request_handle)
-              request_handle:logInfo('Goodbye.')
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+        envoyExtensions: {}
         hostname: www.example.com
         isHTTP2: false
         metadata:
@@ -544,14 +530,7 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
-        envoyExtensions:
-          luas:
-          - Code: |
-              function envoy_on_request(request_handle)
-              request_handle:logInfo('Goodbye.')
-              end
-            FilterContext: null
-            Name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+        envoyExtensions: {}
         hostname: www.example.com
         isHTTP2: false
         metadata:

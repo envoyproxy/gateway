@@ -13,6 +13,12 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
+    - name: http-invalid
+      protocol: HTTP
+      port: 81
+      allowedRoutes:
+        namespaces:
+          from: All
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -49,6 +55,45 @@ httpRoutes:
     - matches:
       - path:
           value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-invalid-listener
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http-invalid
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-invalid-rule
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - name: invalid
+      matches:
+      - path:
+          value: /invalid-rule
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - name: valid
+      matches:
+      - path:
+          value: /valid-rule
       backendRefs:
       - name: service-1
         port: 8080
@@ -98,3 +143,53 @@ envoyextensionpolicies:
             end
             return envoy.lua.ResponseStatus.Continue
         end
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-invalid-listener
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-invalid
+    lua:
+    - type: ValueRef
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: missing
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-with-invalid-rule
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-invalid-rule
+    lua:
+    - type: Inline
+      inline: |
+        function envoy_on_response(handle)
+          handle:headers():add("x-route-parent", "true")
+        end
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-invalid-rule
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-invalid-rule
+      sectionName: invalid
+    lua:
+    - type: ValueRef
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: missing
