@@ -1,0 +1,17 @@
+global:
+  images:
+    envoyProxy:
+      image: "docker.io/envoyproxy/envoy:distroless-dev"
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+
+config:
+  envoyGateway:
+    envoyProxy:
+      provider:
+        type: Kubernetes
+        kubernetes:
+          envoyDeployment:
+            container:
+              image: "private-hub/envoyproxy/envoy:custom"
