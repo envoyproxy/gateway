@@ -1,0 +1,1 @@
+Fixed a GatewayClass keeping the observedGeneration of its previous generation after a spec change, when the Gateway API translator finished translating an older snapshot after the provider had already reported the new generation.

@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -426,8 +427,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				_, statusUpdateSpan := tracer.Start(translateGCCtx, "GatewayApiRunner.ResoureTranslationCycle.UpdateStatus")
 				defer statusUpdateSpan.End()
 				if result.GatewayClass != nil {
-					key := utils.NamespacedName(result.GatewayClass)
-					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
+					storeGatewayClassStatus(&r.ProviderResources.GatewayClassStatuses, result.GatewayClass)
 				}
 
 				// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
@@ -873,6 +873,29 @@ func storeStatus[K comparable, V any](
 	}
 	m.Store(key, status)
 	seen[key] = uid
+}
+
+// storeGatewayClassStatus stores the translated status of gc unless the stored status was
+// computed for another generation. The provider stores the status of a GatewayClass before it
+// publishes a snapshot with it, and generations only grow, so a stored status of another
+// generation is either newer than this translation or belongs to an object created again under
+// the same name after gc was deleted. The provider writes the map concurrently, so the check and
+// the store are one compare-and-swap.
+func storeGatewayClassStatus(m *watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus], gc *gwapiv1.GatewayClass) {
+	key := utils.NamespacedName(gc)
+	for {
+		stored, loaded := m.LoadOrStore(key, &gc.Status)
+		if !loaded {
+			return
+		}
+		accepted := meta.FindStatusCondition(stored.Conditions, string(gwapiv1.GatewayClassConditionStatusAccepted))
+		if accepted != nil && accepted.ObservedGeneration != gc.Generation {
+			return
+		}
+		if m.CompareAndSwap(key, stored, &gc.Status) {
+			return
+		}
+	}
 }
 
 func newKeyCache() *KeyCache {
