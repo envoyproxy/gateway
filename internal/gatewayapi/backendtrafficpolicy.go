@@ -1791,6 +1791,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
 				setIfNil(&r.DNS, tf.DNS)
+				setIfNil(&r.CircuitBreaker, tf.CircuitBreaker.UDPOnly())
 			}
 		}
 	}
@@ -2162,6 +2163,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		// specific policy
 		setIfNil(&route.LoadBalancer, tf.LoadBalancer)
 		setIfNil(&route.DNS, tf.DNS)
+		setIfNil(&route.CircuitBreaker, tf.CircuitBreaker.UDPOnly())
 	}
 
 	routesWithDirectResponse := sets.New[string]()
@@ -2339,7 +2341,8 @@ func applyRouteHTTP3(r *ir.HTTPRoute, warnings http3Warnings) {
 //
 // Without MergeBackends a TCP/UDP backend's cluster is built from ir.TCPRoute / ir.UDPRoute, which
 // carry a deliberately narrower feature set than an HTTP route's - ir.UDPRoute, for instance, only
-// has LoadBalancer and DNS, so a health check can never reach the cluster udp_proxy routes to.
+// has LoadBalancer, DNS and the UDP subset of CircuitBreaker, so a health check can never reach the
+// cluster udp_proxy routes to.
 // Deduplicating clusters must not change that, so the subsets below mirror exactly what the TCP
 // and UDP loops in translateBackendTrafficPolicyForListeners set on their routes; keep them in
 // sync with those loops.
@@ -2355,8 +2358,9 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, cf *ir.ClusterTraf
 	switch bc.Protocol() {
 	case ir.UDP:
 		bc.Traffic = &ir.ClusterTrafficFeatures{
-			LoadBalancer: cf.LoadBalancer.DeepCopy(),
-			DNS:          cf.DNS.DeepCopy(),
+			LoadBalancer:   cf.LoadBalancer.DeepCopy(),
+			DNS:            cf.DNS.DeepCopy(),
+			CircuitBreaker: cf.CircuitBreaker.UDPOnly(),
 		}
 	case ir.TCP:
 		bc.Traffic = &ir.ClusterTrafficFeatures{

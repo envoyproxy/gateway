@@ -3116,6 +3116,9 @@ type UDPRoute struct {
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// CircuitBreaker holds the circuit breaker thresholds that apply to UDP. Envoy counts each
+	// UDP session against the cluster's connection limit, so only MaxConnections is carried.
+	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 	// Authorization defines the schema for the authorization.
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
@@ -3764,6 +3767,16 @@ type CircuitBreaker struct {
 
 	// RetryBudget defines the retry budget configuration.
 	RetryBudget *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
+}
+
+// UDPOnly returns the subset of cb that Envoy enforces on a udp_proxy cluster, or nil if none of
+// it applies. udp_proxy counts each session against the cluster's connection limit and checks no
+// other threshold, so only MaxConnections is kept.
+func (cb *CircuitBreaker) UDPOnly() *CircuitBreaker {
+	if cb == nil || cb.MaxConnections == nil {
+		return nil
+	}
+	return &CircuitBreaker{MaxConnections: new(*cb.MaxConnections)}
 }
 
 // PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.

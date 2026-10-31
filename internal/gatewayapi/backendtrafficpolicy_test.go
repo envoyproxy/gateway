@@ -3184,7 +3184,7 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			"ProxyProtocol":     false,
 			"HealthCheck":       false,
 			"AdmissionControl":  false,
-			"CircuitBreaker":    false,
+			"CircuitBreaker":    true,
 			"Timeout":           false,
 			"TCPKeepalive":      false,
 			"BackendConnection": false,
@@ -3235,7 +3235,13 @@ func TestApplyGatewayPolicyToMergedClusterExhaustive(t *testing.T) {
 			}
 			t.Run(string(protocol)+"/"+name, func(t *testing.T) {
 				bc := mergedClusterForProtocol(protocol)
-				applyGatewayPolicyToMergedCluster(bc, structWithFieldSet[ir.ClusterTrafficFeatures](name), nil)
+				features := structWithFieldSet[ir.ClusterTrafficFeatures](name)
+				// An empty CircuitBreaker is nilled by UDPOnly(), so populate MaxConnections when
+				// testing that field - matching what a Gateway-targeted policy actually sets.
+				if name == "CircuitBreaker" {
+					features.CircuitBreaker.MaxConnections = new(uint32(1024))
+				}
+				applyGatewayPolicyToMergedCluster(bc, features, nil)
 				require.NotNil(t, bc.Traffic)
 				kept := !reflect.ValueOf(bc.Traffic).Elem().FieldByName(name).IsNil()
 				require.Equal(t, want, kept,
