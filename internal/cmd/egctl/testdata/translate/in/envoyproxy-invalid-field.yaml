@@ -4,10 +4,12 @@ metadata:
   name: example
   namespace: default
 spec:
-  telemetry:
-    metrics:
-      # The closing % of ROUTE_RULE_NAME is missing, so this field is ignored.
-      clusterStatName: "%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NAME/%ROUTE_RULE_NUMBER%"
+  # The filters are ordered before each other, which is a cycle, so this field is ignored.
+  filterOrder:
+    - name: envoy.filters.http.jwt_authn
+      before: envoy.filters.http.basic_auth
+    - name: envoy.filters.http.basic_auth
+      before: envoy.filters.http.jwt_authn
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

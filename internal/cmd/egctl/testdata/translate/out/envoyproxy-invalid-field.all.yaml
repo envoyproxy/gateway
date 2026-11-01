@@ -5,12 +5,14 @@ envoyProxyForGatewayClass:
     name: example
     namespace: default
   spec:
+    filterOrder:
+    - before: envoy.filters.http.basic_auth
+      name: envoy.filters.http.jwt_authn
+    - before: envoy.filters.http.jwt_authn
+      name: envoy.filters.http.basic_auth
     logging:
       level:
         default: warn
-    telemetry:
-      metrics:
-        clusterStatName: '%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NAME/%ROUTE_RULE_NUMBER%'
   status:
     ancestors:
     - ancestorRef:
@@ -24,8 +26,8 @@ envoyProxyForGatewayClass:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'The following invalid fields were ignored: telemetry.metrics.clusterStatName:
-          unable to configure Cluster Stat Name: unsupported operators: [%ROUTE_RULE_NAME/%]'
+        message: 'The following invalid fields were ignored: filterOrder: there is
+          a cycle in the filter order: envoy.filters.http.basic_auth -> envoy.filters.http.jwt_authn'
         reason: InvalidField
         status: "True"
         type: Warning
