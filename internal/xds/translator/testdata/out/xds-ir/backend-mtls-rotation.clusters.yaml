@@ -40,7 +40,7 @@
       - endpoint:
           address:
             socketAddress:
-              address: tls-backend-2.default.svc.cluster.local
+              address: tls-backend-1.default.svc.cluster.local
               portValue: 443
         loadBalancingWeight: 1
         metadata:
