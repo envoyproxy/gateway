@@ -10,9 +10,10 @@ that are able to serve them. Two kinds of health checking are supported, and the
 - **Passive health checking**: Envoy watches the responses of real requests and temporarily ejects endpoints that
   return too many errors. This is Envoy's [Outlier Detection][].
 
-Health checking is configured in the `healthCheck` field of a [BackendTrafficPolicy][], which can target a [Gateway][],
-an [HTTPRoute][], a [GRPCRoute][], a TCPRoute or a TLSRoute. Health checks are not applied to the backends of a
-UDPRoute. Each backendRef of a route has its own set of endpoints, and each endpoint is checked independently.
+Health checking is configured in the `healthCheck` field of a [BackendTrafficPolicy][], and applies to the backends of
+the resources the policy targets, such as a [Gateway][], an [HTTPRoute][] or a [GRPCRoute][]. Health checks are not
+applied to the backends of a UDPRoute. Each backendRef of a route has its own set of endpoints, and each endpoint is
+checked independently.
 
 ## Prerequisites
 
@@ -198,8 +199,9 @@ See [ActiveHealthCheck][] for every field and its default. To log the result of 
 ## Passive Health Checking
 
 Passive health checking needs no probes: Envoy counts the errors returned by each endpoint while serving real requests.
-Apply a policy that ejects an endpoint for 30 seconds after 5 consecutive `5xx` responses, checking every 3 seconds.
-It never ejects more than half of the endpoints, but `alwaysEjectOneEndpoint` still allows one endpoint to be ejected
+Apply a policy that ejects an endpoint for 30 seconds as soon as it returns 5 consecutive `5xx` responses. `interval`
+sets how often Envoy runs its periodic outlier analysis, which also returns endpoints to service once their ejection
+time has passed. It never ejects more than half of the endpoints, but `alwaysEjectOneEndpoint` still allows one endpoint to be ejected
 when that limit rounds down to zero, as it does for the single endpoint of the quickstart backend:
 
 ```shell
@@ -208,7 +210,8 @@ kubectl patch backendtrafficpolicy/health-check --type merge \
 ```
 
 An ejected endpoint is reported with the `failed_outlier_check` health flag. It stays ejected for `baseEjectionTime`
-multiplied by the number of times it has been ejected, so an endpoint that keeps failing is ejected for longer. Because
+multiplied by the number of times it has been ejected, up to Envoy's default maximum of 300 seconds, so an endpoint
+that keeps failing is ejected for longer. Because
 this policy also has an active health check, an ejection can end early: Envoy returns an ejected endpoint to service as
 soon as it passes an active health check. See [PassiveHealthCheck][] for every field and its default.
 
