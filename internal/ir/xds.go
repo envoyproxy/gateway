@@ -1656,6 +1656,10 @@ type BasicAuth struct {
 	//
 	// If it is not specified, the username will not be forwarded.
 	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty" yaml:"forwardUsernameHeader,omitempty"`
+
+	// Realm sets the value of the WWW-Authenticate realm field returned in 401 responses.
+	// If unset, Envoy defaults the realm to the full request URI.
+	Realm *string `json:"realm,omitempty" yaml:"realm,omitempty"`
 }
 
 // APIKeyCredential defines a single API key credential.

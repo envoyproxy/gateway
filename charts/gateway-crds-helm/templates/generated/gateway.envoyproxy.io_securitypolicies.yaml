@@ -572,6 +572,13 @@ spec:
 
                       If it is not specified, the username will not be forwarded.
                     type: string
+                  realm:
+                    description: |-
+                      Realm sets the value of the WWW-Authenticate realm field returned in 401 responses.
+                      Browsers cache Basic Auth credentials per (origin, realm) per RFC 7617, so setting
+                      a fixed realm allows credential reuse across different paths of the same protected route.
+                      If unset, Envoy defaults the realm to the full request URI.
+                    type: string
                   users:
                     description: |-
                       The Kubernetes secret which contains the username-password pairs in
