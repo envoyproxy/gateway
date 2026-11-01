@@ -1,1 +1,1 @@
-An EnvoyProxy referenced by a Gateway now gets a `Warning` condition with reason `UnsupportedField` when it sets `mergeGateways`, which only takes effect on the EnvoyProxy referenced by the GatewayClass and was previously ignored silently.
+When Gateways are not merged, an EnvoyProxy referenced by a Gateway now gets a `Warning` condition with reason `UnsupportedField` when it sets `mergeGateways`, which only takes effect on the EnvoyProxy referenced by the GatewayClass and was previously ignored silently.
