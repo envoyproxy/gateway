@@ -21,7 +21,9 @@ and each endpoint is checked independently.
 ## Active Health Checking
 
 Apply a `BackendTrafficPolicy` that probes every endpoint of the `backend` HTTPRoute with an HTTP `GET /` request every
-3 seconds. An endpoint is marked unhealthy after 3 failed probes in a row, and healthy again after 1 successful probe.
+3 seconds. An endpoint is marked unhealthy after 3 probes in a row time out or fail to connect, and healthy again after
+1 successful probe. A response with an unexpected status marks the endpoint unhealthy right away, unless that status is
+listed in `retriableStatuses`, in which case it counts toward `unhealthyThreshold` like a timeout.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -108,7 +110,8 @@ kubectl patch backendtrafficpolicy/health-check --type merge \
   -p '{"spec":{"healthCheck":{"active":{"http":{"expectedStatuses":[204]}}}}}'
 ```
 
-After three probes, the endpoint is marked as failing the active health check:
+The next probe gets a `200`, which is neither expected nor retriable, so the endpoint is marked as failing the active
+health check right away:
 
 ```console
 httproute/default/backend/rule/0::10.244.0.11:3000::health_flags::/failed_active_hc
@@ -118,6 +121,8 @@ Requests to the backend still succeed, because of Envoy's [panic threshold][Pani
 backend's endpoints are healthy, Envoy ignores health status and balances across all of its endpoints, so that a
 failing health check can't take down a whole backend at once. The quickstart backend has a single endpoint, so it is
 always in panic mode while that endpoint is unhealthy.
+
+If you followed the "Without LoadBalancer Support" prerequisite, run `export GATEWAY_HOST=localhost:8888` first.
 
 ```shell
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/
@@ -193,18 +198,21 @@ See [ActiveHealthCheck][] for every field and its default. To log the result of 
 ## Passive Health Checking
 
 Passive health checking needs no probes: Envoy counts the errors returned by each endpoint while serving real requests.
-Apply a policy that ejects an endpoint for 30 seconds after 5 consecutive `5xx` responses, checking every 3 seconds, and
-never ejects more than half of the endpoints:
+Apply a policy that ejects an endpoint for 30 seconds after 5 consecutive `5xx` responses, checking every 3 seconds.
+It never ejects more than half of the endpoints, but `alwaysEjectOneEndpoint` still allows one endpoint to be ejected
+when that limit rounds down to zero, as it does for the single endpoint of the quickstart backend:
 
 ```shell
 kubectl patch backendtrafficpolicy/health-check --type merge \
-  -p '{"spec":{"healthCheck":{"passive":{"consecutive5XxErrors":5,"interval":"3s","baseEjectionTime":"30s","maxEjectionPercent":50}}}}'
+  -p '{"spec":{"healthCheck":{"passive":{"consecutive5XxErrors":5,"interval":"3s","baseEjectionTime":"30s","maxEjectionPercent":50,"alwaysEjectOneEndpoint":true}}}}'
 ```
 
 An ejected endpoint is reported with the `failed_outlier_check` health flag. It stays ejected for `baseEjectionTime`
 multiplied by the number of times it has been ejected, so an endpoint that keeps failing is ejected for longer. See [PassiveHealthCheck][] for every field and its default.
 
-Active and passive health checking can be combined in the same policy: an endpoint is only used when it passes both.
+Active and passive health checking can be combined in the same policy: an endpoint is only considered healthy when it
+passes both. Panic mode still applies, so when fewer than `panicThreshold` percent of the endpoints are healthy, Envoy
+sends requests to all of them regardless.
 
 ## Clean-Up
 
