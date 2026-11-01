@@ -67,32 +67,43 @@ func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentRefere
 		return
 	}
 
+	type warning struct {
+		reason  egv1a1.EnvoyProxyConditionReason
+		message string
+	}
+	var warnings []warning
+	if len(deprecatedFields) > 0 {
+		warnings = append(warnings, warning{egv1a1.EnvoyProxyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields)})
+	}
+	if len(patchedFields) > 0 {
+		warnings = append(warnings, warning{egv1a1.EnvoyProxyReasonPatchDisabled, fmt.Sprintf(
+			"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: %s",
+			strings.Join(patchedFields, ", "))})
+	}
+	if len(unsupportedFields) > 0 {
+		warnings = append(warnings, warning{EnvoyProxyReasonUnsupportedField, fmt.Sprintf(
+			"The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
+				"set them on the EnvoyProxy referenced by the GatewayClass instead: %s",
+			strings.Join(unsupportedFields, ", "))})
+	}
+
 	var (
 		reason egv1a1.EnvoyProxyConditionReason
 		msg    string
 	)
-	addWarning := func(r egv1a1.EnvoyProxyConditionReason, m string) {
-		if msg == "" {
-			reason = r
-			msg = m
-			return
-		}
+	switch len(warnings) {
+	case 0:
+	case 1:
+		reason, msg = warnings[0].reason, warnings[0].message
+	default:
 		reason = egv1a1.EnvoyProxyReasonMultipleWarnings
-		msg = mergeBoundedWarningMessages(msg, m)
-	}
-	if len(deprecatedFields) > 0 {
-		addWarning(egv1a1.EnvoyProxyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields))
-	}
-	if len(patchedFields) > 0 {
-		addWarning(egv1a1.EnvoyProxyReasonPatchDisabled, fmt.Sprintf(
-			"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: %s",
-			strings.Join(patchedFields, ", ")))
-	}
-	if len(unsupportedFields) > 0 {
-		addWarning(EnvoyProxyReasonUnsupportedField, fmt.Sprintf(
-			"The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
-				"set them on the EnvoyProxy referenced by the GatewayClass instead: %s",
-			strings.Join(unsupportedFields, ", ")))
+		// Merge the later warnings first, so that if the message is too long only the first
+		// warning is cut short and every later one is kept in full.
+		rest := warnings[1].message
+		for _, w := range warnings[2:] {
+			rest = mergePolicyWarningMessages(rest, w.message)
+		}
+		msg = mergeBoundedWarningMessages(warnings[0].message, rest)
 	}
 
 	for i := range ep.Status.Ancestors {
