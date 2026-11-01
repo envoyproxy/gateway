@@ -26,7 +26,7 @@ func TestSetEnvoyProxyWarnings(t *testing.T) {
 		ep := &egv1a1.EnvoyProxy{}
 		SetEnvoyProxyWarnings(ep, ancestor, map[string]DeprecatedField{
 			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
-		}, nil)
+		}, nil, nil)
 
 		assert.Len(t, ep.Status.Ancestors, 1)
 		conds := ep.Status.Ancestors[0].Conditions
@@ -39,7 +39,7 @@ func TestSetEnvoyProxyWarnings(t *testing.T) {
 
 	t.Run("no-op when no deprecated fields are used", func(t *testing.T) {
 		ep := &egv1a1.EnvoyProxy{}
-		SetEnvoyProxyWarnings(ep, ancestor, nil, nil)
+		SetEnvoyProxyWarnings(ep, ancestor, nil, nil, nil)
 		assert.Empty(t, ep.Status.Ancestors)
 	})
 
@@ -48,7 +48,7 @@ func TestSetEnvoyProxyWarnings(t *testing.T) {
 		UpdateEnvoyProxyStatusAccepted(ep, ancestor, egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 		SetEnvoyProxyWarnings(ep, ancestor, map[string]DeprecatedField{
 			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
-		}, nil)
+		}, nil, nil)
 
 		assert.Len(t, ep.Status.Ancestors, 1)
 		conds := ep.Status.Ancestors[0].Conditions
@@ -60,7 +60,7 @@ func TestSetEnvoyProxyWarnings(t *testing.T) {
 		UpdateEnvoyProxyStatusAccepted(ep, ancestor, egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 		SetEnvoyProxyWarnings(ep, ancestor, map[string]DeprecatedField{
 			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
-		}, []string{"spec.provider.kubernetes.envoyDeployment.patch"})
+		}, []string{"spec.provider.kubernetes.envoyDeployment.patch"}, nil)
 
 		require.Len(t, ep.Status.Ancestors, 1)
 		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
@@ -71,18 +71,47 @@ func TestSetEnvoyProxyWarnings(t *testing.T) {
 			"spec.provider.kubernetes.envoyDeployment.patch", cond.Message)
 	})
 
+	t.Run("sets an UnsupportedField warning for fields that have no effect", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		SetEnvoyProxyWarnings(ep, ancestor, nil, nil, []string{"spec.mergeGateways"})
+
+		require.Len(t, ep.Status.Ancestors, 1)
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, string(EnvoyProxyReasonUnsupportedField), cond.Reason)
+		assert.Equal(t, "The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
+			"set them on the EnvoyProxy referenced by the GatewayClass instead: spec.mergeGateways", cond.Message)
+	})
+
+	t.Run("merges an UnsupportedField warning with the other warnings", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		SetEnvoyProxyWarnings(ep, ancestor, map[string]DeprecatedField{
+			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
+		}, []string{"spec.provider.kubernetes.envoyDeployment.patch"}, []string{"spec.mergeGateways"})
+
+		require.Len(t, ep.Status.Ancestors, 1)
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, string(egv1a1.EnvoyProxyReasonMultipleWarnings), cond.Reason)
+		assert.Equal(t, "spec.luaValidation is deprecated, use spec.lua.validationType instead; "+
+			"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: "+
+			"spec.provider.kubernetes.envoyDeployment.patch; "+
+			"The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
+			"set them on the EnvoyProxy referenced by the GatewayClass instead: spec.mergeGateways", cond.Message)
+	})
+
 	t.Run("replaces a warning left over from an earlier translation", func(t *testing.T) {
 		ep := &egv1a1.EnvoyProxy{}
 		SetEnvoyProxyWarnings(ep, ancestor, map[string]DeprecatedField{
 			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
 			"spec.telemetry.foo": {Replacement: "spec.telemetry.bar"},
-		}, []string{"spec.provider.kubernetes.envoyDeployment.patch"})
+		}, []string{"spec.provider.kubernetes.envoyDeployment.patch"}, nil)
 
 		// The user migrated off spec.luaValidation and the patch field.
 		ep.Generation++
 		SetEnvoyProxyWarnings(ep, ancestor, map[string]DeprecatedField{
 			"spec.telemetry.foo": {Replacement: "spec.telemetry.bar"},
-		}, nil)
+		}, nil, nil)
 
 		require.Len(t, ep.Status.Ancestors, 1)
 		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
@@ -97,8 +126,8 @@ func TestSetEnvoyProxyWarnings(t *testing.T) {
 		UpdateEnvoyProxyStatusAccepted(ep, ancestor, egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 		SetEnvoyProxyWarnings(ep, ancestor, map[string]DeprecatedField{
 			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
-		}, nil)
-		SetEnvoyProxyWarnings(ep, ancestor, nil, nil)
+		}, nil, nil)
+		SetEnvoyProxyWarnings(ep, ancestor, nil, nil, nil)
 
 		require.Len(t, ep.Status.Ancestors, 1)
 		assert.Nil(t, meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning)))
@@ -129,7 +158,7 @@ func TestSetEnvoyProxyWarningKeepsLaterWarningWhenFull(t *testing.T) {
 	for i := range 2500 {
 		fields[fmt.Sprintf("spec.telemetry.accessLog.settings[%d].sinks[0].openTelemetry.host", i)] = DeprecatedField{Replacement: "backendRefs"}
 	}
-	SetEnvoyProxyWarnings(ep, ancestor, fields, []string{"spec.provider.kubernetes.envoyDeployment.patch"})
+	SetEnvoyProxyWarnings(ep, ancestor, fields, []string{"spec.provider.kubernetes.envoyDeployment.patch"}, nil)
 
 	cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
 	require.NotNil(t, cond)

@@ -621,7 +621,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			if t.EnvoyProxyPatchDisabled {
 				patchedFields = disabledPatchFieldsUsedInEnvoyProxy(ep)
 			}
-			status.SetEnvoyProxyWarnings(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep), patchedFields)
+			status.SetEnvoyProxyWarnings(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep), patchedFields, nil)
 		}
 	}
 
@@ -703,7 +703,8 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 				if t.EnvoyProxyPatchDisabled {
 					patchedFields = disabledPatchFieldsUsedInEnvoyProxy(ep)
 				}
-				status.SetEnvoyProxyWarnings(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(envoyproxyMap[key]), patchedFields)
+				status.SetEnvoyProxyWarnings(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(envoyproxyMap[key]), patchedFields,
+					gatewayUnsupportedFieldsUsedInEnvoyProxy(envoyproxyMap[key]))
 			}
 		}
 
@@ -738,6 +739,18 @@ func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.D
 	deprecatedFields := make(map[string]status.DeprecatedField)
 	deprecation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
 	return deprecatedFields
+}
+
+// gatewayUnsupportedFieldsUsedInEnvoyProxy returns the fields set on the given EnvoyProxy that
+// only take effect on an EnvoyProxy referenced by a GatewayClass, so callers can surface that
+// they were ignored on an EnvoyProxy referenced by a Gateway.
+func gatewayUnsupportedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) []string {
+	var fields []string
+	// MergeGateways is only read from the GatewayClass's EnvoyProxy, see IsMergeGatewaysEnabled.
+	if ep.Spec.MergeGateways != nil {
+		fields = append(fields, "spec.mergeGateways")
+	}
+	return fields
 }
 
 // disabledPatchFieldsUsedInEnvoyProxy returns the Kubernetes resource `patch`

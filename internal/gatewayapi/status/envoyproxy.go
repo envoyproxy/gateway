@@ -47,15 +47,21 @@ func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.Par
 	})
 }
 
+// EnvoyProxyReasonUnsupportedField is used with the "Warning" condition when a field set on an
+// EnvoyProxy has no effect where the EnvoyProxy is referenced, e.g. spec.mergeGateways on an
+// EnvoyProxy referenced by a Gateway.
+const EnvoyProxyReasonUnsupportedField egv1a1.EnvoyProxyConditionReason = "UnsupportedField"
+
 // SetEnvoyProxyWarnings sets the Warning condition on the EnvoyProxy ancestor status from the
-// warnings found in the current translation: the deprecated fields in use and the Kubernetes
+// warnings found in the current translation: the deprecated fields in use, the Kubernetes
 // resource `patch` fields that were ignored because patching is disabled in the EnvoyGateway
-// configuration. An EnvoyProxy has a single Warning condition per ancestor, so both are merged
-// into one message, and the reason becomes EnvoyProxyReasonMultipleWarnings when both are present.
+// configuration, and the fields that have no effect for this ancestor. An EnvoyProxy has a single
+// Warning condition per ancestor, so these are merged into one message, and the reason becomes
+// EnvoyProxyReasonMultipleWarnings when more than one is present.
 // Any Warning condition left over from an earlier translation is replaced, or removed when there
 // is nothing to warn about, so a warning goes away once the field is no longer used.
 func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference,
-	deprecatedFields map[string]DeprecatedField, patchedFields []string,
+	deprecatedFields map[string]DeprecatedField, patchedFields, unsupportedFields []string,
 ) {
 	if ep == nil || ancestor == nil {
 		return
@@ -65,21 +71,28 @@ func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentRefere
 		reason egv1a1.EnvoyProxyConditionReason
 		msg    string
 	)
+	addWarning := func(r egv1a1.EnvoyProxyConditionReason, m string) {
+		if msg == "" {
+			reason = r
+			msg = m
+			return
+		}
+		reason = egv1a1.EnvoyProxyReasonMultipleWarnings
+		msg = mergeBoundedWarningMessages(msg, m)
+	}
 	if len(deprecatedFields) > 0 {
-		reason = egv1a1.EnvoyProxyReasonDeprecatedField
-		msg = buildDeprecationWarningMessage(deprecatedFields)
+		addWarning(egv1a1.EnvoyProxyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields))
 	}
 	if len(patchedFields) > 0 {
-		patchMsg := fmt.Sprintf(
+		addWarning(egv1a1.EnvoyProxyReasonPatchDisabled, fmt.Sprintf(
 			"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: %s",
-			strings.Join(patchedFields, ", "))
-		if msg == "" {
-			reason = egv1a1.EnvoyProxyReasonPatchDisabled
-			msg = patchMsg
-		} else {
-			reason = egv1a1.EnvoyProxyReasonMultipleWarnings
-			msg = mergeBoundedWarningMessages(msg, patchMsg)
-		}
+			strings.Join(patchedFields, ", ")))
+	}
+	if len(unsupportedFields) > 0 {
+		addWarning(EnvoyProxyReasonUnsupportedField, fmt.Sprintf(
+			"The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
+				"set them on the EnvoyProxy referenced by the GatewayClass instead: %s",
+			strings.Join(unsupportedFields, ", ")))
 	}
 
 	for i := range ep.Status.Ancestors {
