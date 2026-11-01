@@ -476,6 +476,7 @@ jobs:
     needs:
     - lint
     - gen-check
+    - grafana-operator-test
     - license-check
     - coverage-test
     - build
