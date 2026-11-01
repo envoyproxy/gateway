@@ -12,7 +12,9 @@ via an `extensionRef` filter. For gRPC, a regex `:path` rewrite operates on the 
 {{% alert title="Note" color="primary" %}}
 A URL rewrite in the `filters` of a `backendRef` only supports rewriting the hostname to a fixed value. Path
 rewrites, and hostname rewrites of type `Header`, `Backend` or `PathRegex`, are only supported in the filters of a
-route rule; when used on a `backendRef`, that backendRef is rejected with an `InvalidBackendFilters` condition.
+route rule. When one is used on a `backendRef`, that backendRef is not used and the route's `ResolvedRefs` condition is
+set to `False`, with reason `UnsupportedRefValue` for a Gateway API `URLRewrite` path rewrite, or `InvalidBackendFilters`
+for a rewrite set through an `HTTPRouteFilter`.
 {{% /alert %}}
 
 ## Prerequisites
