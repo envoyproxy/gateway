@@ -535,10 +535,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
 								http3DisabledListeners = append(http3DisabledListeners, string(l.Name))
 							}
-							if listenerHasTLS(gwXdsIR, l) {
-								hasTLSListener = true
-							} else {
-								nonTLSListeners = append(nonTLSListeners, string(l.Name))
+							if policy.Spec.TLS != nil {
+								if listenerHasTLS(gwXdsIR, l) {
+									hasTLSListener = true
+								} else {
+									nonTLSListeners = append(nonTLSListeners, string(l.Name))
+								}
 							}
 							if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 								errs = errors.Join(errs, err)
