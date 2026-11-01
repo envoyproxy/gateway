@@ -25,6 +25,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/luavalidator"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -41,10 +42,20 @@ const (
 )
 
 // deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
+	}
+	for i := range policy.Spec.ExtProc {
+		deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, fmt.Sprintf("spec.extProc[%d]", i),
+			&policy.Spec.ExtProc[i].BackendCluster, nil)
+	}
+	for i, backend := range policy.Spec.Backends {
+		if backend.BackendSettings != nil {
+			deprecation.AddDeprecatedLoadBalancerFields(deprecatedFields,
+				fmt.Sprintf("spec.backends[%d].backendSettings.loadBalancer", i), backend.BackendSettings.LoadBalancer)
+		}
 	}
 	return deprecatedFields
 }
@@ -496,6 +507,10 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -663,6 +678,10 @@ func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -765,7 +784,10 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
-
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 

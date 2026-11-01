@@ -25,6 +25,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -123,6 +124,11 @@ type Translator struct {
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
 
+	// RateLimitClusterSettings holds the settings of the rate limit service cluster,
+	// as configured on EnvoyGateway.RateLimit.ServiceSettings. The CRD schema defaults are
+	// expected to be applied already, see config.ApplyEnvoyGatewaySchemaDefaults.
+	RateLimitClusterSettings *egv1a1.ClusterSettings
+
 	// EndpointRoutingDisabled can be set to true to use
 	// the Service Cluster IP for routing to the backend
 	// instead.
@@ -177,6 +183,11 @@ type Translator struct {
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
+
+	// ExtensionSecretGroupKinds stores the group/kind for resources registered in
+	// ExtensionManager.SecretResources. A listener's tls.certificateRefs may
+	// reference these kinds.
+	ExtensionSecretGroupKinds []schema.GroupKind
 
 	// ControllerNamespace is the namespace that Envoy Gateway controller runs in.
 	ControllerNamespace string
@@ -756,12 +767,9 @@ func fieldErrors(fields []validation.InvalidField) []error {
 	return errs
 }
 
-func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
-	deprecatedFields := make(map[string]string)
-	if ep.Spec.LuaValidation != nil {
-		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
-	}
-
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
+	deprecation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
 	return deprecatedFields
 }
 

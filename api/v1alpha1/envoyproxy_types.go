@@ -849,7 +849,7 @@ const (
 	EnvoyProxyReasonInvalidField EnvoyProxyConditionReason = "InvalidField"
 
 	// EnvoyProxyReasonMultipleWarnings is used with the "Warning" condition when the EnvoyProxy
-	// is warned about for more than one reason. The message lists every warning.
+	// has warnings with different reasons; the condition message lists all of them.
 	EnvoyProxyReasonMultipleWarnings EnvoyProxyConditionReason = "Warnings"
 )
 
