@@ -11,8 +11,8 @@ that are able to serve them. Two kinds of health checking are supported, and the
   return too many errors. This is Envoy's [Outlier Detection][].
 
 Health checking is configured in the `healthCheck` field of a [BackendTrafficPolicy][], which can target a [Gateway][],
-an [HTTPRoute][], a [GRPCRoute][] or the other xRoute kinds. Each backendRef of a route has its own set of endpoints,
-and each endpoint is checked independently.
+an [HTTPRoute][], a [GRPCRoute][], a TCPRoute or a TLSRoute. Health checks are not applied to the backends of a
+UDPRoute. Each backendRef of a route has its own set of endpoints, and each endpoint is checked independently.
 
 ## Prerequisites
 
