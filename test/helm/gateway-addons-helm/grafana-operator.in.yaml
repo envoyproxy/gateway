@@ -1,5 +1,12 @@
 dashboard:
   mode: grafana-operator
+  folder: "123"
+  instanceSelector:
+    matchExpressions:
+      - key: environment
+        operator: In
+        values:
+          - production
   labels:
     team: gateway
     app.kubernetes.io/part-of: envoy-gateway

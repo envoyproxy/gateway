@@ -1,0 +1,18 @@
+dashboard:
+  mode: grafana-operator
+  instanceSelector:
+    matchLabels: null
+prometheus:
+  enabled: false
+grafana:
+  enabled: false
+fluent-bit:
+  enabled: false
+alloy:
+  enabled: false
+loki:
+  enabled: false
+tempo:
+  enabled: false
+opentelemetry-collector:
+  enabled: false

@@ -16,8 +16,7 @@ spec:
   allowCrossNamespaceImport: true
   folder: {{ $.Values.dashboard.folder | quote }}
   instanceSelector:
-    matchLabels:
-      {{- $.Values.dashboard.instanceSelector.matchLabels | toYaml | nindent 6 }}
+    {{- $.Values.dashboard.instanceSelector | toYaml | nindent 4 }}
   json: {{ $.Files.Get $path | toJson }}
 {{- end }}
 {{- end }}
