@@ -208,7 +208,9 @@ kubectl patch backendtrafficpolicy/health-check --type merge \
 ```
 
 An ejected endpoint is reported with the `failed_outlier_check` health flag. It stays ejected for `baseEjectionTime`
-multiplied by the number of times it has been ejected, so an endpoint that keeps failing is ejected for longer. See [PassiveHealthCheck][] for every field and its default.
+multiplied by the number of times it has been ejected, so an endpoint that keeps failing is ejected for longer. Because
+this policy also has an active health check, an ejection can end early: Envoy returns an ejected endpoint to service as
+soon as it passes an active health check. See [PassiveHealthCheck][] for every field and its default.
 
 Active and passive health checking can be combined in the same policy: an endpoint is only considered healthy when it
 passes both. Panic mode still applies, so when fewer than `panicThreshold` percent of the endpoints are healthy, Envoy
