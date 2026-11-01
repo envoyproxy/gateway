@@ -300,6 +300,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				var (
 					err                 error
 					http3WarningMessage string
+					tlsWarningMessage   string
 				)
 				for _, l := range gateway.listeners {
 					// Find IR
@@ -316,6 +317,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							httpIR := gwXdsIR.GetHTTPListener(irListenerName(l))
 							if shouldDisableHTTP3ForClientValidation(policy, httpIR) {
 								http3WarningMessage = disabledHTTP3WarningMessage([]string{string(l.Name)})
+							}
+							if policy.Spec.TLS != nil && !listenerHasTLS(gwXdsIR, l) {
+								tlsWarningMessage = ignoredTLSSettingsWarningMessage([]string{string(l.Name)})
 							}
 							err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 						}
@@ -340,6 +344,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				if http3WarningMessage != "" {
 					status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
 						status.PolicyReasonUnsupportedHTTP3ClientValidation, http3WarningMessage, policy.Generation)
+				}
+
+				// Set Warning condition if the TLS settings don't apply to the listener
+				if tlsWarningMessage != "" {
+					status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+						status.PolicyReasonUnsupportedField, tlsWarningMessage, policy.Generation)
 				}
 
 				// Check for deprecated fields and set warning if any are found
@@ -491,6 +501,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					var (
 						errs                   error
 						http3DisabledListeners []string
+						nonTLSListeners        []string
+						hasTLSListener         bool
 					)
 					for _, l := range gateway.listeners {
 						if policyTargetsLS && !listenersBelongToLS(l, ls) {
@@ -523,6 +535,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
 								http3DisabledListeners = append(http3DisabledListeners, string(l.Name))
 							}
+							if listenerHasTLS(gwXdsIR, l) {
+								hasTLSListener = true
+							} else {
+								nonTLSListeners = append(nonTLSListeners, string(l.Name))
+							}
 							if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
 								errs = errors.Join(errs, err)
 							}
@@ -552,6 +569,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					if len(http3DisabledListeners) > 0 {
 						status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
 							status.PolicyReasonUnsupportedHTTP3ClientValidation, disabledHTTP3WarningMessage(http3DisabledListeners), policy.Generation)
+					}
+
+					// Set Warning condition if the TLS settings don't apply to any of the listeners
+					if policy.Spec.TLS != nil && !hasTLSListener && len(nonTLSListeners) > 0 {
+						status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+							status.PolicyReasonUnsupportedField, ignoredTLSSettingsWarningMessage(nonTLSListeners), policy.Generation)
 					}
 
 					// Check for deprecated fields and set warning if any are found
@@ -716,6 +739,25 @@ func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, h
 		return false
 	}
 	return true
+}
+
+// listenerHasTLS reports whether the listener terminates TLS, which is the only case in which a
+// ClientTrafficPolicy's TLS settings are applied to it.
+func listenerHasTLS(gwXdsIR *ir.Xds, l *ListenerContext) bool {
+	name := irListenerName(l)
+	if httpIR := gwXdsIR.GetHTTPListener(name); httpIR != nil && httpIR.TLS != nil {
+		return true
+	}
+	if tcpIR := gwXdsIR.GetTCPListener(name); tcpIR != nil && tcpIR.TLS != nil {
+		return true
+	}
+	return false
+}
+
+func ignoredTLSSettingsWarningMessage(listenerNames []string) string {
+	return fmt.Sprintf("TLS settings have no effect because the targeted listeners (%s) do not terminate TLS; "+
+		"set the listener protocol to HTTPS, or TLS with mode Terminate, and configure certificateRefs",
+		strings.Join(listenerNames, ", "))
 }
 
 func disabledHTTP3WarningMessage(listenerNames []string) string {

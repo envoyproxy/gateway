@@ -1,0 +1,1 @@
+ClientTrafficPolicy now sets a `Warning` condition with reason `UnsupportedField` when its `tls` settings have no effect because none of the listeners it applies to terminate TLS, instead of silently ignoring them.

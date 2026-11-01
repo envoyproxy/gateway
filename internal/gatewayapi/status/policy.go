@@ -41,7 +41,8 @@ const (
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
 
 	// PolicyReasonUnsupportedField is used with the "Warning" condition when a policy field
-	// has no effect on the targeted route kind (e.g. http1 settings on a GRPCRoute).
+	// has no effect on its target (e.g. http1 settings on a GRPCRoute, or TLS settings on a
+	// listener that does not terminate TLS).
 	PolicyReasonUnsupportedField gwapiv1.PolicyConditionReason = "UnsupportedField"
 )
 
