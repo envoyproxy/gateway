@@ -1,5 +1,6 @@
 dashboard:
   mode: grafana-operator
+  annotations: null
   instanceSelector:
     matchLabels: null
 prometheus:
