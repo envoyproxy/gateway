@@ -1,0 +1,1 @@
+Fixed a URL rewrite in the filters of an HTTPRoute backendRef being silently dropped when it set a path or a hostname of type Header, Backend or PathRegex through an HTTPRouteFilter. Envoy can only apply a literal hostname rewrite per backendRef, so these are now rejected with an `InvalidBackendFilters` status condition instead of being ignored.

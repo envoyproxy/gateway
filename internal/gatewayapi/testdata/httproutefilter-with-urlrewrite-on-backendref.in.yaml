@@ -1,0 +1,183 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/header-host"
+          backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: header-host
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/backend-host"
+          backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: backend-host
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-3
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/path-regex-host"
+          backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: path-regex-host
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-4
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/regex-path"
+          backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: regex-path
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-5
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/literal-host"
+          backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: URLRewrite
+                  urlRewrite:
+                    hostname: backend.example.com
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: header-host
+    spec:
+      urlRewrite:
+        hostname:
+          type: Header
+          header: x-custom-host
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: backend-host
+    spec:
+      urlRewrite:
+        hostname:
+          type: Backend
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: path-regex-host
+    spec:
+      urlRewrite:
+        hostname:
+          type: PathRegex
+          pathRegex:
+            pattern: "^/([^/]+)/.*$"
+            substitution: "\\1"
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: regex-path
+    spec:
+      urlRewrite:
+        path:
+          type: ReplaceRegexMatch
+          replaceRegexMatch:
+            pattern: "^/regex-path/(.*)$"
+            substitution: "/\\1"

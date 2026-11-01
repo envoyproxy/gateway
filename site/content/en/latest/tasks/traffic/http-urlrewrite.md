@@ -9,6 +9,12 @@ The Envoy Gateway `HTTPRouteFilter` (used for hostname and regex path rewrite) c
 via an `extensionRef` filter. For gRPC, a regex `:path` rewrite operates on the gRPC path, which has the form
 `/<package>.<Service>/<Method>`. See [Gateway API support](../../concepts/gatewayapi-support#grpcroute) for details.
 
+{{% alert title="Note" color="primary" %}}
+A URL rewrite in the `filters` of a `backendRef` only supports rewriting the hostname to a fixed value. Path
+rewrites, and hostname rewrites of type `Header`, `Backend` or `PathRegex`, are only supported in the filters of a
+route rule; when used on a `backendRef`, that backendRef is rejected with an `InvalidBackendFilters` condition.
+{{% /alert %}}
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
