@@ -55,7 +55,6 @@ func TestEGUpgrade(t *testing.T) {
 		RestConfig:          cfg,
 		ManifestFS:          []fs.FS{e2e.UpgradeManifests},
 		BaseManifests:       "upgrade/manifests.yaml",
-		Hook:                e2e.Hook,
 		ConfigurableOptions: suiteOpts,
 	})
 	if err != nil {
@@ -72,7 +71,7 @@ func TestEGUpgrade(t *testing.T) {
 	t.Cleanup(func() {
 		recorder.Report(t)
 	})
-	timedTests := e2e.WrapConformanceTestsWithTiming(tests.UpgradeTests, recorder)
+	timedTests := e2e.WrapConformanceTestsWithHook(e2e.WrapConformanceTestsWithTiming(tests.UpgradeTests, recorder))
 	tlog.Logf(t, "Running %d Upgrade tests", len(tests.UpgradeTests))
 	cSuite.Setup(t, timedTests)
 

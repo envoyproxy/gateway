@@ -90,7 +90,6 @@ func TestE2E(t *testing.T) {
 		RestConfig:          cfg,
 		ConfigurableOptions: suiteOpts,
 		ManifestFS:          []fs.FS{Manifests},
-		Hook:                Hook,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
@@ -100,7 +99,7 @@ func TestE2E(t *testing.T) {
 	t.Cleanup(func() {
 		recorder.Report(t)
 	})
-	timedTests := WrapConformanceTestsWithTiming(tests.ConformanceTests, recorder)
+	timedTests := WrapConformanceTestsWithHook(WrapConformanceTestsWithTiming(tests.ConformanceTests, recorder))
 	cSuite.Setup(t, timedTests)
 	if cSuite.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s", cSuite.RunTest)
