@@ -1,0 +1,22 @@
+name: PR Labeler
+
+# pull_request_target is required so the job can label PRs from forks. It does
+# not check out or run any code from the PR, so this is safe.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    if: github.repository == 'envoyproxy/gateway'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13  # v7.0.0
+        with:
+          configuration-path: .github/labeler.yml
+          sync-labels: true

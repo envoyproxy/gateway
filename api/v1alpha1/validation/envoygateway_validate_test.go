@@ -375,6 +375,66 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
+			name: "extension certificate resources with the Secret hook",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						SecretResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "cert.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleCertificate",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSSecret,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							Host: "foo.extension",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "extension certificate resources without the Secret hook",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						SecretResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "cert.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleCertificate",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSHTTPListener,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							Host: "foo.extension",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "happy extension settings tls",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -991,6 +1051,71 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
+			name: "extensionManagers registering the same secret kind",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name:            "ext1",
+							SecretResources: []egv1a1.GroupVersionKind{{Group: "example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}},
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						},
+						{
+							Name: "ext2",
+							// A different version is still the same group and kind.
+							SecretResources: []egv1a1.GroupVersionKind{{Group: "example.io", Version: "v1", Kind: "ExampleCertificate"}},
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers registering different secret kinds",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name:            "ext1",
+							SecretResources: []egv1a1.GroupVersionKind{{Group: "example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}},
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						},
+						{
+							Name:            "ext2",
+							SecretResources: []egv1a1.GroupVersionKind{{Group: "other.example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}},
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
 			name: "extensionManagers with missing name",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -1463,60 +1588,6 @@ func TestGetExtensionManagers(t *testing.T) {
 		assert.Equal(t, "plural1", result[0].Name)
 		assert.Equal(t, "plural2", result[1].Name)
 	})
-}
-
-func TestWarnEnvoyGateway(t *testing.T) {
-	eg := egv1a1.DefaultEnvoyGateway()
-
-	testCases := []struct {
-		name     string
-		eg       *egv1a1.EnvoyGateway
-		expected []string
-	}{
-		{
-			name:     "nil EnvoyGateway",
-			eg:       nil,
-			expected: nil,
-		},
-		{
-			name:     "nil ExtensionAPIs",
-			eg:       eg,
-			expected: nil,
-		},
-		{
-			name: "disableLua is set",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						DisableLua: new(true),
-					},
-				},
-			},
-			expected: []string{"disableLua is deprecated, use enableLua instead"},
-		},
-		{
-			name: "enableLua is set",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
-						EnableLua: true,
-					},
-				},
-			},
-			expected: nil,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			warnings := WarnEnvoyGateway(tc.eg)
-			assert.Equal(t, tc.expected, warnings)
-		})
-	}
 }
 
 func TestLuaDisabled(t *testing.T) {

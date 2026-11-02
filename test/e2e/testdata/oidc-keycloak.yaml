@@ -139,6 +139,9 @@ data:
     CLIENT_BAR_ID=oidctest-bar
     CLIENT_BAR_SECRET=oidctest-bar-client-secret
     CLIENT_BAR_REDIRECT_URL=http://www.example.com/bar/oauth2/callback
+    CLIENT_CHUNKED_ID=oidctest-chunked
+    CLIENT_CHUNKED_SECRET=oidctest-chunked-client-secret
+    CLIENT_CHUNKED_REDIRECT_URL=http://www.example.com/chunked/oauth2/callback
 
     set -ex
 
@@ -177,3 +180,21 @@ data:
     create_client "${CLIENT_ID}" "${CLIENT_SECRET}" "${REDIRECT_URL}"
     create_client "${CLIENT_FOO_ID}" "${CLIENT_FOO_SECRET}" "${CLIENT_FOO_REDIRECT_URL}"
     create_client "${CLIENT_BAR_ID}" "${CLIENT_BAR_SECRET}" "${CLIENT_BAR_REDIRECT_URL}"
+
+    # A 6000-character hardcoded claim makes this client's access token too large
+    # for one browser cookie, so a login only completes if Envoy chunks the cookie.
+    # The client registration policy behind kcreg.sh rejects this mapper type, so
+    # the client is created through the admin API.
+    printf -v LARGE_CLAIM '%*s' 6000 ''
+    LARGE_CLAIM="${LARGE_CLAIM// /x}"
+    /opt/keycloak/bin/kcadm.sh create clients \
+    -s clientId="${CLIENT_CHUNKED_ID}" \
+    -s secret="${CLIENT_CHUNKED_SECRET}" \
+    -s "redirectUris=[\"${CLIENT_CHUNKED_REDIRECT_URL}\"]" \
+    -s consentRequired=false \
+    -f - \
+    --server "${KEYCLOAK_SERVER}" \
+    --realm "${REALM}" \
+    --user "${KEYCLOAK_ADMIN}" \
+    --password "${KEYCLOAK_ADMIN_PASSWORD}" \
+    <<< "{\"protocolMappers\":[{\"name\":\"large-claim\",\"protocol\":\"openid-connect\",\"protocolMapper\":\"oidc-hardcoded-claim-mapper\",\"config\":{\"claim.name\":\"large_claim\",\"claim.value\":\"${LARGE_CLAIM}\",\"jsonType.label\":\"String\",\"access.token.claim\":\"true\",\"id.token.claim\":\"false\",\"userinfo.token.claim\":\"false\"}}]}"

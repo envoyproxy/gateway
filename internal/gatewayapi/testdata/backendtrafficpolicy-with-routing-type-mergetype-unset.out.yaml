@@ -24,7 +24,8 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -48,27 +49,20 @@ backendTrafficPolicies:
         kind: Gateway
         name: gateway-1
         namespace: envoy-gateway
-        sectionName: http
       conditions:
       - lastTransitionTime: null
         message: Merged with policy envoy-gateway/policy-for-gateway
         reason: Merged
         status: "True"
         type: Merged
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -98,7 +92,8 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning

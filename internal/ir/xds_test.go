@@ -634,6 +634,16 @@ func TestValidateXds(t *testing.T) {
 	}
 }
 
+func TestExtensionBackendValidation(t *testing.T) {
+	x := &Xds{HTTP: []*HTTPListener{happyHTTPListener.DeepCopy()}}
+	x.HTTP[0].Routes[0].EnvoyExtensions = &EnvoyExtensionFeatures{Backends: map[string]string{"resolver": "callout"}}
+	require.ErrorIs(t, x.Validate(), ErrExtensionBackendRefNotFound)
+	x.ExtensionBackends = []*ExtensionBackend{{RouteDestination: RouteDestination{Name: "callout"}}}
+	require.NoError(t, x.Validate())
+	x.ExtensionBackends[0].Name = ""
+	require.ErrorIs(t, x.Validate(), ErrDestinationNameEmpty)
+}
+
 func TestTLSCertificateValidateDistinguishesMissingSDSFields(t *testing.T) {
 	tests := []struct {
 		name string
@@ -2334,6 +2344,32 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestHTTP3Incompatibilities(t *testing.T) {
+	tlsSetting := &DestinationSetting{Protocol: HTTP, TLS: &TLSUpstreamConfig{}}
+	skipVerifySetting := &DestinationSetting{Protocol: HTTP, TLS: &TLSUpstreamConfig{InsecureSkipVerify: true}}
+	plainSetting := &DestinationSetting{Protocol: HTTP}
+	invalidSetting := &DestinationSetting{Protocol: HTTP, Invalid: true}
+
+	tests := []struct {
+		name        string
+		settings    []*DestinationSetting
+		wantReasons int
+	}{
+		{name: "tls", settings: []*DestinationSetting{tlsSetting}},
+		{name: "tls with insecureSkipVerify", settings: []*DestinationSetting{skipVerifySetting}, wantReasons: 1},
+		{name: "plaintext", settings: []*DestinationSetting{tlsSetting, plainSetting}, wantReasons: 1},
+		// An unresolvable backendRef gets a cluster of its own that cannot be given QUIC.
+		{name: "tls and invalid", settings: []*DestinationSetting{tlsSetting, invalidSetting}, wantReasons: 1},
+		{name: "all invalid", settings: []*DestinationSetting{invalidSetting}, wantReasons: 1},
+		{name: "none", settings: nil},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Len(t, HTTP3Incompatibilities(tc.settings, false, false), tc.wantReasons)
 		})
 	}
 }

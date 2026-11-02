@@ -1136,57 +1136,76 @@ func TestBuildAuthorizationJWTProvider(t *testing.T) {
 	}
 }
 
-// Test_OIDC_PostLogoutRedirect_Merge covers the invariant that the CRD's CEL rule cannot: CEL is
-// evaluated by the apiserver on an individual policy, but a merged policy only ever exists in
-// memory inside the translator. Merging a parent that sets uri with a route that sets disabled
-// therefore yields a policy that sets uri with disabled: true without any admission error, and
-// the translator would resolve it toward uri, silently dropping the route's intent.
+// Test_OIDC_PostLogoutRedirect_Merge checks how a route's postLogoutRedirect combines with the
+// parent's. The field has a replace patch strategy, so under StrategicMerge the route's block
+// replaces the parent's. Under JSONMerge the keys merge, so the parent's uri and the route's
+// disabled: true both survive and the merged policy must be rejected.
 func Test_OIDC_PostLogoutRedirect_Merge(t *testing.T) {
-	oidcWith := func(plr *egv1a1.OIDCPostLogoutRedirect) *egv1a1.OIDC {
-		return &egv1a1.OIDC{PostLogoutRedirect: plr}
-	}
-	parentPolicy := func() *egv1a1.SecurityPolicy {
-		return &egv1a1.SecurityPolicy{
-			Spec: egv1a1.SecurityPolicySpec{
-				OIDC: oidcWith(&egv1a1.OIDCPostLogoutRedirect{
-					URI: ToPointer("https://www.example.com/loggedout"),
-				}),
-			},
-		}
-	}
-	routePolicy := func(mergeType *egv1a1.MergeType) *egv1a1.SecurityPolicy {
+	const parentURI = "https://www.example.com/loggedout"
+	policyWith := func(mergeType *egv1a1.MergeType, plr *egv1a1.OIDCPostLogoutRedirect) *egv1a1.SecurityPolicy {
 		return &egv1a1.SecurityPolicy{
 			Spec: egv1a1.SecurityPolicySpec{
 				MergeType: mergeType,
-				OIDC:      oidcWith(&egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)}),
+				OIDC:      &egv1a1.OIDC{PostLogoutRedirect: plr},
 			},
 		}
 	}
-
-	// Each policy on its own passes the CEL rules, which is why admission lets both
-	// through.
-	require.NoError(t, validateSecurityPolicy(parentPolicy()))
-	require.NoError(t, validateSecurityPolicy(routePolicy(nil)))
-
+	parentWithURI := func() *egv1a1.SecurityPolicy {
+		return policyWith(nil, &egv1a1.OIDCPostLogoutRedirect{URI: ToPointer(parentURI)})
+	}
 	strategicMerge := egv1a1.StrategicMerge
-	merged, _, err := mergeSecurityPolicy(routePolicy(&strategicMerge), parentPolicy())
-	require.NoError(t, err)
+	jsonMerge := egv1a1.JSONMerge
 
-	// Both fields survive the merge, so the merged policy must be rejected rather than silently
-	// resolved toward one of them.
-	plr := merged.Spec.OIDC.PostLogoutRedirect
-	require.NotNil(t, plr.URI, "expected the parent's uri to survive the merge")
-	require.NotNil(t, plr.Disabled, "expected the route's disabled to survive the merge")
-	require.ErrorContains(t, validateSecurityPolicy(merged),
-		"OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+	t.Run("StrategicMerge route disabled replaces parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Nil(t, plr.URI)
+		require.True(t, *plr.Disabled)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
 
-	// disabled: false means the same as leaving it unset, so the route inherits the parent's uri.
-	routeNotDisabled := routePolicy(&strategicMerge)
-	routeNotDisabled.Spec.OIDC.PostLogoutRedirect.Disabled = ToPointer(false)
-	merged, _, err = mergeSecurityPolicy(routeNotDisabled, parentPolicy())
-	require.NoError(t, err)
-	require.Equal(t, "https://www.example.com/loggedout", *merged.Spec.OIDC.PostLogoutRedirect.URI)
-	require.NoError(t, validateSecurityPolicy(merged))
+	t.Run("StrategicMerge route uri replaces parent disabled", func(t *testing.T) {
+		parent := policyWith(nil, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{URI: ToPointer("https://other.example.com/bye")})
+		merged, _, err := mergeSecurityPolicy(route, parent)
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Equal(t, "https://other.example.com/bye", *plr.URI)
+		require.Nil(t, plr.Disabled)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	t.Run("StrategicMerge route without postLogoutRedirect inherits parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, nil)
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		require.Equal(t, parentURI, *merged.Spec.OIDC.PostLogoutRedirect.URI)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	// The route's block replaces the parent's, so disabled: false alone leaves no uri and
+	// Envoy falls back to its default post logout redirect URI.
+	t.Run("StrategicMerge route disabled false does not inherit parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(false)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Nil(t, plr.URI)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	t.Run("JSONMerge route disabled with parent uri is rejected", func(t *testing.T) {
+		route := policyWith(&jsonMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.NotNil(t, plr.URI, "expected the parent's uri to survive JSONMerge")
+		require.NotNil(t, plr.Disabled, "expected the route's disabled to survive JSONMerge")
+		require.ErrorContains(t, validateSecurityPolicy(merged),
+			"OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+	})
 }
 
 func ToPointer[T any](v T) *T {
@@ -1616,7 +1635,7 @@ func SetRouteParentContext(route RouteContext, parentRef gwapiv1.ParentReference
 	route.SetRouteParentContext(parentRef, ctx)
 }
 
-// --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
+// --- L4 branch: validateSecurityPolicyForL4(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	trContext := &TranslatorContext{}
@@ -1768,7 +1787,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	require.True(t, hasParentFalseCondition(policy))
 }
 
-func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
+func Test_validateSecurityPolicyForL4_Table(t *testing.T) {
 	tests := []struct {
 		name    string
 		spec    egv1a1.SecurityPolicySpec
@@ -1840,6 +1859,44 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 							Action: egv1a1.AuthorizationActionDeny,
 							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			// The L4 matcher only looks at client CIDRs, so accepting an operation
+			// would silently widen the rule to all traffic from those CIDRs.
+			name: "operation with methods is rejected",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action:    egv1a1.AuthorizationActionAllow,
+							Operation: &egv1a1.Operation{Methods: []gwapiv1.HTTPMethod{gwapiv1.HTTPMethodGet}},
+							Principal: &egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "operation with path is rejected",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Operation: &egv1a1.Operation{Path: &egv1a1.PathMatch{
+								Value: "/admin",
+							}},
+							Principal: &egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
 							},
 						},
 					},
@@ -1935,17 +1992,36 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
-			err := validateSecurityPolicyForTCP(p)
-			if tc.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
+	// TCP and UDP share the same rules, so every case must hold for both.
+	for _, proto := range []string{"TCP", "UDP"} {
+		for _, tc := range tests {
+			t.Run(proto+"/"+tc.name, func(t *testing.T) {
+				p := &egv1a1.SecurityPolicy{Spec: tc.spec}
+				err := validateSecurityPolicyForL4(p, proto)
+				if tc.wantErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
 	}
+
+	// Rejections that are about the protocol rather than the input name it, so the
+	// status condition tells the user which listener protocol refused the field.
+	t.Run("protocol named in protocol-specific errors", func(t *testing.T) {
+		p := &egv1a1.SecurityPolicy{Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{{
+					Action:    egv1a1.AuthorizationActionAllow,
+					Principal: &egv1a1.Principal{Headers: []egv1a1.AuthorizationHeaderMatch{{Name: "x-user", Values: []string{"foo"}}}},
+				}},
+			},
+		}}
+
+		require.ErrorContains(t, validateSecurityPolicyForL4(p, "TCP"), "headers not supported for TCP")
+		require.ErrorContains(t, validateSecurityPolicyForL4(p, "UDP"), "headers not supported for UDP")
+	})
 }
 
 func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {

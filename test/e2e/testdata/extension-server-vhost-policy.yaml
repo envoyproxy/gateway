@@ -1,0 +1,30 @@
+apiVersion: extserver.example.io/v1alpha1
+kind: VHostMetadataPolicy
+metadata:
+  name: vhost-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: all-namespaces
+  metadataKey: x-ext-server-policy
+  metadataValue: vhost-policy-applied
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: extension-server-vhost-policy
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: all-namespaces
+  hostnames: ["vhost-policy.example.io"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

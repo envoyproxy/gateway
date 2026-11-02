@@ -1,0 +1,49 @@
+# Test ClusterTrafficFeatures.HTTP1 on a non-merged route (inline destination settings).
+# The http1 settings from BTP (preserveHeaderCase + enableTrailers) must appear on
+# the generated upstream cluster's HTTP/1.1 protocol options.
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      http1:
+        preserveHeaderCase: true
+        enableTrailers: true
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "second-route"
+    hostname: "*"
+    traffic:
+      http1:
+        preserveHeaderCase: false
+        enableTrailers: true
+        http10: {}
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.5"
+          port: 50000
+        name: "second-route-dest/backend/0"
