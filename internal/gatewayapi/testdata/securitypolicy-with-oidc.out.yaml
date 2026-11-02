@@ -224,7 +224,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -271,7 +272,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -321,7 +323,8 @@ securityPolicies:
         status: "True"
         type: Overridden
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -427,6 +430,7 @@ xdsIR:
             - openid
             - email
             - profile
+            tokenCookieChunking: true
       - destination:
           metadata:
             kind: HTTPRoute
@@ -478,6 +482,7 @@ xdsIR:
             refreshToken: true
             scopes:
             - openid
+            tokenCookieChunking: true
       - destination:
           metadata:
             kind: HTTPRoute
@@ -531,6 +536,7 @@ xdsIR:
             refreshToken: true
             scopes:
             - openid
+            tokenCookieChunking: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -80,6 +80,11 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+    backends:
+    - name: resolver
+      backendRef:
+        name: service-1
+        port: 8080
     lua:
     - type: Inline
       inline: "function envoy_on_response(response_handle)
