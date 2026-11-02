@@ -140,15 +140,15 @@ type ProxyAccessLogSink struct {
 // AccessLogBufferSettings configures how Envoy buffers access log entries before
 // flushing them to the sink.
 //
-// Entries accumulate until FlushInterval elapses or Size worth have been buffered,
+// Entries accumulate until FlushInterval elapses or the buffered entries fill Size,
 // whichever comes first, at which point Envoy flushes. Entries are discarded, and counted
 // by the sink's `logs_dropped` stat, only when a flush cannot drain the buffer. How much
 // of a sink outage the buffer absorbs therefore depends on both settings, since only
 // entries still buffered when the sink returns are delivered.
 type AccessLogBufferSettings struct {
 	// FlushInterval defines how often buffered access log entries are flushed to the sink.
-	// Entries are flushed when this interval elapses or when Size worth of entries have
-	// been buffered, whichever comes first.
+	// Entries are flushed when this interval elapses or when buffered entries fill Size,
+	// whichever comes first.
 	// Must be greater than 0. Defaults to 1s.
 	//
 	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="flushInterval must be greater than 0"

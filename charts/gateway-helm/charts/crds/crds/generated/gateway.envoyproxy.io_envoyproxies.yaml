@@ -13578,8 +13578,8 @@ spec:
                                           flushInterval:
                                             description: |-
                                               FlushInterval defines how often buffered access log entries are flushed to the sink.
-                                              Entries are flushed when this interval elapses or when Size worth of entries have
-                                              been buffered, whichever comes first.
+                                              Entries are flushed when this interval elapses or when buffered entries fill Size,
+                                              whichever comes first.
                                               Must be greater than 0. Defaults to 1s.
                                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
@@ -15427,8 +15427,8 @@ spec:
                                           flushInterval:
                                             description: |-
                                               FlushInterval defines how often buffered access log entries are flushed to the sink.
-                                              Entries are flushed when this interval elapses or when Size worth of entries have
-                                              been buffered, whichever comes first.
+                                              Entries are flushed when this interval elapses or when buffered entries fill Size,
+                                              whichever comes first.
                                               Must be greater than 0. Defaults to 1s.
                                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string

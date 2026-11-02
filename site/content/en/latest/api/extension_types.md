@@ -125,7 +125,7 @@ _Appears in:_
 AccessLogBufferSettings configures how Envoy buffers access log entries before
 flushing them to the sink.
 
-Entries accumulate until FlushInterval elapses or Size worth have been buffered,
+Entries accumulate until FlushInterval elapses or the buffered entries fill Size,
 whichever comes first, at which point Envoy flushes. Entries are discarded, and counted
 by the sink's `logs_dropped` stat, only when a flush cannot drain the buffer. How much
 of a sink outage the buffer absorbs therefore depends on both settings, since only
@@ -137,7 +137,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `flushInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | FlushInterval defines how often buffered access log entries are flushed to the sink.<br />Entries are flushed when this interval elapses or when Size worth of entries have<br />been buffered, whichever comes first.<br />Must be greater than 0. Defaults to 1s. |
+| `flushInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | FlushInterval defines how often buffered access log entries are flushed to the sink.<br />Entries are flushed when this interval elapses or when buffered entries fill Size,<br />whichever comes first.<br />Must be greater than 0. Defaults to 1s. |
 | `size` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | Size defines the soft size limit of the access log entry buffer.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Envoy carries this as a 32-bit unsigned integer, so values of 4Gi and above are<br />rejected when the EnvoyProxy is translated rather than at admission.<br />Defaults to 16384 bytes. |
 
 
