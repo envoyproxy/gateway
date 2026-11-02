@@ -1,0 +1,180 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: backend-priority-1
+  namespace: gateway-conformance-infra
+spec:
+  backendPriority: 1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: backend-priority-2
+  namespace: gateway-conformance-infra
+spec:
+  backendPriority: 2
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: backend-priority-3
+  namespace: gateway-conformance-infra
+spec:
+  backendPriority: 3
+---
+# All backendRefs of a rule are FQDN Backends, so they share one cluster and priority failover
+# applies. Mixing them with Service backendRefs would split the rule into weighted clusters.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-priority-v1
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
+        port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-priority-v2
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: infra-backend-v2.gateway-conformance-infra.svc.cluster.local
+        port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-priority-v3
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: infra-backend-v3.gateway-conformance-infra.svc.cluster.local
+        port: 8080
+---
+# The Service doesn't expose this port, so the active health check marks the endpoint unhealthy.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-priority-unhealthy-v1
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
+        port: 9999
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-priority-unhealthy-v2
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: infra-backend-v2.gateway-conformance-infra.svc.cluster.local
+        port: 9999
+---
+# The priority 0 backend is healthy, so it receives all traffic.
+# Each route has a healthy backend at a lower priority, which would receive traffic if the
+# priorities weren't applied.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-priority-primary
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-priority/primary
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-priority-v1
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-priority-v2
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: backend-priority-1
+---
+# Priorities 0 and 1 are unhealthy, so traffic fails over to priority 2 only, not to the
+# healthy priority 3 backend.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-priority-multi-tier
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-priority/multi-tier
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-priority-unhealthy-v1
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-priority-unhealthy-v2
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: backend-priority-1
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-priority-v3
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: backend-priority-2
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-priority-v1
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: backend-priority-3
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: backend-priority-health-check
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend-priority-primary
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend-priority-multi-tier
+  healthCheck:
+    active:
+      type: TCP
+      tcp: {}
+      timeout: 1s
+      interval: 1s
+      unhealthyThreshold: 1
+      healthyThreshold: 1

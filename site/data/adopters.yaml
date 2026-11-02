@@ -142,3 +142,7 @@ adopters:
     logo: "/logos/24metrics.svg"
     url: "https://www.24metrics.com"
     description: "24metrics uses Envoy Gateway to manage ingress traffic across its Kubernetes clusters, routing its ad fraud detection and tracking APIs, and using SecurityPolicy extAuth with oauth2-proxy to place internal tools behind SSO."
+  - name: "Prepare.sh"
+    logo: "/logos/preparesh.svg"
+    url: "https://prepare.sh/"
+    description: "Prepare.sh uses Envoy Gateway as the shared gateway for its hands-on technical interview tutorials, routing each learner's traffic to their own isolated environment on Kubernetes and enforcing per-session access with SecurityPolicy external authorization."

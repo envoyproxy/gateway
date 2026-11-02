@@ -583,6 +583,44 @@ explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
 
 Each cookie holds a different value, so all the resulting names must be distinct.
 
+## Large Tokens
+
+Browsers don't store a cookie larger than 4096 bytes, and they drop it without an error.
+Some OIDC providers issue access, ID or refresh tokens larger than that, for example when
+the token carries many group claims. A browser that drops the token cookie never sends the
+token back: Envoy treats the session as missing and redirects the user to the OIDC provider
+again and again, until the browser reports too many redirects.
+
+Envoy Gateway therefore has Envoy split such a token across several cookies. A token that
+fits in one cookie is still written as one cookie. A larger token is written as `<name>_0`,
+`<name>_1`, and so on, plus a `<name>_chunks` cookie that holds the count, for example
+`AccessToken-myapp_0` and `AccessToken-myapp_chunks`. Each cookie stays within 4096 bytes,
+name and attributes included, and a token is split into at most 8 cookies. If a token needs
+more, Envoy fails the login with a `503` instead of setting cookies the browser could not
+send back.
+
+Every chunk is sent back on each request, so several large tokens together can exceed the
+listener's request header limit, 60Ki by default. Raise it with `headers.maxRequestHeaderLimit`
+in a [ClientTrafficPolicy] if requests with a full set of chunks start failing.
+
+Envoy Proxy older than v1.40 can't read the split cookies. While proxies of an earlier Envoy
+Gateway release serve the same hostnames, for example during an upgrade or while the clusters
+of a multi-cluster setup are upgraded one by one, a client that holds such a token in one
+cookie today, such as a non-browser client, is sent back to the OIDC provider whenever it
+reaches an older proxy. To avoid that, disable the `OIDCTokenCookieChunking` runtime flag in
+the [EnvoyGateway] configuration until every proxy is upgraded:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+runtimeFlags:
+  disabled:
+  - OIDCTokenCookieChunking
+```
+
+From v1.40 on, Envoy reads both a single cookie and split cookies whether or not the flag
+is enabled, so turning the flag on or off doesn't end existing sessions.
+
 ## Logout
 
 Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
@@ -742,6 +780,8 @@ Checkout the [Developer Guide](/community/develop) to get involved in the projec
 [oidc]: https://openid.net/connect/
 [google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[EnvoyGateway]: ../../../api/extension_types#envoygateway
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Backend]: ../../../api/extension_types#backend

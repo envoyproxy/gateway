@@ -1156,6 +1156,64 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "ProxyMetrics-clusterStatName-valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: new("%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NAME%/%ROUTE_RULE_NUMBER%|%BACKEND_REFS%"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "ProxyMetrics-clusterStatName-unterminated-operator",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: new("%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NAME/%ROUTE_RULE_NUMBER%"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"clusterStatName contains an unsupported or unterminated operator",
+			},
+		},
+		{
+			desc: "ProxyMetrics-clusterStatName-unsupported-operator",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: new("%ROUTE_KIND%/%GATEWAY_NAME%"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"clusterStatName contains an unsupported or unterminated operator",
+			},
+		},
+		{
+			desc: "ProxyMetrics-clusterStatName-stray-percent",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: new("%ROUTE_NAME%/100%"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"clusterStatName contains an unsupported or unterminated operator",
+			},
+		},
+		{
 			desc: "ProxyMetrics-sinks-backend-empty",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{

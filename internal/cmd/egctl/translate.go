@@ -43,10 +43,11 @@ const (
 )
 
 type TranslationOptions struct {
-	GlobalRateLimitEnabled  bool
-	EndpointRoutingDisabled bool
-	EnvoyPatchPolicyEnabled bool
-	BackendEnabled          bool
+	GlobalRateLimitEnabled   bool
+	EndpointRoutingDisabled  bool
+	EnvoyPatchPolicyEnabled  bool
+	BackendEnabled           bool
+	ExtensionBackendsEnabled bool
 }
 
 type TranslationResult struct {
@@ -250,10 +251,11 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 			}
 			if outType == xdsType {
 				opts := &TranslationOptions{
-					GlobalRateLimitEnabled:  true,
-					EndpointRoutingDisabled: true,
-					EnvoyPatchPolicyEnabled: true,
-					BackendEnabled:          true,
+					GlobalRateLimitEnabled:   true,
+					EndpointRoutingDisabled:  true,
+					EnvoyPatchPolicyEnabled:  true,
+					BackendEnabled:           true,
+					ExtensionBackendsEnabled: true,
 				}
 				res, err := TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources, opts)
 				if err != nil {
@@ -287,12 +289,13 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 	}
 
 	t := &gatewayapi.Translator{
-		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
-		EnvoyPatchPolicyEnabled: true,
-		BackendEnabled:          true,
+		GatewayControllerName:    string(resources.GatewayClass.Spec.ControllerName),
+		GatewayClassName:         gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:   true,
+		EndpointRoutingDisabled:  true,
+		EnvoyPatchPolicyEnabled:  true,
+		BackendEnabled:           true,
+		ExtensionBackendsEnabled: true,
 		// Discard logs during translation for egctl command to avoid polluting output
 		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
@@ -317,19 +320,22 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
-		EnvoyPatchPolicyEnabled: true,
-		BackendEnabled:          true,
-		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+		GatewayControllerName:    string(resources.GatewayClass.Spec.ControllerName),
+		GatewayClassName:         gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:   true,
+		EndpointRoutingDisabled:  true,
+		EnvoyPatchPolicyEnabled:  true,
+		BackendEnabled:           true,
+		ExtensionBackendsEnabled: true,
+		Logger:                   logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(context.Background(), resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxyForGatewayClass != nil {
-		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxyForGatewayClass); err != nil {
+		// Match the translator: invalid fields that can be unset are ignored and reported on the
+		// EnvoyProxy status, so only errors that make the EnvoyProxy unusable reject the class.
+		if _, err := validation.ValidateEnvoyProxyFields(resources.EnvoyProxyForGatewayClass); err != nil {
 			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(gwapiv1.GatewayClassReasonInvalidParameters), msg)
@@ -360,13 +366,14 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
-		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled:  opts.GlobalRateLimitEnabled,
-		EndpointRoutingDisabled: opts.EndpointRoutingDisabled,
-		EnvoyPatchPolicyEnabled: opts.EnvoyPatchPolicyEnabled,
-		BackendEnabled:          opts.BackendEnabled,
-		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
+		GatewayControllerName:    string(resources.GatewayClass.Spec.ControllerName),
+		GatewayClassName:         gwapiv1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:   opts.GlobalRateLimitEnabled,
+		EndpointRoutingDisabled:  opts.EndpointRoutingDisabled,
+		EnvoyPatchPolicyEnabled:  opts.EnvoyPatchPolicyEnabled,
+		BackendEnabled:           opts.BackendEnabled,
+		ExtensionBackendsEnabled: opts.ExtensionBackendsEnabled,
+		Logger:                   logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(context.Background(), resources)
 
@@ -386,10 +393,9 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
 			},
-			Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
-		}
-		if resources.EnvoyProxyForGatewayClass != nil {
-			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
+			// Use the order from the IR, which has invalid fields of the EnvoyProxy dropped.
+			FilterOrder: val.FilterOrder,
+			Logger:      logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		}
 		xRes, err := xTranslator.Translate(context.Background(), val)
 		if err != nil {

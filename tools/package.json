@@ -4,11 +4,12 @@
   "private": true,
   "dependencies": {
     "linkinator": "8.1.0",
-    "markdownlint-cli": "0.49.1"
+    "markdownlint-cli": "0.50.0"
   },
   "overrides": {
     "js-yaml": "^5.4.1",
     "katex": "^0.18.2",
+    "re2js": "~2.8.7",
     "smol-toml": "^1.9.0"
   }
 }
