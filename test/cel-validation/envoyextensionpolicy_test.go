@@ -1090,6 +1090,126 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				": Exactly one of inline or valueRef must be set with correct type.",
 			},
 		},
+		// Wasm name-only registry lookup
+		{
+			desc: "valid Wasm name-only registry reference",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Name: new("security-filter"),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Wasm with neither code nor name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"either code must be set, or name must be set and match the wasmModules name pattern"},
+		},
+		{
+			desc: "Wasm name-only with invalid name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Name: new("MyFilter"),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"either code must be set, or name must be set and match the wasmModules name pattern"},
+		},
+		{
+			desc: "valid Wasm HTTP code with name that does not match wasmModules pattern",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Name: new("MyFilter"),
+							Code: &egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/filter.wasm",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid Wasm HTTP code without name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: &egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/filter.wasm",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 		// DynamicModules
 		{
 			desc: "valid DynamicModule with all fields",
@@ -1500,6 +1620,42 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				"spec.extProc[0]: Invalid value:",
 				": If shadowMode is enabled, body processing mode must be Streamed or unset.",
 			},
+		},
+		{
+			desc: "ExtProc with http1 backendSettings is rejected",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+								BackendSettings: &egv1a1.BackendSettings{
+									ClusterSettings: egv1a1.ClusterSettings{
+										HTTP1: &egv1a1.BackendHTTP1Settings{},
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for ExtProc backends, which always use gRPC."},
 		},
 	}
 

@@ -50,6 +50,15 @@ type Infra struct {
 	// ControllerNamespace is the namespace where Envoy Gateway is deployed.
 	ControllerNamespace string
 
+	// ControllerName is the well-known name of the Envoy Gateway controller's own resources.
+	ControllerName string
+
+	// ControllerFullName is the Helm release fullname used for certgen and other release-scoped resources.
+	ControllerFullName string
+
+	// ControllerServiceAccountName is the service account name of the Envoy Gateway controller pod.
+	ControllerServiceAccountName string
+
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 
@@ -59,6 +68,13 @@ type Infra struct {
 	// Client wrap k8s client.
 	Client *InfraClient
 
+	// apiReader is an uncached reader backed by the live API server, used for
+	// ownership-conflict checks that must observe resources the label-filtered
+	// cache would miss (e.g. an unmanaged same-name Deployment/DaemonSet in
+	// GatewayNamespace mode). It may be nil (e.g. in unit tests), in which case
+	// checkOwnership falls back to the cached client.
+	apiReader client.Reader
+
 	logger logging.Logger
 
 	// errors is the notifier used to send async errors to the main control loop.
@@ -67,15 +83,23 @@ type Infra struct {
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client, cfg *config.Server, errors message.RunnerErrorNotifier) *Infra {
+	var apiReader client.Reader
+	if cfg.KubernetesClient != nil {
+		apiReader = cfg.KubernetesClient.GetAPIReader()
+	}
 	return &Infra{
 		// Always set infra namespace to cfg.ControllerNamespace,
 		// Otherwise RateLimit resource provider will failed to create/delete.
-		ControllerNamespace: cfg.ControllerNamespace,
-		DNSDomain:           cfg.DNSDomain,
-		EnvoyGateway:        cfg.EnvoyGateway,
-		Client:              New(cli),
-		logger:              cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
-		errors:              errors,
+		ControllerNamespace:          cfg.ControllerNamespace,
+		ControllerName:               cfg.ControllerName,
+		ControllerFullName:           cfg.ControllerFullName,
+		ControllerServiceAccountName: cfg.ControllerServiceAccountName,
+		DNSDomain:                    cfg.DNSDomain,
+		EnvoyGateway:                 cfg.EnvoyGateway,
+		Client:                       New(cli),
+		apiReader:                    apiReader,
+		logger:                       cfg.Logger.WithName(string(egv1a1.LogComponentInfrastructureRunner)),
+		errors:                       errors,
 	}
 }
 

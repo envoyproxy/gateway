@@ -1,0 +1,42 @@
+- ignorePortInHostMatching: true
+  name: preserve-case-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: preserve-case-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: preserve-case-route
+      route:
+        cluster: preserve-case-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: trailers-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: trailers-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: trailers-route
+      route:
+        cluster: trailers-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: http10-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: http10-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: http10-route
+      route:
+        cluster: http10-dest
+        upgradeConfigs:
+        - upgradeType: websocket

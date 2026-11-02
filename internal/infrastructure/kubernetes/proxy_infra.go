@@ -53,6 +53,18 @@ func (i *Infra) GetControllerNamespace() string {
 	return i.ControllerNamespace
 }
 
+func (i *Infra) GetControllerName() string {
+	return i.ControllerName
+}
+
+func (i *Infra) GetControllerFullName() string {
+	return i.ControllerFullName
+}
+
+func (i *Infra) GetControllerServiceAccountName() string {
+	return i.ControllerServiceAccountName
+}
+
 func (i *Infra) GetDNSDomain() string {
 	return i.DNSDomain
 }

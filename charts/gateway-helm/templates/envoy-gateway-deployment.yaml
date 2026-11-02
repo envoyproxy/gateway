@@ -36,6 +36,10 @@ spec:
       {{- end }}
     spec:
       automountServiceAccountToken: true
+      {{- with .Values.deployment.pod.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- with .Values.deployment.pod.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -66,6 +70,13 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        - name: ENVOY_GATEWAY_SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.serviceAccountName
+        - name: ENVOY_GATEWAY_FULLNAME
+          value: {{ include "eg.fullname" . }}
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
         {{- with .Values.deployment.envoyGateway.extraEnv }}
@@ -105,6 +116,9 @@ spec:
         {{- with .Values.deployment.pod.extraVolumeMounts }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      {{- with .Values.deployment.pod.extraContainers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}

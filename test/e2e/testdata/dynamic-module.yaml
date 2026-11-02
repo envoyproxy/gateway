@@ -6,6 +6,8 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   ipFamily: IPv4
+  # Keep Wasm memory use independent of the runner's CPU count.
+  concurrency: 2
   provider:
     type: Kubernetes
     kubernetes:
@@ -66,8 +68,119 @@ metadata:
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-with-dynamic-module
+      kind: Gateway
+      name: dynamic-module-gateway
+  backends:
+    - name: resolver
+      backendRef:
+        name: infra-backend-v2
+        port: 8080
+      backendSettings:
+        timeout:
+          tcp:
+            connectTimeout: 3s
   dynamicModule:
     - name: header-mutation
       filterName: header_mutation
+    - name: header-mutation
+      filterName: http_callout
+      config:
+        backend: resolver
+  lua:
+    - type: Inline
+      inline: |
+        function envoy_on_request(handle)
+          local cluster = handle:route():metadata():get("resolver")
+          if cluster == nil then
+            handle:respond({[":status"] = "502"}, "missing backend binding")
+            return
+          end
+          local headers = handle:httpCall(cluster, {
+            [":method"] = "GET", [":path"] = "/", [":authority"] = "resolver"
+          }, nil, 2000)
+          if headers[":status"] ~= "200" then
+            handle:respond({[":status"] = "502"}, "Lua callout failed")
+          end
+        end
+        function envoy_on_response(handle)
+          handle:headers():add("x-lua-callout", "true")
+        end
+  wasm:
+    - name: backend-callout
+      code:
+        type: HTTP
+        http:
+          url: http://static-file-server.gateway-conformance-infra/wasm/backend_callout.wasm
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-dynamic-module-isolation
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: dynamic-module-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /dynamic-module-isolation
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: dynamic-module-isolation
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http-with-dynamic-module-isolation
+  mergeType: JSONMerge
+  backends:
+    - name: resolver
+      backendRef:
+        name: callout-failure
+        port: 8080
+      backendSettings:
+        timeout:
+          tcp:
+            connectTimeout: 3s
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: callout-failure
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: callout-failure
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: callout-failure
+  namespace: gateway-conformance-infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: callout-failure
+  template:
+    metadata:
+      labels:
+        app: callout-failure
+    spec:
+      containers:
+        - name: server
+          image: envoyproxy/gateway-static-file-server
+          imagePullPolicy: IfNotPresent
+          args: ["-dir=/missing"]

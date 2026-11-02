@@ -8,12 +8,14 @@ package translator
 import (
 	"testing"
 
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	brotliv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/brotli/compressor/v3"
 	gzipv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
 	zstdv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/zstd/compressor/v3"
 	compressorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	protobuf "google.golang.org/protobuf/proto"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -107,6 +109,22 @@ func TestBuildCompressorFilter(t *testing.T) {
 				assert.Equal(t, uint32(2048), c.ResponseDirectionConfig.CommonConfig.MinContentLength.Value)
 			},
 		},
+		{
+			name: "custom settings are not applied to the filter",
+			compression: &ir.Compression{
+				Type: egv1a1.GzipCompressorType,
+				Gzip: &egv1a1.GzipCompressor{
+					CompressionLevel: new(uint32(9)),
+				},
+			},
+			expectedName:    "envoy.filters.http.compressor.gzip",
+			expectedExtName: "envoy.compression.gzip.compressor",
+			validateProto: func(t *testing.T, c *compressorv3.Compressor) {
+				gzip := &gzipv3.Gzip{}
+				require.NoError(t, c.CompressorLibrary.TypedConfig.UnmarshalTo(gzip))
+				assert.True(t, protobuf.Equal(&gzipv3.Gzip{}, gzip))
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -127,6 +145,20 @@ func TestBuildCompressorFilter(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCompressorPatchRouteDuplicateType(t *testing.T) {
+	irRoute := &ir.HTTPRoute{
+		Traffic: &ir.TrafficFeatures{
+			Compression: []*ir.Compression{
+				{Type: egv1a1.GzipCompressorType},
+				{Type: egv1a1.GzipCompressorType},
+			},
+		},
+	}
+
+	err := (&compressor{}).patchRoute(&routev3.Route{}, irRoute, nil)
+	require.ErrorContains(t, err, "route already contains filter config: envoy.filters.http.compressor.gzip")
 }
 
 func TestCompressorFilterName(t *testing.T) {

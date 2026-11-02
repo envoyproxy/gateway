@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: https-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: https-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

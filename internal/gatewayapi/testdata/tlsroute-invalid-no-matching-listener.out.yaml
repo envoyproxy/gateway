@@ -563,6 +563,8 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 443
+      hostnames:
+      - www.example.com
       metadata:
         kind: Gateway
         name: gateway-tls-exact-hostname
@@ -603,6 +605,8 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 443
+      hostnames:
+      - '*.example.com'
       metadata:
         kind: Gateway
         name: gateway-tls-wildcard-hostname

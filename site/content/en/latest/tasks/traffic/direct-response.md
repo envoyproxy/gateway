@@ -8,7 +8,7 @@ This task shows you how to configure them.
 
 The `HTTPRouteFilter` used below can also be referenced from a `GRPCRoute` via an `extensionRef` filter. For gRPC, Envoy
 adds gRPC status trailers to the direct response so gRPC clients handle it correctly. See
-[Gateway API support](./gatewayapi-support#grpcroute) for details.
+[Gateway API support](../../concepts/gatewayapi-support#grpcroute) for details.
 
 ## Installation
 

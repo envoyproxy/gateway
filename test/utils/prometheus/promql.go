@@ -32,7 +32,7 @@ func QueryPrometheus(c client.Client, promQL string) (model.Value, error) {
 
 	promAPIClient := promapiv1.NewAPI(promClient)
 
-	v, _, err := promAPIClient.Query(context.TODO(), promQL, time.Now())
+	v, _, _, err := promAPIClient.Query(context.TODO(), promQL, time.Now())
 	if err != nil {
 		return nil, err
 	}

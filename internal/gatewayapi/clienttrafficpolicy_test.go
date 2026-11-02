@@ -17,24 +17,140 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 	tests := []struct {
-		name string
-		spec *egv1a1.ClientTrafficPolicySpec
-		want bool
+		name                string
+		spec                *egv1a1.ClientTrafficPolicySpec
+		ctpHTTP1ClientScope bool
+		want                bool
 	}{
 		{name: "nil spec", spec: nil, want: false},
 		{name: "empty spec", spec: &egv1a1.ClientTrafficPolicySpec{}, want: false},
 		{name: "HTTP1 set", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{}}, want: true},
+		{name: "HTTP1.EnableTrailers set, flag off", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{EnableTrailers: new(bool)}}, want: true},
+		{name: "HTTP1.EnableTrailers set, flag on", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{EnableTrailers: new(bool)}}, ctpHTTP1ClientScope: true, want: false},
+		{name: "HTTP1.PreserveHeaderCase set, flag off", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)}}, want: true},
+		{name: "HTTP1.PreserveHeaderCase set, flag on", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)}}, ctpHTTP1ClientScope: true, want: false},
+		{name: "HTTP1.HTTP10 set, flag off", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{HTTP10: &egv1a1.HTTP10Settings{}}}, want: true},
+		{name: "HTTP1.HTTP10 set, flag on", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{HTTP10: &egv1a1.HTTP10Settings{}}}, ctpHTTP1ClientScope: true, want: false},
+		{name: "HTTP1.DisableSafeMaxConnectionDuration set, flag off", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{DisableSafeMaxConnectionDuration: new(bool)}}, want: true},
+		{name: "HTTP1.DisableSafeMaxConnectionDuration set, flag on", spec: &egv1a1.ClientTrafficPolicySpec{HTTP1: &egv1a1.HTTP1Settings{DisableSafeMaxConnectionDuration: new(bool)}}, ctpHTTP1ClientScope: true, want: false},
 		{name: "HTTP2 set, no HTTP1", spec: &egv1a1.ClientTrafficPolicySpec{HTTP2: &egv1a1.HTTP2Settings{}}, want: false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.want, ctpSpecHasClusterScopedFields(tc.spec))
+			require.Equal(t, tc.want, ctpSpecHasClusterScopedFields(tc.spec, tc.ctpHTTP1ClientScope))
 		})
 	}
+}
+
+func TestDeprecatedFieldsUsedInClientTrafficPolicy(t *testing.T) {
+	trueVal := new(bool)
+	*trueVal = true
+
+	tests := []struct {
+		name         string
+		policy       *egv1a1.ClientTrafficPolicy
+		wantKeys     []string
+		wantContains map[string]string // substring checks on values
+	}{
+		{
+			name:     "no deprecated fields",
+			policy:   &egv1a1.ClientTrafficPolicy{},
+			wantKeys: nil,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := deprecatedFieldsUsedInClientTrafficPolicy(tc.policy)
+			require.Len(t, got, len(tc.wantKeys))
+			for _, k := range tc.wantKeys {
+				require.Contains(t, got, k)
+			}
+			for k, substr := range tc.wantContains {
+				require.Contains(t, got[k], substr)
+			}
+		})
+	}
+}
+
+func TestHttp1BehaviorChangeWarningMessage(t *testing.T) {
+	trueVal := new(bool)
+	*trueVal = true
+
+	tests := []struct {
+		name         string
+		policy       *egv1a1.ClientTrafficPolicy
+		wantEmpty    bool
+		wantKeys     []string
+		wantContains map[string]string
+	}{
+		{
+			name:      "no http1",
+			policy:    &egv1a1.ClientTrafficPolicy{},
+			wantEmpty: true,
+		},
+		{
+			name: "enableTrailers set — entry present",
+			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
+				HTTP1: &egv1a1.HTTP1Settings{EnableTrailers: trueVal},
+			}},
+			wantKeys: []string{"spec.http1.enableTrailers"},
+			wantContains: map[string]string{
+				"spec.http1.enableTrailers": "use BackendTrafficPolicy.http1.enableTrailers for backend settings",
+			},
+		},
+		{
+			name: "multiple fields — all keys present",
+			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
+				HTTP1: &egv1a1.HTTP1Settings{EnableTrailers: trueVal, PreserveHeaderCase: trueVal},
+			}},
+			wantKeys: []string{"spec.http1.enableTrailers", "spec.http1.preserveHeaderCase"},
+		},
+		{
+			name: "disableSafeMaxConnectionDuration only — no entry (listener-scoped)",
+			policy: &egv1a1.ClientTrafficPolicy{Spec: egv1a1.ClientTrafficPolicySpec{
+				HTTP1: &egv1a1.HTTP1Settings{DisableSafeMaxConnectionDuration: trueVal},
+			}},
+			wantEmpty: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := behaviorChangedFieldsUsedInClientTrafficPolicy(tc.policy)
+			if tc.wantEmpty {
+				require.Empty(t, got)
+				return
+			}
+			for _, k := range tc.wantKeys {
+				require.Contains(t, got, k)
+			}
+			for k, substr := range tc.wantContains {
+				require.Contains(t, got[k], substr)
+			}
+		})
+	}
+}
+
+func TestValidatePortOverlapForClientTrafficPolicyGatewayNamePrefix(t *testing.T) {
+	gateway := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway", Name: "gw"}},
+	}
+	listener := &ListenerContext{
+		Listener: &gwapiv1.Listener{Name: "http"},
+		gateway:  gateway,
+	}
+	xds := &ir.Xds{HTTP: []*ir.HTTPListener{
+		{CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/gw/http", Port: 8081}},
+		{CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/gw/http-2", Port: 8081}},
+		{CoreListenerDetails: ir.CoreListenerDetails{Name: "envoy-gateway/gw-b/http", Port: 8081}},
+	}}
+
+	err := validatePortOverlapForClientTrafficPolicy(listener, xds, scopeEntireGateway)
+	require.EqualError(t, err, "ClientTrafficPolicy is being applied to multiple http (non https) listeners (envoy-gateway/gw-b/http) on the same port, which is not allowed")
 }
 
 func TestCTPClusterSettingsIndex(t *testing.T) {
@@ -74,7 +190,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 						},
 					},
 				},
-				HTTP1: &egv1a1.HTTP1Settings{},
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)},
 			},
 		},
 		{
@@ -91,7 +207,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 						},
 					},
 				},
-				HTTP1: &egv1a1.HTTP1Settings{},
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)},
 			},
 		},
 		{
@@ -109,7 +225,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 						},
 					},
 				},
-				HTTP1: &egv1a1.HTTP1Settings{},
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)},
 			},
 		},
 		{
@@ -126,7 +242,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 						},
 					},
 				},
-				HTTP1: &egv1a1.HTTP1Settings{},
+				HTTP1: &egv1a1.HTTP1Settings{PreserveHeaderCase: new(bool)},
 			},
 		},
 		{
@@ -231,7 +347,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 		{"oldest accepted ListenerSet-wide CTP with no HTTP1 blocks a younger conflicting one", gwNN("gateway-2"), lsListener(lsWideOldest, "any-listener"), false},
 	}
 
-	idx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1, gateway2, gateway3}, []*gwapiv1.ListenerSet{lsSection, lsWide, lsWideOldest}, nil, nil, true)
+	idx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1, gateway2, gateway3}, []*gwapiv1.ListenerSet{lsSection, lsWide, lsWideOldest}, nil, nil, true, false)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.want, idx.HasClusterSettingsBelowGateway(tc.gatewayNN, tc.listener))
@@ -240,7 +356,7 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 
 	// mergeBackendsEnabled: false must produce an empty, non-nil index - no lookups should
 	// ever return true.
-	emptyIdx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1}, []*gwapiv1.ListenerSet{lsSection, lsWide}, nil, nil, false)
+	emptyIdx := BuildCTPClusterSettingsIndex(ctps, []*GatewayContext{gateway1}, []*gwapiv1.ListenerSet{lsSection, lsWide}, nil, nil, false, false)
 	require.False(t, emptyIdx.HasClusterSettingsBelowGateway(gwNN("gateway-1"), gwDirectListener("http-1")))
 }
 
@@ -257,7 +373,7 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Headers":             false,
 		"Timeout":             false,
 		"Connection":          false,
-		"HTTP1":               true,
+		"HTTP1":               true, // any http1 block on a listener-level CTP masks whatever a gateway-wide CTP set
 		"HTTP2":               false,
 		"HTTP3":               false,
 		"GRPC":                false,
@@ -277,7 +393,7 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			spec := structWithFieldSet[egv1a1.ClientTrafficPolicySpec](name)
-			require.Equal(t, want, ctpSpecHasClusterScopedFields(spec),
+			require.Equal(t, want, ctpSpecHasClusterScopedFields(spec, false),
 				"ctpSpecHasClusterScopedFields's behavior for field %q doesn't match this test's classification map", name)
 		})
 	}
@@ -286,5 +402,204 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		if !slices.Contains(actualFields, name) {
 			t.Errorf("classification map has stale entry %q - field no longer exists on ClientTrafficPolicySpec", name)
 		}
+	}
+}
+
+// TestTranslateHeaderModifierMutations covers the ordered Mutations field, both
+// on its own and combined with the legacy Set/Add/AddIfAbsent/Remove/RemoveOnMatch
+// fields.
+func TestTranslateHeaderModifierMutations(t *testing.T) {
+	regexpType := egv1a1.StringMatchRegularExpression
+
+	testCases := []struct {
+		name    string
+		in      *egv1a1.HTTPHeaderFilter
+		want    []ir.HeaderMutation
+		wantErr bool
+	}{
+		{
+			name: "mutations preserve order and map every write action",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-a", Value: "1"}, Action: egv1a1.HeaderWriteSet}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-a", Value: "2"}, Action: egv1a1.HeaderWriteAdd}},
+					{Remove: new("x-b")},
+					{RemoveOnMatch: &egv1a1.StringMatch{Type: &regexpType, Value: "^x-internal-.*"}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-c", Value: "3"}, Action: egv1a1.HeaderWriteAddIfAbsent}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-d", Value: "4"}, Action: egv1a1.HeaderWriteSetIfExists}},
+				},
+			},
+			want: []ir.HeaderMutation{
+				{Write: &ir.HeaderWrite{Name: "x-a", Value: "1", Action: ir.HeaderWriteSet}},
+				{Write: &ir.HeaderWrite{Name: "x-a", Value: "2", Action: ir.HeaderWriteAdd}},
+				{Remove: new("x-b")},
+				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: &regexpType, Value: "^x-internal-.*"})},
+				{Write: &ir.HeaderWrite{Name: "x-c", Value: "3", Action: ir.HeaderWriteAddIfAbsent}},
+				{Write: &ir.HeaderWrite{Name: "x-d", Value: "4", Action: ir.HeaderWriteSetIfExists}},
+			},
+		},
+		{
+			// The same name may be written more than once: unlike the legacy
+			// fields, ordered mutations are emitted verbatim without de-duplication.
+			name: "repeated writes of the same header are all kept",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "1"}, Action: egv1a1.HeaderWriteSet}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "X-Foo", Value: "2"}, Action: egv1a1.HeaderWriteAdd}},
+				},
+			},
+			want: []ir.HeaderMutation{
+				{Write: &ir.HeaderWrite{Name: "x-foo", Value: "1", Action: ir.HeaderWriteSet}},
+				{Write: &ir.HeaderWrite{Name: "X-Foo", Value: "2", Action: ir.HeaderWriteAdd}},
+			},
+		},
+		{
+			// Remove followed by a write of the same name is the case the flat
+			// fields cannot express, since they always emit every write first.
+			name: "remove then re-add the same header",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Remove: new("x-recreate")},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-recreate", Value: "fresh"}, Action: egv1a1.HeaderWriteAdd}},
+				},
+			},
+			want: []ir.HeaderMutation{
+				{Remove: new("x-recreate")},
+				{Write: &ir.HeaderWrite{Name: "x-recreate", Value: "fresh", Action: ir.HeaderWriteAdd}},
+			},
+		},
+		{
+			name: "write action defaults to Append when unset",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-a", Value: "1"}}},
+				},
+			},
+			want: []ir.HeaderMutation{
+				{Write: &ir.HeaderWrite{Name: "x-a", Value: "1", Action: ir.HeaderWriteAdd}},
+			},
+		},
+		{
+			name: "explicit keepEmptyValue is honored",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-a", Value: "v"}, Action: egv1a1.HeaderWriteAdd, KeepEmptyValue: new(true)}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-b", Value: "w"}, Action: egv1a1.HeaderWriteAdd, KeepEmptyValue: new(false)}},
+				},
+			},
+			want: []ir.HeaderMutation{
+				{Write: &ir.HeaderWrite{Name: "x-a", Value: "v", Action: ir.HeaderWriteAdd, KeepEmptyValue: true}},
+				{Write: &ir.HeaderWrite{Name: "x-b", Value: "w", Action: ir.HeaderWriteAdd, KeepEmptyValue: false}},
+			},
+		},
+		{
+			name: "every removeOnMatch matcher type is translated",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{RemoveOnMatch: &egv1a1.StringMatch{Value: "x-exact"}},
+					{RemoveOnMatch: &egv1a1.StringMatch{Type: new(egv1a1.StringMatchPrefix), Value: "x-pre-"}},
+					{RemoveOnMatch: &egv1a1.StringMatch{Type: new(egv1a1.StringMatchSuffix), Value: "-suf"}},
+					{RemoveOnMatch: &egv1a1.StringMatch{Type: &regexpType, Value: "^x-re-.*"}},
+				},
+			},
+			want: []ir.HeaderMutation{
+				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Value: "x-exact"})},
+				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: new(egv1a1.StringMatchPrefix), Value: "x-pre-"})},
+				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: new(egv1a1.StringMatchSuffix), Value: "-suf"})},
+				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: &regexpType, Value: "^x-re-.*"})},
+			},
+		},
+		{
+			name: "mutations are emitted before the legacy fields",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-m", Value: "m"}, Action: egv1a1.HeaderWriteAdd}},
+					{Remove: new("x-m-rm")},
+				},
+				Add:           []gwapiv1.HTTPHeader{{Name: "x-add", Value: "a"}},
+				Set:           []gwapiv1.HTTPHeader{{Name: "x-set", Value: "s"}},
+				AddIfAbsent:   []gwapiv1.HTTPHeader{{Name: "x-abs", Value: "d"}},
+				Remove:        []string{"x-rm"},
+				RemoveOnMatch: []egv1a1.StringMatch{{Type: &regexpType, Value: "^x-drop-.*"}},
+			},
+			want: []ir.HeaderMutation{
+				{Write: &ir.HeaderWrite{Name: "x-m", Value: "m", Action: ir.HeaderWriteAdd}},
+				{Remove: new("x-m-rm")},
+				{Write: &ir.HeaderWrite{Name: "x-add", Value: "a", Action: ir.HeaderWriteAdd}},
+				{Write: &ir.HeaderWrite{Name: "x-set", Value: "s", Action: ir.HeaderWriteSet}},
+				{Write: &ir.HeaderWrite{Name: "x-abs", Value: "d", Action: ir.HeaderWriteAddIfAbsent}},
+				{Remove: new("x-rm")},
+				{RemoveOnMatch: irStringMatch("", egv1a1.StringMatch{Type: &regexpType, Value: "^x-drop-.*"})},
+			},
+		},
+		{
+			// The legacy de-duplication scans the whole mutation list, so a legacy
+			// write whose name was already written by an explicit mutation is dropped.
+			name: "legacy write is de-duplicated against an earlier explicit mutation",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-foo", Value: "from-mutation"}, Action: egv1a1.HeaderWriteAdd}},
+				},
+				Add: []gwapiv1.HTTPHeader{{Name: "X-Foo", Value: "from-add"}},
+				Set: []gwapiv1.HTTPHeader{{Name: "x-foo", Value: "from-set"}},
+			},
+			want: []ir.HeaderMutation{
+				{Write: &ir.HeaderWrite{Name: "x-foo", Value: "from-mutation", Action: ir.HeaderWriteAdd}},
+			},
+		},
+		{
+			name: "legacy remove is de-duplicated against an earlier explicit mutation",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Remove: new("x-bar")},
+				},
+				Remove: []string{"X-Bar", "x-other"},
+			},
+			want: []ir.HeaderMutation{
+				{Remove: new("x-bar")},
+				{Remove: new("x-other")},
+			},
+		},
+		{
+			name: "invalid mutation entries are skipped and reported",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "bad/name", Value: "v"}, Action: egv1a1.HeaderWriteAdd}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "bad:name", Value: "v"}, Action: egv1a1.HeaderWriteAdd}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "", Value: "v"}, Action: egv1a1.HeaderWriteAdd}},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-bad-value", Value: "  invalid"}, Action: egv1a1.HeaderWriteAdd}},
+					{Remove: new("")},
+					{RemoveOnMatch: &egv1a1.StringMatch{Value: ""}},
+					{},
+					{Write: &egv1a1.HTTPHeaderWrite{Header: gwapiv1.HTTPHeader{Name: "x-ok", Value: "v"}, Action: egv1a1.HeaderWriteAdd}},
+				},
+			},
+			want: []ir.HeaderMutation{
+				{Write: &ir.HeaderWrite{Name: "x-ok", Value: "v", Action: ir.HeaderWriteAdd}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "a filter whose only mutations are invalid reports an error and yields nothing",
+			in: &egv1a1.HTTPHeaderFilter{
+				Mutations: []egv1a1.HTTPHeaderMutation{
+					{Remove: new("")},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := translateHeaderModifier(tc.in, "EarlyRequestHeaders")
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, tc.want, got)
+		})
 	}
 }
