@@ -128,30 +128,21 @@ func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentRefere
 		return
 	}
 
-	var present []*EnvoyProxyWarning
-	for _, w := range warnings {
-		if w != nil {
-			present = append(present, w)
-		}
-	}
-
 	var (
 		reason egv1a1.EnvoyProxyConditionReason
 		msg    string
 	)
-	switch len(present) {
-	case 0:
-	case 1:
-		reason, msg = present[0].Reason, present[0].Message
-	default:
-		reason = egv1a1.EnvoyProxyReasonMultipleWarnings
-		// Merge the later warnings first, so that if the message is too long only the first
-		// warning is cut short and every later one is kept in full.
-		rest := present[1].Message
-		for _, w := range present[2:] {
-			rest = mergePolicyWarningMessages(rest, w.Message)
+	for _, w := range warnings {
+		if w == nil {
+			continue
 		}
-		msg = mergeBoundedWarningMessages(present[0].Message, rest)
+		if msg == "" {
+			reason = w.Reason
+			msg = w.Message
+		} else {
+			reason = egv1a1.EnvoyProxyReasonMultipleWarnings
+			msg = mergeBoundedWarningMessages(msg, w.Message)
+		}
 	}
 
 	for i := range ep.Status.Ancestors {

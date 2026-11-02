@@ -199,20 +199,22 @@ func TestSetEnvoyProxyWarningKeepsLaterWarningWhenFull(t *testing.T) {
 	assert.Equal(t, string(egv1a1.EnvoyProxyReasonMultipleWarnings), cond.Reason)
 }
 
-func TestSetEnvoyProxyWarningsKeepsLaterWarningsWhenTruncating(t *testing.T) {
+func TestSetEnvoyProxyWarningsKeepsUnsupportedFieldWarningWhenTruncating(t *testing.T) {
 	ancestor := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName("eg")}
-	deprecated := make(map[string]DeprecatedField)
+	invalid := make([]validation.InvalidField, 0, 2000)
 	for i := range 2000 {
-		deprecated[fmt.Sprintf("spec.telemetry.field%04d", i)] = DeprecatedField{Replacement: fmt.Sprintf("spec.telemetry.replacement%04d", i)}
+		invalid = append(invalid, validation.InvalidField{
+			Path: fmt.Sprintf("telemetry.accessLog.settings[%d].sinks[0]", i),
+			Err:  errors.New("unsupported sink type"),
+		})
 	}
-	patchMsg := "The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: " +
-		"spec.provider.kubernetes.envoyDeployment.patch"
 	unsupportedMsg := "The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, " +
 		"set them on the EnvoyProxy referenced by the GatewayClass instead: spec.mergeGateways"
 
 	ep := &egv1a1.EnvoyProxy{}
-	SetEnvoyProxyWarnings(ep, ancestor, DeprecatedFieldsWarning(deprecated),
+	SetEnvoyProxyWarnings(ep, ancestor,
 		PatchDisabledWarning([]string{"spec.provider.kubernetes.envoyDeployment.patch"}),
+		InvalidFieldsWarning(invalid),
 		UnsupportedFieldsWarning([]string{"spec.mergeGateways"}))
 
 	require.Len(t, ep.Status.Ancestors, 1)
@@ -221,5 +223,5 @@ func TestSetEnvoyProxyWarningsKeepsLaterWarningsWhenTruncating(t *testing.T) {
 	assert.Equal(t, string(egv1a1.EnvoyProxyReasonMultipleWarnings), cond.Reason)
 	assert.LessOrEqual(t, len(cond.Message), conditionMessageMaxLength)
 	assert.Contains(t, cond.Message, conditionMessageTruncationSuffix)
-	assert.True(t, strings.HasSuffix(cond.Message, patchMsg+"; "+unsupportedMsg), "later warnings must be kept in full")
+	assert.True(t, strings.HasSuffix(cond.Message, "; "+unsupportedMsg), "the UnsupportedField warning must be kept in full")
 }
