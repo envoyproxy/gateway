@@ -14,6 +14,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference,
@@ -47,63 +48,110 @@ func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.Par
 	})
 }
 
+// EnvoyProxyWarning is one of the reasons an EnvoyProxy is warned about in its Warning condition.
+type EnvoyProxyWarning struct {
+	Reason  egv1a1.EnvoyProxyConditionReason
+	Message string
+}
+
+// DeprecatedFieldsWarning returns the warning for the deprecated fields used by an EnvoyProxy,
+// or nil when there is none.
+func DeprecatedFieldsWarning(deprecatedFields map[string]DeprecatedField) *EnvoyProxyWarning {
+	if len(deprecatedFields) == 0 {
+		return nil
+	}
+	return &EnvoyProxyWarning{
+		Reason:  egv1a1.EnvoyProxyReasonDeprecatedField,
+		Message: buildDeprecationWarningMessage(deprecatedFields),
+	}
+}
+
+// PatchDisabledWarning returns the warning for the Kubernetes resource `patch` fields that were
+// ignored because patching is disabled in the EnvoyGateway configuration, or nil when there is none.
+func PatchDisabledWarning(patchedFields []string) *EnvoyProxyWarning {
+	if len(patchedFields) == 0 {
+		return nil
+	}
+	return &EnvoyProxyWarning{
+		Reason: egv1a1.EnvoyProxyReasonPatchDisabled,
+		Message: fmt.Sprintf(
+			"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: %s",
+			strings.Join(patchedFields, ", ")),
+	}
+}
+
+// InvalidFieldsWarning returns the warning for the invalid fields of an EnvoyProxy that were
+// ignored, or nil when there is none.
+func InvalidFieldsWarning(invalidFields []validation.InvalidField) *EnvoyProxyWarning {
+	if len(invalidFields) == 0 {
+		return nil
+	}
+	msgs := make([]string, 0, len(invalidFields))
+	for _, f := range invalidFields {
+		msgs = append(msgs, f.Error())
+	}
+	return &EnvoyProxyWarning{
+		Reason:  egv1a1.EnvoyProxyReasonInvalidField,
+		Message: fmt.Sprintf("The following invalid fields were ignored: %s", strings.Join(msgs, "; ")),
+	}
+}
+
 // EnvoyProxyReasonUnsupportedField is used with the "Warning" condition when a field set on an
 // EnvoyProxy has no effect where the EnvoyProxy is referenced, e.g. spec.mergeGateways on an
 // EnvoyProxy referenced by a Gateway.
 const EnvoyProxyReasonUnsupportedField egv1a1.EnvoyProxyConditionReason = "UnsupportedField"
 
-// SetEnvoyProxyWarnings sets the Warning condition on the EnvoyProxy ancestor status from the
-// warnings found in the current translation: the deprecated fields in use, the Kubernetes
-// resource `patch` fields that were ignored because patching is disabled in the EnvoyGateway
-// configuration, and the fields that have no effect for this ancestor. An EnvoyProxy has a single
-// Warning condition per ancestor, so these are merged into one message, and the reason becomes
-// EnvoyProxyReasonMultipleWarnings when more than one is present.
-// Any Warning condition left over from an earlier translation is replaced, or removed when there
-// is nothing to warn about, so a warning goes away once the field is no longer used.
-func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference,
-	deprecatedFields map[string]DeprecatedField, patchedFields, unsupportedFields []string,
-) {
+// UnsupportedFieldsWarning returns the warning for the fields of an EnvoyProxy referenced by a
+// Gateway that only take effect on an EnvoyProxy referenced by a GatewayClass, or nil when there
+// is none.
+func UnsupportedFieldsWarning(unsupportedFields []string) *EnvoyProxyWarning {
+	if len(unsupportedFields) == 0 {
+		return nil
+	}
+	return &EnvoyProxyWarning{
+		Reason: EnvoyProxyReasonUnsupportedField,
+		Message: fmt.Sprintf(
+			"The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
+				"set them on the EnvoyProxy referenced by the GatewayClass instead: %s",
+			strings.Join(unsupportedFields, ", ")),
+	}
+}
+
+// SetEnvoyProxyWarnings sets the Warning condition on the EnvoyProxy ancestor status to the
+// given warnings, ignoring nil ones. A single condition holds them all, since conditions are
+// keyed by type: its reason is the warning's own reason when there is one, and
+// EnvoyProxyReasonMultipleWarnings otherwise. Any Warning condition left over from an earlier
+// translation is replaced, or removed when there is nothing to warn about, so a warning goes
+// away once the field is no longer used.
+func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, warnings ...*EnvoyProxyWarning) {
 	if ep == nil || ancestor == nil {
 		return
 	}
 
-	type warning struct {
-		reason  egv1a1.EnvoyProxyConditionReason
-		message string
-	}
-	var warnings []warning
-	if len(deprecatedFields) > 0 {
-		warnings = append(warnings, warning{egv1a1.EnvoyProxyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields)})
-	}
-	if len(patchedFields) > 0 {
-		warnings = append(warnings, warning{egv1a1.EnvoyProxyReasonPatchDisabled, fmt.Sprintf(
-			"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: %s",
-			strings.Join(patchedFields, ", "))})
-	}
-	if len(unsupportedFields) > 0 {
-		warnings = append(warnings, warning{EnvoyProxyReasonUnsupportedField, fmt.Sprintf(
-			"The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
-				"set them on the EnvoyProxy referenced by the GatewayClass instead: %s",
-			strings.Join(unsupportedFields, ", "))})
+	var present []*EnvoyProxyWarning
+	for _, w := range warnings {
+		if w != nil {
+			present = append(present, w)
+		}
 	}
 
 	var (
 		reason egv1a1.EnvoyProxyConditionReason
 		msg    string
 	)
-	switch len(warnings) {
+	switch len(present) {
 	case 0:
 	case 1:
-		reason, msg = warnings[0].reason, warnings[0].message
+		reason, msg = present[0].Reason, present[0].Message
 	default:
 		reason = egv1a1.EnvoyProxyReasonMultipleWarnings
 		// Merge the later warnings first, so that if the message is too long only the first
 		// warning is cut short and every later one is kept in full.
-		rest := warnings[1].message
-		for _, w := range warnings[2:] {
-			rest = mergePolicyWarningMessages(rest, w.message)
+		rest := present[1].Message
+		for _, w := range present[2:] {
+			rest = mergePolicyWarningMessages(rest, w.Message)
 		}
-		msg = mergeBoundedWarningMessages(warnings[0].message, rest)
+		msg = mergeBoundedWarningMessages(present[0].Message, rest)
 	}
 
 	for i := range ep.Status.Ancestors {
