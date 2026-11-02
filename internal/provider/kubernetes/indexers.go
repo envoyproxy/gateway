@@ -1262,6 +1262,17 @@ func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
 			)
 		}
 	}
+	if t := filter.Spec.GRPCJSONTranscoder; t != nil {
+		ref := t.ProtoDescriptor.ValueRef
+		if string(ref.Group) == "" && string(ref.Kind) == resource.KindConfigMap {
+			configMapReferences = append(configMapReferences,
+				types.NamespacedName{
+					Namespace: filter.Namespace,
+					Name:      string(ref.Name),
+				}.String(),
+			)
+		}
+	}
 	return configMapReferences
 }
 
@@ -1394,6 +1405,13 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 					Name:      string(backendRef.Name),
 				}.String())
 		}
+	}
+
+	for _, backend := range envoyExtensionPolicy.Spec.Backends {
+		ret = append(ret, types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(backend.BackendRef.Namespace, envoyExtensionPolicy.Namespace),
+			Name:      string(backend.BackendRef.Name),
+		}.String())
 	}
 
 	return ret

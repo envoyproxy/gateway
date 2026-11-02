@@ -137,7 +137,7 @@ static_resources:
             - name: prometheus_stats
               domains:
               - "*"
-              {{- if .EnablePrometheusCompression }}
+              {{- if .PrometheusCompression }}
               typed_per_filter_config:
                 envoy.filters.http.compression:
                   "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
@@ -152,7 +152,7 @@ static_resources:
                       exact: GET
                 route:
                   cluster: prometheus_stats
-                {{- if .EnablePrometheusCompression }}
+                {{- if .PrometheusCompression }}
                 typed_per_filter_config:
                   envoy.filters.http.compression:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.CompressorPerRoute
@@ -160,27 +160,35 @@ static_resources:
                       response_direction_config:
                 {{- end }}
           http_filters:
-          {{- if .EnablePrometheusCompression }}
+          {{- if .PrometheusCompression }}
           - name: envoy.filters.http.compressor
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
-              {{- if eq .PrometheusCompressionLibrary "Gzip"}}
+              {{- if eq .PrometheusCompression.Library "Gzip"}}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
               {{- end }}
-              {{- if eq .PrometheusCompressionLibrary "Brotli"}}
+              {{- if eq .PrometheusCompression.Library "Brotli"}}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
               {{- end }}
-              {{- if eq .PrometheusCompressionLibrary "Zstd"}}
+              {{- if eq .PrometheusCompression.Library "Zstd"}}
               compressor_library:
                 name: text_optimized
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+              {{- end }}
+              {{- with .PrometheusCompression.LibrarySettings }}
+{{ indent 18 . }}
+              {{- end }}
+              {{- with .PrometheusCompression.MinContentLength }}
+              response_direction_config:
+                common_config:
+                  min_content_length: {{ . }}
               {{- end }}
           {{- end }}
           - name: envoy.filters.http.router

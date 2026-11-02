@@ -430,6 +430,7 @@ func buildLoadBalancer(policy *egv1a1.BackendSettings) (*ir.LoadBalancer, error)
 		lb.PreferLocal = &ir.PreferLocalZone{
 			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
 			PercentageEnabled:     preferLocal.PercentageEnabled,
+			FailTrafficOnPanic:    preferLocal.FailTrafficOnPanic,
 		}
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{
@@ -620,8 +621,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 	case egv1a1.ActiveHealthCheckerTypeTCP:
 		irHC.TCP = buildTCPActiveHealthChecker(hc.TCP)
 	case egv1a1.ActiveHealthCheckerTypeGRPC:
+		grpc := ptr.Deref(hc.GRPC, egv1a1.GRPCActiveHealthChecker{})
 		irHC.GRPC = &ir.GRPCHealthChecker{
-			Service: ptr.Deref(hc.GRPC, egv1a1.GRPCActiveHealthChecker{}).Service,
+			Service:   grpc.Service,
+			Authority: ptr.Deref(grpc.Hostname, ""),
 		}
 	}
 
@@ -638,8 +641,9 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	}
 
 	irHTTP := &ir.HTTPHealthChecker{
-		Path:   h.Path,
-		Method: h.Method,
+		Path:     h.Path,
+		Method:   h.Method,
+		Protocol: h.Protocol,
 	}
 	if irHTTP.Method != nil {
 		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)

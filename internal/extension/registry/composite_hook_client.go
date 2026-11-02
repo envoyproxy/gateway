@@ -32,9 +32,8 @@ type hookClientEntry struct {
 	name              string
 	client            types.XDSHookClient
 	failOpen          bool
-	resourceGKSet     sets.Set[schema.GroupKind] // used for per-extension resource filtering in PostRouteModifyHook, PostClusterModifyHook
-	policyGKSet       sets.Set[schema.GroupKind] // used for per-extension policy filtering in PostRouteModifyHook, PostHTTPListenerModifyHook, PostTranslateModifyHook
-	translationConfig *egv1a1.TranslationConfig  // used for per-extension resource-type gating in PostTranslateModifyHook
+	gkSets            extensionGKSets
+	translationConfig *egv1a1.TranslationConfig // used for per-extension resource-type gating in PostTranslateModifyHook
 }
 
 // compositeXDSHookClient chains multiple XDSHookClient calls sequentially.
@@ -47,8 +46,8 @@ func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostna
 	current := r
 	var called int
 	for _, entry := range c.entries {
-		filteredRefs := filterResourcesByGK(extensionResources, entry.resourceGKSet)
-		filteredPolicies := filterResourcesByGK(extensionPolicies, entry.policyGKSet)
+		filteredRefs := filterResourcesByGK(extensionResources, entry.gkSets.resource)
+		filteredPolicies := filterResourcesByGK(extensionPolicies, entry.gkSets.policy)
 		result, hr, err := entry.client.PostRouteModifyHook(current, routeHostnames, filteredRefs, filteredPolicies)
 		called += hr.CallCount
 		if err != nil {
@@ -62,11 +61,19 @@ func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostna
 	return current, types.HookResult{CallCount: called}, nil
 }
 
-func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, types.HookResult, error) {
+func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost, extensionResources []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
 	current := vh
 	var called int
 	for _, entry := range c.entries {
-		result, hr, err := entry.client.PostVirtualHostModifyHook(current)
+		// For the vhost hook, an empty policy set means the manager declared no policy
+		// resources and therefore owns none — pass an empty slice rather than all resources.
+		// This differs from filterResourcesByGK's backward-compat behaviour (empty = pass all)
+		// which is only correct for single-manager mode.
+		var filtered []*unstructured.Unstructured
+		if entry.gkSets.policy.Len() > 0 {
+			filtered = filterResourcesByGK(extensionResources, entry.gkSets.policy)
+		}
+		result, hr, err := entry.client.PostVirtualHostModifyHook(current, filtered)
 		called += hr.CallCount
 		if err != nil {
 			if entry.failOpen {
@@ -98,7 +105,7 @@ func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener
 	current := l
 	var called int
 	for _, entry := range c.entries {
-		filtered := filterResourcesByGK(extensionResources, entry.policyGKSet)
+		filtered := filterResourcesByGK(extensionResources, entry.gkSets.policy)
 		result, hr, err := entry.client.PostHTTPListenerModifyHook(current, filtered)
 		called += hr.CallCount
 		if err != nil {
@@ -115,7 +122,7 @@ func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener
 func (c *compositeXDSHookClient) PostClusterModifyHook(cl *cluster.Cluster, extensionResources []*unstructured.Unstructured) (*cluster.Cluster, error) {
 	current := cl
 	for _, entry := range c.entries {
-		filtered := filterResourcesByGK(extensionResources, entry.resourceGKSet)
+		filtered := filterResourcesByGK(extensionResources, entry.gkSets.resource)
 		result, err := entry.client.PostClusterModifyHook(current, filtered)
 		if err != nil {
 			if entry.failOpen {
@@ -150,7 +157,7 @@ func (c *compositeXDSHookClient) PostTranslateModifyHook(
 
 	for _, entry := range c.entries {
 		// Per-extension policy filtering: only send policies matching this extension's declared GKs
-		filteredPolicies := filterPoliciesByGK(extensionPolicies, entry.policyGKSet)
+		filteredPolicies := filterPoliciesByGK(extensionPolicies, entry.gkSets.policy)
 
 		// Per-extension resource-type gating: only pass resource types this extension declared interest in.
 		// This mirrors the behavior in processExtensionPostTranslationHook (extension.go) where
@@ -238,4 +245,33 @@ func filterPoliciesByGK(policies []*ir.UnstructuredRef, gkSet sets.Set[schema.Gr
 		}
 	}
 	return filtered
+}
+
+// ResolveSecretHook resolves one secret through the extension that
+// registered its group and kind. This hook deliberately does not chain. The owning extension is identified by the referenced
+// resource's group and kind.
+func (c *compositeXDSHookClient) ResolveSecretHook(secretCtx *types.SecretContext) (*types.SecretResolution, error) {
+	if secretCtx == nil || secretCtx.Secret == nil {
+		return nil, fmt.Errorf("a secret resource is required to resolve a secret")
+	}
+
+	gk := secretCtx.Secret.GroupVersionKind().GroupKind()
+
+	for _, entry := range c.entries {
+		// An entry with no declared secret kinds is not a secret provider.
+		if entry.gkSets.secret == nil || !entry.gkSets.secret.Has(gk) {
+			continue
+		}
+
+		resolution, err := entry.client.ResolveSecretHook(secretCtx)
+		if err != nil {
+			// A secret kind is owned by a single extension, so this loop matches at
+			// most one entry: return immediately rather than continuing like the chaining hooks.
+			// failOpen does not apply: a hook error fails translation.
+			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
+		}
+		return resolution, nil
+	}
+
+	return nil, fmt.Errorf("no extension registered secret kind %s", gk.String())
 }

@@ -26,6 +26,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -244,14 +245,15 @@ func BuildBTPIndexes(
 }
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
 	}
 	if len(policy.Spec.Compression) > 0 {
-		deprecatedFields["spec.compression"] = "spec.compressor"
+		deprecatedFields["spec.compression"] = deprecatedFieldScheduledForRemoval("spec.compressor")
 	}
+	deprecation.AddDeprecatedLoadBalancerFields(deprecatedFields, "spec.loadBalancer", policy.Spec.LoadBalancer)
 	return deprecatedFields
 }
 
@@ -330,6 +332,35 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Build ListenerSet policy maps, which are needed when processing the policies targeting xRoutes.
 	t.buildListenerSetBackendTrafficPolicyMap(backendTrafficPolicies, listenerSetMap, listenerSetPolicyMap, resources)
 
+	// Resolve once, then reuse these targets during route policy application.
+	// Count targets rather than policies because selectors can match many routes.
+	targetsByPolicy := make([][]policyTargetReferenceWithSectionName, policyMapSize)
+	httpRouteTargets := 0
+	for i, policy := range backendTrafficPolicies {
+		targetsByPolicy[i] = resolvePolicyTargets(policy.Spec.PolicyTargetReferences, routes,
+			resources.ReferenceGrants, egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)
+		for _, target := range targetsByPolicy[i] {
+			if target.Kind != resource.KindHTTPRoute && target.Kind != resource.KindGRPCRoute {
+				continue
+			}
+			key := policyTargetRouteKey{
+				Kind:      string(target.Kind),
+				Namespace: string(target.Namespace),
+				Name:      string(target.Name),
+			}
+			if routeMap[key] != nil {
+				httpRouteTargets++
+			}
+		}
+	}
+	var httpRouteIndex backendTrafficPolicyHTTPRouteIndex
+	// Amortize index construction over a larger target set, even when each
+	// source route produces only one generated match and scanning is cheaper.
+	const minHTTPRouteIndexTargets = 128
+	if httpRouteTargets >= minHTTPRouteIndexTargets {
+		httpRouteIndex = make(backendTrafficPolicyHTTPRouteIndex)
+	}
+
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
@@ -344,7 +375,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
+				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex,
 					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
@@ -353,15 +384,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Process the policies targeting Routes
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargets(
-			currPolicy.Spec.PolicyTargetReferences,
-			routes,
-			resources.ReferenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindBackendTrafficPolicy,
-			currPolicy.Namespace,
-			t.GetNamespace)
-		for _, currTarget := range targetRefs {
+		for _, currTarget := range targetsByPolicy[i] {
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
@@ -370,7 +393,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
+				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex,
 					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
@@ -957,6 +980,7 @@ func (t *Translator) buildListenerSetBackendTrafficPolicyMap(
 
 func (t *Translator) processBackendTrafficPolicyForRoute(
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
@@ -1052,6 +1076,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -1073,7 +1101,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	}
 
 	if policy.Spec.MergeType == nil {
-		h3WarningsByListener, buildErr := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil)
+		h3WarningsByListener, buildErr := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, httpRouteIndex, nil)
 		// Set each listener's warnings on the ancestor of the parentRef. A parentRef naming a whole Gateway or ListenerSet
 		// reaches several listeners; their repeated warnings merge into one message on that ancestor in SetWarningForPolicyAncestor.
 		for _, parent := range parentRefCtxs {
@@ -1143,7 +1171,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 					h3Warnings, applied := h3WarningsByListener[name]
 					// a listener may occur multiple times in the parentRefCtxs, so we only need to translate once per listener
 					if !applied {
-						h3WarningsByListener, err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener)
+						h3WarningsByListener, err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, httpRouteIndex, listener)
 						h3Warnings = h3WarningsByListener[name]
 						h3WarningsByListener[name], listenerErrs[name] = h3Warnings, err
 					}
@@ -1167,7 +1195,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				if !applied {
 					var err error
 					h3Warnings, err = t.translateBackendTrafficPolicyForRouteWithMerge(
-						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
+						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR, httpRouteIndex,
 					)
 					if err != nil {
 						errMsgs.Insert(status.Error2ConditionMsg(err))
@@ -1264,6 +1292,10 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -1366,6 +1398,10 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -1627,6 +1663,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	route RouteContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 	policyTargetListener *ListenerContext,
 ) (map[string]http3Warnings, error) {
 	h3Warnings := map[string]http3Warnings{}
@@ -1648,7 +1685,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 			// Skip if not the gateway wanted
 			continue
 		}
-		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, targetListenerName, h3Warnings)
+		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, httpRouteIndex, targetListenerName, h3Warnings)
 	}
 
 	return h3Warnings, errs
@@ -1659,6 +1696,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	target policyTargetReferenceWithSectionName,
 	policyTargetListener *ListenerContext, route RouteContext,
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 ) (http3Warnings, error) {
 	mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
 	if err != nil {
@@ -1710,9 +1748,44 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		return nil, nil
 	}
 	h3Warnings := map[string]http3Warnings{}
-	t.applyTrafficFeatureToRoute(route, tf, buildErr, mergedPolicy, target, x, irListenerName(policyTargetListener), h3Warnings)
+	t.applyTrafficFeatureToRoute(route, tf, buildErr, mergedPolicy, target, x, httpRouteIndex, irListenerName(policyTargetListener), h3Warnings)
 
 	return h3Warnings[irListenerName(policyTargetListener)], buildErr
+}
+
+// The index lives for one policy pass. A listener's first lookup uses the
+// existing scan; only repeated lookups pay the cost of building an index.
+type backendTrafficPolicyHTTPRouteIndex map[*ir.HTTPListener]map[policyTargetRouteKey][]*ir.HTTPRoute
+
+func (idx backendTrafficPolicyHTTPRouteIndex) routesFor(listener *ir.HTTPListener, route RouteContext) []*ir.HTTPRoute {
+	if idx == nil {
+		return listener.Routes
+	}
+	routes, ok := idx[listener]
+	if !ok {
+		idx[listener] = nil
+		return listener.Routes
+	}
+	if routes == nil {
+		routes = make(map[policyTargetRouteKey][]*ir.HTTPRoute)
+		for _, r := range listener.Routes {
+			if r.Metadata == nil {
+				continue
+			}
+			key := policyTargetRouteKey{
+				Kind:      r.Metadata.Kind,
+				Namespace: r.Metadata.Namespace,
+				Name:      r.Metadata.Name,
+			}
+			routes[key] = append(routes[key], r)
+		}
+		idx[listener] = routes
+	}
+	return routes[policyTargetRouteKey{
+		Kind:      string(route.GetRouteType()),
+		Namespace: route.GetNamespace(),
+		Name:      route.GetName(),
+	}]
 }
 
 // applyTrafficFeatureToRoute applies tf to the route's IR entries in x. A non-nil buildErr
@@ -1723,6 +1796,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	policy *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	x *ir.Xds,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 	policyTargetListenerName string,
 	h3Warnings map[string]http3Warnings,
 ) {
@@ -1793,7 +1867,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 			perListener = http3Warnings{}
 			h3Warnings[http.Name] = perListener
 		}
-		for _, r := range http.Routes {
+		for _, r := range httpRouteIndex.routesFor(http, route) {
 			// If specified the sectionName in policy target, must match route rule from ir route metadata.
 			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 				continue
@@ -3012,6 +3086,10 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy, 
 					Value: code.Value,
 				})
 			}
+		}
+
+		for _, h := range ro.Match.RequestHeaders {
+			match.RequestHeaders = append(match.RequestHeaders, *irStringMatch(string(h.Name), h.Value))
 		}
 
 		for _, h := range ro.Match.ResponseHeaders {
