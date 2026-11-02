@@ -1344,7 +1344,7 @@ func TestBuildAccessLogBuffer(t *testing.T) {
 		{
 			name: "size only, suffixed quantity is resolved to bytes",
 			buffer: &egv1a1.AccessLogBufferSettings{
-				SizeBytes: new(apiresource.MustParse("4Mi")),
+				Size: new(apiresource.MustParse("4Mi")),
 			},
 			expected: &ir.AccessLogBuffer{
 				SizeBytes: new(uint32(4194304)),
@@ -1354,7 +1354,7 @@ func TestBuildAccessLogBuffer(t *testing.T) {
 			name: "both fields",
 			buffer: &egv1a1.AccessLogBufferSettings{
 				FlushInterval: new(gwapiv1.Duration("1m30s")),
-				SizeBytes:     new(apiresource.MustParse("32768")),
+				Size:          new(apiresource.MustParse("32768")),
 			},
 			expected: &ir.AccessLogBuffer{
 				FlushInterval: ir.MetaV1DurationPtr(90 * time.Second),
@@ -1371,35 +1371,35 @@ func TestBuildAccessLogBuffer(t *testing.T) {
 		{
 			name: "size beyond uint32",
 			buffer: &egv1a1.AccessLogBufferSettings{
-				SizeBytes: new(apiresource.MustParse("5Gi")),
+				Size: new(apiresource.MustParse("5Gi")),
 			},
-			wantErr: "access log buffer sizeBytes value 5Gi is out of range",
+			wantErr: "access log buffer size value 5Gi is out of range",
 		},
 		{
 			name: "size beyond int64",
 			buffer: &egv1a1.AccessLogBufferSettings{
-				SizeBytes: new(apiresource.MustParse("1e30")),
+				Size: new(apiresource.MustParse("1e30")),
 			},
-			wantErr: "invalid access log buffer sizeBytes value 1e30",
+			wantErr: "invalid access log buffer size value 1e30",
 		},
 		{
 			// The pattern accepts only values of 1 and above, but it constrains just the
 			// string branch, so a bare YAML 0 would otherwise slip through.
 			name: "zero size",
 			buffer: &egv1a1.AccessLogBufferSettings{
-				SizeBytes: new(apiresource.MustParse("0")),
+				Size: new(apiresource.MustParse("0")),
 			},
-			wantErr: "access log buffer sizeBytes value 0 is out of range",
+			wantErr: "access log buffer size value 0 is out of range",
 		},
 		{
-			// A raw manifest can write sizeBytes as a bare YAML number, which the CRD
+			// A raw manifest can write size as a bare YAML number, which the CRD
 			// pattern does not constrain (JSON Schema applies it to strings only), so a
 			// negative value reaches the translator.
 			name: "negative size",
 			buffer: &egv1a1.AccessLogBufferSettings{
-				SizeBytes: new(apiresource.MustParse("-5")),
+				Size: new(apiresource.MustParse("-5")),
 			},
-			wantErr: "access log buffer sizeBytes value -5 is out of range",
+			wantErr: "access log buffer size value -5 is out of range",
 		},
 	}
 

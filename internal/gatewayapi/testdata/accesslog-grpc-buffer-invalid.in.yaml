@@ -20,7 +20,7 @@ envoyProxyForGatewayClass:
               buffer:
                 # Above the 32-bit unsigned integer Envoy carries buffer_size_bytes in,
                 # so this is rejected at translation rather than at admission.
-                sizeBytes: 5Gi
+                size: 5Gi
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend

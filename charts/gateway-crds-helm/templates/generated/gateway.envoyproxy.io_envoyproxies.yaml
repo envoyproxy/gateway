@@ -13579,7 +13579,7 @@ spec:
                                           flushInterval:
                                             description: |-
                                               FlushInterval defines how often buffered access log entries are flushed to the sink.
-                                              Entries are flushed when this interval elapses or when SizeBytes worth of entries have
+                                              Entries are flushed when this interval elapses or when Size worth of entries have
                                               been buffered, whichever comes first.
                                               Must be greater than 0. Defaults to 1s.
                                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
@@ -13588,7 +13588,7 @@ spec:
                                             - message: flushInterval must be greater
                                                 than 0
                                               rule: duration(self) > duration('0s')
-                                          sizeBytes:
+                                          size:
                                             allOf:
                                             - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
@@ -13596,7 +13596,7 @@ spec:
                                             - type: integer
                                             - type: string
                                             description: |-
-                                              SizeBytes defines the soft size limit of the access log entry buffer.
+                                              Size defines the soft size limit of the access log entry buffer.
                                               For example, 20Mi, 1Gi, 256Ki etc.
                                               Note that when the suffix is not provided, the value is interpreted as bytes.
                                               Envoy carries this as a 32-bit unsigned integer, so values of 4Gi and above are
@@ -15428,7 +15428,7 @@ spec:
                                           flushInterval:
                                             description: |-
                                               FlushInterval defines how often buffered access log entries are flushed to the sink.
-                                              Entries are flushed when this interval elapses or when SizeBytes worth of entries have
+                                              Entries are flushed when this interval elapses or when Size worth of entries have
                                               been buffered, whichever comes first.
                                               Must be greater than 0. Defaults to 1s.
                                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
@@ -15437,7 +15437,7 @@ spec:
                                             - message: flushInterval must be greater
                                                 than 0
                                               rule: duration(self) > duration('0s')
-                                          sizeBytes:
+                                          size:
                                             allOf:
                                             - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                             - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
@@ -15445,7 +15445,7 @@ spec:
                                             - type: integer
                                             - type: string
                                             description: |-
-                                              SizeBytes defines the soft size limit of the access log entry buffer.
+                                              Size defines the soft size limit of the access log entry buffer.
                                               For example, 20Mi, 1Gi, 256Ki etc.
                                               Note that when the suffix is not provided, the value is interpreted as bytes.
                                               Envoy carries this as a 32-bit unsigned integer, so values of 4Gi and above are

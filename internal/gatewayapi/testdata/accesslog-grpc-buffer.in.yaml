@@ -21,7 +21,7 @@ envoyProxyForGatewayClass:
                   type: HTTP
                   buffer:
                     flushInterval: 5s
-                    sizeBytes: 4Mi
+                    size: 4Mi
           - sinks:
               - type: OpenTelemetry
                 openTelemetry:
@@ -32,7 +32,7 @@ envoyProxyForGatewayClass:
                       Group: gateway.envoyproxy.io
                       port: 4317
                   buffer:
-                    sizeBytes: 1Mi
+                    size: 1Mi
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway

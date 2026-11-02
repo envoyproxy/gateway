@@ -1090,16 +1090,16 @@ func buildAccessLogBuffer(buffer *egv1a1.AccessLogBufferSettings) (*ir.AccessLog
 		irBuffer.FlushInterval = ir.MetaV1DurationPtr(d)
 	}
 
-	if buffer.SizeBytes != nil {
-		size, ok := buffer.SizeBytes.AsInt64()
+	if buffer.Size != nil {
+		size, ok := buffer.Size.AsInt64()
 		if !ok {
-			return nil, fmt.Errorf("invalid access log buffer sizeBytes value %s", buffer.SizeBytes.String())
+			return nil, fmt.Errorf("invalid access log buffer size value %s", buffer.Size.String())
 		}
 		// The CRD pattern constrains only the string branch of this int-or-string field,
 		// so a bare YAML number reaches here unchecked. Reject zero and negatives to match
 		// what the pattern accepts.
 		if size <= 0 || size > math.MaxUint32 {
-			return nil, fmt.Errorf("access log buffer sizeBytes value %s is out of range", buffer.SizeBytes.String())
+			return nil, fmt.Errorf("access log buffer size value %s is out of range", buffer.Size.String())
 		}
 		irBuffer.SizeBytes = new(uint32(size))
 	}

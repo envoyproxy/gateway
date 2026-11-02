@@ -461,7 +461,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"flushInterval must be greater than 0"},
 		},
 		{
-			desc: "AccessLogBufferSettings-with-malformed-sizeBytes",
+			desc: "AccessLogBufferSettings-with-malformed-size",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
@@ -483,7 +483,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 													},
 												},
 												Buffer: &egv1a1.AccessLogBufferSettings{
-													SizeBytes: new(resource.MustParse("15m")),
+													Size: new(resource.MustParse("15m")),
 												},
 											},
 										},
@@ -497,7 +497,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
 		},
 		{
-			// Covers both accepted forms of sizeBytes: a suffixed quantity and a bare
+			// Covers both accepted forms of size: a suffixed quantity and a bare
 			// byte count. Quantity always marshals as a JSON string, so a typed client
 			// cannot exercise the integer branch of this int-or-string field at all.
 			desc: "valid-AccessLogBufferSettings",
@@ -523,7 +523,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 												},
 												Buffer: &egv1a1.AccessLogBufferSettings{
 													FlushInterval: new(gwapiv1.Duration("5s")),
-													SizeBytes:     new(resource.MustParse("4Mi")),
+													Size:          new(resource.MustParse("4Mi")),
 												},
 											},
 										},
@@ -542,7 +542,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 												},
 												Type: egv1a1.ALSEnvoyProxyAccessLogTypeHTTP,
 												Buffer: &egv1a1.AccessLogBufferSettings{
-													SizeBytes: new(resource.MustParse("16384")),
+													Size: new(resource.MustParse("16384")),
 												},
 											},
 										},

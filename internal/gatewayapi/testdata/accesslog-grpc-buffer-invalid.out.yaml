@@ -35,7 +35,7 @@ gateways:
     conditions:
     - lastTransitionTime: null
       message: 'Invalid access log configuration in the referenced EnvoyProxy: access
-        log buffer sizeBytes value 5Gi is out of range'
+        log buffer size value 5Gi is out of range'
       reason: InvalidParameters
       status: "False"
       type: Accepted
@@ -86,7 +86,7 @@ infraIR:
                       namespace: envoy-gateway
                       port: 4317
                     buffer:
-                      sizeBytes: 5Gi
+                      size: 5Gi
                   type: OpenTelemetry
         status: {}
       listeners:

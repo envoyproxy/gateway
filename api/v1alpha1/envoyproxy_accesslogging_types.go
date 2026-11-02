@@ -140,21 +140,21 @@ type ProxyAccessLogSink struct {
 // AccessLogBufferSettings configures how Envoy buffers access log entries before
 // flushing them to the sink.
 //
-// Entries accumulate until FlushInterval elapses or SizeBytes worth have been buffered,
+// Entries accumulate until FlushInterval elapses or Size worth have been buffered,
 // whichever comes first, at which point Envoy flushes. Entries are discarded, and counted
 // by the sink's `logs_dropped` stat, only when a flush cannot drain the buffer. How much
 // of a sink outage the buffer absorbs therefore depends on both settings, since only
 // entries still buffered when the sink returns are delivered.
 type AccessLogBufferSettings struct {
 	// FlushInterval defines how often buffered access log entries are flushed to the sink.
-	// Entries are flushed when this interval elapses or when SizeBytes worth of entries have
+	// Entries are flushed when this interval elapses or when Size worth of entries have
 	// been buffered, whichever comes first.
 	// Must be greater than 0. Defaults to 1s.
 	//
 	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="flushInterval must be greater than 0"
 	// +optional
 	FlushInterval *gwapiv1.Duration `json:"flushInterval,omitempty"`
-	// SizeBytes defines the soft size limit of the access log entry buffer.
+	// Size defines the soft size limit of the access log entry buffer.
 	// For example, 20Mi, 1Gi, 256Ki etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	// Envoy carries this as a 32-bit unsigned integer, so values of 4Gi and above are
@@ -164,7 +164,7 @@ type AccessLogBufferSettings struct {
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
-	SizeBytes *resource.Quantity `json:"sizeBytes,omitempty"`
+	Size *resource.Quantity `json:"size,omitempty"`
 }
 
 type ALSEnvoyProxyAccessLogType string

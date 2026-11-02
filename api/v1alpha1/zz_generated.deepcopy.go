@@ -132,8 +132,8 @@ func (in *AccessLogBufferSettings) DeepCopyInto(out *AccessLogBufferSettings) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.SizeBytes != nil {
-		in, out := &in.SizeBytes, &out.SizeBytes
+	if in.Size != nil {
+		in, out := &in.Size, &out.Size
 		x := (*in).DeepCopy()
 		*out = &x
 	}
