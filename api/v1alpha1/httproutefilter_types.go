@@ -67,6 +67,12 @@ type HTTPRouteFilterSpec struct {
 	//
 	// +optional
 	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty"`
+	// SessionPersistence extends the session persistence settings of an HTTPRoute or
+	// GRPCRoute rule. The same rule must configure SessionPersistence. This filter is
+	// not supported on backend references.
+	//
+	// +optional
+	SessionPersistence *HTTPSessionPersistenceFilter `json:"sessionPersistence,omitempty"`
 	// Matches defines additional matching criteria for the HTTPRoute rule.
 	// As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
 	// When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
@@ -96,6 +102,19 @@ type HTTPRouteFilterSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=128
 	BackendPriority *int32 `json:"backendPriority,omitempty"`
+}
+
+// HTTPSessionPersistenceFilter extends Gateway API session persistence.
+type HTTPSessionPersistenceFilter struct {
+	// Strict keeps an existing session on its destination. If the destination is
+	// unavailable, it returns HTTP 503 or gRPC UNAVAILABLE instead of falling back
+	// to another endpoint. Existing sessions can continue on draining endpoints
+	// in per-rule clusters. Merged backend clusters use their default override
+	// eligibility.
+	// Defaults to false, which allows load balancing to select another endpoint.
+	//
+	// +optional
+	Strict *bool `json:"strict,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
