@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -160,6 +161,41 @@ func (s *Server) PostVirtualHostModify(_ context.Context, req *pb.PostVirtualHos
 
 		req.VirtualHost.Domains = append(req.VirtualHost.Domains, newDomain)
 	}
+
+	// If a VHostMetadataPolicy is attached to this listener, inject its key/value
+	// as a response header on the VirtualHost so all responses include it.
+	if req.PostVirtualHostContext != nil {
+		for _, res := range req.PostVirtualHostContext.ExtensionResources {
+			var obj map[string]any
+			if err := json.Unmarshal(res.UnstructuredBytes, &obj); err != nil {
+				s.log.Warn("PostVirtualHostModify failed to unmarshal extension resource", slog.Any("error", err))
+				continue
+			}
+			if fmt.Sprintf("%v", obj["kind"]) != "VHostMetadataPolicy" {
+				continue
+			}
+			spec, ok := obj["spec"].(map[string]any)
+			if !ok {
+				continue
+			}
+			key, _ := spec["metadataKey"].(string)
+			val, _ := spec["metadataValue"].(string)
+			if key == "" {
+				continue
+			}
+			s.log.Info("PostVirtualHostModify injecting response header from policy",
+				slog.String("key", key), slog.String("value", val))
+			req.VirtualHost.ResponseHeadersToAdd = append(req.VirtualHost.ResponseHeadersToAdd,
+				&corev3.HeaderValueOption{
+					Header: &corev3.HeaderValue{
+						Key:   key,
+						Value: val,
+					},
+					KeepEmptyValue: false,
+				})
+		}
+	}
+
 	return &pb.PostVirtualHostModifyResponse{
 		VirtualHost: req.VirtualHost,
 	}, nil

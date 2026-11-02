@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -453,6 +454,190 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
+		},
+		{
+			name: "should be invalid when OpenTelemetry tracing backend has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendSettings: &egv1a1.BackendSettings{
+										HTTP1: &egv1a1.BackendHTTP1Settings{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be valid when OpenTelemetry tracing backend has no http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be invalid when OpenTelemetry metrics sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendSettings: &egv1a1.BackendSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when OpenTelemetry metrics sink has http1 settings and type is omitted",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									// Type omitted: CRD default not applied in embedded EnvoyProxy templates
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendSettings: &egv1a1.BackendSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when OpenTelemetry access log sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendSettings: &egv1a1.BackendSettings{
+														HTTP1: &egv1a1.BackendHTTP1Settings{},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when ALS access log sink has no als settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when ALS access log sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendSettings: &egv1a1.BackendSettings{
+														HTTP1: &egv1a1.BackendHTTP1Settings{},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
 		},
 		{
 			name: "should be valid when service patch is empty",
@@ -901,6 +1086,93 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "prometheus compression without minContentLength",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type: egv1a1.GzipCompressorType,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength of 1 byte",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("1")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength at the uint32 limit",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("4294967295")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength overflowing uint32",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("4Gi")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for i := range testCases {
@@ -1211,6 +1483,198 @@ func TestValidateProxyAccessLog(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := validateProxyAccessLog(tc.accessLog)
 			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestValidateEnvoyProxyFields(t *testing.T) {
+	textFormat := &egv1a1.ProxyAccessLogFormat{
+		Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+		Text: new("[%START_TIME%]"),
+	}
+	fileSink := egv1a1.ProxyAccessLogSink{
+		Type: egv1a1.ProxyAccessLogSinkTypeFile,
+		File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+	}
+
+	tests := []struct {
+		name          string
+		proxy         *egv1a1.EnvoyProxy
+		wantPaths     []string
+		wantFatal     bool
+		wantSanitized *egv1a1.EnvoyProxySpec
+	}{
+		{
+			name: "valid",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{ClusterStatName: new("%ROUTE_NAME%")},
+				},
+			}},
+		},
+		{
+			name: "invalid clusterStatName is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{
+						ClusterStatName:        new("%ROUTE_RULE_NAME/%ROUTE_RULE_NUMBER%"),
+						EnableVirtualHostStats: new(true),
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.metrics.clusterStatName"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{EnableVirtualHostStats: new(true)},
+				},
+			},
+		},
+		{
+			name: "only the invalid access log sink is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{{
+							Format: textFormat,
+							Sinks:  []egv1a1.ProxyAccessLogSink{{Type: egv1a1.ProxyAccessLogSinkTypeFile}, fileSink},
+						}},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].sinks[0]"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{{
+							Format: textFormat,
+							Sinks:  []egv1a1.ProxyAccessLogSink{fileSink},
+						}},
+					},
+				},
+			},
+		},
+		{
+			name: "access log setting with invalid format is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{
+								Format: &egv1a1.ProxyAccessLogFormat{Type: new(egv1a1.ProxyAccessLogFormatTypeText)},
+								Sinks:  []egv1a1.ProxyAccessLogSink{fileSink},
+							},
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].format"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "access log setting left without sinks is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{{Type: egv1a1.ProxyAccessLogSinkTypeFile}}},
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].sinks[0]"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "access log settings are unset when no setting is left",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{{Type: egv1a1.ProxyAccessLogSinkTypeFile}}},
+						},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].sinks[0]"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{AccessLog: &egv1a1.ProxyAccessLog{}},
+			},
+		},
+		{
+			name: "filterOrder with a cycle is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				FilterOrder: []egv1a1.FilterPosition{
+					{Name: egv1a1.EnvoyFilterOAuth2, Before: new(egv1a1.EnvoyFilterJWTAuthn)},
+					{Name: egv1a1.EnvoyFilterJWTAuthn, Before: new(egv1a1.EnvoyFilterOAuth2)},
+				},
+			}},
+			wantPaths:     []string{"filterOrder"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{},
+		},
+		{
+			name: "invalid provider is fatal",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyService: &egv1a1.KubernetesServiceSpec{Type: new(egv1a1.ServiceType("foo"))},
+					},
+				},
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{ClusterStatName: new("%FOO%")},
+				},
+			}},
+			wantPaths: []string{"telemetry.metrics.clusterStatName"},
+			wantFatal: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			invalid, err := ValidateEnvoyProxyFields(tc.proxy)
+			if tc.wantFatal {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			var paths []string
+			for _, f := range invalid {
+				paths = append(paths, f.Path)
+			}
+			require.Equal(t, tc.wantPaths, paths)
+
+			// ValidateEnvoyProxy stays strict and reports every error.
+			require.Equal(t, tc.wantFatal || len(tc.wantPaths) > 0, ValidateEnvoyProxy(tc.proxy) != nil)
+
+			original := tc.proxy.DeepCopy()
+			sanitized := DropInvalidFields(tc.proxy)
+			require.Equal(t, original, tc.proxy, "DropInvalidFields must not modify its input")
+			remaining, _ := ValidateEnvoyProxyFields(sanitized)
+			require.Empty(t, remaining, "DropInvalidFields must clear every field ValidateEnvoyProxyFields reports")
+			if tc.wantSanitized != nil {
+				require.Equal(t, *tc.wantSanitized, sanitized.Spec)
+			}
+			if len(tc.wantPaths) == 0 {
+				require.Same(t, tc.proxy, sanitized)
+			}
 		})
 	}
 }

@@ -222,6 +222,10 @@ xdsIR:
           name: httproute/default/httproute-2/rule/0
           settings:
           - isDynamicResolver: true
+            metadata:
+              kind: Backend
+              name: backend-with-system-ca
+              namespace: default
             name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             tls:
@@ -251,6 +255,10 @@ xdsIR:
           name: httproute/default/httproute-1/rule/0
           settings:
           - isDynamicResolver: true
+            metadata:
+              kind: Backend
+              name: backend-with-custom-ca
+              namespace: default
             name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP2
             tls:

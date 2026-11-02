@@ -597,7 +597,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		}
 	}
 
-	return false
+	return r.isServiceReferencedByBackend(&nsName)
 }
 
 // validateBackendForReconcile tries finding the owning Gateway of the Backend
@@ -648,6 +648,29 @@ func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.
 	return len(spList.Items) > 0
 }
 
+// isServiceReferencedByBackend returns true if a KubernetesService Backend that points at
+// the named Service is referenced by a route or policy, so the Service is part of the resource tree.
+func (r *gatewayAPIReconciler) isServiceReferencedByBackend(nsName *types.NamespacedName) bool {
+	if r.backendAPIDisabled() {
+		return false
+	}
+
+	backendList := &egv1a1.BackendList{}
+	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(serviceBackendIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated Backends")
+		return false
+	}
+
+	for i := range backendList.Items {
+		if r.validateBackendForReconcile(&backendList.Items[i]) {
+			return true
+		}
+	}
+	return false
+}
+
 // validateServiceImportForReconcile tries finding the owning Gateway of the ServiceImport
 // if it exists, finds the Gateway's Deployment, and further updates the Gateway
 // status Ready condition. All Services are pushed for reconciliation.
@@ -659,7 +682,17 @@ func (r *gatewayAPIReconciler) validateServiceImportForReconcile(obj client.Obje
 	}
 
 	nsName := utils.NamespacedName(svcImport)
-	return r.isRouteReferencingBackend(&nsName)
+	if r.isRouteReferencingBackend(&nsName) {
+		return true
+	}
+
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // isRouteReferencingBackend returns true if the backend(service and serviceImport) is referenced by any of the xRoutes
@@ -803,7 +836,7 @@ func (r *gatewayAPIReconciler) isEndpointSliceBackendReferenced(nsName *types.Na
 		}
 	}
 
-	return false
+	return r.isServiceReferencedByBackend(nsName)
 }
 
 // validateObjectForReconcile tries finding the owning Gateway of the Deployment or DaemonSet
