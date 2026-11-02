@@ -375,6 +375,66 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
+			name: "extension certificate resources with the Secret hook",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						SecretResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "cert.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleCertificate",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSSecret,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							Host: "foo.extension",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "extension certificate resources without the Secret hook",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						SecretResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "cert.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleCertificate",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSHTTPListener,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							Host: "foo.extension",
+							Port: 80,
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "happy extension settings tls",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -989,6 +1049,71 @@ func TestValidateEnvoyGateway(t *testing.T) {
 				},
 			},
 			expect: false,
+		},
+		{
+			name: "extensionManagers registering the same secret kind",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name:            "ext1",
+							SecretResources: []egv1a1.GroupVersionKind{{Group: "example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}},
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						},
+						{
+							Name: "ext2",
+							// A different version is still the same group and kind.
+							SecretResources: []egv1a1.GroupVersionKind{{Group: "example.io", Version: "v1", Kind: "ExampleCertificate"}},
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers registering different secret kinds",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name:            "ext1",
+							SecretResources: []egv1a1.GroupVersionKind{{Group: "example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}},
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						},
+						{
+							Name:            "ext2",
+							SecretResources: []egv1a1.GroupVersionKind{{Group: "other.example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}},
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: true,
 		},
 		{
 			name: "extensionManagers with missing name",

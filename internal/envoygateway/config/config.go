@@ -70,6 +70,12 @@ type Server struct {
 
 type KubernetesClientHolder struct {
 	client client.Client
+	// apiReader is an uncached reader backed by the live API server. It is used
+	// for conflict checks that must see resources the label-filtered cache would
+	// miss (e.g. an unmanaged same-name Deployment/DaemonSet in GatewayNamespace
+	// mode). It is nil when no API reader is configured (e.g. in unit tests), in
+	// which case consumers fall back to the cached client.
+	apiReader client.Reader
 }
 
 func NewKubernetesClientHolder() *KubernetesClientHolder {
@@ -87,6 +93,21 @@ func (h *KubernetesClientHolder) Get() client.Client {
 		return nil
 	}
 	return h.client
+}
+
+// SetAPIReader stores an uncached reader backed by the live API server.
+func (h *KubernetesClientHolder) SetAPIReader(r client.Reader) {
+	if h != nil {
+		h.apiReader = r
+	}
+}
+
+// GetAPIReader returns the uncached API reader, or nil if none was set.
+func (h *KubernetesClientHolder) GetAPIReader() client.Reader {
+	if h == nil {
+		return nil
+	}
+	return h.apiReader
 }
 
 // New returns a Server with default parameters.
@@ -158,6 +179,22 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		}
 	}
 
+	return nil
+}
+
+// ApplyEnvoyGatewaySchemaDefaults applies the defaults declared in the CRD schemas to the parts
+// of eg that are borrowed from CRD types, as the API server would on admission. EnvoyGateway is
+// loaded as static configuration, so this runs once when it's loaded or reloaded, after
+// ValidateEnvoyGateway, rather than on every translation.
+func ApplyEnvoyGatewaySchemaDefaults(eg *egv1a1.EnvoyGateway) error {
+	if eg == nil || eg.RateLimit == nil || eg.RateLimit.ServiceSettings == nil {
+		return nil
+	}
+	cs, err := DefaultClusterSettings(eg.RateLimit.ServiceSettings)
+	if err != nil {
+		return fmt.Errorf("failed to default rateLimit.serviceSettings: %w", err)
+	}
+	eg.RateLimit.ServiceSettings = cs
 	return nil
 }
 

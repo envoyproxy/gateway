@@ -1,1 +1,0 @@
-`EnvoyProxy.spec.dynamicModules[].local.path` now requires an absolute path at CRD admission, matching the existing rule for local Wasm module paths. A relative path such as `foo.so` previously passed validation and is now rejected.

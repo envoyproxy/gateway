@@ -923,6 +923,15 @@ type ExtensionManager struct {
 	// +optional
 	BackendResources []GroupVersionKind `json:"backendResources,omitempty"`
 
+	// SecretResources defines the set of K8s resources the extension will handle as secret
+	// sources. These resources can be referenced in place of a Kubernetes Secret by group
+	// and kind, allowing Envoy to use a secret held by an external provider. Currently this
+	// covers a Gateway or ListenerSet listener's tls.certificateRefs; other secret consumers
+	// may be added over time.
+	//
+	// +optional
+	SecretResources []GroupVersionKind `json:"secretResources,omitempty"`
+
 	// Hooks defines the set of hooks the extension supports
 	//
 	// +kubebuilder:validation:Required
@@ -942,6 +951,8 @@ type ExtensionManager struct {
 	// When set to true, if the Extension Service hooks return an error, no changes will be applied to the
 	// source of the configuration which was sent to the extension server. The errors are ignored and the resulting
 	// xDS configuration is updated in the xDS snapshot.
+	//
+	// FailOpen does not apply to the Secret hook: its errors are never ignored.
 	//
 	// Default: false
 	//

@@ -1,1 +1,0 @@
-Added cosign keyless signing of the `docker.io/envoyproxy/gateway` release image. Verify it with `cosign verify` and the identity of the release workflow, as shown in the "Verify Image Signatures" install docs.

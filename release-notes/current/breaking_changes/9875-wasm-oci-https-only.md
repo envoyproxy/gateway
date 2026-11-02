@@ -1,1 +1,0 @@
-OCI Wasm image pulls now require the registry to serve HTTPS. The implicit fallback to plain HTTP has been removed, so a Wasm extension backed by a plain HTTP registry will fail to load unless that registry is explicitly configured as insecure.

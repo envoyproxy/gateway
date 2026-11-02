@@ -47,6 +47,76 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 
 	return []backendTrafficPolicyCase{
 		{
+			desc: "valid routeStatName",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Telemetry: &egv1a1.BackendTelemetry{
+						Metrics: &egv1a1.BackendMetrics{
+							RouteStatName: new("%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/%ROUTE_RULE_NAME%"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "routeStatName with unterminated operator",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Telemetry: &egv1a1.BackendTelemetry{
+						Metrics: &egv1a1.BackendMetrics{
+							RouteStatName: new("%ROUTE_KIND%/%ROUTE_NAME"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"routeStatName contains an unsupported or unterminated operator",
+			},
+		},
+		{
+			desc: "routeStatName with operator only supported by clusterStatName",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Telemetry: &egv1a1.BackendTelemetry{
+						Metrics: &egv1a1.BackendMetrics{
+							RouteStatName: new("%ROUTE_NAME%/%ROUTE_RULE_NUMBER%"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"routeStatName contains an unsupported or unterminated operator",
+			},
+		},
+		{
 			desc: "valid gateway targetRef",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
