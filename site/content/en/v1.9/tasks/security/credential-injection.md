@@ -262,5 +262,5 @@ Check out the [Developer Guide](/community/develop) to get involved in the proje
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
-[BackendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpbackendref
+[BackendRef]: {{<gateway-api-spec>}}#httpbackendref
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter

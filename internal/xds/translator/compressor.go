@@ -13,18 +13,15 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	brotliv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/brotli/compressor/v3"
-	gzipv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
-	zstdv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/zstd/compressor/v3"
 	compressorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/filters"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -75,35 +72,20 @@ func compressorFilterName(compressorType egv1a1.CompressorType) string {
 // buildCompressorFilter builds a compressor filter with the provided compressionType.
 func buildCompressorFilter(compression *ir.Compression) (*hcmv3.HttpFilter, error) {
 	var (
-		compressorProto *compressorv3.Compressor
-		extensionName   string
-		extensionMsg    protobuf.Message
-		extensionAny    *anypb.Any
-		compressorAny   *anypb.Any
-		err             error
+		compressorProto   *compressorv3.Compressor
+		compressorLibrary *corev3.TypedExtensionConfig
+		compressorAny     *anypb.Any
+		err               error
 	)
 
-	switch compression.Type {
-	case egv1a1.BrotliCompressorType:
-		extensionName = "envoy.compression.brotli.compressor"
-		extensionMsg = &brotliv3.Brotli{}
-	case egv1a1.GzipCompressorType:
-		extensionName = "envoy.compression.gzip.compressor"
-		extensionMsg = &gzipv3.Gzip{}
-	case egv1a1.ZstdCompressorType:
-		extensionName = "envoy.compression.zstd.compressor"
-		extensionMsg = &zstdv3.Zstd{}
-	}
-
-	if extensionAny, err = proto.ToAnyWithValidation(extensionMsg); err != nil {
+	// The filter is shared by all the routes of the listener, so it always uses the default
+	// compressor library settings. Routes with custom settings override the compressor library.
+	if compressorLibrary, err = filters.CompressorLibrary(compression.Type, nil, nil, nil); err != nil {
 		return nil, err
 	}
 
 	compressorProto = &compressorv3.Compressor{
-		CompressorLibrary: &corev3.TypedExtensionConfig{
-			Name:        extensionName,
-			TypedConfig: extensionAny,
-		},
+		CompressorLibrary: compressorLibrary,
 	}
 
 	if compression.ChooseFirst {
@@ -157,10 +139,10 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 	// Overwrite the HCM level filter config with the per route filter config.
 	perFilterCfg = route.GetTypedPerFilterConfig()
 	if perFilterCfg == nil {
-		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+		perFilterCfg = make(map[string]*anypb.Any)
+		route.TypedPerFilterConfig = perFilterCfg
 	}
 
-	compressorProto := compressorPerRouteConfig()
 	for _, irComp := range irRoute.Traffic.Compression {
 		filterName := compressorFilterName(irComp.Type)
 		if _, ok := perFilterCfg[filterName]; ok {
@@ -170,11 +152,18 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 				filterName, route)
 		}
 
-		if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
+		var compressorLibrary *corev3.TypedExtensionConfig
+		if irComp.Gzip != nil || irComp.Brotli != nil || irComp.Zstd != nil {
+			if compressorLibrary, err = filters.CompressorLibrary(irComp.Type, irComp.Gzip, irComp.Brotli, irComp.Zstd); err != nil {
+				return err
+			}
+		}
+
+		if compressorAny, err = proto.ToAnyWithValidation(compressorPerRouteConfig(compressorLibrary)); err != nil {
 			return err
 		}
 
-		route.TypedPerFilterConfig[filterName] = compressorAny
+		perFilterCfg[filterName] = compressorAny
 	}
 
 	// Ensure accept-encoding from the request to prevent double compression.
@@ -185,12 +174,14 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 	return nil
 }
 
-// Enable compression on this route if compression is configured.
-func compressorPerRouteConfig() *compressorv3.CompressorPerRoute {
+// Enable compression on this route if compression is configured, and override the
+// compressor library if the route has custom compressor settings.
+func compressorPerRouteConfig(compressorLibrary *corev3.TypedExtensionConfig) *compressorv3.CompressorPerRoute {
 	return &compressorv3.CompressorPerRoute{
 		Override: &compressorv3.CompressorPerRoute_Overrides{
 			Overrides: &compressorv3.CompressorOverrides{
 				ResponseDirectionConfig: &compressorv3.ResponseDirectionOverrides{},
+				CompressorLibrary:       compressorLibrary,
 			},
 		},
 	}

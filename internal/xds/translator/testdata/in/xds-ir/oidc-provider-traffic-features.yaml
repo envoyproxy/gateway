@@ -1,5 +1,7 @@
 http:
 # Test HTTPListener with SecurityPolicy using OIDC provider with traffic features configured, but without Destination.
+# http1 is set on the listener: preserveHeaderCase asserts it flows into the route destination cluster,
+# while http10 asserts it does NOT leak into the ext-service (OIDC token endpoint) cluster.
 - address: 0.0.0.0
   externalPort: 80
   hostnames:
@@ -14,6 +16,10 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10080
+  http1:
+    preserveHeaderCase: true
+    http10:
+      defaultHost: "www.example.com"
   routes:
   - destination:
       metadata:
@@ -60,6 +66,8 @@ http:
           authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
           tokenEndpoint: https://oauth.foo.com/token
           traffic:
+            http1:
+              enableTrailers: true
             backendConnection:
               bufferLimit: 100000000
             circuitBreaker:
