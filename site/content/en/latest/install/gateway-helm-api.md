@@ -116,6 +116,19 @@ The Helm chart for Envoy Gateway
 | hpa.metrics | list | `[]` |  |
 | hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+| metrics.serviceMonitor | object | `{"annotations":{},"enabled":false,"interval":"","jobLabel":"","labels":{},"metricRelabelings":[],"namespace":"","path":"","portName":"metrics","relabelings":[],"scheme":"","tlsConfig":{}}` | Configure a prometheus-operator ServiceMonitor to scrape Envoy Gateway control plane metrics via the envoy-gateway Service. |
+| metrics.serviceMonitor.annotations | object | `{}` | Annotations for the ServiceMonitor resource. |
+| metrics.serviceMonitor.enabled | bool | `false` | Enable the ServiceMonitor. |
+| metrics.serviceMonitor.interval | string | `""` | Scrape interval; Prometheus default when empty. |
+| metrics.serviceMonitor.jobLabel | string | `""` | Label used as the job name. |
+| metrics.serviceMonitor.labels | object | `{}` | Additional labels for the ServiceMonitor resource. |
+| metrics.serviceMonitor.metricRelabelings | list | `[]` | MetricRelabelConfigs applied before ingestion. |
+| metrics.serviceMonitor.namespace | string | `""` | Namespace where the ServiceMonitor is installed. Defaults to the chart namespace. |
+| metrics.serviceMonitor.path | string | `""` | Metrics scrape path; /metrics when empty. |
+| metrics.serviceMonitor.portName | string | `"metrics"` | Name of the Service port to scrape. Defaults to the metrics port defined in deployment.ports. |
+| metrics.serviceMonitor.relabelings | list | `[]` | RelabelConfigs applied before scraping. |
+| metrics.serviceMonitor.scheme | string | `""` | Scrape protocol scheme (http/https). |
+| metrics.serviceMonitor.tlsConfig | object | `{}` | TLS config for the scrape endpoint. |
 | namespaceOverride | string | `""` | Override the namespace for resources deployed by the chart. Defaults to the release namespace. |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
