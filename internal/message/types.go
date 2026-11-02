@@ -170,7 +170,8 @@ func (x *XdsIRWithContext) StoredAtTime() time.Time {
 	return x.StoredAt
 }
 
-// DeepCopy creates a new ControllerResourcesContext.
+// DeepCopy creates an independent XdsIRWithContext, preserving shared HTTP
+// destination settings within the copied IR.
 // The Context field is preserved (not deep copied) since contexts are meant to be passed around.
 func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
 	if x == nil {
@@ -178,7 +179,7 @@ func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
 	}
 	var xdsIRCopy *ir.Xds
 	if x.XdsIR != nil {
-		xdsIRCopy = x.XdsIR.DeepCopy()
+		xdsIRCopy = copyXdsIR(x.XdsIR)
 	}
 	return &XdsIRWithContext{
 		XdsIR:    xdsIRCopy,

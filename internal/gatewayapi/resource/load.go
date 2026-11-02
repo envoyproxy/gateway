@@ -67,10 +67,13 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 		extFilter
 		extPolicy
 		extBackend
+		extSecret
 	)
 	extGVKMap := map[string]extCategory{}
 	if envoyGateway != nil {
-		for _, em := range envoyGateway.GetExtensionManagers() {
+		extensionManagers := envoyGateway.GetExtensionManagers()
+		for i := range extensionManagers {
+			em := &extensionManagers[i]
 			for _, gvk := range em.Resources {
 				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
 				extGVKMap[key] = extFilter
@@ -78,6 +81,10 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 			for _, gvk := range em.PolicyResources {
 				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
 				extGVKMap[key] = extPolicy
+			}
+			for _, gvk := range em.SecretResources {
+				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+				extGVKMap[key] = extSecret
 			}
 			for _, gvk := range em.BackendResources {
 				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
@@ -151,6 +158,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 					resources.ExtensionRefFilters = append(resources.ExtensionRefFilters, *un)
 				case extPolicy:
 					resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+				case extSecret:
+					resources.ExtensionSecrets = append(resources.ExtensionSecrets, *un)
 				}
 				return nil
 			}
@@ -182,6 +191,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 					// It's weird for non-namespaced resource to have namespace.
+					// Labels are kept so GatewayClass targetSelectors on policies can match it.
+					Labels: un.GetLabels(),
 				},
 				Spec: typedSpec.(gwapiv1.GatewayClassSpec),
 			}
@@ -409,6 +420,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 			resources.Secrets = append(resources.Secrets, secret)
 		case KindConfigMap:
 			typedData := data.Interface()
+			typedBinaryData := kobjVal.FieldByName("BinaryData").Interface()
 			configMap := &corev1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindConfigMap,
@@ -418,7 +430,8 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 					Name:      name,
 					Namespace: namespace,
 				},
-				Data: typedData.(map[string]string),
+				Data:       typedData.(map[string]string),
+				BinaryData: typedBinaryData.(map[string][]byte),
 			}
 			resources.ConfigMaps = append(resources.ConfigMaps, configMap)
 		case KindBackendTLSPolicy:

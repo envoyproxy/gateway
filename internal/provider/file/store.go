@@ -110,18 +110,29 @@ func (r *resourcesStore) ReloadAll(ctx context.Context, files, dirs []string, en
 		} else if k.deletionOrder <= GatewayDeletionOrder {
 			// Reconcile once if gateway got deleted, this may be able to
 			// remove the finalizer on gatewayclass.
-			r.reconcile <- generateReconcileID()
-			rn++
+			if r.enqueueReconcile(ctx) {
+				rn++
+			}
 		}
 	}
 
 	r.keys = currentKeys
-	r.reconcile <- generateReconcileID()
-	rn++
+	if r.enqueueReconcile(ctx) {
+		rn++
+	}
 
 	r.logger.Info("reload resources finished",
 		"reload_resources_num", len(r.keys), "reconcile_times", rn, "time", time.Now())
 	return errList
+}
+
+func (r *resourcesStore) enqueueReconcile(ctx context.Context) bool {
+	select {
+	case r.reconcile <- generateReconcileID():
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // storeResources stores resources via offline gateway-api client.
@@ -257,6 +268,11 @@ func (r *resourcesStore) storeResources(ctx context.Context, re *resource.Resour
 	}
 
 	for _, obj := range re.ExtensionServerPolicies {
+		if err := r.storeObjectWithKeys(ctx, &obj, collectKeys); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, obj := range re.ExtensionSecrets {
 		if err := r.storeObjectWithKeys(ctx, &obj, collectKeys); err != nil {
 			errs = errors.Join(errs, err)
 		}

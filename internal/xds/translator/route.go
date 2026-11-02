@@ -45,13 +45,14 @@ var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
 	},
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex) (*routev3.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backendIndex backendClusterIndex, geoIPHeaders []string, downstreamHTTP3Enabled bool) (*routev3.Route, error) {
 	connectMatch := httpRoute.Traffic.HasConnectUpgrade()
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
 		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches, httpRoute.CookieMatches),
 		Metadata: buildXdsMetadata(httpRoute.Metadata),
 	}
+	patchExtensionBackendMetadata(router, httpRoute)
 
 	if len(httpRoute.AddRequestHeaders) > 0 {
 		router.RequestHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddRequestHeaders)
@@ -59,7 +60,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	if len(httpRoute.RemoveRequestHeaders) > 0 {
 		router.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
 	}
-	router.RequestHeadersToRemove = append(router.RequestHeadersToRemove, geoIPHeadersToRemove(httpListener)...)
+	router.RequestHeadersToRemove = append(router.RequestHeadersToRemove, geoIPHeaders...)
 
 	if len(httpRoute.AddResponseHeaders) > 0 {
 		router.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)
@@ -165,6 +166,15 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	// Add per route filter configs to the route, if needed.
 	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
 		return nil, err
+	}
+	if err := patchRouteWithAlternateProtocolsCache(router, httpRoute, backendIndex); err != nil {
+		return nil, err
+	}
+	// A route proxying over upstream HTTP/3 strips the backend's alt-svc in the header mutation filter.
+	if routeUsesUpstreamHTTP3(httpRoute, backendIndex) {
+		if err := patchRouteWithUpstreamHTTP3AltSvc(router, httpListener, downstreamHTTP3Enabled); err != nil {
+			return nil, err
+		}
 	}
 
 	return router, nil
@@ -666,12 +676,17 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 
 	for _, policy := range mirrorPolicies {
 		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
-			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+			rmp := &routev3.RouteAction_RequestMirrorPolicy{
 				Cluster:         policy.Destination.Name,
 				RuntimeFraction: mp,
+			}
+			if policy.HostRewrite != nil && *policy.HostRewrite != "" {
+				rmp.HostRewriteLiteral = *policy.HostRewrite
+			} else {
 				// We don't need to append the shadow host suffix as the mirror policy already uses a different cluster which is enough to distinguish the mirrored traffic
-				DisableShadowHostSuffixAppend: true,
-			})
+				rmp.DisableShadowHostSuffixAppend = true
+			}
+			xdsMirrorPolicies = append(xdsMirrorPolicies, rmp)
 		}
 	}
 

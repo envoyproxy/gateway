@@ -6,7 +6,9 @@
 package status
 
 import (
+	"cmp"
 	"errors"
+	"slices"
 	"sort"
 	"strings"
 
@@ -260,7 +262,18 @@ func (c *TypedErrorCollector) Empty() bool {
 	return len(c.errs) == 0
 }
 
+// gatewayAPIRouteConditionTypes lists the route condition types defined by the Gateway API
+// in the order they are reported.
+var gatewayAPIRouteConditionTypes = []gwapiv1.RouteConditionType{
+	gwapiv1.RouteConditionAccepted,
+	gwapiv1.RouteConditionResolvedRefs,
+	gwapiv1.RouteConditionPartiallyInvalid,
+}
+
 // Types returns all unique condition types for which errors have been collected.
+// The types are returned in a deterministic order so that the route status conditions
+// don't change between translations: the Gateway API defined types come first,
+// followed by the others in lexical order.
 func (c *TypedErrorCollector) Types() []gwapiv1.RouteConditionType {
 	if len(c.errs) == 0 {
 		return nil
@@ -269,7 +282,23 @@ func (c *TypedErrorCollector) Types() []gwapiv1.RouteConditionType {
 	for t := range c.errs {
 		types = append(types, t)
 	}
+	slices.SortFunc(types, compareRouteConditionTypes)
 	return types
+}
+
+func compareRouteConditionTypes(a, b gwapiv1.RouteConditionType) int {
+	ai := slices.Index(gatewayAPIRouteConditionTypes, a)
+	bi := slices.Index(gatewayAPIRouteConditionTypes, b)
+	switch {
+	case ai >= 0 && bi >= 0:
+		return cmp.Compare(ai, bi)
+	case ai >= 0:
+		return -1
+	case bi >= 0:
+		return 1
+	default:
+		return strings.Compare(string(a), string(b))
+	}
 }
 
 // Add appends a new error to the collector, automatically grouping it with

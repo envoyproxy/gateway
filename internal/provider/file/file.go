@@ -96,8 +96,18 @@ func (p *Provider) Start(ctx context.Context) error {
 	// Nor we may lose some messages from controller.
 	wg := new(sync.WaitGroup)
 	wg.Add(2)
-	go p.startReconciling(ctx, wg)
-	go p.status.Start(ctx, wg)
+
+	// workers tracks the goroutines that write to shared state so Start can
+	// block until they've actually exited, rather than returning as soon as
+	// ctx is cancelled while they're still running.
+	var workers sync.WaitGroup
+	defer workers.Wait()
+	workers.Go(func() {
+		p.startReconciling(ctx, wg)
+	})
+	workers.Go(func() {
+		p.status.Start(ctx, wg)
+	})
 	wg.Wait()
 
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)

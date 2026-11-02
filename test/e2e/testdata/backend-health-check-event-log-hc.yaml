@@ -1,23 +1,10 @@
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: http-with-hc-event-log
-  namespace: gateway-conformance-infra
-spec:
-  parentRefs:
-    - name: same-namespace
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /hc-event-log
-      backendRefs:
-        - name: infra-backend-v1
-          port: 8080
----
 # BTP with an intentionally failing health check (/status/418 never returns 200).
 # With no matches set (log everything), every probe cycle produces a failure
 # event logged to stdout, which Loki collects and the test can assert against.
+#
+# The BTP precedes its HTTPRoute so that Envoy receives the route's cluster with
+# its health check right away. A cluster first sent without one is then updated,
+# and that update waits for EDS until initial_fetch_timeout (15s).
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -39,3 +26,20 @@ spec:
         path: "/status/418"
         expectedStatuses:
           - 200
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-hc-event-log
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /hc-event-log
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

@@ -1,0 +1,103 @@
+- circuitBreakers:
+    thresholds:
+    - maxConnections: 2048
+      maxPendingRequests: 1
+      maxRequests: 4294967295
+      maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 15s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: service/default/service-1/8163/tcp
+  healthChecks:
+  - healthyThreshold: 1
+    interval: 3s
+    tcpHealthCheck:
+      receive:
+      - text: 706f6e67
+      send:
+        text: "70696e67"
+    timeout: 0.500s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.maglev
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8163"
+  name: service/default/service-1/8163/tcp
+  outlierDetection:
+    baseEjectionTime: 160s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
+    interval: 2s
+    maxEjectionPercent: 100
+  perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: envoy.transport_sockets.upstream_proxy_protocol
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
+      config:
+        version: V2
+      transportSocket:
+        name: envoy.transport_sockets.raw_buffer
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      commonHttpProtocolOptions:
+        idleTimeout: 16s
+        maxConnectionDuration: 17s
+        maxRequestsPerConnection: 1
+      explicitHttpConfig:
+        httpProtocolOptions: {}
+  upstreamConnectionOptions:
+    tcpKeepalive:
+      keepaliveInterval: 60
+      keepaliveProbes: 3
+      keepaliveTime: 1200
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: service/default/service-1/8162/udp
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.maglev
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8162"
+  name: service/default/service-1/8162/udp
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

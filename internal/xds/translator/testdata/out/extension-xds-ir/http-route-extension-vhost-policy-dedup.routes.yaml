@@ -1,0 +1,19 @@
+- ignorePortInHostMatching: true
+  name: listener-foo
+  virtualHosts:
+  - domains:
+    - foo.example.io
+    name: listener-foo/foo_example_io
+    routes:
+    - match:
+        prefix: /
+      name: foo-route
+      route:
+        cluster: foo-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - directResponse:
+        status: 200
+      match:
+        prefix: /from-foo-policy
+      name: from-foo-policy

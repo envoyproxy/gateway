@@ -1030,6 +1030,144 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "another controller's status for the same parentRef is preserved",
+			args: args{
+				old: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionTrue, Reason: "Accepted"},
+						},
+					},
+					{
+						ControllerName: "example.com/policy-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: "example.com/PolicyAffected", Status: metav1.ConditionTrue, Reason: "Accepted"},
+						},
+					},
+				},
+				new: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionFalse, Reason: "SomeReason"},
+						},
+					},
+				},
+			},
+			want: []gwapiv1.RouteParentStatus{
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+					Conditions: []metav1.Condition{
+						{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionFalse, Reason: "SomeReason"},
+					},
+				},
+				{
+					ControllerName: "example.com/policy-controller",
+					ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+					Conditions: []metav1.Condition{
+						{Type: "example.com/PolicyAffected", Status: metav1.ConditionTrue, Reason: "Accepted"},
+					},
+				},
+			},
+		},
+		{
+			name: "duplicate entries of ours for the same parentRef are collapsed",
+			args: args{
+				old: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionTrue, Reason: "Accepted"},
+						},
+					},
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionTrue, Reason: "Accepted"},
+						},
+					},
+					{
+						ControllerName: "example.com/policy-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: "example.com/PolicyAffected", Status: metav1.ConditionTrue, Reason: "Accepted"},
+						},
+					},
+				},
+				new: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionTrue, Reason: "Accepted"},
+						},
+					},
+				},
+			},
+			want: []gwapiv1.RouteParentStatus{
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+					Conditions: []metav1.Condition{
+						{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionTrue, Reason: "Accepted"},
+					},
+				},
+				{
+					ControllerName: "example.com/policy-controller",
+					ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+					Conditions: []metav1.Condition{
+						{Type: "example.com/PolicyAffected", Status: metav1.ConditionTrue, Reason: "Accepted"},
+					},
+				},
+			},
+		},
+		{
+			name: "only another controller's status exists for the parentRef - ours is appended",
+			args: args{
+				old: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "example.com/policy-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: "example.com/PolicyAffected", Status: metav1.ConditionTrue, Reason: "Accepted"},
+						},
+					},
+				},
+				new: []gwapiv1.RouteParentStatus{
+					{
+						ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+						ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+						Conditions: []metav1.Condition{
+							{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionTrue, Reason: "Accepted"},
+						},
+					},
+				},
+			},
+			want: []gwapiv1.RouteParentStatus{
+				{
+					ControllerName: "example.com/policy-controller",
+					ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+					Conditions: []metav1.Condition{
+						{Type: "example.com/PolicyAffected", Status: metav1.ConditionTrue, Reason: "Accepted"},
+					},
+				},
+				{
+					ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
+					ParentRef:      gwapiv1.ParentReference{Name: "gateway1"},
+					Conditions: []metav1.Condition{
+						{Type: string(gwapiv1.RouteConditionAccepted), Status: metav1.ConditionTrue, Reason: "Accepted"},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

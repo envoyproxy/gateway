@@ -15,8 +15,10 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func MergeWithPatch[T any](original T, patch *egv1a1.KubernetesPatchSpec) (T, error) {
-	if patch == nil {
+// MergeWithPatch merges patch onto original. If disabled is true, patch is
+// ignored and original is returned unchanged, regardless of patch's content.
+func MergeWithPatch[T any](original T, patch *egv1a1.KubernetesPatchSpec, disabled bool) (T, error) {
+	if patch == nil || disabled {
 		return original, nil
 	}
 

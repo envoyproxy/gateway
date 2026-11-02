@@ -62,7 +62,7 @@ spec:
         app: redis
     spec:
       containers:
-      - image: redis:6.0.6
+      - image: redis:8.6.7
         imagePullPolicy: IfNotPresent
         name: redis
         resources:
@@ -121,7 +121,7 @@ spec:
         app: redis
     spec:
       containers:
-      - image: redis:6.0.6
+      - image: redis:8.6.7
         imagePullPolicy: IfNotPresent
         name: redis
         resources:

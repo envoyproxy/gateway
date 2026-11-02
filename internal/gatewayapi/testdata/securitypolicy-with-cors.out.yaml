@@ -293,6 +293,8 @@ securityPolicies:
       allowMethods:
       - GET
       - POST
+      allowOriginRegexes:
+      - https://preview-[0-9]+\.example\.com
       allowOrigins:
       - https://*.test.com:8080
       - https://www.test.org:8080
@@ -319,7 +321,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -362,7 +365,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -380,6 +384,8 @@ securityPolicies:
       allowMethods:
       - GET
       - POST
+      allowOriginRegexes:
+      - https://preview-[0-9]+\.example\.com(:8443)?
       allowOrigins:
       - http://*.example.com
       - http://foo.bar.com
@@ -406,7 +412,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -500,6 +507,9 @@ xdsIR:
             - distinct: false
               name: ""
               safeRegex: https://.*
+            - distinct: false
+              name: ""
+              safeRegex: https://preview-[0-9]+\.example\.com(:8443)?
             exposeHeaders:
             - x-header-3
             - x-header-4
@@ -595,6 +605,9 @@ xdsIR:
             - distinct: false
               exact: https://www.test.org:8080
               name: ""
+            - distinct: false
+              name: ""
+              safeRegex: https://preview-[0-9]+\.example\.com
             exposeHeaders:
             - x-header-7
             - x-header-8
