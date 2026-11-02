@@ -464,14 +464,14 @@ only one Route rule may match each request. For more information on how conflict
 resolution applies to merging, refer to the [API specification][httprouterule].
 
 
-[httproute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httproute
-[httprouterule]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httprouterule
-[hostname]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#hostname
+[httproute]: {{<gateway-api-spec>}}#httproute
+[httprouterule]: {{<gateway-api-spec>}}#httprouterule
+[hostname]: {{<gateway-api-spec>}}#hostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[matches]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httproutematch
-[filters]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httproutefilter
-[backendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpbackendref
-[parentRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#parentreference
-[timeouts]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httproutetimeouts
+[matches]: {{<gateway-api-spec>}}#httproutematch
+[filters]: {{<gateway-api-spec>}}#httproutefilter
+[backendRef]: {{<gateway-api-spec>}}#httpbackendref
+[parentRef]: {{<gateway-api-spec>}}#parentreference
+[timeouts]: {{<gateway-api-spec>}}#httproutetimeouts
 [appProtocol]: https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol
-[sectionName]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#sectionname
+[sectionName]: {{<gateway-api-spec>}}#sectionname

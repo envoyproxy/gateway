@@ -1739,7 +1739,7 @@ func (t *Translator) findWasmModule(
 	if resources != nil {
 		gatewayClassProxy = resources.EnvoyProxyForGatewayClass
 	}
-	for _, ep := range []*egv1a1.EnvoyProxy{gateway.envoyProxyForGateway, gatewayClassProxy} {
+	for _, ep := range []*egv1a1.EnvoyProxy{gateway.gatewayEnvoyProxy, gatewayClassProxy} {
 		if ep == nil {
 			continue
 		}

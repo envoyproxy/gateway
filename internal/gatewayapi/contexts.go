@@ -18,6 +18,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -29,11 +30,13 @@ import (
 type GatewayContext struct {
 	*gwapiv1.Gateway
 
-	listeners  []*ListenerContext
-	envoyProxy *egv1a1.EnvoyProxy
-	// envoyProxyForGateway is the unmerged Gateway-level EnvoyProxy, nil when the
-	// Gateway has none. Merged fields are traced back to it to find their owner.
-	envoyProxyForGateway *egv1a1.EnvoyProxy
+	listeners             []*ListenerContext
+	envoyProxy            *egv1a1.EnvoyProxy
+	envoyProxyFromGateway bool
+	// gatewayEnvoyProxy is the EnvoyProxy referenced by the Gateway itself, as provided by the
+	// user. Unlike envoyProxy, it is neither merged nor stripped of its invalid fields, so it is
+	// the object whose status is updated and that is returned in the TranslateResult.
+	gatewayEnvoyProxy *egv1a1.EnvoyProxy
 
 	backendTLS *egv1a1.BackendTLSConfig
 }
@@ -109,20 +112,25 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
-				gatewayProxy = ep
+				g.envoyProxyFromGateway = true
+				g.gatewayEnvoyProxy = ep
+				gatewayProxy = validation.DropInvalidFields(ep)
 			}
 		}
 	}
 
 	// Merge all EnvoyProxy configs. On error, MergeEnvoyProxyConfigs returns a fallback
 	// configuration so the gateway can continue to function.
+	//
+	// Invalid fields are unset on each layer before merging, so an invalid override is ignored
+	// and the valid value it would have overridden in a less specific layer still applies. The
+	// EnvoyGateway default spec is validated strictly when the configuration is loaded.
 	merged, err := MergeEnvoyProxyConfigs(
 		resources.EnvoyProxyDefaultSpec,
-		resources.EnvoyProxyForGatewayClass,
+		validation.DropInvalidFields(resources.EnvoyProxyForGatewayClass),
 		gatewayProxy,
 	)
 	g.envoyProxy = merged
-	g.envoyProxyForGateway = gatewayProxy
 	return err
 }
 

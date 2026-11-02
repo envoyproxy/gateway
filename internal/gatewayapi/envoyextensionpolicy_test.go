@@ -143,7 +143,7 @@ func TestBuildLocalWasmVMSharing(t *testing.T) {
 					},
 				}},
 			}}
-			gateway := &GatewayContext{envoyProxy: envoyProxy, envoyProxyForGateway: envoyProxy}
+			gateway := &GatewayContext{envoyProxy: envoyProxy, gatewayEnvoyProxy: envoyProxy, envoyProxyFromGateway: true}
 			original := config.DeepCopy()
 			translator := &Translator{TranslatorContext: &TranslatorContext{}}
 			got, err := translator.buildWasm(irConfigNameForWasm(policy, 0), config, policy, 0, &resource.Resources{}, gateway)
