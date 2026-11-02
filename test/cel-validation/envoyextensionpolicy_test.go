@@ -1621,6 +1621,42 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				": If shadowMode is enabled, body processing mode must be Streamed or unset.",
 			},
 		},
+		{
+			desc: "ExtProc with http1 backendSettings is rejected",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: new(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+								BackendSettings: &egv1a1.BackendSettings{
+									ClusterSettings: egv1a1.ClusterSettings{
+										HTTP1: &egv1a1.BackendHTTP1Settings{},
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for ExtProc backends, which always use gRPC."},
+		},
 	}
 
 	for _, tc := range cases {

@@ -25,6 +25,4 @@
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
-        httpProtocolOptions:
-          acceptHttp10: true
-          defaultHostForHttp10: foo.com
+        httpProtocolOptions: {}

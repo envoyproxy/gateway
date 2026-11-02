@@ -44,6 +44,14 @@ type ProxyMetrics struct {
 	// +optional
 	EnableRequestResponseSizesStats *bool `json:"enableRequestResponseSizesStats,omitempty"`
 
+	// EnableCircuitBreakerRemainingStats enables Envoy's circuit breaker `remaining_*` gauges,
+	// which expose the number of resources remaining before each circuit breaker opens.
+	// Enabling this adds 5 additional gauges per cluster, see:
+	// https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats#circuit-breakers-statistics
+	//
+	// +optional
+	EnableCircuitBreakerRemainingStats *bool `json:"enableCircuitBreakerRemainingStats,omitempty"`
+
 	// EnableGRPCStats enables the gRPC stats filter on listeners.
 	// This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
 	// In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
@@ -66,6 +74,8 @@ type ProxyMetrics struct {
 	// Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
 	// Example: `httproute/my-ns/my-route/rule/0`
 	//
+	// +kubebuilder:validation:MaxLength=1024
+	// +kubebuilder:validation:XValidation:rule="self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME|ROUTE_RULE_NUMBER|BACKEND_REFS)%)*$')",message="clusterStatName contains an unsupported or unterminated operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%, %ROUTE_KIND%, %ROUTE_RULE_NAME%, %ROUTE_RULE_NUMBER% and %BACKEND_REFS%"
 	// +optional
 	ClusterStatName *string `json:"clusterStatName,omitempty"`
 }
@@ -94,17 +104,18 @@ type ProxyMetricSink struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="http1 is not supported for OpenTelemetry metrics backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
 type ProxyOpenTelemetrySink struct {
 	BackendCluster `json:",inline"`
 	// Host define the service hostname.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the service is exposed on.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

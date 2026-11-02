@@ -61,6 +61,7 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.targetRef) || !(self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || !has(self.targetRef.sectionName)", message="sectionName is not supported when targeting a backend"
 // +kubebuilder:validation:XValidation:rule="!has(self.targetRefs) || self.targetRefs.all(ref, !(ref.kind in ['Service', 'ServiceImport', 'Backend']) || !has(ref.sectionName))", message="sectionName is not supported when targeting a backend"
 // +kubebuilder:validation:XValidation:rule="!has(self.compression) || !has(self.compressor)", message="either compression or compressor can be set, not both"
+// +kubebuilder:validation:XValidation:rule="!has(self.http3) || !has(self.useClientProtocol) || !self.useClientProtocol", message="useClientProtocol cannot be used together with http3"
 // +kubebuilder:validation:XValidation:rule="!has(self.requestBuffer) || self.requestBuffer.mode == 'LimitOnly' || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0", message="requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"
 // +kubebuilder:validation:XValidation:rule="!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'Service', 'ServiceImport', 'Backend']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'Service', 'ServiceImport', 'Backend'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute'])))", message="admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRef/targetRefs (targetSelectors is not supported for those kinds)"
 // +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.timeout) || !has(self.timeout.http) || (!has(self.timeout.http.requestTimeout) && !has(self.timeout.http.streamIdleTimeout))", message="timeout.http.requestTimeout and timeout.http.streamIdleTimeout are not allowed when targeting a backend"
@@ -110,12 +111,14 @@ type BackendTrafficPolicySpec struct {
 
 	// The compression config for the http streams.
 	//
-	// Deprecated: Use Compressor instead.
+	// Deprecated: Use Compressor instead. This field will be removed in v1.11.
 	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=3
+	// +kubebuilder:validation:XValidation:rule="self.all(c, self.filter(o, o.type == c.type).size() == 1)",message="compression types must be unique"
 	Compression []*Compression `json:"compression,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// The compressor config for the http streams.
@@ -126,6 +129,8 @@ type BackendTrafficPolicySpec struct {
 	// +patchStrategy=merge
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=3
+	// +kubebuilder:validation:XValidation:rule="self.all(c, self.filter(o, o.type == c.type).size() == 1)",message="compressor types must be unique"
 	Compressor []*Compression `json:"compressor,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
 
 	// ResponseOverride defines the configuration to override specific responses with a custom one.
@@ -194,6 +199,8 @@ type BackendMetrics struct {
 	// Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
 	// Disabled by default.
 	//
+	// +kubebuilder:validation:MaxLength=1024
+	// +kubebuilder:validation:XValidation:rule="self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME)%)*$')",message="routeStatName contains an unsupported or unterminated operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%, %ROUTE_KIND% and %ROUTE_RULE_NAME%"
 	// +optional
 	RouteStatName *string `json:"routeStatName,omitempty"`
 }

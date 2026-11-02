@@ -65,34 +65,34 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-		t.Run("route to external service with app protocol", func(t *testing.T) {
+		t.Run("route to service with h2c app protocol", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-with-app-protocol", Namespace: ConformanceInfraNamespace}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-with-app-protocol", Namespace: ConformanceInfraNamespace})
 
+			// test-service-foo fronts the echo server's HTTP/1.1 port, so the h2c
+			// request the Backend forces ends in an upstream protocol error.
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request: http.Request{
-					Host: "httpbin.org",
-					Path: "/status/200",
+					Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+					Path: "/status",
 				},
 				Response: http.Response{
-					StatusCodes: []int{502}, // request will fail because httpbin.org doesn't support http2.0
+					StatusCodes: []int{502},
 				},
 			})
 
-			req := http.MakeRequest(t, &http.ExpectedResponse{
+			// test-service-h2c fronts the echo server's h2c port, which rejects anything but HTTP/2.
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request: http.Request{
-					Host: "gateway.envoyproxy.io", // gateway website supports http2.0
+					Host: "test-service-h2c.gateway-conformance-infra.svc.cluster.local",
+					Path: "/status",
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
 				},
-			}, gwAddr, "HTTP", "http")
-			http.WaitForConsistentResponse(t, suite.RoundTripper, req, http.ExpectedResponse{
-				Response: http.Response{
-					StatusCodes: []int{200},
-				},
-			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
+				Namespace: ConformanceInfraNamespace,
+			})
 		})
 		t.Run("route to loopback address should be blocked", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
