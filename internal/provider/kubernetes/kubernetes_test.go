@@ -261,6 +261,12 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}
 	require.NoError(t, cli.Create(ctx, gw))
 
+	// The provider updates the Gateway status from the Service event below only if
+	// the Gateway is already in its cache, and nothing in this test triggers it again.
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, utils.NamespacedName(gw), &gwapiv1.Gateway{}) == nil
+	}, defaultWait, defaultTick)
+
 	labels := map[string]string{
 		gatewayapi.OwningGatewayNameLabel:      gw.Name,
 		gatewayapi.OwningGatewayNamespaceLabel: gw.Namespace,

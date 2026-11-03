@@ -17,7 +17,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Testing Direct Response
 
-Note: the size of the response body (whether provided in-line or via a reference) cannot exceed 4096 bytes.
+There is no fixed size limit for direct-response bodies, but they are stored in Envoy's memory, so avoid using very large responses.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
