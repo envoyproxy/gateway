@@ -11,9 +11,10 @@ import (
 	"path/filepath"
 )
 
-// Write writes data into a given filepath.
+// Write writes data into a given filepath. The file is created readable by
+// the owner only, since callers use it for private keys and secrets.
 func Write(data, filepath string) error {
-	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
@@ -30,7 +31,7 @@ func Write(data, filepath string) error {
 
 // WriteDir write data into a given filename under certain directory.
 func WriteDir(data []byte, dir, filename string) error {
-	err := os.MkdirAll(dir, 0o755)
+	err := os.MkdirAll(dir, 0o750)
 	if err != nil {
 		return err
 	}
