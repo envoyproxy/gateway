@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -86,6 +87,10 @@ var statusRetryBackoff = wait.Backoff{
 	Jitter:   0.1,
 }
 
+// errUpdateHandlerStopping ends a retry once the handler shuts down. It's a plain error
+// rather than ctx.Err(), because isTransientError would treat context.Canceled as retryable.
+var errUpdateHandlerStopping = errors.New("status update handler stopping")
+
 func (u *UpdateHandler) apply(ctx context.Context, update Update) {
 	var (
 		startTime = time.Now()
@@ -98,32 +103,29 @@ func (u *UpdateHandler) apply(ctx context.Context, update Update) {
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
 
-	// The backoff stops waiting once the handler shuts down. The API calls use a background
-	// context so a write already in flight still finishes, and so client-side rate limiting
-	// waits for its turn instead of failing early.
-	var lastErr error
-	err := wait.ExponentialBackoffWithContext(ctx, statusRetryBackoff, func(context.Context) (bool, error) {
-		err := u.writeStatus(context.Background(), update, log)
+	// Each attempt checks for shutdown first, so nothing is written once the handler stops.
+	// The API calls use a background context so a write already in flight still finishes,
+	// and so client-side rate limiting waits for its turn instead of failing early.
+	err := retry.OnError(statusRetryBackoff, func(err error) bool {
 		switch {
-		case err == nil:
-			return true, nil
 		case kerrors.IsConflict(err):
 			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
+			return true
 		case isTransientError(err):
 			log.Info("retrying status update after a transient error", "error", err.Error())
-		default:
-			return false, err
+			return true
 		}
-		lastErr = err
-		return false, nil
+		return false
+	}, func() error {
+		if ctx.Err() != nil {
+			return errUpdateHandlerStopping
+		}
+		return u.writeStatus(context.Background(), update, log)
 	})
-	if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+	if errors.Is(err, errUpdateHandlerStopping) {
 		// The next leader publishes every status again, so this one isn't lost.
 		log.Info("status update handler stopping, abandoning retry")
 		return
-	}
-	if wait.Interrupted(err) && lastErr != nil {
-		err = lastErr
 	}
 
 	if err != nil {
