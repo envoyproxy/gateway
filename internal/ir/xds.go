@@ -1547,6 +1547,10 @@ type JWT struct {
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+
+	// Name is a unique name for this JWT configuration. The xds translator uses
+	// it as the jwt_authn requirement name, so JWTs that share a name must be equal.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // JWTProvider defines the schema for the JWT Provider.
