@@ -60,6 +60,15 @@ func (p *Tracker) Start(name string, attrs ...attribute.KeyValue) {
 	_, p.inFlight = p.tracer.Start(p.ctx, name, trace.WithAttributes(attrs...))
 }
 
+// SetAttributes adds attributes to the in-flight phase span. No-op if no phase
+// is currently in flight or tracing is not recording.
+func (p *Tracker) SetAttributes(attrs ...attribute.KeyValue) {
+	if p.inFlight == nil {
+		return
+	}
+	p.inFlight.SetAttributes(attrs...)
+}
+
 // End ends the phase span started by the last call to Start.
 func (p *Tracker) End() {
 	if p.inFlight == nil {
