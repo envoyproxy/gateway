@@ -592,7 +592,7 @@ xdsIR:
               name: ""
           jwt:
             allowMissing: true
-            policyName: envoy-gateway/policy-for-gateway
+            name: default/policy-parent-owned+envoy-gateway/policy-for-gateway
             providers:
             - issuer: https://gateway.example.com
               name: gateway-provider
@@ -631,7 +631,7 @@ xdsIR:
         security:
           jwt:
             allowMissing: true
-            policyName: default/policy-route-owned
+            name: default/policy-route-owned+envoy-gateway/policy-for-gateway
             providers:
             - issuer: https://route.example.com
               name: route-provider
@@ -715,7 +715,7 @@ xdsIR:
           prefix: /shared-port
         security:
           jwt:
-            policyName: default/policy-shared-port
+            name: default/policy-shared-port+envoy-gateway/policy-for-listener-a
             providers:
             - issuer: https://route.example.com
               name: route-provider
@@ -768,7 +768,7 @@ xdsIR:
           prefix: /shared-port
         security:
           jwt:
-            policyName: default/policy-shared-port
+            name: default/policy-shared-port+envoy-gateway/policy-for-listener-b
             providers:
             - issuer: https://route.example.com
               name: route-provider

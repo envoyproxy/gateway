@@ -9,8 +9,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1" //nolint:gosec // SHA1 is required to validate htpasswd {SHA} format
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1964,56 +1966,60 @@ func (t *Translator) buildJWT(
 		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
 		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
 		Providers:            providers,
-		// JWT.Providers has no patch merge key, so a merge takes the list whole from
-		// the owner rather than combining both policies' entries. Routes with the same
-		// owner and mode therefore carry the same JWT, as PolicyName requires.
-		// If JWT.Providers gains a patch merge key, a merged policy can combine
-		// providers from both policies under one owner, and this name must be updated
-		// to identify them.
-		PolicyName: utils.NamespacedName(jwtOwnerPolicy).String(),
+		Name:                 jwtName(policy, owners),
 	}, nil
 }
 
-// jwtRequirementKey identifies the jwt_authn requirement the xDS translator names
-// after a policy: its PolicyName and the mode the name's suffix spells out.
-type jwtRequirementKey struct {
-	policyName           string
-	allowMissing         bool
-	allowMissingOrFailed bool
-}
+// maxJWTNameLength bounds the length of a JWT name, which the xds translator uses as
+// the jwt_authn requirement name. A merged policy's name joins two policy names, and
+// would otherwise exceed it.
+const maxJWTNameLength = 256
 
-func jwtRequirementKeyOf(jwt *ir.JWT) jwtRequirementKey {
-	key := jwtRequirementKey{policyName: jwt.PolicyName}
-	// AllowMissingOrFailed supersedes AllowMissing, in the requirement and in its name.
-	switch {
-	case jwt.AllowMissingOrFailed:
-		key.allowMissingOrFailed = true
-	case jwt.AllowMissing:
-		key.allowMissing = true
+// jwtName names the JWT config a SecurityPolicy applies to a route after the
+// policy: <namespace>/<name>, or for a merged policy the route and parent policies
+// it was built from, <route namespace>/<route name>+<parent namespace>/<parent name>.
+//
+// The xds translator uses the name as the jwt_authn requirement name, which the
+// listener's requirement_map and the routes' requirement_name both carry. The name
+// depends only on which policies apply, not on their JWT config, so an edit of the
+// providers, optional or failOpen changes only the requirement content and does not
+// rename the requirement that routes refer to. The whole JWT config is derived from
+// the named policies, so routes that share a name carry the same JWT.
+func jwtName(policy *egv1a1.SecurityPolicy, owners *securityPolicyOwners) string {
+	// A merged policy takes its metadata from the route policy, so policy names the
+	// route policy either way.
+	name := utils.NamespacedName(policy).String()
+	if owners.mergedParent != nil {
+		// Kubernetes namespaces and names cannot contain '+', so the separator never
+		// reads as part of a policy name.
+		name += "+" + utils.NamespacedName(owners.mergedParent).String()
 	}
-	return key
+	if len(name) <= maxJWTNameLength {
+		return name
+	}
+	// Hash the full name, so a truncated name still depends only on the policies
+	// and two long names do not collide.
+	sum := sha256.Sum256([]byte(name))
+	suffix := "_" + hex.EncodeToString(sum[:8])
+	return name[:maxJWTNameLength-len(suffix)] + suffix
 }
 
-// jwtRequirementNames keeps one translation's policy-derived jwt_authn requirement
-// names unambiguous. One requirement_map holds the routes of every listener on a
-// port, and a name shared by two different requirements would let one silently
-// replace the other.
+// jwtRequirementNames keeps one translation's jwt_authn requirement names
+// unambiguous. One requirement_map holds the routes of every listener on a port,
+// and a name shared by two different requirements would let one silently replace
+// the other.
 //
-// buildJWT does not produce such conflicts today (see the PolicyName comment
-// there). This guards against a later change breaking that: the first JWT config
-// recorded under a name in an xds IR keeps it, and a later route that carries a
-// different config under the same name is refused. SecurityPolicies are applied in
-// a fixed order (oldest first, then by name), so the same route keeps the name on
-// every translation.
-//
-// The scope already fixes the policy name and the mode, so only the providers of
-// the first JWT are kept to compare against.
-type jwtRequirementNames map[jwtRequirementNameScope][]ir.JWTProvider
+// buildJWT does not produce such conflicts today (see jwtName). This guards against
+// a later change breaking that: the first JWT config recorded under a name in an
+// xds IR keeps it, and a later route that carries a different config under the
+// same name is refused. SecurityPolicies are applied in a fixed order (oldest
+// first, then by name), so the same route keeps the name on every translation.
+type jwtRequirementNames map[jwtRequirementNameScope]*ir.JWT
 
 // jwtRequirementNameScope is one requirement name within one xds IR.
 type jwtRequirementNameScope struct {
 	irKey string
-	key   jwtRequirementKey
+	name  string
 }
 
 func newJWTRequirementNames() jwtRequirementNames {
@@ -2025,16 +2031,16 @@ func newJWTRequirementNames() jwtRequirementNames {
 // the requirement_map, when another route already holds the name with a different
 // config. The caller refuses the route.
 func (n jwtRequirementNames) record(irKey string, r *ir.HTTPRoute) error {
-	if r.Security == nil || r.Security.JWT == nil || r.Security.JWT.PolicyName == "" {
+	if r.Security == nil || r.Security.JWT == nil || r.Security.JWT.Name == "" {
 		return nil
 	}
-	scope := jwtRequirementNameScope{irKey: irKey, key: jwtRequirementKeyOf(r.Security.JWT)}
+	scope := jwtRequirementNameScope{irKey: irKey, name: r.Security.JWT.Name}
 	first, ok := n[scope]
 	if !ok {
-		n[scope] = r.Security.JWT.Providers
+		n[scope] = r.Security.JWT
 		return nil
 	}
-	if reflect.DeepEqual(first, r.Security.JWT.Providers) {
+	if reflect.DeepEqual(first, r.Security.JWT) {
 		return nil
 	}
 	// Routes share SecurityFeatures; copy them so the other routes keep their JWT.
@@ -2042,8 +2048,8 @@ func (n jwtRequirementNames) record(irKey string, r *ir.HTTPRoute) error {
 	security.JWT = nil
 	r.Security = &security
 	return perr.WithMessage(fmt.Errorf(
-		"the jwt requirement of policy %s differs from the one another route of the same gateway already holds",
-		scope.key.policyName), "JWT")
+		"the jwt requirement %s differs from the one another route of the same gateway already holds",
+		scope.name), "JWT")
 }
 
 func validateJWTProvider(providers []egv1a1.JWTProvider) error {
@@ -3536,6 +3542,10 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 }
 
 type securityPolicyOwners struct {
+	// mergedParent is the parent policy a merged policy was built from, rather than
+	// the owner of a field. It is nil when the policy is not merged.
+	mergedParent *egv1a1.SecurityPolicy
+
 	basicAuth                *egv1a1.SecurityPolicy
 	apiKeyAuthCredentialRefs *egv1a1.SecurityPolicy
 	authorizationRules       *egv1a1.SecurityPolicy
@@ -3567,6 +3577,7 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 // and to derive IR resource names tied to the owning policy.
 func buildSecurityPolicyOwners(route, parent *egv1a1.SecurityPolicy) *securityPolicyOwners {
 	return &securityPolicyOwners{
+		mergedParent: parent,
 		basicAuth: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
 			return p.Spec.BasicAuth != nil
 		}),

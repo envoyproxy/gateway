@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -2883,10 +2884,10 @@ func Test_securityPolicyOwnerChoose(t *testing.T) {
 }
 
 func TestJWTRequirementNamesConflict(t *testing.T) {
-	jwtFor := func(policy, issuer string, allowMissing bool) *ir.JWT {
+	jwtFor := func(name, issuer string, allowMissing bool) *ir.JWT {
 		return &ir.JWT{
 			AllowMissing: allowMissing,
-			PolicyName:   policy,
+			Name:         name,
 			Providers:    []ir.JWTProvider{{Name: "example", Issuer: issuer}},
 		}
 	}
@@ -2899,13 +2900,13 @@ func TestJWTRequirementNamesConflict(t *testing.T) {
 		wantErr bool
 	}{
 		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "a/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", false)}}},
-		// Another mode is another requirement name.
-		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "a/conflict-missing", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://b.example.com", true)}}},
 		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "a/stable", Security: stable}},
 		// The same config under the name is shared.
 		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict-same", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", false)}}},
-		// A different config under the name is refused.
+		// A different config under the name is refused, whether the providers or
+		// the mode differ.
 		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://b.example.com", false)}}, wantErr: true},
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict-missing", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", true)}}, wantErr: true},
 		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/stable", Security: stable}},
 		// The same name in another xds IR is a different requirement_map.
 		{irKey: "gateway-2", route: &ir.HTTPRoute{Name: "c/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://c.example.com", false)}}},
@@ -2927,4 +2928,48 @@ func TestJWTRequirementNamesConflict(t *testing.T) {
 	}
 	// Refusing a route leaves the SecurityFeatures it shared untouched.
 	require.NotNil(t, stable.JWT)
+}
+
+func TestJWTName(t *testing.T) {
+	policyFor := func(namespace, name string) *egv1a1.SecurityPolicy {
+		return &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				JWT:       &egv1a1.JWT{Providers: []egv1a1.JWTProvider{{Name: "example"}}},
+			},
+		}
+	}
+	routePolicy := policyFor("default", "policy-for-route")
+	parentPolicy := policyFor("envoy-gateway", "policy-for-gateway")
+
+	t.Run("policy", func(t *testing.T) {
+		require.Equal(t, "default/policy-for-route", jwtName(routePolicy, &securityPolicyOwners{}))
+	})
+
+	t.Run("merged policy", func(t *testing.T) {
+		// The merged policy keeps the route policy's metadata, which jwtName relies
+		// on to name the route policy.
+		merged, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
+		require.Equal(t, "default/policy-for-route+envoy-gateway/policy-for-gateway", jwtName(merged, owners))
+		// The same route policy merged with another parent is another JWT.
+		other, otherOwners, err := mergeSecurityPolicy(routePolicy, policyFor("envoy-gateway", "policy-for-listener"))
+		require.NoError(t, err)
+		require.NotEqual(t, jwtName(merged, owners), jwtName(other, otherOwners))
+	})
+
+	t.Run("bounded", func(t *testing.T) {
+		// A 63-character namespace and a 253-character name, the Kubernetes maximums,
+		// exceed the bound. The two parents differ only past the truncated prefix.
+		long := func(last string) *egv1a1.SecurityPolicy {
+			return policyFor(strings.Repeat("n", 63), strings.Repeat("p", 252)+last)
+		}
+		route := long("r")
+		name := jwtName(route, buildSecurityPolicyOwners(route, long("a")))
+		other := jwtName(route, buildSecurityPolicyOwners(route, long("b")))
+		require.Len(t, name, maxJWTNameLength)
+		require.Equal(t, name, jwtName(route, buildSecurityPolicyOwners(route, long("a"))))
+		require.NotEqual(t, name, other)
+	})
 }

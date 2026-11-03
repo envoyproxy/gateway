@@ -15,7 +15,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: default/policy-for-gateway:missing
+          requirementName: default/policy-for-gateway
     - match:
         path: foo/baz
       name: second-route
@@ -26,4 +26,4 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: default/policy-for-gateway:missing
+          requirementName: default/policy-for-gateway

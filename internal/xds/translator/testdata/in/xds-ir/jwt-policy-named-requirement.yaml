@@ -15,7 +15,7 @@ http:
     security:
       jwt:
         allowMissing: true
-        policyName: default/policy-for-gateway
+        name: default/policy-for-gateway
         providers:
         - name: example
           issuer: https://www.example.com
@@ -38,7 +38,7 @@ http:
     security:
       jwt:
         allowMissing: true
-        policyName: default/policy-for-gateway
+        name: default/policy-for-gateway
         providers:
         - name: example
           issuer: https://www.example.com

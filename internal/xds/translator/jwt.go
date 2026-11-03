@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -120,12 +119,11 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 			jwtAuthn.Providers[providerKey] = jwtProvider
 		}
 
-		requirement := buildJWTRequirement(reqs)
-		requirementName, err := jwtRequirementName(route.Security.JWT, requirement)
+		requirementName, err := jwtRequirementName(route.Security.JWT)
 		if err != nil {
 			return err
 		}
-		jwtAuthn.RequirementMap[requirementName] = requirement
+		jwtAuthn.RequirementMap[requirementName] = buildJWTRequirement(reqs)
 	}
 	return nil
 }
@@ -289,10 +287,10 @@ func buildJWTRequirement(reqs []*jwtauthnv3.JwtRequirement) *jwtauthnv3.JwtRequi
 	}
 }
 
-// maxJWTNameLength bounds the length of generated JWT provider and requirement
-// names. The readable prefix is derived from user-controlled provider names and,
-// for requirements, grows with the number of combined providers, so without a
-// cap the generated name could become long enough to fail Envoy xDS validation.
+// maxJWTNameLength bounds the length of generated JWT provider
+// names. The readable prefix is derived from user-controlled provider names, so
+// without a cap the generated name could become long enough to fail Envoy xDS
+// validation.
 const maxJWTNameLength = 256
 
 // boundedJWTName joins a human-readable prefix with a content-derived hash,
@@ -319,58 +317,19 @@ func jwtProviderName(providerName string, provider *jwtauthnv3.JwtProvider) (str
 	return boundedJWTName(providerName, hash), nil
 }
 
-// jwtRequirementName returns a deterministic name for a JWT requirement.
-//
-// When the IR names the SecurityPolicy that owns the providers, the requirement is
-// named after it, as <namespace>/<name>[:missing|:missing-or-failed]. Envoy applies
-// the listener (requirement_map) and the route configuration (requirement_name) as
-// separate updates, and connections already open keep their listener's
-// requirement_map until they drain. A name derived from the policy identity survives
-// an edit of the providers, so only the content of the requirement_map entry
-// changes, and requests on those connections are verified against the old providers
-// instead of being refused with "Wrong requirement_name".
-//
-// Otherwise the name combines the referenced IR provider names (plus "missing" or
-// "missing-or-failed" when such tokens are tolerated) with a hash of the generated
-// Envoy requirement config, so identical requirements are deduplicated while the
-// name stays human readable.
-func jwtRequirementName(jwt *ir.JWT, requirement *jwtauthnv3.JwtRequirement) (string, error) {
-	var tolerated string
-	switch {
-	case jwt.AllowMissingOrFailed:
-		tolerated = "missing-or-failed"
-	case jwt.AllowMissing:
-		tolerated = "missing"
+// jwtRequirementName returns the name of a JWT requirement, which the IR JWT
+// carries. Envoy applies the listener (requirement_map) and the route
+// configuration (requirement_name) as separate updates, and connections already
+// open keep their listener's requirement_map until they drain. A name that does
+// not depend on the content survives an edit of the JWT config, so only the
+// content of the requirement_map entry changes, and requests on those connections
+// are verified against the old config instead of being refused with
+// "Wrong requirement_name".
+func jwtRequirementName(jwt *ir.JWT) (string, error) {
+	if jwt.Name == "" {
+		return "", errors.New("jwt name is empty")
 	}
-
-	if jwt.PolicyName != "" {
-		// Kubernetes namespaces and names cannot contain ':', so the suffix never
-		// reads as part of another policy's name.
-		name := jwt.PolicyName
-		if tolerated != "" {
-			name += ":" + tolerated
-		}
-		if len(name) <= maxJWTNameLength {
-			return name, nil
-		}
-		// Hash the full name rather than the content, so a truncated name still
-		// depends only on the policy identity and two long names do not collide.
-		sum := sha256.Sum256([]byte(name))
-		return boundedJWTName(name, hex.EncodeToString(sum[:8])), nil
-	}
-
-	hash, err := protoHash(requirement)
-	if err != nil {
-		return "", err
-	}
-	names := make([]string, 0, len(jwt.Providers)+1)
-	for i := range jwt.Providers {
-		names = append(names, jwt.Providers[i].Name)
-	}
-	if tolerated != "" {
-		names = append(names, tolerated)
-	}
-	return boundedJWTName(strings.Join(names, "-or-"), hash), nil
+	return jwt.Name, nil
 }
 
 // protoHash returns the first 16 hex characters of the SHA-256 digest of the
@@ -436,11 +395,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 			return nil
 		}
 
-		_, reqs, err := buildJWTRequirements(irRoute.Security.JWT)
-		if err != nil {
-			return err
-		}
-		requirementName, err := jwtRequirementName(irRoute.Security.JWT, buildJWTRequirement(reqs))
+		requirementName, err := jwtRequirementName(irRoute.Security.JWT)
 		if err != nil {
 			return err
 		}

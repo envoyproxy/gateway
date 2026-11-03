@@ -21,6 +21,7 @@ http:
       exact: "foo/bar"
     security:
       jwt:
+        name: default/policy
         providers:
         - name: example
           issuer: https://www.example.com

@@ -36,7 +36,7 @@
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
-              default/policy-for-gateway:missing:
+              default/policy-for-gateway:
                 requiresAny:
                   requirements:
                   - providerName: example_ced70d98fe975d58

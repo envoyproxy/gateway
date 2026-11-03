@@ -32,6 +32,7 @@ func TestJWTAuthnDeduplicatesIdenticalRouteProviders(t *testing.T) {
 				Name: "httproute/default/route-a/rule/0/match/0/example.com",
 				Security: &ir.SecurityFeatures{
 					JWT: &ir.JWT{
+						Name:      "default/sp",
 						Providers: []ir.JWTProvider{provider},
 					},
 				},
@@ -40,6 +41,7 @@ func TestJWTAuthnDeduplicatesIdenticalRouteProviders(t *testing.T) {
 				Name: "httproute/default/route-b/rule/0/match/0/example.com",
 				Security: &ir.SecurityFeatures{
 					JWT: &ir.JWT{
+						Name:      "default/sp",
 						Providers: []ir.JWTProvider{provider},
 					},
 				},
@@ -119,9 +121,9 @@ func TestBuildJWTProviderClaimToHeaders(t *testing.T) {
 	require.Equal(t, "c.d", nested.GetClaimPath()[1].GetKey())
 }
 
-// Build a JWT config with many long provider names so the joined,
-// human-readable prefix would exceed the length guard if left unbounded.
-func TestJWTAuthnNamesAreBounded(t *testing.T) {
+// Build a JWT config with long provider names so the human-readable prefix would
+// exceed the length guard if left unbounded.
+func TestJWTAuthnProviderNamesAreBounded(t *testing.T) {
 	providers := make([]ir.JWTProvider, 0, 50)
 	for i := 0; i < 50; i++ {
 		providers = append(providers, ir.JWTProvider{
@@ -132,7 +134,7 @@ func TestJWTAuthnNamesAreBounded(t *testing.T) {
 			},
 		})
 	}
-	irJWT := &ir.JWT{Providers: providers, AllowMissing: true}
+	irJWT := &ir.JWT{Name: "default/sp", Providers: providers, AllowMissing: true}
 	irListener := &ir.HTTPListener{
 		Routes: []*ir.HTTPRoute{
 			{
@@ -147,12 +149,32 @@ func TestJWTAuthnNamesAreBounded(t *testing.T) {
 
 	for providerName := range jwtAuthn.GetProviders() {
 		require.LessOrEqual(t, len(providerName), maxJWTNameLength)
-	}
-	for requirementName := range jwtAuthn.GetRequirementMap() {
-		require.LessOrEqual(t, len(requirementName), maxJWTNameLength)
 		// The uniqueness-guaranteeing hash suffix must survive truncation.
-		require.Contains(t, requirementName, "_")
+		require.Contains(t, providerName, "_")
 	}
+}
+
+// The gateway API translator names every JWT, so an unnamed one is refused rather
+// than named after its content, which would rename the requirement on every edit.
+func TestJWTAuthnRequiresName(t *testing.T) {
+	irListener := &ir.HTTPListener{
+		Routes: []*ir.HTTPRoute{
+			{
+				Name: "httproute/default/route-a/rule/0/match/0/example.com",
+				Security: &ir.SecurityFeatures{JWT: &ir.JWT{Providers: []ir.JWTProvider{{
+					Name:   "example",
+					Issuer: "https://issuer.example.com/",
+					RemoteJWKS: &ir.RemoteJWKS{
+						URI: "https://issuer.example.com/keys",
+					},
+				}}}},
+			},
+		},
+	}
+
+	var jwtAuthn jwtauthnv3.JwtAuthentication
+	require.ErrorContains(t, buildJWTAuthn(irListener, &jwtAuthn), "jwt name is empty")
+	require.ErrorContains(t, (&jwt{}).patchRoute(&routev3.Route{}, irListener.Routes[0], irListener), "jwt name is empty")
 }
 
 // policyJWTListener builds one listener whose routes all carry irJWT, and returns
@@ -182,7 +204,7 @@ func policyJWTListener(t *testing.T, irJWT *ir.JWT, routeNames ...string) (*jwta
 	return jwtAuthn, refs
 }
 
-func TestJWTAuthnPolicyNamedRequirementSurvivesEdit(t *testing.T) {
+func TestJWTAuthnNamedRequirementSurvivesEdit(t *testing.T) {
 	provider := ir.JWTProvider{
 		Name:      "example",
 		Issuer:    "https://issuer.example.com/",
@@ -199,82 +221,30 @@ func TestJWTAuthnPolicyNamedRequirementSurvivesEdit(t *testing.T) {
 		"httproute/default/route-b/rule/0/match/0/example.com",
 	}
 	before, beforeRefs := policyJWTListener(t, &ir.JWT{
-		AllowMissing: true,
-		PolicyName:   "default/sp",
-		Providers:    []ir.JWTProvider{provider},
+		Name:      "default/sp",
+		Providers: []ir.JWTProvider{provider},
 	}, routes...)
 	after, afterRefs := policyJWTListener(t, &ir.JWT{
 		AllowMissing: true,
-		PolicyName:   "default/sp",
+		Name:         "default/sp",
 		Providers:    []ir.JWTProvider{edited},
 	}, routes...)
 
-	// Routes of one policy share one requirement, so adding a route leaves the
+	// Routes that share a name share one requirement, so adding a route leaves the
 	// listener unchanged.
 	require.Len(t, before.GetRequirementMap(), 1)
-	require.Contains(t, before.GetRequirementMap(), "default/sp:missing")
-	require.Equal(t, []string{"default/sp:missing", "default/sp:missing"}, beforeRefs)
+	require.Contains(t, before.GetRequirementMap(), "default/sp")
+	require.Equal(t, []string{"default/sp", "default/sp"}, beforeRefs)
 
-	// The edit renames the provider but not the requirement the routes refer to:
-	// the route configuration stays put and only the requirement_map entry changes.
+	// The edit, of the providers and the mode alike, changes the provider but not
+	// the requirement the routes refer to: the route configuration stays put and
+	// only the requirement_map entry changes.
 	require.Equal(t, beforeRefs, afterRefs)
-	require.Contains(t, after.GetRequirementMap(), "default/sp:missing")
+	require.Contains(t, after.GetRequirementMap(), "default/sp")
 	require.False(t, gproto.Equal(
-		before.GetRequirementMap()["default/sp:missing"],
-		after.GetRequirementMap()["default/sp:missing"]))
+		before.GetRequirementMap()["default/sp"],
+		after.GetRequirementMap()["default/sp"]))
 	for providerName := range after.GetProviders() {
 		require.NotContains(t, before.GetProviders(), providerName)
 	}
-}
-
-func TestJWTAuthnPolicyNamedRequirementModes(t *testing.T) {
-	provider := []ir.JWTProvider{{
-		Name:   "example",
-		Issuer: "https://issuer.example.com/",
-		RemoteJWKS: &ir.RemoteJWKS{
-			URI: "https://issuer.example.com/keys",
-		},
-	}}
-	route := "httproute/default/route-a/rule/0/match/0/example.com"
-	tests := []struct {
-		jwt  *ir.JWT
-		want string
-	}{
-		{jwt: &ir.JWT{PolicyName: "default/sp", Providers: provider}, want: "default/sp"},
-		{jwt: &ir.JWT{PolicyName: "default/sp", AllowMissing: true, Providers: provider}, want: "default/sp:missing"},
-		{jwt: &ir.JWT{PolicyName: "default/sp", AllowMissingOrFailed: true, Providers: provider}, want: "default/sp:missing-or-failed"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.want, func(t *testing.T) {
-			jwtAuthn, refs := policyJWTListener(t, tc.jwt, route)
-			require.Equal(t, []string{tc.want}, refs)
-			require.Contains(t, jwtAuthn.GetRequirementMap(), tc.want)
-		})
-	}
-}
-
-func TestJWTAuthnPolicyNamedRequirementIsBounded(t *testing.T) {
-	provider := ir.JWTProvider{
-		Name:      "example",
-		Issuer:    "https://issuer.example.com/",
-		Audiences: []string{"aud-a"},
-		RemoteJWKS: &ir.RemoteJWKS{
-			URI: "https://issuer.example.com/keys",
-		},
-	}
-	edited := provider
-	edited.Audiences = []string{"aud-a", "aud-b"}
-
-	// A 63-character namespace and a 253-character name, the Kubernetes maximums,
-	// exceed the bound. The two policies differ only past the truncated prefix.
-	longName := strings.Repeat("n", 63) + "/" + strings.Repeat("p", 252)
-	route := "httproute/default/route-a/rule/0/match/0/example.com"
-
-	_, before := policyJWTListener(t, &ir.JWT{PolicyName: longName + "a", Providers: []ir.JWTProvider{provider}}, route)
-	_, after := policyJWTListener(t, &ir.JWT{PolicyName: longName + "a", Providers: []ir.JWTProvider{edited}}, route)
-	_, other := policyJWTListener(t, &ir.JWT{PolicyName: longName + "b", Providers: []ir.JWTProvider{provider}}, route)
-
-	require.LessOrEqual(t, len(before[0]), maxJWTNameLength)
-	require.Equal(t, before, after)
-	require.NotEqual(t, before, other)
 }
