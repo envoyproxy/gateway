@@ -182,13 +182,16 @@ func (i *Infra) getEnvoyVersion(proxyConfig *egv1a1.EnvoyProxy) string {
 
 // extractSemver takes an image reference like "docker.io/envoyproxy/envoy:distroless-v1.35.0"
 // and returns the semver string, e.g. "1.35.0".
+// The image reference may also be pinned by digest, e.g. "envoyproxy/envoy:distroless-v1.35.0@sha256:...",
+// and the registry host may contain a port, e.g. "localhost:5000/envoyproxy/envoy:v1.35.0".
 func extractSemver(image string) (string, error) {
-	// Split to isolate the tag part after the colon
-	parts := strings.Split(image, ":")
-	if len(parts) < 2 {
+	// Drop the digest, if any, as it also contains a colon.
+	ref, _, _ := strings.Cut(image, "@")
+	// The tag is in the last path segment, so registry ports are not mistaken for it.
+	_, tag, found := strings.Cut(ref[strings.LastIndex(ref, "/")+1:], ":")
+	if !found || tag == "" {
 		return "", fmt.Errorf("no tag found in default Envoy image reference: %s", image)
 	}
-	tag := parts[len(parts)-1]
 
 	re := regexp.MustCompile(`\d+\.\d+\.\d+`)
 	semver := re.FindString(tag)

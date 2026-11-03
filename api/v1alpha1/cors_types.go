@@ -28,6 +28,18 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // +kubebuilder:validation:Pattern=`^(\*|[A-Za-z][A-Za-z0-9+.-]*:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$`
 type Origin string
 
+// CORSOriginRegex is a regular expression that is matched against the full Origin header value,
+// including the scheme and the port if present.
+// The regex string must adhere to the syntax documented in
+// https://github.com/google/re2/wiki/Syntax, except for the \C escape sequence,
+// which is not supported.
+// A regular expression that matches the literal string "*" is rejected.
+// The value "*" in AllowOrigins allows any origin.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=1024
+type CORSOriginRegex string
+
 // CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
 type CORS struct {
 	// AllowOrigins defines the origins that are allowed to make requests.
@@ -36,6 +48,13 @@ type CORS struct {
 	//
 	// +optional
 	AllowOrigins []Origin `json:"allowOrigins,omitempty"`
+
+	// AllowOriginRegexes defines regular expressions that are matched against the Origin header.
+	// It specifies additional allowed origins in the Access-Control-Allow-Origin CORS response header.
+	// An origin is allowed when it matches any entry in AllowOrigins or AllowOriginRegexes.
+	//
+	// +optional
+	AllowOriginRegexes []CORSOriginRegex `json:"allowOriginRegexes,omitempty"`
 
 	// AllowMethods defines the methods that are allowed to make requests.
 	// It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..

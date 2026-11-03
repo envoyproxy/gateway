@@ -55,7 +55,7 @@ var ClientMTLSTest = suite.ConformanceTest{
 						Host: "mtls.example.com",
 						Path: "/client-mtls",
 						Headers: map[string]string{
-							"X-Forwarded-Client-Cert": "Hash=ac77d86dd638969a0a39b4e0743370e860d1b70da58b1b08ce950417b6386a8b;Subject=\"CN=mtls.example.com,OU=Gateway,O=EnvoyProxy,L=SomeCity,ST=VA,C=US\"",
+							"X-Forwarded-Client-Cert": "Hash=ac77d86dd638969a0a39b4e0743370e860d1b70da58b1b08ce950417b6386a8b;Subject=\"CN=mtls.example.com,OU=Gateway,O=EnvoyProxy,L=SomeCity,ST=VA,C=US\";Issuer=\"CN=mtls.example.com,OU=Gateway,O=EnvoyProxy,L=SomeCity,ST=VA,C=US\"",
 						},
 					},
 				},

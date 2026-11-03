@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/luavalidator"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -40,10 +42,20 @@ const (
 )
 
 // deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
+	}
+	for i := range policy.Spec.ExtProc {
+		deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, fmt.Sprintf("spec.extProc[%d]", i),
+			&policy.Spec.ExtProc[i].BackendCluster, nil)
+	}
+	for i, backend := range policy.Spec.Backends {
+		if backend.BackendSettings != nil {
+			deprecation.AddDeprecatedLoadBalancerFields(deprecatedFields,
+				fmt.Sprintf("spec.backends[%d].backendSettings.loadBalancer", i), backend.BackendSettings.LoadBalancer)
+		}
 	}
 	return deprecatedFields
 }
@@ -495,6 +507,10 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -517,21 +533,21 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 		// they intentionally skip Gateway listener policies because those are
 		// sibling scopes.
 		for _, parentRefCtx := range parentRefCtxs {
+			// The listeners can merge with different parent policies, and fail on some of them
+			// only, so collect their results and report them once for the parentRef.
+			errMsgs, mergedWith := sets.New[string](), sets.New[string]()
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
 
 				var (
 					parentPolicy *egv1a1.EnvoyExtensionPolicy
 					parentScope  policyScope
-					ancestorRef  gwapiv1.ParentReference
 				)
 				if listener.isFromListenerSet() {
 					lsNN := types.NamespacedName{
 						Namespace: listener.listenerSet.Namespace,
 						Name:      listener.listenerSet.Name,
 					}
-					ancestorRef = getAncestorRefForListenerSetPolicy(lsNN, &listener.Name)
-
 					lsListenerKey := NamespacedNameWithSection{NamespacedName: lsNN, SectionName: listener.Name}
 					lsKey := NamespacedNameWithSection{NamespacedName: lsNN}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
@@ -544,8 +560,6 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 						parentPolicy, parentScope = p, gatewayScope(gwNN)
 					}
 				} else {
-					ancestorRef = getAncestorRefForPolicy(gwNN, &listener.Name)
-
 					listenerKey := NamespacedNameWithSection{NamespacedName: gwNN, SectionName: listener.Name}
 					gwKey := NamespacedNameWithSection{NamespacedName: gwNN}
 
@@ -559,14 +573,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 				if parentPolicy == nil {
 					// No parent policy found, fall back to current policy
 					if err := t.translateEnvoyExtensionPolicyForRoute(policy, &envoyExtensionPolicyOwners{}, targetedRoute, currTarget, xdsIR, resources, listener); err != nil {
-						status.SetConditionForPolicyAncestor(&policy.Status,
-							&ancestorRef,
-							t.GatewayControllerName,
-							gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-							egv1a1.PolicyReasonInvalid,
-							status.Error2ConditionMsg(err),
-							policy.Generation,
-						)
+						errMsgs.Insert(status.Error2ConditionMsg(err))
 					}
 					continue
 				}
@@ -574,44 +581,23 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 				// Merge with parent policy
 				mergedPolicy, owners, err := mergeEnvoyExtensionPolicy(policy, parentPolicy)
 				if err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						fmt.Sprintf("error merging policies: %v", err),
-						policy.Generation,
-					)
+					errMsgs.Insert(fmt.Sprintf("error merging policies: %v", err))
 					continue
 				}
 
 				// Apply merged policy
 				if err := t.translateEnvoyExtensionPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, xdsIR, resources, listener); err != nil {
-					status.SetConditionForPolicyAncestor(&policy.Status,
-						&ancestorRef,
-						t.GatewayControllerName,
-						gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse,
-						egv1a1.PolicyReasonInvalid,
-						status.Error2ConditionMsg(err),
-						policy.Generation,
-					)
+					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
 
 				// Record the merged route under the parent scope so the parent's
 				// status can list the routes that were merged into it.
 				merged.Add(parentScope, routeAsChildScope)
-
-				status.SetConditionForPolicyAncestor(&policy.Status,
-					&ancestorRef,
-					t.GatewayControllerName,
-					egv1a1.PolicyConditionMerged,
-					metav1.ConditionTrue,
-					egv1a1.PolicyReasonMerged,
-					fmt.Sprintf("Merged with policy %s/%s", parentPolicy.Namespace, parentPolicy.Name),
-					policy.Generation,
-				)
+				mergedWith.Insert(utils.NamespacedName(parentPolicy).String())
 			}
+
+			status.SetMergeResultForPolicyAncestor(&policy.Status, new(parentRefCtx.PolicyAncestorRef()), t.GatewayControllerName, policy.Generation, errMsgs, mergedWith)
 		}
 	}
 
@@ -692,6 +678,10 @@ func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -794,7 +784,10 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
-
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -1047,17 +1040,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	targetListener *ListenerContext,
 ) error {
 	var (
-		wasms                                                 []ir.Wasm
-		luas                                                  []ir.Lua
-		wasmFailOpen, extProcFailOpen                         bool
-		wasmError, luaError, extProcError, dynamicModuleError error
-		errs                                                  error
+		luas                                                                []ir.Lua
+		extProcFailOpen                                                     bool
+		luaError, extProcError, dynamicModuleError, wasmError, backendError error
+		errs                                                                error
 	)
-
-	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, owners, resources); wasmError != nil {
-		wasmError = perr.WithMessage(wasmError, "Wasm")
-		errs = errors.Join(errs, wasmError)
-	}
 
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
@@ -1096,6 +1083,19 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			}
 		}
 
+		var (
+			wasms        []ir.Wasm
+			wasmFailOpen bool
+		)
+		// Built per parent Gateway because EnvoyProxy Wasm resolves against
+		// that Gateway's EnvoyProxy.wasmModules. HTTP/Image call WasmCache.Get
+		// here; IfNotPresent is a cache hit on repeats, Always may re-fetch
+		// once per parentRef (same placement as Lua and DynamicModules).
+		if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, owners, resources, gtwCtx.envoyProxy); wasmError != nil {
+			wasmError = perr.WithMessage(wasmError, "Wasm")
+			errs = errors.Join(errs, wasmError)
+		}
+
 		if luas, luaError = t.buildLuas(policy, owners, gtwCtx.envoyProxy); luaError != nil {
 			luaError = perr.WithMessage(luaError, "Lua")
 			errs = errors.Join(errs, luaError)
@@ -1111,6 +1111,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, owners, gtwCtx.envoyProxy); dynamicModuleError != nil {
 			dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 			errs = errors.Join(errs, dynamicModuleError)
+		}
+
+		var backends map[string]*ir.ExtensionBackend
+		var backendRefs map[string]string
+		if backends, backendError = t.buildExtensionBackends(policy, owners, resources, gtwCtx); backendError != nil {
+			errs = errors.Join(errs, backendError)
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
@@ -1135,7 +1141,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							continue
 						}
 
-						failRoute := false
+						// Declared backends remain required when a filter allows failures.
+						failRoute := backendError != nil
 						// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
 						// TODO: we may also add fail open option for Lua extension to align with other extensions
 						if luaError != nil {
@@ -1151,16 +1158,24 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							failRoute = true
 						}
 						if failRoute {
+							if backendError != nil {
+								// Mark this policy selected so a parent cannot restore extensions.
+								r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
+							}
 							r.DirectResponse = &ir.CustomResponse{
 								StatusCode: new(uint32(500)),
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
+							if backendRefs == nil {
+								backendRefs = t.registerExtensionBackends(xdsIR[irKey], gtwCtx, backends)
+							}
 							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 								ExtProcs:       extProcs,
 								Wasms:          wasms,
 								Luas:           luas,
 								DynamicModules: dynamicModules,
+								Backends:       backendRefs,
 							}
 						}
 					}
@@ -1220,13 +1235,13 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 	targetListeners []*ListenerContext,
 ) error {
 	var (
-		extProcs                                              []ir.ExtProc
-		wasms                                                 []ir.Wasm
-		luas                                                  []ir.Lua
-		dynamicModules                                        []ir.DynamicModule
-		wasmFailOpen, extProcFailOpen                         bool
-		wasmError, luaError, extProcError, dynamicModuleError error
-		errs                                                  error
+		extProcs                                                            []ir.ExtProc
+		wasms                                                               []ir.Wasm
+		luas                                                                []ir.Lua
+		dynamicModules                                                      []ir.DynamicModule
+		wasmFailOpen, extProcFailOpen                                       bool
+		wasmError, luaError, extProcError, dynamicModuleError, backendError error
+		errs                                                                error
 	)
 
 	noOwners := &envoyExtensionPolicyOwners{}
@@ -1234,7 +1249,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
-	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, noOwners, resources); wasmError != nil {
+	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, noOwners, resources, gateway.envoyProxy); wasmError != nil {
 		wasmError = perr.WithMessage(wasmError, "Wasm")
 		errs = errors.Join(errs, wasmError)
 	}
@@ -1245,6 +1260,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, noOwners, gateway.envoyProxy); dynamicModuleError != nil {
 		dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 		errs = errors.Join(errs, dynamicModuleError)
+	}
+
+	var backends map[string]*ir.ExtensionBackend
+	var backendRefs map[string]string
+	if backends, backendError = t.buildExtensionBackends(policy, noOwners, resources, gateway); backendError != nil {
+		errs = errors.Join(errs, backendError)
 	}
 
 	irKey := t.getIRKey(gateway.Gateway)
@@ -1270,7 +1291,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				continue
 			}
 
-			failRoute := false
+			// Declared backends remain required when a filter allows failures.
+			failRoute := backendError != nil
 			// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
 			// TODO: we may also add fail open option for Lua extension to align with other extensions
 			if luaError != nil {
@@ -1286,16 +1308,24 @@ func (t *Translator) translateEnvoyExtensionPolicyForListeners(
 				failRoute = true
 			}
 			if failRoute {
+				if backendError != nil {
+					// Mark this policy selected so a parent cannot restore extensions.
+					r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
+				}
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
+				if backendRefs == nil {
+					backendRefs = t.registerExtensionBackends(x, gateway, backends)
+				}
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 					ExtProcs:       extProcs,
 					Wasms:          wasms,
 					Luas:           luas,
 					DynamicModules: dynamicModules,
+					Backends:       backendRefs,
 				}
 			}
 		}
@@ -1462,7 +1492,7 @@ func (t *Translator) buildExtProc(
 			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policy.Namespace))
 	}
 
-	traffic, err := translateTrafficFeatures(extProc.BackendSettings)
+	traffic, err := translateExtServiceBackendSettings(extProc.BackendSettings)
 	if err != nil {
 		return nil, err
 	}
@@ -1552,31 +1582,36 @@ func (t *Translator) buildWasms(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	owners *envoyExtensionPolicyOwners,
 	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) ([]ir.Wasm, error, bool) {
 	var (
 		failOpen bool
 		errs     error
 	)
 
-	if len(policy.Spec.Wasm) == 0 {
+	if policy == nil || len(policy.Spec.Wasm) == 0 {
 		return nil, nil, failOpen
 	}
 
 	wasmIRList := make([]ir.Wasm, 0, len(policy.Spec.Wasm))
 
-	if t.WasmCache == nil {
-		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen
+	// Name-only entries do not need cache (local path references).
+	needsCache := false
+	for _, wasm := range policy.Spec.Wasm {
+		if wasm.Code != nil && (wasm.Code.Type == egv1a1.HTTPWasmCodeSourceType || wasm.Code.Type == egv1a1.ImageWasmCodeSourceType) {
+			needsCache = true
+			break
+		}
 	}
-
-	if policy == nil {
-		return nil, nil, failOpen
+	if needsCache && t.WasmCache == nil {
+		return nil, fmt.Errorf("wasm cache is not initialized"), failOpen
 	}
 
 	hasFailClose := false
 	ownerPolicy := policyOwnerOr(owners.wasm, policy)
 	for idx, wasm := range policy.Spec.Wasm {
 		name := irConfigNameForWasm(ownerPolicy, idx)
-		wasmIR, err := t.buildWasm(name, &wasm, ownerPolicy, idx, resources)
+		wasmIR, err := t.buildWasm(name, &wasm, ownerPolicy, idx, resources, envoyProxy)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if wasm.FailOpen == nil || !*wasm.FailOpen {
@@ -1601,10 +1636,12 @@ func (t *Translator) buildWasm(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	idx int,
 	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.Wasm, error) {
 	var (
 		failOpen   = false
 		code       *ir.HTTPWasmCode
+		localPath  string
 		pullPolicy wasm.PullPolicy
 		// the checksum provided by the user, it's used to validate the wasm module
 		// downloaded from the original HTTP server or the OCI registry
@@ -1618,142 +1655,166 @@ func (t *Translator) buildWasm(
 		failOpen = *config.FailOpen
 	}
 
-	if config.Code.PullPolicy != nil {
-		switch *config.Code.PullPolicy {
-		case egv1a1.ImagePullPolicyAlways:
-			pullPolicy = wasm.Always
-		case egv1a1.ImagePullPolicyIfNotPresent:
-			pullPolicy = wasm.IfNotPresent
+	if config.Code == nil {
+		// Name is the wasmModules registry key when code is omitted
+		if config.Name == nil || *config.Name == "" {
+			return nil, fmt.Errorf("wasm name must be set when code is omitted")
+		}
+		var entry *egv1a1.WasmModuleEntry
+		if envoyProxy != nil {
+			for i := range envoyProxy.Spec.WasmModules {
+				if envoyProxy.Spec.WasmModules[i].Name == *config.Name {
+					entry = &envoyProxy.Spec.WasmModules[i]
+					break
+				}
+			}
+		}
+		if entry == nil {
+			return nil, fmt.Errorf("wasm module %q is not registered in the EnvoyProxy wasmModules allowlist", *config.Name)
+		}
+		if entry.Source.Local == nil || entry.Source.Local.Path == "" {
+			return nil, fmt.Errorf("wasm module %q has no local source configured", *config.Name)
+		}
+		localPath = entry.Source.Local.Path
+
+	} else {
+		if config.Code.PullPolicy != nil {
+			switch *config.Code.PullPolicy {
+			case egv1a1.ImagePullPolicyAlways:
+				pullPolicy = wasm.Always
+			case egv1a1.ImagePullPolicyIfNotPresent:
+				pullPolicy = wasm.IfNotPresent
+			default:
+				pullPolicy = wasm.Unspecified
+			}
+		}
+
+		switch config.Code.Type {
+		case egv1a1.HTTPWasmCodeSourceType:
+			var checksum string
+
+			// This is a sanity check, the validation should have caught this
+			if config.Code.HTTP == nil {
+				return nil, fmt.Errorf("missing HTTP field in Wasm code source")
+			}
+
+			if config.Code.HTTP.SHA256 != nil {
+				originalChecksum = *config.Code.HTTP.SHA256
+			}
+
+			http := config.Code.HTTP
+
+			if http.TLS != nil {
+				from := crossNamespaceFrom{
+					group:     egv1a1.GroupName,
+					kind:      resource.KindEnvoyExtensionPolicy,
+					namespace: policy.Namespace,
+				}
+				if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
+					return nil, err
+				}
+			}
+
+			if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
+				Checksum:        originalChecksum,
+				PullPolicy:      pullPolicy,
+				ResourceName:    irConfigNameForWasm(policy, idx),
+				ResourceVersion: policy.ResourceVersion,
+				CACert:          caCert,
+			}); err != nil {
+				return nil, err
+			}
+
+			code = &ir.HTTPWasmCode{
+				ServingURL:  servingURL,
+				OriginalURL: http.URL,
+				SHA256:      checksum,
+			}
+
+		case egv1a1.ImageWasmCodeSourceType:
+			var (
+				image      = config.Code.Image
+				secret     *corev1.Secret
+				pullSecret []byte
+				// the checksum of the wasm module extracted from the OCI image
+				// it's different from the checksum for the OCI image
+				checksum string
+			)
+
+			// This is a sanity check, the validation should have caught this
+			if image == nil {
+				return nil, fmt.Errorf("missing Image field in Wasm code source")
+			}
+
+			if image.TLS != nil {
+				from := crossNamespaceFrom{
+					group:     egv1a1.GroupName,
+					kind:      resource.KindEnvoyExtensionPolicy,
+					namespace: policy.Namespace,
+				}
+				if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
+					return nil, err
+				}
+			}
+
+			if image.PullSecretRef != nil {
+				from := crossNamespaceFrom{
+					group:     egv1a1.GroupName,
+					kind:      resource.KindEnvoyExtensionPolicy,
+					namespace: policy.Namespace,
+				}
+
+				if secret, err = t.validateSecretRef(
+					true, from, *image.PullSecretRef, resources); err != nil {
+					return nil, err
+				}
+
+				if data, ok := secret.Data[corev1.DockerConfigJsonKey]; ok {
+					pullSecret = data
+				} else {
+					return nil, fmt.Errorf("missing %s key in secret %s/%s", corev1.DockerConfigJsonKey, secret.Namespace, secret.Name)
+				}
+			}
+
+			// Wasm Cache requires the URL to be in the format "scheme://<URL>"
+			imageURL := image.URL
+			if !strings.HasPrefix(image.URL, ociURLPrefix) {
+				imageURL = fmt.Sprintf("%s%s", ociURLPrefix, image.URL)
+			}
+
+			// If the url is an OCI image, and neither digest nor tag is provided, use the latest tag.
+			if !hasDigest(imageURL) && !hasTag(imageURL) {
+				imageURL += ":latest"
+			}
+
+			if config.Code.Image.SHA256 != nil {
+				originalChecksum = *config.Code.Image.SHA256
+			}
+
+			// The wasm checksum is different from the OCI image digest.
+			// The original checksum in the EEP is used to match the digest of OCI image.
+			// The returned checksum from the cache is the checksum of the wasm file
+			// extracted from the OCI image, which is used by the envoy to verify the wasm file.
+			if servingURL, checksum, err = t.WasmCache.Get(imageURL, &wasm.GetOptions{
+				Checksum:        originalChecksum,
+				PullSecret:      pullSecret,
+				PullPolicy:      pullPolicy,
+				ResourceName:    irConfigNameForWasm(policy, idx),
+				ResourceVersion: policy.ResourceVersion,
+				CACert:          caCert,
+			}); err != nil {
+				return nil, err
+			}
+
+			code = &ir.HTTPWasmCode{
+				ServingURL:  servingURL,
+				SHA256:      checksum,
+				OriginalURL: imageURL,
+			}
 		default:
-			pullPolicy = wasm.Unspecified
+			// should never happen because of kubebuilder validation, just a sanity check
+			return nil, fmt.Errorf("unsupported Wasm code source type %q", config.Code.Type)
 		}
-	}
-
-	switch config.Code.Type {
-	case egv1a1.HTTPWasmCodeSourceType:
-		var checksum string
-
-		// This is a sanity check, the validation should have caught this
-		if config.Code.HTTP == nil {
-			return nil, fmt.Errorf("missing HTTP field in Wasm code source")
-		}
-
-		if config.Code.HTTP.SHA256 != nil {
-			originalChecksum = *config.Code.HTTP.SHA256
-		}
-
-		http := config.Code.HTTP
-
-		if http.TLS != nil {
-			from := crossNamespaceFrom{
-				group:     egv1a1.GroupName,
-				kind:      resource.KindEnvoyExtensionPolicy,
-				namespace: policy.Namespace,
-			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
-				return nil, err
-			}
-		}
-
-		if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
-			Checksum:        originalChecksum,
-			PullPolicy:      pullPolicy,
-			ResourceName:    irConfigNameForWasm(policy, idx),
-			ResourceVersion: policy.ResourceVersion,
-			CACert:          caCert,
-		}); err != nil {
-			return nil, err
-		}
-
-		code = &ir.HTTPWasmCode{
-			ServingURL:  servingURL,
-			OriginalURL: http.URL,
-			SHA256:      checksum,
-		}
-
-	case egv1a1.ImageWasmCodeSourceType:
-		var (
-			image      = config.Code.Image
-			secret     *corev1.Secret
-			pullSecret []byte
-			// the checksum of the wasm module extracted from the OCI image
-			// it's different from the checksum for the OCI image
-			checksum string
-		)
-
-		// This is a sanity check, the validation should have caught this
-		if image == nil {
-			return nil, fmt.Errorf("missing Image field in Wasm code source")
-		}
-
-		if image.TLS != nil {
-			from := crossNamespaceFrom{
-				group:     egv1a1.GroupName,
-				kind:      resource.KindEnvoyExtensionPolicy,
-				namespace: policy.Namespace,
-			}
-			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, resources, from, "ca.crt"); err != nil {
-				return nil, err
-			}
-		}
-
-		if image.PullSecretRef != nil {
-			from := crossNamespaceFrom{
-				group:     egv1a1.GroupName,
-				kind:      resource.KindEnvoyExtensionPolicy,
-				namespace: policy.Namespace,
-			}
-
-			if secret, err = t.validateSecretRef(
-				true, from, *image.PullSecretRef, resources); err != nil {
-				return nil, err
-			}
-
-			if data, ok := secret.Data[corev1.DockerConfigJsonKey]; ok {
-				pullSecret = data
-			} else {
-				return nil, fmt.Errorf("missing %s key in secret %s/%s", corev1.DockerConfigJsonKey, secret.Namespace, secret.Name)
-			}
-		}
-
-		// Wasm Cache requires the URL to be in the format "scheme://<URL>"
-		imageURL := image.URL
-		if !strings.HasPrefix(image.URL, ociURLPrefix) {
-			imageURL = fmt.Sprintf("%s%s", ociURLPrefix, image.URL)
-		}
-
-		// If the url is an OCI image, and neither digest nor tag is provided, use the latest tag.
-		if !hasDigest(imageURL) && !hasTag(imageURL) {
-			imageURL += ":latest"
-		}
-
-		if config.Code.Image.SHA256 != nil {
-			originalChecksum = *config.Code.Image.SHA256
-		}
-
-		// The wasm checksum is different from the OCI image digest.
-		// The original checksum in the EEP is used to match the digest of OCI image.
-		// The returned checksum from the cache is the checksum of the wasm file
-		// extracted from the OCI image, which is used by the envoy to verify the wasm file.
-		if servingURL, checksum, err = t.WasmCache.Get(imageURL, &wasm.GetOptions{
-			Checksum:        originalChecksum,
-			PullSecret:      pullSecret,
-			PullPolicy:      pullPolicy,
-			ResourceName:    irConfigNameForWasm(policy, idx),
-			ResourceVersion: policy.ResourceVersion,
-			CACert:          caCert,
-		}); err != nil {
-			return nil, err
-		}
-
-		code = &ir.HTTPWasmCode{
-			ServingURL:  servingURL,
-			SHA256:      checksum,
-			OriginalURL: imageURL,
-		}
-	default:
-		// should never happen because of kubebuilder validation, just a sanity check
-		return nil, fmt.Errorf("unsupported Wasm code source type %q", config.Code.Type)
 	}
 
 	wasmName := name
@@ -1767,10 +1828,27 @@ func (t *Translator) buildWasm(
 		Config:   config.Config,
 		FailOpen: failOpen,
 		Code:     code,
+		Path:     localPath,
 	}
 
 	if config.Env != nil && len(config.Env.HostKeys) > 0 {
 		wasmIR.HostKeys = config.Env.HostKeys
+	}
+
+	if ptr.Deref(config.VMSharingScope, egv1a1.WasmVMSharingScopePolicy) == egv1a1.WasmVMSharingScopeNamespace {
+		// Identify local modules by path and remote modules by their resolved
+		// checksum because Envoy computes the key before fetching remote code.
+		moduleID := wasmIR.Path
+		if wasmIR.Code != nil {
+			moduleID = wasmIR.Code.SHA256
+		}
+		wasmIR.VMID = fmt.Sprintf("envoyextensionpolicy/%s/wasm/%s", policy.Namespace, moduleID)
+
+		// Envoy includes the environment configuration in its VM identity. Emit
+		// equivalent host-key sets in the same order without modifying the policy.
+		wasmIR.HostKeys = slices.Clone(wasmIR.HostKeys)
+		slices.Sort(wasmIR.HostKeys)
+		wasmIR.HostKeys = slices.Compact(wasmIR.HostKeys)
 	}
 
 	return wasmIR, nil
@@ -1883,6 +1961,7 @@ func (t *Translator) buildDynamicModules(
 }
 
 type envoyExtensionPolicyOwners struct {
+	backends      *egv1a1.EnvoyExtensionPolicy
 	wasm          *egv1a1.EnvoyExtensionPolicy
 	extProc       *egv1a1.EnvoyExtensionPolicy
 	lua           *egv1a1.EnvoyExtensionPolicy
@@ -1907,6 +1986,9 @@ func mergeEnvoyExtensionPolicy(routePolicy, parentPolicy *egv1a1.EnvoyExtensionP
 // and to derive IR resource names tied to the owning policy.
 func buildEnvoyExtensionPolicyOwners(route, parent *egv1a1.EnvoyExtensionPolicy) *envoyExtensionPolicyOwners {
 	return &envoyExtensionPolicyOwners{
+		backends: ownerOf(route, parent, func(p *egv1a1.EnvoyExtensionPolicy) bool {
+			return len(p.Spec.Backends) > 0
+		}),
 		wasm: ownerOf(route, parent, func(p *egv1a1.EnvoyExtensionPolicy) bool {
 			return len(p.Spec.Wasm) > 0
 		}),

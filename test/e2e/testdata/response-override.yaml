@@ -118,3 +118,34 @@ spec:
           set:
             - name: X-Override-Matched
               value: "true"
+    - match:
+        requestHeaders:
+          - name: X-Client-Type
+            value:
+              type: Exact
+              value: browser
+      response:
+        contentType: text/plain
+        body:
+          type: Inline
+          inline: "matched on request header"
+        header:
+          set:
+            - name: X-Request-Override-Matched
+              value: "true"
+    - match:
+        requestHeaders:
+          - name: X-Client-Type
+            value:
+              type: Exact
+              value: mobile
+        responseHeaders:
+          - name: X-Custom-Header
+            value:
+              type: Exact
+              value: combined-value
+      response:
+        contentType: text/plain
+        body:
+          type: Inline
+          inline: "matched on request and response headers"

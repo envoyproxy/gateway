@@ -44,7 +44,7 @@ ClientTrafficPolicy can be attached to Gateway API resources using two targeting
 1. **Direct Reference (`targetRefs`)**: Explicitly reference specific resources by name and kind. Supported kinds are:
    - `Gateway` — apply the policy to all listeners on the Gateway (or a specific listener via `sectionName`)
    - `ListenerSet` — apply the policy to all listeners in the ListenerSet (or a specific listener via `sectionName`)
-2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselectors)). Both `Gateway` and `ListenerSet` kinds are supported.
+2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselector)). Both `Gateway` and `ListenerSet` kinds are supported.
 
 The policy applies to all resources that match either targeting method.
 

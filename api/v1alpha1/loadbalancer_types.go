@@ -116,7 +116,7 @@ type ConsistentHash struct {
 
 	// Header configures the header hash policy when the consistent hash type is set to Header.
 	//
-	// Deprecated: use Headers instead
+	// Deprecated: use Headers instead. This field will be removed in v1.11.
 	// +optional
 	Header *Header `json:"header,omitempty"`
 
@@ -314,7 +314,7 @@ const (
 	SourceIPConsistentHashType ConsistentHashType = "SourceIP"
 	// HeaderConsistentHashType hashes based on a request header.
 	//
-	// Deprecated: use HeadersConsistentHashType instead
+	// Deprecated: use HeadersConsistentHashType instead. This value will be removed in v1.11.
 	HeaderConsistentHashType ConsistentHashType = "Header"
 	// HeadersConsistentHashType hashes based on multiple request headers.
 	HeadersConsistentHashType ConsistentHashType = "Headers"
@@ -370,6 +370,17 @@ type PreferLocalZone struct {
 	// +kubebuilder:validation:Maximum=100
 	// +optional
 	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty"`
+
+	// FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+	// cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+	// drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+	// across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+	// requests instead, applying backpressure to clients and giving the backend room to
+	// recover.
+	// Defaults to false.
+	//
+	// +optional
+	FailTrafficOnPanic *bool `json:"failTrafficOnPanic,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
