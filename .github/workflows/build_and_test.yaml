@@ -99,17 +99,43 @@ jobs:
       with:
         fetch-depth: 0  # Need base branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
+    # Pushes save their results keyed by commit, so a PR whose base branch tip has
+    # already been benchmarked compares against those results instead of running the
+    # base branch again. The script falls back to running it on a miss or a CPU mismatch.
+    - name: Resolve Benchmark Cache Key
+      id: bench-key
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          sha=$(git rev-parse "origin/${{ github.base_ref }}")
+          echo "key=go-benchmark-${{ github.base_ref }}-${sha}" >> "$GITHUB_OUTPUT"
+        else
+          echo "key=go-benchmark-${{ github.ref_name }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        fi
+    - name: Restore Base Benchmark Results
+      if: github.event_name == 'pull_request'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+      with:
+        path: base-bench-cached.txt
+        key: ${{ steps.bench-key.outputs.key }}
     - name: Run Benchmark Comparison
       env:
         # Compare against the PR's base branch, not always main: release branch
         # PRs pin an older Go toolchain and main would fail to build with it.
         BASE_REF: origin/${{ github.base_ref || 'main' }}
+        BASE_BENCH_FILE: base-bench-cached.txt
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           ./tools/hack/go-benchmark-compare.sh
         else
-          make go-benchmark
+          set -o pipefail
+          make go-benchmark 2>&1 | tee base-bench-cached.txt
         fi
+    - name: Save Benchmark Results
+      if: github.event_name == 'push'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+      with:
+        path: base-bench-cached.txt
+        key: ${{ steps.bench-key.outputs.key }}
 
   build:
     runs-on: ubuntu-latest
