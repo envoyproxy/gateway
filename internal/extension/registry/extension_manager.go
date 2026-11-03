@@ -297,6 +297,17 @@ func (m *Manager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (ex
 	return xdsHookClient, nil
 }
 
+// GetSecretHookClient returns the Secret hook client if this extension registered gk in its
+// SecretResources, and nil otherwise.
+func (m *Manager) GetSecretHookClient(gk schema.GroupKind) (extTypes.XDSHookClient, error) {
+	for _, gvk := range m.extension.SecretResources {
+		if gvk.Group == gk.Group && gvk.Kind == gk.Kind {
+			return m.GetPostXDSHookClient(egv1a1.XDSSecret)
+		}
+	}
+	return nil, nil
+}
+
 func (m *Manager) CleanupHookConns() {
 	if m.extensionConnCache != nil {
 		m.extensionConnCache.Close()

@@ -6,6 +6,7 @@
 package types
 
 import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -32,6 +33,12 @@ type Manager interface {
 	// If the extension makes use of the hook then the XDS Hook Client is returned. If it does not support
 	// the hook type then nil is returned
 	GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (XDSHookClient, error)
+
+	// GetSecretHookClient returns the Secret hook client of the extension that registered the given
+	// Group and Kind in its SecretResources. Only that extension's client is initialized, so a
+	// misconfigured extension cannot block secrets owned by another one.
+	// If no extension registered the Group and Kind then nil is returned.
+	GetSecretHookClient(gk schema.GroupKind) (XDSHookClient, error)
 
 	// FailOpen returns true if the extension manager is configured to fail open, and false otherwise.
 	FailOpen() bool

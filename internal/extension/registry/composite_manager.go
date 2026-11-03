@@ -6,6 +6,9 @@
 package registry
 
 import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -127,6 +130,24 @@ func (c *CompositeManager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslator
 	return c.collectHookClients(xdsHookType, func(m extTypes.Manager, h egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
 		return m.GetPostXDSHookClient(h)
 	}, true)
+}
+
+// GetSecretHookClient returns the Secret hook client of the manager that registered gk in its
+// SecretResources. A secret kind is owned by a single extension, so only the owner's client is
+// initialized: an unrelated manager's setup error, such as a missing TLS credential Secret,
+// cannot block the certificate.
+func (c *CompositeManager) GetSecretHookClient(gk schema.GroupKind) (extTypes.XDSHookClient, error) {
+	for _, nm := range c.managers {
+		if !nm.gkSets.secret.Has(gk) {
+			continue
+		}
+		client, err := nm.manager.GetSecretHookClient(gk)
+		if err != nil {
+			return nil, fmt.Errorf("extension %q: %w", nm.name, err)
+		}
+		return client, nil
+	}
+	return nil, nil
 }
 
 // collectHookClients iterates over all child managers, collects hook clients via the given getter,

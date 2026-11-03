@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -26,6 +28,8 @@ type mockManager struct {
 	preHookErr        error
 	postHookClient    extTypes.XDSHookClient
 	postHookErr       error
+	secretHookClient  extTypes.XDSHookClient
+	secretHookErr     error
 }
 
 func (m *mockManager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {
@@ -49,6 +53,10 @@ func (m *mockManager) GetPreXDSHookClient(_ egv1a1.XDSTranslatorHook) (extTypes.
 
 func (m *mockManager) GetPostXDSHookClient(_ egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
 	return m.postHookClient, m.postHookErr
+}
+
+func (m *mockManager) GetSecretHookClient(_ schema.GroupKind) (extTypes.XDSHookClient, error) {
+	return m.secretHookClient, m.secretHookErr
 }
 
 func (m *mockManager) CleanupHookConns() {}
@@ -311,4 +319,74 @@ func TestCompositeManager_CleanupHookConns(t *testing.T) {
 	})
 	composite.CleanupHookConns()
 	assert.Equal(t, []string{"mgr1", "mgr2"}, called)
+}
+
+func TestCompositeManager_GetSecretHookClient(t *testing.T) {
+	fooGK := schema.GroupKind{Group: "foo.io", Kind: "FooCert"}
+	barGK := schema.GroupKind{Group: "bar.io", Kind: "BarCert"}
+
+	t.Run("returns only the owner's client", func(t *testing.T) {
+		barClient := &mockXDSHookClient{}
+		composite := NewCompositeManager([]namedManager{
+			{
+				name:    "foo",
+				manager: &mockManager{secretHookClient: &mockXDSHookClient{}},
+				gkSets:  extensionGKSets{secret: sets.New(fooGK)},
+			},
+			{
+				name:    "bar",
+				manager: &mockManager{secretHookClient: barClient},
+				gkSets:  extensionGKSets{secret: sets.New(barGK)},
+			},
+		})
+		client, err := composite.GetSecretHookClient(barGK)
+		require.NoError(t, err)
+		assert.Same(t, barClient, client)
+	})
+
+	t.Run("unrelated manager's setup error does not block the owner", func(t *testing.T) {
+		barClient := &mockXDSHookClient{}
+		composite := NewCompositeManager([]namedManager{
+			{
+				name:    "foo",
+				manager: &mockManager{secretHookErr: fmt.Errorf("TLS credential secret not found")},
+				gkSets:  extensionGKSets{secret: sets.New(fooGK)},
+			},
+			{
+				name:    "bar",
+				manager: &mockManager{secretHookClient: barClient},
+				gkSets:  extensionGKSets{secret: sets.New(barGK)},
+			},
+		})
+		client, err := composite.GetSecretHookClient(barGK)
+		require.NoError(t, err)
+		assert.Same(t, barClient, client)
+	})
+
+	t.Run("owner's setup error is returned", func(t *testing.T) {
+		composite := NewCompositeManager([]namedManager{
+			{
+				name:    "foo",
+				manager: &mockManager{secretHookErr: fmt.Errorf("TLS credential secret not found")},
+				gkSets:  extensionGKSets{secret: sets.New(fooGK)},
+			},
+		})
+		client, err := composite.GetSecretHookClient(fooGK)
+		require.ErrorContains(t, err, `extension "foo"`)
+		assert.Nil(t, client)
+	})
+
+	t.Run("returns nil for an unregistered kind", func(t *testing.T) {
+		composite := NewCompositeManager([]namedManager{
+			{
+				name:    "foo",
+				manager: &mockManager{secretHookClient: &mockXDSHookClient{}},
+				gkSets:  extensionGKSets{secret: sets.New(fooGK)},
+			},
+			{name: "noSecrets", manager: &mockManager{secretHookErr: fmt.Errorf("should not be called")}},
+		})
+		client, err := composite.GetSecretHookClient(barGK)
+		require.NoError(t, err)
+		assert.Nil(t, client)
+	})
 }

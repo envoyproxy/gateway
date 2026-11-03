@@ -919,3 +919,31 @@ func TestGetTranslationHookConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestManager_GetSecretHookClient(t *testing.T) {
+	mgr := &Manager{
+		extension: egv1a1.ExtensionManager{
+			SecretResources: []egv1a1.GroupVersionKind{{Group: "foo.io", Version: "v1", Kind: "FooCert"}},
+			Hooks: &egv1a1.ExtensionHooks{
+				XDSTranslator: &egv1a1.XDSTranslatorHooks{
+					Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
+				},
+			},
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					IP: &egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 44344},
+				},
+			},
+		},
+	}
+	t.Cleanup(mgr.CleanupHookConns)
+
+	hook, err := mgr.GetSecretHookClient(schema.GroupKind{Group: "bar.io", Kind: "BarCert"})
+	require.NoError(t, err)
+	require.Nil(t, hook)
+	require.Nil(t, mgr.extensionConnCache, "no connection should be set up for an unregistered kind")
+
+	hook, err = mgr.GetSecretHookClient(schema.GroupKind{Group: "foo.io", Kind: "FooCert"})
+	require.NoError(t, err)
+	require.NotNil(t, hook)
+}

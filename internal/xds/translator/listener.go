@@ -1525,19 +1525,22 @@ func (t *Translator) resolveExtensionCertificates(
 		if t.ExtensionManager == nil {
 			return nil, fmt.Errorf("certificate %q requires an extension server but none is configured", cert.Name)
 		}
-		hookClient, err := (*t.ExtensionManager).GetPostXDSHookClient(egv1a1.XDSSecret)
+		secret := resolveUnstructuredRef(cert.ExtensionRef, t.extensionIndex)
+		if secret == nil {
+			return nil, fmt.Errorf("certificate %q references extension resource %q, which is not in the IR",
+				cert.Name, cert.ExtensionRef.Name)
+		}
+
+		// Only the extension that owns the referenced kind is asked, so an unrelated
+		// extension cannot block this certificate.
+		gk := secret.GroupVersionKind().GroupKind()
+		hookClient, err := (*t.ExtensionManager).GetSecretHookClient(gk)
 		if err != nil {
 			return nil, err
 		}
 		if hookClient == nil {
 			return nil, fmt.Errorf("certificate %q requires the %s hook but no extension registered it",
 				cert.Name, egv1a1.XDSSecret)
-		}
-
-		secret := resolveUnstructuredRef(cert.ExtensionRef, t.extensionIndex)
-		if secret == nil {
-			return nil, fmt.Errorf("certificate %q references extension resource %q, which is not in the IR",
-				cert.Name, cert.ExtensionRef.Name)
 		}
 		secretCtx := &extensionTypes.SecretContext{
 			Secret:              secret,
