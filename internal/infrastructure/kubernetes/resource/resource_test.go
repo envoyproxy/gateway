@@ -111,6 +111,30 @@ func TestExpectedServiceSpec(t *testing.T) {
 			},
 		},
 		{
+			name: "ClusterIPWithExternalTrafficPolicyLocal",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+				ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyLocal),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeClusterIP,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
+			name: "ClusterIPWithExternalTrafficPolicyCluster",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+				ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeClusterIP,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
+			},
+		},
+		{
 			name: "NodePort",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeNodePort),
