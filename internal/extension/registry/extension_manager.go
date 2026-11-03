@@ -100,6 +100,9 @@ type extensionGKSets struct {
 	secret   sets.Set[schema.GroupKind] // SecretResources
 }
 
+// buildManagerGKSets returns the GK sets for an ExtensionManager.
+// Version is intentionally dropped so matching aligns with runner.ExtensionGroupKinds
+// and Manager.HasExtension, which also compare by group+kind only.
 func buildManagerGKSets(ext *egv1a1.ExtensionManager) extensionGKSets {
 	gkSets := extensionGKSets{
 		resource: sets.New[schema.GroupKind](),
