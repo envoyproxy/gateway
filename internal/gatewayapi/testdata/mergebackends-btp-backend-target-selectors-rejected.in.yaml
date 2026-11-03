@@ -45,7 +45,6 @@ backendTrafficPolicies:
     spec:
       targetSelectors:
         - kind: Service
-          group: ""
           matchLabels:
             pick: me
       mergeType: StrategicMerge

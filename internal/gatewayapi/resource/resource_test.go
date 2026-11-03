@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -118,6 +120,38 @@ func TestEqualXds(t *testing.T) {
 			},
 			equal: true,
 		},
+		{
+			desc: "out of order extension secrets are equal",
+			a: &ControllerResources{
+				{
+					GatewayClass: &gwapiv1.GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "foo",
+						},
+					},
+					ExtensionSecrets: []unstructured.Unstructured{
+						extensionSecret("b", "cert"),
+						extensionSecret("a", "cert"),
+						extensionSecret("b", "a-cert"),
+					},
+				},
+			},
+			b: &ControllerResources{
+				{
+					GatewayClass: &gwapiv1.GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "foo",
+						},
+					},
+					ExtensionSecrets: []unstructured.Unstructured{
+						extensionSecret("a", "cert"),
+						extensionSecret("b", "a-cert"),
+						extensionSecret("b", "cert"),
+					},
+				},
+			},
+			equal: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -161,6 +195,14 @@ func TestEqualControllerResourcesContext(t *testing.T) {
 
 	assert.True(t, r1.Equal(r2))
 	assert.True(t, r2.Equal(r1))
+}
+
+func extensionSecret(namespace, name string) unstructured.Unstructured {
+	u := unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{Group: "cert.example.io", Version: "v1", Kind: "Certificate"})
+	u.SetNamespace(namespace)
+	u.SetName(name)
+	return u
 }
 
 func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {

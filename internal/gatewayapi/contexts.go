@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +18,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -31,6 +33,10 @@ type GatewayContext struct {
 	listeners             []*ListenerContext
 	envoyProxy            *egv1a1.EnvoyProxy
 	envoyProxyFromGateway bool
+	// gatewayEnvoyProxy is the EnvoyProxy referenced by the Gateway itself, as provided by the
+	// user. Unlike envoyProxy, it is neither merged nor stripped of its invalid fields, so it is
+	// the object whose status is updated and that is returned in the TranslateResult.
+	gatewayEnvoyProxy *egv1a1.EnvoyProxy
 
 	backendTLS *egv1a1.BackendTLSConfig
 }
@@ -107,16 +113,21 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
 				g.envoyProxyFromGateway = true
-				gatewayProxy = ep
+				g.gatewayEnvoyProxy = ep
+				gatewayProxy = validation.DropInvalidFields(ep)
 			}
 		}
 	}
 
 	// Merge all EnvoyProxy configs. On error, MergeEnvoyProxyConfigs returns a fallback
 	// configuration so the gateway can continue to function.
+	//
+	// Invalid fields are unset on each layer before merging, so an invalid override is ignored
+	// and the valid value it would have overridden in a less specific layer still applies. The
+	// EnvoyGateway default spec is validated strictly when the configuration is loaded.
 	merged, err := MergeEnvoyProxyConfigs(
 		resources.EnvoyProxyDefaultSpec,
-		resources.EnvoyProxyForGatewayClass,
+		validation.DropInvalidFields(resources.EnvoyProxyForGatewayClass),
 		gatewayProxy,
 	)
 	g.envoyProxy = merged
@@ -170,6 +181,8 @@ type ListenerTLSConfig struct {
 	secrets               []*corev1.Secret
 	certDNSNames          []string
 	frontendTLSValidation *ListenerFrontendTLSValidation
+	// extensionCertificates are certificate resources of a kind registered in ExtensionManager.SecretResources.
+	extensionCertificates []unstructured.Unstructured
 }
 
 type ListenerFrontendTLSValidation struct {
@@ -332,6 +345,10 @@ func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionTy
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
 	l.tls.secrets = tlsSecrets
+}
+
+func (l *ListenerContext) SetTLSExtensionCertificates(certs []unstructured.Unstructured) {
+	l.tls.extensionCertificates = certs
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
@@ -644,6 +661,27 @@ func GetManagedParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	return managed
 }
 
+// GetManagedRouteParentContexts returns the RouteParentContexts of the route in
+// spec.parentRefs order. Iterating the ParentRefs map directly is nondeterministic,
+// which matters when several parentRefs compete for the same listener.
+func GetManagedRouteParentContexts(route RouteContext) []*RouteParentContext {
+	parentRefs := GetParentReferences(route)
+	ctxs := make([]*RouteParentContext, 0, len(parentRefs))
+	seen := make(map[*RouteParentContext]struct{}, len(parentRefs))
+	for _, parentRef := range parentRefs {
+		ctx := route.GetRouteParentContext(parentRef)
+		if ctx == nil {
+			continue
+		}
+		if _, ok := seen[ctx]; ok {
+			continue
+		}
+		seen[ctx] = struct{}{}
+		ctxs = append(ctxs, ctx)
+	}
+	return ctxs
+}
+
 // GetRouteStatus returns the RouteStatus object associated with the Route.
 func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 	return route.GetRouteStatus()
@@ -934,6 +972,12 @@ type ResolvedCAKey struct {
 	Name         string
 }
 
+// ExtensionBackendKey scopes a generated callout cluster name to its output IR.
+type ExtensionBackendKey struct {
+	GatewayIRKey string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -944,11 +988,14 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionBackendMap     map[ExtensionBackendKey]*ir.ExtensionBackend
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
 	ResolvedCAMap           map[ResolvedCAKey]string
+	protoDescriptors        map[types.NamespacedName]*parsedProtoDescriptor
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
+	BTPRejectedPolicies     map[types.NamespacedName]backendPolicyRejection
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
 	BackendTLSPolicyIndex   BackendTLSPolicyIndex
 	// ExtensionRefIndex is held by value, unlike the policy indexes above: it only holds maps, so

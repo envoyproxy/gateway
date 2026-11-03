@@ -2,7 +2,7 @@ date: September 28, 2026
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
-  Lua scripts that use the `getfenv`, `setfenv`, `newproxy`, or `module` globals now fail `Strict` Lua validation, which is the default mode. Rewrite the script without them, or set `EnvoyProxy.spec.lua.validationType` to `InsecureSyntax` or `Disabled`.
+  Lua scripts that use the `getfenv`, `setfenv`, `newproxy`, or `module` globals now fail `Strict` Lua validation, which is the default mode. Rewrite the script without them, or set `EnvoyProxy.spec.luaValidation` to `InsecureSyntax` or `Disabled`.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |

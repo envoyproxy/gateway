@@ -1,10 +1,11 @@
-date: October 25, 2026
+date: October 26, 2026
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Bumped Envoy to v1.39.5 (from v1.39.1), which includes the fix for CVE-2026-35189 (BoringSSL excessive memory allocation when parsing certificate CRL distribution points), GHSA-8vc2-jrm4-835w and GHSA-47vj-9r25-wv5j (crashes in the OAuth2 and API key auth filters on requests without a `:path` header), and removes the compromised eMudhra intermediate CAs from the trusted CAs in the Envoy image. Refer to the [Envoy v1.39.5 release notes](https://www.envoyproxy.io/docs/envoy/v1.39.5/version_history/v1.39/v1.39.5).
   Bumped golang.org/x/net to v0.60.0 to fix CVE-2026-97032, CVE-2026-78659, CVE-2026-78660, CVE-2026-78663 and CVE-2026-78669.
 
 # New features or capabilities added in this release.

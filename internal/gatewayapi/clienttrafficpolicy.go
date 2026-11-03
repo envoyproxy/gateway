@@ -145,22 +145,22 @@ func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 }
 
 // deprecatedFieldsUsedInClientTrafficPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.EnableProxyProtocol != nil {
-		deprecatedFields["spec.enableProxyProtocol"] = "spec.proxyProtocol"
+		deprecatedFields["spec.enableProxyProtocol"] = deprecatedFieldScheduledForRemoval("spec.proxyProtocol")
 	}
 	if policy.Spec.Headers != nil && policy.Spec.Headers.PreserveXRequestID != nil {
-		deprecatedFields["spec.headers.preserveXRequestID"] = "spec.headers.requestID"
+		deprecatedFields["spec.headers.preserveXRequestID"] = deprecatedFieldScheduledForRemoval("spec.headers.requestID")
 	}
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
 	}
 	// Optional is a non-pointer bool, so deprecated usage is only observable when it changes behavior.
 	if policy.Spec.TLS != nil &&
 		policy.Spec.TLS.ClientValidation != nil &&
 		policy.Spec.TLS.ClientValidation.Optional {
-		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
+		deprecatedFields["spec.tls.clientValidation.optional"] = deprecatedField("spec.tls.clientValidation.mode")
 	}
 	return deprecatedFields
 }
@@ -794,7 +794,8 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// ProxyProtocol field takes precedence when configured
 		// Even if it's an empty object {}, we should enable proxy protocol with default settings
 		proxyProtocol = &ir.ProxyProtocolSettings{
-			Optional: ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+			Optional:     ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
+			ForwardProto: buildIRForwardProtoConfig(policy.Spec.ProxyProtocol.ForwardProto),
 		}
 	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
 		// Fallback to legacy EnableProxyProtocol field
@@ -924,6 +925,41 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 	}
 
 	return nil
+}
+
+// buildIRForwardProtoConfig translates the ProxyProtocol ForwardProtoConfig API type into the IR
+// type, converting the int32 port lists to uint32 to match the Envoy proto field types.
+func buildIRForwardProtoConfig(cfg *egv1a1.ForwardProtoConfig) *ir.ForwardProtoConfig {
+	// Return early if not set.
+	if cfg == nil {
+		return nil
+	}
+
+	// Defensive guard: CEL validation requires at least one port list to be set, but return nil
+	// for an effectively-empty config so the IR omits the field instead of carrying empty slices.
+	if len(cfg.HTTPSDestinationPorts) == 0 && len(cfg.HTTPDestinationPorts) == 0 {
+		return nil
+	}
+
+	irCfg := &ir.ForwardProtoConfig{}
+
+	// Only allocate/copy when the corresponding list is non-empty, so an unset list stays nil in
+	// the IR rather than becoming an explicitly-empty slice.
+	if len(cfg.HTTPSDestinationPorts) > 0 {
+		irCfg.HTTPSDestinationPorts = make([]uint32, len(cfg.HTTPSDestinationPorts))
+		for i, p := range cfg.HTTPSDestinationPorts {
+			irCfg.HTTPSDestinationPorts[i] = uint32(p)
+		}
+	}
+
+	if len(cfg.HTTPDestinationPorts) > 0 {
+		irCfg.HTTPDestinationPorts = make([]uint32, len(cfg.HTTPDestinationPorts))
+		for i, p := range cfg.HTTPDestinationPorts {
+			irCfg.HTTPDestinationPorts[i] = uint32(p)
+		}
+	}
+
+	return irCfg
 }
 
 func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error) {
@@ -1477,6 +1513,10 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 				return nil, fmt.Errorf("invalid MaxConnectionDuration value %s", *connection.ConnectionLimit.MaxConnectionDuration)
 			}
 			irConnectionLimit.MaxConnectionDuration = ir.MetaV1DurationPtr(d)
+		}
+
+		if connection.ConnectionLimit.MaxConnectionDurationJitter != nil {
+			irConnectionLimit.MaxConnectionDurationJitter = connection.ConnectionLimit.MaxConnectionDurationJitter
 		}
 
 		if connection.ConnectionLimit.MaxRequestsPerConnection != nil {

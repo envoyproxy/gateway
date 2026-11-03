@@ -1,1 +1,0 @@
-Reduced translation time for gateways with many BackendTLSPolicies by indexing the policies once per translation by the backend (and section) they target, instead of scanning every policy for each route backendRef.
