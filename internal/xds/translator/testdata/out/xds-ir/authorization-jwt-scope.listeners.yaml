@@ -53,10 +53,10 @@
                     timeout: 10s
                     uri: https://one.example.com/jwt/public-key/jwks.json
             requirementMap:
-              example1_3b6358ed75b16e41:
-                providerName: example1_ee7c27dda4c8e01e
-              example1_128ed6e824345145:
+              default/policy-1:
                 providerName: example1_02327216cb0dba21
+              default/policy-2:
+                providerName: example1_ee7c27dda4c8e01e
         - name: envoy.filters.http.rbac
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC

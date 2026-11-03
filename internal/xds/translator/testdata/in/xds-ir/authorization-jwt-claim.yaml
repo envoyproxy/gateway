@@ -47,6 +47,7 @@ http:
               - name: user.name
                 values: ["alice", "bob"]
       jwt:
+        name: default/policy-1
         providers:
         - audiences:
           - two.foo.com
@@ -92,6 +93,7 @@ http:
               - name: department
                 values: ["engineering"]
       jwt:
+        name: default/policy-2
         providers:
         - audiences:
           - one.foo.com
