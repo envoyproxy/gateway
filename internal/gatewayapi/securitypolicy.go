@@ -3091,10 +3091,12 @@ func (t *Translator) buildBasicAuth(
 
 // validateHtpasswdFormat validates that the htpasswd data is in the correct format.
 // Currently, only the SHA format is supported by Envoy.
+// Lines are checked as Envoy reads them, without trimming whitespace, so that
+// data Envoy would reject is reported here instead of failing the xDS update.
 func validateHtpasswdFormat(data []byte) error {
 	lines := strings.Split(string(data), "\n")
+	usernames := sets.New[string]()
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
@@ -3104,7 +3106,15 @@ func validateHtpasswdFormat(data []byte) error {
 			return fmt.Errorf("invalid htpasswd format: each line must be in the format 'username:password'")
 		}
 
-		password := parts[1]
+		username, password := parts[0], parts[1]
+		if username == "" || password == "" {
+			return fmt.Errorf("invalid htpasswd format: username and password must not be empty")
+		}
+		if usernames.Has(username) {
+			return fmt.Errorf("invalid htpasswd format: duplicate username")
+		}
+		usernames.Insert(username)
+
 		if !strings.HasPrefix(password, "{SHA}") {
 			return fmt.Errorf("unsupported htpasswd format: please use {SHA}")
 		}

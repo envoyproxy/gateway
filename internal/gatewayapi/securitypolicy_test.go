@@ -1344,6 +1344,26 @@ func Test_validateHtpasswdFormat(t *testing.T) {
 			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\r\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=\r\n",
 			wantError: false,
 		},
+		{
+			name:      "invalid htpasswd with duplicate username",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\nuser1:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with empty username",
+			htpasswd:  ":{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with trailing whitespace",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g= \nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with whitespace-only line",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\n  \nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=",
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {
