@@ -38,6 +38,7 @@ http:
           exact: https://www.test.org:8080
           name: ""
       jwt:
+        name: default/policy
         providers:
         - audiences:
           - one.foo.com
