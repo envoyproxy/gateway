@@ -1,0 +1,30 @@
+# Tests that route-level traffic.http1 (BTP, cluster-scoped) overrides the listener-level
+# http1 (CTP, HCM-scoped) for the upstream cluster.
+# Listener has preserveHeaderCase:true; route has traffic.http1.preserveHeaderCase:false.
+# Expected: upstream cluster gets preserveHeaderCase:false (route wins for cluster config),
+# while the listener HCM retains preserveHeaderCase:true (listener setting unchanged).
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  http1:
+    preserveHeaderCase: true
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      http1:
+        preserveHeaderCase: false
+        enableTrailers: true
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

@@ -8,7 +8,7 @@ This task shows you how to configure them.
 
 The `HTTPRouteFilter` used below can also be referenced from a `GRPCRoute` via an `extensionRef` filter. For gRPC, Envoy
 adds gRPC status trailers to the direct response so gRPC clients handle it correctly. See
-[Gateway API support](./gatewayapi-support#grpcroute) for details.
+[Gateway API support](../../concepts/gatewayapi-support#grpcroute) for details.
 
 ## Installation
 
@@ -17,7 +17,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Testing Direct Response
 
-Note: the size of the response body (whether provided in-line or via a reference) cannot exceed 4096 bytes.
+There is no fixed size limit for direct-response bodies, but they are stored in Envoy's memory, so avoid using very large responses.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}

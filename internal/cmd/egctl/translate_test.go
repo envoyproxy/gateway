@@ -260,6 +260,13 @@ func TestTranslate(t *testing.T) {
 			expect: true,
 		},
 		{
+			name:   "envoyproxy-invalid-field",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
 			name:   "no-gateway-class-resources",
 			from:   "gateway-api",
 			to:     "xds",
@@ -282,6 +289,19 @@ func TestTranslate(t *testing.T) {
 			name:   "backend-endpoint",
 			from:   "gateway-api",
 			to:     "gateway-api",
+			expect: true,
+		},
+		{
+			name:         "extension-backends",
+			from:         "gateway-api",
+			to:           "gateway-api,xds",
+			resourceType: string(ClusterEnvoyConfigType),
+			expect:       true,
+		},
+		{
+			name:   "extension-backends",
+			from:   "gateway-api",
+			to:     "ir",
 			expect: true,
 		},
 		{

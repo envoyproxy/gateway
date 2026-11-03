@@ -13,6 +13,8 @@ import (
 	"net"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
@@ -92,10 +94,26 @@ type Config struct {
 
 type Runner struct {
 	Config
+
+	// done tracks goroutines started by Start so that Close can block until
+	// they have all exited, ensuring shared state they write to is not
+	// closed out from under them during shutdown.
+	done sync.WaitGroup
 }
 
 func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
+}
+
+// proxyInfraNameAndNamespace returns the ProxyInfra name and namespace for the xDS IR with the
+// given key.
+func proxyInfraNameAndNamespace(irKey, controllerNamespace string, gatewayNamespaceMode bool) (string, string) {
+	if gatewayNamespaceMode {
+		if namespace, name, ok := strings.Cut(irKey, "/"); ok {
+			return name, namespace
+		}
+	}
+	return irKey, controllerNamespace
 }
 
 func (r *Runner) Name() string {
@@ -147,7 +165,10 @@ func getRandomMaxConnectionAge() time.Duration {
 }
 
 // Close implements Runner interface.
-func (r *Runner) Close() error { return nil }
+func (r *Runner) Close() error {
+	r.done.Wait()
+	return nil
+}
 
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) error {
@@ -222,12 +243,16 @@ func (r *Runner) Start(ctx context.Context) error {
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// Start and listen xDS gRPC Server.
-	go r.serveXdsServer(ctx)
+	r.done.Go(func() {
+		r.serveXdsServer(ctx)
+	})
 
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	sub := r.XdsIR.Subscribe(ctx)
-	go r.translateFromSubscription(sub)
+	r.done.Go(func() {
+		r.translateFromSubscription(sub)
+	})
 	r.Logger.Info("started")
 	return err
 }
@@ -303,8 +328,11 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				}
 			} else {
 				// Translate to xds resources
+				proxyInfraName, proxyInfraNamespace := proxyInfraNameAndNamespace(key, r.ControllerNamespace, r.EnvoyGateway.GatewayNamespaceMode())
 				t := &translator.Translator{
 					ControllerNamespace: r.ControllerNamespace,
+					ProxyInfraName:      proxyInfraName,
+					ProxyInfraNamespace: proxyInfraNamespace,
 					FilterOrder:         val.XdsIR.FilterOrder,
 					RuntimeFlags:        r.EnvoyGateway.RuntimeFlags,
 					Logger:              traceLogger,

@@ -6,15 +6,20 @@
 package status
 
 import (
+	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 )
 
 const (
@@ -22,9 +27,22 @@ const (
 	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
 	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
 
+	// PolicyReasonUnsupportedHTTP3Backend is used with the "Warning" condition when HTTP/3 to
+	// a backend is disabled because the backend, or another setting, cannot use QUIC, or when
+	// it stays on but a backend TLS setting that QUIC cannot carry is ignored.
+	PolicyReasonUnsupportedHTTP3Backend gwapiv1.PolicyConditionReason = "UnsupportedHTTP3Backend"
+
+	// PolicyReasonBehaviorChange is used with the "Warning" condition when a field's behavior
+	// will change in a future release. Users should prepare by migrating to the recommended alternative.
+	PolicyReasonBehaviorChange gwapiv1.PolicyConditionReason = "BehaviorChange"
+
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
+
+	// PolicyReasonUnsupportedField is used with the "Warning" condition when a policy field
+	// has no effect on the targeted route kind (e.g. http1 settings on a GRPCRoute).
+	PolicyReasonUnsupportedField gwapiv1.PolicyConditionReason = "UnsupportedField"
 )
 
 const (
@@ -73,6 +91,23 @@ func SetTranslationErrorForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, an
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1.PolicyReasonInvalid, errMsg, generation)
 }
 
+// SetMergeResultForPolicyAncestor reports the results of merging a route policy with its
+// parent policies on the listeners of one route parentRef: the errors as Accepted=False,
+// and the parent policies it merged with as Merged.
+func SetMergeResultForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64,
+	errMsgs, mergedWith sets.Set[string],
+) {
+	if errMsgs.Len() > 0 {
+		SetTranslationErrorForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation,
+			strings.Join(sets.List(errMsgs), "; "))
+	}
+	if mergedWith.Len() > 0 {
+		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+			egv1a1.PolicyConditionMerged, metav1.ConditionTrue, egv1a1.PolicyReasonMerged,
+			"Merged with policy "+strings.Join(sets.List(mergedWith), ", "), generation)
+	}
+}
+
 // SetAcceptedForPolicyAncestors sets accepted conditions for each ancestor reference if it is unset.
 func SetAcceptedForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64) {
 	for _, ancestorRef := range ancestorRefs {
@@ -97,16 +132,38 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRe
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, message, generation)
 }
 
+// SetNotMergedForPolicyAncestor marks the ancestor not accepted because its targets were not merged,
+// unless an Accepted condition is already set for it.
+func SetNotMergedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, message string) {
+	if getPolicyAncestorCondition(policyStatus, ancestorRef, controllerName, gwapiv1.PolicyConditionAccepted) != nil {
+		return
+	}
+	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, egv1a1.PolicyReasonNotMerged, message, generation)
+}
+
 // SetDeprecatedFieldsWarningForPolicyAncestors sets deprecated fields warning conditions for each ancestor reference.
-func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]DeprecatedField) {
 	for _, ancestorRef := range ancestorRefs {
 		SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation, deprecatedFields)
 	}
 }
 
 // SetDeprecatedFieldsWarningForPolicyAncestor sets a deprecated fields warning condition for a specific ancestor reference.
-func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]DeprecatedField) {
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
+}
+
+// SetBehaviorChangedFieldsWarningForPolicyAncestors sets behavior-change warning conditions for each ancestor reference.
+func SetBehaviorChangedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, behaviorFields map[string]string, change string) {
+	for _, ancestorRef := range ancestorRefs {
+		SetBehaviorChangedFieldsWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation, behaviorFields, change)
+	}
+}
+
+// SetBehaviorChangedFieldsWarningForPolicyAncestor sets a behavior-change warning condition for a specific ancestor reference.
+func SetBehaviorChangedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, behaviorFields map[string]string, change string) {
+	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, PolicyReasonBehaviorChange, buildBehaviorChangeWarningMessage(behaviorFields, change), generation)
 }
 
 // SetWarningForPolicyAncestor sets or appends a warning condition for a specific ancestor reference.
@@ -209,30 +266,58 @@ func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 	policyStatus.Ancestors = append(policyStatus.Ancestors[:worst], policyStatus.Ancestors[worst+1:]...)
 }
 
+// DeprecatedFieldsRemovalRelease is the release that removes the deprecated fields tracked in
+// https://github.com/envoyproxy/gateway/issues/10211.
+const DeprecatedFieldsRemovalRelease = deprecation.DeprecatedFieldsRemovalRelease
+
+// DeprecatedField describes the replacement for a deprecated field.
+type DeprecatedField = deprecation.DeprecatedField
+
 // buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
-func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
+func buildDeprecationWarningMessage(deprecatedFields map[string]DeprecatedField) string {
 	if len(deprecatedFields) == 0 {
 		return ""
 	}
 
 	// Sort the keys to ensure deterministic message ordering
-	keys := make([]string, 0, len(deprecatedFields))
-	for k := range deprecatedFields {
+	messages := make([]string, 0, len(deprecatedFields))
+	for _, path := range slices.Sorted(maps.Keys(deprecatedFields)) {
+		messages = append(messages, deprecatedFields[path].Message(path))
+	}
+	return strings.Join(messages, "; ")
+}
+
+// buildBehaviorChangeWarningMessage formats behavior-change warnings for a set of fields.
+// Each entry produces: "<key> behavior will change in a future release: <change>, for compatibility: <action>"
+func buildBehaviorChangeWarningMessage(behaviorFields map[string]string, change string) string {
+	if len(behaviorFields) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(behaviorFields))
+	for k := range behaviorFields {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
 	var builder strings.Builder
-	for i, deprecated := range keys {
+	for i, key := range keys {
 		if i > 0 {
 			builder.WriteString("; ")
 		}
-		builder.WriteString(deprecated)
-		builder.WriteString(" is deprecated, use ")
-		builder.WriteString(deprecatedFields[deprecated])
-		builder.WriteString(" instead")
+		builder.WriteString(key)
+		builder.WriteString(" behavior will change in a future release: ")
+		builder.WriteString(change)
+		builder.WriteString(", for compatibility: ")
+		builder.WriteString(behaviorFields[key])
 	}
 	return builder.String()
+}
+
+// MergedConditionMessage builds the status message for a Merged condition, naming the
+// policy that was merged with.
+func MergedConditionMessage(mergedWith metav1.Object) string {
+	return fmt.Sprintf("Merged with policy %s/%s", mergedWith.GetNamespace(), mergedWith.GetName())
 }
 
 func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {

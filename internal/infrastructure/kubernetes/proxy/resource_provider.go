@@ -62,12 +62,27 @@ type ResourceRender struct {
 	// controllerNamespace is the namespace used for Envoy Gateway controller.
 	controllerNamespace string
 
+	// controllerSAName is the service account name of the Envoy Gateway controller pod.
+	controllerSAName string
+
+	// controllerName is the well-known name of the Envoy Gateway controller's own resources
+	// (Deployment, Service, ServiceAccount). Used to detect naming collision attacks.
+	controllerName string
+
+	// controllerFullName is the Helm release fullname (eg.fullname) used for certgen and other
+	// release-scoped resources.
+	controllerFullName string
+
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 
 	ShutdownManager *egv1a1.ShutdownManager
 
 	TopologyInjectorDisabled bool
+
+	// EnvoyProxyPatchDisabled disables applying the Kubernetes resource `patch`
+	// fields configured on EnvoyProxy's Kubernetes provider settings.
+	EnvoyProxyPatchDisabled bool
 
 	GatewayNamespaceMode bool
 
@@ -80,6 +95,9 @@ type ResourceRender struct {
 // KubernetesInfraProvider provide information for initializing the proxy resource render.
 type KubernetesInfraProvider interface {
 	GetControllerNamespace() string
+	GetControllerName() string
+	GetControllerFullName() string
+	GetControllerServiceAccountName() string
 	GetDNSDomain() string
 	GetEnvoyGateway() *egv1a1.EnvoyGateway
 	GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error)
@@ -95,10 +113,14 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 	return &ResourceRender{
 		envoyNamespace:           kubeInfra.GetResourceNamespace(infra),
 		controllerNamespace:      kubeInfra.GetControllerNamespace(),
+		controllerName:           kubeInfra.GetControllerName(),
+		controllerFullName:       kubeInfra.GetControllerFullName(),
+		controllerSAName:         kubeInfra.GetControllerServiceAccountName(),
 		DNSDomain:                kubeInfra.GetDNSDomain(),
 		infra:                    infra.GetProxyInfra(),
 		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
 		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
+		EnvoyProxyPatchDisabled:  !kubeInfra.GetEnvoyGateway().RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
 		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
 		ownerReferenceUID:        ownerReference,
 	}, nil
@@ -113,6 +135,94 @@ func (r *ResourceRender) serviceAccountName() string {
 	}
 
 	return r.Name()
+}
+
+// validateName returns an error if the resource name collides with a controller-owned name
+// in ControllerNamespace mode.
+func (r *ResourceRender) validateName(name string) error {
+	if r.GatewayNamespaceMode || r.controllerName == "" {
+		return nil
+	}
+	if name == r.controllerName || name == r.controllerName+"-config" {
+		return fmt.Errorf("resource name %q is reserved for the Envoy Gateway controller "+
+			"and cannot be used in a gateway deployment", name)
+	}
+	return nil
+}
+
+// validatePodSpec returns an error if the pod spec references controller-owned resources
+// in ControllerNamespace mode.
+func (r *ResourceRender) validatePodSpec(pod *corev1.PodSpec) error {
+	if r.GatewayNamespaceMode {
+		return nil
+	}
+	if r.controllerSAName != "" && pod.ServiceAccountName == r.controllerSAName {
+		return fmt.Errorf("serviceAccountName %q is reserved for the Envoy Gateway controller "+
+			"and cannot be used in a gateway deployment", pod.ServiceAccountName)
+	}
+	if r.controllerFullName != "" && pod.ServiceAccountName == r.controllerFullName+"-certgen" {
+		return fmt.Errorf("serviceAccountName %q is reserved for the Envoy Gateway controller "+
+			"and cannot be used in a gateway deployment", pod.ServiceAccountName)
+	}
+	for i := range pod.Volumes {
+		vol := &pod.Volumes[i]
+		if vol.Secret != nil && vol.Secret.SecretName == r.controllerName {
+			return fmt.Errorf("volume %q references secret %q which is reserved for the Envoy Gateway controller",
+				vol.Name, vol.Secret.SecretName)
+		}
+		if vol.ConfigMap != nil &&
+			(vol.ConfigMap.Name == r.controllerName || vol.ConfigMap.Name == r.controllerName+"-config") {
+			return fmt.Errorf("volume %q references configmap %q which is reserved for the Envoy Gateway controller",
+				vol.Name, vol.ConfigMap.Name)
+		}
+		if vol.Projected != nil {
+			for _, src := range vol.Projected.Sources {
+				if src.Secret != nil && src.Secret.Name == r.controllerName {
+					return fmt.Errorf("volume %q references secret %q which is reserved for the Envoy Gateway controller",
+						vol.Name, src.Secret.Name)
+				}
+				if src.ConfigMap != nil &&
+					(src.ConfigMap.Name == r.controllerName || src.ConfigMap.Name == r.controllerName+"-config") {
+					return fmt.Errorf("volume %q references configmap %q which is reserved for the Envoy Gateway controller",
+						vol.Name, src.ConfigMap.Name)
+				}
+			}
+		}
+	}
+	for _, containers := range [][]corev1.Container{pod.Containers, pod.InitContainers} {
+		for i := range containers {
+			c := &containers[i]
+			for _, env := range c.Env {
+				if env.ValueFrom == nil {
+					continue
+				}
+				if env.ValueFrom.SecretKeyRef != nil &&
+					env.ValueFrom.SecretKeyRef.Name == r.controllerName {
+					return fmt.Errorf("env var %q in container %q references secret %q which is reserved for the Envoy Gateway controller",
+						env.Name, c.Name, r.controllerName)
+				}
+				if env.ValueFrom.ConfigMapKeyRef != nil &&
+					(env.ValueFrom.ConfigMapKeyRef.Name == r.controllerName ||
+						env.ValueFrom.ConfigMapKeyRef.Name == r.controllerName+"-config") {
+					return fmt.Errorf("env var %q in container %q references configmap %q which is reserved for the Envoy Gateway controller",
+						env.Name, c.Name, env.ValueFrom.ConfigMapKeyRef.Name)
+				}
+			}
+			for _, envFrom := range c.EnvFrom {
+				if envFrom.SecretRef != nil && envFrom.SecretRef.Name == r.controllerName {
+					return fmt.Errorf("envFrom in container %q references secret %q which is reserved for the Envoy Gateway controller",
+						c.Name, envFrom.SecretRef.Name)
+				}
+				if envFrom.ConfigMapRef != nil &&
+					(envFrom.ConfigMapRef.Name == r.controllerName ||
+						envFrom.ConfigMapRef.Name == r.controllerName+"-config") {
+					return fmt.Errorf("envFrom in container %q references configmap %q which is reserved for the Envoy Gateway controller",
+						c.Name, envFrom.ConfigMapRef.Name)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (r *ResourceRender) Name() string {
@@ -157,7 +267,7 @@ func (r *ResourceRender) ownerReferences() []metav1.OwnerReference {
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
-	saLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	saLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(saLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -178,7 +288,8 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	}, nil
 }
 
-// envoyLabels returns the labels, including extraLabels, used for Envoy resources.
+// envoyLabels returns the labels used for Envoy resources. These also feed the
+// immutable pod selector, so no keys may be added here for existing installs.
 func (r *ResourceRender) envoyLabels(extraLabels map[string]string) map[string]string {
 	appLabels := EnvoyAppLabel()
 	if r.GatewayNamespaceMode {
@@ -187,6 +298,22 @@ func (r *ResourceRender) envoyLabels(extraLabels map[string]string) map[string]s
 	maps.Copy(appLabels, extraLabels)
 
 	return appLabels
+}
+
+// objectLabels returns the metadata labels for generated resources, adding the
+// standard gateway-name label in default mode. It's kept out of envoyLabels
+// since that feeds the immutable selector (merged gateways have no owning name).
+func (r *ResourceRender) objectLabels(extraLabels map[string]string) map[string]string {
+	labels := r.envoyLabels(extraLabels)
+	if !r.GatewayNamespaceMode {
+		// Merged gateways don't carry OwningGatewayNameLabel, so this
+		// naturally skips them.
+		if gwName := labels[gatewayapi.OwningGatewayNameLabel]; gwName != "" {
+			labels[gatewayapi.GatewayNameLabel] = gwName
+		}
+	}
+
+	return labels
 }
 
 // Service returns the expected Service based on the provided infra.
@@ -223,7 +350,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Set the infraLabels based on the owning gatewayclass name.
-	infraLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	infraLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(infraLabels) {
 		return nil, fmt.Errorf("missing owning gateway infraLabels")
 	}
@@ -254,7 +381,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	// Set the spec of gateway service
 	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
-	serviceSpec.Selector = resource.GetSelector(infraLabels).MatchLabels
+	// Use the workload's stable selector so pod label overrides cannot break
+	// Service selection. User-provided infrastructure labels are metadata only.
+	serviceSpec.Selector = r.stableSelector().MatchLabels
 
 	if (*envoyServiceConfig.Type) == egv1a1.ServiceTypeClusterIP {
 		if len(r.infra.Addresses) > 0 {
@@ -279,6 +408,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		case egv1a1.DualStack:
 			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol}
 			serviceSpec.IPFamilyPolicy = new(corev1.IPFamilyPolicyRequireDualStack)
+		case egv1a1.PreferDualStack:
+			// IPFamilies is left unset so the cluster assigns the families it has
+			serviceSpec.IPFamilyPolicy = new(corev1.IPFamilyPolicyPreferDualStack)
 		}
 	}
 
@@ -305,7 +437,11 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// apply merge patch to service
 	var err error
-	if svc, err = utils.MergeWithPatch(svc, envoyServiceConfig.Patch); err != nil {
+	if svc, err = utils.MergeWithPatch(svc, envoyServiceConfig.Patch, r.EnvoyProxyPatchDisabled); err != nil {
+		return nil, err
+	}
+
+	if err := r.validateName(svc.Name); err != nil {
 		return nil, err
 	}
 
@@ -315,7 +451,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
-	cmLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	cmLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(cmLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -455,7 +591,15 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// apply merge patch to deployment
-	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch); err != nil {
+	if deployment, err = utils.MergeWithPatch(deployment, deploymentConfig.Patch, r.EnvoyProxyPatchDisabled); err != nil {
+		return nil, err
+	}
+
+	if err := r.validateName(deployment.Name); err != nil {
+		return nil, err
+	}
+
+	if err := r.validatePodSpec(&deployment.Spec.Template.Spec); err != nil {
 		return nil, err
 	}
 
@@ -526,10 +670,13 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// apply merge patch to DaemonSet
-	if daemonSet, err = utils.MergeWithPatch(daemonSet, daemonSetConfig.Patch); err != nil {
+	if daemonSet, err = utils.MergeWithPatch(daemonSet, daemonSetConfig.Patch, r.EnvoyProxyPatchDisabled); err != nil {
 		return nil, err
 	}
 
+	if err := r.validatePodSpec(&daemonSet.Spec.Template.Spec); err != nil {
+		return nil, err
+	}
 	return daemonSet, nil
 }
 
@@ -560,7 +707,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 		resourceName = *pdb.Name
 	}
 
-	return infracommon.GetPodDisruptionBudget(pdb, r.stableSelector(), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences())
+	return infracommon.GetPodDisruptionBudget(pdb, r.stableSelector(), r.objectLabels(r.stableSelector().MatchLabels), &types.NamespacedName{Name: resourceName, Namespace: r.Namespace()}, r.ownerReferences(), r.EnvoyProxyPatchDisabled)
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
@@ -582,7 +729,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Annotations:     r.infra.GetProxyMetadata().Annotations,
-			Labels:          r.stableSelector().MatchLabels,
+			Labels:          r.objectLabels(r.stableSelector().MatchLabels),
 			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
@@ -613,7 +760,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	var err error
-	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
+	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch, r.EnvoyProxyPatchDisabled); err != nil {
 		return nil, err
 	}
 
@@ -676,7 +823,7 @@ func (r *ResourceRender) getPodAnnotations(resourceAnnotation map[string]string,
 
 func (r *ResourceRender) getLabels() (map[string]string, error) {
 	// Set the labels based on the owning gateway name.
-	resourceLabels := r.envoyLabels(r.infra.GetProxyMetadata().Labels)
+	resourceLabels := r.objectLabels(r.infra.GetProxyMetadata().Labels)
 	if OwningGatewayLabelsAbsent(resourceLabels) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -685,10 +832,13 @@ func (r *ResourceRender) getLabels() (map[string]string, error) {
 }
 
 func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]string {
-	podLabels := r.infra.GetProxyMetadata().Labels
+	// Copy into a fresh map so the pod-spec labels are not written back into the
+	// shared infra metadata map (which also feeds getLabels/stableSelector).
+	podLabels := map[string]string{}
+	maps.Copy(podLabels, r.infra.GetProxyMetadata().Labels)
 	maps.Copy(podLabels, pod.Labels)
 
-	return r.envoyLabels(podLabels)
+	return r.objectLabels(podLabels)
 }
 
 // OwningGatewayLabelsAbsent Check if labels are missing some OwningGatewayLabels
