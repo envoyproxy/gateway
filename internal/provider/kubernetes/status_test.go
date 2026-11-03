@@ -7,17 +7,21 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
@@ -1174,6 +1178,254 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 			if got := mergeRouteParentStatus("default", tt.args.old, tt.args.new); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeRouteParentStatus() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func Test_mergePolicyAncestorStatus(t *testing.T) {
+	const (
+		ours  = gwapiv1.GatewayController("gateway.envoyproxy.io/gatewayclass-controller")
+		other = gwapiv1.GatewayController("example.com/other-controller")
+	)
+	ancestor := func(controller gwapiv1.GatewayController, name, condType string, condStatus metav1.ConditionStatus) gwapiv1.PolicyAncestorStatus {
+		return gwapiv1.PolicyAncestorStatus{
+			ControllerName: controller,
+			AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName(name)},
+			Conditions: []metav1.Condition{
+				{Type: condType, Status: condStatus, Reason: "Reason", ObservedGeneration: 1},
+			},
+		}
+	}
+	accepted := string(gwapiv1.PolicyConditionAccepted)
+	foreign := "example.com/Audited"
+	ancestors := func(controller gwapiv1.GatewayController, prefix string, n int, condType string) []gwapiv1.PolicyAncestorStatus {
+		res := make([]gwapiv1.PolicyAncestorStatus, 0, n)
+		for i := range n {
+			res = append(res, ancestor(controller, fmt.Sprintf("%s-%02d", prefix, i), condType, metav1.ConditionTrue))
+		}
+		return res
+	}
+	concat := func(lists ...[]gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
+		var res []gwapiv1.PolicyAncestorStatus
+		for _, l := range lists {
+			res = append(res, l...)
+		}
+		return res
+	}
+	aggregated := func(as []gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
+		for i := range as {
+			as[i].Conditions = append(as[i].Conditions, metav1.Condition{
+				Type:               string(egv1a1.PolicyConditionAggregated),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(egv1a1.PolicyReasonAggregated),
+				Message:            "Ancestors have been truncated because the number of policy ancestors exceeds 16.",
+				ObservedGeneration: 1,
+			})
+		}
+		return as
+	}
+
+	tests := []struct {
+		name string
+		old  []gwapiv1.PolicyAncestorStatus
+		new  []gwapiv1.PolicyAncestorStatus
+		want []gwapiv1.PolicyAncestorStatus
+	}{
+		{
+			name: "no old status",
+			new:  []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
+			want: []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
+		},
+		{
+			name: "our entry is updated",
+			old:  []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
+			new:  []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionFalse)},
+			want: []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionFalse)},
+		},
+		{
+			name: "stale entry of ours is removed",
+			old: []gwapiv1.PolicyAncestorStatus{
+				ancestor(ours, "gateway1", accepted, metav1.ConditionTrue),
+				ancestor(ours, "gateway2", accepted, metav1.ConditionTrue),
+			},
+			new:  []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway2", accepted, metav1.ConditionTrue)},
+			want: []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway2", accepted, metav1.ConditionTrue)},
+		},
+		{
+			name: "all entries of ours are removed when the new status is empty",
+			old: []gwapiv1.PolicyAncestorStatus{
+				ancestor(ours, "gateway1", accepted, metav1.ConditionTrue),
+				ancestor(other, "gateway1", foreign, metav1.ConditionTrue),
+			},
+			want: []gwapiv1.PolicyAncestorStatus{ancestor(other, "gateway1", foreign, metav1.ConditionTrue)},
+		},
+		{
+			name: "another controller's entries are preserved in place",
+			old: []gwapiv1.PolicyAncestorStatus{
+				ancestor(other, "gateway0", foreign, metav1.ConditionTrue),
+				ancestor(ours, "gateway1", accepted, metav1.ConditionTrue),
+				ancestor(other, "gateway1", foreign, metav1.ConditionTrue),
+			},
+			new: []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionFalse)},
+			want: []gwapiv1.PolicyAncestorStatus{
+				ancestor(other, "gateway0", foreign, metav1.ConditionTrue),
+				ancestor(ours, "gateway1", accepted, metav1.ConditionFalse),
+				ancestor(other, "gateway1", foreign, metav1.ConditionTrue),
+			},
+		},
+		{
+			name: "only another controller's entry exists for the ancestorRef - ours is appended",
+			old:  []gwapiv1.PolicyAncestorStatus{ancestor(other, "gateway1", foreign, metav1.ConditionTrue)},
+			new:  []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
+			want: []gwapiv1.PolicyAncestorStatus{
+				ancestor(other, "gateway1", foreign, metav1.ConditionTrue),
+				ancestor(ours, "gateway1", accepted, metav1.ConditionTrue),
+			},
+		},
+		{
+			name: "duplicate entries of ours are collapsed",
+			old: []gwapiv1.PolicyAncestorStatus{
+				ancestor(ours, "gateway1", accepted, metav1.ConditionTrue),
+				ancestor(ours, "gateway1", accepted, metav1.ConditionTrue),
+			},
+			new:  []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
+			want: []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionTrue)},
+		},
+		{
+			name: "ours are truncated to the slots left by other controllers",
+			old:  concat(ancestors(other, "other", 4, foreign), ancestors(ours, "gw", 10, accepted)),
+			new:  ancestors(ours, "gw", 14, accepted),
+			want: concat(ancestors(other, "other", 4, foreign), ancestors(ours, "gw", 11, accepted), aggregated(ancestors(ours, "gw", 12, accepted)[11:])),
+		},
+		{
+			name: "other controllers' entries are kept when ours fill the limit",
+			old:  concat(ancestors(ours, "gw", 1, accepted), ancestors(other, "other", 3, foreign)),
+			new:  ancestors(ours, "gw", 16, accepted),
+			want: concat(ancestors(ours, "gw", 1, accepted), ancestors(other, "other", 3, foreign), ancestors(ours, "gw", 12, accepted)[1:], aggregated(ancestors(ours, "gw", 13, accepted)[12:])),
+		},
+		{
+			name: "all of ours are dropped when other controllers fill the limit",
+			old:  ancestors(other, "other", 16, foreign),
+			new:  ancestors(ours, "gw", 3, accepted),
+			want: ancestors(other, "other", 16, foreign),
+		},
+		{
+			name: "other controllers' entries are kept up to the limit",
+			old:  ancestors(other, "other", 10, foreign),
+			new:  ancestors(ours, "gw", 6, accepted),
+			want: concat(ancestors(other, "other", 10, foreign), ancestors(ours, "gw", 6, accepted)),
+		},
+		{
+			name: "ancestorRef with explicit default namespace matches",
+			old: []gwapiv1.PolicyAncestorStatus{
+				{
+					ControllerName: ours,
+					AncestorRef:    gwapiv1.ParentReference{Name: "gateway1", Namespace: new(gwapiv1.Namespace("default"))},
+					Conditions:     []metav1.Condition{{Type: accepted, Status: metav1.ConditionTrue, Reason: "Reason"}},
+				},
+				ancestor(other, "gateway2", foreign, metav1.ConditionTrue),
+			},
+			new: []gwapiv1.PolicyAncestorStatus{ancestor(ours, "gateway1", accepted, metav1.ConditionFalse)},
+			want: []gwapiv1.PolicyAncestorStatus{
+				ancestor(ours, "gateway1", accepted, metav1.ConditionFalse),
+				ancestor(other, "gateway2", foreign, metav1.ConditionTrue),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergePolicyAncestorStatus("default", ours, tt.old, tt.new)
+			require.LessOrEqual(t, len(got), 16)
+			// The Aggregated condition set on truncation is given the current time.
+			for i := range got {
+				for j := range got[i].Conditions {
+					if got[i].Conditions[j].Type == string(egv1a1.PolicyConditionAggregated) {
+						require.False(t, got[i].Conditions[j].LastTransitionTime.IsZero())
+						got[i].Conditions[j].LastTransitionTime = metav1.Time{}
+					}
+				}
+			}
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_unstructuredPolicyAncestors(t *testing.T) {
+	policy := func(status any) *unstructured.Unstructured {
+		obj := map[string]any{
+			"apiVersion": "example.com/v1alpha1",
+			"kind":       "ExampleExtPolicy",
+			"metadata":   map[string]any{"name": "policy", "namespace": "default"},
+		}
+		if status != nil {
+			obj["status"] = status
+		}
+		return &unstructured.Unstructured{Object: obj}
+	}
+
+	tests := []struct {
+		name string
+		obj  *unstructured.Unstructured
+		want []gwapiv1.PolicyAncestorStatus
+	}{
+		{
+			name: "no status",
+			obj:  policy(nil),
+		},
+		{
+			name: "status is not a map",
+			obj:  policy("invalid"),
+		},
+		{
+			name: "status is not a PolicyStatus",
+			obj:  policy(map[string]any{"ancestors": "invalid"}),
+		},
+		{
+			name: "ancestors are decoded",
+			// As decoded from the API server's JSON response.
+			obj: policy(map[string]any{
+				"ancestors": []any{
+					map[string]any{
+						"ancestorRef":    map[string]any{"group": "gateway.networking.k8s.io", "kind": "Gateway", "name": "gateway1"},
+						"controllerName": "example.com/other-controller",
+						"conditions": []any{
+							map[string]any{
+								"type":               "example.com/Audited",
+								"status":             "True",
+								"reason":             "Checked",
+								"message":            "added by another controller",
+								"observedGeneration": int64(1),
+								"lastTransitionTime": "2026-01-01T00:00:00Z",
+							},
+						},
+					},
+				},
+			}),
+			want: []gwapiv1.PolicyAncestorStatus{
+				{
+					AncestorRef: gwapiv1.ParentReference{
+						Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+						Kind:  new(gwapiv1.Kind("Gateway")),
+						Name:  "gateway1",
+					},
+					ControllerName: "example.com/other-controller",
+					Conditions: []metav1.Condition{
+						{
+							Type:               "example.com/Audited",
+							Status:             metav1.ConditionTrue,
+							Reason:             "Checked",
+							Message:            "added by another controller",
+							ObservedGeneration: 1,
+							LastTransitionTime: metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).Local()),
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, unstructuredPolicyAncestors(tt.obj))
 		})
 	}
 }
