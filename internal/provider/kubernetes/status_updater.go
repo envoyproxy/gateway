@@ -106,7 +106,7 @@ func (u *UpdateHandler) apply(update Update) {
 			return true
 		}
 		if isTransientError(err) {
-			statusUpdateTotal.WithFailure(metrics.ReasonError, kindLabel.Value(objKind)).Increment()
+			statusUpdateTotal.WithFailure(metrics.ReasonTransient, kindLabel.Value(objKind)).Increment()
 			log.Info("retrying status update after a transient error", "error", err.Error())
 			return true
 		}
