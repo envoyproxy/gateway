@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/mail"
@@ -23,6 +24,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -2253,10 +2255,11 @@ func (t *Translator) buildLocalJWKS(
 			return jwksBytes, nil
 		}
 		if len(cm.Data) > 0 {
-			// Fallback to the first entry in the ConfigMap data if "jwks" key is not present
-			for _, v := range cm.Data {
-				return v, nil
-			}
+			// Fallback to the first entry in the ConfigMap data if "jwks" key is not present.
+			// Take the first key in sorted order rather than in map iteration order, so
+			// every build of the policy's JWT, on any route and any translation, picks the
+			// same entry.
+			return cm.Data[slices.Sorted(maps.Keys(cm.Data))[0]], nil
 		}
 
 		return "", fmt.Errorf(

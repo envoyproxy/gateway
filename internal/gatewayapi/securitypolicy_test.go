@@ -759,6 +759,43 @@ func Test_JWTProvider(t *testing.T) {
 	}
 }
 
+func TestBuildLocalJWKSValueRefFallback(t *testing.T) {
+	policy := &egv1a1.SecurityPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "policy"}}
+	localJWKS := &egv1a1.LocalJWKS{
+		Type:     new(egv1a1.LocalJWKSTypeValueRef),
+		ValueRef: &gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "jwks"},
+	}
+	translatorFor := func(data map[string]string) *Translator {
+		return &Translator{
+			TranslatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: "default", Name: "jwks"}: {
+						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "jwks"},
+						Data:       data,
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("jwks key", func(t *testing.T) {
+		tr := translatorFor(map[string]string{"a": "a-value", JWKSConfigMapKey: "jwks-value"})
+		jwks, err := tr.buildLocalJWKS(policy, localJWKS)
+		require.NoError(t, err)
+		require.Equal(t, "jwks-value", jwks)
+	})
+
+	t.Run("first key in sorted order", func(t *testing.T) {
+		tr := translatorFor(map[string]string{"c": "c-value", "a": "a-value", "b": "b-value"})
+		// Map iteration order is random, so repeat to catch a fallback that depends on it.
+		for range 20 {
+			jwks, err := tr.buildLocalJWKS(policy, localJWKS)
+			require.NoError(t, err)
+			require.Equal(t, "a-value", jwks)
+		}
+	})
+}
+
 func Test_APIKeyAuth(t *testing.T) {
 	tests := []struct {
 		name       string
