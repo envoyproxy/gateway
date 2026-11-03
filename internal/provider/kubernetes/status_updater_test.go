@@ -37,11 +37,10 @@ func TestUpdateHandlerApplyRetries(t *testing.T) {
 		name string
 		// getErrs and updateErrs are returned, in order, by the first calls to Get and
 		// Status().Update; later calls go through to the fake client.
-		getErrs        []error
-		updateErrs     []error
-		wantUpdates    int
-		wantStatusSet  bool
-		cancelCtxFirst bool
+		getErrs       []error
+		updateErrs    []error
+		wantUpdates   int
+		wantStatusSet bool
 	}{
 		{
 			name:          "server timeout on update is retried",
@@ -77,12 +76,6 @@ func TestUpdateHandlerApplyRetries(t *testing.T) {
 			updateErrs:  repeatErr(kerrors.NewServerTimeout(gvr, "update", 1), 100),
 			wantUpdates: statusRetryBackoff.Steps,
 		},
-		{
-			name:           "no write once the handler is shutting down",
-			updateErrs:     []error{kerrors.NewServerTimeout(gvr, "update", 1)},
-			wantUpdates:    0,
-			cancelCtxFirst: true,
-		},
 	}
 
 	for _, tc := range testCases {
@@ -111,14 +104,8 @@ func TestUpdateHandlerApplyRetries(t *testing.T) {
 				}).
 				Build()
 
-			ctx, cancel := context.WithCancel(t.Context())
-			defer cancel()
-			if tc.cancelCtxFirst {
-				cancel()
-			}
-
 			u := NewUpdateHandler(logr.Discard(), cli, cli)
-			u.apply(ctx, Update{
+			u.apply(Update{
 				NamespacedName: key,
 				Resource:       new(gwapiv1.Gateway),
 				Mutator: MutatorFunc(func(obj client.Object) client.Object {

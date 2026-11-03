@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -87,14 +86,11 @@ var statusRetryBackoff = wait.Backoff{
 	Jitter:   0.1,
 }
 
-// errUpdateHandlerStopping ends a retry once the handler shuts down. It's a plain error
-// rather than ctx.Err(), because isTransientError would treat context.Canceled as retryable.
-var errUpdateHandlerStopping = errors.New("status update handler stopping")
-
-func (u *UpdateHandler) apply(ctx context.Context, update Update) {
+func (u *UpdateHandler) apply(update Update) {
 	var (
 		startTime = time.Now()
-		objKind   = KindOf(update.Resource)
+		obj       = update.Resource
+		objKind   = KindOf(obj)
 	)
 	log := u.log.WithValues("name", update.NamespacedName.Name,
 		"namespace", update.NamespacedName.Namespace, "kind", objKind)
@@ -103,74 +99,53 @@ func (u *UpdateHandler) apply(ctx context.Context, update Update) {
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
 
-	// Each attempt checks for shutdown first, so nothing is written once the handler stops.
-	// The API calls use a background context so a write already in flight still finishes,
-	// and so client-side rate limiting waits for its turn instead of failing early.
-	err := retry.OnError(statusRetryBackoff, func(err error) bool {
-		switch {
-		case kerrors.IsConflict(err):
+	if err := retry.OnError(statusRetryBackoff, func(err error) bool {
+		if kerrors.IsConflict(err) {
 			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
 			return true
-		case isTransientError(err):
+		}
+		if isTransientError(err) {
 			log.Info("retrying status update after a transient error", "error", err.Error())
 			return true
 		}
 		return false
 	}, func() error {
-		if ctx.Err() != nil {
-			return errUpdateHandlerStopping
+		// Get the resource.
+		if err := u.client.Get(context.Background(), update.NamespacedName, obj); err != nil {
+			if !kerrors.IsNotFound(err) {
+				return err
+			}
+			// The cache-backed client may not have a freshly-created object yet.
+			// Confirm against the API server before dropping the status write;
+			// otherwise the update is silently lost under high cache churn, leaving
+			// the object with an empty status until a controller restart (issue #9536).
+			if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil // The object is genuinely gone.
+				}
+				return err
+			}
 		}
-		return u.writeStatus(context.Background(), update, log)
-	})
-	if errors.Is(err, errUpdateHandlerStopping) {
-		// The next leader publishes every status again, so this one isn't lost.
-		log.Info("status update handler stopping, abandoning retry")
-		return
-	}
 
-	if err != nil {
+		newObj := update.Mutator.Mutate(obj)
+
+		if isStatusEqual(obj, newObj) {
+			log.Info("status unchanged, bypassing update")
+
+			statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
+			return nil
+		}
+
+		newObj.SetUID(obj.GetUID())
+
+		return u.client.Status().Update(context.Background(), newObj)
+	}); err != nil {
 		log.Error(err, "unable to update status")
 
 		statusUpdateTotal.WithFailure(metrics.ReasonError, kindLabel.Value(objKind)).Increment()
 	} else {
 		statusUpdateTotal.WithSuccess(kindLabel.Value(objKind)).Increment()
 	}
-}
-
-// writeStatus makes one attempt to read the object and write its new status.
-func (u *UpdateHandler) writeStatus(ctx context.Context, update Update, log logr.Logger) error {
-	obj := update.Resource
-	objKind := KindOf(obj)
-
-	// Get the resource.
-	if err := u.client.Get(ctx, update.NamespacedName, obj); err != nil {
-		if !kerrors.IsNotFound(err) {
-			return err
-		}
-		// The cache-backed client may not have a freshly-created object yet.
-		// Confirm against the API server before dropping the status write;
-		// otherwise the update is silently lost under high cache churn, leaving
-		// the object with an empty status until a controller restart (issue #9536).
-		if err := u.apiReader.Get(ctx, update.NamespacedName, obj); err != nil {
-			if kerrors.IsNotFound(err) {
-				return nil // The object is genuinely gone.
-			}
-			return err
-		}
-	}
-
-	newObj := update.Mutator.Mutate(obj)
-
-	if isStatusEqual(obj, newObj) {
-		log.Info("status unchanged, bypassing update")
-
-		statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
-		return nil
-	}
-
-	newObj.SetUID(obj.GetUID())
-
-	return u.client.Status().Update(ctx, newObj)
 }
 
 func (u *UpdateHandler) NeedLeaderElection() bool {
@@ -193,7 +168,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 			u.log.Info("received a status update", "namespace", update.NamespacedName.Namespace,
 				"name", update.NamespacedName.Name, "kind", KindOf(update.Resource))
 
-			u.apply(ctx, update)
+			u.apply(update)
 		}
 	}
 }
