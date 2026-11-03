@@ -102,9 +102,11 @@ func (u *UpdateHandler) apply(update Update) {
 	if err := retry.OnError(statusRetryBackoff, func(err error) bool {
 		if kerrors.IsConflict(err) {
 			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
+			log.Info("retrying status update after a conflict error", "error", err.Error())
 			return true
 		}
 		if isTransientError(err) {
+			statusUpdateTotal.WithFailure(metrics.ReasonError, kindLabel.Value(objKind)).Increment()
 			log.Info("retrying status update after a transient error", "error", err.Error())
 			return true
 		}
