@@ -1,9 +1,10 @@
 # Real IR extracted from gatewayapi's mergebackends-tcp-udp-gateway-btp-protocol-scoped.out.yaml:
 # a whole-Gateway BackendTrafficPolicy with the full cluster-scoped feature set, merged into a
 # UDP and a TCP BackendCluster. The UDP cluster must only carry what ir.UDPRoute can carry
-# (load balancing and DNS) - no health check, circuit breaker, tcpKeepalive, proxyProtocol or
-# HttpProtocolOptions on the cluster udp_proxy routes to. Both clusters are route clusters, so
-# neither gets the route-scoped maxStreamDuration or consistent-hash policy on the cluster.
+# (load balancing, DNS and the maxConnections subset of circuitBreaker) - no health check,
+# tcpKeepalive, proxyProtocol or HttpProtocolOptions on the cluster udp_proxy routes to. Both
+# clusters are route clusters, so neither gets the route-scoped maxStreamDuration or
+# consistent-hash policy on the cluster.
 backendClusters:
 - metadata:
     kind: Service
@@ -88,6 +89,8 @@ backendClusters:
     name: service/default/service-1/8162/udp
     protocol: UDP
   traffic:
+    circuitBreaker:
+      maxConnections: 2048
     dns:
       dnsRefreshRate: 30s
       name: default/policy-for-gateway
@@ -181,6 +184,8 @@ udp:
   name: default/tcp-gateway/foo
   port: 8162
   route:
+    circuitBreaker:
+      maxConnections: 2048
     destination:
       backendClusterRefs:
       - name: service/default/service-1/8162/udp

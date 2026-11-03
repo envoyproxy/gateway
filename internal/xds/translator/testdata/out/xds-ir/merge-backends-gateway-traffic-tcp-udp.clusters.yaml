@@ -74,7 +74,8 @@
       keepaliveTime: 1200
 - circuitBreakers:
     thresholds:
-    - maxRetries: 1024
+    - maxConnections: 2048
+      maxRetries: 1024
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED

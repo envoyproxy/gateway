@@ -5820,6 +5820,11 @@ func (in *UDPRoute) DeepCopyInto(out *UDPRoute) {
 		*out = new(DNS)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CircuitBreaker != nil {
+		in, out := &in.CircuitBreaker, &out.CircuitBreaker
+		*out = new(CircuitBreaker)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Authorization != nil {
 		in, out := &in.Authorization, &out.Authorization
 		*out = new(Authorization)

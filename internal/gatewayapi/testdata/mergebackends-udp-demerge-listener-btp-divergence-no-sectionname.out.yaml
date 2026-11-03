@@ -223,6 +223,8 @@ xdsIR:
       name: envoy-gateway/gateway-1/udp-1
       port: 8080
       route:
+        circuitBreaker:
+          maxConnections: 1024
         destination:
           metadata:
             kind: UDPRoute
