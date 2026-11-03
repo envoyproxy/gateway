@@ -26,9 +26,9 @@ import (
 
 func TestUpdateHandlerApplyRetries(t *testing.T) {
 	// Keep the number of retries but skip the real waits.
-	origBackoff := transientRetryBackoff
-	transientRetryBackoff.Duration = time.Millisecond
-	t.Cleanup(func() { transientRetryBackoff = origBackoff })
+	origBackoff := statusRetryBackoff
+	statusRetryBackoff.Duration = time.Millisecond
+	t.Cleanup(func() { statusRetryBackoff = origBackoff })
 
 	gvr := schema.GroupResource{Group: gwapiv1.GroupName, Resource: "gateways"}
 	key := types.NamespacedName{Namespace: "default", Name: "gw"}
@@ -75,12 +75,12 @@ func TestUpdateHandlerApplyRetries(t *testing.T) {
 		{
 			name:        "transient errors give up after the backoff runs out",
 			updateErrs:  repeatErr(kerrors.NewServerTimeout(gvr, "update", 1), 100),
-			wantUpdates: transientRetryBackoff.Steps,
+			wantUpdates: statusRetryBackoff.Steps,
 		},
 		{
-			name:           "no retry once the handler is shutting down",
+			name:           "no write once the handler is shutting down",
 			updateErrs:     []error{kerrors.NewServerTimeout(gvr, "update", 1)},
-			wantUpdates:    1,
+			wantUpdates:    0,
 			cancelCtxFirst: true,
 		},
 	}

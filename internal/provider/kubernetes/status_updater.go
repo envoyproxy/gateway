@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -17,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -76,10 +76,10 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 	return u
 }
 
-// transientRetryBackoff paces retries after errors that usually clear up on their own,
-// such as API server timeouts, throttling or a brief outage. It waits about 1.5s
-// in total, because every other status write queues up behind the one being retried.
-var transientRetryBackoff = wait.Backoff{
+// statusRetryBackoff paces retries after conflicts and after errors that usually clear
+// up on their own, such as API server timeouts, throttling or a brief outage. It waits
+// about 1.5s in total, because every other status write queues up behind the one being retried.
+var statusRetryBackoff = wait.Backoff{
 	Steps:    5,
 	Duration: 100 * time.Millisecond,
 	Factor:   2.0,
@@ -98,37 +98,32 @@ func (u *UpdateHandler) apply(ctx context.Context, update Update) {
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
 
-	// Conflicts are retried quickly inside each attempt. Transient errors get the slower
-	// backoff below, which stops waiting once the handler shuts down. The API calls use a
-	// background context so a write already in flight still finishes, and so client-side
-	// rate limiting waits for its turn instead of failing early.
-	backoff := transientRetryBackoff
-	var err error
-	for {
-		err = retry.OnError(retry.DefaultBackoff, func(err error) bool {
-			if kerrors.IsConflict(err) {
-				statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
-				return true
-			}
-			return false
-		}, func() error {
-			return u.writeStatus(context.Background(), update, log)
-		})
-		if err == nil || !isTransientError(err) || backoff.Steps <= 1 {
-			break
+	// The backoff stops waiting once the handler shuts down. The API calls use a background
+	// context so a write already in flight still finishes, and so client-side rate limiting
+	// waits for its turn instead of failing early.
+	var lastErr error
+	err := wait.ExponentialBackoffWithContext(ctx, statusRetryBackoff, func(context.Context) (bool, error) {
+		err := u.writeStatus(context.Background(), update, log)
+		switch {
+		case err == nil:
+			return true, nil
+		case kerrors.IsConflict(err):
+			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
+		case isTransientError(err):
+			log.Info("retrying status update after a transient error", "error", err.Error())
+		default:
+			return false, err
 		}
-
-		delay := backoff.Step()
-		log.Info("retrying status update after a transient error", "error", err.Error(), "delay", delay)
-		select {
-		case <-ctx.Done():
-		case <-time.After(delay):
-		}
-		if ctx.Err() != nil {
-			// The next leader publishes every status again, so this one isn't lost.
-			log.Info("status update handler stopping, abandoning retry")
-			return
-		}
+		lastErr = err
+		return false, nil
+	})
+	if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+		// The next leader publishes every status again, so this one isn't lost.
+		log.Info("status update handler stopping, abandoning retry")
+		return
+	}
+	if wait.Interrupted(err) && lastErr != nil {
+		err = lastErr
 	}
 
 	if err != nil {
