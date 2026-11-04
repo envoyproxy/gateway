@@ -186,6 +186,18 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/2
             protocol: HTTP
             weight: 3
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-4
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/3
+            protocol: HTTP
+            weight: 0
         hostname: '*'
         isHTTP2: false
         metadata:
