@@ -7,6 +7,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"sync"
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -18,20 +19,34 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
 
-func fetchAndPatchBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) (*bootstrapv3.Bootstrap, *bootstrapv3.Bootstrap, error) {
+type renderedBootstrap struct {
+	yaml   string
+	parsed *bootstrapv3.Bootstrap
+}
+
+// defaultBootstrap is shared between callers, parsed must be treated as read-only.
+var defaultBootstrap = sync.OnceValues(func() (renderedBootstrap, error) {
 	defaultBootstrapStr, err := GetRenderedBootstrapConfig(nil)
+	if err != nil {
+		return renderedBootstrap{}, err
+	}
+	parsed := &bootstrapv3.Bootstrap{}
+	if err := proto.FromYAML([]byte(defaultBootstrapStr), parsed); err != nil {
+		return renderedBootstrap{}, fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
+	}
+	if err := parsed.Validate(); err != nil {
+		return renderedBootstrap{}, fmt.Errorf("default bootstrap validation failed: %w", err)
+	}
+	return renderedBootstrap{yaml: defaultBootstrapStr, parsed: parsed}, nil
+})
+
+func fetchAndPatchBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) (*bootstrapv3.Bootstrap, *bootstrapv3.Bootstrap, error) {
+	defaults, err := defaultBootstrap()
 	if err != nil {
 		return nil, nil, err
 	}
-	defaultBootstrap := &bootstrapv3.Bootstrap{}
-	if err := proto.FromYAML([]byte(defaultBootstrapStr), defaultBootstrap); err != nil {
-		return nil, nil, fmt.Errorf("unable to unmarshal default bootstrap: %w", err)
-	}
-	if err := defaultBootstrap.Validate(); err != nil {
-		return nil, nil, fmt.Errorf("default bootstrap validation failed: %w", err)
-	}
 	// Validate user bootstrap config
-	patchedYaml, err := ApplyBootstrapConfig(boostrapConfig, defaultBootstrapStr)
+	patchedYaml, err := ApplyBootstrapConfig(boostrapConfig, defaults.yaml)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,7 +57,7 @@ func fetchAndPatchBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) (*bootstrapv3
 	if err := patchedBootstrap.Validate(); err != nil {
 		return nil, nil, fmt.Errorf("validation failed for user bootstrap: %w", err)
 	}
-	return patchedBootstrap, defaultBootstrap, err
+	return patchedBootstrap, defaults.parsed, nil
 }
 
 // Validate ensures that after applying the provided bootstrap configuration, the resulting
