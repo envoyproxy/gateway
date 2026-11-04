@@ -404,7 +404,8 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1.PolicyStatus, controllerName 
 
 // lessPolicyAncestor reports whether ancestor a should be ordered before ancestor b when deciding
 // which ancestors to preserve under the CRD limit: by sort rank (negative polarity first), then
-// namespace, then name.
+// namespace, name, kind, group, sectionName and port. Comparing every field of the ancestorRef gives
+// a total order, so which ancestors are kept doesn't depend on the order they were added in.
 func lessPolicyAncestor(a, b *gwapiv1.PolicyAncestorStatus) bool {
 	aRank := sortRankForPolicyAncestor(a)
 	bRank := sortRankForPolicyAncestor(b)
@@ -424,7 +425,59 @@ func lessPolicyAncestor(a, b *gwapiv1.PolicyAncestorStatus) bool {
 	if aNamespace != bNamespace {
 		return aNamespace < bNamespace
 	}
-	return string(a.AncestorRef.Name) < string(b.AncestorRef.Name)
+	if a.AncestorRef.Name != b.AncestorRef.Name {
+		return string(a.AncestorRef.Name) < string(b.AncestorRef.Name)
+	}
+
+	// Then by kind and group
+	aKind := ""
+	if a.AncestorRef.Kind != nil {
+		aKind = string(*a.AncestorRef.Kind)
+	}
+	bKind := ""
+	if b.AncestorRef.Kind != nil {
+		bKind = string(*b.AncestorRef.Kind)
+	}
+
+	if aKind != bKind {
+		return aKind < bKind
+	}
+
+	aGroup := ""
+	if a.AncestorRef.Group != nil {
+		aGroup = string(*a.AncestorRef.Group)
+	}
+	bGroup := ""
+	if b.AncestorRef.Group != nil {
+		bGroup = string(*b.AncestorRef.Group)
+	}
+
+	if aGroup != bGroup {
+		return aGroup < bGroup
+	}
+
+	// Then by sectionName and port
+	aSectionName := ""
+	if a.AncestorRef.SectionName != nil {
+		aSectionName = string(*a.AncestorRef.SectionName)
+	}
+	bSectionName := ""
+	if b.AncestorRef.SectionName != nil {
+		bSectionName = string(*b.AncestorRef.SectionName)
+	}
+
+	if aSectionName != bSectionName {
+		return aSectionName < bSectionName
+	}
+
+	var aPort, bPort gwapiv1.PortNumber
+	if a.AncestorRef.Port != nil {
+		aPort = *a.AncestorRef.Port
+	}
+	if b.AncestorRef.Port != nil {
+		bPort = *b.AncestorRef.Port
+	}
+	return aPort < bPort
 }
 
 // sortRankForPolicyAncestor returns an integer sort key.
