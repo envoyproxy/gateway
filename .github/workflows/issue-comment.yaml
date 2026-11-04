@@ -15,7 +15,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: jpmcb/prow-github-actions@187c5e3cd95a329c43448e1bdb3b1f5249232e44  # v3.0.1
+      - uses: jpmcb/prow-github-actions@a192ee15687d4ede4d553ff0929b2b296666afd7  # v3.5.0
         with:
           prow-commands: '/assign
             /unassign
