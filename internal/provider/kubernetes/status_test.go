@@ -18,6 +18,7 @@ import (
 	"github.com/telepresenceio/watchable"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1501,12 +1502,6 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 			want: []gwapiv1.PolicyAncestorStatus{other("gateway1")},
 		},
 		{
-			name: "our entries are trimmed to stay within the CRD limit",
-			old:  othersN(4),
-			new:  oursN(16),
-			want: append(oursN(12), othersN(4)...),
-		},
-		{
 			name: "no room left for our entries",
 			old:  othersN(16),
 			new:  oursN(2),
@@ -1519,6 +1514,47 @@ func Test_mergePolicyAncestorStatus(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func Test_mergePolicyAncestorStatus_truncation(t *testing.T) {
+	const otherController gwapiv1.GatewayController = "example.com/policy-controller"
+
+	// 16 entries of ours in insertion order; the last one isn't accepted, so it must be kept
+	// over the accepted ones when our entries are truncated.
+	newAncestors := make([]gwapiv1.PolicyAncestorStatus, 0, 16)
+	for i := range 16 {
+		a := policyAncestor(egv1a1.GatewayControllerName, gwapiv1.ObjectName(fmt.Sprintf("gateway-%02d", i)), string(gwapiv1.PolicyConditionAccepted))
+		a.Conditions[0].ObservedGeneration = 2
+		a.Conditions[0].LastTransitionTime = metav1.Now()
+		newAncestors = append(newAncestors, a)
+	}
+	newAncestors[15].Conditions[0].Status = metav1.ConditionFalse
+	newCopy := make([]gwapiv1.PolicyAncestorStatus, len(newAncestors))
+	for i := range newAncestors {
+		newAncestors[i].DeepCopyInto(&newCopy[i])
+	}
+
+	old := make([]gwapiv1.PolicyAncestorStatus, 0, 4)
+	for i := range 4 {
+		old = append(old, policyAncestor(otherController, gwapiv1.ObjectName(fmt.Sprintf("other-%d", i)), "example.com/PolicyAffected"))
+	}
+
+	got := mergePolicyAncestorStatus(egv1a1.GatewayControllerName, old, newAncestors)
+
+	require.Len(t, got, 16)
+	require.Equal(t, newCopy, newAncestors, "new status must not be modified")
+	// The rejected ancestor comes first, then the accepted ones by name.
+	require.Equal(t, gwapiv1.ObjectName("gateway-15"), got[0].AncestorRef.Name)
+	for i := 1; i < 12; i++ {
+		require.Equal(t, gwapiv1.ObjectName(fmt.Sprintf("gateway-%02d", i-1)), got[i].AncestorRef.Name)
+		require.Equal(t, egv1a1.GatewayControllerName, string(got[i].ControllerName))
+	}
+	aggregated := meta.FindStatusCondition(got[11].Conditions, string(egv1a1.PolicyConditionAggregated))
+	require.NotNil(t, aggregated)
+	require.Equal(t, metav1.ConditionTrue, aggregated.Status)
+	require.Equal(t, int64(2), aggregated.ObservedGeneration)
+	require.False(t, aggregated.LastTransitionTime.IsZero())
+	require.Equal(t, old, got[12:])
 }
 
 func Test_mergeUnstructuredPolicyStatus(t *testing.T) {

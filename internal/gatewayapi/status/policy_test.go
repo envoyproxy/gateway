@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -203,4 +204,43 @@ func TestSetNotMergedForPolicyAncestor(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestTruncatePolicyAncestorsTo(t *testing.T) {
+	const controller = "example.com/controller"
+	newStatus := func() *gwapiv1.PolicyStatus {
+		policyStatus := &gwapiv1.PolicyStatus{}
+		for i := range 5 {
+			ref := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName(fmt.Sprintf("gw-%d", i))}
+			SetConditionForPolicyAncestor(policyStatus, ref, controller,
+				gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, "accepted", 1)
+		}
+		SetConditionForPolicyAncestor(policyStatus, &gwapiv1.ParentReference{Name: "gw-bad"}, controller,
+			gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1.PolicyReasonConflicted, "conflicted", 1)
+		return policyStatus
+	}
+
+	t.Run("within limit", func(t *testing.T) {
+		policyStatus := newStatus()
+		TruncatePolicyAncestorsTo(policyStatus, 6, controller, 1)
+		assert.Len(t, policyStatus.Ancestors, 6)
+		assert.Equal(t, gwapiv1.ObjectName("gw-0"), policyStatus.Ancestors[0].AncestorRef.Name)
+	})
+
+	t.Run("truncated by priority", func(t *testing.T) {
+		policyStatus := newStatus()
+		TruncatePolicyAncestorsTo(policyStatus, 3, controller, 1)
+		if assert.Len(t, policyStatus.Ancestors, 3) {
+			assert.Equal(t, gwapiv1.ObjectName("gw-bad"), policyStatus.Ancestors[0].AncestorRef.Name)
+			assert.Equal(t, gwapiv1.ObjectName("gw-0"), policyStatus.Ancestors[1].AncestorRef.Name)
+			assert.Equal(t, gwapiv1.ObjectName("gw-1"), policyStatus.Ancestors[2].AncestorRef.Name)
+			assert.True(t, meta.IsStatusConditionTrue(policyStatus.Ancestors[2].Conditions, string(egv1a1.PolicyConditionAggregated)))
+		}
+	})
+
+	t.Run("no room", func(t *testing.T) {
+		policyStatus := newStatus()
+		TruncatePolicyAncestorsTo(policyStatus, 0, controller, 1)
+		assert.Empty(t, policyStatus.Ancestors)
+	})
 }

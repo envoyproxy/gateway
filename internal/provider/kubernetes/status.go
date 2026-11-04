@@ -722,9 +722,10 @@ func mergePolicyStatus(controllerName gwapiv1.GatewayController, old, new *gwapi
 // translator runner), so it replaces all old entries owned by controllerName, including
 // stale ones. Entries written by other controllers are kept as they are.
 //
-// If the merged list would exceed the CRD limit, this controller's own entries are trimmed
-// from the end so that the status update isn't rejected and other controllers' entries
-// survive.
+// If the merged list would exceed the CRD limit, this controller's own entries are truncated
+// to the remaining room, with the same priority order and Aggregated condition used by
+// status.TruncatePolicyAncestors, so that the status update isn't rejected and other
+// controllers' entries survive.
 func mergePolicyAncestorStatus(controllerName gwapiv1.GatewayController, old, new []gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
 	others := make([]gwapiv1.PolicyAncestorStatus, 0, len(old))
 	for _, oldA := range old {
@@ -735,13 +736,39 @@ func mergePolicyAncestorStatus(controllerName gwapiv1.GatewayController, old, ne
 
 	ours := new
 	if room := maxPolicyAncestors - len(others); len(ours) > room {
-		ours = ours[:max(room, 0)]
+		ours = truncateOwnPolicyAncestors(controllerName, new, room)
 	}
 
 	merged := make([]gwapiv1.PolicyAncestorStatus, 0, len(ours)+len(others))
 	merged = append(merged, ours...)
 	merged = append(merged, others...)
 	return merged
+}
+
+// truncateOwnPolicyAncestors returns a copy of ancestors, all owned by controllerName,
+// truncated to at most limit entries.
+func truncateOwnPolicyAncestors(controllerName gwapiv1.GatewayController, ancestors []gwapiv1.PolicyAncestorStatus, limit int) []gwapiv1.PolicyAncestorStatus {
+	truncated := &gwapiv1.PolicyStatus{Ancestors: make([]gwapiv1.PolicyAncestorStatus, len(ancestors))}
+	var generation int64
+	for i := range ancestors {
+		ancestors[i].DeepCopyInto(&truncated.Ancestors[i])
+		for _, c := range ancestors[i].Conditions {
+			generation = max(generation, c.ObservedGeneration)
+		}
+	}
+
+	status.TruncatePolicyAncestorsTo(truncated, limit, string(controllerName), generation)
+
+	// The Aggregated condition is added after the update time was set on the other conditions.
+	now := metav1.Now()
+	for i := range truncated.Ancestors {
+		for j := range truncated.Ancestors[i].Conditions {
+			if truncated.Ancestors[i].Conditions[j].LastTransitionTime.IsZero() {
+				truncated.Ancestors[i].Conditions[j].LastTransitionTime = now
+			}
+		}
+	}
+	return truncated.Ancestors
 }
 
 // mergeUnstructuredPolicyStatus merges the PolicyStatus computed by this controller into the
