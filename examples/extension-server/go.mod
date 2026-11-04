@@ -7,7 +7,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.14.1-0.20260409050421-3f47accd6e14
 	github.com/envoyproxy/go-control-plane/envoy v1.40.0
 	github.com/urfave/cli/v2 v2.27.7
-	google.golang.org/grpc v1.84.0
+	google.golang.org/grpc v1.85.0
 	google.golang.org/protobuf v1.36.12
 	k8s.io/apimachinery v0.37.1
 	sigs.k8s.io/controller-runtime v0.25.2
