@@ -1,0 +1,1 @@
+Fixed `extensionRef` filters being dispatched by kind only, so an extension resource with kind `HTTPRouteFilter` in a different group was resolved as the Envoy Gateway HTTPRouteFilter of the same name instead of being passed to the extension server. Both the group and the kind are now checked when loading, indexing and translating HTTPRouteFilter references.
