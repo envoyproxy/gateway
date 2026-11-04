@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 func extensionBackendResources(t *testing.T) *resource.Resources {
@@ -68,6 +69,7 @@ func translateExtensionBackendsWithFeature(t *testing.T, resources *resource.Res
 		GatewayControllerName: egv1a1.GatewayControllerName, GatewayClassName: "envoy-gateway-class",
 		ControllerNamespace: "envoy-gateway-system", EndpointRoutingDisabled: true, BackendEnabled: true,
 		ExtensionBackendsEnabled: enabled,
+		BootstrapValidator:       bootstrap.Validator{},
 		MergeGateways:            IsMergeGatewaysEnabled(resources), Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	result, _ := translator.Translate(t.Context(), resources)
@@ -217,6 +219,7 @@ func TestExtensionBackendRegistry(t *testing.T) {
 		GatewayControllerName: egv1a1.GatewayControllerName, GatewayClassName: "envoy-gateway-class",
 		ControllerNamespace: "envoy-gateway-system", EndpointRoutingDisabled: true, BackendEnabled: true,
 		ExtensionBackendsEnabled: true,
+		BootstrapValidator:       bootstrap.Validator{},
 		Logger:                   logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	// Run the same translator with maxConnections 17, then 18. The second output

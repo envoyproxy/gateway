@@ -66,6 +66,11 @@ func TestRunner(t *testing.T) {
 	}, time.Second*1, time.Millisecond*20)
 }
 
+func TestNewCreatesBootstrapValidator(t *testing.T) {
+	r := New(&Config{})
+	require.NotNil(t, r.bootstrapValidator)
+}
+
 // setupTestRunner creates a test runner with populated stores and keyCache
 func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	pResources := new(message.ProviderResources)
