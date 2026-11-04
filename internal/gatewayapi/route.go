@@ -2204,11 +2204,6 @@ func (t *Translator) checkIneffectiveBackendPriority(httpRoutes []*HTTPRouteCont
 					continue
 				}
 				reasons := r.ClusterPerSettingReasons()
-				// The weighted route action names a merged backend's shared cluster separately
-				// from this rule's own backends, so those get a cluster each too.
-				if len(r.Destination.BackendClusterRefs) > 0 {
-					reasons = append(reasons, "other backendRefs are merged into shared clusters")
-				}
 				if len(reasons) == 0 {
 					continue
 				}
