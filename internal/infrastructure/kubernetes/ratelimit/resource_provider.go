@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -74,7 +75,7 @@ func NewResourceRender(ns, resourcePrefix string, gateway *egv1a1.EnvoyGateway, 
 }
 
 func (r *ResourceRender) Name() string {
-	return InfraName
+	return config.InstanceResourceName(r.resourcePrefix, InfraName)
 }
 
 func (r *ResourceRender) Namespace() string {
@@ -82,7 +83,14 @@ func (r *ResourceRender) Namespace() string {
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
-	return labels.SelectorFromSet(rateLimitLabels())
+	return labels.SelectorFromSet(rateLimitLabels(r.resourcePrefix))
+}
+
+// instanceControlPlaneName returns the name of this instance's own
+// control-plane resources (Deployment, Service, ServiceAccount) that own the
+// rate limit infra.
+func (r *ResourceRender) instanceControlPlaneName() string {
+	return config.InstanceResourceName(r.resourcePrefix, config.EnvoyGatewayServiceName)
 }
 
 func enablePrometheus(rl *egv1a1.RateLimit) bool {
@@ -109,8 +117,8 @@ func (r *ResourceRender) ConfigMap(_ string) (*corev1.ConfigMap, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
-			Name:            "statsd-exporter-config",
-			Labels:          rateLimitLabels(),
+			Name:            config.InstanceResourceName(r.resourcePrefix, StatsdConfigMapName),
+			Labels:          rateLimitLabels(r.resourcePrefix),
 			OwnerReferences: r.ownerReferences(),
 		},
 		Data: map[string]string{
@@ -142,7 +150,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		ports = append(ports, metricsPort)
 	}
 
-	labels := rateLimitLabels()
+	labels := rateLimitLabels(r.resourcePrefix)
 	kubernetesServiceSpec := &egv1a1.KubernetesServiceSpec{
 		Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 	}
@@ -157,7 +165,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace(),
-			Name:      InfraName,
+			Name:      r.Name(),
 			Labels:    labels,
 		},
 		Spec: serviceSpec,
@@ -169,7 +177,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 				{
 					Kind:       ResourceKindService,
 					APIVersion: apiVersion,
-					Name:       "envoy-gateway",
+					Name:       r.instanceControlPlaneName(),
 					UID:        uid,
 				},
 			}
@@ -191,8 +199,8 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		AutomountServiceAccountToken: new(false),
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace(),
-			Name:      InfraName,
-			Labels:    rateLimitLabels(),
+			Name:      r.Name(),
+			Labels:    rateLimitLabels(r.resourcePrefix),
 		},
 	}
 
@@ -202,7 +210,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 				{
 					Kind:       ResourceKindServiceAccount,
 					APIVersion: apiVersion,
-					Name:       "envoy-gateway",
+					Name:       r.instanceControlPlaneName(),
 					UID:        uid,
 				},
 			}
@@ -214,15 +222,18 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace())
-	selector := resource.GetSelector(rateLimitLabels())
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace(), r.resourcePrefix)
+	labels := rateLimitLabels(r.resourcePrefix)
+	selector := resource.GetSelector(labels)
 
-	podLabels := rateLimitLabels()
+	// Clone the labels: user-provided pod labels must not leak into the
+	// deployment metadata labels or the pod selector.
+	podLabels := maps.Clone(labels)
 	if r.rateLimitDeployment.Pod.Labels != nil {
 		maps.Copy(podLabels, r.rateLimitDeployment.Pod.Labels)
 		// Copy overwrites values in the dest map if they exist in the src map https://pkg.go.dev/maps#Copy
 		// It's applied again with the rateLimitLabels that are used as deployment selector to ensure those are not overwritten by user input
-		maps.Copy(podLabels, rateLimitLabels())
+		maps.Copy(podLabels, rateLimitLabels(r.resourcePrefix))
 	}
 
 	var podAnnotations map[string]string
@@ -257,7 +268,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace(),
-			Labels:    rateLimitLabels(),
+			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: replicas,
@@ -270,7 +281,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					ServiceAccountName:            InfraName,
+					ServiceAccountName:            r.Name(),
 					AutomountServiceAccountToken:  new(false),
 					TerminationGracePeriodSeconds: new(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -306,7 +317,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				{
 					Kind:       ResourceKindDeployment,
 					APIVersion: appsAPIVersion,
-					Name:       "envoy-gateway",
+					Name:       r.instanceControlPlaneName(),
 					UID:        uid,
 				},
 			}
@@ -349,7 +360,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Name:            r.Name(),
-			Labels:          rateLimitLabels(),
+			Labels:          rateLimitLabels(r.resourcePrefix),
 			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
@@ -402,7 +413,7 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 
 	// Patch is always applied here: the rate limit PDB config comes from
 	// EnvoyGateway.spec.rateLimit, which is admin-authored, not tenant-facing.
-	return common.GetPodDisruptionBudget(r.rateLimitPdb, resource.GetSelector(rateLimitLabels()), rateLimitLabels(), &types.NamespacedName{
+	return common.GetPodDisruptionBudget(r.rateLimitPdb, resource.GetSelector(rateLimitLabels(r.resourcePrefix)), rateLimitLabels(r.resourcePrefix), &types.NamespacedName{
 		Name:      resourceName,
 		Namespace: r.Namespace(),
 	}, r.ownerReferences(), false)
@@ -416,7 +427,7 @@ func (r *ResourceRender) ownerReferences() []metav1.OwnerReference {
 				{
 					Kind:       ResourceKindDeployment,
 					APIVersion: appsAPIVersion,
-					Name:       "envoy-gateway",
+					Name:       r.instanceControlPlaneName(),
 					UID:        uid,
 				},
 			}

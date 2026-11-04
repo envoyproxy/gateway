@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 )
 
@@ -25,7 +26,7 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 	ownerReferenceUID := make(map[string]types.UID)
 	key := types.NamespacedName{
 		Namespace: i.ControllerNamespace,
-		Name:      "envoy-gateway",
+		Name:      config.InstanceResourceName(i.ControllerResourcePrefix, config.EnvoyGatewayServiceName),
 	}
 
 	serviceUID, err := i.Client.GetUID(ctx, key, &corev1.Service{})

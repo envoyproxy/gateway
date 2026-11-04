@@ -106,6 +106,148 @@ func TestProvider(t *testing.T) {
 	}
 }
 
+// TestProviderObjectSelector verifies that watch.objectSelector filters the
+// objects reconciled through the real watch machinery: a Gateway whose labels
+// match the selector is reconciled, a Gateway in a watched namespace whose
+// labels do not match is ignored.
+func TestProviderObjectSelector(t *testing.T) {
+	// Setup the test environment.
+	testEnv, cliCfg, err := startEnv()
+	require.NoError(t, err)
+
+	// Setup and start the kube provider scoped by an object selector,
+	// orthogonal to the (default, all-namespaces) watch mode.
+	svr, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	// Disable webhook server for provider test to avoid non-existent cert errors
+	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)}
+	svr.EnvoyGateway.Provider.Kubernetes.Watch = &egv1a1.KubernetesWatchMode{
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"instance": "internal"},
+		},
+	}
+	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(t.Context())
+	go func() {
+		require.NoError(t, provider.Start(ctx))
+	}()
+
+	testNs := config.DefaultNamespace
+	cli := provider.manager.GetClient()
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	// Stop the kube provider.
+	t.Cleanup(func() {
+		cancel()
+		_ = testEnv.Stop()
+	})
+
+	gc := test.GetGatewayClass("gc-object-selector", egv1a1.GatewayControllerName, nil)
+	require.NoError(t, cli.Create(ctx, gc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+	requireGatewayClassAccepted(t, cli, gc)
+
+	// Create the namespace for the Gateways under test.
+	gwNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-object-selector"}}
+	require.NoError(t, cli.Create(ctx, gwNs))
+
+	newGateway := func(name, instance string) *gwapiv1.Gateway {
+		return &gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: gwNs.Name,
+				Labels:    map[string]string{"instance": instance},
+			},
+			Spec: gwapiv1.GatewaySpec{
+				GatewayClassName: gwapiv1.ObjectName(gc.Name),
+				Listeners: []gwapiv1.Listener{
+					{
+						Name:     "test",
+						Port:     int32(8080),
+						Protocol: gwapiv1.HTTPProtocolType,
+					},
+				},
+			},
+		}
+	}
+
+	gwMatching := newGateway("object-selector-matching", "internal")
+	require.NoError(t, cli.Create(ctx, gwMatching))
+	gwNonMatching := newGateway("object-selector-non-matching", "external")
+	require.NoError(t, cli.Create(ctx, gwNonMatching))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gwMatching))
+		require.NoError(t, cli.Delete(ctx, gwNonMatching))
+	}()
+
+	// The GatewayClass resource table only contains the matching Gateway.
+	require.Eventually(t, func() bool {
+		res, ok := getGatewayClassFromResources(resources, gc.Name)
+		return ok && res != nil && len(res.Gateways) == 1 && res.Gateways[0].Name == gwMatching.Name
+	}, defaultWait, defaultTick)
+
+	// The Service carrying the owning-Gateway labels of the matching Gateway
+	// is what triggers the provider's Gateway status update (the same
+	// mechanism the real proxy infra uses); without it the Gateway status is
+	// never pushed. It is created only after the Gateway is known to be in
+	// the provider cache (see above), because the owning-Gateway lookup reads
+	// from that cache.
+	owningSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gwNs.Name,
+			Name:      gwMatching.Name + "-svc",
+			Labels: map[string]string{
+				gatewayapi.OwningGatewayNameLabel:      gwMatching.Name,
+				gatewayapi.OwningGatewayNamespaceLabel: gwMatching.Namespace,
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Port: 80}},
+		},
+		Status: corev1.ServiceStatus{
+			LoadBalancer: corev1.LoadBalancerStatus{
+				Ingress: []corev1.LoadBalancerIngress{{IP: "1.1.1.1"}},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, owningSvc))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, owningSvc))
+	}()
+
+	// The Gateway whose labels match the selector is reconciled.
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, utils.NamespacedName(gwMatching), gwMatching); err != nil {
+			return false
+		}
+		for _, cond := range gwMatching.Status.Conditions {
+			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}, defaultWait, defaultTick, "timed out waiting for the matching Gateway to report Accepted=True condition")
+
+	// The Gateway not matching the selector is ignored by the provider even
+	// though its namespace is watched.
+	require.NoError(t, cli.Get(ctx, utils.NamespacedName(gwNonMatching), gwNonMatching))
+	reconciled := false
+	for _, cond := range gwNonMatching.Status.Conditions {
+		if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+			reconciled = true
+		}
+	}
+	require.False(t, reconciled,
+		"Gateway %s/%s must not be reconciled: it does not match watch.objectSelector", gwNonMatching.Namespace, gwNonMatching.Name)
+}
+
 func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 	gwAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "charts", "crds", "crds", "gatewayapi-crds.yaml")

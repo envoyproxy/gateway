@@ -72,6 +72,7 @@ type gatewayAPIReconciler struct {
 	namespaceLabel       *metav1.LabelSelector
 	objectSelector       labels.Selector
 	hmacSecretName       string
+	resourcePrefix       string
 	envoyGateway         *egv1a1.EnvoyGateway
 	mergeGateways        sets.Set[string]
 	mergeGatewaysMu      sync.RWMutex
@@ -209,6 +210,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		extSecretCRDExists:   make(map[schema.GroupVersionKind]bool),
 		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
 		hmacSecretName:       config.InstanceResourceName(cfg.ControllerResourcePrefix, oidcHMACSecretName),
+		resourcePrefix:       cfg.ControllerResourcePrefix,
 	}
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
@@ -1418,6 +1420,13 @@ func (r *gatewayAPIReconciler) processEnvoyTLSSecret(ctx context.Context, resour
 	return nil
 }
 
+// rateLimitServiceName returns the per-instance name of the in-cluster
+// Service fronting this instance's envoy-ratelimit deployment. With the
+// default (empty) controller resource prefix it is the historic name.
+func (r *gatewayAPIReconciler) rateLimitServiceName() string {
+	return config.InstanceResourceName(r.resourcePrefix, rateLimitServiceBaseName)
+}
+
 // processRateLimitService adds the in-cluster envoy-ratelimit Service and its
 // EndpointSlices to the resourceTree. Unlike other backends, this Service is
 // never referenced by a Gateway API backendRef, so processBackendRefs never
@@ -1432,7 +1441,7 @@ func (r *gatewayAPIReconciler) processRateLimitService(ctx context.Context, reso
 
 	var service corev1.Service
 	if err := r.client.Get(ctx,
-		types.NamespacedName{Namespace: r.namespace, Name: rateLimitServiceName},
+		types.NamespacedName{Namespace: r.namespace, Name: r.rateLimitServiceName()},
 		&service,
 	); err != nil {
 		return err
@@ -1442,15 +1451,15 @@ func (r *gatewayAPIReconciler) processRateLimitService(ctx context.Context, reso
 	if !resourceMap.allAssociatedServices.Has(svcKey) {
 		resourceMap.allAssociatedServices.Insert(svcKey)
 		resourceTree.Services = append(resourceTree.Services, &service)
-		r.log.Info("processing rate limit Service", "namespace", r.namespace, "name", rateLimitServiceName)
+		r.log.Info("processing rate limit Service", "namespace", r.namespace, "name", r.rateLimitServiceName())
 	}
 
 	endpointSliceList := new(discoveryv1.EndpointSliceList)
 	opts := []client.ListOption{client.InNamespace(r.namespace)}
 	if r.endpointSliceIndexEnabled() {
-		opts = append(opts, client.MatchingFields{serviceEndpointSliceIndex: rateLimitServiceName})
+		opts = append(opts, client.MatchingFields{serviceEndpointSliceIndex: r.rateLimitServiceName()})
 	} else {
-		opts = append(opts, client.MatchingLabels{discoveryv1.LabelServiceName: rateLimitServiceName})
+		opts = append(opts, client.MatchingLabels{discoveryv1.LabelServiceName: r.rateLimitServiceName()})
 	}
 	if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
 		return err
@@ -2544,11 +2553,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.hasMatchingNamespaceLabels(ep)
 			}))
 		}
-		if r.objectSelector != nil {
-			epPredicates = append(epPredicates, predicate.NewTypedPredicateFuncs(func(ep *egv1a1.EnvoyProxy) bool {
-				return r.hasMatchingObjectLabels(ep)
-			}))
-		}
 
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.EnvoyProxy{},
@@ -2576,9 +2580,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}))
 	}
 	if r.objectSelector != nil {
-		gPredicates = append(gPredicates, predicate.NewTypedPredicateFuncs(func(gtw *gwapiv1.Gateway) bool {
-			return r.hasMatchingObjectLabels(gtw)
-		}))
+		gPredicates = append(gPredicates, objectSelectorPredicate[*gwapiv1.Gateway](r))
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1.Gateway{},
@@ -2619,9 +2621,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
-				return r.hasMatchingObjectLabels(obj)
-			}))
+			xlsPredicates = append(xlsPredicates, objectSelectorPredicate[*gwapiv1.ListenerSet](r))
 		}
 
 		if err := c.Watch(
@@ -2672,9 +2672,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}))
 	}
 	if r.objectSelector != nil {
-		httprPredicates = append(httprPredicates, predicate.NewTypedPredicateFuncs(func(hr *gwapiv1.HTTPRoute) bool {
-			return r.hasMatchingObjectLabels(hr)
-		}))
+		httprPredicates = append(httprPredicates, objectSelectorPredicate[*gwapiv1.HTTPRoute](r))
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1.HTTPRoute{},
@@ -2703,9 +2701,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
-				return r.hasMatchingObjectLabels(grpc)
-			}))
+			grpcrPredicates = append(grpcrPredicates, objectSelectorPredicate[*gwapiv1.GRPCRoute](r))
 		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
@@ -2734,9 +2730,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
-				return r.hasMatchingObjectLabels(route)
-			}))
+			tlsrPredicates = append(tlsrPredicates, objectSelectorPredicate[*gwapiv1.TLSRoute](r))
 		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.TLSRoute{},
@@ -2766,9 +2760,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.UDPRoute) bool {
-				return r.hasMatchingObjectLabels(route)
-			}))
+			udprPredicates = append(udprPredicates, objectSelectorPredicate[*gwapiv1.UDPRoute](r))
 		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.UDPRoute{},
@@ -2798,9 +2790,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TCPRoute) bool {
-				return r.hasMatchingObjectLabels(route)
-			}))
+			tcprPredicates = append(tcprPredicates, objectSelectorPredicate[*gwapiv1.TCPRoute](r))
 		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.TCPRoute{},
@@ -2906,11 +2896,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			backendPredicates = append(backendPredicates, predicate.NewTypedPredicateFuncs(func(be *egv1a1.Backend) bool {
 				return r.hasMatchingNamespaceLabels(be)
-			}))
-		}
-		if r.objectSelector != nil {
-			backendPredicates = append(backendPredicates, predicate.NewTypedPredicateFuncs(func(be *egv1a1.Backend) bool {
-				return r.hasMatchingObjectLabels(be)
 			}))
 		}
 		if err := c.Watch(
@@ -3063,9 +3048,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			eppPredicates = append(eppPredicates, predicate.NewTypedPredicateFuncs(func(epp *egv1a1.EnvoyPatchPolicy) bool {
-				return r.hasMatchingObjectLabels(epp)
-			}))
+			eppPredicates = append(eppPredicates, objectSelectorPredicate[*egv1a1.EnvoyPatchPolicy](r))
 		}
 		// Watch EnvoyPatchPolicy CRUDs
 		if err := c.Watch(
@@ -3095,9 +3078,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			ctpPredicates = append(ctpPredicates, predicate.NewTypedPredicateFuncs(func(ctp *egv1a1.ClientTrafficPolicy) bool {
-				return r.hasMatchingObjectLabels(ctp)
-			}))
+			ctpPredicates = append(ctpPredicates, objectSelectorPredicate[*egv1a1.ClientTrafficPolicy](r))
 		}
 
 		if err := c.Watch(
@@ -3131,9 +3112,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			btpPredicates = append(btpPredicates, predicate.NewTypedPredicateFuncs(func(btp *egv1a1.BackendTrafficPolicy) bool {
-				return r.hasMatchingObjectLabels(btp)
-			}))
+			btpPredicates = append(btpPredicates, objectSelectorPredicate[*egv1a1.BackendTrafficPolicy](r))
 		}
 
 		if err := c.Watch(
@@ -3167,9 +3146,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			spPredicates = append(spPredicates, predicate.NewTypedPredicateFuncs(func(sp *egv1a1.SecurityPolicy) bool {
-				return r.hasMatchingObjectLabels(sp)
-			}))
+			spPredicates = append(spPredicates, objectSelectorPredicate[*egv1a1.SecurityPolicy](r))
 		}
 
 		if err := c.Watch(
@@ -3204,9 +3181,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
-				return r.hasMatchingObjectLabels(btp)
-			}))
+			btlsPredicates = append(btlsPredicates, objectSelectorPredicate[*gwapiv1.BackendTLSPolicy](r))
 		}
 
 		if err := c.Watch(
@@ -3240,9 +3215,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			}))
 		}
 		if r.objectSelector != nil {
-			eepPredicates = append(eepPredicates, predicate.NewTypedPredicateFuncs(func(eep *egv1a1.EnvoyExtensionPolicy) bool {
-				return r.hasMatchingObjectLabels(eep)
-			}))
+			eepPredicates = append(eepPredicates, objectSelectorPredicate[*egv1a1.EnvoyExtensionPolicy](r))
 		}
 
 		// Watch EnvoyExtensionPolicy CRUDs
@@ -3363,11 +3336,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs(func(be *egv1a1.HTTPRouteFilter) bool {
 				return r.hasMatchingNamespaceLabels(be)
-			}))
-		}
-		if r.objectSelector != nil {
-			httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs(func(be *egv1a1.HTTPRouteFilter) bool {
-				return r.hasMatchingObjectLabels(be)
 			}))
 		}
 		if err := c.Watch(

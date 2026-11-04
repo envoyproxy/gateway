@@ -348,7 +348,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {
 					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
-						ServiceURL: ratelimit.GetServiceURL(r.ControllerNamespace, r.DNSDomain),
+						ServiceURL: ratelimit.GetServiceURL(r.ControllerResourcePrefix, r.ControllerNamespace, r.DNSDomain),
 						FailClosed: r.EnvoyGateway.RateLimit.FailClosed,
 					}
 					if r.EnvoyGateway.RateLimit.Timeout != nil {

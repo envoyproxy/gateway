@@ -166,7 +166,7 @@ func TestTranslateXds(t *testing.T) {
 			tr := &Translator{
 				ControllerNamespace: "envoy-gateway-system",
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
+					ServiceURL: ratelimit.GetServiceURL("", "envoy-gateway-system", dnsDomain),
 				},
 				FilterOrder:  x.FilterOrder,
 				RuntimeFlags: cfg.runtimeFlags,
@@ -342,7 +342,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 				ProxyInfraName:      "team-a/web",
 				ProxyInfraNamespace: "envoy-gateway-system",
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+					ServiceURL: ratelimit.GetServiceURL("", "envoy-gateway-system", "cluster.local"),
 				},
 			}
 			ext := egv1a1.ExtensionManager{
@@ -489,7 +489,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+					ServiceURL: ratelimit.GetServiceURL("", "envoy-gateway-system", "cluster.local"),
 				},
 			}
 			ext := egv1a1.ExtensionManager{
@@ -577,7 +577,7 @@ func TestTranslateXdsWithCompositeExtensionErrorsWhenFailOpen(t *testing.T) {
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+					ServiceURL: ratelimit.GetServiceURL("", "envoy-gateway-system", "cluster.local"),
 				},
 			}
 			ext := buildExtensionManagerConfig(true)
@@ -641,7 +641,7 @@ func TestTranslateXdsWithCompositeExtensionErrorsWhenFailClosed(t *testing.T) {
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+					ServiceURL: ratelimit.GetServiceURL("", "envoy-gateway-system", "cluster.local"),
 				},
 			}
 			extA := buildExtensionManagerConfig(false)
@@ -717,7 +717,7 @@ func TestExtensionHookStatsAccumulation(t *testing.T) {
 
 	tr := &Translator{
 		GlobalRateLimit: &GlobalRateLimitSettings{
-			ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+			ServiceURL: ratelimit.GetServiceURL("", "envoy-gateway-system", "cluster.local"),
 		},
 		ExtensionManager: &extMgr,
 	}

@@ -194,8 +194,10 @@ type Translator struct {
 
 	// ControllerResourcePrefix is the prefix applied to the names of the shared
 	// control-plane resources owned by the Envoy Gateway instance (for example
-	// the OIDC HMAC Secret created by certgen). It is empty when the historic
-	// single-instance resource names are used.
+	// the OIDC HMAC Secret created by certgen). It defaults to
+	// "envoy-gateway"; both that default and the empty prefix yield the
+	// historic single-instance resource names (see
+	// config.InstanceResourceName).
 	ControllerResourcePrefix string
 
 	// WasmCache is the cache for Wasm modules.

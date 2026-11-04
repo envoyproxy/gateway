@@ -211,8 +211,16 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		Label:                 labels.SelectorFromSet(proxy.EnvoyAppLabel()),
 	}
 
-	namesReq, err := labels.NewRequirement("app.kubernetes.io/name", selection.In,
-		[]string{"envoy", "envoy-ratelimit"})
+	// The rate limit resources of this instance carry a per-instance name label
+	// derived from the controller resource prefix; both the historic and the
+	// prefixed name are matched so co-located installs keep working.
+	managedNames := []string{"envoy"}
+	if prefixed := ec.InstanceResourceName(svrCfg.ControllerResourcePrefix, "envoy-ratelimit"); prefixed != "envoy-ratelimit" {
+		managedNames = append(managedNames, "envoy-ratelimit", prefixed)
+	} else {
+		managedNames = append(managedNames, "envoy-ratelimit")
+	}
+	namesReq, err := labels.NewRequirement("app.kubernetes.io/name", selection.In, managedNames)
 	if err != nil {
 		panic(err)
 	}

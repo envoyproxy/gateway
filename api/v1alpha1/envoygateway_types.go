@@ -584,18 +584,22 @@ type KubernetesWatchMode struct {
 
 	// ObjectSelector holds an optional label selector used to filter the
 	// namespaced resources that Envoy Gateway watches and reconciles:
-	// Gateway, ListenerSet, EnvoyProxy, HTTPRoute, GRPCRoute, TLSRoute,
-	// TCPRoute, UDPRoute, Backend, BackendTLSPolicy, BackendTrafficPolicy,
-	// ClientTrafficPolicy, SecurityPolicy, EnvoyExtensionPolicy,
-	// EnvoyPatchPolicy and HTTPRouteFilter. Only resources whose labels match
-	// the selector are reconciled, which allows multiple Envoy Gateway
-	// instances to share a namespace, each reconciling only the resources
-	// labelled for it.
+	// Gateway, ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute,
+	// BackendTLSPolicy, BackendTrafficPolicy, ClientTrafficPolicy,
+	// SecurityPolicy, EnvoyExtensionPolicy and EnvoyPatchPolicy. Only resources
+	// whose labels match the selector are reconciled, which allows multiple
+	// Envoy Gateway instances to share a namespace, each reconciling only the
+	// resources labelled for it.
+	// EnvoyProxy, Backend and HTTPRouteFilter are not filtered: they are looked
+	// up by name when referenced by the resources above, so an unlabeled
+	// reference from a matched resource keeps resolving.
 	// ObjectSelector is orthogonal to Type: it composes as an additional
 	// (AND) filter with any namespace watch mode. The namespace where Envoy
 	// Gateway runs is always reconciled for its own managed infrastructure
 	// resources. GatewayClass is not affected, as it is already partitioned
 	// by its spec.controllerName.
+	// An empty selector (no matchLabels and no matchExpressions) matches every
+	// object, i.e. it enables the filter without excluding anything.
 	// +optional
 	ObjectSelector *metav1.LabelSelector `json:"objectSelector,omitempty"`
 }

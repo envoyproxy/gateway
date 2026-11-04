@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -182,6 +183,50 @@ func TestObjectSelectorListOptions(t *testing.T) {
 		require.False(t, got.LabelSelector.Matches(labels.Set{"gateway": "external", "team": "a"}))
 		// The input selector is not mutated.
 		require.Equal(t, before, existing.String())
+	})
+}
+
+// TestObjectSelectorPredicate verifies the watch predicate built from
+// watch.objectSelector: create, delete and generic events are kept when the
+// object matches, and update events are kept when either the old or the new
+// object matches, so relabeling an object away from the instance is still
+// seen by it.
+func TestObjectSelectorPredicate(t *testing.T) {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{"gateway": "internal"},
+	})
+	require.NoError(t, err)
+	r := gatewayAPIReconciler{objectSelector: selector}
+	p := objectSelectorPredicate[*gwapiv1.HTTPRoute](&r)
+
+	matching := test.GetHTTPRoute(
+		types.NamespacedName{Namespace: "ns-1", Name: "matching"},
+		"scheduled-status-test", gwapiv1.BackendObjectReference{Name: "backend"}, "")
+	matching.Labels = map[string]string{"gateway": "internal"}
+	nonMatching := test.GetHTTPRoute(
+		types.NamespacedName{Namespace: "ns-1", Name: "non-matching"},
+		"scheduled-status-test", gwapiv1.BackendObjectReference{Name: "backend"}, "")
+	nonMatching.Labels = map[string]string{"gateway": "external"}
+
+	t.Run("create", func(t *testing.T) {
+		require.True(t, p.Create(event.TypedCreateEvent[*gwapiv1.HTTPRoute]{Object: matching}))
+		require.False(t, p.Create(event.TypedCreateEvent[*gwapiv1.HTTPRoute]{Object: nonMatching}))
+	})
+	t.Run("update old or new matches", func(t *testing.T) {
+		// Relabeled away from the instance: still processed once more.
+		require.True(t, p.Update(event.TypedUpdateEvent[*gwapiv1.HTTPRoute]{ObjectOld: matching, ObjectNew: nonMatching}))
+		// Relabeled onto the instance.
+		require.True(t, p.Update(event.TypedUpdateEvent[*gwapiv1.HTTPRoute]{ObjectOld: nonMatching, ObjectNew: matching}))
+		// Never matched: ignored.
+		require.False(t, p.Update(event.TypedUpdateEvent[*gwapiv1.HTTPRoute]{ObjectOld: nonMatching, ObjectNew: nonMatching}))
+	})
+	t.Run("delete", func(t *testing.T) {
+		require.True(t, p.Delete(event.TypedDeleteEvent[*gwapiv1.HTTPRoute]{Object: matching}))
+		require.False(t, p.Delete(event.TypedDeleteEvent[*gwapiv1.HTTPRoute]{Object: nonMatching}))
+	})
+	t.Run("generic", func(t *testing.T) {
+		require.True(t, p.Generic(event.TypedGenericEvent[*gwapiv1.HTTPRoute]{Object: matching}))
+		require.False(t, p.Generic(event.TypedGenericEvent[*gwapiv1.HTTPRoute]{Object: nonMatching}))
 	})
 }
 

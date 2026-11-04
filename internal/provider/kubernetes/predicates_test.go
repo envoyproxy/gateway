@@ -1365,14 +1365,14 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			namespace:    "envoy-gateway-system",
 			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
 			endpointSlice: test.GetEndpointSlice(
-				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceBaseName, false),
 			expect: true,
 		},
 		{
 			name:      "rate limit service endpointslice but global rate limit disabled",
 			namespace: "envoy-gateway-system",
 			endpointSlice: test.GetEndpointSlice(
-				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+				types.NamespacedName{Namespace: "envoy-gateway-system", Name: "envoy-ratelimit-abcde"}, rateLimitServiceBaseName, false),
 			expect: false,
 		},
 		{
@@ -1380,7 +1380,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			namespace:    "envoy-gateway-system",
 			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
 			endpointSlice: test.GetEndpointSlice(
-				types.NamespacedName{Namespace: "other-namespace", Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false),
+				types.NamespacedName{Namespace: "other-namespace", Name: "envoy-ratelimit-abcde"}, rateLimitServiceBaseName, false),
 			expect: false,
 		},
 	}
@@ -1908,20 +1908,20 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			name:         "rate limit service in controller namespace with global rate limit enabled",
 			namespace:    "envoy-gateway-system",
 			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
-			service:      test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
+			service:      test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceBaseName}, nil, nil),
 			expect:       true,
 		},
 		{
 			name:      "rate limit service in controller namespace but global rate limit disabled",
 			namespace: "envoy-gateway-system",
-			service:   test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceName}, nil, nil),
+			service:   test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: rateLimitServiceBaseName}, nil, nil),
 			expect:    false,
 		},
 		{
 			name:         "unrelated service named envoy-ratelimit in a different namespace",
 			namespace:    "envoy-gateway-system",
 			envoyGateway: &egv1a1.EnvoyGateway{EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{RateLimit: &egv1a1.RateLimit{}}},
-			service:      test.GetService(types.NamespacedName{Namespace: "other-namespace", Name: rateLimitServiceName}, nil, nil),
+			service:      test.GetService(types.NamespacedName{Namespace: "other-namespace", Name: rateLimitServiceBaseName}, nil, nil),
 			expect:       false,
 		},
 	}

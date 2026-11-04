@@ -428,12 +428,12 @@ func TestProcessRateLimitService(t *testing.T) {
 	const ns = "envoy-gateway-system"
 	rateLimitService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      rateLimitServiceName,
+			Name:      rateLimitServiceBaseName,
 			Namespace: ns,
 		},
 	}
 	matchingEndpointSlice := test.GetEndpointSlice(
-		types.NamespacedName{Namespace: ns, Name: "envoy-ratelimit-abcde"}, rateLimitServiceName, false)
+		types.NamespacedName{Namespace: ns, Name: "envoy-ratelimit-abcde"}, rateLimitServiceBaseName, false)
 	otherEndpointSlice := test.GetEndpointSlice(
 		types.NamespacedName{Namespace: ns, Name: "es-other"}, "other", false)
 
@@ -498,7 +498,7 @@ func TestProcessRateLimitService(t *testing.T) {
 
 			if tc.expectSvc {
 				require.Len(t, gwcResource.Services, 1)
-				require.Equal(t, rateLimitServiceName, gwcResource.Services[0].Name)
+				require.Equal(t, rateLimitServiceBaseName, gwcResource.Services[0].Name)
 			} else {
 				require.Empty(t, gwcResource.Services)
 			}

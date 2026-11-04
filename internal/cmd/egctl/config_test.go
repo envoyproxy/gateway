@@ -418,7 +418,7 @@ func TestFetchRunningRateLimitPods(t *testing.T) {
 				},
 			},
 			namespace:     "envoy-gateway-system",
-			labelSelector: ratelimit.LabelSelector(),
+			labelSelector: ratelimit.StableLabelSelector(),
 			expectErr:     nil,
 		},
 		{
@@ -435,7 +435,7 @@ func TestFetchRunningRateLimitPods(t *testing.T) {
 				},
 			},
 			namespace:     "envoy-gateway-system",
-			labelSelector: ratelimit.LabelSelector(),
+			labelSelector: ratelimit.StableLabelSelector(),
 			expectErr:     fmt.Errorf("please check that the rate limit instance starts properly"),
 		},
 	}

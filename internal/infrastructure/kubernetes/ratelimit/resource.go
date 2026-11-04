@@ -97,13 +97,21 @@ const (
 	// OTELExporterOTLPTraceEndpointVar is target url to which the trace exporter is going to send
 	OTELExporterOTLPTraceEndpointVar = "OTEL_EXPORTER_OTLP_ENDPOINT"
 
-	// InfraName is the name for rate-limit resources.
+	// InfraName is the base name for rate-limit resources. The per-instance
+	// name is derived from the controller resource prefix via
+	// config.InstanceResourceName, so that multiple instances can share a
+	// namespace.
 	InfraName = "envoy-ratelimit"
+	// StatsdConfigMapName is the base name of the statsd exporter ConfigMap
+	// created for the rate limit deployment.
+	StatsdConfigMapName = "statsd-exporter-config"
 	// InfraGRPCPort is the grpc port that the rate limit service listens on.
 	InfraGRPCPort = 8081
 	// XdsGrpcSotwConfigServerPort is the listening port of the ratelimit xDS config server.
 	XdsGrpcSotwConfigServerPort = 18001
-	// XdsGrpcSotwConfigServerHost is the hostname of the ratelimit xDS config server.
+	// XdsGrpcSotwConfigServerHost is the base hostname of the ratelimit xDS
+	// config server, fronted by the Envoy Gateway Service. The per-instance
+	// hostname is derived from the controller resource prefix.
 	XdsGrpcSotwConfigServerHost = "envoy-gateway"
 	// ReadinessPath is readiness path for readiness probe.
 	ReadinessPath = "/healthcheck"
@@ -113,14 +121,18 @@ const (
 	PrometheusPort = 19001
 )
 
-// GetServiceURL returns the URL for the rate limit service.
-func GetServiceURL(namespace, dnsDomain string) string {
-	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d", InfraName, namespace, dnsDomain, InfraGRPCPort)
+// GetServiceURL returns the URL for the rate limit service of the instance
+// with the given controller resource prefix.
+func GetServiceURL(resourcePrefix, namespace, dnsDomain string) string {
+	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d",
+		config.InstanceResourceName(resourcePrefix, InfraName), namespace, dnsDomain, InfraGRPCPort)
 }
 
-// LabelSelector returns the string slice form labels used for all envoy rate limit resources.
-func LabelSelector() []string {
-	rlLabelMap := rateLimitLabels()
+// LabelSelector returns the string slice form of the labels used for the envoy
+// rate limit resources of the instance with the given controller resource
+// prefix.
+func LabelSelector(resourcePrefix string) []string {
+	rlLabelMap := rateLimitLabels(resourcePrefix)
 	retLabels := make([]string, 0, len(rlLabelMap))
 
 	for labelK, labelV := range rlLabelMap {
@@ -131,18 +143,36 @@ func LabelSelector() []string {
 	return retLabels
 }
 
-// rateLimitLabels returns the labels used for all envoy rate limit resources.
-func rateLimitLabels() map[string]string {
+// StableLabelSelector returns the label requirements shared by the envoy rate
+// limit resources of every instance, regardless of the per-instance resource
+// prefix. It is used by tooling (egctl) that needs to find the rate limit pods
+// of a namespace without knowing the instance's prefix.
+func StableLabelSelector() []string {
+	return []string{
+		"app.kubernetes.io/component=ratelimit",
+		"app.kubernetes.io/managed-by=envoy-gateway",
+	}
+}
+
+// rateLimitLabels returns the labels used for the envoy rate limit resources of
+// the instance with the given controller resource prefix. The
+// app.kubernetes.io/name label carries the per-instance resource name so that
+// the Service of one instance never selects the pods of another instance in a
+// shared namespace.
+func rateLimitLabels(resourcePrefix string) map[string]string {
 	return map[string]string{
-		"app.kubernetes.io/name":       InfraName,
+		"app.kubernetes.io/name":       config.InstanceResourceName(resourcePrefix, InfraName),
 		"app.kubernetes.io/component":  "ratelimit",
 		"app.kubernetes.io/managed-by": "envoy-gateway",
 	}
 }
 
 // expectedRateLimitContainers returns expected rateLimit containers.
-func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
+func expectedRateLimitContainers(
+	rateLimit *egv1a1.RateLimit,
+	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
 	namespace string,
+	resourcePrefix string,
 ) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
@@ -162,13 +192,13 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 
 	containers := []corev1.Container{
 		{
-			Name:            InfraName,
+			Name:            config.InstanceResourceName(resourcePrefix, InfraName),
 			Image:           *rateLimitDeployment.Container.Image,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
 				"/bin/ratelimit",
 			},
-			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment, namespace),
+			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment, namespace, resourcePrefix),
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
 			SecurityContext:          expectedRateLimitContainerSecurityContext(rateLimitDeployment),
@@ -285,7 +315,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "statsd-exporter-config",
+						Name: config.InstanceResourceName(resourcePrefix, StatsdConfigMapName),
 					},
 					Optional:    new(true),
 					DefaultMode: new(int32(420)),
@@ -298,8 +328,11 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 }
 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.
-func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
+func expectedRateLimitContainerEnv(
+	rateLimit *egv1a1.RateLimit,
+	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec,
 	namespace string,
+	resourcePrefix string,
 ) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
@@ -331,12 +364,13 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 			Value: "GRPC_XDS_SOTW",
 		},
 		{
-			Name:  ConfigGrpcXdsServerURLEnvVar,
-			Value: net.JoinHostPort(XdsGrpcSotwConfigServerHost, strconv.Itoa(XdsGrpcSotwConfigServerPort)),
+			Name: ConfigGrpcXdsServerURLEnvVar,
+			Value: net.JoinHostPort(config.InstanceResourceName(resourcePrefix, XdsGrpcSotwConfigServerHost),
+				strconv.Itoa(XdsGrpcSotwConfigServerPort)),
 		},
 		{
 			Name:  ConfigGrpcXdsNodeIDEnvVar,
-			Value: InfraName,
+			Value: config.InstanceResourceName(resourcePrefix, InfraName),
 		},
 		{
 			Name:  GRPCServerUseTLSEnvVar,
@@ -441,7 +475,7 @@ func expectedRateLimitContainerEnv(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 			},
 			{
 				Name:  TracingServiceNameVar,
-				Value: InfraName,
+				Value: config.InstanceResourceName(resourcePrefix, InfraName),
 			},
 			{
 				Name:  TracingServiceNamespaceVar,

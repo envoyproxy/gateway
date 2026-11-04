@@ -672,8 +672,8 @@ Handling connection for 8889
 The pattern above assigns one namespace per Envoy Gateway controller. Alternatively, several Envoy Gateway instances can **share a single namespace**, each reconciling only the resources it owns. This requires three things per instance:
 
 * A unique `gateway.controllerName` (e.g. `gateway.envoyproxy.io/eg-internal` and `gateway.envoyproxy.io/eg-external`). `GatewayClass` is cluster-scoped and is partitioned by this name.
-* A unique `resourcePrefix` Helm value. It prefixes the names of the shared control-plane resources the instance creates in the namespace (Deployment, Service, ServiceAccount, ConfigMap, the certgen Secrets, the xDS Service name, the topology-injector Webhook and the leader election lease). With the default empty prefix these names are fixed, so only one instance per namespace is supported.
-* A `provider.kubernetes.watch.objectSelector` label selector that matches only the instance's own resources (Gateway, ListenerSet, EnvoyProxy, the route kinds, the policy kinds and Backend). **The selectors of co-located instances must be disjoint**: a resource whose labels match two selectors is reconciled by both instances and they will fight over its managed infrastructure. Label the entry resources accordingly; referenced resources (Service, Secret, ...) are not filtered, so an unlabeled backend referenced from a labeled Gateway resolves as usual.
+* A unique `resourcePrefix` Helm value. It prefixes the names of the shared control-plane resources the instance creates in the namespace (Deployment, Service, ServiceAccount, ConfigMap, the certgen Secrets, the xDS Service name, the topology-injector Webhook, the leader election lease and, when global rate limiting is enabled, the rate limit Deployment, Service, ServiceAccount, ConfigMap, HPA, PDB and the Service the proxies and rate limit server point at). With the default empty prefix these names are fixed, so only one instance per namespace is supported.
+* A `provider.kubernetes.watch.objectSelector` label selector that matches only the instance's own resources (Gateway, ListenerSet, the route kinds and the policy kinds). **The selectors of co-located instances must be disjoint**: a resource whose labels match two selectors is reconciled by both instances and they will fight over its managed infrastructure. Label the entry resources accordingly; referenced resources (Service, Secret, ...) are not filtered, so an unlabeled backend referenced from a labeled Gateway resolves as usual.
 
 ```shell
 helm install \
@@ -718,6 +718,10 @@ spec:
 
 {{% alert title="Note" color="primary" %}}
 `objectSelector` is not a permission boundary. It only filters the objects the controller reconciles; the controller keeps the same list/watch RBAC it would have without the selector. To reduce permissions, combine it with `watch.type=NamespaceSelector` and namespace-scoped roles.
+{{% /alert %}}
+
+{{% alert title="Note" color="primary" %}}
+When the topology injector is enabled, each instance's `MutatingWebhookConfiguration` selects the whole shared namespace, so every proxy pod created in it is evaluated by the webhooks of **all** co-located instances. The injection is idempotent (the webhook uses `failurePolicy: Ignore`), so the extra evaluations are harmless but add latency to pod creation.
 {{% /alert %}}
 
 ### Merged gateways deployment

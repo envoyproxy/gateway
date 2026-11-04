@@ -13,6 +13,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -76,7 +77,7 @@ func (t *Translator) ProcessGlobalResources(resources *resource.Resources, xdsIR
 }
 
 func (t *Translator) processRateLimitServiceCluster(resources *resource.Resources) *ir.RouteDestination {
-	const rateLimitServiceName = "envoy-ratelimit"
+	rateLimitServiceName := config.InstanceResourceName(t.ControllerResourcePrefix, "envoy-ratelimit")
 
 	var service *corev1.Service
 	for _, candidate := range resources.Services {
