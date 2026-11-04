@@ -1,0 +1,1 @@
+Fixed Envoy using only the first TLS settings when backendRefs in the same route rule point to the same IP or UDS endpoint with different TLS settings (for example, two Backends with different client certificates during rotation), by giving each backendRef its own cluster.

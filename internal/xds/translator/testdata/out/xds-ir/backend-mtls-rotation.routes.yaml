@@ -1,0 +1,49 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /fqdn
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: backend-tls-route
+              namespace: default
+      name: httproute/default/backend-tls-route/rule/1/match/0/*
+      route:
+        cluster: httproute/default/backend-tls-route/rule/1
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /ip
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: backend-tls-route
+              namespace: default
+      name: httproute/default/backend-tls-route/rule/0/match/0/*
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: httproute/default/backend-tls-route/rule/0/backend/0
+            weight: 1
+          - name: httproute/default/backend-tls-route/rule/0/backend/1
+            weight: 1
