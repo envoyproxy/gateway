@@ -906,6 +906,47 @@ func TestReconcileGatewayClassTerminatingKeepsEnvoyProxy(t *testing.T) {
 	require.Equal(t, ep.Name, resourceTree.EnvoyProxyForGatewayClass.Name)
 }
 
+func TestReconcileGatewayClassTerminatingMissingEnvoyProxyKeepsStatus(t *testing.T) {
+	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
+	now := metav1.Now()
+
+	// A terminating GatewayClass whose EnvoyProxy no longer exists.
+	gc := &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{gatewayClassFinalizer},
+		},
+		Spec: gwapiv1.GatewayClassSpec{
+			ControllerName: gcCtrlName,
+			ParametersRef: &gwapiv1.ParametersReference{
+				Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+				Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+				Name:      "missing",
+				Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+			},
+		},
+	}
+
+	r := &gatewayAPIReconciler{
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		classController: gcCtrlName,
+		namespace:       config.DefaultNamespace,
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			Build(),
+		resources: &message.ProviderResources{},
+	}
+
+	resourceTree, err := r.reconcileGatewayClass(context.Background(), gc, sets.New[types.NamespacedName](), r.log)
+	require.NoError(t, err)
+	require.Nil(t, resourceTree.EnvoyProxyForGatewayClass)
+
+	// The terminating GatewayClass must not be marked InvalidParameters.
+	_, ok := r.resources.GatewayClassStatuses.Load(utils.NamespacedName(gc))
+	require.False(t, ok, "terminating GatewayClass status must not be written for a missing EnvoyProxy")
+}
+
 func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 	testCases := []struct {
 		name                 string
