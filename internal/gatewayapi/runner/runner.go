@@ -40,6 +40,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 const (
@@ -52,6 +53,10 @@ const (
 	hmacSecretKey  = "hmac-secret"
 
 	gatewayClassConcurrency = 2
+
+	// bootstrapValidationCacheSize counts distinct bootstraps, not EnvoyProxies.
+	// An entry takes a few hundred bytes.
+	bootstrapValidationCacheSize = 512
 )
 
 var tracer = otel.Tracer("envoy-gateway/gateway-api")
@@ -71,6 +76,8 @@ type Runner struct {
 
 	// Key tracking for mark and sweep - avoids expensive LoadAll operations
 	keyCache *KeyCache
+
+	bootstrapValidator *bootstrap.ValidationCache
 
 	// Goroutine synchronization
 	done sync.WaitGroup
@@ -157,8 +164,9 @@ func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a
 
 func New(cfg *Config) *Runner {
 	return &Runner{
-		Config:   *cfg,
-		keyCache: newKeyCache(),
+		Config:             *cfg,
+		keyCache:           newKeyCache(),
+		bootstrapValidator: bootstrap.NewValidationCache(bootstrapValidationCacheSize),
 	}
 }
 
@@ -339,6 +347,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
 					PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
 					WasmCache:                       r.wasmCache,
+					BootstrapValidator:              r.bootstrapValidator,
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
 					Logger:                          traceLogger,
