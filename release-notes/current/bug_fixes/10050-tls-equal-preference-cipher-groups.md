@@ -1,1 +1,0 @@
-Fixed `ClientTrafficPolicy` rejecting BoringSSL equal-preference cipher groups such as `[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]` as an unsupported cipher suite. Each member of a group is now validated on its own.

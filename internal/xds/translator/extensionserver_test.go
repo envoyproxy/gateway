@@ -569,3 +569,48 @@ func getTargetRefKind(obj *unstructured.Unstructured) (string, error) {
 
 	return kind, nil
 }
+
+// ResolveSecret resolves a secret based on the referenced resource's name:
+//   - "refuse-*": refused with a failure reason (provider not ready)
+//   - "error-*":  the call fails
+//   - "reserved-<secret>": resolved to <secret>, for testing reserved names
+//   - "sds-*":    resolved to a name served over SDS
+//   - otherwise:  resolved to a name only
+func (t *testingExtensionServer) ResolveSecret(_ context.Context, req *pb.ResolveSecretRequest) (*pb.ResolveSecretResponse, error) {
+	secretCtx := req.GetSecretContext()
+	var secret unstructured.Unstructured
+	if err := secret.UnmarshalJSON(secretCtx.GetSecretResource().GetUnstructuredBytes()); err != nil {
+		return nil, err
+	}
+
+	name := secret.GetName()
+	switch {
+	case strings.HasPrefix(name, "refuse-"):
+		return &pb.ResolveSecretResponse{
+			FailureReason:  "NotReady",
+			FailureMessage: fmt.Sprintf("secret %s is not ready", name),
+		}, nil
+	case strings.HasPrefix(name, "error-"):
+		return nil, errors.New("secret resolve error")
+	case strings.HasPrefix(name, "reserved-"):
+		return &pb.ResolveSecretResponse{
+			SdsSecretConfig: &tlsV3.SdsSecretConfig{Name: strings.TrimPrefix(name, "reserved-")},
+		}, nil
+	case strings.HasPrefix(name, "sds-"):
+		return &pb.ResolveSecretResponse{
+			SdsSecretConfig: &tlsV3.SdsSecretConfig{
+				Name: "sds/" + name,
+				SdsConfig: &coreV3.ConfigSource{
+					ResourceApiVersion:    coreV3.ApiVersion_V3,
+					ConfigSourceSpecifier: &coreV3.ConfigSource_Ads{Ads: &coreV3.AggregatedConfigSource{}},
+				},
+			},
+		}, nil
+	default:
+		return &pb.ResolveSecretResponse{
+			SdsSecretConfig: &tlsV3.SdsSecretConfig{
+				Name: fmt.Sprintf("%s/%s/%s", secretCtx.GetProxy().GetNamespace(), secretCtx.GetProxy().GetName(), name),
+			},
+		}, nil
+	}
+}
