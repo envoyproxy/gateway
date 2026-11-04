@@ -46,13 +46,13 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 	}
 	ownerReferenceUID[ratelimit.ResourceKindServiceAccount] = serviceAccountUID
 
-	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.EnvoyGateway, ownerReferenceUID)
+	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.ControllerResourcePrefix, i.EnvoyGateway, ownerReferenceUID)
 	return i.createOrUpdate(ctx, r)
 }
 
 // DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
 func (i *Infra) DeleteRateLimitInfra(ctx context.Context) error {
 	// Delete ratelimit infra do not require the uid of owner reference.
-	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.EnvoyGateway, nil)
+	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.ControllerResourcePrefix, i.EnvoyGateway, nil)
 	return i.delete(ctx, r)
 }

@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -69,6 +70,8 @@ type gatewayAPIReconciler struct {
 	store                *kubernetesProviderStore
 	namespace            string
 	namespaceLabel       *metav1.LabelSelector
+	objectSelector       labels.Selector
+	hmacSecretName       string
 	envoyGateway         *egv1a1.EnvoyGateway
 	mergeGateways        sets.Set[string]
 	mergeGatewaysMu      sync.RWMutex
@@ -205,6 +208,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		extSecretGVKs:        extSecretGVKs,
 		extSecretCRDExists:   make(map[schema.GroupVersionKind]bool),
 		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
+		hmacSecretName:       config.InstanceResourceName(cfg.ControllerResourcePrefix, oidcHMACSecretName),
 	}
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
@@ -212,6 +216,15 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		// Always allow controller-namespace infrastructure resources to bypass
 		// user namespace selectors.
 		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
+	}
+
+	if objectSelectorEnabled(cfg.EnvoyGateway) {
+		sel, err := metav1.LabelSelectorAsSelector(
+			cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().Watch.ObjectSelector)
+		if err != nil {
+			return fmt.Errorf("invalid watch.objectSelector: %w", err)
+		}
+		r.objectSelector = sel
 	}
 
 	debounce := cfg.EnvoyGateway.Debounce
@@ -321,6 +334,42 @@ func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	default:
 		return false
 	}
+}
+
+// objectSelectorEnabled returns true when an object selector is configured to
+// filter the entry resources that Envoy Gateway watches and reconciles. The
+// object selector is orthogonal to the watch mode: it composes as an
+// additional (AND) filter with any namespace watch mode, including the
+// default (watch all namespaces) mode.
+func objectSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
+	if eg.Provider == nil {
+		return false
+	}
+	watch := eg.Provider.GetKubernetesConfiguration().Watch
+	return watch != nil && watch.ObjectSelector != nil
+}
+
+// objectSelectorListOptions returns list options with the configured
+// watch.objectSelector applied, so that only entry resources labelled for this
+// instance are listed. The options are returned unchanged (and unmutated) when
+// no object selector is configured; otherwise a copy is returned, so that
+// shared options such as client.UnsafeDisableDeepCopy are never modified.
+func (r *gatewayAPIReconciler) objectSelectorListOptions(opts *client.ListOptions) *client.ListOptions {
+	if r.objectSelector == nil {
+		return opts
+	}
+	out := client.ListOptions{}
+	if opts != nil {
+		out = *opts
+	}
+	if out.LabelSelector != nil {
+		if added, ok := r.objectSelector.Requirements(); ok {
+			out.LabelSelector = out.LabelSelector.Add(added...)
+		}
+	} else {
+		out.LabelSelector = r.objectSelector
+	}
+	return &out
 }
 
 func isTransientError(err error) bool {
@@ -1333,7 +1382,7 @@ func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resour
 	)
 
 	if err = r.client.Get(ctx,
-		types.NamespacedName{Namespace: r.namespace, Name: oidcHMACSecretName},
+		types.NamespacedName{Namespace: r.namespace, Name: r.hmacSecretName},
 		&secret); err != nil {
 		return err
 	}
@@ -1342,7 +1391,7 @@ func (r *gatewayAPIReconciler) processOIDCHMACSecret(ctx context.Context, resour
 	if !resourceMap.allAssociatedSecrets.Has(key) {
 		resourceMap.allAssociatedSecrets.Insert(key)
 		resourceTree.Secrets = append(resourceTree.Secrets, &secret)
-		r.log.Info("processing OIDC HMAC Secret", "namespace", r.namespace, "name", oidcHMACSecretName)
+		r.log.Info("processing OIDC HMAC Secret", "namespace", r.namespace, "name", r.hmacSecretName)
 	}
 	return nil
 }
@@ -1942,9 +1991,9 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 	// Find gateways for the managedGC
 	// Find the Gateways that reference this Class.
 	gatewayList := &gwapiv1.GatewayList{}
-	if err := r.client.List(ctx, gatewayList, &client.ListOptions{
+	if err := r.client.List(ctx, gatewayList, r.objectSelectorListOptions(&client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, managedGC.Name),
-	}); err != nil {
+	})); err != nil {
 		r.log.Error(err, "failed to list gateways for GatewayClass", "GatewayClass", managedGC.Name)
 		return err
 	}
@@ -2228,7 +2277,7 @@ func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, n
 // processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree
 func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
 	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
-	if err := r.client.List(ctx, &envoyPatchPolicies, client.UnsafeDisableDeepCopy); err != nil {
+	if err := r.client.List(ctx, &envoyPatchPolicies, r.objectSelectorListOptions(&client.ListOptions{UnsafeDisableDeepCopy: new(true)})); err != nil {
 		return fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
 	}
 
@@ -2253,7 +2302,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(ctx, &clientTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
+	if err := r.client.List(ctx, &clientTrafficPolicies, r.objectSelectorListOptions(&client.ListOptions{UnsafeDisableDeepCopy: new(true)})); err != nil {
 		return fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
 	}
 
@@ -2283,9 +2332,9 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 	resourceMap.gatewayToListenerSets[gatewayNamespaceName] = nil
 
 	listenerSetList := &gwapiv1.ListenerSetList{}
-	if err := r.client.List(ctx, listenerSetList, &client.ListOptions{
+	if err := r.client.List(ctx, listenerSetList, r.objectSelectorListOptions(&client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayListenerSetIndex, gatewayNamespaceName),
-	}); err != nil {
+	})); err != nil {
 		r.log.Error(err, "failed to list ListenerSets", "gateway", gatewayNamespaceName)
 		return err
 	}
@@ -2349,7 +2398,7 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
-	if err := r.client.List(ctx, &backendTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
+	if err := r.client.List(ctx, &backendTrafficPolicies, r.objectSelectorListOptions(&client.ListOptions{UnsafeDisableDeepCopy: new(true)})); err != nil {
 		return fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
 	}
 
@@ -2374,7 +2423,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	securityPolicies := egv1a1.SecurityPolicyList{}
-	if err := r.client.List(ctx, &securityPolicies, client.UnsafeDisableDeepCopy); err != nil {
+	if err := r.client.List(ctx, &securityPolicies, r.objectSelectorListOptions(&client.ListOptions{UnsafeDisableDeepCopy: new(true)})); err != nil {
 		return fmt.Errorf("error listing SecurityPolicies: %w", err)
 	}
 
@@ -2401,7 +2450,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(ctx, &backendTLSPolicies, client.UnsafeDisableDeepCopy); err != nil {
+	if err := r.client.List(ctx, &backendTLSPolicies, r.objectSelectorListOptions(&client.ListOptions{UnsafeDisableDeepCopy: new(true)})); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
 
@@ -2495,6 +2544,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.hasMatchingNamespaceLabels(ep)
 			}))
 		}
+		if r.objectSelector != nil {
+			epPredicates = append(epPredicates, predicate.NewTypedPredicateFuncs(func(ep *egv1a1.EnvoyProxy) bool {
+				return r.hasMatchingObjectLabels(ep)
+			}))
+		}
 
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.EnvoyProxy{},
@@ -2519,6 +2573,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	if r.namespaceLabel != nil {
 		gPredicates = append(gPredicates, predicate.NewTypedPredicateFuncs(func(gtw *gwapiv1.Gateway) bool {
 			return r.hasMatchingNamespaceLabels(gtw)
+		}))
+	}
+	if r.objectSelector != nil {
+		gPredicates = append(gPredicates, predicate.NewTypedPredicateFuncs(func(gtw *gwapiv1.Gateway) bool {
+			return r.hasMatchingObjectLabels(gtw)
 		}))
 	}
 	if err := c.Watch(
@@ -2557,6 +2616,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
 				return r.hasMatchingNamespaceLabels(obj)
+			}))
+		}
+		if r.objectSelector != nil {
+			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
+				return r.hasMatchingObjectLabels(obj)
 			}))
 		}
 
@@ -2607,6 +2671,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			return r.hasMatchingNamespaceLabels(hr)
 		}))
 	}
+	if r.objectSelector != nil {
+		httprPredicates = append(httprPredicates, predicate.NewTypedPredicateFuncs(func(hr *gwapiv1.HTTPRoute) bool {
+			return r.hasMatchingObjectLabels(hr)
+		}))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1.HTTPRoute{},
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.HTTPRoute) []reconcile.Request {
@@ -2633,6 +2702,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.hasMatchingNamespaceLabels(grpc)
 			}))
 		}
+		if r.objectSelector != nil {
+			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
+				return r.hasMatchingObjectLabels(grpc)
+			}))
+		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
 				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
@@ -2657,6 +2731,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
+			}))
+		}
+		if r.objectSelector != nil {
+			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
+				return r.hasMatchingObjectLabels(route)
 			}))
 		}
 		if err := c.Watch(
@@ -2686,6 +2765,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.hasMatchingNamespaceLabels(route)
 			}))
 		}
+		if r.objectSelector != nil {
+			udprPredicates = append(udprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.UDPRoute) bool {
+				return r.hasMatchingObjectLabels(route)
+			}))
+		}
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.UDPRoute{},
 				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.UDPRoute) []reconcile.Request {
@@ -2711,6 +2795,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TCPRoute) bool {
 				return r.hasMatchingNamespaceLabels(route)
+			}))
+		}
+		if r.objectSelector != nil {
+			tcprPredicates = append(tcprPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TCPRoute) bool {
+				return r.hasMatchingObjectLabels(route)
 			}))
 		}
 		if err := c.Watch(
@@ -2817,6 +2906,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			backendPredicates = append(backendPredicates, predicate.NewTypedPredicateFuncs(func(be *egv1a1.Backend) bool {
 				return r.hasMatchingNamespaceLabels(be)
+			}))
+		}
+		if r.objectSelector != nil {
+			backendPredicates = append(backendPredicates, predicate.NewTypedPredicateFuncs(func(be *egv1a1.Backend) bool {
+				return r.hasMatchingObjectLabels(be)
 			}))
 		}
 		if err := c.Watch(
@@ -2968,6 +3062,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.hasMatchingNamespaceLabels(epp)
 			}))
 		}
+		if r.objectSelector != nil {
+			eppPredicates = append(eppPredicates, predicate.NewTypedPredicateFuncs(func(epp *egv1a1.EnvoyPatchPolicy) bool {
+				return r.hasMatchingObjectLabels(epp)
+			}))
+		}
 		// Watch EnvoyPatchPolicy CRUDs
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{},
@@ -2993,6 +3092,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			ctpPredicates = append(ctpPredicates, predicate.NewTypedPredicateFuncs(func(ctp *egv1a1.ClientTrafficPolicy) bool {
 				return r.hasMatchingNamespaceLabels(ctp)
+			}))
+		}
+		if r.objectSelector != nil {
+			ctpPredicates = append(ctpPredicates, predicate.NewTypedPredicateFuncs(func(ctp *egv1a1.ClientTrafficPolicy) bool {
+				return r.hasMatchingObjectLabels(ctp)
 			}))
 		}
 
@@ -3026,6 +3130,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.hasMatchingNamespaceLabels(btp)
 			}))
 		}
+		if r.objectSelector != nil {
+			btpPredicates = append(btpPredicates, predicate.NewTypedPredicateFuncs(func(btp *egv1a1.BackendTrafficPolicy) bool {
+				return r.hasMatchingObjectLabels(btp)
+			}))
+		}
 
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.BackendTrafficPolicy{},
@@ -3055,6 +3164,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			spPredicates = append(spPredicates, predicate.NewTypedPredicateFuncs(func(sp *egv1a1.SecurityPolicy) bool {
 				return r.hasMatchingNamespaceLabels(sp)
+			}))
+		}
+		if r.objectSelector != nil {
+			spPredicates = append(spPredicates, predicate.NewTypedPredicateFuncs(func(sp *egv1a1.SecurityPolicy) bool {
+				return r.hasMatchingObjectLabels(sp)
 			}))
 		}
 
@@ -3089,6 +3203,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				return r.hasMatchingNamespaceLabels(btp)
 			}))
 		}
+		if r.objectSelector != nil {
+			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
+				return r.hasMatchingObjectLabels(btp)
+			}))
+		}
 
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
@@ -3118,6 +3237,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			eepPredicates = append(eepPredicates, predicate.NewTypedPredicateFuncs(func(eep *egv1a1.EnvoyExtensionPolicy) bool {
 				return r.hasMatchingNamespaceLabels(eep)
+			}))
+		}
+		if r.objectSelector != nil {
+			eepPredicates = append(eepPredicates, predicate.NewTypedPredicateFuncs(func(eep *egv1a1.EnvoyExtensionPolicy) bool {
+				return r.hasMatchingObjectLabels(eep)
 			}))
 		}
 
@@ -3239,6 +3363,11 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		if r.namespaceLabel != nil {
 			httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs(func(be *egv1a1.HTTPRouteFilter) bool {
 				return r.hasMatchingNamespaceLabels(be)
+			}))
+		}
+		if r.objectSelector != nil {
+			httpRouteFilter = append(httpRouteFilter, predicate.NewTypedPredicateFuncs(func(be *egv1a1.HTTPRouteFilter) bool {
+				return r.hasMatchingObjectLabels(be)
 			}))
 		}
 		if err := c.Watch(
@@ -3517,7 +3646,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	envoyExtensionPolicies := egv1a1.EnvoyExtensionPolicyList{}
-	if err := r.client.List(ctx, &envoyExtensionPolicies, client.UnsafeDisableDeepCopy); err != nil {
+	if err := r.client.List(ctx, &envoyExtensionPolicies, r.objectSelectorListOptions(&client.ListOptions{UnsafeDisableDeepCopy: new(true)})); err != nil {
 		return fmt.Errorf("error listing EnvoyExtensionPolicies: %w", err)
 	}
 

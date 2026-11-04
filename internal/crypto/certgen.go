@@ -108,7 +108,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		egProvider := cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type
 
 		if cfg.EnvoyGateway.GetEnvoyGatewayProvider().IsRunningOnKubernetes() {
-			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.ControllerNamespace, cfg.DNSDomain)
+			egDNSNames = kubeServiceNames(config.InstanceResourceName(cfg.ControllerResourcePrefix, DefaultEnvoyGatewayDNSPrefix), cfg.ControllerNamespace, cfg.DNSDomain)
 			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.ControllerNamespace))
 		} else if cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type == egv1a1.ProviderTypeCustom {
 			// For custom provider (host mode), use localhost for xDS communication

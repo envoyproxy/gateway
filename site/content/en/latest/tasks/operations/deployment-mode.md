@@ -667,6 +667,59 @@ Handling connection for 8889
 * Connection #0 to host localhost left intact
 ```
 
+#### Multiple Envoy Gateway instances in a single namespace
+
+The pattern above assigns one namespace per Envoy Gateway controller. Alternatively, several Envoy Gateway instances can **share a single namespace**, each reconciling only the resources it owns. This requires three things per instance:
+
+* A unique `gateway.controllerName` (e.g. `gateway.envoyproxy.io/eg-internal` and `gateway.envoyproxy.io/eg-external`). `GatewayClass` is cluster-scoped and is partitioned by this name.
+* A unique `resourcePrefix` Helm value. It prefixes the names of the shared control-plane resources the instance creates in the namespace (Deployment, Service, ServiceAccount, ConfigMap, the certgen Secrets, the xDS Service name, the topology-injector Webhook and the leader election lease). With the default empty prefix these names are fixed, so only one instance per namespace is supported.
+* A `provider.kubernetes.watch.objectSelector` label selector that matches only the instance's own resources (Gateway, ListenerSet, EnvoyProxy, the route kinds, the policy kinds and Backend). **The selectors of co-located instances must be disjoint**: a resource whose labels match two selectors is reconciled by both instances and they will fight over its managed infrastructure. Label the entry resources accordingly; referenced resources (Service, Secret, ...) are not filtered, so an unlabeled backend referenced from a labeled Gateway resolves as usual.
+
+```shell
+helm install \
+--set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/eg-internal \
+--set config.envoyGateway.provider.kubernetes.watch.objectSelector.matchLabels.gateway=internal \
+--set resourcePrefix=eg-internal \
+eg-internal oci://docker.io/envoyproxy/gateway-helm \
+--version {{< helm-version >}} -n gateway-shared --create-namespace
+
+helm install \
+--set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/eg-external \
+--set config.envoyGateway.provider.kubernetes.watch.objectSelector.matchLabels.gateway=external \
+--set resourcePrefix=eg-external \
+eg-external oci://docker.io/envoyproxy/gateway-helm \
+--version {{< helm-version >}} -n gateway-shared
+```
+
+The resources each instance reconciles are labeled for it:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg-internal
+spec:
+  controllerName: gateway.envoyproxy.io/eg-internal
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg-internal
+  namespace: gateway-shared
+  labels:
+    gateway: internal
+spec:
+  gatewayClassName: eg-internal
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8080
+```
+
+{{% alert title="Note" color="primary" %}}
+`objectSelector` is not a permission boundary. It only filters the objects the controller reconciles; the controller keeps the same list/watch RBAC it would have without the selector. To reduce permissions, combine it with `watch.type=NamespaceSelector` and namespace-scoped roles.
+{{% /alert %}}
+
 ### Merged gateways deployment
 
 {{% alert title="Recommendation" color="primary" %}}

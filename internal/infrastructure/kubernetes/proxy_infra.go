@@ -61,6 +61,10 @@ func (i *Infra) GetControllerFullName() string {
 	return i.ControllerFullName
 }
 
+func (i *Infra) GetControllerResourcePrefix() string {
+	return i.ControllerResourcePrefix
+}
+
 func (i *Infra) GetControllerServiceAccountName() string {
 	return i.ControllerServiceAccountName
 }

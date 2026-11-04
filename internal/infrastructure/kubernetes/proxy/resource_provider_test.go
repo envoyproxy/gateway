@@ -47,6 +47,7 @@ type fakeKubernetesInfraProvider struct {
 	ControllerNamespace          string
 	ControllerName               string
 	ControllerFullName           string
+	ControllerResourcePrefix     string
 	ControllerServiceAccountName string
 	DNSDomain                    string
 	EnvoyGateway                 *egv1a1.EnvoyGateway
@@ -57,6 +58,7 @@ func newFakeKubernetesInfraProvider(cfg *config.Server) KubernetesInfraProvider 
 		ControllerNamespace:          cfg.ControllerNamespace,
 		ControllerName:               cfg.ControllerName,
 		ControllerFullName:           cfg.ControllerFullName,
+		ControllerResourcePrefix:     cfg.ControllerResourcePrefix,
 		ControllerServiceAccountName: cfg.ControllerServiceAccountName,
 		DNSDomain:                    cfg.DNSDomain,
 		EnvoyGateway:                 cfg.EnvoyGateway,
@@ -73,6 +75,10 @@ func (f *fakeKubernetesInfraProvider) GetControllerName() string {
 
 func (f *fakeKubernetesInfraProvider) GetControllerFullName() string {
 	return f.ControllerFullName
+}
+
+func (f *fakeKubernetesInfraProvider) GetControllerResourcePrefix() string {
+	return f.ControllerResourcePrefix
 }
 
 func (f *fakeKubernetesInfraProvider) GetControllerServiceAccountName() string {

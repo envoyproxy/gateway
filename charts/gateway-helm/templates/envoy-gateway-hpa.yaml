@@ -2,13 +2,13 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: envoy-gateway
+  name: {{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" $) }}
   namespace: {{ include "eg.namespace" $ }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: envoy-gateway
+    name: {{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" $) }}
   {{- if .Values.hpa.minReplicas }}
   minReplicas: {{ .Values.hpa.minReplicas }}
   {{- end }}

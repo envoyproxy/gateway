@@ -31,7 +31,29 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create chart name and version as used by the chart label.
+Name of this instance's shared control-plane resources.
+
+Several Envoy Gateway releases can share a namespace: set
+`.Values.resourcePrefix` to a unique value per release and the resources
+owned by the control plane (Deployment, Service, ServiceAccount, ConfigMap,
+the certgen Secrets, the xDS Service name and the leader election lease) are
+named "<prefix>-<base>". The prefix is also passed to the controller as
+ENVOY_GATEWAY_RESOURCE_PREFIX. When the prefix is empty (the default) or
+"envoy-gateway", the historic single-instance names are kept, so default
+installs are unaffected.
+*/}}
+{{- define "eg.instanceName" -}}
+{{- $base := .base -}}
+{{- $prefix := .root.Values.resourcePrefix -}}
+{{- if and $prefix (ne $prefix "envoy-gateway") -}}
+{{- printf "%s-%s" $prefix $base -}}
+{{- else -}}
+{{- $base -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Create chart name and version as used for the chart label.
 */}}
 {{- define "eg.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}

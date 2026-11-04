@@ -21,6 +21,28 @@ var (
 	TLSUnrecognizedKind = gwapiv1.Kind("Unrecognized")
 )
 
+// TestInstanceResourceName verifies that the historic single-instance resource
+// names are preserved for the empty and default prefixes, and prefixed
+// otherwise, so that multiple instances can share a namespace.
+func TestInstanceResourceName(t *testing.T) {
+	testCases := []struct {
+		prefix string
+		base   string
+		expect string
+	}{
+		{prefix: "", base: "envoy-gateway", expect: "envoy-gateway"},
+		{prefix: EnvoyGatewayServiceName, base: "envoy-gateway", expect: "envoy-gateway"},
+		{prefix: "tenant-a", base: "envoy-gateway", expect: "tenant-a-envoy-gateway"},
+		{prefix: "tenant-a", base: "envoy-gateway-config", expect: "tenant-a-envoy-gateway-config"},
+		{prefix: "tenant-a", base: "envoy-oidc-hmac", expect: "tenant-a-envoy-oidc-hmac"},
+	}
+	for _, tc := range testCases {
+		t.Run("prefix="+tc.prefix+" base="+tc.base, func(t *testing.T) {
+			require.Equal(t, tc.expect, InstanceResourceName(tc.prefix, tc.base))
+		})
+	}
+}
+
 // differentXdsClusterAddressBootstrap is a full bootstrap replacement whose
 // xds_cluster load assignment points somewhere other than Envoy Gateway's xDS
 // server. bootstrap.Validate rejects it; see the analogous testdata under

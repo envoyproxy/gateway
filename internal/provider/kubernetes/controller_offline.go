@@ -85,7 +85,7 @@ func NewOfflineGatewayAPIController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate certificates: %w", err)
 	}
-	secrets := CertsToSecret(cfg.ControllerNamespace, certs)
+	secrets := CertsToSecret(cfg.ControllerResourcePrefix, cfg.ControllerNamespace, certs)
 	for i := range secrets {
 		if err := cli.Create(ctx, &secrets[i]); err != nil {
 			return nil, fmt.Errorf("failed to seed secret %s: %w", secrets[i].Name, err)
@@ -107,6 +107,7 @@ func NewOfflineGatewayAPIController(
 		log:               cfg.Logger,
 		classController:   gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		namespace:         cfg.ControllerNamespace,
+		hmacSecretName:    config.InstanceResourceName(cfg.ControllerResourcePrefix, oidcHMACSecretName),
 		statusUpdater:     su,
 		resources:         resources,
 		subscriptions:     &subscriptions{},

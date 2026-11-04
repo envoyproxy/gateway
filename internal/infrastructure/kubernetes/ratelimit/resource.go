@@ -20,6 +20,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 )
@@ -250,7 +251,7 @@ func expectedContainerVolumeMounts(rateLimit *egv1a1.RateLimit, rateLimitDeploym
 }
 
 // expectedDeploymentVolumes returns expected rateLimit deployment volumes.
-func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec) []corev1.Volume {
+func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment *egv1a1.KubernetesDeploymentSpec, resourcePrefix string) []corev1.Volume {
 	var volumes []corev1.Volume
 
 	if rateLimit.Backend.Redis != nil &&
@@ -272,7 +273,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 		VolumeSource: corev1.VolumeSource{
 			// #nosec G101 - This refers to a Kubernetes secret volume, not a credential
 			Secret: &corev1.SecretVolumeSource{
-				SecretName:  "envoy-rate-limit",
+				SecretName:  config.InstanceResourceName(resourcePrefix, "envoy-rate-limit"),
 				DefaultMode: new(int32(420)),
 			},
 		},

@@ -104,7 +104,7 @@ func TestServiceAccount(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestService(t *testing.T) {
 
 	for _, tc := range cases {
 		cfg.EnvoyGateway.RateLimit = tc.rateLimit
-		r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+		r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 
 		svc, err := r.Service()
 		require.NoError(t, err)
@@ -173,7 +173,7 @@ func TestConfigmap(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 	cm, err := r.ConfigMap("")
 	require.NoError(t, err)
 	requireObject[corev1.ConfigMap](t, cm, "testdata/envoy-ratelimit-configmap.yaml")
@@ -246,7 +246,7 @@ func TestPDB(t *testing.T) {
 					},
 				},
 			}
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 			pdb, err := r.PodDisruptionBudget()
 			require.NoError(t, err)
 
@@ -843,7 +843,7 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 			}
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 			requireObject[appsv1.Deployment](t, dp, fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName))
@@ -952,7 +952,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 					},
 				},
 			}
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 

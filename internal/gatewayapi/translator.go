@@ -192,6 +192,12 @@ type Translator struct {
 	// ControllerNamespace is the namespace that Envoy Gateway controller runs in.
 	ControllerNamespace string
 
+	// ControllerResourcePrefix is the prefix applied to the names of the shared
+	// control-plane resources owned by the Envoy Gateway instance (for example
+	// the OIDC HMAC Secret created by certgen). It is empty when the historic
+	// single-instance resource names are used.
+	ControllerResourcePrefix string
+
 	// WasmCache is the cache for Wasm modules.
 	WasmCache wasm.Cache
 

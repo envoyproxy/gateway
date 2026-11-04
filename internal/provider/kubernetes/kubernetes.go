@@ -93,6 +93,14 @@ func cacheReadyCheck(mgr manager.Manager) healthz.Checker {
 	}
 }
 
+// leaderElectionLeaseID returns the name of the leader election lease for the
+// instance with the given resource prefix. The historic single-instance lease
+// name is preserved when the prefix is empty or the default, so existing
+// deployments keep their lease (and do not trigger a re-election) on upgrade.
+func leaderElectionLeaseID(prefix string) string {
+	return ec.InstanceResourceName(prefix, "5b9825d2.gateway.envoyproxy.io")
+}
+
 func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier,
 ) (*Provider, error) {
@@ -109,7 +117,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		Scheme:                  envoygateway.GetScheme(),
 		Logger:                  svrCfg.Logger.Logger,
 		HealthProbeBindAddress:  healthProbeBindAddress,
-		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
+		LeaderElectionID:        leaderElectionLeaseID(svrCfg.ControllerResourcePrefix),
 		LeaderElectionNamespace: svrCfg.ControllerNamespace,
 		Client: client.Options{
 			Cache: &client.CacheOptions{

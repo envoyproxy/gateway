@@ -42,6 +42,11 @@ type ResourceRender struct {
 	// namespace is the Namespace used for managed infra.
 	namespace string
 
+	// resourcePrefix is the prefix applied to the names of the shared
+	// control-plane resources owned by the Envoy Gateway instance (for
+	// example the rate limit TLS Secret created by certgen).
+	resourcePrefix string
+
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
 	rateLimitHpa        *egv1a1.KubernetesHorizontalPodAutoscalerSpec
@@ -52,11 +57,12 @@ type ResourceRender struct {
 }
 
 // NewResourceRender returns a new ResourceRender.
-func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
+func NewResourceRender(ns, resourcePrefix string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
 	prov := gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider()
 
 	render := &ResourceRender{
 		namespace:           ns,
+		resourcePrefix:      resourcePrefix,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: prov.RateLimitDeployment,
 		rateLimitHpa:        prov.RateLimitHpa,
@@ -271,7 +277,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
-					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
+					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment, r.resourcePrefix),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
 					ImagePullSecrets:              r.rateLimitDeployment.Pod.ImagePullSecrets,

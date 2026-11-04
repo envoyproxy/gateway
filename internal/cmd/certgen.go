@@ -117,7 +117,7 @@ func certGen(ctx context.Context, logOut io.Writer, local bool, configHome strin
 func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *config.Server,
 	updateSecrets bool, certs *crypto.Certificates,
 ) error {
-	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.ControllerNamespace, certs), updateSecrets)
+	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.ControllerResourcePrefix, cfg.ControllerNamespace, certs), updateSecrets)
 	log := cfg.Logger
 
 	if err != nil {
@@ -141,13 +141,14 @@ func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *c
 		return nil
 	}
 
-	webhookConfigName := fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace)
+	webhookConfigName := fmt.Sprintf("%s.%s",
+		config.InstanceResourceName(cfg.ControllerResourcePrefix, topologyWebhookNamePrefix), cfg.ControllerNamespace)
 	webhookCfg := &admissionregistrationv1.MutatingWebhookConfiguration{}
 	if err := cli.Get(ctx, client.ObjectKey{Name: webhookConfigName}, webhookCfg); err != nil {
 		return fmt.Errorf("failed to get mutating webhook configuration: %w", err)
 	}
 
-	secretName := types.NamespacedName{Name: "envoy-gateway", Namespace: cfg.ControllerNamespace}
+	secretName := types.NamespacedName{Name: config.InstanceResourceName(cfg.ControllerResourcePrefix, config.EnvoyGatewayServiceName), Namespace: cfg.ControllerNamespace}
 	current := &corev1.Secret{}
 	if err := cli.Get(ctx, secretName, current); err != nil {
 		return fmt.Errorf("failed to get secret %s/%s: %w", current.Namespace, current.Name, err)

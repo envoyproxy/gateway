@@ -56,6 +56,13 @@ func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) b
 
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
+// hasMatchingObjectLabels reports whether the labels carried by obj match the
+// configured watch.objectSelector. It is only called when an object selector
+// is configured.
+func (r *gatewayAPIReconciler) hasMatchingObjectLabels(obj client.Object) bool {
+	return r.objectSelector.Matches(labels.Set(obj.GetLabels()))
+}
+
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
 	// Keep controller-namespace infrastructure events visible even when the
 	// controller namespace does not match the user selector.
@@ -512,7 +519,7 @@ func (r *gatewayAPIReconciler) isCtpReferencingSecret(nsName *types.NamespacedNa
 func (r *gatewayAPIReconciler) isOIDCHMACSecret(nsName *types.NamespacedName) bool {
 	oidcHMACSecret := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      oidcHMACSecretName,
+		Name:      r.hmacSecretName,
 	}
 	return *nsName == oidcHMACSecret
 }
