@@ -43,6 +43,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -856,6 +857,53 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReconcileGatewayClassTerminatingKeepsEnvoyProxy(t *testing.T) {
+	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
+	now := metav1.Now()
+
+	ep := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: config.DefaultNamespace,
+			Name:      "test",
+		},
+	}
+
+	// A GatewayClass that is being deleted but still holds its finalizer
+	// because Gateways still reference it.
+	gc := &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{gatewayClassFinalizer},
+		},
+		Spec: gwapiv1.GatewayClassSpec{
+			ControllerName: gcCtrlName,
+			ParametersRef: &gwapiv1.ParametersReference{
+				Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+				Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+				Name:      "test",
+				Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+			},
+		},
+	}
+
+	r := &gatewayAPIReconciler{
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		classController: gcCtrlName,
+		namespace:       config.DefaultNamespace,
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(ep).
+			Build(),
+		resources: &message.ProviderResources{},
+	}
+
+	resourceTree, err := r.reconcileGatewayClass(context.Background(), gc, sets.New[types.NamespacedName](), r.log)
+	require.NoError(t, err)
+	require.NotNil(t, resourceTree.EnvoyProxyForGatewayClass, "EnvoyProxy must still apply while the GatewayClass is terminating")
+	require.Equal(t, ep.Name, resourceTree.EnvoyProxyForGatewayClass.Name)
 }
 
 func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {

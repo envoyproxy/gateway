@@ -441,7 +441,7 @@ func (r *gatewayAPIReconciler) reconcileGatewayClass(ctx context.Context, manage
 	// Process the parametersRef of the accepted GatewayClass.
 	// This should run before processGateways and processBackendRefs
 	failToProcessGCParamsRef := false
-	if managedGC.Spec.ParametersRef != nil && managedGC.DeletionTimestamp == nil {
+	if managedGC.Spec.ParametersRef != nil {
 		if err := r.processGatewayClassParamsRef(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 			if isTransientError(err) {
 				gcLogger.Error(err, "transient error processing parametersRef for GatewayClass")
