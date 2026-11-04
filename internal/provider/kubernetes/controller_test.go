@@ -9,9 +9,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/url"
 	"os"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -2948,6 +2952,17 @@ func TestIsTransientError(t *testing.T) {
 	wrappedCanceledErr := fmt.Errorf("wrapped: %w", context.Canceled)
 	wrappedDeadlineExceededErr := fmt.Errorf("wrapped: %w", context.DeadlineExceeded)
 
+	// Transport errors client-go returns when the API server is unreachable.
+	connRefusedErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: &net.OpError{
+		Op: "dial", Net: "tcp", Err: &os.SyscallError{Syscall: "connect", Err: syscall.ECONNREFUSED},
+	}}
+	connResetErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: &net.OpError{
+		Op: "read", Net: "tcp", Err: &os.SyscallError{Syscall: "read", Err: syscall.ECONNRESET},
+	}}
+	eofErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: io.EOF}
+	clientTimeoutErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: &net.DNSError{IsTimeout: true}}
+	otherNetErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: &net.DNSError{Err: "no such host", IsNotFound: true}}
+
 	testCases := []struct {
 		name     string
 		err      error
@@ -2963,6 +2978,11 @@ func TestIsTransientError(t *testing.T) {
 		{"ContextDeadlineExceeded", deadlineExceededErr, true},
 		{"WrappedContextCanceled", wrappedCanceledErr, true},
 		{"WrappedContextDeadlineExceeded", wrappedDeadlineExceededErr, true},
+		{"ConnectionRefused", connRefusedErr, true},
+		{"ConnectionReset", connResetErr, true},
+		{"UnexpectedEOF", eofErr, true},
+		{"ClientTimeout", clientTimeoutErr, true},
+		{"NoSuchHost", otherNetErr, false},
 	}
 
 	for _, tc := range testCases {
