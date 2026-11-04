@@ -979,12 +979,6 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
-	basicAuth := p.Spec.BasicAuth
-	if basicAuth != nil {
-		if err := validateBasicAuth(basicAuth); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
