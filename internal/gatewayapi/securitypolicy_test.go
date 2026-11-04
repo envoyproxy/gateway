@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -756,6 +757,43 @@ func Test_JWTProvider(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildLocalJWKSValueRefFallback(t *testing.T) {
+	policy := &egv1a1.SecurityPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "policy"}}
+	localJWKS := &egv1a1.LocalJWKS{
+		Type:     new(egv1a1.LocalJWKSTypeValueRef),
+		ValueRef: &gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "jwks"},
+	}
+	translatorFor := func(data map[string]string) *Translator {
+		return &Translator{
+			TranslatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: "default", Name: "jwks"}: {
+						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "jwks"},
+						Data:       data,
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("jwks key", func(t *testing.T) {
+		tr := translatorFor(map[string]string{"a": "a-value", JWKSConfigMapKey: "jwks-value"})
+		jwks, err := tr.buildLocalJWKS(policy, localJWKS)
+		require.NoError(t, err)
+		require.Equal(t, "jwks-value", jwks)
+	})
+
+	t.Run("first key in sorted order", func(t *testing.T) {
+		tr := translatorFor(map[string]string{"c": "c-value", "a": "a-value", "b": "b-value"})
+		// Map iteration order is random, so repeat to catch a fallback that depends on it.
+		for range 20 {
+			jwks, err := tr.buildLocalJWKS(policy, localJWKS)
+			require.NoError(t, err)
+			require.Equal(t, "a-value", jwks)
+		}
+	})
 }
 
 func Test_APIKeyAuth(t *testing.T) {
@@ -1702,7 +1740,7 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target, newJWTRequirementNames())
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1781,7 +1819,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target, newJWTRequirementNames())
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -2879,5 +2917,96 @@ func Test_securityPolicyOwnerChoose(t *testing.T) {
 
 		assert.Same(t, parentPolicy, owners.extAuth)
 		assert.Same(t, parentPolicy, owners.extAuthBackendRefs)
+	})
+}
+
+func TestJWTRequirementNamesConflict(t *testing.T) {
+	jwtFor := func(name, issuer string, allowMissing bool) *ir.JWT {
+		return &ir.JWT{
+			AllowMissing: allowMissing,
+			Name:         name,
+			Providers:    []ir.JWTProvider{{Name: "example", Issuer: issuer}},
+		}
+	}
+	// The routes of one policy share one SecurityFeatures, as the translator
+	// assigns them.
+	stable := &ir.SecurityFeatures{JWT: jwtFor("default/stable", "https://stable.example.com", false)}
+	tests := []struct {
+		irKey   string
+		route   *ir.HTTPRoute
+		wantErr bool
+	}{
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "a/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", false)}}},
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "a/stable", Security: stable}},
+		// The same config under the name is shared.
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict-same", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", false)}}},
+		// A different config under the name is refused, whether the providers or
+		// the mode differ.
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://b.example.com", false)}}, wantErr: true},
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict-missing", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", true)}}, wantErr: true},
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/stable", Security: stable}},
+		// The same name in another xds IR is a different requirement_map.
+		{irKey: "gateway-2", route: &ir.HTTPRoute{Name: "c/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://c.example.com", false)}}},
+	}
+
+	names := newJWTRequirementNames()
+	for _, tc := range tests {
+		jwt := tc.route.Security.JWT
+		err := names.record(tc.irKey, tc.route)
+		if !tc.wantErr {
+			require.NoError(t, err, tc.route.Name)
+			require.Same(t, jwt, tc.route.Security.JWT, tc.route.Name)
+			continue
+		}
+		require.ErrorContains(t, err, "default/conflict", tc.route.Name)
+		// The refused route carries no JWT, so its requirement never reaches the
+		// requirement_map.
+		require.Nil(t, tc.route.Security.JWT, tc.route.Name)
+	}
+	// Refusing a route leaves the SecurityFeatures it shared untouched.
+	require.NotNil(t, stable.JWT)
+}
+
+func TestJWTName(t *testing.T) {
+	policyFor := func(namespace, name string) *egv1a1.SecurityPolicy {
+		return &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				JWT:       &egv1a1.JWT{Providers: []egv1a1.JWTProvider{{Name: "example"}}},
+			},
+		}
+	}
+	routePolicy := policyFor("default", "policy-for-route")
+	parentPolicy := policyFor("envoy-gateway", "policy-for-gateway")
+
+	t.Run("policy", func(t *testing.T) {
+		require.Equal(t, "default/policy-for-route", jwtName(routePolicy, &securityPolicyOwners{}))
+	})
+
+	t.Run("merged policy", func(t *testing.T) {
+		// The merged policy keeps the route policy's metadata, which jwtName relies
+		// on to name the route policy.
+		merged, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
+		require.Equal(t, "default/policy-for-route+envoy-gateway/policy-for-gateway", jwtName(merged, owners))
+		// The same route policy merged with another parent is another JWT.
+		other, otherOwners, err := mergeSecurityPolicy(routePolicy, policyFor("envoy-gateway", "policy-for-listener"))
+		require.NoError(t, err)
+		require.NotEqual(t, jwtName(merged, owners), jwtName(other, otherOwners))
+	})
+
+	t.Run("bounded", func(t *testing.T) {
+		// A 63-character namespace and a 253-character name, the Kubernetes maximums,
+		// exceed the bound. The two parents differ only past the truncated prefix.
+		long := func(last string) *egv1a1.SecurityPolicy {
+			return policyFor(strings.Repeat("n", 63), strings.Repeat("p", 252)+last)
+		}
+		route := long("r")
+		name := jwtName(route, buildSecurityPolicyOwners(route, long("a")))
+		other := jwtName(route, buildSecurityPolicyOwners(route, long("b")))
+		require.Len(t, name, maxJWTNameLength)
+		require.Equal(t, name, jwtName(route, buildSecurityPolicyOwners(route, long("a"))))
+		require.NotEqual(t, name, other)
 	})
 }

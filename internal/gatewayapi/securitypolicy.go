@@ -9,17 +9,22 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1" //nolint:gosec // SHA1 is required to validate htpasswd {SHA} format
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -138,6 +143,10 @@ func (t *Translator) ProcessSecurityPolicies(
 		listenerSetMap[key] = &policyListenerSetTargetContext{ListenerSet: ls}
 	}
 
+	// jwtNames is shared by every policy of this translation, so a conflict between
+	// policies is caught in the order the policies are applied.
+	jwtNames := newJWTRequirementNames()
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
 	// Map of attached Policy to Gateway. Used for policy merge process.
@@ -181,7 +190,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget, jwtNames)
 			}
 		}
 	}
@@ -205,7 +214,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget, jwtNames)
 			}
 		}
 	}
@@ -228,7 +237,7 @@ func (t *Translator) ProcessSecurityPolicies(
 						res = append(res, policy)
 					}
 
-					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget, jwtNames)
 				}
 			}
 		}
@@ -253,7 +262,7 @@ func (t *Translator) ProcessSecurityPolicies(
 						res = append(res, policy)
 					}
 
-					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget, jwtNames)
 				}
 			}
 		}
@@ -273,7 +282,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget, jwtNames)
 			}
 		}
 	}
@@ -298,7 +307,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget, jwtNames)
 			}
 		}
 	}
@@ -430,6 +439,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	merged policyScopeGraph,
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
+	jwtNames jwtRequirementNames,
 ) {
 	var (
 		targetedRoute RouteContext
@@ -556,7 +566,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
 		// No merging - use existing translation logic
-		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil); err != nil {
+		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil, jwtNames); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -611,7 +621,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 				if parentPolicy == nil {
 					// No parent policy found, fall back to current policy
-					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
+					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener, jwtNames); err != nil {
 						errMsgs.Insert(status.Error2ConditionMsg(err))
 					}
 					continue
@@ -630,7 +640,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Apply merged policy
-				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
+				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener, jwtNames); err != nil {
 					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
@@ -688,6 +698,7 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 	merged policyScopeGraph,
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
+	jwtNames jwtRequirementNames,
 ) {
 	var (
 		targeted   *gwapiv1.ListenerSet
@@ -743,7 +754,7 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
-	if err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR, jwtNames); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -806,6 +817,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	merged policyScopeGraph,
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
+	jwtNames jwtRequirementNames,
 ) {
 	var (
 		targetedGateway *GatewayContext
@@ -847,7 +859,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR, jwtNames); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -1251,6 +1263,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	targetListener *ListenerContext,
+	jwtNames jwtRequirementNames,
 ) error {
 	// Build IR
 	var (
@@ -1309,6 +1322,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
 	routesWithDirectResponse := sets.New[string]()
+	// A requirement name conflict is reported once however many routes it refuses.
+	var jwtConflictReported bool
 
 	var targetListenerName string
 	var targetGatewayNN types.NamespacedName
@@ -1497,6 +1512,16 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							}
 
 							r.Security = securityFeatures
+							if err := jwtNames.record(irKey, r); err != nil {
+								if !jwtConflictReported {
+									jwtConflictReported = true
+									errs = errors.Join(errs, err)
+								}
+								// The requirement would replace another route's; refuse the route.
+								r.DirectResponse = directResponse
+								routesWithDirectResponse.Insert(r.Name)
+								continue
+							}
 
 							// Validate GeoIP if clientIPGeoLocations is used in the Authorization.
 							// We have to validate GeoIP here because it reuses the listener-level ClientIPDetection configuration from CTP.
@@ -1547,6 +1572,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	jwtNames jwtRequirementNames,
 ) error {
 	return t.translateSecurityPolicyForListeners(
 		policy,
@@ -1554,6 +1580,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 		resources,
 		xdsIR,
 		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
+		jwtNames,
 	)
 }
 
@@ -1563,6 +1590,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	jwtNames jwtRequirementNames,
 ) error {
 	return t.translateSecurityPolicyForListeners(
 		policy,
@@ -1570,6 +1598,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		resources,
 		xdsIR,
 		gatewayPolicyTargetListeners(gtwCtx, target),
+		jwtNames,
 	)
 }
 
@@ -1579,6 +1608,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	targetListeners []*ListenerContext,
+	jwtNames jwtRequirementNames,
 ) error {
 	// Build IR
 	noOwners := &securityPolicyOwners{}
@@ -1702,6 +1732,8 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	routesWithDirectResponse := sets.New[string]()
 	hasBaseErrs := errs != nil
 	directResponse := &ir.CustomResponse{StatusCode: new(uint32(500))}
+	// A requirement name conflict is reported once however many routes it refuses.
+	var jwtConflictReported bool
 	for _, h := range x.HTTP {
 		if !listenerNames.Has(h.Name) {
 			continue
@@ -1744,6 +1776,16 @@ func (t *Translator) translateSecurityPolicyForListeners(
 				continue
 			}
 			r.Security = securityFeatures
+			if err := jwtNames.record(irKey, r); err != nil {
+				if !jwtConflictReported {
+					jwtConflictReported = true
+					errs = errors.Join(errs, err)
+				}
+				// The requirement would replace another route's; refuse the route.
+				r.DirectResponse = directResponse
+				routesWithDirectResponse.Insert(r.Name)
+				continue
+			}
 			if errorResponse != nil {
 				r.DirectResponse = errorResponse
 				routesWithDirectResponse.Insert(r.Name)
@@ -1950,7 +1992,90 @@ func (t *Translator) buildJWT(
 		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
 		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
 		Providers:            providers,
+		Name:                 jwtName(policy, owners),
 	}, nil
+}
+
+// maxJWTNameLength bounds the length of a JWT name, which the xds translator uses as
+// the jwt_authn requirement name. A merged policy's name joins two policy names, and
+// would otherwise exceed it.
+const maxJWTNameLength = 256
+
+// jwtName names the JWT config a SecurityPolicy applies to a route after the
+// policy: <namespace>/<name>, or for a merged policy the route and parent policies
+// it was built from, <route namespace>/<route name>+<parent namespace>/<parent name>.
+//
+// The xds translator uses the name as the jwt_authn requirement name, which the
+// listener's requirement_map and the routes' requirement_name both carry. The name
+// depends only on which policies apply, not on their JWT config, so an edit of the
+// providers, optional or failOpen changes only the requirement content and does not
+// rename the requirement that routes refer to. The whole JWT config is derived from
+// the named policies, so routes that share a name carry the same JWT.
+func jwtName(policy *egv1a1.SecurityPolicy, owners *securityPolicyOwners) string {
+	// A merged policy takes its metadata from the route policy, so policy names the
+	// route policy either way.
+	name := utils.NamespacedName(policy).String()
+	if owners.mergedParent != nil {
+		// Kubernetes namespaces and names cannot contain '+', so the separator never
+		// reads as part of a policy name.
+		name += "+" + utils.NamespacedName(owners.mergedParent).String()
+	}
+	if len(name) <= maxJWTNameLength {
+		return name
+	}
+	// Hash the full name, so a truncated name still depends only on the policies
+	// and two long names do not collide.
+	sum := sha256.Sum256([]byte(name))
+	suffix := "_" + hex.EncodeToString(sum[:8])
+	return name[:maxJWTNameLength-len(suffix)] + suffix
+}
+
+// jwtRequirementNames keeps one translation's jwt_authn requirement names
+// unambiguous. One requirement_map holds the routes of every listener on a port,
+// and a name shared by two different requirements would let one silently replace
+// the other.
+//
+// buildJWT does not produce such conflicts today (see jwtName). This guards against
+// a later change breaking that: the first JWT config recorded under a name in an
+// xds IR keeps it, and a later route that carries a different config under the
+// same name is refused. SecurityPolicies are applied in a fixed order (oldest
+// first, then by name), so the same route keeps the name on every translation.
+type jwtRequirementNames map[jwtRequirementNameScope]*ir.JWT
+
+// jwtRequirementNameScope is one requirement name within one xds IR.
+type jwtRequirementNameScope struct {
+	irKey string
+	name  string
+}
+
+func newJWTRequirementNames() jwtRequirementNames {
+	return jwtRequirementNames{}
+}
+
+// record is called once a route of the xds IR irKey has its SecurityFeatures set.
+// It returns an error, and drops the route's JWT so the requirement never reaches
+// the requirement_map, when another route already holds the name with a different
+// config. The caller refuses the route.
+func (n jwtRequirementNames) record(irKey string, r *ir.HTTPRoute) error {
+	if r.Security == nil || r.Security.JWT == nil || r.Security.JWT.Name == "" {
+		return nil
+	}
+	scope := jwtRequirementNameScope{irKey: irKey, name: r.Security.JWT.Name}
+	first, ok := n[scope]
+	if !ok {
+		n[scope] = r.Security.JWT
+		return nil
+	}
+	if reflect.DeepEqual(first, r.Security.JWT) {
+		return nil
+	}
+	// Routes share SecurityFeatures; copy them so the other routes keep their JWT.
+	security := *r.Security
+	security.JWT = nil
+	r.Security = &security
+	return perr.WithMessage(fmt.Errorf(
+		"the jwt requirement %s differs from the one another route of the same gateway already holds",
+		scope.name), "JWT")
 }
 
 func validateJWTProvider(providers []egv1a1.JWTProvider) error {
@@ -2130,10 +2255,11 @@ func (t *Translator) buildLocalJWKS(
 			return jwksBytes, nil
 		}
 		if len(cm.Data) > 0 {
-			// Fallback to the first entry in the ConfigMap data if "jwks" key is not present
-			for _, v := range cm.Data {
-				return v, nil
-			}
+			// Fallback to the first entry in the ConfigMap data if "jwks" key is not present.
+			// Take the first key in sorted order rather than in map iteration order, so
+			// every build of the policy's JWT, on any route and any translation, picks the
+			// same entry.
+			return cm.Data[slices.Sorted(maps.Keys(cm.Data))[0]], nil
 		}
 
 		return "", fmt.Errorf(
@@ -3444,6 +3570,10 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 }
 
 type securityPolicyOwners struct {
+	// mergedParent is the parent policy a merged policy was built from, rather than
+	// the owner of a field. It is nil when the policy is not merged.
+	mergedParent *egv1a1.SecurityPolicy
+
 	basicAuth                *egv1a1.SecurityPolicy
 	apiKeyAuthCredentialRefs *egv1a1.SecurityPolicy
 	authorizationRules       *egv1a1.SecurityPolicy
@@ -3475,6 +3605,7 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 // and to derive IR resource names tied to the owning policy.
 func buildSecurityPolicyOwners(route, parent *egv1a1.SecurityPolicy) *securityPolicyOwners {
 	return &securityPolicyOwners{
+		mergedParent: parent,
 		basicAuth: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
 			return p.Spec.BasicAuth != nil
 		}),
