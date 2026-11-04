@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -373,7 +374,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status:     mergePolicyStatus(r.classController, &t.Status, valCopy),
 						}
 						return tCopy
 					}),
@@ -411,7 +412,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status:     mergePolicyStatus(r.classController, &t.Status, valCopy),
 						}
 						return tCopy
 					}),
@@ -449,7 +450,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status:     mergePolicyStatus(r.classController, &t.Status, valCopy),
 						}
 						return tCopy
 					}),
@@ -487,7 +488,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status:     mergePolicyStatus(r.classController, &t.Status, valCopy),
 						}
 						return tCopy
 					}),
@@ -528,7 +529,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status:     mergePolicyStatus(r.classController, &t.Status, valCopy),
 						}
 						return tCopy
 					}),
@@ -566,7 +567,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status:     *valCopy,
+							Status:     mergePolicyStatus(r.classController, &t.Status, valCopy),
 						}
 						return tCopy
 					}),
@@ -648,7 +649,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 									objMap[k] = v
 								}
 							}
-							objMap["status"] = *valCopy
+							objMap["status"] = mergeUnstructuredPolicyStatus(r.classController, t.Object["status"], valCopy)
 							tCopy := &unstructured.Unstructured{Object: objMap}
 							return tCopy
 						}),
@@ -700,6 +701,73 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 	})
 
 	return &workers
+}
+
+// maxPolicyAncestors is the Gateway API CRD limit on the number of entries in status.ancestors.
+const maxPolicyAncestors = 16
+
+// mergePolicyStatus merges the PolicyStatus computed by this controller into the status
+// currently stored on the policy. See mergePolicyAncestorStatus.
+func mergePolicyStatus(controllerName gwapiv1.GatewayController, old, new *gwapiv1.PolicyStatus) gwapiv1.PolicyStatus {
+	return gwapiv1.PolicyStatus{
+		Ancestors: mergePolicyAncestorStatus(controllerName, old.Ancestors, new.Ancestors),
+	}
+}
+
+// mergePolicyAncestorStatus merges the old and new PolicyAncestorStatus.
+//
+// Gateway API treats status.ancestors as a map keyed by AncestorRef and ControllerName, and
+// an implementation must only populate the ancestors it is responsible for. new holds every
+// ancestor this controller computed for the policy (aggregated across GatewayClasses by the
+// translator runner), so it replaces all old entries owned by controllerName, including
+// stale ones. Entries written by other controllers are kept as they are.
+//
+// If the merged list would exceed the CRD limit, this controller's own entries are trimmed
+// from the end so that the status update isn't rejected and other controllers' entries
+// survive.
+func mergePolicyAncestorStatus(controllerName gwapiv1.GatewayController, old, new []gwapiv1.PolicyAncestorStatus) []gwapiv1.PolicyAncestorStatus {
+	others := make([]gwapiv1.PolicyAncestorStatus, 0, len(old))
+	for _, oldA := range old {
+		if oldA.ControllerName != controllerName {
+			others = append(others, oldA)
+		}
+	}
+
+	ours := new
+	if room := maxPolicyAncestors - len(others); len(ours) > room {
+		ours = ours[:max(room, 0)]
+	}
+
+	merged := make([]gwapiv1.PolicyAncestorStatus, 0, len(ours)+len(others))
+	merged = append(merged, ours...)
+	merged = append(merged, others...)
+	return merged
+}
+
+// mergeUnstructuredPolicyStatus merges the PolicyStatus computed by this controller into the
+// status of an extension server policy, which is only known as unstructured content.
+// Fields of the old status other than ancestors are kept. If the old ancestors can't be
+// decoded, the new status replaces them.
+func mergeUnstructuredPolicyStatus(controllerName gwapiv1.GatewayController, oldStatus any, new *gwapiv1.PolicyStatus) map[string]any {
+	oldMap, _ := oldStatus.(map[string]any)
+
+	old := &gwapiv1.PolicyStatus{}
+	if oldMap != nil {
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(oldMap, old); err != nil {
+			old = &gwapiv1.PolicyStatus{}
+		}
+	}
+
+	merged := mergePolicyStatus(controllerName, old, new)
+	// No need to check the error: merged is a typed PolicyStatus, which always converts.
+	mergedMap, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(&merged)
+
+	statusMap := make(map[string]any, len(oldMap)+1)
+	for k, v := range oldMap {
+		statusMap[k] = v
+	}
+	statusMap["ancestors"] = mergedMap["ancestors"]
+	return statusMap
 }
 
 // mergeRouteParentStatus merges the old and new RouteParentStatus.

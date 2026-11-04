@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"sort"
@@ -18,6 +19,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -25,6 +29,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func TestEnvoyEndpointNodeNamesForService(t *testing.T) {
@@ -1412,4 +1417,252 @@ func Test_updateStatusFromSubscriptions_HTTPRoute(t *testing.T) {
 	if len(mutated.Status.Parents) != 0 {
 		t.Errorf("mutated.Status.Parents = %v, want empty (stale gateway1 entry should be dropped)", mutated.Status.Parents)
 	}
+}
+
+func policyAncestor(controllerName gwapiv1.GatewayController, name gwapiv1.ObjectName, conditionType string) gwapiv1.PolicyAncestorStatus {
+	return gwapiv1.PolicyAncestorStatus{
+		AncestorRef:    gwapiv1.ParentReference{Name: name},
+		ControllerName: controllerName,
+		Conditions: []metav1.Condition{
+			{Type: conditionType, Status: metav1.ConditionTrue, Reason: "Accepted"},
+		},
+	}
+}
+
+func Test_mergePolicyAncestorStatus(t *testing.T) {
+	const otherController gwapiv1.GatewayController = "example.com/policy-controller"
+	ours := func(name gwapiv1.ObjectName) gwapiv1.PolicyAncestorStatus {
+		return policyAncestor(egv1a1.GatewayControllerName, name, string(gwapiv1.PolicyConditionAccepted))
+	}
+	other := func(name gwapiv1.ObjectName) gwapiv1.PolicyAncestorStatus {
+		return policyAncestor(otherController, name, "example.com/PolicyAffected")
+	}
+	oursN := func(n int) []gwapiv1.PolicyAncestorStatus {
+		ret := make([]gwapiv1.PolicyAncestorStatus, 0, n)
+		for i := range n {
+			ret = append(ret, ours(gwapiv1.ObjectName(fmt.Sprintf("gateway-%d", i))))
+		}
+		return ret
+	}
+	othersN := func(n int) []gwapiv1.PolicyAncestorStatus {
+		ret := make([]gwapiv1.PolicyAncestorStatus, 0, n)
+		for i := range n {
+			ret = append(ret, other(gwapiv1.ObjectName(fmt.Sprintf("other-%d", i))))
+		}
+		return ret
+	}
+
+	tests := []struct {
+		name string
+		old  []gwapiv1.PolicyAncestorStatus
+		new  []gwapiv1.PolicyAncestorStatus
+		want []gwapiv1.PolicyAncestorStatus
+	}{
+		{
+			name: "no old status",
+			old:  nil,
+			new:  []gwapiv1.PolicyAncestorStatus{ours("gateway1")},
+			want: []gwapiv1.PolicyAncestorStatus{ours("gateway1")},
+		},
+		{
+			name: "only our entries: new replaces old, stale entries are dropped",
+			old:  []gwapiv1.PolicyAncestorStatus{ours("gateway1"), ours("gateway2")},
+			new:  []gwapiv1.PolicyAncestorStatus{ours("gateway2")},
+			want: []gwapiv1.PolicyAncestorStatus{ours("gateway2")},
+		},
+		{
+			name: "other controller's entry for the same ancestor is kept",
+			old:  []gwapiv1.PolicyAncestorStatus{ours("gateway1"), other("gateway1")},
+			new:  []gwapiv1.PolicyAncestorStatus{ours("gateway1")},
+			want: []gwapiv1.PolicyAncestorStatus{ours("gateway1"), other("gateway1")},
+		},
+		{
+			name: "our entry is added next to an entry written only by another controller",
+			old:  []gwapiv1.PolicyAncestorStatus{other("gateway1")},
+			new:  []gwapiv1.PolicyAncestorStatus{ours("gateway1")},
+			want: []gwapiv1.PolicyAncestorStatus{ours("gateway1"), other("gateway1")},
+		},
+		{
+			name: "other controller's entries for other ancestors are kept",
+			old:  []gwapiv1.PolicyAncestorStatus{other("gateway2"), ours("gateway1"), other("gateway3")},
+			new:  []gwapiv1.PolicyAncestorStatus{ours("gateway1")},
+			want: []gwapiv1.PolicyAncestorStatus{ours("gateway1"), other("gateway2"), other("gateway3")},
+		},
+		{
+			name: "duplicated entries of ours collapse",
+			old:  []gwapiv1.PolicyAncestorStatus{ours("gateway1"), ours("gateway1"), other("gateway1")},
+			new:  []gwapiv1.PolicyAncestorStatus{ours("gateway1")},
+			want: []gwapiv1.PolicyAncestorStatus{ours("gateway1"), other("gateway1")},
+		},
+		{
+			name: "empty new status drops only our entries",
+			old:  []gwapiv1.PolicyAncestorStatus{ours("gateway1"), other("gateway1")},
+			new:  []gwapiv1.PolicyAncestorStatus{},
+			want: []gwapiv1.PolicyAncestorStatus{other("gateway1")},
+		},
+		{
+			name: "our entries are trimmed to stay within the CRD limit",
+			old:  othersN(4),
+			new:  oursN(16),
+			want: append(oursN(12), othersN(4)...),
+		},
+		{
+			name: "no room left for our entries",
+			old:  othersN(16),
+			new:  oursN(2),
+			want: othersN(16),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergePolicyAncestorStatus(egv1a1.GatewayControllerName, tt.old, tt.new)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_mergeUnstructuredPolicyStatus(t *testing.T) {
+	const otherController gwapiv1.GatewayController = "example.com/policy-controller"
+	ours := policyAncestor(egv1a1.GatewayControllerName, "gateway1", string(gwapiv1.PolicyConditionAccepted))
+	other := policyAncestor(otherController, "gateway1", "example.com/PolicyAffected")
+
+	toMap := func(t *testing.T, s *gwapiv1.PolicyStatus) map[string]any {
+		t.Helper()
+		m, err := runtime.DefaultUnstructuredConverter.ToUnstructured(s)
+		require.NoError(t, err)
+		return m
+	}
+
+	t.Run("keeps other controller's ancestors and other status fields", func(t *testing.T) {
+		oldStatus := toMap(t, &gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{other}})
+		oldStatus["observedGeneration"] = int64(3)
+
+		got := mergeUnstructuredPolicyStatus(egv1a1.GatewayControllerName, oldStatus,
+			&gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{ours}})
+
+		want := toMap(t, &gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{ours, other}})
+		want["observedGeneration"] = int64(3)
+		require.Equal(t, want, got)
+	})
+
+	t.Run("no old status", func(t *testing.T) {
+		got := mergeUnstructuredPolicyStatus(egv1a1.GatewayControllerName, nil,
+			&gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{ours}})
+		require.Equal(t, toMap(t, &gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{ours}}), got)
+	})
+
+	t.Run("undecodable old ancestors are replaced", func(t *testing.T) {
+		oldStatus := map[string]any{"ancestors": "not-a-list"}
+		got := mergeUnstructuredPolicyStatus(egv1a1.GatewayControllerName, oldStatus,
+			&gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{ours}})
+		require.Equal(t, toMap(t, &gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{ours}}), got)
+	})
+}
+
+// Test_updateStatusFromSubscriptions_ExtensionServerPolicy is a regression test for
+// https://github.com/envoyproxy/gateway/issues/8808: the status of an extension server
+// policy used to be replaced as a whole, dropping ancestors written by other controllers.
+func Test_updateStatusFromSubscriptions_ExtensionServerPolicy(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	const otherController gwapiv1.GatewayController = "example.com/policy-controller"
+	ours := policyAncestor(egv1a1.GatewayControllerName, "gateway1", string(gwapiv1.PolicyConditionAccepted))
+	other := policyAncestor(otherController, "gateway1", "example.com/PolicyAffected")
+
+	key := message.NamespacedNameAndGVK{
+		NamespacedName:   types.NamespacedName{Namespace: "default", Name: "ext-policy"},
+		GroupVersionKind: schema.GroupVersionKind{Group: "example.com", Version: "v1alpha1", Kind: "ExampleExtPolicy"},
+	}
+	var extensionPolicyStatuses watchable.Map[message.NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
+	extensionPolicyStatuses.Store(key, &gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{ours}})
+
+	updater := &fakeUpdater{updates: make(chan Update, 1)}
+	r := &gatewayAPIReconciler{
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		classController: egv1a1.GatewayControllerName,
+		statusUpdater:   updater,
+		subscriptions: &subscriptions{
+			extensionPolicyStatuses: extensionPolicyStatuses.Subscribe(ctx),
+		},
+	}
+
+	go r.updateStatusFromSubscriptions(ctx, true)
+
+	var update Update
+	select {
+	case update = <-updater.updates:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for status update")
+	}
+	require.Equal(t, key.NamespacedName, update.NamespacedName)
+
+	oldStatus, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&gwapiv1.PolicyStatus{
+		Ancestors: []gwapiv1.PolicyAncestorStatus{other},
+	})
+	require.NoError(t, err)
+	policy := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "example.com/v1alpha1",
+		"kind":       "ExampleExtPolicy",
+		"metadata":   map[string]any{"namespace": "default", "name": "ext-policy"},
+		"spec":       map[string]any{},
+		"status":     oldStatus,
+	}}
+
+	mutated, ok := update.Mutator.Mutate(policy).(*unstructured.Unstructured)
+	require.True(t, ok)
+
+	got := &gwapiv1.PolicyStatus{}
+	statusMap, ok := mutated.Object["status"].(map[string]any)
+	require.True(t, ok)
+	require.NoError(t, runtime.DefaultUnstructuredConverter.FromUnstructured(statusMap, got))
+	require.Len(t, got.Ancestors, 2)
+	require.Equal(t, egv1a1.GatewayControllerName, string(got.Ancestors[0].ControllerName))
+	require.Equal(t, otherController, got.Ancestors[1].ControllerName)
+	require.Equal(t, other.Conditions[0].Type, got.Ancestors[1].Conditions[0].Type)
+}
+
+// Test_updateStatusFromSubscriptions_BackendTLSPolicy checks that ancestors written by
+// other controllers survive a status update of a typed policy.
+func Test_updateStatusFromSubscriptions_BackendTLSPolicy(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	const otherController gwapiv1.GatewayController = "example.com/gateway-controller"
+	ours := policyAncestor(egv1a1.GatewayControllerName, "gateway1", string(gwapiv1.PolicyConditionAccepted))
+	other := policyAncestor(otherController, "gateway1", string(gwapiv1.PolicyConditionAccepted))
+
+	key := types.NamespacedName{Namespace: "default", Name: "backend-tls"}
+	var backendTLSPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	backendTLSPolicyStatuses.Store(key, &gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{ours}})
+
+	updater := &fakeUpdater{updates: make(chan Update, 1)}
+	r := &gatewayAPIReconciler{
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		classController: egv1a1.GatewayControllerName,
+		statusUpdater:   updater,
+		subscriptions: &subscriptions{
+			backendTLSPolicyStatuses: backendTLSPolicyStatuses.Subscribe(ctx),
+		},
+	}
+
+	go r.updateStatusFromSubscriptions(ctx, false)
+
+	var update Update
+	select {
+	case update = <-updater.updates:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for status update")
+	}
+	require.Equal(t, key, update.NamespacedName)
+
+	policy := &gwapiv1.BackendTLSPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+		Status:     gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{other}},
+	}
+	mutated, ok := update.Mutator.Mutate(policy).(*gwapiv1.BackendTLSPolicy)
+	require.True(t, ok)
+	require.Len(t, mutated.Status.Ancestors, 2)
+	require.Equal(t, egv1a1.GatewayControllerName, string(mutated.Status.Ancestors[0].ControllerName))
+	require.Equal(t, other, mutated.Status.Ancestors[1])
 }
