@@ -16,7 +16,7 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid access log backendRefs in the referenced EnvoyProxy: invalid
+      message: 'Invalid access log configuration in the referenced EnvoyProxy: invalid
         CEL expression: )++++'
       reason: InvalidParameters
       status: "False"
