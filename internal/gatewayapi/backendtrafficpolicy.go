@@ -332,6 +332,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	t.buildGatewayPolicyMap(backendTrafficPolicies, gateways, gatewayMap, gatewayPolicyMap, resources.ReferenceGrants)
 	// Build ListenerSet policy maps, which are needed when processing the policies targeting xRoutes.
 	t.buildListenerSetBackendTrafficPolicyMap(backendTrafficPolicies, listenerSetMap, listenerSetPolicyMap, resources)
+	var mergeCache backendTrafficPolicyMergeCache
 
 	// Resolve once, then reuse these targets during route policy application.
 	// Count targets rather than policies because selectors can match many routes.
@@ -376,7 +377,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex,
+				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex, &mergeCache,
 					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
@@ -394,7 +395,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex,
+				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex, &mergeCache,
 					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
@@ -982,6 +983,7 @@ func (t *Translator) buildListenerSetBackendTrafficPolicyMap(
 func (t *Translator) processBackendTrafficPolicyForRoute(
 	xdsIR resource.XdsIRMap,
 	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
+	mergeCache *backendTrafficPolicyMergeCache,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
@@ -1121,6 +1123,12 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			)
 		}
 	} else {
+		// A single target on one listener cannot reuse a merge. Selectors may
+		// resolve to multiple targets, so keep the cache for those policies.
+		if len(policy.Spec.TargetRefs) <= 1 && len(policy.Spec.TargetSelectors) == 0 &&
+			len(parentRefCtxs) == 1 && len(parentRefCtxs[0].listeners) == 1 {
+			mergeCache = nil
+		}
 		// Merge with the closest policy in the Route's attachment hierarchy.
 		// Gateway listeners check the Gateway listener policy first, then the
 		// Gateway policy. ListenerSet listeners check the ListenerSet listener
@@ -1196,7 +1204,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				if !applied {
 					var err error
 					h3Warnings, err = t.translateBackendTrafficPolicyForRouteWithMerge(
-						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR, httpRouteIndex,
+						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR, httpRouteIndex, mergeCache,
 					)
 					if err != nil {
 						errMsgs.Insert(status.Error2ConditionMsg(err))
@@ -1692,14 +1700,38 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	return h3Warnings, errs
 }
 
+// Reuse consecutive merges of the same policy pair within one policy pass.
+// A single entry avoids a map and retaining every merged policy until the pass ends.
+type backendTrafficPolicyMergeCache struct {
+	key    [2]*egv1a1.BackendTrafficPolicy
+	policy *egv1a1.BackendTrafficPolicy
+	owners *backendTrafficPolicyOwners
+	err    error
+}
+
 func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	policy, parentPolicy *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	policyTargetListener *ListenerContext, route RouteContext,
 	xdsIR resource.XdsIRMap,
 	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
+	mergeCache *backendTrafficPolicyMergeCache,
 ) (http3Warnings, error) {
-	mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
+	var (
+		mergedPolicy *egv1a1.BackendTrafficPolicy
+		owners       *backendTrafficPolicyOwners
+		err          error
+	)
+	if mergeCache == nil {
+		mergedPolicy, owners, err = t.mergeBackendTrafficPolicy(policy, parentPolicy)
+	} else {
+		key := [2]*egv1a1.BackendTrafficPolicy{policy, parentPolicy}
+		if mergeCache.key != key {
+			mergedPolicy, owners, err = t.mergeBackendTrafficPolicy(policy, parentPolicy)
+			*mergeCache = backendTrafficPolicyMergeCache{key: key, policy: mergedPolicy, owners: owners, err: err}
+		}
+		mergedPolicy, owners, err = mergeCache.policy, mergeCache.owners, mergeCache.err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("error merging policies: %w", err)
 	}

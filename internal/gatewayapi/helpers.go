@@ -206,6 +206,15 @@ func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
 	return false
 }
 
+// IsHTTPRouteFilterRef returns true if the extensionRef refers to Envoy Gateway
+// HTTPRouteFilter. Both group and kind must match, since an extension may register
+// a resource with the same kind in a different group.
+func IsHTTPRouteFilterRef(ref *gwapiv1.LocalObjectReference) bool {
+	return ref != nil &&
+		string(ref.Group) == egv1a1.GroupName &&
+		string(ref.Kind) == egv1a1.KindHTTPRouteFilter
+}
+
 // ValidateHTTPRouteFilter validates the provided filter within HTTPRoute.
 func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
@@ -222,8 +231,7 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+		case IsHTTPRouteFilterRef(filter.ExtensionRef):
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -252,8 +260,7 @@ func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+		case IsHTTPRouteFilterRef(filter.ExtensionRef):
 			return nil
 		default:
 			for _, gk := range extGKs {
