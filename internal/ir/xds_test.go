@@ -2421,6 +2421,22 @@ func TestRouteDestination_HasPriorityFailover(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "custom backend at a different priority",
+			settings: []*DestinationSetting{
+				{IsCustomBackend: true},
+				{Endpoints: endpoints, Priority: new(uint32(1))},
+			},
+			expected: true,
+		},
+		{
+			name: "dynamic resolver at a different priority",
+			settings: []*DestinationSetting{
+				{IsDynamicResolver: true},
+				{Endpoints: endpoints, Priority: new(uint32(1))},
+			},
+			expected: true,
+		},
 	}
 
 	for _, test := range tests {

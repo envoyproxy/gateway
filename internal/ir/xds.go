@@ -2333,7 +2333,7 @@ func (r *RouteDestination) HasPriorityFailover() bool {
 	priorities := sets.New[uint32]()
 	for _, s := range r.Settings {
 		if s == nil || s.Invalid || (s.Weight != nil && *s.Weight == 0) ||
-			(len(s.Endpoints) == 0 && !s.IsDynamicResolver) {
+			(len(s.Endpoints) == 0 && !s.IsDynamicResolver && !s.IsCustomBackend) {
 			continue
 		}
 		priorities.Insert(ptr.Deref(s.Priority, 0))
