@@ -96,6 +96,27 @@ func InvalidFieldsWarning(invalidFields []validation.InvalidField) *EnvoyProxyWa
 	}
 }
 
+// EnvoyProxyReasonUnsupportedField is used with the "Warning" condition when a field set on an
+// EnvoyProxy has no effect where the EnvoyProxy is referenced, e.g. spec.mergeGateways on an
+// EnvoyProxy referenced by a Gateway.
+const EnvoyProxyReasonUnsupportedField egv1a1.EnvoyProxyConditionReason = "UnsupportedField"
+
+// UnsupportedFieldsWarning returns the warning for the fields of an EnvoyProxy referenced by a
+// Gateway that only take effect on an EnvoyProxy referenced by a GatewayClass, or nil when there
+// is none.
+func UnsupportedFieldsWarning(unsupportedFields []string) *EnvoyProxyWarning {
+	if len(unsupportedFields) == 0 {
+		return nil
+	}
+	return &EnvoyProxyWarning{
+		Reason: EnvoyProxyReasonUnsupportedField,
+		Message: fmt.Sprintf(
+			"The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
+				"set them on the EnvoyProxy referenced by the GatewayClass instead: %s",
+			strings.Join(unsupportedFields, ", ")),
+	}
+}
+
 // SetEnvoyProxyWarnings sets the Warning condition on the EnvoyProxy ancestor status to the
 // given warnings, ignoring nil ones. A single condition holds them all, since conditions are
 // keyed by type: its reason is the warning's own reason when there is one, and

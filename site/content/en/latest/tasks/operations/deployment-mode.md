@@ -35,6 +35,7 @@ However, for some deployments, it may be more convenient to merge listeners acro
 
 This can help to efficiently utilize the infra resources in the cluster and manage them in a centralized manner, or have a single IP address for all of the listeners.
 Setting the `mergeGateways` field in the EnvoyProxy resource linked to GatewayClass will result in merging all Gateway listeners under one GatewayClass resource.
+The field has no effect on an EnvoyProxy referenced by a Gateway through `infrastructure.parametersRef`; that EnvoyProxy gets a `Warning` condition with reason `UnsupportedField` instead. When Gateways are already merged, a Gateway should not set `parametersRef` at all: if merging is enabled by the GatewayClass's EnvoyProxy, the Gateway is not accepted, and if it is enabled by the default EnvoyProxy spec in the EnvoyGateway configuration, the settings of the referenced EnvoyProxy are ignored, but the reference must still point to an existing EnvoyProxy, or the Gateway is not accepted.
 
 * The tuple of port, protocol, and hostname must be unique across all Listeners.
 
