@@ -33,6 +33,7 @@ type hookClientEntry struct {
 	client            types.XDSHookClient
 	failOpen          bool
 	gkSets            extensionGKSets
+	manager           types.Manager             // used to build the Secret hook client when client is nil
 	translationConfig *egv1a1.TranslationConfig // used for per-extension resource-type gating in PostTranslateModifyHook
 }
 
@@ -263,7 +264,11 @@ func (c *compositeXDSHookClient) ResolveSecretHook(secretCtx *types.SecretContex
 			continue
 		}
 
-		resolution, err := entry.client.ResolveSecretHook(secretCtx)
+		client, err := entry.secretHookClient()
+		if err != nil {
+			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
+		}
+		resolution, err := client.ResolveSecretHook(secretCtx)
 		if err != nil {
 			// A secret kind is owned by a single extension, so this loop matches at
 			// most one entry: return immediately rather than continuing like the chaining hooks.
@@ -274,4 +279,22 @@ func (c *compositeXDSHookClient) ResolveSecretHook(secretCtx *types.SecretContex
 	}
 
 	return nil, fmt.Errorf("no extension registered secret kind %s", gk.String())
+}
+
+// secretHookClient returns the entry's Secret hook client, building it from its manager if needed.
+func (e *hookClientEntry) secretHookClient() (types.XDSHookClient, error) {
+	if e.client != nil {
+		return e.client, nil
+	}
+	if e.manager == nil {
+		return nil, fmt.Errorf("no client for the %s hook", egv1a1.XDSSecret)
+	}
+	client, err := e.manager.GetPostXDSHookClient(egv1a1.XDSSecret)
+	if err != nil {
+		return nil, err
+	}
+	if client == nil {
+		return nil, fmt.Errorf("the %s hook is not registered", egv1a1.XDSSecret)
+	}
+	return client, nil
 }
