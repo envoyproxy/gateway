@@ -320,7 +320,7 @@ Together with cert-manager, this can be used to fully automate hostname manageme
 It can use various source resources, among them Gateway Routes.
 Just specify a Gateway Route resource, let ExternalDNS create the domain records, and then cert-manager the TLS certificate.
 
-[The tutorial on Gateway API](https://kubernetes-sigs.github.io/external-dns/latest/tutorials/gateway-api/) uses kubectl.
+[The tutorial on Gateway API](https://kubernetes-sigs.github.io/external-dns/latest/docs/sources/gateway-api/) uses kubectl.
 They also have a [Helm chart](https://github.com/kubernetes-sigs/external-dns/blob/master/charts/external-dns/README.md), which is easier to customize.
 The only thing relevant to Envoy Gateway is to set the sources:
 
