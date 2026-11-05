@@ -11,6 +11,25 @@ This task shows you how to configure proxy metrics.
 
 ## Metrics
 
+### Cluster-level metric settings
+
+The `enablePerEndpointStats`, `enableRequestResponseSizesStats`, and
+`enableCircuitBreakerRemainingStats` settings in `EnvoyProxy.spec.telemetry.metrics`
+currently apply to dynamically generated clusters for:
+
+* route backends and request mirrors
+* tracing providers and OpenTelemetry access logs
+* the global rate limit service and remote Wasm service
+
+These settings do not currently apply to the following Envoy Gateway infrastructure clusters:
+
+* gRPC Access Log Service (ALS) clusters
+* extension service clusters used by external authorization, external processing, JWT, and OIDC
+* URL-derived clusters used by dynamic modules and remote JWKS
+* OIDC token endpoint clusters
+* the local proxy service cluster
+* bootstrap-defined clusters, such as local, xDS, Prometheus stats, and OpenTelemetry metric sink clusters
+
 ### Prometheus Metrics
 
 To query metrics using Prometheus API, follow the steps below.
