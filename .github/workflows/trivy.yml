@@ -40,3 +40,4 @@ jobs:
         image-ref: envoy-proxy/gateway-dev:${{ github.sha }}
         exit-code: '1'
         ignore-unfixed: true
+        version: v0.76.1
