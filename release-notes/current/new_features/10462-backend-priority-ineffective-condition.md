@@ -1,0 +1,1 @@
+Added a `BackendPriorityIneffective` condition to HTTPRoute and GRPCRoute status when a rule's backends have different priorities, set by a `backendPriority` HTTPRouteFilter or a fallback Backend, but are split into separate clusters, so priority failover between them has no effect.

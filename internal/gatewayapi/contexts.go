@@ -178,11 +178,17 @@ type ListenerContext struct {
 }
 
 type ListenerTLSConfig struct {
-	secrets               []*corev1.Secret
+	// secrets are the listener's secrets in the configured order.
+	secrets               []listenerSecret
 	certDNSNames          []string
 	frontendTLSValidation *ListenerFrontendTLSValidation
-	// extensionCertificates are certificate resources of a kind registered in ExtensionManager.SecretResources.
-	extensionCertificates []unstructured.Unstructured
+}
+
+// listenerSecret is a listener secret from a Kubernetes Secret, or from a resource of a kind
+// registered in ExtensionManager.SecretResources. Exactly one field is set.
+type listenerSecret struct {
+	kubernetesSecret *corev1.Secret
+	extensionSecret  *unstructured.Unstructured
 }
 
 type ListenerFrontendTLSValidation struct {
@@ -343,12 +349,8 @@ func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionTy
 	}
 }
 
-func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
-	l.tls.secrets = tlsSecrets
-}
-
-func (l *ListenerContext) SetTLSExtensionCertificates(certs []unstructured.Unstructured) {
-	l.tls.extensionCertificates = certs
+func (l *ListenerContext) SetTLSSecrets(secrets []listenerSecret) {
+	l.tls.secrets = secrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)

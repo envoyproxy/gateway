@@ -1,0 +1,243 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  # Ineffective: a RequestHeaderModifier on the secondary backendRef splits the rule.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-1
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-1
+                - type: RequestHeaderModifier
+                  requestHeaderModifier:
+                    set:
+                      - name: x-backend
+                        value: secondary
+  # Ineffective on both rules, reported in one message: a BackendTrafficPolicy enabling
+  # preferLocal splits rule 0, and also rule 1, which has an invalid backendRef as well.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-2
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-1
+        - matches:
+            - path:
+                value: /route-3
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-1
+            - name: service-not-found
+              port: 8080
+  # Ineffective: a fallback Backend's priority, with a filter on the primary backendRef.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-4
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-4
+          backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: RequestHeaderModifier
+                  requestHeaderModifier:
+                    set:
+                      - name: x-backend
+                        value: primary
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: be-fallback
+  # Only rule 1 is reported: rule 0 shares one cluster, so its priority takes effect.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-5
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-5a
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-1
+        - matches:
+            - path:
+                value: /route-5b
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: priority-1
+                - type: RequestHeaderModifier
+                  requestHeaderModifier:
+                    set:
+                      - name: x-backend
+                        value: secondary
+  # Not reported: a filter splits the rule, but every backendRef has the same priority.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: http-route-6
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /route-6
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+              filters:
+                - type: RequestHeaderModifier
+                  requestHeaderModifier:
+                    set:
+                      - name: x-backend
+                        value: secondary
+grpcRoutes:
+  # Ineffective: a fallback Backend's priority, with a filter on the primary backendRef.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: GRPCRoute
+    metadata:
+      namespace: default
+      name: grpc-route-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: RequestHeaderModifier
+                  requestHeaderModifier:
+                    set:
+                      - name: x-backend
+                        value: primary
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: be-fallback
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: priority-1
+    spec:
+      backendPriority: 1
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: prefer-local
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: http-route-2
+      loadBalancer:
+        type: RoundRobin
+        zoneAware:
+          preferLocal:
+            minEndpointsThreshold: 1
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      namespace: default
+      name: be-fallback
+    spec:
+      fallback: true
+      endpoints:
+        - ip:
+            address: 2.2.2.2
+            port: 3001

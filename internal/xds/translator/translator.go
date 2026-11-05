@@ -247,6 +247,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.ExtensionStats = ExtensionHookStats{}
 
 	tCtx := new(types.ResourceVersionTable)
+	tCtx.EnableClusterIndex()
 
 	// xDS translation is done in a best-effort manner, so we collect all errors
 	// and return them at the end.
@@ -341,7 +342,10 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 		errs = errors.Join(errs, err)
 	}
 
-	// All XDS resources is ready, let's do the patch.
+	// Resource construction is complete. Patches and extension hooks can rename
+	// clusters in place, so subsequent lookups must use the resource slices.
+	tCtx.DisableClusterIndex()
+
 	if err := processJSONPatches(ctx, tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
 		// Since JSONPatch error is user-triggered, we don't fail the entire xDS translation so that the remaining
 		// valid xDS resources can be sent to the proxy.
@@ -1440,18 +1444,10 @@ func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.
 
 // findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
 func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cluster {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
+	if tCtx == nil {
 		return nil
 	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
-		cluster, ok := r.(*clusterv3.Cluster)
-		if ok && cluster.Name == name {
-			return cluster
-		}
-	}
-
-	return nil
+	return tCtx.FindCluster(name)
 }
 
 // findXdsEndpoint finds a xds endpoint with the same cluster name, and returns nil if there is no match.
