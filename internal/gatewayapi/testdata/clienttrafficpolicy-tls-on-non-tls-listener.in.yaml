@@ -37,6 +37,18 @@ clientTrafficPolicies:
       sectionName: https-1
     tls:
       minVersion: "1.2"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-3-invalid-cert
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-3
+    tls:
+      minVersion: "1.2"
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -82,6 +94,25 @@ gateways:
         mode: Terminate
         certificateRefs:
         - name: tls-secret-1
+          namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-3
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: https-invalid-cert
+      protocol: HTTPS
+      port: 9443
+      allowedRoutes:
+        namespaces:
+          from: Same
+      tls:
+        mode: Terminate
+        certificateRefs:
+        - name: missing-secret
           namespace: envoy-gateway
 secrets:
 - apiVersion: v1

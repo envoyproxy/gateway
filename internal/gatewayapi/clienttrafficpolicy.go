@@ -318,10 +318,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							if shouldDisableHTTP3ForClientValidation(policy, httpIR) {
 								http3WarningMessage = disabledHTTP3WarningMessage([]string{string(l.Name)})
 							}
-							if policy.Spec.TLS != nil && !listenerHasTLS(gwXdsIR, l) {
+							var tlsResult tlsSettingsResult
+							tlsResult, err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
+							if tlsResult == tlsSettingsIgnored {
 								tlsWarningMessage = ignoredTLSSettingsWarningMessage([]string{string(l.Name)})
 							}
-							err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 						}
 						break
 					}
@@ -349,7 +350,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				// Set Warning condition if the TLS settings don't apply to the listener
 				if tlsWarningMessage != "" {
 					status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
-						status.PolicyReasonUnsupportedField, tlsWarningMessage, policy.Generation)
+						status.PolicyReasonTLSNotTerminated, tlsWarningMessage, policy.Generation)
 				}
 
 				// Check for deprecated fields and set warning if any are found
@@ -535,15 +536,15 @@ func (t *Translator) ProcessClientTrafficPolicies(
 							if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
 								http3DisabledListeners = append(http3DisabledListeners, string(l.Name))
 							}
-							if policy.Spec.TLS != nil {
-								if listenerHasTLS(gwXdsIR, l) {
-									hasTLSListener = true
-								} else {
-									nonTLSListeners = append(nonTLSListeners, string(l.Name))
-								}
-							}
-							if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
+							tlsResult, err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
+							if err != nil {
 								errs = errors.Join(errs, err)
+							}
+							switch tlsResult {
+							case tlsSettingsApplied:
+								hasTLSListener = true
+							case tlsSettingsIgnored:
+								nonTLSListeners = append(nonTLSListeners, string(l.Name))
 							}
 							if policyTargetsLS {
 								if claimedSections[gatewayKey] == nil {
@@ -574,9 +575,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					}
 
 					// Set Warning condition if the TLS settings don't apply to any of the listeners
-					if policy.Spec.TLS != nil && !hasTLSListener && len(nonTLSListeners) > 0 {
+					if !hasTLSListener && len(nonTLSListeners) > 0 {
 						status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
-							status.PolicyReasonUnsupportedField, ignoredTLSSettingsWarningMessage(nonTLSListeners), policy.Generation)
+							status.PolicyReasonTLSNotTerminated, ignoredTLSSettingsWarningMessage(nonTLSListeners), policy.Generation)
 					}
 
 					// Check for deprecated fields and set warning if any are found
@@ -743,17 +744,29 @@ func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, h
 	return true
 }
 
-// listenerHasTLS reports whether the listener terminates TLS, which is the only case in which a
-// ClientTrafficPolicy's TLS settings are applied to it.
-func listenerHasTLS(gwXdsIR *ir.Xds, l *ListenerContext) bool {
-	name := irListenerName(l)
-	if httpIR := gwXdsIR.GetHTTPListener(name); httpIR != nil && httpIR.TLS != nil {
-		return true
+// tlsSettingsResult describes what happened to a ClientTrafficPolicy's TLS settings on one listener.
+type tlsSettingsResult int
+
+const (
+	// tlsSettingsNotEvaluated means the policy sets no TLS settings, or the listener has no IR
+	// (for example, it is not Programmed because its certificateRefs are invalid). The listener's
+	// own status already reports the cause in the latter case, so no warning is needed.
+	tlsSettingsNotEvaluated tlsSettingsResult = iota
+	// tlsSettingsApplied means the listener terminates TLS, so the TLS settings apply to it.
+	tlsSettingsApplied
+	// tlsSettingsIgnored means the listener is translated but does not terminate TLS, so the TLS
+	// settings have no effect on it.
+	tlsSettingsIgnored
+)
+
+func tlsSettingsResultForListener(policy *egv1a1.ClientTrafficPolicy, httpIR *ir.HTTPListener, tcpIR *ir.TCPListener) tlsSettingsResult {
+	if policy.Spec.TLS == nil || (httpIR == nil && tcpIR == nil) {
+		return tlsSettingsNotEvaluated
 	}
-	if tcpIR := gwXdsIR.GetTCPListener(name); tcpIR != nil && tcpIR.TLS != nil {
-		return true
+	if (httpIR != nil && httpIR.TLS != nil) || (tcpIR != nil && tcpIR.TLS != nil) {
+		return tlsSettingsApplied
 	}
-	return false
+	return tlsSettingsIgnored
 }
 
 func ignoredTLSSettingsWarningMessage(listenerNames []string) string {
@@ -783,7 +796,7 @@ func disabledHTTP3WarningMessage(listenerNames []string) string {
 func (t *Translator) translateClientTrafficPolicyForListener(
 	policy *egv1a1.ClientTrafficPolicy, l *ListenerContext,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources,
-) error {
+) (tlsSettingsResult, error) {
 	// Find IR
 	irKey := t.getIRKey(l.gateway.Gateway)
 	// It must exist since we've already finished processing the gateways
@@ -807,6 +820,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 			break
 		}
 	}
+
+	// Decided here, from the listener IR the settings are applied to, so a listener that was not
+	// translated (and therefore has no IR) never reports its TLS settings as ignored.
+	tlsResult := tlsSettingsResultForListener(policy, httpIR, tcpIR)
 
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (
@@ -935,7 +952,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 					"error", errs,
 				)
 			}
-			return errs
+			return tlsResult, errs
 		}
 
 		httpIR.TCPKeepalive = keepalive
@@ -958,7 +975,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 			// Remove all TCP routes if there are any errors
 			// The listener will still be created, but any client traffic will be forwarded to the default empty cluster
 			tcpIR.Routes = nil
-			return errs
+			return tlsResult, errs
 		}
 
 		tcpIR.TCPKeepalive = keepalive
@@ -968,7 +985,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		tcpIR.Timeout = timeout
 	}
 
-	return nil
+	return tlsResult, nil
 }
 
 // buildIRForwardProtoConfig translates the ProxyProtocol ForwardProtoConfig API type into the IR
