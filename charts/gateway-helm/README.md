@@ -179,7 +179,7 @@ helm uninstall eg -n envoy-gateway-system
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | namespaceOverride | string | `""` | Override the namespace for resources deployed by the chart. Defaults to the release namespace. |
 | podDisruptionBudget.minAvailable | int | `0` |  |
-| resourcePrefix | string | `""` | Prefix for the names of the control plane resources created by this release (Deployment, Service, ServiceAccount, ConfigMap, certgen Secrets, xDS Service, leader election lease). Leave empty to keep the historic resource names, which only support one Envoy Gateway instance per namespace. Set a unique value per release to run multiple Envoy Gateway instances in the same namespace, and combine it with `config.envoyGateway.provider.kubernetes.watch.objectSelector` so that each instance reconciles only its own resources. |
+| resourcePrefix | string | `""` | Prefix for the names of the control plane resources created by this release (Deployment, Service, ServiceAccount, ConfigMap, certgen Secrets, xDS Service, leader election lease). Leave empty to keep the historic resource names, which only support one Envoy Gateway instance per namespace. Set a unique value per release to run multiple Envoy Gateway instances in the same namespace, and combine it with a unique `config.envoyGateway.gateway.controllerName` and a disjoint `config.envoyGateway.provider.kubernetes.watch.objectSelector` so that each instance reconciles only its own resources. |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
 | service.type | string | `"ClusterIP"` | Service type. Can be set to LoadBalancer with specific IP, e.g.: type: LoadBalancer loadBalancerIP: 10.236.90.20 |

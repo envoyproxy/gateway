@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" .) }}
+  name: {{ include "eg.instanceName" $ }}
   namespace: {{ include "eg.namespace" . }}
   {{- with .Values.deployment.annotations }}
   annotations:
@@ -127,16 +127,16 @@ spec:
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
       {{- end }}
-      serviceAccountName: {{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" .) }}
+      serviceAccountName: {{ include "eg.instanceName" $ }}
       terminationGracePeriodSeconds: 10
       volumes:
       - configMap:
           defaultMode: 420
-          name: {{ include "eg.instanceName" (dict "base" "envoy-gateway-config" "root" .) }}
+          name: {{ include "eg.instanceName" $ }}-config
         name: envoy-gateway-config
       - name: certs
         secret:
-          secretName: {{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" .) }}
+          secretName: {{ include "eg.instanceName" $ }}
       # Writable cache for Wasm modules; required because the controller's
       # root filesystem is read-only by default (readOnlyRootFilesystem).
       - name: wasm-cache

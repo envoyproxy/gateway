@@ -24,7 +24,7 @@ roleRef:
   name: '{{ include "eg.fullname" $ }}-infra-manager-tokenreview'
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" $) }}'
+  name: '{{ include "eg.instanceName" $ }}'
   namespace: {{ include "eg.namespace" $ }}
 {{ if $kube.watch.namespaces }}
 {{ if gt (len $kube.watch.namespaces) 0 }}
@@ -60,7 +60,7 @@ roleRef:
   name: '{{ include "eg.fullname" $ }}-namespaced-infra-manager'
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" $) }}'
+  name: '{{ include "eg.instanceName" $ }}'
   namespace: {{ include "eg.namespace" $ }}
 ---
 {{- end }}

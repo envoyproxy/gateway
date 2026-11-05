@@ -37,18 +37,17 @@ Several Envoy Gateway releases can share a namespace: set
 `.Values.resourcePrefix` to a unique value per release and the resources
 owned by the control plane (Deployment, Service, ServiceAccount, ConfigMap,
 the certgen Secrets, the xDS Service name and the leader election lease) are
-named "<prefix>-<base>". The prefix is also passed to the controller as
-ENVOY_GATEWAY_RESOURCE_PREFIX. When the prefix is empty (the default) or
-"envoy-gateway", the historic single-instance names are kept, so default
-installs are unaffected.
+named "<prefix>-envoy-gateway[-<suffix>]". The prefix is also passed to the
+controller as ENVOY_GATEWAY_RESOURCE_PREFIX. When the prefix is empty (the
+default) or "envoy-gateway", the historic single-instance names are kept, so
+default installs are unaffected.
 */}}
 {{- define "eg.instanceName" -}}
-{{- $base := .base -}}
-{{- $prefix := .root.Values.resourcePrefix -}}
+{{- $prefix := .Values.resourcePrefix -}}
 {{- if and $prefix (ne $prefix "envoy-gateway") -}}
-{{- printf "%s-%s" $prefix $base -}}
+{{- printf "%s-envoy-gateway" $prefix -}}
 {{- else -}}
-{{- $base -}}
+envoy-gateway
 {{- end -}}
 {{- end }}
 

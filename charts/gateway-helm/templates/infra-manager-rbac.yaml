@@ -28,7 +28,7 @@ roleRef:
   name: '{{ include "eg.fullname" $ }}-cluster-infra-manager'
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" $) }}'
+  name: '{{ include "eg.instanceName" $ }}'
   namespace: {{ include "eg.namespace" $ }}
 ---
 {{ end }}
@@ -62,5 +62,5 @@ roleRef:
   name: '{{ include "eg.fullname" . }}-infra-manager'
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.instanceName" (dict "base" "envoy-gateway" "root" .) }}'
+  name: '{{ include "eg.instanceName" $ }}'
   namespace: {{ include "eg.namespace" . }}
