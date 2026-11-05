@@ -9,9 +9,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/url"
 	"os"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -218,6 +222,17 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 		},
 	}
 
+	customService := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "custom.example.io/v1",
+			"kind":       "Service",
+			"metadata": map[string]interface{}{
+				"name":      "custom-service",
+				"namespace": "default",
+			},
+		},
+	}
+
 	testCases := []struct {
 		name                    string
 		extBackendGVKs          []schema.GroupVersionKind
@@ -279,6 +294,28 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 				}: *lambdaBackend,
 			},
 			expectedExtFiltersCount: 2,
+			expectedNamespaces:      []string{"default"},
+		},
+		{
+			name: "process custom backend whose kind collides with a built-in kind",
+			extBackendGVKs: []schema.GroupVersionKind{
+				{Group: "custom.example.io", Version: "v1", Kind: "Service"},
+			},
+			backendRefs: []gwapiv1.BackendObjectReference{
+				{
+					Group:     new(gwapiv1.Group("custom.example.io")),
+					Kind:      new(gwapiv1.Kind("Service")),
+					Name:      "custom-service",
+					Namespace: new(gwapiv1.Namespace("default")),
+				},
+			},
+			existingExtFilters: map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{
+				{
+					NamespacedName: types.NamespacedName{Namespace: "default", Name: "custom-service"},
+					GroupKind:      schema.GroupKind{Group: "custom.example.io", Kind: "Service"},
+				}: *customService,
+			},
+			expectedExtFiltersCount: 1,
 			expectedNamespaces:      []string{"default"},
 		},
 		{
@@ -2948,6 +2985,17 @@ func TestIsTransientError(t *testing.T) {
 	wrappedCanceledErr := fmt.Errorf("wrapped: %w", context.Canceled)
 	wrappedDeadlineExceededErr := fmt.Errorf("wrapped: %w", context.DeadlineExceeded)
 
+	// Transport errors client-go returns when the API server is unreachable.
+	connRefusedErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: &net.OpError{
+		Op: "dial", Net: "tcp", Err: &os.SyscallError{Syscall: "connect", Err: syscall.ECONNREFUSED},
+	}}
+	connResetErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: &net.OpError{
+		Op: "read", Net: "tcp", Err: &os.SyscallError{Syscall: "read", Err: syscall.ECONNRESET},
+	}}
+	eofErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: io.EOF}
+	clientTimeoutErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: &net.DNSError{IsTimeout: true}}
+	otherNetErr := &url.Error{Op: "Put", URL: "https://10.96.0.1:443", Err: &net.DNSError{Err: "no such host", IsNotFound: true}}
+
 	testCases := []struct {
 		name     string
 		err      error
@@ -2963,6 +3011,11 @@ func TestIsTransientError(t *testing.T) {
 		{"ContextDeadlineExceeded", deadlineExceededErr, true},
 		{"WrappedContextCanceled", wrappedCanceledErr, true},
 		{"WrappedContextDeadlineExceeded", wrappedDeadlineExceededErr, true},
+		{"ConnectionRefused", connRefusedErr, true},
+		{"ConnectionReset", connResetErr, true},
+		{"UnexpectedEOF", eofErr, true},
+		{"ClientTimeout", clientTimeoutErr, true},
+		{"NoSuchHost", otherNetErr, false},
 	}
 
 	for _, tc := range testCases {

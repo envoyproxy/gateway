@@ -184,6 +184,12 @@ type Translator struct {
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
 
+	// ExtensionBackendGroupKinds stores the group/kind of the resources an Extension registers as
+	// custom backends (ExtensionManager.BackendResources). Only these are dispatched to the
+	// extension as backendRefs: ExtensionGroupKinds also includes ExtensionManager.Resources,
+	// which may name a built-in backend kind for use as an extensionRef filter.
+	ExtensionBackendGroupKinds []schema.GroupKind
+
 	// ExtensionSecretGroupKinds stores the group/kind for resources registered in
 	// ExtensionManager.SecretResources. A listener's tls.certificateRefs may
 	// reference these kinds.
@@ -509,6 +515,10 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	)
 	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
 	phases.End()
+
+	// Runs after BackendTrafficPolicies too, since their load balancer settings can split a
+	// rule into one cluster per backendRef.
+	t.checkIneffectiveBackendPriority(httpRoutes, grpcRoutes, xdsIR)
 
 	// Process SecurityPolicies
 	phases.Start("GatewayApiTranslator.ProcessSecurityPolicies",

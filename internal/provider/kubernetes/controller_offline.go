@@ -55,21 +55,22 @@ func NewOfflineGatewayAPIController(
 		extSecretGVKs          []schema.GroupVersionKind
 	)
 
-	if cfg.EnvoyGateway.ExtensionManager != nil {
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
+	extensionManagers := cfg.EnvoyGateway.GetExtensionManagers()
+	for i := range extensionManagers {
+		em := &extensionManagers[i]
+		for _, rsrc := range em.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.PolicyResources {
+		for _, rsrc := range em.PolicyResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
-
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+		for _, rsrc := range em.BackendResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extBackendPoliciesGVKs = append(extBackendPoliciesGVKs, gvk)
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.SecretResources {
+		for _, rsrc := range em.SecretResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extSecretGVKs = append(extSecretGVKs, gvk)
 		}
@@ -145,7 +146,7 @@ func NewOfflineGatewayAPIController(
 	r.subscribeToResources(ctx)
 
 	if su != nil {
-		r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		r.updateStatusFromSubscriptions(ctx, len(extensionManagers) > 0)
 	}
 
 	return &OfflineGatewayAPIReconciler{
