@@ -837,13 +837,12 @@ func TestValidateTerminateModeDeduplicatesSDSCertificateRefs(t *testing.T) {
 	}
 	translator.SetSecrets([]*corev1.Secret{sdsSecretOne, sdsSecretTwo})
 
-	resolvedSecrets, extensionCerts, certs, ok := translator.validateTerminateModeAndGetTLSSecrets(
+	resolvedSecrets, certs, ok := translator.validateTerminateModeAndGetTLSSecrets(
 		gateway.listeners[0],
 		&resource.Resources{},
 	)
 
 	require.True(t, ok)
 	require.Empty(t, certs)
-	require.Empty(t, extensionCerts)
-	require.Equal(t, []*corev1.Secret{sdsSecretOne, sdsSecretTwo}, resolvedSecrets)
+	require.Equal(t, []listenerSecret{{kubernetesSecret: sdsSecretOne}, {kubernetesSecret: sdsSecretTwo}}, resolvedSecrets)
 }

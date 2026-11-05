@@ -601,19 +601,19 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 
 // irTLSConfigs produces a defaulted IR TLSConfig
 func (t *Translator) irTLSConfigs(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
-	if len(config.secrets) == 0 && len(config.extensionCertificates) == 0 && config.frontendTLSValidation == nil {
+	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
-		Certificates: make([]ir.TLSCertificate, len(config.secrets), len(config.secrets)+len(config.extensionCertificates)),
+		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
-	for i, tlsSecret := range config.secrets {
-		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(tlsSecret)
-	}
-	for i := range config.extensionCertificates {
-		tlsListenerConfigs.Certificates = append(tlsListenerConfigs.Certificates,
-			t.getTLSCertificateFromExtensionRef(&config.extensionCertificates[i], gwIR, gatewayCtx))
+	for i, secret := range config.secrets {
+		if secret.extensionSecret != nil {
+			tlsListenerConfigs.Certificates[i] = t.getTLSCertificateFromExtensionRef(secret.extensionSecret, gwIR, gatewayCtx)
+			continue
+		}
+		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(secret.kubernetesSecret)
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
