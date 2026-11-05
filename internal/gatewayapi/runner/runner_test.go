@@ -11,10 +11,13 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/telepresenceio/watchable"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -22,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
 	pb "github.com/envoyproxy/gateway/proto/extension"
 )
@@ -519,4 +523,110 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.NotNil(t, tlsConfig.GetConfigForClient)
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+}
+
+func acceptedGatewayClassStatus(generation int64) *gwapiv1.GatewayClassStatus {
+	return &gwapiv1.GatewayClassStatus{Conditions: []metav1.Condition{{
+		Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gwapiv1.GatewayClassReasonAccepted),
+		ObservedGeneration: generation,
+	}}}
+}
+
+// acceptedGatewayClass is a GatewayClass as the provider puts it in a snapshot: accepted at
+// its generation.
+func acceptedGatewayClass(name string, uid types.UID, generation int64) *gwapiv1.GatewayClass {
+	return &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid, Generation: generation},
+		Spec:       gwapiv1.GatewayClassSpec{ControllerName: egv1a1.GatewayControllerName},
+		Status:     *acceptedGatewayClassStatus(generation),
+	}
+}
+
+func TestTranslationOfOlderSnapshotKeepsNewerGatewayClassStatus(t *testing.T) {
+	pResources := new(message.ProviderResources)
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	t.Cleanup(closeFunc)
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
+		XdsIR:             new(message.XdsIR),
+		InfraIR:           new(message.InfraIR),
+		ExtensionManager:  extMgr,
+	})
+	require.NoError(t, r.Start(t.Context()))
+
+	lagging := types.NamespacedName{Name: "a-lagging"}
+	sentinel := types.NamespacedName{Name: "z-sentinel"}
+	pResources.GatewayClassStatuses.Store(lagging, acceptedGatewayClassStatus(2))
+	snapshot := resource.ControllerResources{resource.NewResources(), resource.NewResources()}
+	snapshot[0].GatewayClass = acceptedGatewayClass(lagging.Name, "lagging-uid", 1)
+	snapshot[1].GatewayClass = acceptedGatewayClass(sentinel.Name, "sentinel-uid", 1)
+	pResources.GatewayAPIResources.Store(string(egv1a1.GatewayControllerName), &resource.ControllerResourcesContext{
+		Resources: &snapshot,
+		Context:   t.Context(),
+	})
+
+	// The runner translates the GatewayClasses of a snapshot in order, so once the sentinel's
+	// status is stored, the lagging GatewayClass has been translated too.
+	require.Eventually(t, func() bool {
+		_, ok := pResources.GatewayClassStatuses.Load(sentinel)
+		return ok
+	}, 5*time.Second, 10*time.Millisecond)
+	got, ok := pResources.GatewayClassStatuses.Load(lagging)
+	require.True(t, ok)
+	require.Equal(t, int64(2), got.Conditions[0].ObservedGeneration)
+}
+
+func TestLateTranslationOfDeletedGatewayClassKeepsStatusOfRecreatedOne(t *testing.T) {
+	var statuses watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus]
+	key := types.NamespacedName{Name: "gc"}
+	// The GatewayClass was deleted at generation 5 and created again under the same name. The
+	// provider has stored the status of the new object, and a translation of the old one is late.
+	statuses.Store(key, acceptedGatewayClassStatus(1))
+	storeGatewayClassStatus(&statuses, acceptedGatewayClass(key.Name, "old-uid", 5))
+
+	got, _ := statuses.Load(key)
+	require.Equal(t, int64(1), got.Conditions[0].ObservedGeneration)
+}
+
+func TestTranslatedGatewayClassStatusReplacesProviderStatusOfSameGeneration(t *testing.T) {
+	var statuses watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus]
+	key := types.NamespacedName{Name: "gc"}
+	statuses.Store(key, acceptedGatewayClassStatus(3))
+	// The translator rejects an invalid EnvoyProxy, which the provider does not validate.
+	gc := acceptedGatewayClass(key.Name, "uid", 3)
+	gc.Status.Conditions[0].Status = metav1.ConditionFalse
+	storeGatewayClassStatus(&statuses, gc)
+
+	got, _ := statuses.Load(key)
+	require.Equal(t, metav1.ConditionFalse, got.Conditions[0].Status)
+}
+
+func TestStoreGatewayClassStatusRacingProviderStore(t *testing.T) {
+	var statuses watchable.Map[types.NamespacedName, *gwapiv1.GatewayClassStatus]
+	key := types.NamespacedName{Name: "gc"}
+	for round := range 20000 {
+		// The runner translates the snapshot of generation 1 while the provider stores generation 2.
+		statuses.Store(key, acceptedGatewayClassStatus(1))
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Go(func() {
+			<-start
+			statuses.Store(key, acceptedGatewayClassStatus(2))
+		})
+		wg.Go(func() {
+			<-start
+			storeGatewayClassStatus(&statuses, acceptedGatewayClass(key.Name, "uid", 1))
+		})
+		close(start)
+		wg.Wait()
+		got, _ := statuses.Load(key)
+		require.Equal(t, int64(2), got.Conditions[0].ObservedGeneration, "round %d: a translated status replaced a newer one stored concurrently", round)
+	}
 }
