@@ -1303,6 +1303,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		Tracing                 *ir.Tracing
 		Metrics                 *ir.Metrics
 		HealthCheckLog          *ir.ProxyHealthCheckLog
+		DrainStrategy           egv1a1.DrainStrategy
 		HTTP                    []*ir.HTTPListener
 		TCP                     []*ir.TCPListener
 		UDP                     []*ir.UDPListener
@@ -1320,6 +1321,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		Tracing:                 a.Tracing,
 		Metrics:                 a.Metrics,
 		HealthCheckLog:          a.HealthCheckLog,
+		DrainStrategy:           a.DrainStrategy,
 		HTTP:                    a.HTTP,
 		TCP:                     a.TCP,
 		UDP:                     a.UDP,

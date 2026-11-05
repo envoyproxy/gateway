@@ -314,6 +314,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
+		xdsIR[irKey].DrainStrategy = getDrainStrategy(gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
 
 		for _, listener := range gateway.listeners {
@@ -762,6 +763,13 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 		Path:     bootstrap.EnvoyReadinessPath,
 		IPFamily: ipFamily,
 	}
+}
+
+func getDrainStrategy(envoyProxy *egv1a1.EnvoyProxy) egv1a1.DrainStrategy {
+	if envoyProxy == nil || envoyProxy.Spec.Shutdown == nil || envoyProxy.Spec.Shutdown.DrainStrategy == nil {
+		return ""
+	}
+	return *envoyProxy.Spec.Shutdown.DrainStrategy
 }
 
 func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {

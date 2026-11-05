@@ -16,17 +16,26 @@ The shutdown manager sidecar coordinates graceful connection draining during pod
 
 1. Kubernetes sends SIGTERM to the pod's containers and marks the pod as
    terminating.
-2. Shutdown manager starts Envoy listener drain.
-   - Drain is initiated directly via
-     `/drain_listeners?graceful&skip_exit` or indirectly via `/healthcheck/fail`
-     when no health check failure delay is configured.
-   - Envoy continues to serve accepted connections while listeners are draining.
+2. Shutdown manager starts Envoy listener drain via
+   `/drain_listeners?graceful&skip_exit`.
+   - HTTP connections are drained according to `drainStrategy`. Envoy closes a
+     draining connection after its next response (`Connection: close` for
+     HTTP/1.1, `GOAWAY` for HTTP/2 and HTTP/3), and closes idle connections
+     before the drain window ends. `Immediate` drains every connection once the
+     drain starts, while `Gradual` spreads the draining across `drainTimeout`.
+   - TCP and UDP proxy connections are not drained and stay open until Envoy
+     exits.
+   - Envoy continues to accept and serve connections while listeners are draining.
 3. Shutdown manager fails health checks via `/healthcheck/fail`, causing the
    pod's readiness probe to fail.
-   - By default this happens immediately and also starts listener drain.
+   - By default this happens immediately after listener drain starts.
    - When `healthCheckFailureDelay` is configured, this step is delayed without
      delaying listener drain, connection monitoring, or the drain timeout.
-4. Connection monitoring begins, polling `server.total_connections`
+   - With the `Immediate` strategy, failing health checks also drains all
+     connections immediately. With the `Gradual` strategy, it does not drain
+     connections by itself, so the gradual drain is preserved.
+4. Connection monitoring begins, polling the active downstream connections and
+   UDP sessions.
 5. Process exits when connections reach zero or drain timeout is exceeded
 
 ## Configuration
@@ -39,6 +48,11 @@ Graceful shutdown behavior includes default values that can be overridden using 
 - `drainTimeout`: 60 seconds - Maximum time for connection draining
 - `minDrainDuration`: 10 seconds - Minimum wait before allowing exit
 - `healthCheckFailureDelay`: 0 seconds - Optional delay before failing health checks after drain starts
+- `drainStrategy`: `Immediate` - How HTTP connections are drained, either `Immediate` or `Gradual`
+
+Changing `drainStrategy` on an existing Gateway changes the listener
+configuration. The running Envoy proxies replace their listeners and drain their
+existing connections at the same time, before the rolling update reaches them.
 
 `healthCheckFailureDelay` does not extend the drain sequence or keep the pod's
 containers running. If the drain completes before `healthCheckFailureDelay`
