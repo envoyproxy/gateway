@@ -2063,7 +2063,63 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "example",
-								ClockSkew: new(uint32(300)),
+								ClockSkew: new(gwapiv1.Duration("300s")),
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "jwt with clockSkew at the 1s minimum",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:      "example",
+								ClockSkew: new(gwapiv1.Duration("1s")),
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "jwt with clockSkew at the 24h maximum",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:      "example",
+								ClockSkew: new(gwapiv1.Duration("24h")),
 								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://example.com/jwt/jwks.json",
 								},
@@ -2093,7 +2149,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "example",
-								ClockSkew: new(uint32(0)),
+								ClockSkew: new(gwapiv1.Duration("0s")),
 								RemoteJWKS: &egv1a1.RemoteJWKS{
 									URI: "https://example.com/jwt/jwks.json",
 								},
@@ -2112,7 +2168,72 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.jwt.providers[0].clockSkew in body should be greater than or equal to 1",
+				"spec.jwt.providers[0].clockSkew: Invalid value:",
+				": clockSkew must be at least 1s",
+			},
+		},
+		{
+			desc: "jwt with clockSkew above 24h",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:      "example",
+								ClockSkew: new(gwapiv1.Duration("24h1s")),
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.jwt.providers[0].clockSkew: Invalid value:",
+				": clockSkew must be at most 24h",
+			},
+		},
+		{
+			// Envoy's clock_skew_seconds has no sub-second precision, so 1500ms
+			// would be truncated to 1s without telling anyone.
+			desc: "jwt with sub-second clockSkew",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name:      "example",
+								ClockSkew: new(gwapiv1.Duration("1500ms")),
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.jwt.providers[0].clockSkew: Invalid value:",
+				": clockSkew must be a whole number of seconds",
 			},
 		},
 		{

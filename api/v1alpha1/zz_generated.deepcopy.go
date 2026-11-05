@@ -5877,7 +5877,7 @@ func (in *JWTProvider) DeepCopyInto(out *JWTProvider) {
 	}
 	if in.ClockSkew != nil {
 		in, out := &in.ClockSkew, &out.ClockSkew
-		*out = new(uint32)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 }

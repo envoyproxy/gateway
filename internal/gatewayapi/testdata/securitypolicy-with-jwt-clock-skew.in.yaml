@@ -50,7 +50,7 @@ securityPolicies:
         issuer: https://one.example.com
         audiences:
         - one.foo.com
-        clockSkew: 300
+        clockSkew: 300s
         remoteJWKS:
           uri: https://one.example.com/jwt/public-key/jwks.json
       - name: example2
