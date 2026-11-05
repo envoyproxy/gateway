@@ -385,6 +385,48 @@ func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, polic
 	require.NoErrorf(t, waitErr, "error waiting for ClientTrafficPolicy to be accepted")
 }
 
+// ClientTrafficPolicyMustNotExist waits for the specified ClientTrafficPolicy to be deleted.
+func ClientTrafficPolicyMustNotExist(t *testing.T, c client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.ClientTrafficPolicy{}
+		err := c.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching ClientTrafficPolicy: %w", err)
+		default:
+			tlog.Logf(t, "ClientTrafficPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for ClientTrafficPolicy to be deleted")
+}
+
+// BackendTrafficPolicyMustNotExist waits for the specified BackendTrafficPolicy to be deleted.
+func BackendTrafficPolicyMustNotExist(t *testing.T, c client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.BackendTrafficPolicy{}
+		err := c.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
+		default:
+			tlog.Logf(t, "BackendTrafficPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be deleted")
+}
+
 func EnvoyProxyMustBeAccepted(t *testing.T, client client.Client, epName types.NamespacedName, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 

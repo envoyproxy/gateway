@@ -94,6 +94,42 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid UDPRoute targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("UDPRoute"),
+								Name:  gwapiv1.ObjectName("udp-backend"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid UDPRoute targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("UDPRoute"),
+									Name:  gwapiv1.ObjectName("udp-backend"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid mergeType with xRoute targetRef",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -120,6 +156,24 @@ func TestSecurityPolicyTarget(t *testing.T) {
 							{
 								Kind:        gwapiv1.Kind("HTTPRoute"),
 								MatchLabels: map[string]string{"app": "foo"},
+							},
+						},
+					},
+					MergeType: new(egv1a1.StrategicMerge),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid mergeType with UDPRoute targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("UDPRoute"),
+								Name:  gwapiv1.ObjectName("udp-backend"),
 							},
 						},
 					},
@@ -210,7 +264,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 		{
@@ -251,7 +305,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRef.group of gateway.networking.k8s.io",
-				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 		{
@@ -274,7 +328,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
 			},
 		},
 
@@ -850,6 +904,350 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "GRPC external auth service with packAsBytes",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							MaxRequestBytes: new(uint32(32768)),
+							PackAsBytes:     new(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "GRPC external auth service with packAsBytes and no maxRequestBytes",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							PackAsBytes: new(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "GRPC external auth service with empty bodyToExtAuth",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "HTTP external auth service with empty bodyToExtAuth",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "http-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "GRPC external auth service with zero maxRequestBytes",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							MaxRequestBytes: new(uint32(0)),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extAuth.bodyToExtAuth.maxRequestBytes: Invalid value: 0: spec.extAuth.bodyToExtAuth.maxRequestBytes in body should be greater than or equal to 1",
+			},
+		},
+		{
+			desc: "HTTP external auth service with packAsBytes enabled",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "http-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							MaxRequestBytes: new(uint32(32768)),
+							PackAsBytes:     new(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"packAsBytes can only be enabled when grpc is specified",
+			},
+		},
+		{
+			desc: "HTTP external auth service with packAsBytes disabled",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "http-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							MaxRequestBytes: new(uint32(32768)),
+							PackAsBytes:     new(false),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "HTTP external auth service with bodyToExtAuth and no packAsBytes",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						HTTP: &egv1a1.HTTPExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "http-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							MaxRequestBytes: new(uint32(32768)),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "GRPC external auth service with bodyToExtAuth and no packAsBytes",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							MaxRequestBytes: new(uint32(32768)),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "GRPC external auth service with packAsBytes disabled",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+							},
+						},
+						BodyToExtAuth: &egv1a1.BodyToExtAuth{
+							MaxRequestBytes: new(uint32(32768)),
+							PackAsBytes:     new(false),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "HTTP external auth service with both path and pathOverride",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -1228,6 +1626,42 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "GRPC external auth service with http1 backendSettings is rejected",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					ExtAuth: &egv1a1.ExtAuth{
+						GRPC: &egv1a1.GRPCExtAuthService{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-auth-service",
+											Port: new(gwapiv1.PortNumber(15001)),
+										},
+									},
+								},
+								BackendSettings: &egv1a1.BackendSettings{
+									ClusterSettings: egv1a1.ClusterSettings{
+										HTTP1: &egv1a1.BackendHTTP1Settings{},
+									},
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http1 is not supported for gRPC ExtAuth backends, which always use gRPC."},
+		},
 
 		// JWT
 		{
@@ -1256,6 +1690,40 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "http3 rejected in jwt backendSettings",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{
+							{
+								Name: "example",
+								RemoteJWKS: &egv1a1.RemoteJWKS{
+									BackendCluster: egv1a1.BackendCluster{
+										BackendSettings: &egv1a1.BackendSettings{
+											ClusterSettings: egv1a1.ClusterSettings{
+												HTTP3: &egv1a1.BackendHTTP3Settings{},
+											},
+										},
+									},
+									URI: "https://example.com/jwt/jwks.json",
+								},
+							},
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"http3 is only supported for route backends"},
 		},
 		{
 			desc: "jwt with claim to headers",

@@ -9,8 +9,7 @@ backendTrafficPolicies:
       maxConnections: 1024
     mergeType: StrategicMerge
     targetSelectors:
-    - group: ""
-      kind: Service
+    - kind: Service
       matchLabels:
         pick: me
   status:

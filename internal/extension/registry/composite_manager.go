@@ -6,8 +6,6 @@
 package registry
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -23,8 +21,7 @@ var _ extTypes.Manager = (*CompositeManager)(nil)
 type namedManager struct {
 	name            string
 	manager         extTypes.Manager
-	resourceGKSet   sets.Set[schema.GroupKind] // Resources + BackendResources GKs
-	policyGKSet     sets.Set[schema.GroupKind] // PolicyResources GKs
+	gkSets          extensionGKSets
 	cleanupHookConn func()
 }
 
@@ -125,11 +122,34 @@ func (c *CompositeManager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorH
 }
 
 // GetPostXDSHookClient returns a compositeXDSHookClient that chains all child clients
-// for the given hook type.
+// for the given hook type. The Secret hook does not chain, see secretHookClient.
 func (c *CompositeManager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
+	if xdsHookType == egv1a1.XDSSecret {
+		return c.secretHookClient(), nil
+	}
 	return c.collectHookClients(xdsHookType, func(m extTypes.Manager, h egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
 		return m.GetPostXDSHookClient(h)
 	}, true)
+}
+
+// secretHookClient returns a client for the Secret hook that builds only the client of the
+// extension owning a secret's group and kind, so an unrelated extension cannot block it.
+func (c *CompositeManager) secretHookClient() extTypes.XDSHookClient {
+	var entries []hookClientEntry
+	for _, nm := range c.managers {
+		if nm.gkSets.secret.Len() == 0 {
+			continue
+		}
+		entries = append(entries, hookClientEntry{
+			name:    nm.name,
+			manager: nm.manager,
+			gkSets:  nm.gkSets,
+		})
+	}
+	if len(entries) == 0 {
+		return nil
+	}
+	return &compositeXDSHookClient{entries: entries}
 }
 
 // collectHookClients iterates over all child managers, collects hook clients via the given getter,
@@ -151,11 +171,10 @@ func (c *CompositeManager) collectHookClients(
 		}
 		if client != nil {
 			entry := hookClientEntry{
-				name:          nm.name,
-				client:        client,
-				failOpen:      nm.manager.FailOpen(),
-				resourceGKSet: nm.resourceGKSet,
-				policyGKSet:   nm.policyGKSet,
+				name:     nm.name,
+				client:   client,
+				failOpen: nm.manager.FailOpen(),
+				gkSets:   nm.gkSets,
 			}
 			if includeTranslationConfig {
 				entry.translationConfig = nm.manager.GetTranslationHookConfig()

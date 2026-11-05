@@ -230,7 +230,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -279,7 +280,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -357,6 +359,7 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         security:
           jwt:
+            name: envoy-gateway/policy-for-gateway
             providers:
             - audiences:
               - one.foo.com
@@ -454,6 +457,7 @@ xdsIR:
           prefix: /
         security:
           jwt:
+            name: default/policy-for-route
             providers:
             - audiences:
               - three.foo.com

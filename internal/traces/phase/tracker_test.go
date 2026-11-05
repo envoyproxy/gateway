@@ -80,6 +80,35 @@ func TestTracker(t *testing.T) {
 		require.Empty(t, sr.Ended())
 	})
 
+	t.Run("SetAttributes annotates the in-flight span", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")
+
+		ctx, parent := tracer.Start(t.Context(), "stage")
+		phases := NewTracker(ctx, tracer)
+		phases.Start("work", attribute.Int("input.count", 5))
+		phases.SetAttributes(attribute.Int64("hook.call_count", 3), attribute.Int64("hook.duration_ms", 12))
+		phases.End()
+		parent.End()
+
+		spans := sr.Ended()
+		require.Len(t, spans, 2)
+		require.Equal(t, "work", spans[0].Name())
+		require.Contains(t, spans[0].Attributes(), attribute.Int("input.count", 5))
+		require.Contains(t, spans[0].Attributes(), attribute.Int64("hook.call_count", 3))
+		require.Contains(t, spans[0].Attributes(), attribute.Int64("hook.duration_ms", 12))
+	})
+
+	t.Run("SetAttributes is a no-op when no phase is in flight", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")
+
+		phases := NewTracker(t.Context(), tracer)
+		// no Start() called — must not panic
+		phases.SetAttributes(attribute.Int64("hook.call_count", 1))
+		require.Empty(t, sr.Ended())
+	})
+
 	t.Run("records phases with zero-valued attributes", func(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
 		tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")

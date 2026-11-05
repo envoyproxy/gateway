@@ -15,6 +15,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,6 +28,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -204,6 +206,15 @@ func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
 	return false
 }
 
+// IsHTTPRouteFilterRef returns true if the extensionRef refers to Envoy Gateway
+// HTTPRouteFilter. Both group and kind must match, since an extension may register
+// a resource with the same kind in a different group.
+func IsHTTPRouteFilterRef(ref *gwapiv1.LocalObjectReference) bool {
+	return ref != nil &&
+		string(ref.Group) == egv1a1.GroupName &&
+		string(ref.Kind) == egv1a1.KindHTTPRouteFilter
+}
+
 // ValidateHTTPRouteFilter validates the provided filter within HTTPRoute.
 func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
@@ -220,8 +231,7 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+		case IsHTTPRouteFilterRef(filter.ExtensionRef):
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -250,8 +260,7 @@ func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+		case IsHTTPRouteFilterRef(filter.ExtensionRef):
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -462,11 +471,11 @@ func irStringKey(gatewayNs, gatewayName string) string {
 // The listener name format can be:
 // - Gateway: "namespace/gateway/listener"
 // - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
-// Returns "namespace/gateway" in both cases.
+// Returns "namespace/gateway/" in both cases.
 func extractGatewayNameFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
 	if len(parts) >= 2 {
-		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+		return fmt.Sprintf("%s/%s/", parts[0], parts[1])
 	}
 	// should never happen
 	return listenerName
@@ -591,7 +600,7 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 }
 
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
+func (t *Translator) irTLSConfigs(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
 	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
@@ -599,8 +608,12 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 	tlsListenerConfigs := &ir.TLSConfig{
 		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
-	for i, tlsSecret := range config.secrets {
-		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(tlsSecret)
+	for i, secret := range config.secrets {
+		if secret.extensionSecret != nil {
+			tlsListenerConfigs.Certificates[i] = t.getTLSCertificateFromExtensionRef(secret.extensionSecret, gwIR, gatewayCtx)
+			continue
+		}
+		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(secret.kubernetesSecret)
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
@@ -656,10 +669,29 @@ func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
 	return cert
 }
 
+// getTLSCertificateFromExtensionRef builds the IR certificate for a listener certificate
+// resolved from an extension-registered kind. No key material is carried: how Envoy obtains
+// the certificate is decided by the extension server via the Secret hook.
+func (t *Translator) getTLSCertificateFromExtensionRef(obj *unstructured.Unstructured, gwIR *ir.Xds, gatewayCtx *GatewayContext) ir.TLSCertificate {
+	return ir.TLSCertificate{
+		Name:         irTLSExtensionCertificateName(obj),
+		ExtensionRef: t.getOrCreateExtensionResource(gwIR, gatewayCtx, obj),
+	}
+}
+
+// irTLSExtensionCertificateName is the IR-level identifier for an extension-resolved
+// certificate. It is scoped by group and kind as well as namespace and name, so two
+// providers may use the same resource name without colliding. This is not the xDS secret
+// name -- that is chosen by the extension server.
+func irTLSExtensionCertificateName(obj *unstructured.Unstructured) string {
+	gvk := obj.GroupVersionKind()
+	return fmt.Sprintf("%s/%s/%s/%s", gvk.Group, gvk.Kind, obj.GetNamespace(), obj.GetName())
+}
+
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
-	tlsListenerConfigs := irTLSConfigs(config)
+func (t *Translator) irTLSConfigsForTCPListener(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
+	tlsListenerConfigs := t.irTLSConfigs(config, gwIR, gatewayCtx)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice
@@ -760,6 +792,18 @@ func getAncestorRefForListenerSetPolicy(lsNN types.NamespacedName, sectionName *
 		Kind:        KindPtr(resource.KindListenerSet),
 		Namespace:   NamespacePtr(lsNN.Namespace),
 		Name:        gwapiv1.ObjectName(lsNN.Name),
+		SectionName: sectionName,
+	}
+}
+
+// getAncestorRefForGatewayClassPolicy returns a GatewayClass as an ancestor reference for policy.
+// Used when a policy directly targets a GatewayClass, which is only meaningful when the Gateways
+// under that class are merged into a single xDS IR.
+func getAncestorRefForGatewayClassPolicy(name gwapiv1.ObjectName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
+		Group:       GroupPtr(gwapiv1.GroupName),
+		Kind:        KindPtr(resource.KindGatewayClass),
+		Name:        name,
 		SectionName: sectionName,
 	}
 }
@@ -1021,6 +1065,11 @@ func (g policyScopeGraph) GetWithDescendants(parent policyScope) sets.Set[policy
 	return result
 }
 
+// maxNamesListed bounds the names a condition message lists per kind. A policy over a large
+// fleet would otherwise push the message past the condition size limit, where truncation
+// cuts the tail; the first names are enough to point at what to fix.
+const maxNamesListed = 20
+
 // formatPolicyScopes builds a status message describing a set of scopes,
 // grouping entries by kind.
 //
@@ -1059,10 +1108,19 @@ func formatPolicyScopes(scopes sets.Set[policyScope]) string {
 	parts := make([]string, 0, len(order))
 	for _, o := range order {
 		if list, ok := byKind[o.Kind]; ok {
-			parts = append(parts, fmt.Sprintf("%s: %v", o.Label, list))
+			parts = append(parts, fmt.Sprintf("%s: %s", o.Label, formatNameList(list)))
 		}
 	}
 	return strings.Join(parts, " and ")
+}
+
+// formatNameList renders a sorted name list the way formatPolicyScopes always has, as
+// "[a b c]", keeping the first maxNamesListed names and counting the rest.
+func formatNameList(names []string) string {
+	if len(names) <= maxNamesListed {
+		return fmt.Sprintf("%v", names)
+	}
+	return fmt.Sprintf("%v and %d more", names[:maxNamesListed], len(names)-maxNamesListed)
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
@@ -1148,13 +1206,13 @@ type policyTargetReferenceWithSectionName struct {
 }
 
 func isRouteRule(target policyTargetReferenceWithSectionName) bool {
-	// If the target is not a gateway and the section name is not nil, then it's a route rule.
-	return target.Kind != resource.KindGateway && target.SectionName != nil
+	// If the target is not a gateway, gatewayclass, or listenerset and the section name is not nil, then it's a route rule.
+	return target.Kind != resource.KindGateway && target.Kind != resource.KindGatewayClass && target.Kind != resource.KindListenerSet && target.SectionName != nil
 }
 
 func isRoute(target policyTargetReferenceWithSectionName) bool {
-	// If the target is not a gateway and the section name is nil, then it's a route.
-	return target.Kind != resource.KindGateway && target.SectionName == nil
+	// If the target is not a gateway, gatewayclass, or listenerset and the section name is nil, then it's a route.
+	return target.Kind != resource.KindGateway && target.Kind != resource.KindGatewayClass && target.Kind != resource.KindListenerSet && target.SectionName == nil
 }
 
 func isGateway(target policyTargetReferenceWithSectionName) bool {
@@ -1167,15 +1225,32 @@ func isListener(target policyTargetReferenceWithSectionName) bool {
 	return target.Kind == resource.KindGateway && target.SectionName != nil
 }
 
-// isBackendTargetKind reports whether target's kind is Service, ServiceImport, or Backend -
-// i.e. the target is a backend, not a Gateway/ListenerSet/xRoute.
-func isBackendTargetKind(target policyTargetReferenceWithSectionName) bool {
-	switch target.Kind {
-	case gwapiv1.Kind(resource.KindService), gwapiv1.Kind(resource.KindServiceImport), gwapiv1.Kind(resource.KindBackend):
-		return true
-	default:
-		return false
+// backendGroupKinds are the group and kind pairs a BackendTrafficPolicy can target as a backend.
+var backendGroupKinds = []schema.GroupKind{
+	{Group: "", Kind: resource.KindService},
+	{Group: GroupMultiClusterService, Kind: resource.KindServiceImport},
+	{Group: egv1a1.GroupName, Kind: resource.KindBackend},
+}
+
+// isBackendGroupKind reports whether gk is a Service, ServiceImport, or Backend, i.e. a backend, not a
+// Gateway/ListenerSet/xRoute or an unrelated resource.
+func isBackendGroupKind(gk schema.GroupKind) bool {
+	return slices.Contains(backendGroupKinds, gk)
+}
+
+// backendGroupForKind maps a backend kind to its real group: a selector's group is pinned to
+// gateway.networking.k8s.io, so selectors are matched by kind and given the group the kind lives in.
+func backendGroupForKind(kind gwapiv1.Kind) (string, bool) {
+	for _, gk := range backendGroupKinds {
+		if gk.Kind == string(kind) {
+			return gk.Group, true
+		}
 	}
+	return "", false
+}
+
+func targetRefGroupKind(target policyTargetReferenceWithSectionName) schema.GroupKind {
+	return schema.GroupKind{Group: string(target.Group), Kind: string(target.Kind)}
 }
 
 func isListenerSet(target policyTargetReferenceWithSectionName) bool {
@@ -1562,7 +1637,8 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 		return new(egv1a1.IPv4)
 	case egv1a1.IPv6:
 		return new(egv1a1.IPv6)
-	case egv1a1.DualStack:
+	case egv1a1.DualStack, egv1a1.PreferDualStack:
+		// Both build the same proxy listeners. Only the proxy Service differs.
 		return new(egv1a1.DualStack)
 	default:
 		return nil
@@ -1635,4 +1711,27 @@ func getOverriddenTargetsMessageForRoute(
 		return fmt.Sprintf("these route rules: %v", routes)
 	}
 	return ""
+}
+
+// deprecatedField describes a deprecated field replaced by replacement, with no planned removal.
+func deprecatedField(replacement string) status.DeprecatedField {
+	return status.DeprecatedField{Replacement: replacement}
+}
+
+// deprecatedFieldScheduledForRemoval describes a deprecated field replaced by replacement that is
+// scheduled for removal in status.DeprecatedFieldsRemovalRelease.
+func deprecatedFieldScheduledForRemoval(replacement string) status.DeprecatedField {
+	return status.DeprecatedField{Replacement: replacement, RemovedIn: status.DeprecatedFieldsRemovalRelease}
+}
+
+// isExtensionSecretRef reports whether a listener certificate ref points at a kind
+// registered in ExtensionManager.SecretResources. Gateway API certificate refs carry
+// no version, so only group and kind are compared.
+func (t *Translator) isExtensionSecretRef(group, kind string) bool {
+	for _, gk := range t.ExtensionSecretGroupKinds {
+		if gk.Group == group && gk.Kind == kind {
+			return true
+		}
+	}
+	return false
 }
