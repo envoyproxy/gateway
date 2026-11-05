@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
@@ -323,6 +324,9 @@ func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	}
 }
 
+// isTransientError reports whether err is likely to clear up on its own, either an
+// API server response such as a timeout or throttling, or a connection-level failure
+// (refused, reset, dropped) that client-go returns without a Kubernetes status.
 func isTransientError(err error) bool {
 	return kerrors.IsServerTimeout(err) ||
 		kerrors.IsTimeout(err) ||
@@ -332,7 +336,12 @@ func isTransientError(err error) bool {
 		kerrors.IsInternalError(err) ||
 		kerrors.IsUnexpectedServerError(err) ||
 		errors.Is(err, context.Canceled) ||
-		errors.Is(err, context.DeadlineExceeded)
+		errors.Is(err, context.DeadlineExceeded) ||
+		utilnet.IsConnectionRefused(err) ||
+		utilnet.IsConnectionReset(err) ||
+		utilnet.IsHTTP2ConnectionLost(err) ||
+		utilnet.IsProbableEOF(err) ||
+		utilnet.IsTimeout(err)
 }
 
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
