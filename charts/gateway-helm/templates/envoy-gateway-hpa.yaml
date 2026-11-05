@@ -2,13 +2,13 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "eg.instanceName" $ }}
+  name: {{ include "eg.instanceName" . }}
   namespace: {{ include "eg.namespace" $ }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "eg.instanceName" $ }}
+    name: {{ include "eg.instanceName" . }}
   {{- if .Values.hpa.minReplicas }}
   minReplicas: {{ .Values.hpa.minReplicas }}
   {{- end }}

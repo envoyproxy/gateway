@@ -24,7 +24,7 @@ roleRef:
   name: '{{ include "eg.fullname" $ }}-infra-manager-tokenreview'
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.instanceName" $ }}'
+  name: '{{ include "eg.instanceName" . }}'
   namespace: {{ include "eg.namespace" $ }}
 {{ if $kube.watch.namespaces }}
 {{ if gt (len $kube.watch.namespaces) 0 }}

@@ -62,7 +62,7 @@ roleRef:
   name: {{ include "eg.fullname" . }}-envoy-gateway-role
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.instanceName" $ }}'
+  name: '{{ include "eg.instanceName" . }}'
   namespace: {{ include "eg.namespace" . }}
 {{ else }}
 ---
@@ -89,6 +89,6 @@ roleRef:
   name: {{ include "eg.fullname" . }}-envoy-gateway-role
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.instanceName" $ }}'
+  name: '{{ include "eg.instanceName" . }}'
   namespace: {{ include "eg.namespace" . }}
 {{ end }}

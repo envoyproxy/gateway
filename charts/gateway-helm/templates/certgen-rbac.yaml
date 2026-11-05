@@ -100,7 +100,7 @@ rules:
     resources:
       - mutatingwebhookconfigurations
     resourceNames:
-      - '{{ include "eg.instanceName" $ }}-topology-injector.{{ include "eg.namespace" . }}'
+      - '{{ include "eg.instanceName" . }}-topology-injector.{{ include "eg.namespace" . }}'
     verbs:
       - update
       - patch
