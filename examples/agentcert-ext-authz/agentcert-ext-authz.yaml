@@ -1,0 +1,121 @@
+# AgentCert ext_authz example.
+#
+# A generic external-authorization recipe: verify a calling agent's certificate
+# (an "AgentCert") and its live trust score on every request, using a SecurityPolicy
+# with extAuth pointing at an HTTP ext_authz sidecar. No core change, no custom
+# Envoy filter — the sidecar does the crypto and returns allow/deny plus verdict
+# headers that your own policy and logs can act on.
+#
+# Shadow mode by default: failOpen is true and the sidecar runs in observe mode
+# (TAG_MODE=shadow), so it decides and logs but never blocks. Flip to enforcement
+# only after you've watched real traffic.
+#
+# The verifier used here is the open-source agentcert-tag sidecar
+# (https://github.com/pdxlab/agentcert-tag, MIT). Any HTTP ext_authz service that
+# follows the same header contract works the same way.
+---
+# The external-authorization service: the agentcert-tag verify sidecar.
+# It exposes an Envoy ext_authz HTTP endpoint at /ext_authz, reads the caller's
+# cert from x-agent-cert* request headers, and returns the verdict + TrustScore
+# as x-agentcert-* response headers.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentcert-ext-authz
+  labels:
+    app: agentcert-ext-authz
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agentcert-ext-authz
+  template:
+    metadata:
+      labels:
+        app: agentcert-ext-authz
+    spec:
+      containers:
+      - name: sidecar
+        image: ghcr.io/pdxlab/agentcert-tag/sidecar:latest
+        env:
+        # shadow mode: decide + log, never block. Set to "enforce" to block.
+        - name: TAG_MODE
+          value: "shadow"
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentcert-ext-authz
+spec:
+  selector:
+    app: agentcert-ext-authz
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+# Route some traffic to a backend so there is something to protect.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: agentcert-demo
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /agent
+    backendRefs:
+    - name: backend
+      port: 3000
+---
+# Verify the AgentCert on every request to the route above.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: agentcert-ext-authz
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: agentcert-demo
+  extAuth:
+    # Shadow mode: if the verifier is unreachable or returns an error, let the
+    # request through. The sidecar itself also runs in shadow (TAG_MODE=shadow),
+    # so it returns allow on every request until you move to enforcement. Set to
+    # false for fail-closed once you flip the sidecar to TAG_MODE=enforce.
+    failOpen: true
+    # Forward the cert-carrying request headers to the verifier. By default the
+    # HTTP ext_authz filter only forwards Host, Method, Path, Content-Length and
+    # Authorization, so the x-agent-cert* headers must be listed explicitly.
+    headersToExtAuth:
+      - x-agent-cert           # base64 PEM leaf (the AgentCert)
+      - x-agent-cert-proof     # stapled proof-of-possession (for header carriage)
+      - x-agent-cert-carriage  # "header" (default) or "mtls"
+      - x-agent-id             # claimed ANS id, cross-checked to the cert SAN
+    http:
+      backendRefs:
+        - name: agentcert-ext-authz
+          port: 8080
+      # The sidecar matches exactly /ext_authz, so replace the request path for
+      # the authorization call (pathOverride) rather than appending to it (path).
+      pathOverride: /ext_authz
+      # Surface the verdict + TrustScore onto the upstream request so the backend
+      # (or a downstream policy / access log) can see and act on it.
+      headersToBackend:
+        - x-agentcert-verdict       # VERIFIED / REVOKED / UNVERIFIED / EXPIRED / ERROR
+        - x-agentcert-agent-id      # ans://<org>/<agent>/<env>
+        - x-agentcert-trustscore    # 0-1000 live TrustScore
+        - x-agentcert-tier          # Trusted / Caution / Untrusted / Unknown
+        - x-agentcert-decision      # allow / deny
+        - x-agentcert-shadow-would  # what enforce *would* do (shadow visibility)
