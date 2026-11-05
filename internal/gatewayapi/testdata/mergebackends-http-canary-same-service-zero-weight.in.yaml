@@ -1,0 +1,83 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends: {}
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: canary
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /canary
+          backendRefs:
+            - name: canary
+              port: 3000
+              weight: 50
+            - name: canary
+              port: 4000
+              weight: 0
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: canary
+      namespace: default
+    spec:
+      clusterIP: 10.11.12.13
+      ports:
+        - port: 3000
+          name: http-v1
+          protocol: TCP
+          targetPort: 3000
+        - port: 4000
+          name: http-v2
+          protocol: TCP
+          targetPort: 3000
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-canary
+      namespace: default
+      labels:
+        kubernetes.io/service-name: canary
+    addressType: IPv4
+    ports:
+      - name: http-v1
+        protocol: TCP
+        port: 3000
+      - name: http-v2
+        protocol: TCP
+        port: 3000
+    endpoints:
+      - addresses:
+          - "10.244.0.11"
+        conditions:
+          ready: true
