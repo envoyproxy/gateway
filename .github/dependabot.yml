@@ -77,10 +77,10 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
-      # Alloy v1.21.3 (chart 1.15.0) stalls e2e log shipping to Loki; remove once
+      # Alloy v1.21.3 (chart 1.14.4 and 1.15.0) stalls e2e log shipping to Loki; remove once
       # https://github.com/envoyproxy/gateway/issues/10525 is resolved.
       - dependency-name: "alloy"
-        versions: [">= 1.15.0"]
+        versions: [">= 1.14.4"]
     groups:
       helm:
         patterns:
