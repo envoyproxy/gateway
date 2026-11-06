@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -65,6 +66,10 @@ type HTTPFilterIR struct {
 	// DirectResponse filter so they can be stripped when the rule is later
 	// rejected and replaced with a 500.
 	directResponseAddedHeaders []ir.AddHeader
+
+	// configuredDirectResponse is true when DirectResponse came from an
+	// HTTPRouteFilter DirectResponse spec, not from an error sentinel 500.
+	configuredDirectResponse bool
 
 	Mirrors []*ir.MirrorPolicy
 
@@ -142,65 +147,69 @@ func (t *Translator) ProcessHTTPFilters(
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
 	var errs status.TypedErrorCollector
+	evalCtx := httpFiltersContext
 	for i := range filters {
 		filter := filters[i]
-		// Keep validating later filters after a DirectResponse so filter
-		// order cannot skip an invalid or incompatible filter. The same
-		// cumulative context is used so post-loop checks still see both
-		// the terminal DirectResponse and later filters such as RequestMirror.
+		// After a DirectResponse, later filters are still validated so order
+		// cannot skip an invalid or incompatible filter. Those later filters
+		// run against a cumulative shadow copy; the emitted context stays
+		// frozen for applyHTTPFiltersContextToIRRoute.
+		evalCtx = evalContextAfterDirectResponse(httpFiltersContext, evalCtx)
 		if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
-			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
+			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), evalCtx, err))
 			continue
 		}
 
 		switch filter.Type {
 		case gwapiv1.HTTPRouteFilterURLRewrite:
-			if err := t.processURLRewriteFilter(filter.URLRewrite, httpFiltersContext); err != nil {
+			if err := t.processURLRewriteFilter(filter.URLRewrite, evalCtx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestRedirect:
-			if err := t.processRedirectFilter(filter.RequestRedirect, httpFiltersContext); err != nil {
+			if err := t.processRedirectFilter(filter.RequestRedirect, evalCtx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestHeaderModifier:
-			err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext)
+			err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, evalCtx)
 			if err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterResponseHeaderModifier:
-			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext); err != nil {
+			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, evalCtx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestMirror:
-			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources, xdsIR); err != nil {
+			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, evalCtx, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterCORS:
-			t.processCORSFilter(filter.CORS, httpFiltersContext)
+			t.processCORSFilter(filter.CORS, evalCtx)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, evalCtx, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
-			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
+			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), evalCtx))
 		}
 	}
 
 	// Check for conflicts between RequestMirror and DirectResponse or RequestRedirect filters
-	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+	if evalCtx.configuredDirectResponse && len(evalCtx.Mirrors) > 0 {
 		// Clear the DirectResponse to prevent it from being configured in the IR
-		httpFiltersContext.DirectResponse = nil
-		httpFiltersContext.Mirrors = nil
+		clearDirectResponseAndMirrors(httpFiltersContext, evalCtx)
 
 		errs.Add(status.NewRouteStatusError(
 			errors.New(requestMirrorDirectResponseConflictMsg),
 			gwapiv1.RouteReasonIncompatibleFilters,
 		).WithType(gwapiv1.RouteConditionAccepted))
 	}
-	if httpFiltersContext.RedirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
-		// Clear the RedirectResponse to prevent it from being configured in the IR
+	if evalCtx.RedirectResponse != nil && len(evalCtx.Mirrors) > 0 {
 		httpFiltersContext.RedirectResponse = nil
 		httpFiltersContext.Mirrors = nil
+		if evalCtx != httpFiltersContext {
+			evalCtx.RedirectResponse = nil
+			evalCtx.Mirrors = nil
+		}
 
 		errs.Add(status.NewRouteStatusError(
 			errors.New(requestMirrorRedirectConflictMsg),
@@ -209,9 +218,9 @@ func (t *Translator) ProcessHTTPFilters(
 	}
 	// The transcoder changes the path to the gRPC method before the router, so the filters
 	// that use the path, like a redirect or a path rewrite, would not work as expected.
-	if httpFiltersContext.GRPCJSONTranscoder != nil {
+	if evalCtx.GRPCJSONTranscoder != nil {
 		// The mirrored request is also transcoded.
-		for _, mirror := range httpFiltersContext.Mirrors {
+		for _, mirror := range evalCtx.Mirrors {
 			for _, ds := range mirror.Destination.Settings {
 				if err := useGRPCUpstream(ds); err != nil {
 					errs.Add(err)
@@ -220,8 +229,8 @@ func (t *Translator) ProcessHTTPFilters(
 		}
 
 		var conflict string
-		switch rw := httpFiltersContext.URLRewrite; {
-		case httpFiltersContext.RedirectResponse != nil:
+		switch rw := evalCtx.URLRewrite; {
+		case evalCtx.RedirectResponse != nil:
 			conflict = "RequestRedirect"
 		case rw != nil && rw.Path != nil:
 			conflict = "URLRewrite with a path modifier"
@@ -234,9 +243,9 @@ func (t *Translator) ProcessHTTPFilters(
 				fmt.Errorf(grpcJSONTranscoderConflictMsg, conflict),
 				gwapiv1.RouteReasonIncompatibleFilters,
 			).WithType(gwapiv1.RouteConditionAccepted))
-		// The transcoder is not enabled for a direct response.
-		// Note: an invalid filter also sets a DirectResponse, so only check it if there is no error.
-		case httpFiltersContext.DirectResponse != nil && errs.Empty():
+		// The transcoder is not enabled for a configured direct response.
+		// Error-sentinel 500s are not a configured DirectResponse.
+		case evalCtx.configuredDirectResponse && errs.Empty():
 			errs.Add(status.NewRouteStatusError(
 				errors.New(grpcJSONTranscoderDirectResponseConflictMsg),
 				gwapiv1.RouteReasonIncompatibleFilters,
@@ -244,8 +253,8 @@ func (t *Translator) ProcessHTTPFilters(
 		}
 	}
 
-	if httpFiltersContext.RequestMirrorModifier != nil && len(httpFiltersContext.Mirrors) > 0 {
-		if err := t.applyRequestMirrorModifier(httpFiltersContext); err != nil {
+	if evalCtx.RequestMirrorModifier != nil && len(evalCtx.Mirrors) > 0 {
+		if err := t.applyRequestMirrorModifier(evalCtx); err != nil {
 			errs.Add(err)
 		}
 	}
@@ -269,42 +278,43 @@ func (t *Translator) ProcessGRPCFilters(
 	}
 
 	var errs status.TypedErrorCollector
+	evalCtx := httpFiltersContext
 	for i := range filters {
 		filter := filters[i]
-		// Keep validating later filters after a DirectResponse so filter
-		// order cannot skip an invalid or incompatible filter. The same
-		// cumulative context is used so post-loop checks still see both
-		// the terminal DirectResponse and later filters such as RequestMirror.
+		// After a DirectResponse, later filters are still validated so order
+		// cannot skip an invalid or incompatible filter. Those later filters
+		// run against a cumulative shadow copy; the emitted context stays
+		// frozen for applyHTTPFiltersContextToIRRoute.
+		evalCtx = evalContextAfterDirectResponse(httpFiltersContext, evalCtx)
 		if err := ValidateGRPCRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
-			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
+			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), evalCtx, err))
 			continue
 		}
 
 		switch filter.Type {
 		case gwapiv1.GRPCRouteFilterRequestHeaderModifier:
-			if err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext); err != nil {
+			if err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, evalCtx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
-			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext); err != nil {
+			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, evalCtx); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources, xdsIR); err != nil {
+			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, evalCtx, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, evalCtx, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
-			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
+			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), evalCtx))
 		}
 	}
 
-	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
-		httpFiltersContext.DirectResponse = nil
-		httpFiltersContext.Mirrors = nil
+	if evalCtx.configuredDirectResponse && len(evalCtx.Mirrors) > 0 {
+		clearDirectResponseAndMirrors(httpFiltersContext, evalCtx)
 
 		errs.Add(status.NewRouteStatusError(
 			errors.New(requestMirrorDirectResponseConflictMsg),
@@ -317,18 +327,21 @@ func (t *Translator) ProcessGRPCFilters(
 	// produce. Envoy maps the status to gRPC OK and emits a trailers-only reply with
 	// no message, which unary clients treat as an invalid response. Only non-2xx
 	// (deny/error) direct responses are supported for GRPCRoute.
-	if dr := httpFiltersContext.DirectResponse; dr != nil && dr.StatusCode != nil &&
-		*dr.StatusCode >= 200 && *dr.StatusCode < 300 {
-		httpFiltersContext.DirectResponse = nil
+	if evalCtx.configuredDirectResponse {
+		if dr := evalCtx.DirectResponse; dr != nil && dr.StatusCode != nil &&
+			*dr.StatusCode >= 200 && *dr.StatusCode < 300 {
+			httpFiltersContext.DirectResponse = nil
+			evalCtx.DirectResponse = nil
 
-		errs.Add(status.NewRouteStatusError(
-			errors.New(grpcDirectResponse2xxMsg),
-			gwapiv1.RouteReasonUnsupportedValue,
-		).WithType(gwapiv1.RouteConditionAccepted))
+			errs.Add(status.NewRouteStatusError(
+				errors.New(grpcDirectResponse2xxMsg),
+				gwapiv1.RouteReasonUnsupportedValue,
+			).WithType(gwapiv1.RouteConditionAccepted))
+		}
 	}
 
-	if httpFiltersContext.RequestMirrorModifier != nil && len(httpFiltersContext.Mirrors) > 0 {
-		if err := t.applyRequestMirrorModifier(httpFiltersContext); err != nil {
+	if evalCtx.RequestMirrorModifier != nil && len(evalCtx.Mirrors) > 0 {
+		if err := t.applyRequestMirrorModifier(evalCtx); err != nil {
 			errs.Add(err)
 		}
 	}
@@ -1075,6 +1088,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						})
 					}
 					filterContext.DirectResponse = dr
+					filterContext.configuredDirectResponse = true
 
 					// Add response headers from the direct response filter.
 					// Headers must be added to the filter context to get applied to the response.
@@ -1388,25 +1402,92 @@ func appendDirectResponseHeader(filterContext *HTTPFiltersContext, header ir.Add
 	filterContext.directResponseAddedHeaders = append(filterContext.directResponseAddedHeaders, header)
 }
 
+func addHeaderEqual(a, b ir.AddHeader) bool {
+	if !strings.EqualFold(a.Name, b.Name) || a.Append != b.Append || a.AddIfAbsent != b.AddIfAbsent {
+		return false
+	}
+	if len(a.Value) != len(b.Value) {
+		return false
+	}
+	for i := range a.Value {
+		if a.Value[i] != b.Value[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func removeAddedHeaders(from, remove []ir.AddHeader) []ir.AddHeader {
 	if len(from) == 0 || len(remove) == 0 {
 		return from
 	}
-	drop := make(map[string]struct{}, len(remove))
-	for i := range remove {
-		drop[strings.ToLower(remove[i].Name)] = struct{}{}
+	keep := make([]bool, len(from))
+	for i := range keep {
+		keep[i] = true
+	}
+	// Remove one matching occurrence per tracked DirectResponse header,
+	// preferring the last match so an earlier same-name modifier is kept.
+	for _, r := range remove {
+		for i := len(from) - 1; i >= 0; i-- {
+			if keep[i] && addHeaderEqual(from[i], r) {
+				keep[i] = false
+				break
+			}
+		}
 	}
 	out := make([]ir.AddHeader, 0, len(from))
 	for i := range from {
-		if _, ok := drop[strings.ToLower(from[i].Name)]; ok {
-			continue
+		if keep[i] {
+			out = append(out, from[i])
 		}
-		out = append(out, from[i])
 	}
 	if len(out) == 0 {
 		return nil
 	}
 	return out
+}
+
+// evalContextAfterDirectResponse returns a cumulative shadow copy once the
+// emitted context has a DirectResponse, so later filters can still be
+// validated without changing the IR that applyHTTPFiltersContextToIRRoute sees.
+func evalContextAfterDirectResponse(emitted, eval *HTTPFiltersContext) *HTTPFiltersContext {
+	if emitted.DirectResponse == nil || eval != emitted {
+		return eval
+	}
+	return cloneHTTPFiltersContext(emitted)
+}
+
+func cloneHTTPFiltersContext(ctx *HTTPFiltersContext) *HTTPFiltersContext {
+	irCopy := *ctx.HTTPFilterIR
+	irCopy.AddRequestHeaders = slices.Clone(ctx.AddRequestHeaders)
+	irCopy.RemoveRequestHeaders = slices.Clone(ctx.RemoveRequestHeaders)
+	irCopy.AddResponseHeaders = slices.Clone(ctx.AddResponseHeaders)
+	irCopy.RemoveResponseHeaders = slices.Clone(ctx.RemoveResponseHeaders)
+	irCopy.directResponseAddedHeaders = slices.Clone(ctx.directResponseAddedHeaders)
+	irCopy.Mirrors = slices.Clone(ctx.Mirrors)
+	irCopy.ExtensionRefs = slices.Clone(ctx.ExtensionRefs)
+	irCopy.Matches = slices.Clone(ctx.Matches)
+	return &HTTPFiltersContext{
+		ParentRef:    ctx.ParentRef,
+		Route:        ctx.Route,
+		RuleIdx:      ctx.RuleIdx,
+		HTTPFilterIR: &irCopy,
+	}
+}
+
+func clearDirectResponseAndMirrors(ctxs ...*HTTPFiltersContext) {
+	seen := make(map[*HTTPFiltersContext]struct{}, len(ctxs))
+	for _, ctx := range ctxs {
+		if ctx == nil {
+			continue
+		}
+		if _, ok := seen[ctx]; ok {
+			continue
+		}
+		seen[ctx] = struct{}{}
+		ctx.DirectResponse = nil
+		ctx.Mirrors = nil
+	}
 }
 
 // applyInvalidFilterDirectResponse replaces any redirect or DirectResponse with a

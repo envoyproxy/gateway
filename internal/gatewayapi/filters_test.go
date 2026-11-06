@@ -29,3 +29,31 @@ func TestRemoveAddedHeaders(t *testing.T) {
 	require.Nil(t, removeAddedHeaders(from[:2], remove))
 	require.Equal(t, from, removeAddedHeaders(from, nil))
 }
+
+func TestRemoveAddedHeadersKeepsEarlierSameNameModifier(t *testing.T) {
+	from := []ir.AddHeader{
+		{Name: "Set-Cookie", Value: []string{"keep=1"}},
+		{Name: "Set-Cookie", Value: []string{"dropped=1"}},
+		{Name: "Content-Type", Value: []string{"text/plain"}},
+	}
+	remove := []ir.AddHeader{
+		{Name: "Set-Cookie", Value: []string{"dropped=1"}},
+		{Name: "Content-Type", Value: []string{"text/plain"}},
+	}
+
+	got := removeAddedHeaders(from, remove)
+	require.Equal(t, []ir.AddHeader{{Name: "Set-Cookie", Value: []string{"keep=1"}}}, got)
+}
+
+func TestRemoveAddedHeadersRemovesLastIdenticalOccurrence(t *testing.T) {
+	from := []ir.AddHeader{
+		{Name: "X-Foo", Value: []string{"same"}},
+		{Name: "X-Foo", Value: []string{"same"}},
+	}
+	remove := []ir.AddHeader{
+		{Name: "X-Foo", Value: []string{"same"}},
+	}
+
+	got := removeAddedHeaders(from, remove)
+	require.Equal(t, []ir.AddHeader{{Name: "X-Foo", Value: []string{"same"}}}, got)
+}
