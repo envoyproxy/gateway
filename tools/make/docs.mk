@@ -65,7 +65,7 @@ sync-benchmark-dashboard: ## Sync release benchmark dashboard data and rebuild t
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Copy the current release docs to the docs folder
 	@$(LOG_TARGET)
-	@CURRENT_RELEASE=$(shell ls $(ROOT_DIR)/site/content/en | grep -E '^v[0-9]+\.[0-9]+$$' | sort | tail -n 1); \
+	@CURRENT_RELEASE=$(shell ls $(ROOT_DIR)/site/content/en | grep -E '^v[0-9]+\.[0-9]+$$' | sort -V | tail -n 1); \
 	echo "Copying the current release $$CURRENT_RELEASE docs to the docs folder"; \
 	rm -rf $(ROOT_DIR)/site/content/en/docs; \
 	mkdir -p $(ROOT_DIR)/site/content/en/docs; \
