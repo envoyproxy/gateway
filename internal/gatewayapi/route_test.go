@@ -1041,20 +1041,37 @@ func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
 		require.NotEqual(t, cookieName(t, httpRoute("default", "route-1"), 0), cookieName(t, grpcRoute("default", "route-1"), 0))
 	})
 
-	t.Run("explicit sessionName is used verbatim", func(t *testing.T) {
-		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new("my-session")}, httpRoute("default", "route-1"), 0)
+	t.Run("explicit cookie name is used verbatim", func(t *testing.T) {
+		name := gwapiv1.CookieName("my-session")
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{Cookie: &gwapiv1.CookieConfig{Name: &name}}, httpRoute("default", "route-1"), 0)
 		require.Nil(t, err)
 		require.Equal(t, "my-session", sp.Cookie.Name)
 	})
 
-	t.Run("empty explicit sessionName is rejected", func(t *testing.T) {
-		for _, route := range []RouteContext{httpRoute("default", "route-1"), grpcRoute("default", "route-1")} {
-			for _, spType := range []gwapiv1.SessionPersistenceType{gwapiv1.CookieBasedSessionPersistence, gwapiv1.HeaderBasedSessionPersistence} {
-				sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new(""), Type: new(spType)}, route, 0)
-				require.Nil(t, sp)
-				require.NotNil(t, err)
-				require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, err.Reason())
-			}
-		}
+	t.Run("empty explicit cookie name is rejected", func(t *testing.T) {
+		name := gwapiv1.CookieName("")
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{Cookie: &gwapiv1.CookieConfig{Name: &name}}, httpRoute("default", "route-1"), 0)
+		require.Nil(t, sp)
+		require.NotNil(t, err)
+		require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, err.Reason())
+	})
+
+	t.Run("empty header name is rejected", func(t *testing.T) {
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{
+			Type:   new(gwapiv1.HeaderBasedSessionPersistence),
+			Header: &gwapiv1.HeaderConfig{Name: gwapiv1.HeaderName("")},
+		}, httpRoute("default", "route-1"), 0)
+		require.Nil(t, sp)
+		require.NotNil(t, err)
+		require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, err.Reason())
+	})
+
+	t.Run("explicit header name is used verbatim", func(t *testing.T) {
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{
+			Type:   new(gwapiv1.HeaderBasedSessionPersistence),
+			Header: &gwapiv1.HeaderConfig{Name: gwapiv1.HeaderName("x-session")},
+		}, httpRoute("default", "route-1"), 0)
+		require.Nil(t, err)
+		require.Equal(t, "x-session", sp.Header.Name)
 	})
 }
