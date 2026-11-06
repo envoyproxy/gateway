@@ -600,3 +600,33 @@ func createDirIfNotExist(dir string) (err error) {
 	}
 	return nil
 }
+
+// configChurnQueries measure the cost of applying the route burst, before any traffic is sent.
+// Envoy is created fresh for each test, so its totals cover only this burst; Envoy Gateway
+// was already running, so its CPU is taken as an increase over the burst window.
+var configChurnQueries = []struct{ name, query string }{
+	{"envoy_cpu_seconds", `container_cpu_usage_seconds_total{namespace="envoy-gateway-system", container="envoy"}`},
+	{"envoy_active_clusters", `envoy_cluster_manager_active_clusters`},
+	{"envoy_cluster_added", `envoy_cluster_manager_cluster_added`},
+	{"envoy_cluster_modified", `envoy_cluster_manager_cluster_modified`},
+	{"envoy_cds_update_success", `envoy_cluster_manager_cds_update_success`},
+	{"envoy_lds_update_success", `envoy_listener_manager_lds_update_success`},
+	{"envoy_eds_update_success", `envoy_cluster_update_success`},
+	{"eg_cpu_seconds", `increase(process_cpu_seconds_total{namespace="envoy-gateway-system", control_plane="envoy-gateway"}[%DURATIONs])`},
+	{"eg_xds_snapshot_updates", `increase(xds_snapshot_update_total[%DURATIONs])`},
+}
+
+// LogConfigChurn waits for one more Prometheus scrape, then logs the config churn metrics
+// collected since the route burst started. Query failures are logged, not fatal.
+func (b *BenchmarkTestSuite) LogConfigChurn(t *testing.T, ctx context.Context, burstStart time.Time) {
+	time.Sleep(45 * time.Second)
+	window := fmt.Sprintf("%d", int(time.Since(burstStart).Seconds()))
+	for _, q := range configChurnQueries {
+		v, err := b.promClient.QuerySum(ctx, strings.ReplaceAll(q.query, DurationFormatter, window))
+		if err != nil {
+			tlog.Logf(t, "CONFIG_CHURN %s error: %v", q.name, err)
+			continue
+		}
+		tlog.Logf(t, "CONFIG_CHURN %s=%.2f", q.name, v)
+	}
+}

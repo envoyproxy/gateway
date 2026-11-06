@@ -123,6 +123,8 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
 						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
 
+					bSuite.LogConfigChurn(t, ctx, startTime)
+
 					// Run benchmark test at different scale.
 					jobName := fmt.Sprintf("scale-up-httproutes-%d", scale)
 					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), rps, startTime)
