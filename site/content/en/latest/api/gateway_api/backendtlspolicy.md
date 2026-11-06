@@ -119,7 +119,7 @@ Also note:
 
 #### Subject Alternative Names
 
-This field was added to BackendTLSPolicy in `v1.2.0`
+This feature is part of extended support, and requires your implementation to support the feature `BackendTLSPolicySANValidation`. For more information on support levels, refer to our [conformance guide](https://gateway-api.sigs.k8s.io/docs/concepts/conformance/).
 
 The subjectAltNames field enables basic mutual TLS configuration between Gateways and backends, as well as the optional use of SPIFFE. When subjectAltNames is specified, the certificate served by the backend must have at least one Subject Alternative Name matching one of the specified values. This is particularly useful for SPIFFE implementations where URI-based SANs may not be valid SNIs.  
 Subject Alternative Names may contain one of either a Hostname or URI field, and must contain a Type specifying whether Hostname or URI is chosen.  
@@ -129,8 +129,6 @@ Subject Alternative Names may contain one of either a Hostname or URI field, and
 - URI: URI format (e.g., SPIFFE ID)
 
 #### TLS Options
-
-This field was added to BackendTLSPolicy in `v1.2.0`
 
 The options field allows specification of implementation-specific TLS configurations. This can include:  
 
@@ -167,12 +165,12 @@ Status defines the observed state of the BackendTLSPolicy and is not user-config
 way you do for other Gateway API objects to verify correct operation.  Note that the status in BackendTLSPolicy
 uses `PolicyAncestorStatus` to allow you to know which parentReference set that particular status.
 
-[backendtlspolicy]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#backendtlspolicy
-[validation]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#backendtlspolicyvalidation
-[caCertificateRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#localobjectreference
-[wellKnownCACertificates]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#localobjectreference
-[hostname]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#precisehostname
+[backendtlspolicy]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#backendtlspolicy
+[validation]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#backendtlspolicyvalidation
+[caCertificateRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#localobjectreference
+[wellKnownCACertificates]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#localobjectreference
+[hostname]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#precisehostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[targetRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#localpolicytargetreferencewithsectionname
-[subjectAltNames]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#subjectaltname
-[options]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#backendtlspolicyspec
+[targetRefs]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#localpolicytargetreferencewithsectionname
+[subjectAltNames]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#subjectaltname
+[options]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#backendtlspolicyspec

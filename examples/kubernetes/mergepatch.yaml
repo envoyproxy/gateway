@@ -78,7 +78,7 @@ spec:
     spec:
       serviceAccountName: backend
       containers:
-        - image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
+        - image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.2.0
           imagePullPolicy: IfNotPresent
           name: backend
           ports:

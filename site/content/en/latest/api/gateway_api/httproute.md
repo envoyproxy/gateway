@@ -454,14 +454,14 @@ Multiple HTTPRoutes can be attached to a single Gateway resource. Importantly,
 only one Route rule may match each request. For more information on how conflict
 resolution applies to merging, refer to the [API specification][httprouterule].
 
-[httproute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#httproute
-[httprouterule]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#httprouterule
-[hostname]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#hostname
+[httproute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#httproute
+[httprouterule]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#httprouterule
+[hostname]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#hostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[matches]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#httproutematch
-[filters]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#httproutefilter
-[backendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#httpbackendref
-[parentRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#parentreference
-[timeouts]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#httproutetimeouts
+[matches]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#httproutematch
+[filters]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#httproutefilter
+[backendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#httpbackendref
+[parentRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#parentreference
+[timeouts]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#httproutetimeouts
 [appProtocol]: https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol
-[sectionName]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#sectionname
+[sectionName]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#sectionname
