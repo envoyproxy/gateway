@@ -1085,6 +1085,13 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					if filterContext.Route != nil &&
 						filterContext.Route.GetRouteType() == resource.KindGRPCRoute &&
 						dr.StatusCode != nil && *dr.StatusCode >= 200 && *dr.StatusCode < 300 {
+						// Install an error-sentinel 500 so later filters run on the
+						// shadow copy. Returning without DirectResponse would leave
+						// the emitted context unfrozen; a following cookie match
+						// would then narrow the invalid-rule 500.
+						filterContext.DirectResponse = &ir.CustomResponse{
+							StatusCode: new(uint32(500)),
+						}
 						return status.NewRouteStatusError(
 							errors.New(grpcDirectResponse2xxMsg),
 							gwapiv1.RouteReasonUnsupportedValue,
