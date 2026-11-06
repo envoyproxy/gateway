@@ -27,6 +27,8 @@ BENCHMARK_BASELINE_RPS ?= 100
 BENCHMARK_CONNECTIONS ?= 100
 BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
+# Set to true to run the benchmark with EnvoyProxy mergeBackends enabled.
+BENCHMARK_MERGE_BACKENDS ?= false
 
 # Benchmark toggles
 # Disable PNG rendering by default to speed up CI
@@ -370,6 +372,9 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
+	@if [ "$(BENCHMARK_MERGE_BACKENDS)" = "true" ]; then \
+		kubectl patch envoyproxy proxy-config -n envoy-gateway-system --type merge -p '{"spec":{"mergeBackends":{}}}'; \
+	fi
 	cd test && go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./benchmark --baseline-rps=$(BENCHMARK_BASELINE_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi

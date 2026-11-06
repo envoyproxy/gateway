@@ -333,6 +333,14 @@ jobs:
     # There's a different workflow for benchmark-test on push.
     # So we need to check if this is a pull request and changes.
     if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - mergeBackends: "false"
+          reportName: benchmark_report
+        - mergeBackends: "true"
+          reportName: benchmark_report_merge_backends
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -358,13 +366,14 @@ jobs:
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report
         BENCHMARK_RENDER_PNG: "false"
+        BENCHMARK_MERGE_BACKENDS: ${{ matrix.mergeBackends }}
         SKIP_GO_BUILD: "true"
       run: make benchmark
 
     - name: Upload Benchmark report
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
-        name: benchmark_report
+        name: ${{ matrix.reportName }}
         path: ./test/benchmark/benchmark_report/
 
   resilience-test:
