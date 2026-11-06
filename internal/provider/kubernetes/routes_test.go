@@ -714,7 +714,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				objs = append(objs, filter)
 			}
 			r.client = fakeclient.NewClientBuilder().
-				WithScheme(envoygateway.GetScheme()).
+				WithScheme(newTestScheme(tc.extensionAPIGroups...)).
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
 				Build()
@@ -1020,7 +1020,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				objs = append(objs, filter)
 			}
 			r.client = fakeclient.NewClientBuilder().
-				WithScheme(envoygateway.GetScheme()).
+				WithScheme(newTestScheme(tc.extensionAPIGroups...)).
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
 				WithIndex(&gwapiv1.GRPCRoute{}, listenerSetGRPCRouteIndex, listenerSetGRPCRouteIndexFunc).
