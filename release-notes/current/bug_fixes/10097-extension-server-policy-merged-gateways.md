@@ -1,0 +1,1 @@
+Fixed ExtensionServerPolicies that target a Gateway being attached to the listeners of every Gateway in the GatewayClass when `mergeGateways` is enabled, and `sectionName` matching same-named listeners on other Gateways.
