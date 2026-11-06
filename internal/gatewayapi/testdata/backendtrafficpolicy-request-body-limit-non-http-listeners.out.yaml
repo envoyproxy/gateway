@@ -1,0 +1,686 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-listenerset-tcp
+    namespace: envoy-gateway
+  spec:
+    requestBodyLimit:
+      maxSize: 1Mi
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+      sectionName: ext-tcp
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: ext-listeners
+        namespace: envoy-gateway
+        sectionName: ext-tcp
+      conditions:
+      - lastTransitionTime: null
+        message: requestBodyLimit has no effect on TCP listeners
+        reason: UnsupportedField
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-listenerset
+    namespace: envoy-gateway
+  spec:
+    requestBodyLimit:
+      maxSize: 1Mi
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: ext-listeners
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these listenerset listeners: [envoy-gateway/ext-listeners/ext-tcp]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-gateway-tcp
+    namespace: envoy-gateway
+  spec:
+    requestBodyLimit:
+      maxSize: 1Mi
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-mixed
+      sectionName: tcp
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: tcp
+      conditions:
+      - lastTransitionTime: null
+        message: requestBodyLimit has no effect on TCP listeners
+        reason: UnsupportedField
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-gateway-udp
+    namespace: envoy-gateway
+  spec:
+    requestBodyLimit:
+      maxSize: 1Mi
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-mixed
+      sectionName: udp
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: udp
+      conditions:
+      - lastTransitionTime: null
+        message: requestBodyLimit has no effect on UDP listeners
+        reason: UnsupportedField
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-gateway-tls
+    namespace: envoy-gateway
+  spec:
+    requestBodyLimit:
+      maxSize: 1Mi
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-mixed
+      sectionName: tls
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: tls
+      conditions:
+      - lastTransitionTime: null
+        message: requestBodyLimit has no effect on TLS listeners
+        reason: UnsupportedField
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-gateway-http
+    namespace: envoy-gateway
+  spec:
+    requestBodyLimit:
+      maxSize: 1Mi
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-mixed
+      sectionName: http
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-gateway-tcp-only
+    namespace: envoy-gateway
+  spec:
+    requestBodyLimit:
+      maxSize: 1Mi
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-tcp-only
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-tcp-only
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: requestBodyLimit has no effect on TCP listeners
+        reason: UnsupportedField
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-mixed
+    namespace: envoy-gateway
+  spec:
+    allowedListeners:
+      namespaces:
+        from: All
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: TCPRoute
+      name: tcp
+      port: 8089
+      protocol: TCP
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
+      name: udp
+      port: 8162
+      protocol: UDP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: tls
+      port: 8443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+  status:
+    attachedListenerSets: 1
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: udp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-tcp-only
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: TCPRoute
+      name: tcp
+      port: 8089
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+infraIR:
+  envoy-gateway/gateway-mixed:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway-mixed/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      - name: envoy-gateway/gateway-mixed/tcp
+        ports:
+        - containerPort: 8089
+          name: tcp-8089
+          protocol: TCP
+          servicePort: 8089
+      - name: envoy-gateway/gateway-mixed/udp
+        ports:
+        - containerPort: 8162
+          name: udp-8162
+          protocol: UDP
+          servicePort: 8162
+      - name: envoy-gateway/gateway-mixed/tls
+        ports:
+        - containerPort: 8443
+          name: tls-8443
+          protocol: TLS
+          servicePort: 8443
+      - name: envoy-gateway/gateway-mixed/envoy-gateway/ext-listeners/ext-http
+        ports:
+        - containerPort: 8081
+          name: http-8081
+          protocol: HTTP
+          servicePort: 8081
+      - name: envoy-gateway/gateway-mixed/envoy-gateway/ext-listeners/ext-tcp
+        ports:
+        - containerPort: 9000
+          name: tcp-9000
+          protocol: TCP
+          servicePort: 9000
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-mixed
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-mixed
+      namespace: envoy-gateway-system
+  envoy-gateway/gateway-tcp-only:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway-tcp-only/tcp
+        ports:
+        - containerPort: 8089
+          name: tcp-8089
+          protocol: TCP
+          servicePort: 8089
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-tcp-only
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-tcp-only
+      namespace: envoy-gateway-system
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: ext-listeners
+    namespace: envoy-gateway
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: ext-http
+      port: 8081
+      protocol: HTTP
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: TCPRoute
+      name: ext-tcp
+      port: 9000
+      protocol: TCP
+    parentRef:
+      name: gateway-mixed
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: ext-http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: ext-tcp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+xdsIR:
+  envoy-gateway/gateway-mixed:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-mixed-94aaf8eb
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-mixed
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-mixed-94aaf8eb
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-mixed
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-mixed/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      externalPort: 8081
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: ext-http
+      name: envoy-gateway/gateway-mixed/envoy-gateway/ext-listeners/ext-http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8081
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 8089
+      metadata:
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: tcp
+      name: envoy-gateway/gateway-mixed/tcp
+      port: 8089
+    - address: 0.0.0.0
+      externalPort: 8443
+      metadata:
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: tls
+      name: envoy-gateway/gateway-mixed/tls
+      port: 8443
+    - address: 0.0.0.0
+      externalPort: 9000
+      metadata:
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: ext-tcp
+      name: envoy-gateway/gateway-mixed/envoy-gateway/ext-listeners/ext-tcp
+      port: 9000
+    udp:
+    - address: 0.0.0.0
+      externalPort: 8162
+      metadata:
+        kind: Gateway
+        name: gateway-mixed
+        namespace: envoy-gateway
+        sectionName: udp
+      name: envoy-gateway/gateway-mixed/udp
+      port: 8162
+  envoy-gateway/gateway-tcp-only:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-tcp-only-102935e7
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-tcp-only
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-tcp-only-102935e7
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tcp-only
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 8089
+      metadata:
+        kind: Gateway
+        name: gateway-tcp-only
+        namespace: envoy-gateway
+        sectionName: tcp
+      name: envoy-gateway/gateway-tcp-only/tcp
+      port: 8089

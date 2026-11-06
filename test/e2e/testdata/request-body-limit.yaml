@@ -1,0 +1,55 @@
+# This manifest exercises the BackendTrafficPolicy requestBodyLimit field.
+#
+# - request-body-limit sets requestBodyLimit with a 64Ki maxSize. Envoy enforces it with the
+#   body size limit filter, which rejects a larger body with HTTP 413 without buffering it:
+#   immediately when the Content-Length header announces a larger body, otherwise once the
+#   streamed body passes the limit.
+# - request-body-limit-default has no policy, so the same body is streamed to the backend (200).
+#   Nothing buffers it, so the default per-connection buffer limit does not reject it either.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: request-body-limit
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /request-body-limit
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: request-body-limit-default
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /request-body-limit-default
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: request-body-limit
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: request-body-limit
+  requestBodyLimit:
+    maxSize: 64Ki

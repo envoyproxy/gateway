@@ -3426,6 +3426,35 @@ spec:
                     - Local
                     type: string
                 type: object
+              requestBodyLimit:
+                description: |-
+                  RequestBodyLimit caps the size of the request body on a route without buffering it.
+                  A request whose body exceeds the limit is rejected with HTTP 413 Content Too Large or its stream is
+                  reset if the response has already started.
+
+                  The limit also counts the payload of WebSocket connections and gRPC streams, so do not set it on
+                  routes that carry long-lived streams.
+                properties:
+                  maxSize:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxSize is the maximum request body size. A request whose body is larger is rejected; see
+                      requestBodyLimit for what the client receives. When the Content-Length header announces a larger
+                      body, the request is rejected before any body byte is read.
+
+                      Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                    x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: maxSize must be greater than 0
+                      rule: type(self) == string || self > 0
+                required:
+                - maxSize
+                type: object
               requestBuffer:
                 description: |-
                   RequestBuffer configures how much of a request body Envoy is allowed to buffer for a route,
@@ -3436,6 +3465,7 @@ spec:
                   body size, depends on the mode: see the mode field.
 
                   Buffering increases memory usage for Envoy that should be accounted for in your deployment settings.
+                  To cap the request body size without buffering it, use requestBodyLimit instead.
                 properties:
                   limit:
                     allOf:
@@ -4687,10 +4717,12 @@ spec:
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.httpUpgrade)'
-            - message: requestBuffer is not allowed when targeting a backend
+            - message: requestBuffer and requestBodyLimit are not allowed when targeting
+                a backend
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
-                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.requestBuffer)'
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || (!has(self.requestBuffer)
+                && !has(self.requestBodyLimit))'
             - message: telemetry is not allowed when targeting a backend
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
@@ -13072,6 +13104,8 @@ spec:
 
                   - envoy.filters.http.header_mutation
 
+                  - envoy.filters.http.body_size_limit
+
                   - envoy.filters.http.ext_authz
 
                   - envoy.filters.http.api_key_auth
@@ -13136,6 +13170,7 @@ spec:
                       - envoy.filters.http.cors
                       - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -13171,6 +13206,7 @@ spec:
                       - envoy.filters.http.cors
                       - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -13204,6 +13240,7 @@ spec:
                       - envoy.filters.http.cors
                       - envoy.filters.http.csrf
                       - envoy.filters.http.header_mutation
+                      - envoy.filters.http.body_size_limit
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
