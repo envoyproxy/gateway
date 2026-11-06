@@ -196,6 +196,10 @@ jobs:
           gwapiChannel: experimental
         - version: v1.37.0
           ipFamily: ipv4
+          profile: endpoint-fast-path
+          gwapiChannel: experimental
+        - version: v1.37.0
+          ipFamily: ipv4
           profile: watch-namespaces
           gwapiChannel: experimental
         - version: v1.37.0

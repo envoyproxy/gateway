@@ -1,0 +1,45 @@
+http:
+- name: listener
+  address: 0.0.0.0
+  port: 10080
+  hostnames: ["*"]
+  routes:
+  - name: route
+    hostname: "*"
+    destination:
+      name: orders
+      settings:
+      - name: orders/backend/0
+        addressType: IP
+        protocol: HTTP
+        weight: 1
+        endpoints:
+        - host: 10.0.0.1
+          port: 8080
+        endpointSource:
+          backend:
+            kind: Service
+            namespace: default
+            name: orders
+            uid: orders-uid
+          portName: http
+          protocol: TCP
+          revision: 1
+envoyPatchPolicies:
+- name: endpoint-weight
+  namespace: default
+  generation: 1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        namespace: default
+        name: gateway
+  jsonPatches:
+  - type: type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+    name: orders
+    operation:
+      op: replace
+      path: /endpoints/0/load_balancing_weight
+      value: 9
