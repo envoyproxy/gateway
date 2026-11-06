@@ -1,1 +1,0 @@
-Fixed a BackendTrafficPolicy's cluster-scoped settings (circuit breaker, load balancer, timeout, etc.) failing to apply to merged backend clusters whenever an unrelated route-scoped field (such as a broken `rateLimit`) failed to translate. This affected both whole-Gateway BackendTrafficPolicies and backend-targeted BackendTrafficPolicy merging.

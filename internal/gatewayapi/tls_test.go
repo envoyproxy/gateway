@@ -844,5 +844,5 @@ func TestValidateTerminateModeDeduplicatesSDSCertificateRefs(t *testing.T) {
 
 	require.True(t, ok)
 	require.Empty(t, certs)
-	require.Equal(t, []*corev1.Secret{sdsSecretOne, sdsSecretTwo}, resolvedSecrets)
+	require.Equal(t, []listenerSecret{{kubernetesSecret: sdsSecretOne}, {kubernetesSecret: sdsSecretTwo}}, resolvedSecrets)
 }

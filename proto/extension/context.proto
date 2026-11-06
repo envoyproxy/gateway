@@ -69,6 +69,25 @@ message PostTranslateExtensionContext {
 }
 
 
+// SecretExtensionContext identifies the secret reference being resolved. The referenced
+// resource is a kind registered in ExtensionManager.SecretResources; Envoy Gateway has
+// confirmed the reference is permitted and the resource exists. Whether it can be served is
+// the extension's decision.
+message SecretExtensionContext {
+    // The secret resource that was referenced.
+    ExtensionResource secret_resource = 1;
+
+    // The data plane the listener is translated for.
+    ProxyInfra proxy = 2;
+}
+
+// ProxyInfra identifies the data plane by name and namespace.
+message ProxyInfra {
+    string name = 1;
+    string namespace = 2;
+}
+
+
 // ExtensionResource stores the data for a K8s API object referenced in an HTTPRouteFilter
 // extensionRef. It is constructed from an unstructured.Unstructured marshalled to JSON. An extension
 // can marshal the bytes from this resource back into an unstructured.Unstructured and then

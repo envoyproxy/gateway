@@ -140,21 +140,21 @@ func TestNewManager(t *testing.T) {
 		require.False(t, mgr.HasExtension("bar.io", "BarPolicy"))
 		require.False(t, mgr.HasExtension("baz.io", "Baz"))
 
-		// Verify named managers have the correct policyGKSets and resourceGKSets.
+		// Verify named managers have the correct policy and resource GK sets.
 		// Matching is by group+kind only; Version from ExtensionManager.Resources is dropped.
 		require.Equal(t, "ext1", composite.managers[0].name)
-		require.Len(t, composite.managers[0].policyGKSet, 1)
-		require.Contains(t, composite.managers[0].policyGKSet, schema.GroupKind{Group: "foo.io", Kind: "FooPolicy"})
-		require.Len(t, composite.managers[0].resourceGKSet, 2)
-		require.Contains(t, composite.managers[0].resourceGKSet, schema.GroupKind{Group: "foo.io", Kind: "Foo"})
-		require.Contains(t, composite.managers[0].resourceGKSet, schema.GroupKind{Group: "foo.io", Kind: "FooBackend"})
+		require.Len(t, composite.managers[0].gkSets.policy, 1)
+		require.Contains(t, composite.managers[0].gkSets.policy, schema.GroupKind{Group: "foo.io", Kind: "FooPolicy"})
+		require.Len(t, composite.managers[0].gkSets.resource, 2)
+		require.Contains(t, composite.managers[0].gkSets.resource, schema.GroupKind{Group: "foo.io", Kind: "Foo"})
+		require.Contains(t, composite.managers[0].gkSets.resource, schema.GroupKind{Group: "foo.io", Kind: "FooBackend"})
 
 		require.Equal(t, "ext2", composite.managers[1].name)
-		require.Len(t, composite.managers[1].policyGKSet, 1)
-		require.Contains(t, composite.managers[1].policyGKSet, schema.GroupKind{Group: "bar.io", Kind: "BarPolicy"})
-		require.Len(t, composite.managers[1].resourceGKSet, 2)
-		require.Contains(t, composite.managers[1].resourceGKSet, schema.GroupKind{Group: "bar.io", Kind: "Bar"})
-		require.Contains(t, composite.managers[1].resourceGKSet, schema.GroupKind{Group: "bar.io", Kind: "BarBackend"})
+		require.Len(t, composite.managers[1].gkSets.policy, 1)
+		require.Contains(t, composite.managers[1].gkSets.policy, schema.GroupKind{Group: "bar.io", Kind: "BarPolicy"})
+		require.Len(t, composite.managers[1].gkSets.resource, 2)
+		require.Contains(t, composite.managers[1].gkSets.resource, schema.GroupKind{Group: "bar.io", Kind: "Bar"})
+		require.Contains(t, composite.managers[1].gkSets.resource, schema.GroupKind{Group: "bar.io", Kind: "BarBackend"})
 	})
 }
 
