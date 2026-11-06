@@ -1452,6 +1452,16 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 			)
 		}
 
+		// Skip listener attachment when the route was rejected and no IR
+		// routes were generated (e.g. invalid regex or empty session name).
+		// Attaching anyway would increment AttachedRoutes and enable gRPC
+		// filters with nothing to serve. Generated 500 error routes are still
+		// attached below, matching HTTPRoute.
+		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) &&
+			len(routesWithBackends) == 0 {
+			continue
+		}
+
 		hasHostnameIntersection := t.processHTTPRouteParentRefListener(grpcRoute, routesWithBackends, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(grpcRoute)
@@ -1465,8 +1475,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 			)
 		}
 
-		// Skip parent refs that did not accept the route. Error routes for
-		// all-invalid rules are attached above, matching HTTPRoute.
+		// Skip parent refs that did not accept the route.
 		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}

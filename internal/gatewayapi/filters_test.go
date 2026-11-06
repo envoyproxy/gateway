@@ -45,6 +45,45 @@ func TestRemoveAddedHeadersKeepsEarlierSameNameModifier(t *testing.T) {
 	require.Equal(t, []ir.AddHeader{{Name: "Set-Cookie", Value: []string{"keep=1"}}}, got)
 }
 
+func TestConfiguredDirectResponseIs2xx(t *testing.T) {
+	ok := uint32(200)
+	created := uint32(201)
+	denied := uint32(404)
+	serverErr := uint32(500)
+
+	require.False(t, configuredDirectResponseIs2xx(nil))
+	require.False(t, configuredDirectResponseIs2xx(&HTTPFiltersContext{HTTPFilterIR: &HTTPFilterIR{}}))
+	require.False(t, configuredDirectResponseIs2xx(&HTTPFiltersContext{
+		HTTPFilterIR: &HTTPFilterIR{
+			DirectResponse: &ir.CustomResponse{StatusCode: &ok},
+		},
+	}))
+	require.True(t, configuredDirectResponseIs2xx(&HTTPFiltersContext{
+		HTTPFilterIR: &HTTPFilterIR{
+			DirectResponse:           &ir.CustomResponse{StatusCode: &ok},
+			configuredDirectResponse: true,
+		},
+	}))
+	require.True(t, configuredDirectResponseIs2xx(&HTTPFiltersContext{
+		HTTPFilterIR: &HTTPFilterIR{
+			DirectResponse:           &ir.CustomResponse{StatusCode: &created},
+			configuredDirectResponse: true,
+		},
+	}))
+	require.False(t, configuredDirectResponseIs2xx(&HTTPFiltersContext{
+		HTTPFilterIR: &HTTPFilterIR{
+			DirectResponse:           &ir.CustomResponse{StatusCode: &denied},
+			configuredDirectResponse: true,
+		},
+	}))
+	require.False(t, configuredDirectResponseIs2xx(&HTTPFiltersContext{
+		HTTPFilterIR: &HTTPFilterIR{
+			DirectResponse:           &ir.CustomResponse{StatusCode: &serverErr},
+			configuredDirectResponse: true,
+		},
+	}))
+}
+
 func TestRemoveAddedHeadersRemovesLastIdenticalOccurrence(t *testing.T) {
 	from := []ir.AddHeader{
 		{Name: "X-Foo", Value: []string{"same"}},

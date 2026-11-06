@@ -244,8 +244,9 @@ func (t *Translator) ProcessHTTPFilters(
 				gwapiv1.RouteReasonIncompatibleFilters,
 			).WithType(gwapiv1.RouteConditionAccepted))
 		// The transcoder is not enabled for a configured direct response.
-		// Error-sentinel 500s are not a configured DirectResponse.
-		case evalCtx.configuredDirectResponse && errs.Empty():
+		// Error-sentinel 500s are not a configured DirectResponse, so this
+		// check is independent of unrelated ResolvedRefs errors.
+		case evalCtx.configuredDirectResponse:
 			errs.Add(status.NewRouteStatusError(
 				errors.New(grpcJSONTranscoderDirectResponseConflictMsg),
 				gwapiv1.RouteReasonIncompatibleFilters,
@@ -327,17 +328,17 @@ func (t *Translator) ProcessGRPCFilters(
 	// produce. Envoy maps the status to gRPC OK and emits a trailers-only reply with
 	// no message, which unary clients treat as an invalid response. Only non-2xx
 	// (deny/error) direct responses are supported for GRPCRoute.
-	if evalCtx.configuredDirectResponse {
-		if dr := evalCtx.DirectResponse; dr != nil && dr.StatusCode != nil &&
-			*dr.StatusCode >= 200 && *dr.StatusCode < 300 {
-			httpFiltersContext.DirectResponse = nil
-			evalCtx.DirectResponse = nil
+	// Check the frozen emitted context as well as the shadow: a later DirectResponse
+	// can replace evalCtx.DirectResponse while the first 2xx remains the programmed
+	// route.
+	if configuredDirectResponseIs2xx(httpFiltersContext) || configuredDirectResponseIs2xx(evalCtx) {
+		httpFiltersContext.DirectResponse = nil
+		evalCtx.DirectResponse = nil
 
-			errs.Add(status.NewRouteStatusError(
-				errors.New(grpcDirectResponse2xxMsg),
-				gwapiv1.RouteReasonUnsupportedValue,
-			).WithType(gwapiv1.RouteConditionAccepted))
-		}
+		errs.Add(status.NewRouteStatusError(
+			errors.New(grpcDirectResponse2xxMsg),
+			gwapiv1.RouteReasonUnsupportedValue,
+		).WithType(gwapiv1.RouteConditionAccepted))
 	}
 
 	if evalCtx.RequestMirrorModifier != nil && len(evalCtx.Mirrors) > 0 {
@@ -1081,6 +1082,15 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						dr.StatusCode = new(uint32(200))
 					}
 
+					if filterContext.Route != nil &&
+						filterContext.Route.GetRouteType() == resource.KindGRPCRoute &&
+						dr.StatusCode != nil && *dr.StatusCode >= 200 && *dr.StatusCode < 300 {
+						return status.NewRouteStatusError(
+							errors.New(grpcDirectResponse2xxMsg),
+							gwapiv1.RouteReasonUnsupportedValue,
+						).WithType(gwapiv1.RouteConditionAccepted)
+					}
+
 					if hrf.Spec.DirectResponse.ContentType != nil {
 						appendDirectResponseHeader(filterContext, ir.AddHeader{
 							Name:  "Content-Type",
@@ -1473,6 +1483,14 @@ func cloneHTTPFiltersContext(ctx *HTTPFiltersContext) *HTTPFiltersContext {
 		RuleIdx:      ctx.RuleIdx,
 		HTTPFilterIR: &irCopy,
 	}
+}
+
+func configuredDirectResponseIs2xx(ctx *HTTPFiltersContext) bool {
+	if ctx == nil || !ctx.configuredDirectResponse || ctx.DirectResponse == nil || ctx.DirectResponse.StatusCode == nil {
+		return false
+	}
+	sc := *ctx.DirectResponse.StatusCode
+	return sc >= 200 && sc < 300
 }
 
 func clearDirectResponseAndMirrors(ctxs ...*HTTPFiltersContext) {
