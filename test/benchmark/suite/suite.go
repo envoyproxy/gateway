@@ -22,8 +22,11 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -459,6 +462,14 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
 		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(routeHostname)
 
+		if *RoutesPerBackend > 0 {
+			backendName := fmt.Sprintf("nighthawk-test-server-%d", (uint(i)-1) / *RoutesPerBackend)
+			if err := b.createBackendService(ctx, backendName); err != nil {
+				return err
+			}
+			newRoute.Spec.Rules[0].BackendRefs[0].Name = gwapiv1.ObjectName(backendName)
+		}
+
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
 		}
@@ -512,6 +523,27 @@ func (b *BenchmarkTestSuite) ScaleDownHTTPRoutes(ctx context.Context, scaleRange
 	}
 
 	return nil
+}
+
+// createBackendService creates a Service that selects the nighthawk test server pods,
+// so routes can use different backends without running more test servers.
+func (b *BenchmarkTestSuite) createBackendService(ctx context.Context, name string) error {
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "benchmark-test",
+			Labels:    b.scaledLabels,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{"app": "nighthawk-test-server"},
+			Ports: []corev1.ServicePort{{
+				Name:       "http",
+				Port:       8080,
+				TargetPort: intstr.FromInt32(8080),
+			}},
+		},
+	}
+	return b.CreateResource(ctx, svc)
 }
 
 func (b *BenchmarkTestSuite) CreateResource(ctx context.Context, object client.Object) error {

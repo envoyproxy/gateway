@@ -29,6 +29,8 @@ BENCHMARK_DURATION ?= 60
 BENCHMARK_REPORT_DIR ?= benchmark_report
 # Set to true to run the benchmark with EnvoyProxy mergeBackends enabled.
 BENCHMARK_MERGE_BACKENDS ?= false
+# Number of routes that share one backend Service; 0 puts every route on one Service.
+BENCHMARK_ROUTES_PER_BACKEND ?= 0
 
 # Benchmark toggles
 # Disable PNG rendering by default to speed up CI
@@ -375,7 +377,7 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	@if [ "$(BENCHMARK_MERGE_BACKENDS)" = "true" ]; then \
 		kubectl patch envoyproxy proxy-config -n envoy-gateway-system --type merge -p '{"spec":{"mergeBackends":{}}}'; \
 	fi
-	cd test && go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./benchmark --baseline-rps=$(BENCHMARK_BASELINE_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
+	cd test && go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./benchmark --baseline-rps=$(BENCHMARK_BASELINE_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR) --routes-per-backend=$(BENCHMARK_ROUTES_PER_BACKEND)
 	# render benchmark profiles into image
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$$${1%.pprof}.png"' _ {} \; ; fi

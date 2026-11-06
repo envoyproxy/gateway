@@ -50,8 +50,9 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 
 		routeNameFormat := "benchmark-route-%d"
 		routeHostnameFormat := "www.benchmark-%d.com"
-		routeScales := []uint16{10, 50, 100, 300, 500, 1000}
-		rpsScales := []uint16{1, 3, 5, 8, 10, 20}
+		// Trimmed for the mergeBackends comparison: a single 1000-route step, no scale-down.
+		routeScales := []uint16{1000}
+		rpsScales := []uint16{20}
 		routeScalesN := len(routeScales)
 		routeNNs := make([]types.NamespacedName, 0, routeScales[routeScalesN-1])
 
@@ -71,38 +72,48 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 				t.Run(testName, func(t *testing.T) {
 					tlog.Logf(t, "Start scaling up HTTPRoutes to %d with %d routes per hostname", scale, routePerHost)
 					startTime := time.Now()
-					convergenceTimeByHost := map[string]time.Duration{}
+
+					// Create the whole step in one burst and only wait for the last route
+					// on each hostname, which is the one the convergence time is taken from.
+					type lastRoute struct {
+						nn      types.NamespacedName
+						applyAt time.Time
+					}
+					lastByHost := map[string]lastRoute{}
 					err = bSuite.ScaleUpHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, routeHostnameFormat, gatewayNN.Name, routePerHost-batch,
 						func(route *gwapiv1.HTTPRoute, applyAt time.Time) {
 							routeNN := types.NamespacedName{Name: route.Name, Namespace: route.Namespace}
 							routeNNs = append(routeNNs, routeNN)
-							host := string(route.Spec.Hostnames[0])
-							gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
-								bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNN)
-
-							req := http.MakeRequest(t, &http.ExpectedResponse{
-								Request: http.Request{
-									Host: host,
-									Path: "/",
-								},
-								Response: http.Response{
-									StatusCodes: []int{200},
-								},
-							}, gwAddr, "HTTP", "HTTP")
-							http.WaitForConsistentResponse(t, &r, req, http.ExpectedResponse{
-								Response: http.Response{
-									StatusCodes: []int{200},
-								},
-							}, bSuite.TimeoutConfig.RequiredConsecutiveSuccesses, bSuite.TimeoutConfig.MaxTimeToConsistency)
-
-							d := time.Since(applyAt)
-							convergenceTimeByHost[host] = d
-
-							t.Logf("Create HTTPRoute: %s with hostname %s, and became ready after %s", routeNN.String(), host, d)
+							lastByHost[string(route.Spec.Hostnames[0])] = lastRoute{nn: routeNN, applyAt: applyAt}
 						})
 					require.NoError(t, err)
 					start = scale
 					batch = routePerHost
+
+					convergenceTimeByHost := map[string]time.Duration{}
+					for host, last := range lastByHost {
+						gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
+							bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), last.nn)
+
+						req := http.MakeRequest(t, &http.ExpectedResponse{
+							Request: http.Request{
+								Host: host,
+								Path: "/",
+							},
+							Response: http.Response{
+								StatusCodes: []int{200},
+							},
+						}, gwAddr, "HTTP", "HTTP")
+						http.WaitForConsistentResponse(t, &r, req, http.ExpectedResponse{
+							Response: http.Response{
+								StatusCodes: []int{200},
+							},
+						}, bSuite.TimeoutConfig.RequiredConsecutiveSuccesses, bSuite.TimeoutConfig.MaxTimeToConsistency)
+
+						d := time.Since(last.applyAt)
+						convergenceTimeByHost[host] = d
+						t.Logf("HTTPRoute %s with hostname %s became ready after %s", last.nn.String(), host, d)
+					}
 
 					// Check if we have convergence time for all hosts.
 					if len(convergenceTimeByHost) != int(totalHosts) {
@@ -120,44 +131,6 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 					report.RoutesPerHost = int(routePerHost)
 					report.Routes = int(scale)
 					report.Phase = "scaling-up"
-
-					reports = append(reports, report)
-				})
-			}
-		})
-
-		t.Run("scaling down httproutes", func(t *testing.T) {
-			start := routeScales[routeScalesN-1]
-			for i := routeScalesN - 2; i >= 0; i-- {
-				scale := routeScales[i]
-				routePerHost := scale / totalHosts
-				rps := scaledRPS(bSuite.Options.BaselineRPS, rpsScales[i])
-				testName := fmt.Sprintf("scaling down httproutes to %d with %d routes per hostname at %s rps", scale, routePerHost, rps)
-
-				t.Run(testName, func(t *testing.T) {
-					startTime := time.Now()
-					err = bSuite.ScaleDownHTTPRoutes(ctx, [2]uint16{start, scale}, routeNameFormat, gatewayNN.Name, func(route *gwapiv1.HTTPRoute) {
-						routeNN := routeNNs[len(routeNNs)-1]
-						routeNNs = routeNNs[:len(routeNNs)-1]
-
-						// Making sure we are deleting the right one route.
-						require.Equal(t, types.NamespacedName{Name: route.Name, Namespace: route.Namespace}, routeNN)
-
-						t.Logf("Delete HTTPRoute: %s", routeNN.String())
-					})
-					require.NoError(t, err)
-					start = scale
-
-					gatewayAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, bSuite.Client, bSuite.TimeoutConfig,
-						bSuite.ControllerName, kubernetes.NewGatewayRef(gatewayNN), routeNNs...)
-
-					// Run benchmark test at different scale.
-					jobName := fmt.Sprintf("scale-down-httproutes-%d", scale)
-					report, err := bSuite.Benchmark(t, ctx, jobName, testName, gatewayAddr, routeHostnameFormat, int(totalHosts), rps, startTime)
-					require.NoError(t, err)
-					report.RoutesPerHost = int(routePerHost)
-					report.Routes = int(scale)
-					report.Phase = "scaling-down"
 
 					reports = append(reports, report)
 				})

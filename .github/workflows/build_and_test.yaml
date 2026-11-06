@@ -336,11 +336,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - mergeBackends: "false"
-          reportName: benchmark_report
-        - mergeBackends: "true"
-          reportName: benchmark_report_merge_backends
+        routesPerBackend: [1, 4, 10, 100]
+        mergeBackends: ["false", "true"]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -361,19 +358,20 @@ jobs:
         # Args for benchmark test
         BENCHMARK_BASELINE_RPS: 100
         BENCHMARK_CONNECTIONS: 100
-        BENCHMARK_DURATION: 90
+        BENCHMARK_DURATION: 60
         BENCHMARK_CPU_LIMITS: 1000m
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report
         BENCHMARK_RENDER_PNG: "false"
         BENCHMARK_MERGE_BACKENDS: ${{ matrix.mergeBackends }}
+        BENCHMARK_ROUTES_PER_BACKEND: ${{ matrix.routesPerBackend }}
         SKIP_GO_BUILD: "true"
       run: make benchmark
 
     - name: Upload Benchmark report
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
-        name: ${{ matrix.reportName }}
+        name: benchmark_report_routes-per-backend-${{ matrix.routesPerBackend }}_merge-backends-${{ matrix.mergeBackends }}
         path: ./test/benchmark/benchmark_report/
 
   resilience-test:

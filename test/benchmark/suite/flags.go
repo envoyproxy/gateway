@@ -15,4 +15,7 @@ var (
 	Duration      = flag.String("duration", "90", "The number of seconds that the test should run.")
 	Concurrency   = flag.String("concurrency", "auto", "The number of concurrent event loops that should be used.")
 	ReportSaveDir = flag.String("report-save-dir", "benchmark_report", "The dir where to save the benchmark test report.")
+	// RoutesPerBackend spreads the scaled routes across Services that all point at the
+	// nighthawk test server. Zero keeps every route on the single nighthawk-test-server Service.
+	RoutesPerBackend = flag.Uint("routes-per-backend", 0, "Number of consecutive routes that share one backend Service; 0 means all routes share one.")
 )
