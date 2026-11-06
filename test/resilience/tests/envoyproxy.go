@@ -162,11 +162,15 @@ var EnvoyProxy = suite.ResilienceTest{
 			)
 			require.NoError(t, err, "Failed to block Envoy proxy xDS connectivity")
 
+			// The policy drops packets on the open xDS connection instead of closing it, so
+			// Envoy only notices through the 30s HTTP/2 keepalive plus its 5s timeout. Add
+			// jitter and the Prometheus scrape interval and that can run past a minute.
 			t.Log("Waiting for Envoy proxy to disconnect from control plane")
-			_, err = waitForMetricValueVerification(
+			_, err = waitForMetricValueVerificationWithTimeout(
 				t,
 				suite,
 				"envoy_control_plane_connected_state",
+				2*time.Minute,
 				func(actual float64) bool {
 					return actual == 0
 				},
