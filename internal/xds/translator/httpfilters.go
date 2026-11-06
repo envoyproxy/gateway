@@ -154,16 +154,18 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 307
 	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 308
-	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
+	case isFilterType(filter, egv1a1.EnvoyFilterAdaptiveConcurrency):
 		order = 309
-	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
+	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
 		order = 310
+	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
+		order = 311
 	// Sits next to the router so that on the response path it sees the alt-svc header
 	// straight from upstream, before any other filter can rewrite or strip it.
 	case isFilterType(filter, egv1a1.EnvoyFilterAlternateProtocolsCache):
-		order = 311
-	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
 		order = 312
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 313
 	}
 
 	return &OrderedHTTPFilter{
