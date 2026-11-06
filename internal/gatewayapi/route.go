@@ -1183,7 +1183,11 @@ func (t *Translator) processHTTPRouteRule(
 	rule *gwapiv1.HTTPRouteRule,
 	routeRuleMetadata *ir.ResourceMetadata,
 ) ([]*ir.HTTPRoute, status.Error) {
-	sessionPersistence, err := translateSessionPersistence(rule.SessionPersistence, httpRoute, ruleIdx)
+	var strict *bool
+	if httpFiltersContext != nil {
+		strict = httpFiltersContext.SessionPersistenceStrict
+	}
+	sessionPersistence, err := translateSessionPersistence(rule.SessionPersistence, httpRoute, ruleIdx, strict)
 	if err != nil {
 		return nil, err
 	}
@@ -1202,8 +1206,9 @@ func (t *Translator) processHTTPRouteRule(
 	// If no matches are specified, the implementation MUST match every HTTP request.
 	if len(matches) == 0 {
 		irRoute := &ir.HTTPRoute{
-			Name:     irRouteName(httpRoute, ruleIdx, -1),
-			Metadata: routeRuleMetadata,
+			Name:               irRouteName(httpRoute, ruleIdx, -1),
+			Metadata:           routeRuleMetadata,
+			SessionPersistence: sessionPersistence,
 		}
 		processRouteTrafficFeatures(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
@@ -1765,7 +1770,11 @@ func buildGRPCRouteMatchCombinations(ruleMatches []gwapiv1.GRPCRouteMatch, filte
 }
 
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule *gwapiv1.GRPCRouteRule) ([]*ir.HTTPRoute, status.Error) {
-	sessionPersistence, err := translateSessionPersistence(rule.SessionPersistence, grpcRoute, ruleIdx)
+	var strict *bool
+	if httpFiltersContext != nil {
+		strict = httpFiltersContext.SessionPersistenceStrict
+	}
+	sessionPersistence, err := translateSessionPersistence(rule.SessionPersistence, grpcRoute, ruleIdx, strict)
 	if err != nil {
 		return nil, err
 	}
@@ -1855,8 +1864,14 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 
 // translateSessionPersistence converts a gateway-api SessionPersistence into the IR
 // representation. It is shared by HTTPRoute and GRPCRoute rule processing.
-func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteContext, ruleIdx int) (*ir.SessionPersistence, status.Error) {
+func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteContext, ruleIdx int, strict *bool) (*ir.SessionPersistence, status.Error) {
 	if sp == nil {
+		if strict != nil {
+			return nil, status.NewRouteStatusError(
+				fmt.Errorf("HTTPRouteFilter sessionPersistence requires sessionPersistence on the same %s rule", route.GetRouteType()),
+				gwapiv1.RouteReasonUnsupportedValue,
+			).WithType(gwapiv1.RouteConditionAccepted)
+		}
 		return nil, nil
 	}
 
@@ -1888,6 +1903,7 @@ func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteCont
 	case sp.Type == nil || // Cookie-based session persistence is default.
 		*sp.Type == gwapiv1.CookieBasedSessionPersistence:
 		out := &ir.SessionPersistence{
+			Strict: ptr.Deref(strict, false),
 			Cookie: &ir.CookieBasedSessionPersistence{
 				Name: sessionName,
 			},
@@ -1904,6 +1920,7 @@ func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteCont
 		return out, nil
 	case *sp.Type == gwapiv1.HeaderBasedSessionPersistence:
 		return &ir.SessionPersistence{
+			Strict: ptr.Deref(strict, false),
 			Header: &ir.HeaderBasedSessionPersistence{
 				Name: sessionName,
 			},
@@ -3408,6 +3425,9 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 	}
 	if httpFiltersContext.GRPCJSONTranscoder != nil {
 		return nil, nil, errors.New("grpcJSONTranscoder is not supported in the filters of a backendRef")
+	}
+	if httpFiltersContext.SessionPersistenceStrict != nil {
+		return nil, nil, fmt.Errorf("HTTPRouteFilter sessionPersistence is only supported on route rules, not backend references")
 	}
 
 	destFilters := buildDestinationFilters(httpFiltersContext)
