@@ -1863,6 +1863,14 @@ func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteCont
 	switch {
 	case sp.Type == nil || // Cookie-based session persistence is default.
 		*sp.Type == gwapiv1.CookieBasedSessionPersistence:
+		// The session cookie is always issued with Path=/, as recommended by
+		// GEP-1619, so a path override would be silently ignored.
+		if sp.Cookie != nil && sp.Cookie.Path != nil && *sp.Cookie.Path != "/" {
+			return nil, status.NewRouteStatusError(
+				errors.New("cookie path override is not supported, the session cookie is always issued with Path=/"),
+				gwapiv1.RouteReasonUnsupportedValue,
+			)
+		}
 		var sessionName string
 		switch {
 		case sp.Cookie == nil || sp.Cookie.Name == nil:
