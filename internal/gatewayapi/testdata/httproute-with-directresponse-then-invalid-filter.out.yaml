@@ -144,13 +144,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - addResponseHeaders:
-        - addIfAbsent: false
-          append: false
-          name: Content-Type
-          value:
-          - text/plain
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false

@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -162,6 +162,69 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: direct-response-then-mirror
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: mirror-direct-response
+        type: ExtensionRef
+      - requestMirror:
+          backendRef:
+            kind: Service
+            name: service-1
+            port: 8080
+        type: RequestMirror
+      matches:
+      - path:
+          type: PathPrefix
+          value: /direct-response-then-mirror
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /valid-direct-then-mirror
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'Dropped Rule(s) [0]: RequestMirror filter cannot be used when the
+          rule also configures a DirectResponse filter.'
+        reason: IncompatibleFilters
+        status: "True"
+        type: PartiallyInvalid
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -223,13 +286,50 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - addResponseHeaders:
-        - addIfAbsent: false
-          append: false
-          name: Content-Type
-          value:
-          - text/plain
-        directResponse:
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: direct-response-then-mirror
+          namespace: default
+        name: httproute/default/direct-response-then-mirror/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /direct-response-then-mirror
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: direct-response-then-mirror
+            namespace: default
+          name: httproute/default/direct-response-then-mirror/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/direct-response-then-mirror/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: direct-response-then-mirror
+          namespace: default
+        name: httproute/default/direct-response-then-mirror/rule/1/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /valid-direct-then-mirror
+      - directResponse:
           statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false

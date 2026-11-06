@@ -26,7 +26,7 @@ grpcRoutes:
       sectionName: http
     rules:
     # Invalid rewrite first so the filter-set DirectResponse is still processed.
-    # A second valid rule keeps the route accepted so this rule stays in xDS.
+    # A single invalid rule stays in xDS as a 500 while Accepted is False.
     - matches:
       - method:
           method: "DirectResponse"
@@ -43,14 +43,6 @@ grpcRoutes:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
           name: direct-response-inline
-    - matches:
-      - method:
-          method: "Valid"
-          service: "com.example"
-          type: Exact
-      backendRefs:
-      - name: service-1
-        port: 8080
 httpFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: HTTPRouteFilter

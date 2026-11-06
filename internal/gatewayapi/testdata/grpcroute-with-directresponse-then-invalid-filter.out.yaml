@@ -66,28 +66,14 @@ grpcRoutes:
           method: DirectResponseFirst
           service: com.example
           type: Exact
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      matches:
-      - method:
-          method: Valid
-          service: com.example
-          type: Exact
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: 'Dropped Rule(s) [0]: Header must be set when rewrite path type is
-          "Header".'
+        message: Header must be set when rewrite path type is "Header".
         reason: UnsupportedValue
-        status: "True"
-        type: PartiallyInvalid
+        status: "False"
+        type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
@@ -162,13 +148,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - addResponseHeaders:
-        - addIfAbsent: false
-          append: false
-          name: Content-Type
-          value:
-          - text/plain
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: true
@@ -180,36 +160,6 @@ xdsIR:
         pathMatch:
           distinct: false
           exact: /com.example/DirectResponseFirst
-          name: ""
-      - destination:
-          metadata:
-            kind: GRPCRoute
-            name: grpcroute-directresponse-then-invalid-rewrite
-            namespace: default
-          name: grpcroute/default/grpcroute-directresponse-then-invalid-rewrite/rule/1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: grpcroute/default/grpcroute-directresponse-then-invalid-rewrite/rule/1/backend/0
-            protocol: GRPC
-            weight: 1
-        hostname: '*'
-        isHTTP2: true
-        metadata:
-          kind: GRPCRoute
-          name: grpcroute-directresponse-then-invalid-rewrite
-          namespace: default
-        name: grpcroute/default/grpcroute-directresponse-then-invalid-rewrite/rule/1/match/0/*
-        pathMatch:
-          distinct: false
-          exact: /com.example/Valid
           name: ""
     readyListener:
       address: 0.0.0.0

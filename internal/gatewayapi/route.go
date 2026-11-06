@@ -390,10 +390,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
-				irRoute.Redirect = nil
-				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: new(uint32(500)),
-				}
+				applyInvalidFilterDirectResponse(irRoute, httpFiltersContext)
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
@@ -1455,9 +1452,6 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 			)
 		}
 
-		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
-			continue
-		}
 		hasHostnameIntersection := t.processHTTPRouteParentRefListener(grpcRoute, routesWithBackends, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(grpcRoute)
@@ -1469,6 +1463,12 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s).",
 			)
+		}
+
+		// Skip parent refs that did not accept the route. Error routes for
+		// all-invalid rules are attached above, matching HTTPRoute.
+		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1608,10 +1608,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
-				irRoute.Redirect = nil
-				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: new(uint32(500)),
-				}
+				applyInvalidFilterDirectResponse(irRoute, httpFiltersContext)
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {

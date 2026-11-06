@@ -61,6 +61,11 @@ type HTTPFilterIR struct {
 	AddResponseHeaders    []ir.AddHeader
 	RemoveResponseHeaders []string
 
+	// directResponseAddedHeaders records response headers installed by a
+	// DirectResponse filter so they can be stripped when the rule is later
+	// rejected and replaced with a 500.
+	directResponseAddedHeaders []ir.AddHeader
+
 	Mirrors []*ir.MirrorPolicy
 
 	CORS *ir.CORS
@@ -121,23 +126,6 @@ func hasBackendPriorityFilter(resources *resource.Resources, ns string, extRefs 
 	return false
 }
 
-// filterEvalContext returns the context used to evaluate the next filter.
-// A DirectResponse is terminal for traffic, but later filters must still be
-// validated so listing it first cannot hide an invalid filter. Successful IR
-// mutations from those later filters are discarded; processFilterError then
-// installs 500 when any error was collected.
-func filterEvalContext(ctx *HTTPFiltersContext) *HTTPFiltersContext {
-	if ctx.DirectResponse == nil {
-		return ctx
-	}
-	return &HTTPFiltersContext{
-		ParentRef:    ctx.ParentRef,
-		Route:        ctx.Route,
-		RuleIdx:      ctx.RuleIdx,
-		HTTPFilterIR: &HTTPFilterIR{},
-	}
-}
-
 // ProcessHTTPFilters translates gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(
 	parentRef *RouteParentContext,
@@ -157,44 +145,44 @@ func (t *Translator) ProcessHTTPFilters(
 	for i := range filters {
 		filter := filters[i]
 		// Keep validating later filters after a DirectResponse so filter
-		// order cannot skip an invalid filter. Effects go to a throwaway
-		// context when DirectResponse is already set.
-		ctx := filterEvalContext(httpFiltersContext)
+		// order cannot skip an invalid or incompatible filter. The same
+		// cumulative context is used so post-loop checks still see both
+		// the terminal DirectResponse and later filters such as RequestMirror.
 		if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
-			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), ctx, err))
+			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
 			continue
 		}
 
 		switch filter.Type {
 		case gwapiv1.HTTPRouteFilterURLRewrite:
-			if err := t.processURLRewriteFilter(filter.URLRewrite, ctx); err != nil {
+			if err := t.processURLRewriteFilter(filter.URLRewrite, httpFiltersContext); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestRedirect:
-			if err := t.processRedirectFilter(filter.RequestRedirect, ctx); err != nil {
+			if err := t.processRedirectFilter(filter.RequestRedirect, httpFiltersContext); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestHeaderModifier:
-			err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, ctx)
+			err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext)
 			if err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterResponseHeaderModifier:
-			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, ctx); err != nil {
+			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterRequestMirror:
-			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, ctx, resources, xdsIR); err != nil {
+			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.HTTPRouteFilterCORS:
-			t.processCORSFilter(filter.CORS, ctx)
+			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, ctx, resources, xdsIR); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
-			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), ctx))
+			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
 		}
 	}
 
@@ -284,33 +272,33 @@ func (t *Translator) ProcessGRPCFilters(
 	for i := range filters {
 		filter := filters[i]
 		// Keep validating later filters after a DirectResponse so filter
-		// order cannot skip an invalid filter. Effects go to a throwaway
-		// context when DirectResponse is already set.
-		ctx := filterEvalContext(httpFiltersContext)
+		// order cannot skip an invalid or incompatible filter. The same
+		// cumulative context is used so post-loop checks still see both
+		// the terminal DirectResponse and later filters such as RequestMirror.
 		if err := ValidateGRPCRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
-			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), ctx, err))
+			errs.Add(t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err))
 			continue
 		}
 
 		switch filter.Type {
 		case gwapiv1.GRPCRouteFilterRequestHeaderModifier:
-			if err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, ctx); err != nil {
+			if err := t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterResponseHeaderModifier:
-			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, ctx); err != nil {
+			if err := t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterRequestMirror:
-			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, ctx, resources, xdsIR); err != nil {
+			if err := t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, ctx, resources, xdsIR); err != nil {
+			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources, xdsIR); err != nil {
 				errs.Add(err)
 			}
 		default:
-			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), ctx))
+			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
 		}
 	}
 
@@ -1081,11 +1069,10 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					}
 
 					if hrf.Spec.DirectResponse.ContentType != nil {
-						newHeader := ir.AddHeader{
+						appendDirectResponseHeader(filterContext, ir.AddHeader{
 							Name:  "Content-Type",
 							Value: []string{*hrf.Spec.DirectResponse.ContentType},
-						}
-						filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, newHeader)
+						})
 					}
 					filterContext.DirectResponse = dr
 
@@ -1094,14 +1081,14 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					rhm := hrf.Spec.DirectResponse.Header
 					if rhm != nil {
 						for h := range rhm.Add {
-							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{
+							appendDirectResponseHeader(filterContext, ir.AddHeader{
 								Name:   string(rhm.Add[h].Name),
 								Append: true,
 								Value:  []string{rhm.Add[h].Value},
 							})
 						}
 						for h := range rhm.Set {
-							filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, ir.AddHeader{
+							appendDirectResponseHeader(filterContext, ir.AddHeader{
 								Name:   string(rhm.Set[h].Name),
 								Append: false,
 								Value:  []string{rhm.Set[h].Value},
@@ -1394,4 +1381,42 @@ func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *
 		fmt.Errorf("invalid filter %s: %w", filterType, err),
 		gwapiv1.RouteReasonUnsupportedValue,
 	).WithType(gwapiv1.RouteConditionAccepted)
+}
+
+func appendDirectResponseHeader(filterContext *HTTPFiltersContext, header ir.AddHeader) {
+	filterContext.AddResponseHeaders = append(filterContext.AddResponseHeaders, header)
+	filterContext.directResponseAddedHeaders = append(filterContext.directResponseAddedHeaders, header)
+}
+
+func removeAddedHeaders(from, remove []ir.AddHeader) []ir.AddHeader {
+	if len(from) == 0 || len(remove) == 0 {
+		return from
+	}
+	drop := make(map[string]struct{}, len(remove))
+	for i := range remove {
+		drop[strings.ToLower(remove[i].Name)] = struct{}{}
+	}
+	out := make([]ir.AddHeader, 0, len(from))
+	for i := range from {
+		if _, ok := drop[strings.ToLower(from[i].Name)]; ok {
+			continue
+		}
+		out = append(out, from[i])
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// applyInvalidFilterDirectResponse replaces any redirect or DirectResponse with a
+// 500 and drops response headers that the replaced DirectResponse had installed.
+func applyInvalidFilterDirectResponse(irRoute *ir.HTTPRoute, httpFiltersContext *HTTPFiltersContext) {
+	irRoute.Redirect = nil
+	if httpFiltersContext != nil {
+		irRoute.AddResponseHeaders = removeAddedHeaders(irRoute.AddResponseHeaders, httpFiltersContext.directResponseAddedHeaders)
+	}
+	irRoute.DirectResponse = &ir.CustomResponse{
+		StatusCode: new(uint32(500)),
+	}
 }

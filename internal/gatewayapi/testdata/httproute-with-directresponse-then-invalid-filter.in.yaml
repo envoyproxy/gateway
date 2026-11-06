@@ -51,6 +51,10 @@ httpFilters:
     directResponse:
       contentType: text/plain
       statusCode: 418
+      header:
+        set:
+        - name: Set-Cookie
+          value: dropped=1
       body:
         type: Inline
         inline: "OK"
