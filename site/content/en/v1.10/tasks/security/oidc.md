@@ -1,0 +1,792 @@
+---
+title: "OIDC Authentication"
+---
+
+This task provides instructions for configuring [OpenID Connect (OIDC)][oidc] authentication.
+OpenID Connect (OIDC) is an authentication standard built on top of OAuth 2.0.
+It enables EG to rely on authentication that is performed by an OpenID Connect Provider (OP)
+to verify the identity of a user.
+
+Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure OIDC
+authentication.
+This instantiated resource can be linked to a [Gateway][Gateway] and [HTTPRoute][HTTPRoute] resource.
+
+## Prerequisites
+
+{{< boilerplate prerequisites >}}
+
+EG OIDC authentication requires the redirect URL to be HTTPS. Follow the [Secure Gateways](../secure-gateways/) guide
+to generate the TLS certificates and update the Gateway configuration to add an HTTPS listener.
+
+Verify the Gateway status:
+
+```shell
+kubectl get gateway/eg -o yaml
+```
+
+Let's create an HTTPRoute that represents an application protected by OIDC.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: myapp
+spec:
+  parentRefs:
+  - name: eg
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp
+    backendRefs:
+    - name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: myapp
+spec:
+  parentRefs:
+  - name: eg
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /myapp
+    backendRefs:
+    - name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Verify the HTTPRoute status:
+
+```shell
+kubectl get httproute/myapp -o yaml
+```
+
+## OIDC Authentication for a HTTPRoute
+
+OIDC can be configured at the Gateway level to authenticate all the HTTPRoutes that are associated with the Gateway with
+the same OIDC configuration, or at the HTTPRoute level to authenticate each HTTPRoute with different OIDC configurations.
+
+This section demonstrates how to configure OIDC authentication for a specific HTTPRoute.
+
+### Register an OIDC application
+
+This task uses Google as the OIDC provider to demonstrate the configuration of OIDC. However, EG works with any OIDC
+providers, including Auth0, Azure AD, Keycloak, Okta, OneLogin, Salesforce, UAA, etc.
+
+Follow the steps in the [Google OIDC documentation][google-oidc] to register an OIDC application. Please make sure the
+redirect URL is set to the one you configured in the SecurityPolicy that you will create in the step below. In this example,
+the redirect URL is `https://www.example.com:8443/myapp/oauth2/callback`.
+
+After registering the application, you should have the following information:
+* Client ID: The client ID of the OIDC application.
+* Client Secret: The client secret of the OIDC application.
+
+### Create a kubernetes secret
+
+Next, create a kubernetes secret with the Client Secret created in the previous step. The secret is an Opaque secret,
+and the Client Secret must be stored in the key "client-secret".
+
+Note: please replace the ${CLIENT_SECRET} with the actual Client Secret that you got from the previous step.
+
+```shell
+kubectl create secret generic my-app-client-secret --from-literal=client-secret=${CLIENT_SECRET}
+```
+
+### Create a SecurityPolicy
+
+**Please notice that the `redirectURL` and `logoutPath` must match the target HTTPRoute.** In this example, the target
+HTTPRoute is configured to match the host `www.example.com` and the path `/myapp`, so the `redirectURL` must be prefixed
+with `https://www.example.com:8443/myapp`, and `logoutPath` must be prefixed with`/myapp`, otherwise the OIDC authentication
+will fail because the redirect and logout requests will not match the target HTTPRoute and therefore can't be processed
+by the OAuth2 filter on that HTTPRoute.
+
+Note: please replace the ${CLIENT_ID} in the below yaml snippet with the actual Client ID that you got from the OIDC provider.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "https://www.example.com:8443/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: myapp
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "https://www.example.com:8443/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Verify the SecurityPolicy configuration:
+
+```shell
+kubectl get securitypolicy/oidc-example -o yaml
+```
+
+### Testing
+
+Port forward gateway port to localhost:
+
+```shell
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
+
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8443:443
+```
+
+Put www.example.com in the /etc/hosts file in your test machine, so we can use this host name to access the gateway from a browser:
+
+```shell
+...
+127.0.0.1 www.example.com
+```
+
+Open a browser and navigate to the `https://www.example.com:8443/myapp` address. You should be redirected to the Google
+login page. After you successfully login, you should see the response from the backend service.
+
+Clean the cookies in the browser and try to access `https://www.example.com:8443/foo` address. You should be able to see
+this page since the path `/foo` is not protected by the OIDC policy.
+
+## OIDC Authentication for a Gateway
+
+OIDC can be configured at the Gateway level to authenticate all the HTTPRoutes that are associated with the Gateway with
+the same OIDC configuration, or at the HTTPRoute level to authenticate each HTTPRoute with different OIDC configurations.
+
+This section demonstrates how to configure OIDC authentication for a Gateway.
+
+### Register an OIDC application
+
+If you haven't registered an OIDC application, follow the steps in the previous section to register an OIDC application.
+
+### Create a kubernetes secret
+
+If you haven't created a kubernetes secret, follow the steps in the previous section to create a kubernetes secret.
+
+### Create an HTTPRoute with a different subdomain
+
+Let's create another HTTPRoute in the same Gateway, but with a different subdomain.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: foo
+spec:
+  parentRefs:
+  - name: eg
+  hostnames: ["foo.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: foo
+spec:
+  parentRefs:
+  - name: eg
+  hostnames: ["foo.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    backendRefs:
+    - name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Verify the HTTPRoute status:
+
+```shell
+kubectl get httproute/foo -o yaml
+```
+
+### Create a SecurityPolicy
+
+Create or update the SecurityPolicy to target the Gateway instead of the HTTPRoute. **Please notice that the `redirectURL`
+and `logoutPath` must match one of the HTTPRoutes associated with the Gateway.** In this example, the target Gateway has
+three HTTPRoutes associated with it, one with the host `www.example.com` and the path `/myapp`, one with the host
+`www.example.com` and the path `/`, and one with the host `foo.example.com` and the path `/`. Any of these HTTPRoutes
+can be used to match the `redirectURL` and `logoutPath`.
+
+By default, the access token and ID token cookies are set to the host of the request, excluding subdomains. To allow the
+token cookies to be shared across subdomains and prevent users from having to log in again when switching between subdomains,
+the `cookieDomain` field needs to be set to the root domain. In this example, the root domain is `example.com`.
+
+Note: if a `cookieDomain` is added to an existing SecurityPolicy, the cookies in the browser must be cleared before sending a new request to the Gateway, otherwise the cookies with the old subdomain will take precedence and be sent to the Gateway, causing the OIDC authentication to fail.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "https://www.example.com:8443/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+    cookieDomain: "example.com"
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "https://www.example.com:8443/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+    cookieDomain: "example.com"
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Verify the SecurityPolicy configuration:
+
+```shell
+kubectl get securitypolicy/oidc-example -o yaml
+```
+
+### Update the Listener TLS certificate to support multiple subdomains
+
+Create a multi-domain wildcard certificate for `*.example.com`.
+
+```shell
+openssl req -out wildcard.csr -newkey rsa:2048 -nodes -keyout wildcard.key -subj "/CN=*.example.com/O=example organization"
+openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in wildcard.csr -out wildcard.crt
+```
+
+Replace the TLS certificate of the Gateway with the wildcard certificate.
+
+```shell
+kubectl delete secret example-cert
+kubectl create secret tls example-cert --key=wildcard.key --cert=wildcard.crt
+```
+
+### Testing
+
+If you haven't done so, follow the steps in the previous section to port forward gateway port to localhost and put
+www.example.com in the /etc/hosts file in your test machine.
+
+Also, put foo.example.com in the /etc/hosts file in your test machine.
+
+```shell
+...
+127.0.0.1 foo.example.com
+```
+
+Open a browser and navigate to the `https://www.example.com:8443/myapp` address. You should be redirected to the Google
+login page. After you successfully login, you should see the response from the backend service.
+
+You can also try to access `https://foo.example.com:8443` and `https://www.example.com:8443/bar` addresses. You should
+be able to see the response from the backend service since these HTTPRoutes are also protected by the same OIDC config,
+and the cookies are shared across subdomains.
+
+## Connect to an OIDC Provider with Self-Signed Certificate
+
+In some scenarios, the OIDC provider may use a self-signed certificate. To connect to an OIDC provider with a self-signed certificate, you need to configure it using the [Backend] resource within the [SecurityPolicy]. Additionally, use the [BackendTLSPolicy] to specify the CA certificate required to authenticate the OIDC provider.
+
+The following example demonstrates how to configure the OIDC provider with a self-signed certificate.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  oidc:
+    provider:
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-keycloak
+        port: 443
+      backendSettings:
+        retry:
+          numRetries: 3
+          perRetry:
+            backOff:
+              baseInterval: 1s
+              maxInterval: 5s
+          retryOn:
+            triggers: ["5xx", "gateway-error", "reset"]
+      issuer: "https://my.keycloak.com/realms/master"
+      authorizationEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/token"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "http://www.example.com/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-keycloak
+spec:
+  endpoints:
+  - fqdn:
+      hostname: 'my.keycloak.com'
+      port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+spec:
+  targetRefs:
+  - group: gateway.envoyproxy.io
+    kind: Backend
+    name: backend-keycloak
+  validation:
+    caCertificateRefs:
+    - name: backend-tls-certificate
+      group: ""
+      kind: ConfigMap
+    hostname: my.keycloak.com
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-example
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  oidc:
+    provider:
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-keycloak
+        port: 443
+      backendSettings:
+        retry:
+          numRetries: 3
+          perRetry:
+            backOff:
+              baseInterval: 1s
+              maxInterval: 5s
+          retryOn:
+            triggers: ["5xx", "gateway-error", "reset"]
+      issuer: "https://my.keycloak.com/realms/master"
+      authorizationEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "https://my.keycloak.com/realms/master/protocol/openid-connect/token"
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "http://www.example.com/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-keycloak
+spec:
+  endpoints:
+  - fqdn:
+      hostname: 'my.keycloak.com'
+      port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: policy-btls
+spec:
+  targetRefs:
+  - group: gateway.envoyproxy.io
+    kind: Backend
+    name: backend-keycloak
+  validation:
+    caCertificateRefs:
+    - name: backend-tls-certificate
+      group: ""
+      kind: ConfigMap
+    hostname: my.keycloak.com
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+As shown in the example above, the [SecurityPolicy] resource is configured with an OIDC provider in its OIDC settings. The `backendRefs` field references the [Backend] resource that defines the OIDC provider. The [BackendTLSPolicy] resource specifies the CA certificate required to authenticate the OIDC provider.
+
+Additional connection settings for the OIDC provider can be configured in the [backendSettings]. Currently, only the retry policy is supported.
+
+For more information about [Backend] and [BackendTLSPolicy], refer to the [Backend Routing][backend-routing] and [Backend TLS: Gateway to Backend][backend-tls] tasks.
+
+
+## Cookie Names
+
+Envoy keeps the OIDC session in a set of cookies, and names each one `<Purpose>-<suffix>`,
+for example `AccessToken-1a2b3c4d`. Envoy Gateway derives the suffix from the identity of
+the [SecurityPolicy], so that policies applying to the same route don't overwrite each
+other's cookies.
+
+Because the generated suffix is tied to the identity of the policy, it changes when the
+policy is deleted and recreated, which logs users out. Pin it with `cookieNames.suffix`:
+
+```yaml
+  oidc:
+    cookieNames:
+      suffix: "myapp"
+```
+
+Envoy then sets `AccessToken-myapp`, `IdToken-myapp`, `OauthHMAC-myapp`,
+`OauthExpires-myapp`, `RefreshToken-myapp`, `OauthNonce-myapp` and
+`CodeVerifier-myapp`.
+
+Policies that share a suffix also share the session cookies, so a user authenticated
+through one is authenticated through the others. This only works if those policies agree
+on the OIDC provider, the client, and the `cookieDomain`.
+
+If something that runs after OIDC expects a particular cookie name, name that cookie
+outright. A filter later in the chain, or the backend application itself, may read a token
+from a cookie whose name it hardcodes, most often the access token. The per-cookie fields
+take precedence over `suffix`:
+
+```yaml
+  oidc:
+    cookieNames:
+      suffix: "myapp"
+      accessToken: "my_access_token"
+```
+
+Here Envoy sets `my_access_token`, and keeps the suffix for the cookies that aren't named
+explicitly, such as `IdToken-myapp` and `OauthHMAC-myapp`.
+
+Each cookie holds a different value, so all the resulting names must be distinct.
+
+## Large Tokens
+
+Browsers don't store a cookie larger than 4096 bytes, and they drop it without an error.
+Some OIDC providers issue access, ID or refresh tokens larger than that, for example when
+the token carries many group claims. A browser that drops the token cookie never sends the
+token back: Envoy treats the session as missing and redirects the user to the OIDC provider
+again and again, until the browser reports too many redirects.
+
+Envoy Gateway therefore has Envoy split such a token across several cookies. A token that
+fits in one cookie is still written as one cookie. A larger token is written as `<name>_0`,
+`<name>_1`, and so on, plus a `<name>_chunks` cookie that holds the count, for example
+`AccessToken-myapp_0` and `AccessToken-myapp_chunks`. Each cookie stays within 4096 bytes,
+name and attributes included, and a token is split into at most 8 cookies. If a token needs
+more, Envoy fails the login with a `503` instead of setting cookies the browser could not
+send back.
+
+Every chunk is sent back on each request, so several large tokens together can exceed the
+listener's request header limit, 60Ki by default. Raise it with `headers.maxRequestHeaderLimit`
+in a [ClientTrafficPolicy] if requests with a full set of chunks start failing.
+
+Envoy Proxy older than v1.40 can't read the split cookies. While proxies of an earlier Envoy
+Gateway release serve the same hostnames, for example during an upgrade or while the clusters
+of a multi-cluster setup are upgraded one by one, a client that holds such a token in one
+cookie today, such as a non-browser client, is sent back to the OIDC provider whenever it
+reaches an older proxy. To avoid that, disable the `OIDCTokenCookieChunking` runtime flag in
+the [EnvoyGateway] configuration until every proxy is upgraded:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+runtimeFlags:
+  disabled:
+  - OIDCTokenCookieChunking
+```
+
+From v1.40 on, Envoy reads both a single cookie and split cookies whether or not the flag
+is enabled, so turning the flag on or off doesn't end existing sessions.
+
+## Logout
+
+Requesting the `logoutPath` clears the OIDC cookies Envoy Gateway set for the session. If not
+specified, `logoutPath` defaults to `/logout`. Like `redirectURL`, it must match the target
+HTTPRoute or Gateway, otherwise the logout request can't be processed by the OIDC filter.
+
+Clearing the cookies only ends the session at the gateway; the user remains logged in at the OIDC
+provider. To also terminate the provider-side session, configure the provider's
+[end session endpoint](https://openid.net/specs/openid-connect-rpinitiated-1_0.html), which enables
+[RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html):
+
+```yaml
+  oidc:
+    provider:
+      issuer: "https://accounts.google.com"
+      endSessionEndpoint: "https://accounts.google.com/o/oauth2/v2/logout"
+    logoutPath: "/myapp/logout"
+```
+
+Envoy Gateway also discovers `endSessionEndpoint` from the provider's
+[Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse)
+when `authorizationEndpoint` or `tokenEndpoint` is not specified, so RP-Initiated Logout may be
+active even if you did not set the field explicitly.
+
+When an end session endpoint is in use, requesting the `logoutPath` returns a redirect to the
+provider that carries a `post_logout_redirect_uri` parameter telling the provider where to send the
+user once the logout completes. By default Envoy sends the root of the request's host,
+`<scheme>://<host>/`.
+
+### Setting the post logout redirect URI
+
+Most providers require the post logout redirect URI to be **registered for the client** and reject
+the logout request otherwise. If the default value is not registered, set an explicit URI:
+
+```yaml
+  oidc:
+    logoutPath: "/myapp/logout"
+    postLogoutRedirect:
+      uri: "https://www.example.com/loggedout"
+```
+
+Point the URI at a page that the OIDC policy does not protect. If it falls under a protected route,
+Envoy Gateway starts a new login as soon as the provider redirects the user there, and the provider
+may sign the user straight back in with its own session.
+
+The URI may contain the Envoy `%REQ(header)%` [command operator][command-operators], which is useful
+when the same policy serves more than one host:
+
+```yaml
+  oidc:
+    postLogoutRedirect:
+      uri: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout"
+```
+
+Only `%REQ(header)%` is accepted here, since it is the only operator meaningful in a URI derived from
+the request. Envoy Gateway rejects any other operator and reports the error on the SecurityPolicy
+status, so that a typo such as `%REQ(x-tenant)` or `%BOGUS%` surfaces on the policy rather than
+causing Envoy to reject the configuration. Envoy percent-encodes the URI when it builds the logout
+redirect, so write it unencoded; a literal percent is written as `%%`.
+
+### Omitting the post logout redirect URI
+
+`post_logout_redirect_uri` is optional in the OIDC specification. If you cannot register a URI with
+your provider, or you do not need the user redirected back to your application, omit the parameter
+entirely:
+
+```yaml
+  oidc:
+    logoutPath: "/myapp/logout"
+    postLogoutRedirect:
+      disabled: true
+```
+
+The logout itself still completes — Envoy Gateway clears its cookies and the provider terminates the
+session — but because the provider is not told where to send the user, the browser is left on a page
+controlled by the provider rather than returning to your application.
+
+`uri` cannot be set together with `disabled: true`. `postLogoutRedirect` has no effect when no end
+session endpoint is configured or discovered, because in that case Envoy Gateway does not redirect to
+the provider at all.
+
+## Providers
+
+Guides to integrate with specific OIDC providers.
+
+### Azure Entra
+
+This guide demonstrates how to configure Envoy Gateway to use [Azure Entra](https://learn.microsoft.com/en-us/entra) as the OIDC provider with additional JWT authorization. To get OAuth 2.0 compatible tokens you must register a Scope for your application as described in the [Microsoft Documentation](https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent). In this example the resulting scope is `api://custom/EnvoyGateway.OIDC`.
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: entra-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  oidc:
+    clientID: "${CLIENT_ID}"
+    clientSecret:
+      name: "my-app-client-secret"
+    redirectURL: "https://www.example.com:8443/myapp/oauth2/callback"
+    logoutPath: "/myapp/logout"
+    
+    cookieDomain: "example.com"
+    cookieNames:
+      suffix: "azure"
+
+    provider:
+      issuer: "https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0"
+    scopes:
+      - api://custom/EnvoyGateway.OIDC
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: "allow-jwt-claim"
+        action: Allow
+        principal:
+          jwt:
+            provider: entra
+            claims:
+              - name: roles
+                valueType: "StringArray"
+                values:
+                  - "administrators"
+  jwt:
+    providers:
+      - name: entra
+        issuer: "https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0"
+        remoteJWKS:
+          uri: https://login.microsoftonline.com/<AZURE_TENANT_ID>/discovery/v2.0/keys
+        extractFrom:
+          cookies:
+            - "azure-access-token"
+```
+
+## Clean-Up
+
+Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+
+Delete the SecurityPolicy, the secret and the HTTPRoute:
+
+```shell
+kubectl delete securitypolicy/oidc-example
+kubectl delete secret/my-app-client-secret
+kubectl delete httproute/myapp
+kubectl delete httproute/foo
+```
+
+## Next Steps
+
+Checkout the [Developer Guide](/community/develop) to get involved in the project.
+
+[oidc]: https://openid.net/connect/
+[google-oidc]: https://developers.google.com/identity/protocols/oauth2/openid-connect
+[SecurityPolicy]: ../../../api/extension_types#securitypolicy
+[ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[EnvoyGateway]: ../../../api/extension_types#envoygateway
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[Backend]: ../../../api/extension_types#backend
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/
+[backend-routing]: ../traffic/backend
+[backend-tls]: ../backend-tls
+[BackendSettings]: ../../../api/extension_types/#clustersettings
+[command-operators]: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators
