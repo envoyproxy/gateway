@@ -388,13 +388,11 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		switch {
-		// return 500 if any filter processing error occurred
+		// Invalid filters make the rule invalid: return 500 and drop any redirect.
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
-				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: new(uint32(500)),
-				}
+				applyInvalidFilterDirectResponse(irRoute, httpFiltersContext)
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {
@@ -1456,9 +1454,16 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 			)
 		}
 
-		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
+		// Skip listener attachment when the route was rejected and no IR
+		// routes were generated (e.g. invalid regex or empty session name).
+		// Attaching anyway would increment AttachedRoutes and enable gRPC
+		// filters with nothing to serve. Generated 500 error routes are still
+		// attached below, matching HTTPRoute.
+		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) &&
+			len(routesWithBackends) == 0 {
 			continue
 		}
+
 		hasHostnameIntersection := t.processHTTPRouteParentRefListener(grpcRoute, routesWithBackends, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(grpcRoute)
@@ -1470,6 +1475,11 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s).",
 			)
+		}
+
+		// Skip parent refs that did not accept the route.
+		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1605,18 +1615,11 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		switch {
-		// return 500 if any filter processing error occurred
+		// Invalid filters make the rule invalid: return 500 and drop any redirect.
 		case processFilterError != nil:
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
-				// If the route already has a direct response or redirect configured, then it was from a filter so skip
-				// the direct response from errors.
-				if irRoute.DirectResponse != nil || irRoute.Redirect != nil {
-					continue
-				}
-				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: new(uint32(500)),
-				}
+				applyInvalidFilterDirectResponse(irRoute, httpFiltersContext)
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
 			if len(routesWithDirectResponse) > 0 {

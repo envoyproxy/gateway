@@ -40,6 +40,22 @@ grpcRoutes:
                 group: gateway.envoyproxy.io
                 kind: HTTPRouteFilter
                 name: mirror-direct-response
+        # DirectResponse listed first must still conflict with a later RequestMirror.
+        - backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-direct-response
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  kind: Service
+                  name: service-1
+                  port: 8080
         - backendRefs:
             - name: service-2
               port: 8080

@@ -445,9 +445,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /v1
-        redirect:
-          hostname: elsewhere.envoyproxy.io
-          port: 80
       - directResponse:
           statusCode: 500
         grpcJSONTranscoder:
