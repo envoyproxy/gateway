@@ -25,6 +25,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/deprecation"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -369,6 +370,13 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
 	translatorContext.BackendTLSPolicyIndex = BuildBackendTLSPolicyIndex(resources.BackendTLSPolicies)
 	translatorContext.ExtensionRefIndex = BuildExtensionRefIndex(resources.ExtensionRefFilters)
+	if len(resources.BackendEndpoints) != 0 {
+		translatorContext.BackendEndpointsByKey = make(map[ir.ServiceKey]*endpoint.BackendEndpoints, len(resources.BackendEndpoints))
+		for i := range resources.BackendEndpoints {
+			backendEndpoints := &resources.BackendEndpoints[i]
+			translatorContext.BackendEndpointsByKey[backendEndpoints.Backend] = backendEndpoints
+		}
+	}
 
 	t.TranslatorContext = translatorContext
 
