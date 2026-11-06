@@ -34,8 +34,8 @@ grpcRoutes:
       - name: service-1
         port: 8080
       sessionPersistence:
-        sessionName: Session-A
         type: Cookie
         absoluteTimeout: 10s
-        cookieConfig:
+        cookie:
+          name: Session-A
           lifetimeType: Permanent

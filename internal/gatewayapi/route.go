@@ -1860,41 +1860,40 @@ func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteCont
 		return nil, nil
 	}
 
-	var sessionName string
-	switch {
-	case sp.SessionName == nil:
-		// SessionName is optional on the gateway-api, but envoy requires it
-		// so we generate the one here.
-
-		// We generate a unique session name per route.
-		// `/` isn't allowed in the header key, so we replace it with `-`. That
-		// replacement alone is ambiguous (e.g. a-b/c and a/b-c), so a short hash
-		// of the original name is appended to keep names collision-free.
-		destName := irRouteDestinationName(route, ruleIdx)
-		sum := sha256.Sum256([]byte(destName))
-		sessionName = strings.ReplaceAll(destName, "/", "-") + "-" + hex.EncodeToString(sum[:4])
-	case *sp.SessionName == "":
-		// The CRD only bounds the maximum length, but envoy rejects an empty
-		// cookie or header name, which would fail the whole xDS update.
-		return nil, status.NewRouteStatusError(
-			errors.New("sessionName must not be empty"),
-			gwapiv1.RouteReasonUnsupportedValue,
-		)
-	default:
-		sessionName = *sp.SessionName
-	}
-
 	switch {
 	case sp.Type == nil || // Cookie-based session persistence is default.
 		*sp.Type == gwapiv1.CookieBasedSessionPersistence:
+		var sessionName string
+		switch {
+		case sp.Cookie == nil || sp.Cookie.Name == nil:
+			// Cookie name is optional on the gateway-api, but envoy requires it
+			// so we generate the one here.
+
+			// We generate a unique session name per route.
+			// `/` isn't allowed in the header key, so we replace it with `-`. That
+			// replacement alone is ambiguous (e.g. a-b/c and a/b-c), so a short hash
+			// of the original name is appended to keep names collision-free.
+			destName := irRouteDestinationName(route, ruleIdx)
+			sum := sha256.Sum256([]byte(destName))
+			sessionName = strings.ReplaceAll(destName, "/", "-") + "-" + hex.EncodeToString(sum[:4])
+		case *sp.Cookie.Name == "":
+			// The CRD only bounds the maximum length, but envoy rejects an empty
+			// cookie or header name, which would fail the whole xDS update.
+			return nil, status.NewRouteStatusError(
+				errors.New("cookie name must not be empty"),
+				gwapiv1.RouteReasonUnsupportedValue,
+			)
+		default:
+			sessionName = string(*sp.Cookie.Name)
+		}
 		out := &ir.SessionPersistence{
 			Cookie: &ir.CookieBasedSessionPersistence{
 				Name: sessionName,
 			},
 		}
 		if sp.AbsoluteTimeout != nil &&
-			sp.CookieConfig != nil && sp.CookieConfig.LifetimeType != nil &&
-			*sp.CookieConfig.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
+			sp.Cookie != nil && sp.Cookie.LifetimeType != nil &&
+			*sp.Cookie.LifetimeType == gwapiv1.PermanentCookieLifetimeType {
 			ttl, err := time.ParseDuration(string(*sp.AbsoluteTimeout))
 			if err != nil {
 				return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
@@ -1903,9 +1902,17 @@ func translateSessionPersistence(sp *gwapiv1.SessionPersistence, route RouteCont
 		}
 		return out, nil
 	case *sp.Type == gwapiv1.HeaderBasedSessionPersistence:
+		// header.name is Core-required by the CRD, but envoy rejects an empty
+		// header name, which would fail the whole xDS update.
+		if sp.Header == nil || sp.Header.Name == "" {
+			return nil, status.NewRouteStatusError(
+				errors.New("header name must not be empty"),
+				gwapiv1.RouteReasonUnsupportedValue,
+			)
+		}
 		return &ir.SessionPersistence{
 			Header: &ir.HeaderBasedSessionPersistence{
-				Name: sessionName,
+				Name: string(sp.Header.Name),
 			},
 		}, nil
 	default:

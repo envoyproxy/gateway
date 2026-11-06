@@ -60,7 +60,8 @@ httpRoutes:
       - path:
           value: /split
       sessionPersistence:
-        sessionName: test-session
+        cookie:
+          name: test-session
         type: Cookie
   status:
     parents:
