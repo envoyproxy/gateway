@@ -22,8 +22,9 @@ spec:
         - name: infra-backend-v2
           port: 8080
       sessionPersistence:
-        sessionName: Session-A
         type: Header
+        header:
+          name: Session-A
     - matches:
         - path:
             type: PathPrefix
@@ -32,19 +33,19 @@ spec:
         - name: infra-backend-v3
           port: 8080
       sessionPersistence:
-        sessionName: Session-A
         type: Cookie
         absoluteTimeout: 10s
-        cookieConfig:
+        cookie:
+          name: Session-A
           lifetimeType: Permanent
     - matches:
         - path:
             type: PathPrefix
             value: /cookie-session-persistence-multiple-backends
       sessionPersistence:
-        sessionName: Session-A
         type: Cookie
-        cookieConfig:
+        cookie:
+          name: Session-A
           lifetimeType: Session
       backendRefs:
         - name: infra-backend-v1

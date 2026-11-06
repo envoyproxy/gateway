@@ -34,5 +34,6 @@ grpcRoutes:
       - name: service-1
         port: 8080
       sessionPersistence:
-        sessionName: Session-A
         type: Header
+        header:
+          name: Session-A

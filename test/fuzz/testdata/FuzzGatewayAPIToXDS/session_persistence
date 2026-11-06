@@ -15,10 +15,10 @@ spec:
         - name: backend
           port: 3000
       sessionPersistence:
-        sessionName: Session-A
         type: Cookie
         absoluteTimeout: 10s
-        cookieConfig:
+        cookie:
+          name: Session-A
           lifetimeType: Permanent
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -37,6 +37,7 @@ spec:
         - name: backend
           port: 3000
       sessionPersistence:
-        sessionName: Session-A
         type: Header
+        header:
+          name: Session-A
         absoluteTimeout: 10s

@@ -36,8 +36,9 @@ grpcRoutes:
             - method:
                 service: helloworld.Greeter
           sessionPersistence:
-            sessionName: test-session
             type: Cookie
+            cookie:
+              name: test-session
           backendRefs:
             - name: service-1
               port: 8080
