@@ -56,6 +56,17 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
+  grafana-operator-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+    - changes
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+    - uses: ./tools/github-actions/setup-deps
+    - run: make helm-test.grafana-operator
+
   license-check:
     runs-on: ubuntu-latest
     steps:
@@ -465,6 +476,7 @@ jobs:
     needs:
     - lint
     - gen-check
+    - grafana-operator-test
     - license-check
     - coverage-test
     - build

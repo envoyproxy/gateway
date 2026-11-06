@@ -52,6 +52,38 @@ To uninstall the chart:
 helm uninstall eg-addons -n monitoring
 ```
 
+### Use an existing Grafana Operator instance
+
+Install the Grafana Operator and create a Grafana instance before enabling this mode.
+Label the instance with `dashboards: grafana` and `environment: production`, and configure
+its Prometheus datasource separately. Save the following as `operator-values.yaml`:
+
+```yaml
+grafana:
+  enabled: false
+dashboard:
+  mode: grafana-operator
+  folder: envoy-gateway
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+    matchExpressions:
+      - key: environment
+        operator: In
+        values:
+          - production
+```
+
+```shell
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest \
+  -n monitoring --create-namespace -f operator-values.yaml
+```
+
+The selector supports both `matchLabels` and `matchExpressions`; all requirements must match.
+Helm merges maps with defaults. To use only expressions, set `dashboard.instanceSelector.matchLabels: null`.
+Dashboards may be imported into matching instances in other namespaces.
+Switching `dashboard.mode` does not disable the bundled Grafana; set `grafana.enabled: false` explicitly.
+
 ## Values
 
 | Key | Type | Default | Description |
@@ -60,7 +92,10 @@ helm uninstall eg-addons -n monitoring
 | alloy.enabled | bool | `false` |  |
 | alloy.fullnameOverride | string | `"alloy"` |  |
 | dashboard.annotations | object | `{}` |  |
+| dashboard.folder | string | `"envoy-gateway"` |  |
+| dashboard.instanceSelector.matchLabels.dashboards | string | `"grafana"` |  |
 | dashboard.labels | object | `{}` |  |
+| dashboard.mode | string | `"configmap"` |  |
 | fluent-bit.config.filters | string | `"[FILTER]\n    Name kubernetes\n    Match kube.*\n    Merge_Log On\n    Keep_Log Off\n    K8S-Logging.Parser On\n    K8S-Logging.Exclude On\n\n[FILTER]\n    Name grep\n    Match kube.*\n    Regex $kubernetes['container_name'] ^envoy$\n\n[FILTER]\n    Name parser\n    Match kube.*\n    Key_Name log\n    Parser envoy\n    Reserve_Data True\n"` |  |
 | fluent-bit.config.inputs | string | `"[INPUT]\n    Name tail\n    Path /var/log/containers/*.log\n    multiline.parser docker, cri\n    Tag kube.*\n    Mem_Buf_Limit 5MB\n    Skip_Long_Lines On\n"` |  |
 | fluent-bit.config.outputs | string | `"[OUTPUT]\n    Name                   loki\n    Match                  kube.*\n    Host                   loki.monitoring.svc.cluster.local\n    Port                   3100\n    Labels                 job=fluentbit, app=$kubernetes['labels']['app'], k8s_namespace_name=$kubernetes['namespace_name'], k8s_pod_name=$kubernetes['pod_name'], k8s_container_name=$kubernetes['container_name']\n"` |  |
