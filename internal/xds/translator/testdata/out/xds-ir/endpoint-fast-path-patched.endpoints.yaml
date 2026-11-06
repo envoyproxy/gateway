@@ -1,0 +1,12 @@
+- clusterName: orders
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.0.1
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 9
+    locality:
+      region: orders/backend/0
