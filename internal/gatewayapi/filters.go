@@ -1476,6 +1476,7 @@ func evalContextAfterDirectResponse(emitted, eval *HTTPFiltersContext) *HTTPFilt
 
 func cloneHTTPFiltersContext(ctx *HTTPFiltersContext) *HTTPFiltersContext {
 	irCopy := *ctx.HTTPFilterIR
+	irCopy.URLRewrite = ctx.URLRewrite.DeepCopy()
 	irCopy.AddRequestHeaders = slices.Clone(ctx.AddRequestHeaders)
 	irCopy.RemoveRequestHeaders = slices.Clone(ctx.RemoveRequestHeaders)
 	irCopy.AddResponseHeaders = slices.Clone(ctx.AddResponseHeaders)

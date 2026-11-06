@@ -1,0 +1,116 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  # A core path rewrite before DirectResponse must stay frozen. A later PathRegex
+  # host rewrite is non-conflicting and must not mutate the shared URLRewrite pointer
+  # or trip the dynamic-resolver PathRegex guard.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-path-then-directresponse-then-pathregex
+    spec:
+      hostnames:
+        - path-then-dr.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/v1"
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: /v2
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: deny
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: host-from-path
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-dynamic-resolver
+  # Control: PathRegex after DirectResponse with no preexisting rewrite stays shadow-only.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-directresponse-then-pathregex
+    spec:
+      hostnames:
+        - dr-then-pathregex.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/v1"
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: deny
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: host-from-path
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-dynamic-resolver
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-dynamic-resolver
+      namespace: default
+    spec:
+      type: DynamicResolver
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: deny
+    spec:
+      directResponse:
+        statusCode: 403
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: host-from-path
+    spec:
+      urlRewrite:
+        hostname:
+          type: PathRegex
+          pathRegex:
+            pattern: "^/v1/([^/]+)/.*$"
+            substitution: "\\1.svc"

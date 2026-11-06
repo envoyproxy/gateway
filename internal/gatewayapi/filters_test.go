@@ -45,6 +45,30 @@ func TestRemoveAddedHeadersKeepsEarlierSameNameModifier(t *testing.T) {
 	require.Equal(t, []ir.AddHeader{{Name: "Set-Cookie", Value: []string{"keep=1"}}}, got)
 }
 
+func TestCloneHTTPFiltersContextDeepCopiesURLRewrite(t *testing.T) {
+	prefix := "/v2"
+	orig := &HTTPFiltersContext{
+		HTTPFilterIR: &HTTPFilterIR{
+			DirectResponse: &ir.CustomResponse{StatusCode: new(uint32(403))},
+			URLRewrite: &ir.URLRewrite{
+				Path: &ir.ExtendedHTTPPathModifier{
+					HTTPPathModifier: ir.HTTPPathModifier{PrefixMatchReplace: &prefix},
+				},
+			},
+		},
+	}
+
+	cloned := cloneHTTPFiltersContext(orig)
+	cloned.URLRewrite.Host = &ir.HTTPHostModifier{
+		PathRegex: &ir.RegexMatchReplace{Pattern: "^/v1/([^/]+)/.*$", Substitution: "\\1.svc"},
+	}
+
+	require.Nil(t, orig.URLRewrite.Host)
+	require.NotNil(t, cloned.URLRewrite.Host)
+	require.NotSame(t, orig.URLRewrite, cloned.URLRewrite)
+	require.Equal(t, "/v2", *orig.URLRewrite.Path.PrefixMatchReplace)
+}
+
 func TestConfiguredDirectResponseIs2xx(t *testing.T) {
 	ok := uint32(200)
 	created := uint32(201)
