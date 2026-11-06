@@ -1074,4 +1074,22 @@ func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
 		require.Nil(t, err)
 		require.Equal(t, "x-session", sp.Header.Name)
 	})
+
+	t.Run("cookie path override is rejected", func(t *testing.T) {
+		path := new("/foo")
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{
+			Cookie: &gwapiv1.CookieConfig{Name: new(gwapiv1.CookieName("my-session")), Path: path},
+		}, httpRoute("default", "route-1"), 0)
+		require.Nil(t, sp)
+		require.NotNil(t, err)
+		require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, err.Reason())
+	})
+
+	t.Run("default cookie path is accepted", func(t *testing.T) {
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{
+			Cookie: &gwapiv1.CookieConfig{Name: new(gwapiv1.CookieName("my-session")), Path: new("/")},
+		}, httpRoute("default", "route-1"), 0)
+		require.Nil(t, err)
+		require.Equal(t, "my-session", sp.Cookie.Name)
+	})
 }
