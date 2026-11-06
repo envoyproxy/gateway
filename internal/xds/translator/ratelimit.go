@@ -622,6 +622,7 @@ func rateLimitCostToHitsAddend(c *ir.RateLimitCost) *routev3.RateLimit_HitsAdden
 	if c.Format != nil {
 		ret.Format = *c.Format
 	}
+	ret.IsNegativeHits = c.Negative
 	return ret
 }
 
