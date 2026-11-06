@@ -280,6 +280,19 @@ func (t *Translator) validateListenerSpec(listener *ListenerContext, resources *
 		specValid = false
 	}
 
+	// Phase 5: Reject pre-routing listener filters (GEP-5224, Gateway API v1.7).
+	// Serving traffic while silently ignoring the requested filters (e.g. ExternalAuth)
+	// would skip the requested authorization, so the listener is rejected instead.
+	if listener.Filters != nil {
+		specValid = false
+		listener.SetCondition(
+			gwapiv1.ListenerConditionAccepted,
+			metav1.ConditionFalse,
+			gwapiv1.ListenerReasonUnsupportedValue,
+			"Pre-routing listener filters are not supported.",
+		)
+	}
+
 	return specValid
 }
 
