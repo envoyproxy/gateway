@@ -59,7 +59,8 @@ grpcRoutes:
           service: com.example.Things
           type: Exact
       sessionPersistence:
-        sessionName: Session-A
+        header:
+          name: Session-A
         type: Header
   status:
     parents:
