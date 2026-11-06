@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: passthrough-echoserver
-          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.2.0
           ports:
             - containerPort: 8443
           env:

@@ -43,10 +43,10 @@ spec:
         - name: backend
           port: 3000
       sessionPersistence:
-        sessionName: Session-A
         type: Cookie
         absoluteTimeout: 10s
-        cookieConfig:
+        cookie:
+          name: Session-A
           lifetimeType: Permanent
 EOF
 ```
@@ -73,10 +73,10 @@ spec:
         - name: backend
           port: 3000
       sessionPersistence:
-        sessionName: Session-A
         type: Cookie
         absoluteTimeout: 10s
-        cookieConfig:
+        cookie:
+          name: Session-A
           lifetimeType: Permanent
 ```
 
@@ -88,8 +88,8 @@ so it keeps working when the path seen by the client differs from the path match
 when an edge proxy rewrites the request path before it reaches Envoy Gateway.
 
 Because the cookie is sent to every route on the same host, each HTTPRoute rule on a host that enables
-cookie-based session persistence must use a distinct `sessionName`. Rules that share a `sessionName` overwrite
-each other's cookie, and session persistence stops working for both. If `sessionName` is omitted, Envoy Gateway
+cookie-based session persistence must use a distinct `cookie.name`. Rules that share a `cookie.name` overwrite
+each other's cookie, and session persistence stops working for both. If `cookie.name` is omitted, Envoy Gateway
 generates a unique cookie name for the rule, so leaving it unset is the safest choice unless the cookie name has
 to match an existing one, such as `JSESSIONID`.
 
@@ -157,8 +157,9 @@ spec:
         - name: backend
           port: 3000
       sessionPersistence:
-        sessionName: Session-A
         type: Header
+        header:
+          name: Session-A
         absoluteTimeout: 10s
 EOF
 ```
@@ -185,8 +186,9 @@ spec:
         - name: backend
           port: 3000
       sessionPersistence:
-        sessionName: Session-A
         type: Header
+        header:
+          name: Session-A
         absoluteTimeout: 10s
 ```
 
