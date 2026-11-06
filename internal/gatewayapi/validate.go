@@ -521,7 +521,7 @@ func (t *Translator) resolveExtensionCertificateRef(
 func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 	listener *ListenerContext,
 	resources *resource.Resources,
-) ([]*corev1.Secret, []unstructured.Unstructured, []*x509.Certificate, bool) {
+) ([]listenerSecret, []*x509.Certificate, bool) {
 	if len(listener.TLS.CertificateRefs) == 0 {
 		listener.SetCondition(
 			gwapiv1.ListenerConditionProgrammed,
@@ -529,14 +529,14 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			gwapiv1.ListenerReasonInvalid,
 			"Listener must have at least 1 TLS certificate ref",
 		)
-		return nil, nil, nil, false
+		return nil, nil, false
 	}
 
 	var errs []status.ListenerError
 	tlsSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
 	sdsSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
-	orderedSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
-	extensionCerts := make([]unstructured.Unstructured, 0, len(listener.TLS.CertificateRefs))
+	orderedSecrets := make([]listenerSecret, 0, len(listener.TLS.CertificateRefs))
+	extensionSecretCount := 0
 	resolvedSDSSecretNames := make(map[types.NamespacedName]struct{})
 	for idx, certificateRef := range listener.TLS.CertificateRefs {
 		refGroup, refKind := "", resource.KindSecret
@@ -554,7 +554,8 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 				errs = append(errs, err)
 				continue
 			}
-			extensionCerts = append(extensionCerts, *cert)
+			orderedSecrets = append(orderedSecrets, listenerSecret{extensionSecret: cert})
+			extensionSecretCount++
 			continue
 		}
 
@@ -644,7 +645,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			}
 			resolvedSDSSecretNames[name] = struct{}{}
 			sdsSecrets = append(sdsSecrets, secret)
-			orderedSecrets = append(orderedSecrets, secret)
+			orderedSecrets = append(orderedSecrets, listenerSecret{kubernetesSecret: secret})
 			continue
 		}
 
@@ -665,10 +666,10 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 		}
 
 		tlsSecrets = append(tlsSecrets, secret)
-		orderedSecrets = append(orderedSecrets, secret)
+		orderedSecrets = append(orderedSecrets, listenerSecret{kubernetesSecret: secret})
 	}
 
-	if len(tlsSecrets)+len(sdsSecrets)+len(extensionCerts) == 0 {
+	if len(tlsSecrets)+len(sdsSecrets)+extensionSecretCount == 0 {
 		// Use RefNotPermitted only if ALL errors are RefNotPermitted
 		// Otherwise use InvalidCertificateRef as the general catch-all
 		reason := gwapiv1.ListenerReasonRefNotPermitted
@@ -690,13 +691,13 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			fmt.Sprintf("No valid secrets exist: %v", errors.Join(errList...)),
 		)
 
-		return nil, nil, nil, false
+		return nil, nil, false
 	}
 
 	validSecrets, certs, err := parseCertsFromTLSSecretsData(tlsSecrets)
 	if err != nil {
 		if err.Reason() != status.ListenerReasonPartiallyInvalidCertificateRef {
-			if len(validSecrets) == 0 && len(sdsSecrets)+len(extensionCerts) > 0 {
+			if len(validSecrets) == 0 && len(sdsSecrets)+extensionSecretCount > 0 {
 				errs = append(errs, err)
 			} else {
 				listener.SetCondition(
@@ -705,7 +706,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 					err.Reason(),
 					fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
 				)
-				return nil, nil, nil, false
+				return nil, nil, false
 			}
 		} else {
 			errs = append(errs, err)
@@ -731,23 +732,23 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 		validTLSSecretsByName[name] = append(validTLSSecretsByName[name], secret)
 	}
 
-	resolvedSecrets := make([]*corev1.Secret, 0, len(validSecrets)+len(sdsSecrets))
+	resolvedSecrets := make([]listenerSecret, 0, len(validSecrets)+len(sdsSecrets)+extensionSecretCount)
 	for _, secret := range orderedSecrets {
-		if secret.Type == egv1a1.SDSSecretType {
+		if secret.extensionSecret != nil || secret.kubernetesSecret.Type == egv1a1.SDSSecretType {
 			resolvedSecrets = append(resolvedSecrets, secret)
 			continue
 		}
 
-		name := types.NamespacedName{Namespace: secret.Namespace, Name: secret.Name}
+		name := types.NamespacedName{Namespace: secret.kubernetesSecret.Namespace, Name: secret.kubernetesSecret.Name}
 		matchingSecrets := validTLSSecretsByName[name]
 		if len(matchingSecrets) == 0 {
 			continue
 		}
-		resolvedSecrets = append(resolvedSecrets, matchingSecrets[0])
+		resolvedSecrets = append(resolvedSecrets, listenerSecret{kubernetesSecret: matchingSecrets[0]})
 		validTLSSecretsByName[name] = matchingSecrets[1:]
 	}
 
-	return resolvedSecrets, extensionCerts, certs, true
+	return resolvedSecrets, certs, true
 }
 
 // validateTLSConfiguration validates TLS configuration per protocol.
@@ -788,9 +789,8 @@ func (t *Translator) validateTLSConfiguration(
 				)
 				specValid = false
 			} else {
-				secrets, extCerts, certs, ok := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
+				secrets, certs, ok := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 				listener.SetTLSSecrets(secrets)
-				listener.SetTLSExtensionCertificates(extCerts)
 
 				if !ok {
 					specValid = false
@@ -834,9 +834,8 @@ func (t *Translator) validateTLSConfiguration(
 					)
 					specValid = false
 				} else {
-					secrets, extCerts, _, ok := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
+					secrets, _, ok := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 					listener.SetTLSSecrets(secrets)
-					listener.SetTLSExtensionCertificates(extCerts)
 
 					if !ok {
 						specValid = false

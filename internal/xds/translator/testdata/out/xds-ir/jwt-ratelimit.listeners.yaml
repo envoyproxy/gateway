@@ -36,7 +36,7 @@
                     timeout: 10s
                     uri: https://192.168.1.250/jwt/public-key/jwks.json
             requirementMap:
-              example_531080ccb6b88587:
+              default/policy:
                 providerName: example_47556953f591bc2c
         - name: envoy.filters.http.ratelimit
           typedConfig:

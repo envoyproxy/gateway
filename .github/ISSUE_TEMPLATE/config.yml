@@ -1,1 +1,5 @@
 blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/envoyproxy/gateway/security/advisories/new
+    about: Report crashes and security issues privately. Do not open a public issue.
