@@ -17,12 +17,22 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // ProviderResources message
 type ProviderResources struct {
+	// EndpointSource holds the latest endpoints of each backend and their revisions.
+	// The full and endpoint controllers write it; full translation gets a copy
+	// through Resources.
+	EndpointSource endpoint.Source
+
+	// EndpointUpdates carries fast-path endpoint updates from the endpoint
+	// controller to the xDS publisher, which takes them in batches.
+	EndpointUpdates endpoint.UpdateQueue
+
 	// GatewayAPIResources is a map from a GatewayClass name to
 	// a group of gateway API and other related resources with trace context.
 	GatewayAPIResources watchable.Map[string, *resource.ControllerResourcesContext]

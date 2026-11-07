@@ -33,6 +33,8 @@ type ResourceVersionTable struct {
 	XdsResources
 	EnvoyPatchPolicyStatuses
 	GlobalResourceStatus
+	EndpointContexts EndpointContexts
+	EndpointInputs   EndpointInputs
 
 	clustersByName map[string]*clusterv3.Cluster
 }

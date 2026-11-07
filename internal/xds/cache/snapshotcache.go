@@ -15,6 +15,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -52,6 +53,7 @@ type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
 	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
+	PublishSnapshot(string, *cachev3.Snapshot, context.Context) error
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
 }
@@ -74,6 +76,33 @@ type snapshotCache struct {
 	lastSnapshot        snapshotMap
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
+}
+
+// PublishSnapshot installs an already prepared immutable snapshot. A nil snapshot
+// removes the IR key while sending an empty snapshot to its connected Envoys.
+func (s *snapshotCache) PublishSnapshot(irKey string, snapshot *cachev3.Snapshot, ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if snapshot == nil {
+		delete(s.lastSnapshot, irKey)
+		var err error
+		snapshot, err = PrepareSnapshot(nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		s.lastSnapshot[irKey] = snapshot
+	}
+	var errs error
+	for _, node := range s.getNodeIDs(irKey) {
+		if err := s.SetSnapshot(ctx, node, snapshot); err != nil {
+			errs = errors.Join(errs, err)
+			xdsSnapshotUpdateTotal.WithFailure(metrics.ReasonError, nodeIDLabel.Value(node)).Increment()
+		} else {
+			xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
+		}
+	}
+	return errs
 }
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS

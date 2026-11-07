@@ -221,6 +221,10 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
+	var options []message.SubscriptionOption
+	if r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) {
+		options = append(options, message.PreserveDeletes)
+	}
 	message.HandleSubscription(
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
@@ -688,6 +692,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// Delete keys using mark and sweep
 			r.deleteKeys(keysToDelete)
 		},
+		options...,
 	)
 	r.Logger.Info("shutting down")
 }
