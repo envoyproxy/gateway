@@ -1,0 +1,196 @@
+# Policies reference HTTP and Image Wasm modules registered on the Gateway's
+# EnvoyProxy instead of carrying inline code.
+#
+# Pull secret in the EnvoyProxy namespace, and one in another namespace that
+# the cross-namespace module must not be allowed to use.
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: registry-pull-secret
+  data:
+    .dockerconfigjson: VGhpc0lzTm90QVJlYWxEb2NrZXJDb25maWdKc29u
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: other-pull-secret
+  data:
+    .dockerconfigjson: VGhpc0lzTm90QVJlYWxEb2NrZXJDb25maWdKc29u
+# CA bundle for the HTTP module with TLS, in the EnvoyProxy namespace.
+configMaps:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    namespace: envoy-gateway
+    name: wasm-ca
+  data:
+    ca.crt: fake-ca-bundle
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: proxy-config
+    resourceVersion: "42"
+  spec:
+    wasmModules:
+    # Plain HTTP module with no refs.
+    - name: http-filter
+      source:
+        type: HTTP
+        http:
+          url: https://www.example.com/wasm-filter-1.wasm
+    # HTTP module whose CA is a ConfigMap in the EnvoyProxy namespace.
+    - name: http-filter-with-ca
+      source:
+        type: HTTP
+        http:
+          url: https://www.example.com/wasm-filter-2.wasm
+          tls:
+            caCertificateRef:
+              kind: ConfigMap
+              name: wasm-ca
+    # Image module with a same-namespace pull secret and pullPolicy Always,
+    # so the cache entry is keyed on the EnvoyProxy's resourceVersion.
+    - name: image-filter
+      source:
+        type: Image
+        image:
+          url: www.example.com/wasm-filter-3:v1.0.0
+          pullSecretRef:
+            name: registry-pull-secret
+        pullPolicy: Always
+    # Image module whose pull secret is in another namespace; rejected.
+    - name: image-filter-cross-namespace-secret
+      source:
+        type: Image
+        image:
+          url: www.example.com/wasm-filter-4:v1.0.0
+          pullSecretRef:
+            namespace: default
+            name: other-pull-secret
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: proxy-config
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+# One route per policy below; httproute-3 has no policy of its own and only
+# gets the Gateway-level modules.
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyextensionpolicies:
+# Uses an HTTP and an Image module together on the Gateway.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    wasm:
+    - name: http-filter
+    - name: image-filter
+      rootID: my-root-id
+# Uses the HTTP module with a CA; the policy is in a different namespace
+# from the EnvoyProxy, but the CA still resolves in the EnvoyProxy namespace.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route-1
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    wasm:
+    - name: http-filter-with-ca
+# Uses the module with the cross-namespace pull secret; expected to fail.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route-2
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    wasm:
+    - name: image-filter-cross-namespace-secret

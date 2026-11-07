@@ -45,7 +45,7 @@ envoyExtensionPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
+          instead; spec.wasm.code is deprecated, use EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
