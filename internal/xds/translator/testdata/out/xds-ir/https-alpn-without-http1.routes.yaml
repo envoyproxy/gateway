@@ -1,0 +1,75 @@
+- ignorePortInHostMatching: true
+  name: h2-only-with-hostname
+  virtualHosts:
+  - domains:
+    - '*'
+    name: h2-only-with-hostname/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: h2-only-without-hostname
+  virtualHosts:
+  - domains:
+    - '*'
+    name: h2-only-without-hostname/*
+    routes:
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: h2-only-with-http3
+  virtualHosts:
+  - domains:
+    - '*'
+    name: h2-only-with-http3/*
+    routes:
+    - match:
+        prefix: /
+      name: third-route
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":443"; ma=86400
+      route:
+        cluster: third-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: h2-and-http1
+  virtualHosts:
+  - domains:
+    - '*'
+    name: h2-and-http1/*
+    routes:
+    - match:
+        prefix: /
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: alpn-disabled
+  virtualHosts:
+  - domains:
+    - '*'
+    name: alpn-disabled/*
+    routes:
+    - match:
+        prefix: /
+      name: fifth-route
+      route:
+        cluster: fifth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

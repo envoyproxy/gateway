@@ -4,6 +4,8 @@
       portValue: 10080
   filterChains:
   - filterChainMatch:
+      applicationProtocols:
+      - some-other-protocol
       serverNames:
       - foo.com
     filters:

@@ -202,6 +202,9 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
+                      When a listener's list includes neither http/1.1 nor http/1.0, clients that
+                      don't offer one of the listed protocols are rejected, including clients that
+                      don't use ALPN at all.
 
                       Defaults to [h2, http/1.1] if not specified.
 
@@ -6835,6 +6838,9 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
+                      When a listener's list includes neither http/1.1 nor http/1.0, clients that
+                      don't offer one of the listed protocols are rejected, including clients that
+                      don't use ALPN at all.
 
                       Defaults to [h2, http/1.1] if not specified.
 
@@ -12673,6 +12679,9 @@ spec:
                       2. Other Routes: ALPN is disabled.
                       3. Backends: proxy uses the appropriate ALPN options for the backend protocol.
                       When an empty list is provided, the ALPN TLS extension is disabled.
+                      When a listener's list includes neither http/1.1 nor http/1.0, clients that
+                      don't offer one of the listed protocols are rejected, including clients that
+                      don't use ALPN at all.
 
                       Defaults to [h2, http/1.1] if not specified.
 
