@@ -10,6 +10,18 @@
         cluster: tcproute/default/tcproute-1/rule/-1
         statPrefix: tcp-10090
     name: tcproute/default/tcproute-1
+  listenerFilters:
+  - name: envoy.filters.listener.set_filter_state
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.set_filter_state.v3.Config
+      onAccept:
+      - formatString:
+          textFormatSource:
+            inlineString: "90"
+        objectKey: envoy.filters.listener.original_dst.local_port
+  - name: envoy.filters.listener.original_dst
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/tcp
   perConnectionBufferLimitBytes: 32768

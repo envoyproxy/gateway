@@ -1,0 +1,83 @@
+http:
+- name: "http-shifted"
+  address: "0.0.0.0"
+  port: 10080
+  externalPort: 80
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "http-route"
+    hostname: "*"
+    traffic:
+      proxyProtocol:
+        version: "V1"
+    destination:
+      name: "http-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "http-route-dest/backend/0"
+- name: "http-not-shifted"
+  address: "0.0.0.0"
+  port: 8080
+  externalPort: 8080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "http-not-shifted-route"
+    hostname: "*"
+    destination:
+      name: "http-not-shifted-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "http-not-shifted-route-dest/backend/0"
+tcp:
+- name: "tls-passthrough"
+  address: "0.0.0.0"
+  port: 10443
+  externalPort: 443
+  routes:
+  - name: "tls-route-passthrough"
+    tls:
+      inspector:
+        snis:
+        - foo.com
+    proxyProtocol:
+      version: "V2"
+    destination:
+      name: "tls-route-passthrough-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tls-route-passthrough-dest/backend/0"
+- name: "tls-passthrough-behind-proxy-protocol"
+  address: "0.0.0.0"
+  port: 10444
+  externalPort: 444
+  proxyProtocol:
+    optional: true
+  routes:
+  - name: "tls-route-passthrough-behind-proxy-protocol"
+    tls:
+      inspector:
+        snis:
+        - bar.com
+    proxyProtocol:
+      version: "V2"
+    destination:
+      name: "tls-route-passthrough-behind-proxy-protocol-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tls-route-passthrough-behind-proxy-protocol-dest/backend/0"
