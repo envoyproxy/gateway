@@ -16,7 +16,7 @@ using a `ConfigMap`. In this section, we will update this resource to enable var
 from Envoy Gateway.
 
 {{% alert title="Exported Metrics" color="warning" %}}
-Refer to the [Gateway Exported Metrics List](./gateway-exported-metrics) to learn more about Envoy Gateway's Metrics.
+Refer to the [Gateway Exported Metrics List](../../concepts/gateway-exported-metrics.md) to learn more about Envoy Gateway's Metrics.
 {{% /alert %}}
 
 ### Retrieve Prometheus Metrics from Envoy Gateway
