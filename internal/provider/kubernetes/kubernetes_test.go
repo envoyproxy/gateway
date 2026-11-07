@@ -69,9 +69,13 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
-	// Disable webhook server for provider test to avoid non-existent cert errors
-	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)}
-	require.NoError(t, err)
+	// Use the test environment certificate and port for the topology injector.
+	previousCertDir, previousPort := webhookTLSCertDir, webhookTLSPort
+	webhookTLSCertDir = testEnv.WebhookInstallOptions.LocalServingCertDir
+	webhookTLSPort = testEnv.WebhookInstallOptions.LocalServingPort
+	t.Cleanup(func() {
+		webhookTLSCertDir, webhookTLSPort = previousCertDir, previousPort
+	})
 	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(t.Context())
@@ -89,6 +93,9 @@ func TestProvider(t *testing.T) {
 		cancel()
 		_ = testEnv.Stop()
 	})
+
+	webhookStarted := provider.manager.GetWebhookServer().StartedChecker()
+	require.Eventually(t, func() bool { return webhookStarted(nil) == nil }, defaultWait, defaultTick)
 
 	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
 		"gatewayclass controller name":         testGatewayClassController,
