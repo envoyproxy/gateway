@@ -254,6 +254,10 @@ func (t *Translator) buildXdsTCPListener(
 		listener.ListenerFiltersTimeout = durationpb.New(timeout.TCP.ConnectionInspectionTimeout.Duration)
 	}
 
+	if listener.ListenerFilters, err = buildExternalPortListenerFilters(listenerDetails); err != nil {
+		return nil, err
+	}
+
 	return listener, nil
 }
 
