@@ -4179,6 +4179,7 @@ _Appears in:_
 | `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  |  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers<br />For examples, following config:<br />The claim must be of type; string, int, double, bool. Array type claims are not supported |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers generated from the claim are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  |  | ExtractFrom defines different ways to extract the JWT token from HTTP request.<br />If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema<br />or access_token from query parameters. |
+| `clockSkew` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ClockSkew defines the tolerance applied when validating time-based claims<br />such as "exp" and "nbf". If not specified, Envoy's default of 60s is used.<br />Envoy only supports whole seconds and treats 0 as "not specified", applying<br />its 60s default. So the value must be a whole number of seconds, and 0 is<br />rejected here instead of being silently ignored: the valid range is 1s to 24h. |
 
 
 #### JWTScope
