@@ -1,0 +1,1 @@
+Fixed Envoy Service selectors to use stable ownership and application labels, preventing traffic disruption when EnvoyProxy pod labels change. Custom labels remain on Service metadata, and explicit Service selector patches remain supported.
