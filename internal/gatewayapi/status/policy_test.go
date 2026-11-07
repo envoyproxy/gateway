@@ -144,6 +144,58 @@ func TestSetWarningForPolicyAncestorMergesWarnings(t *testing.T) {
 	}
 }
 
+// TestSetConditionForPolicyAncestorPort verifies that ancestors differing only by port are kept
+// apart, as route parentRefs to the same Gateway differing only by port attach to different listeners.
+func TestSetConditionForPolicyAncestorPort(t *testing.T) {
+	const controller = "example.com/controller"
+	policyStatus := &gwapiv1.PolicyStatus{}
+
+	refs := []*gwapiv1.ParentReference{
+		{Name: "gw"},
+		{Name: "gw", Port: new(gwapiv1.PortNumber(80))},
+		{Name: "gw", Port: new(gwapiv1.PortNumber(8080))},
+	}
+	for i, ref := range refs {
+		SetConditionForPolicyAncestor(policyStatus, ref, controller,
+			gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, fmt.Sprintf("msg-%d", i), 1)
+	}
+	// Setting a condition on an existing ancestor updates it instead of adding a new one.
+	SetConditionForPolicyAncestor(policyStatus, &gwapiv1.ParentReference{Name: "gw", Port: new(gwapiv1.PortNumber(80))}, controller,
+		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, gwapiv1.PolicyReasonInvalid, "updated", 1)
+
+	assert.Len(t, policyStatus.Ancestors, len(refs))
+	for i, ref := range refs {
+		cond := getPolicyAncestorCondition(policyStatus, ref, controller, gwapiv1.PolicyConditionAccepted)
+		if !assert.NotNil(t, cond) {
+			continue
+		}
+		want := fmt.Sprintf("msg-%d", i)
+		if i == 1 {
+			want = "updated"
+		}
+		assert.Equal(t, want, cond.Message)
+	}
+}
+
+func TestLessPolicyAncestorTotalOrder(t *testing.T) {
+	ancestor := func(ref gwapiv1.ParentReference) gwapiv1.PolicyAncestorStatus {
+		return gwapiv1.PolicyAncestorStatus{AncestorRef: ref}
+	}
+	// Sorted order: the refs differ only in fields after namespace and name.
+	want := []gwapiv1.PolicyAncestorStatus{
+		ancestor(gwapiv1.ParentReference{Name: "gw", Kind: new(gwapiv1.Kind("Gateway"))}),
+		ancestor(gwapiv1.ParentReference{Name: "gw", Kind: new(gwapiv1.Kind("Gateway")), Port: new(gwapiv1.PortNumber(80))}),
+		ancestor(gwapiv1.ParentReference{Name: "gw", Kind: new(gwapiv1.Kind("Gateway")), Port: new(gwapiv1.PortNumber(8080))}),
+		ancestor(gwapiv1.ParentReference{Name: "gw", Kind: new(gwapiv1.Kind("Gateway")), SectionName: new(gwapiv1.SectionName("http"))}),
+		ancestor(gwapiv1.ParentReference{Name: "gw", Kind: new(gwapiv1.Kind("ListenerSet"))}),
+	}
+	for i := range want {
+		for j := range want {
+			assert.Equal(t, i < j, lessPolicyAncestor(&want[i], &want[j]), "less(%d, %d)", i, j)
+		}
+	}
+}
+
 func TestSetNotMergedForPolicyAncestor(t *testing.T) {
 	const controller = "example.com/controller"
 	ref := &gwapiv1.ParentReference{Name: "gw-1"}
