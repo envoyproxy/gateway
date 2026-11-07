@@ -1294,6 +1294,11 @@ func buildXdsUDPListener(
 			Matcher: routeMatcher,
 		},
 	}
+
+	if udpListener.Timeout != nil && udpListener.Timeout.UDP != nil && udpListener.Timeout.UDP.IdleTimeout != nil {
+		udpProxy.IdleTimeout = durationpb.New(udpListener.Timeout.UDP.IdleTimeout.Duration)
+	}
+
 	udpProxyAny, err := proto.ToAnyWithValidation(udpProxy)
 	if err != nil {
 		return nil, err
