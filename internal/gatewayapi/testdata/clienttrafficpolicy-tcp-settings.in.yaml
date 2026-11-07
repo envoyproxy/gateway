@@ -1,0 +1,64 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1
+  spec:
+    tcp:
+      enableActiveDrain: true
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tcp-1
+      protocol: TCP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-1
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: tcp-1
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http-1
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
