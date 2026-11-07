@@ -52,7 +52,12 @@ func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, 
 		if cli == nil {
 			return nil, fmt.Errorf("kubernetes client not found in server config")
 		}
-		mgr = kubernetes.NewInfra(cli, cfg, errors)
+		kubeInfra := kubernetes.NewInfra(cli, cfg, errors)
+		// Resolve the API server version once at startup. Later proxy renders reuse the
+		// cached result. Discovery errors and timeouts keep the legacy shutdown-manager
+		// layout and do not fail manager creation or block reconciliation indefinitely.
+		kubeInfra.ResolveKubernetesVersion(ctx)
+		mgr = kubeInfra
 	case egv1a1.ProviderTypeCustom:
 		mgr, err = newManagerForCustom(ctx, cfg, logger, errors)
 	}
