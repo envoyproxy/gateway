@@ -1,9 +1,11 @@
 # This is used to test forward_proto_config, which infers the x-forwarded-proto
 # header from the PROXY protocol destination port.
-# Traffic from http 80 is redirected to https://www.example.com:443 with proxy
+# Traffic from http 80 is forwarded to https://www.example.com:443 with proxy
 # protocol enabled (injected by the BackendTrafficPolicy on the http route).
-# The https listener has proxyProtocol.forwardProtoConfig set, so the request
-# reaching the backend on the https listener should have x-forwarded-proto: https.
+# The PROXY protocol destination port is 80, and the https listener's
+# forwardProtoConfig maps it to http, so the request reaching the backend on the
+# https listener should have x-forwarded-proto: http, not https from the TLS
+# connection.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
