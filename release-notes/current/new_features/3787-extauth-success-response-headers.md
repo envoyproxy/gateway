@@ -1,0 +1,1 @@
+Added `spec.extAuth.http.headersToClientOnSuccess` to `SecurityPolicy`, allowing selected headers from successful HTTP external authorization responses, such as `Set-Cookie`, to be forwarded to clients.

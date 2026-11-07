@@ -10,6 +10,7 @@ import (
 	"time"
 
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -120,6 +121,76 @@ func TestHttpServiceWithTimeout(t *testing.T) {
 			require.NotNil(t, service)
 			assert.Equal(t, tt.expectedTimeout.Seconds, service.ServerUri.Timeout.Seconds)
 			assert.Equal(t, tt.expectedTimeout.Nanos, service.ServerUri.Timeout.Nanos)
+		})
+	}
+}
+
+func TestHTTPServiceAuthorizationResponseHeaders(t *testing.T) {
+	headerMatcher := func(headers ...string) *matcherv3.ListStringMatcher {
+		patterns := make([]*matcherv3.StringMatcher, 0, len(headers))
+		for _, header := range headers {
+			patterns = append(patterns, &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Exact{
+					Exact: header,
+				},
+				IgnoreCase: true,
+			})
+		}
+		return &matcherv3.ListStringMatcher{Patterns: patterns}
+	}
+
+	tests := []struct {
+		name                     string
+		headersToBackend         []string
+		headersToClientOnSuccess []string
+		want                     *extauthv3.AuthorizationResponse
+	}{
+		{
+			name: "no authorization response headers",
+		},
+		{
+			name:             "headers to backend only",
+			headersToBackend: []string{"x-current-user"},
+			want: &extauthv3.AuthorizationResponse{
+				AllowedUpstreamHeaders: headerMatcher("x-current-user"),
+			},
+		},
+		{
+			name:                     "headers to client on success only",
+			headersToClientOnSuccess: []string{"Set-Cookie", "set-cookie"},
+			want: &extauthv3.AuthorizationResponse{
+				AllowedClientHeadersOnSuccess: headerMatcher(
+					"Set-Cookie",
+					"set-cookie",
+				),
+			},
+		},
+		{
+			name:                     "headers to backend and client on success",
+			headersToBackend:         []string{"x-current-user"},
+			headersToClientOnSuccess: []string{"set-cookie"},
+			want: &extauthv3.AuthorizationResponse{
+				AllowedUpstreamHeaders:        headerMatcher("x-current-user"),
+				AllowedClientHeadersOnSuccess: headerMatcher("set-cookie"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := httpService(
+				&ir.HTTPExtAuthService{
+					Destination:              ir.RouteDestination{Name: "test-cluster"},
+					Authority:                "test-authority",
+					Path:                     "/auth",
+					HeadersToBackend:         tt.headersToBackend,
+					HeadersToClientOnSuccess: tt.headersToClientOnSuccess,
+				},
+				durationpb.New(defaultExtServiceRequestTimeout),
+			)
+
+			require.NotNil(t, service)
+			assert.Equal(t, tt.want, service.AuthorizationResponse)
 		})
 	}
 }
