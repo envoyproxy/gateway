@@ -347,7 +347,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 				// If extensions are loaded, pass their supported groups/kinds to the translator
 				if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
-					var extGKs, extSecretGKs []schema.GroupKind
+					var extGKs, extBackendGKs, extSecretGKs []schema.GroupKind
 					for i := range extensions {
 						em := &extensions[i]
 						for _, gvk := range em.Resources {
@@ -355,13 +355,16 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						}
 						// Include backend resources in extension group kinds for custom backend support
 						for _, gvk := range em.BackendResources {
-							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+							gk := schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}
+							extGKs = append(extGKs, gk)
+							extBackendGKs = append(extBackendGKs, gk)
 						}
 						for _, gvk := range em.SecretResources {
 							extSecretGKs = append(extSecretGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 						}
 					}
 					t.ExtensionGroupKinds = extGKs
+					t.ExtensionBackendGroupKinds = extBackendGKs
 					t.ExtensionSecretGroupKinds = extSecretGKs
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
 				}

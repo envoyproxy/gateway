@@ -47,6 +47,7 @@ http:
               - foo
               - bar
       jwt:
+        name: default/policy-1
         providers:
         - audiences:
           - two.foo.com
@@ -88,6 +89,7 @@ http:
               scopes:
               - foo
       jwt:
+        name: default/policy-2
         providers:
         - audiences:
           - one.foo.com
