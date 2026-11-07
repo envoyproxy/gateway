@@ -1,0 +1,1 @@
+Fixed a `BackendTrafficPolicy` `routingType` that targets a Gateway or ListenerSet listener being ignored for routes, including their request mirrors, that attach to that listener without a `sectionName`. Where that policy changes a route's routing type, the route's inline clusters on that listener get a `/routing/service` or `/routing/endpoint` suffix.

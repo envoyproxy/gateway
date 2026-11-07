@@ -1,0 +1,89 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: gateway-1
+    listeners:
+    - name: ext-http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: listenerset-routing
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: ext-listeners
+    routingType: Service
+# Only the ListenerSet sets a routing type, so no listener diverges and the names stay as they
+# are on main. route-both resolves each parentRef's own routing type under the same plain name,
+# also as on main. Known limitation, unchanged from main: both parentRefs share one cluster name,
+# and only the first one's endpoints reach Envoy.
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-on-ls
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+    rules:
+    - matches:
+      - path:
+          value: /ls
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-both
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+    rules:
+    - matches:
+      - path:
+          value: /both
+      backendRefs:
+      - name: service-2
+        port: 8080
