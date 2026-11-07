@@ -133,6 +133,22 @@ envoyExtensionPolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     namespace: default
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    lua:
+    - type: Inline
+      inline: |
+        function envoy_on_response(handle)
+          handle:headers():add("x-parent", "true")
+        end
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
     name: policy-for-httproute-with-valid-and-invalid-extension-failclose
   spec:
     targetRefs:

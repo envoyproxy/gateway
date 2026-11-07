@@ -196,6 +196,7 @@ xdsIR:
       routes:
       - directResponse:
           statusCode: 500
+        envoyExtensions: {}
         hostname: '*'
         isHTTP2: false
         metadata:
