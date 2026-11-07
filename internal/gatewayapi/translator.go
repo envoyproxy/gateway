@@ -33,7 +33,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/traces/phase"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/wasm"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 const (
@@ -201,6 +200,9 @@ type Translator struct {
 	// WasmCache is the cache for Wasm modules.
 	WasmCache wasm.Cache
 
+	// BootstrapValidator validates EnvoyProxy bootstrap configuration.
+	BootstrapValidator BootstrapValidator
+
 	// RunningOnHost indicates whether Envoy Gateway is running locally on the host machine.
 	RunningOnHost bool
 
@@ -212,6 +214,11 @@ type Translator struct {
 
 	// Logger is the logger used by the translator.
 	Logger logging.Logger
+}
+
+// BootstrapValidator validates the bootstrap configuration of an EnvoyProxy.
+type BootstrapValidator interface {
+	Validate(*egv1a1.ProxyBootstrap) error
 }
 
 type TranslateResult struct {
@@ -582,7 +589,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	for _, ep := range resources.EnvoyProxiesForGateways {
 		key := utils.NamespacedName(ep)
 		envoyproxyMap[key] = ep
-		invalidFields, err := validateEnvoyProxy(ep)
+		invalidFields, err := t.validateEnvoyProxy(ep)
 		if err != nil {
 			envoyproxyValidationErrorMap[key] = err
 		}
@@ -605,7 +612,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 		}
 
-		invalidFields, err := validateEnvoyProxy(ep)
+		invalidFields, err := t.validateEnvoyProxy(ep)
 		if err != nil {
 			envoyproxyValidationErrorMap[utils.NamespacedName(ep)] = err
 			t.Logger.Error(err, "Skipping GatewayClass because EnvoyProxy is invalid",
@@ -756,13 +763,13 @@ func (t *Translator) setEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwap
 
 // validateEnvoyProxy returns the fields of ep that are invalid but can be unset, and an error
 // if ep is unusable as a whole.
-func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) ([]validation.InvalidField, error) {
+func (t *Translator) validateEnvoyProxy(ep *egv1a1.EnvoyProxy) ([]validation.InvalidField, error) {
 	invalidFields, err := validation.ValidateEnvoyProxyFields(ep)
 	if err != nil {
 		return invalidFields, err
 	}
 
-	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
+	if err := t.BootstrapValidator.Validate(ep.Spec.Bootstrap); err != nil {
 		return invalidFields, err
 	}
 

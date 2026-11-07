@@ -18,6 +18,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 // backendTLSBenchResources returns a Gateway with n HTTPRoutes, each routing to its own Service
@@ -121,6 +122,7 @@ func BenchmarkTranslateBackendTLSPolicies(b *testing.B) {
 		b.Run(fmt.Sprintf("routes-and-policies-%d", n), func(b *testing.B) {
 			newTranslator := func() *Translator {
 				return &Translator{
+					BootstrapValidator:    bootstrap.Validator{},
 					GatewayControllerName: egv1a1.GatewayControllerName,
 					GatewayClassName:      "envoy-gateway-class",
 					ControllerNamespace:   "envoy-gateway-system",
