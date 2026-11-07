@@ -1,0 +1,1 @@
+Fixed Secret references in SecurityPolicy (OIDC, API key and basic auth) and HTTPRouteFilter credential injection resolving to a Secret when the reference set `kind: ConfigMap`, which let a ReferenceGrant for ConfigMaps grant access to a same-named Secret in another namespace.
