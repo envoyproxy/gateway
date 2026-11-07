@@ -1,0 +1,327 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-tls
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: tls-passthrough
+      port: 8443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+  status:
+    listeners:
+    - attachedRoutes: 2
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tls-passthrough
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+infraIR:
+  envoy-gateway/gateway-tls:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway-tls/tls-passthrough
+        ports:
+        - containerPort: 8443
+          name: tls-8443
+          protocol: TLS
+          servicePort: 8443
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-tls
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-tls
+      namespace: envoy-gateway-system
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: sp-tlsroute-a
+    namespace: default
+  spec:
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-route-a
+        principal:
+          clientCIDRs:
+          - 192.168.0.0/16
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TLSRoute
+      name: tlsroute-a
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-tls
+        namespace: envoy-gateway
+        sectionName: tls-passthrough
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: sp-tlsroute-b
+    namespace: default
+  spec:
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-route-b
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TLSRoute
+      name: tlsroute-b
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-tls
+        namespace: envoy-gateway
+        sectionName: tls-passthrough
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    name: tlsroute-a
+    namespace: default
+  spec:
+    hostnames:
+    - a.example.com
+    parentRefs:
+    - name: gateway-tls
+      namespace: envoy-gateway
+      sectionName: tls-passthrough
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8443
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-tls
+        namespace: envoy-gateway
+        sectionName: tls-passthrough
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    name: tlsroute-b
+    namespace: default
+  spec:
+    hostnames:
+    - b.example.com
+    parentRefs:
+    - name: gateway-tls
+      namespace: envoy-gateway
+      sectionName: tls-passthrough
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8443
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-tls
+        namespace: envoy-gateway
+        sectionName: tls-passthrough
+xdsIR:
+  envoy-gateway/gateway-tls:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-tls-e5408cf3
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-tls
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-tls-e5408cf3
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-tls
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 8443
+      metadata:
+        kind: Gateway
+        name: gateway-tls
+        namespace: envoy-gateway
+        sectionName: tls-passthrough
+      name: envoy-gateway/gateway-tls/tls-passthrough
+      port: 8443
+      routes:
+      - authorization:
+          defaultAction: Deny
+          rules:
+          - action: Allow
+            name: allow-route-a
+            principal:
+              clientCIDRs:
+              - cidr: 192.168.0.0/16
+                distinct: false
+                invert: false
+                isIPv6: false
+                maskLen: 16
+        destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-a
+            namespace: default
+          name: tlsroute/default/tlsroute-a/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8443"
+            name: tlsroute/default/tlsroute-a/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        metadata:
+          kind: TLSRoute
+          name: tlsroute-a
+          namespace: default
+        name: tlsroute/default/tlsroute-a
+        tls:
+          inspector:
+            snis:
+            - a.example.com
+      - authorization:
+          defaultAction: Deny
+          rules:
+          - action: Allow
+            name: allow-route-b
+            principal:
+              clientCIDRs:
+              - cidr: 10.0.0.0/8
+                distinct: false
+                invert: false
+                isIPv6: false
+                maskLen: 8
+        destination:
+          metadata:
+            kind: TLSRoute
+            name: tlsroute-b
+            namespace: default
+          name: tlsroute/default/tlsroute-b/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8443
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8443"
+            name: tlsroute/default/tlsroute-b/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        metadata:
+          kind: TLSRoute
+          name: tlsroute-b
+          namespace: default
+        name: tlsroute/default/tlsroute-b
+        tls:
+          inspector:
+            snis:
+            - b.example.com
