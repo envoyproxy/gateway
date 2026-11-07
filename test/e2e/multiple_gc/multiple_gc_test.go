@@ -51,7 +51,6 @@ func TestMultipleGC(t *testing.T) {
 		internetGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:              c,
 			RestConfig:          cfg,
-			Hook:                e2e.Hook,
 			ConfigurableOptions: opts,
 		})
 		if err != nil {
@@ -64,7 +63,7 @@ func TestMultipleGC(t *testing.T) {
 		internetGatewaySuite.Applier.GatewayClass = internetGatewaySuiteGatewayClassName
 		internetGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, internetGatewaySuite.Client, internetGatewaySuite.TimeoutConfig, internetGatewaySuite.GatewayClassName)
 
-		timedTests := e2e.WrapConformanceTestsWithTiming(tests.MultipleGCTests[internetGatewaySuiteGatewayClassName], recorder)
+		timedTests := e2e.WrapConformanceTestsWithHook(e2e.WrapConformanceTestsWithTiming(tests.MultipleGCTests[internetGatewaySuiteGatewayClassName], recorder))
 		tlog.Logf(t, "Running %d MultipleGC tests", len(tests.MultipleGCTests[internetGatewaySuiteGatewayClassName]))
 
 		err = internetGatewaySuite.Run(t, timedTests)
@@ -82,7 +81,6 @@ func TestMultipleGC(t *testing.T) {
 			Client:              c,
 			RestConfig:          cfg,
 			ConfigurableOptions: opts,
-			Hook:                e2e.Hook,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
@@ -94,7 +92,7 @@ func TestMultipleGC(t *testing.T) {
 		privateGatewaySuite.Applier.GatewayClass = privateGatewaySuiteGatewayClassName
 		privateGatewaySuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, privateGatewaySuite.Client, privateGatewaySuite.TimeoutConfig, privateGatewaySuite.GatewayClassName)
 
-		timedTests := e2e.WrapConformanceTestsWithTiming(tests.MultipleGCTests[privateGatewaySuiteGatewayClassName], recorder)
+		timedTests := e2e.WrapConformanceTestsWithHook(e2e.WrapConformanceTestsWithTiming(tests.MultipleGCTests[privateGatewaySuiteGatewayClassName], recorder))
 		tlog.Logf(t, "Running %d MultipleGC tests", len(tests.MultipleGCTests[privateGatewaySuiteGatewayClassName]))
 		err = privateGatewaySuite.Run(t, timedTests)
 		if err != nil {

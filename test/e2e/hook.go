@@ -21,3 +21,26 @@ var Hook = func(t *testing.T, test suite.ConformanceTest, suite *suite.Conforman
 		tests.CollectAndDump(t, suite.RestConfig)
 	}
 }
+
+// WrapConformanceTestsWithHook runs Hook at the end of each test body, while the resources the
+// test created are still in the cluster. Use it instead of ConformanceOptions.Hook: the suite
+// runs that from a t.Cleanup registered before the test applies its manifests, and cleanups run
+// last-in-first-out, so it only runs once the test resources have been deleted. A deferred call
+// still runs when the test fails with t.Fatal or require, and before any t.Cleanup of the test.
+//
+// TODO: remove once https://github.com/kubernetes-sigs/gateway-api/pull/5185 is released, and set
+// ConformanceOptions.Hook again.
+func WrapConformanceTestsWithHook(tests []suite.ConformanceTest) []suite.ConformanceTest {
+	wrapped := make([]suite.ConformanceTest, 0, len(tests))
+
+	for _, test := range tests {
+		original := test.Test
+		test.Test = func(t *testing.T, suite *suite.ConformanceTestSuite) {
+			defer Hook(t, test, suite)
+			original(t, suite)
+		}
+		wrapped = append(wrapped, test)
+	}
+
+	return wrapped
+}

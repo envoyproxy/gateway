@@ -46,7 +46,6 @@ func TestRemoteInfra(t *testing.T) {
 		RestConfig:          cfg,
 		ConfigurableOptions: suiteOpts,
 		ManifestFS:          []fs.FS{e2e.Manifests},
-		Hook:                e2e.Hook,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
@@ -56,7 +55,7 @@ func TestRemoteInfra(t *testing.T) {
 	t.Cleanup(func() {
 		recorder.Report(t)
 	})
-	timedTests := e2e.WrapConformanceTestsWithTiming(tests.RemoteInfraTests, recorder)
+	timedTests := e2e.WrapConformanceTestsWithHook(e2e.WrapConformanceTestsWithTiming(tests.RemoteInfraTests, recorder))
 
 	// Apply the base conformance resources (namespaces, backends, secrets, etc.) and
 	// wait for them to be ready. Unlike the merge_gateways/multiple_gc suites, the
