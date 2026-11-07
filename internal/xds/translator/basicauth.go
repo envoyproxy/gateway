@@ -91,6 +91,9 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 	if basicAuth.ForwardUsernameHeader != nil && *basicAuth.ForwardUsernameHeader != "" {
 		basicAuthProto.ForwardUsernameHeader = *basicAuth.ForwardUsernameHeader
 	}
+	if basicAuth.Realm != nil && *basicAuth.Realm != "" {
+		basicAuthProto.Realm = *basicAuth.Realm
+	}
 
 	if basicAuthAny, err = proto.ToAnyWithValidation(basicAuthProto); err != nil {
 		return nil, err
@@ -155,11 +158,15 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.
 }
 
 func basicAuthPerRouteConfig(basicAuth *ir.BasicAuth) *basicauthv3.BasicAuthPerRoute {
-	return &basicauthv3.BasicAuthPerRoute{
+	cfg := &basicauthv3.BasicAuthPerRoute{
 		Users: &corev3.DataSource{
 			Specifier: &corev3.DataSource_InlineBytes{
 				InlineBytes: basicAuth.Users,
 			},
 		},
 	}
+	if basicAuth.Realm != nil && *basicAuth.Realm != "" {
+		cfg.Realm = *basicAuth.Realm
+	}
+	return cfg
 }
