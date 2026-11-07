@@ -5,12 +5,12 @@ go 1.26.10
 require (
 	cel.dev/expr v0.25.3
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/avast/retry-go/v5 v5.0.0
+	github.com/avast/retry-go/v5 v5.0.1
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v29.9.2+incompatible
+	github.com/docker/cli v29.9.3+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.14.1-0.20260729145720-a2d8c7492908
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260729145720-a2d8c7492908
@@ -36,7 +36,7 @@ require (
 	github.com/replicatedhq/troubleshoot v0.134.3
 	github.com/shopspring/decimal v1.6.0
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	github.com/tetratelabs/func-e v1.6.0
