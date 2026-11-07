@@ -1,0 +1,224 @@
+# Backends for the InferencePoolWeightedClusters test. Each InferencePool selects its own echo
+# Deployment. The simple extension server turns each pool's cluster into an ORIGINAL_DST cluster
+# that reads the endpoint from a header specific to that pool, so the client sends one header per
+# pool and the pod that answers shows which cluster Envoy picked.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pool-a
+  namespace: gateway-resilience
+  labels:
+    app: pool-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pool-a
+  template:
+    metadata:
+      labels:
+        app: pool-a
+    spec:
+      containers:
+        - name: backend
+          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: pool-a
+          resources:
+            requests:
+              cpu: 10m
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pool-b
+  namespace: gateway-resilience
+  labels:
+    app: pool-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pool-b
+  template:
+    metadata:
+      labels:
+        app: pool-b
+    spec:
+      containers:
+        - name: backend
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: pool-b
+          resources:
+            requests:
+              cpu: 10m
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pool-svc
+  namespace: gateway-resilience
+  labels:
+    app: pool-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pool-svc
+  template:
+    metadata:
+      labels:
+        app: pool-svc
+    spec:
+      containers:
+        - name: backend
+          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: pool-svc
+          resources:
+            requests:
+              cpu: 10m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pool-svc
+  namespace: gateway-resilience
+spec:
+  selector:
+    app: pool-svc
+  ports:
+    - protocol: TCP
+      port: 8080
+      name: http11
+      targetPort: 3000
+---
+apiVersion: inference.networking.k8s.io/v1
+kind: InferencePool
+metadata:
+  name: pool-a
+  namespace: gateway-resilience
+  annotations:
+    # The simple extension server routes this pool's cluster to the endpoint in this header.
+    simple-extension-server.envoyproxy.io/destination-header: x-pool-a-endpoint
+spec:
+  selector:
+    matchLabels:
+      app: pool-a
+  targetPorts:
+    - number: 3000
+---
+apiVersion: inference.networking.k8s.io/v1
+kind: InferencePool
+metadata:
+  name: pool-b
+  namespace: gateway-resilience
+  annotations:
+    # The simple extension server routes this pool's cluster to the endpoint in this header.
+    simple-extension-server.envoyproxy.io/destination-header: x-pool-b-endpoint
+spec:
+  selector:
+    matchLabels:
+      app: pool-b
+  targetPorts:
+    - number: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: inference-pools-weighted
+  namespace: gateway-resilience
+spec:
+  parentRefs:
+    - name: all-namespaces
+  hostnames: ["inference-pool.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /pools
+      backendRefs:
+        - group: inference.networking.k8s.io
+          kind: InferencePool
+          name: pool-a
+          weight: 3
+        - group: inference.networking.k8s.io
+          kind: InferencePool
+          name: pool-b
+          weight: 1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: inference-pool-and-service
+  namespace: gateway-resilience
+spec:
+  parentRefs:
+    - name: all-namespaces
+  hostnames: ["inference-pool.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /mixed
+      backendRefs:
+        - name: pool-svc
+          port: 8080
+          weight: 1
+        - group: inference.networking.k8s.io
+          kind: InferencePool
+          name: pool-a
+          weight: 1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: inference-pool-zero-weight
+  namespace: gateway-resilience
+spec:
+  parentRefs:
+    - name: all-namespaces
+  hostnames: ["inference-pool.example.com"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /zero
+      backendRefs:
+        - group: inference.networking.k8s.io
+          kind: InferencePool
+          name: pool-a
+          weight: 1
+        - group: inference.networking.k8s.io
+          kind: InferencePool
+          name: pool-b
+          weight: 0
