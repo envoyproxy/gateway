@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -566,6 +567,12 @@ func (t *Translator) addHCMToXDSListener(
 		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames, irListener.TLS.Fingerprints); err != nil {
 			return err
 		}
+		// QUIC always negotiates h3, so the configured ALPN list only applies to TCP.
+		if !http3Listener {
+			if err := addALPNMatch(xdsListener, filterChain, irListener.TLS.ALPNProtocols, irListener.TLS.Fingerprints); err != nil {
+				return err
+			}
+		}
 		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	} else {
 		// Add the HTTP filter chain as the default filter chain
@@ -669,6 +676,43 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 	}
 
 	return nil
+}
+
+// addALPNMatch makes an HTTPS filter chain accept only clients that offer one of the
+// configured ALPN protocols, when that list leaves out HTTP/1.x.
+//
+// The ALPN list of the TLS context is only a preference: when a client offers none of the
+// listed protocols, or sends no ALPN at all, the handshake still succeeds without ALPN and
+// the HTTP connection manager serves the request as HTTP/1.1. Matching on the ALPN of the
+// ClientHello closes those connections instead.
+//
+// A list that includes HTTP/1.x is left alone, because HTTP/1.1 clients are not required to
+// send ALPN, and an application_protocols match also rejects every connection without it.
+// HTTP/2 over TLS, in contrast, must be negotiated with ALPN (RFC 9113, section 3.3).
+func addALPNMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, alpnProtocols []string, fingerprints []ir.TLSFingerprintType) error {
+	if xdsListener == nil || !alpnExcludesHTTP1(alpnProtocols) {
+		return nil
+	}
+
+	if filterChain.FilterChainMatch == nil {
+		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{}
+	}
+	filterChain.FilterChainMatch.ApplicationProtocols = slices.Clone(alpnProtocols)
+
+	// The TLS Inspector reads the ALPN protocols offered in the ClientHello.
+	return addXdsTLSInspectorFilter(xdsListener, fingerprints)
+}
+
+// alpnExcludesHTTP1 reports whether an ALPN list was configured and it allows neither
+// HTTP/1.1 nor HTTP/1.0. A nil list means ALPN is not configured, and an empty list
+// means ALPN is disabled.
+func alpnExcludesHTTP1(alpnProtocols []string) bool {
+	if len(alpnProtocols) == 0 {
+		return false
+	}
+	return !slices.ContainsFunc(alpnProtocols, func(p string) bool {
+		return p == string(egv1a1.HTTPProtocolVersion1_1) || p == string(egv1a1.HTTPProtocolVersion1_0)
+	})
 }
 
 // findXdsHTTPRouteConfigName finds the name of the route config associated with the
@@ -878,25 +922,19 @@ func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnecti
 	return cl
 }
 
-// addXdsTLSInspectorFilter adds a Tls Inspector filter if it does not yet exist.
+// addXdsTLSInspectorFilter adds a Tls Inspector filter if it does not yet exist, and otherwise
+// enables the requested fingerprints on the existing one.
 func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []ir.TLSFingerprintType) error {
-	// Return early if it exists
+	// The TLS Inspector is shared by every filter chain of the listener, so an
+	// existing one gets any fingerprints this filter chain asks for.
 	for _, filter := range xdsListener.ListenerFilters {
 		if filter.Name == wellknown.TlsInspector {
-			return nil
+			return enableTLSFingerprints(filter, fingerprints)
 		}
 	}
 
 	tlsInspector := &tls_inspectorv3.TlsInspector{}
-
-	for _, fingerprint := range fingerprints {
-		switch fingerprint {
-		case ir.TLSFingerprintTypeJA3:
-			tlsInspector.EnableJa3Fingerprinting = &wrapperspb.BoolValue{Value: true}
-		case ir.TLSFingerprintTypeJA4:
-			tlsInspector.EnableJa4Fingerprinting = &wrapperspb.BoolValue{Value: true}
-		}
-	}
+	setTLSFingerprints(tlsInspector, fingerprints)
 
 	tlsInspectorAny, err := proto.ToAnyWithValidation(tlsInspector)
 	if err != nil {
@@ -913,6 +951,41 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []i
 	xdsListener.ListenerFilters = append(xdsListener.ListenerFilters, filter)
 
 	return nil
+}
+
+// enableTLSFingerprints turns on the requested fingerprints in an existing TLS Inspector
+// listener filter, keeping the ones it already has.
+func enableTLSFingerprints(filter *listenerv3.ListenerFilter, fingerprints []ir.TLSFingerprintType) error {
+	if len(fingerprints) == 0 {
+		return nil
+	}
+
+	tlsInspector := &tls_inspectorv3.TlsInspector{}
+	if err := filter.GetTypedConfig().UnmarshalTo(tlsInspector); err != nil {
+		return err
+	}
+	setTLSFingerprints(tlsInspector, fingerprints)
+
+	tlsInspectorAny, err := proto.ToAnyWithValidation(tlsInspector)
+	if err != nil {
+		return err
+	}
+	filter.ConfigType = &listenerv3.ListenerFilter_TypedConfig{
+		TypedConfig: tlsInspectorAny,
+	}
+
+	return nil
+}
+
+func setTLSFingerprints(tlsInspector *tls_inspectorv3.TlsInspector, fingerprints []ir.TLSFingerprintType) {
+	for _, fingerprint := range fingerprints {
+		switch fingerprint {
+		case ir.TLSFingerprintTypeJA3:
+			tlsInspector.EnableJa3Fingerprinting = &wrapperspb.BoolValue{Value: true}
+		case ir.TLSFingerprintTypeJA4:
+			tlsInspector.EnableJa4Fingerprinting = &wrapperspb.BoolValue{Value: true}
+		}
+	}
 }
 
 // allExtensionCertificatesUnresolved reports whether tlsConfig references only
