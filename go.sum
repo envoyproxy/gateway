@@ -55,8 +55,8 @@ github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3d
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/avast/retry-go/v4 v4.7.0 h1:yjDs35SlGvKwRNSykujfjdMxMhMQQM0TnIjJaHB+Zio=
 github.com/avast/retry-go/v4 v4.7.0/go.mod h1:ZMPDa3sY2bKgpLtap9JRUgk2yTAba7cgiFhqxY2Sg6Q=
-github.com/avast/retry-go/v5 v5.0.0 h1:kf1Qc2UsTZ4qq8elDymqfbISvkyMuhgRxuJqX2NHP7k=
-github.com/avast/retry-go/v5 v5.0.0/go.mod h1://d+usmKWio1agtZfS1H/ltTqwtIfBnRq9zEwjc3eH8=
+github.com/avast/retry-go/v5 v5.0.1 h1:J3bUcb/d52eCVRvD01B1B3dV9gQHCgcEs1K5ZpT26ZU=
+github.com/avast/retry-go/v5 v5.0.1/go.mod h1:kb/MOVQOBAxjo+kIre6StLXJro2ZPAQh5IO/6wICTjI=
 github.com/aws/aws-sdk-go-v2 v1.47.4 h1:bTvk6UdSSSvaQsfLVj1JRDEEqj/PDRwGf1KanaRzau0=
 github.com/aws/aws-sdk-go-v2 v1.47.4/go.mod h1:XkrjAZvr705Nytv6PkPUhoSB2W9+vVHBp5oAWpkh8Ak=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.24 h1:t7FxqJ5KHDeKceyD4HtGaG6z7hMSeVGjs5/4c+L5ArM=
@@ -139,8 +139,8 @@ github.com/distribution/reference v0.6.0 h1:0IXCQ5g4/QMHHkarYzh5l+u8T3t73zM5Qvfr
 github.com/distribution/reference v0.6.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
 github.com/dlclark/regexp2 v1.12.0 h1:0j4c5qQmnC6XOWNjP3PIXURXN2gWx76rd3KvgdPkCz8=
 github.com/dlclark/regexp2 v1.12.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
-github.com/docker/cli v29.9.2+incompatible h1:trup/vUxx5uUo2t+87Cd9AmITR+DvKUe4H2tTtZN8FY=
-github.com/docker/cli v29.9.2+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
+github.com/docker/cli v29.9.3+incompatible h1:SBaMp7ecohadEHMDrUJg22t9I3awqsAVhnJ7GOcWpfE=
+github.com/docker/cli v29.9.3+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/docker-credential-helpers v0.9.12 h1:hAgjJcMuC17DPf0Kl/HQSZQ7cxVo+wEA8Oo1SzkmqFg=
 github.com/docker/docker-credential-helpers v0.9.12/go.mod h1:v1S+hepowrQXITkEfw6o4+BMbGot02wiKpzWhGUZK6c=
 github.com/docker/go-events v0.0.0-20250808211157-605354379745 h1:yOn6Ze6IbYI/KAw2lw/83ELYvZh6hvsygTVkD0dzMC4=
@@ -511,8 +511,8 @@ github.com/spf13/cast v1.10.0/go.mod h1:jNfB8QC9IA6ZuY2ZjDp0KtFO2LZZlg4S/7bzP6qq
 github.com/spf13/cobra v1.10.2 h1:DMTTonx5m65Ic0GOoRY2c16WCbHxOOw6xxezuLaBpcU=
 github.com/spf13/cobra v1.10.2/go.mod h1:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiTUUS4=
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
-github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
-github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+github.com/spf13/pflag v1.1.0 h1:6W6MbVUrnMb8PEhjkqwsVLY7ryuzRfFHF4mQd7L94ag=
+github.com/spf13/pflag v1.1.0/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/viper v1.21.0 h1:x5S+0EU27Lbphp4UKm1C+1oQO+rKx36vfCoaVebLFSU=
 github.com/spf13/viper v1.21.0/go.mod h1:P0lhsswPGWD/1lZJ9ny3fYnVqxiegrlNrEmgLjbTCAY=
 github.com/spiffe/go-spiffe/v2 v2.9.0 h1:g5qTg3qIP1HXV+GzuyEfSJFVxUCpEP5Ui1OINVJHPB4=
