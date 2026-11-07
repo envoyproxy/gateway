@@ -476,16 +476,21 @@ func (r *gatewayAPIReconciler) reconcileGatewayClass(ctx context.Context, manage
 		}
 
 		gcLogger.Error(err, "failed to process TLS SecretRef for EnvoyProxy for GatewayClass")
-		status.SetGatewayClassAccepted(
-			managedGC,
-			false,
-			string(gwapiv1.GatewayClassReasonAccepted),
-			fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-		r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
-		message.PublishMetric(message.Metadata{
-			Runner:  string(egv1a1.LogComponentProviderRunner),
-			Message: message.GatewayClassStatusMessageName,
-		}, 1)
+		// Do not overwrite status for a terminating GatewayClass. The referenced
+		// Secret may have been removed while the class is waiting for its Gateways
+		// to be cleaned up.
+		if managedGC.DeletionTimestamp == nil {
+			status.SetGatewayClassAccepted(
+				managedGC,
+				false,
+				string(gwapiv1.GatewayClassReasonAccepted),
+				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
+			r.resources.GatewayClassStatuses.Store(utils.NamespacedName(managedGC), &managedGC.Status)
+			message.PublishMetric(message.Metadata{
+				Runner:  string(egv1a1.LogComponentProviderRunner),
+				Message: message.GatewayClassStatusMessageName,
+			}, 1)
+		}
 		failToProcessGCParamsRef = true
 	}
 

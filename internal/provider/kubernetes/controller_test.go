@@ -947,6 +947,70 @@ func TestReconcileGatewayClassTerminatingMissingEnvoyProxyKeepsStatus(t *testing
 	require.False(t, ok, "terminating GatewayClass status must not be written for a missing EnvoyProxy")
 }
 
+func TestReconcileGatewayClassTerminatingMissingEnvoyProxySecretKeepsStatus(t *testing.T) {
+	gcCtrlName := gwapiv1.GatewayController(egv1a1.GatewayControllerName)
+	now := metav1.Now()
+
+	ep := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: config.DefaultNamespace,
+			Name:      "test",
+		},
+		Spec: egv1a1.EnvoyProxySpec{
+			BackendTLS: &egv1a1.BackendTLSConfig{
+				ClientCertificateRef: &gwapiv1.SecretObjectReference{Name: "missing"},
+			},
+		},
+	}
+	previousStatus := &gwapiv1.GatewayClassStatus{
+		Conditions: []metav1.Condition{{
+			Type:               string(gwapiv1.GatewayClassConditionStatusAccepted),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(gwapiv1.GatewayClassReasonAccepted),
+			Message:            "Valid GatewayClass",
+			LastTransitionTime: now,
+		}},
+	}
+	gc := &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{gatewayClassFinalizer},
+		},
+		Spec: gwapiv1.GatewayClassSpec{
+			ControllerName: gcCtrlName,
+			ParametersRef: &gwapiv1.ParametersReference{
+				Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+				Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+				Name:      "test",
+				Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+			},
+		},
+		Status: *previousStatus.DeepCopy(),
+	}
+
+	r := &gatewayAPIReconciler{
+		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		classController: gcCtrlName,
+		namespace:       config.DefaultNamespace,
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(ep).
+			Build(),
+		resources: &message.ProviderResources{},
+	}
+	r.resources.GatewayClassStatuses.Store(utils.NamespacedName(gc), previousStatus)
+
+	resourceTree, err := r.reconcileGatewayClass(context.Background(), gc, sets.New[types.NamespacedName](), r.log)
+	require.NoError(t, err)
+	require.NotNil(t, resourceTree.EnvoyProxyForGatewayClass, "parametersRef must still be processed while the GatewayClass is terminating")
+	require.Equal(t, ep.Name, resourceTree.EnvoyProxyForGatewayClass.Name)
+	require.Equal(t, *previousStatus, gc.Status, "terminating GatewayClass status must not be changed")
+	storedStatus, ok := r.resources.GatewayClassStatuses.Load(utils.NamespacedName(gc))
+	require.True(t, ok, "the previously stored GatewayClass status must be preserved")
+	require.Equal(t, previousStatus, storedStatus)
+}
+
 func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 	testCases := []struct {
 		name                 string
