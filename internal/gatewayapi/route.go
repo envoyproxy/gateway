@@ -3409,6 +3409,9 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 	if httpFiltersContext.GRPCJSONTranscoder != nil {
 		return nil, nil, errors.New("grpcJSONTranscoder is not supported in the filters of a backendRef")
 	}
+	if err := validateBackendRefURLRewrite(httpFiltersContext.URLRewrite); err != nil {
+		return nil, nil, err
+	}
 
 	destFilters := buildDestinationFilters(httpFiltersContext)
 	if destFilters == nil {
@@ -3420,6 +3423,30 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 		destFilters = &ir.DestinationFilters{}
 	}
 	return destFilters, httpFiltersContext.BackendPriority, nil
+}
+
+// validateBackendRefURLRewrite rejects the parts of a backendRef's URL rewrite that can't be
+// applied per backendRef. A backendRef's filters are translated onto its weighted cluster entry,
+// and Envoy only supports a literal host rewrite there, so a path rewrite or a header, backend or
+// regex based host rewrite would otherwise be silently dropped.
+func validateBackendRefURLRewrite(urlRewrite *ir.URLRewrite) error {
+	if urlRewrite == nil {
+		return nil
+	}
+	if urlRewrite.Path != nil {
+		return errors.New("urlRewrite path is not supported in the filters of a backendRef")
+	}
+	if host := urlRewrite.Host; host != nil {
+		switch {
+		case host.Header != nil:
+			return errors.New("urlRewrite hostname of type Header is not supported in the filters of a backendRef")
+		case host.Backend != nil:
+			return errors.New("urlRewrite hostname of type Backend is not supported in the filters of a backendRef")
+		case host.PathRegex != nil:
+			return errors.New("urlRewrite hostname of type PathRegex is not supported in the filters of a backendRef")
+		}
+	}
+	return nil
 }
 
 func buildDestinationFilters(httpFiltersContext *HTTPFiltersContext) *ir.DestinationFilters {
