@@ -152,12 +152,17 @@ func Test_subscribeAndTranslate(t *testing.T) {
 
 	testCases := []struct {
 		name string
+		// prefix is the ControllerResourcePrefix of the instance under test. The
+		// snapshot must be published under the node ID the instance's
+		// rate-limit pods subscribe with, i.e. the prefixed InfraName.
+		prefix string
 		// xdsIRs contains a list of xds updates that the runner will receive.
 		xdsIRs               []message.Update[string, *ir.Xds]
 		wantRateLimitConfigs map[string]cachetypes.Resource
 	}{
 		{
-			name: "one xds is added",
+			name:   "one xds is added",
+			prefix: config.EnvoyGatewayServiceName,
 			xdsIRs: []message.Update[string, *ir.Xds]{
 				{
 					Key:   "gw0",
@@ -169,7 +174,8 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			},
 		},
 		{
-			name: "two xds are added",
+			name:   "two xds are added",
+			prefix: config.EnvoyGatewayServiceName,
 			xdsIRs: []message.Update[string, *ir.Xds]{
 				{
 					Key:   "gw0",
@@ -186,7 +192,24 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			},
 		},
 		{
-			name: "one xds is deleted",
+			name: "one xds is added with a resource prefix",
+			// A non-default prefix: the snapshot must be published under the
+			// prefixed node ID, or the instance's rate-limit pods never
+			// receive their config.
+			prefix: "tenant-a",
+			xdsIRs: []message.Update[string, *ir.Xds]{
+				{
+					Key:   "gw0",
+					Value: testxds("gw0"),
+				},
+			},
+			wantRateLimitConfigs: map[string]cachetypes.Resource{
+				"default/gw0/listener-0": testRateLimitConfig("gw0"),
+			},
+		},
+		{
+			name:   "one xds is deleted",
+			prefix: config.EnvoyGatewayServiceName,
 			xdsIRs: []message.Update[string, *ir.Xds]{
 				{
 					Key:   "gw0",
@@ -217,6 +240,8 @@ func Test_subscribeAndTranslate(t *testing.T) {
 			defer xdsIR.Close()
 			cfg, err := config.New(os.Stdout, os.Stderr)
 			require.NoError(t, err)
+			// MUST be set before creating the Runner since Config{Server: *cfg} makes a copy.
+			cfg.ControllerResourcePrefix = tt.prefix
 
 			r := New(&Config{
 				Server:       *cfg,
@@ -240,9 +265,12 @@ func Test_subscribeAndTranslate(t *testing.T) {
 				xdsIR.Store(xds.Key, &m)
 			}
 
+			// The node ID the instance's rate-limit pods subscribe with.
+			nodeID := config.InstanceResourceName(tt.prefix, ratelimit.InfraName)
+
 			diff := ""
 			if !assert.Eventually(t, func() bool {
-				rs, err := r.cache.GetSnapshot(ratelimit.InfraName)
+				rs, err := r.cache.GetSnapshot(nodeID)
 				if err != nil {
 					t.Logf("failed to get snapshot: %v", err)
 					return false

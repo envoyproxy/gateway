@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -34,11 +35,13 @@ import (
 const (
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	envoyTLSSecretName = "envoy"
-	// rateLimitServiceName is the name of the in-cluster Service fronting the
-	// envoy-ratelimit deployment. It is not referenced by any Gateway API
-	// backendRef, so it needs its own reconcile-trigger checks below, mirroring
-	// the OIDC HMAC and Envoy TLS Secrets.
-	rateLimitServiceName = "envoy-ratelimit"
+	// rateLimitServiceBaseName is the base name of the in-cluster Service
+	// fronting the envoy-ratelimit deployment; the per-instance name is derived
+	// from the controller resource prefix (gatewayAPIReconciler.rateLimitServiceName).
+	// It is not referenced by any Gateway API backendRef, so it needs its own
+	// reconcile-trigger checks below, mirroring the OIDC HMAC and Envoy TLS
+	// Secrets.
+	rateLimitServiceBaseName = "envoy-ratelimit"
 )
 
 // hasMatchingController returns true if the provided object is a GatewayClass
@@ -52,6 +55,34 @@ func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) b
 
 	r.log.Info("bypassing reconciliation due to controller name", "controller", gc.Spec.ControllerName)
 	return false
+}
+
+// hasMatchingObjectLabels reports whether the labels carried by obj match the
+// configured watch.objectSelector. It is only called when an object selector
+// is configured.
+func (r *gatewayAPIReconciler) hasMatchingObjectLabels(obj client.Object) bool {
+	return r.objectSelector.Matches(labels.Set(obj.GetLabels()))
+}
+
+// objectSelectorPredicate returns a predicate keeping the events of the objects
+// matching the configured watch.objectSelector. On updates the event is kept
+// when either the old or the new object matches, so relabeling an object away
+// from this instance still triggers a final reconciliation for it.
+func objectSelectorPredicate[T client.Object](r *gatewayAPIReconciler) predicate.TypedFuncs[T] {
+	return predicate.TypedFuncs[T]{
+		CreateFunc: func(e event.TypedCreateEvent[T]) bool {
+			return r.hasMatchingObjectLabels(e.Object)
+		},
+		UpdateFunc: func(e event.TypedUpdateEvent[T]) bool {
+			return r.hasMatchingObjectLabels(e.ObjectOld) || r.hasMatchingObjectLabels(e.ObjectNew)
+		},
+		DeleteFunc: func(e event.TypedDeleteEvent[T]) bool {
+			return r.hasMatchingObjectLabels(e.Object)
+		},
+		GenericFunc: func(e event.TypedGenericEvent[T]) bool {
+			return r.hasMatchingObjectLabels(e.Object)
+		},
+	}
 }
 
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
@@ -512,7 +543,7 @@ func (r *gatewayAPIReconciler) isCtpReferencingSecret(nsName *types.NamespacedNa
 func (r *gatewayAPIReconciler) isOIDCHMACSecret(nsName *types.NamespacedName) bool {
 	oidcHMACSecret := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      oidcHMACSecretName,
+		Name:      r.hmacSecretName,
 	}
 	return *nsName == oidcHMACSecret
 }
@@ -536,7 +567,7 @@ func (r *gatewayAPIReconciler) isRateLimitService(nsName *types.NamespacedName) 
 	}
 	rateLimitService := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      rateLimitServiceName,
+		Name:      r.rateLimitServiceName(),
 	}
 	return *nsName == rateLimitService
 }

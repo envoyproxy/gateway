@@ -24,6 +24,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
@@ -73,6 +74,12 @@ type ResourceRender struct {
 	// release-scoped resources.
 	controllerFullName string
 
+	// controllerResourcePrefix is the prefix applied to the names of the shared
+	// control-plane resources owned by the Envoy Gateway instance (certgen
+	// Secrets, xDS Service, ...), so that multiple instances can share a
+	// namespace. Defaults to the well-known Envoy Gateway resource name.
+	controllerResourcePrefix string
+
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 
@@ -97,6 +104,7 @@ type KubernetesInfraProvider interface {
 	GetControllerNamespace() string
 	GetControllerName() string
 	GetControllerFullName() string
+	GetControllerResourcePrefix() string
 	GetControllerServiceAccountName() string
 	GetDNSDomain() string
 	GetEnvoyGateway() *egv1a1.EnvoyGateway
@@ -115,6 +123,7 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		controllerNamespace:      kubeInfra.GetControllerNamespace(),
 		controllerName:           kubeInfra.GetControllerName(),
 		controllerFullName:       kubeInfra.GetControllerFullName(),
+		controllerResourcePrefix: kubeInfra.GetControllerResourcePrefix(),
 		controllerSAName:         kubeInfra.GetControllerServiceAccountName(),
 		DNSDomain:                kubeInfra.GetDNSDomain(),
 		infra:                    infra.GetProxyInfra(),
@@ -164,25 +173,34 @@ func (r *ResourceRender) validatePodSpec(pod *corev1.PodSpec) error {
 		return fmt.Errorf("serviceAccountName %q is reserved for the Envoy Gateway controller "+
 			"and cannot be used in a gateway deployment", pod.ServiceAccountName)
 	}
+	// instanceName is the name of this Envoy Gateway instance's own resources;
+	// it equals r.controllerName for the default (single instance) deployment.
+	instanceName := config.InstanceResourceName(r.controllerResourcePrefix, r.controllerName)
+	instanceConfigName := instanceName + "-config"
+	reservedSecret := func(name string) bool {
+		return name == r.controllerName || name == instanceName
+	}
+	reservedConfigMap := func(name string) bool {
+		return name == r.controllerName || name == r.controllerName+"-config" ||
+			name == instanceName || name == instanceConfigName
+	}
 	for i := range pod.Volumes {
 		vol := &pod.Volumes[i]
-		if vol.Secret != nil && vol.Secret.SecretName == r.controllerName {
+		if vol.Secret != nil && reservedSecret(vol.Secret.SecretName) {
 			return fmt.Errorf("volume %q references secret %q which is reserved for the Envoy Gateway controller",
 				vol.Name, vol.Secret.SecretName)
 		}
-		if vol.ConfigMap != nil &&
-			(vol.ConfigMap.Name == r.controllerName || vol.ConfigMap.Name == r.controllerName+"-config") {
+		if vol.ConfigMap != nil && reservedConfigMap(vol.ConfigMap.Name) {
 			return fmt.Errorf("volume %q references configmap %q which is reserved for the Envoy Gateway controller",
 				vol.Name, vol.ConfigMap.Name)
 		}
 		if vol.Projected != nil {
 			for _, src := range vol.Projected.Sources {
-				if src.Secret != nil && src.Secret.Name == r.controllerName {
+				if src.Secret != nil && reservedSecret(src.Secret.Name) {
 					return fmt.Errorf("volume %q references secret %q which is reserved for the Envoy Gateway controller",
 						vol.Name, src.Secret.Name)
 				}
-				if src.ConfigMap != nil &&
-					(src.ConfigMap.Name == r.controllerName || src.ConfigMap.Name == r.controllerName+"-config") {
+				if src.ConfigMap != nil && reservedConfigMap(src.ConfigMap.Name) {
 					return fmt.Errorf("volume %q references configmap %q which is reserved for the Envoy Gateway controller",
 						vol.Name, src.ConfigMap.Name)
 				}
@@ -515,7 +533,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode, r.controllerResourcePrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -623,7 +641,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode, r.controllerResourcePrefix)
 	if err != nil {
 		return nil, err
 	}

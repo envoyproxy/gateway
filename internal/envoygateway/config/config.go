@@ -36,6 +36,20 @@ const (
 	EnvoyPrefix = "envoy"
 )
 
+// InstanceResourceName returns the name of a shared control-plane resource
+// (for example the xDS Service, the Secrets created by certgen, or the leader
+// election lease) for the instance with the given resource prefix. When the
+// prefix is empty or the default (EnvoyGatewayServiceName), base is returned
+// unchanged, preserving the historic single-instance resource names; other
+// prefixes yield "<prefix>-<base>" so that multiple instances can share a
+// namespace.
+func InstanceResourceName(prefix, base string) string {
+	if prefix == "" || prefix == EnvoyGatewayServiceName {
+		return base
+	}
+	return prefix + "-" + base
+}
+
 // Server wraps the EnvoyGateway configuration and additional parameters
 // used by Envoy Gateway server.
 type Server struct {
@@ -49,6 +63,16 @@ type Server struct {
 	// ControllerFullName is the Helm release fullname (eg.fullname) used for certgen and other
 	// release-scoped resources. Defaults to EnvoyGatewayServiceName.
 	ControllerFullName string
+
+	// ControllerResourcePrefix is the prefix applied to the names of the shared
+	// control-plane resources owned by this instance (the Deployment, Service,
+	// ConfigMap and ServiceAccount created by the Helm chart, the Secrets
+	// created by certgen, the xDS Service, the topology-injector webhook and
+	// the leader election lease). It defaults to EnvoyGatewayServiceName so
+	// that a single instance keeps its historic resource names; set it to a
+	// unique value per instance to run multiple instances in the same
+	// namespace.
+	ControllerResourcePrefix string
 	// ControllerServiceAccountName is the service account name of the Envoy Gateway controller pod.
 	ControllerServiceAccountName string
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
@@ -117,6 +141,7 @@ func New(stdout, stderr io.Writer) (*Server, error) {
 		ControllerNamespace:          env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		ControllerName:               EnvoyGatewayServiceName,
 		ControllerFullName:           env.Lookup("ENVOY_GATEWAY_FULLNAME", EnvoyGatewayServiceName),
+		ControllerResourcePrefix:     env.Lookup("ENVOY_GATEWAY_RESOURCE_PREFIX", EnvoyGatewayServiceName),
 		ControllerServiceAccountName: env.Lookup("ENVOY_GATEWAY_SERVICE_ACCOUNT", EnvoyGatewayServiceAccountName),
 		DNSDomain:                    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		Logger:                       logging.DefaultLogger(stdout, egv1a1.LogLevelInfo),

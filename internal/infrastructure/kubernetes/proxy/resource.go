@@ -85,6 +85,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
 	topologyInjectorDisabled bool,
 	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
+	controllerResourcePrefix string,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
@@ -119,8 +120,10 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Certificate: filepath.Join("/sds", common.SdsCertFilename),
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
-		MaxHeapSizeBytes:         maxHeapSizeBytes,
-		XdsServerHost:            new(fmt.Sprintf("%s.%s.svc.%s.", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
+		MaxHeapSizeBytes: maxHeapSizeBytes,
+		XdsServerHost: new(fmt.Sprintf("%s.%s.svc.%s.",
+			config.InstanceResourceName(controllerResourcePrefix, config.EnvoyGatewayServiceName),
+			controllerNamespace, dnsDomain)),
 		TopologyInjectorDisabled: topologyInjectorDisabled,
 	}
 
@@ -354,7 +357,7 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 		Name: "certs",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName:  "envoy",
+				SecretName:  config.InstanceResourceName(r.controllerResourcePrefix, config.EnvoyPrefix),
 				DefaultMode: new(int32(420)),
 			},
 		},
@@ -379,7 +382,9 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 				},
 			},
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, r.ControllerNamespace(), r.DNSDomain)
+		saAudience := fmt.Sprintf("%s.%s.svc.%s",
+			config.InstanceResourceName(r.controllerResourcePrefix, config.EnvoyGatewayServiceName),
+			r.ControllerNamespace(), r.DNSDomain)
 		saTokenProjectedVolume := corev1.Volume{
 			Name: "sa-token",
 			VolumeSource: corev1.VolumeSource{

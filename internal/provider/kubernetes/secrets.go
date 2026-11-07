@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/crypto"
+	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
@@ -47,12 +48,15 @@ func newSecret(secretType corev1.SecretType, name, namespace string, data map[st
 	}
 }
 
-// CertsToSecret creates secrets in the provided namespace, in compact form, from the provided certs.
-func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret {
+// CertsToSecret creates secrets in the provided namespace, in compact form,
+// from the provided certs. The names are scoped by the instance resource
+// prefix so that multiple instances can share a namespace; the historic
+// single-instance names are preserved for the default prefix.
+func CertsToSecret(prefix, namespace string, certs *crypto.Certificates) []corev1.Secret {
 	return []corev1.Secret{
 		newSecret(
 			corev1.SecretTypeTLS,
-			"envoy-gateway",
+			ec.InstanceResourceName(prefix, ec.EnvoyGatewayServiceName),
 			namespace,
 			map[string][]byte{
 				caCertificateKey:        certs.CACertificate,
@@ -61,7 +65,7 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 			}),
 		newSecret(
 			corev1.SecretTypeTLS,
-			"envoy",
+			ec.InstanceResourceName(prefix, ec.EnvoyPrefix),
 			namespace,
 			map[string][]byte{
 				caCertificateKey:        certs.CACertificate,
@@ -70,7 +74,7 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 			}),
 		newSecret(
 			corev1.SecretTypeTLS,
-			"envoy-rate-limit",
+			ec.InstanceResourceName(prefix, "envoy-rate-limit"),
 			namespace,
 			map[string][]byte{
 				caCertificateKey:        certs.CACertificate,
@@ -79,7 +83,7 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 			}),
 		newSecret(
 			corev1.SecretTypeOpaque,
-			"envoy-oidc-hmac",
+			ec.InstanceResourceName(prefix, "envoy-oidc-hmac"),
 			namespace,
 			map[string][]byte{
 				hmacSecretKey: certs.OIDCHMACSecret,
