@@ -45,6 +45,7 @@ func init() {
 		CookieBasedConsistentHashLoadBalancing,
 		EndpointOverrideLoadBalancing,
 		MultiHeaderConsistentHashHeaderLoadBalancing,
+		WeightedBackendConsistentHashLoadBalancing,
 		QueryParamsBasedConsistentHashLoadBalancing,
 		BackendUtilizationLoadBalancingTest,
 		BackendUtilizationOutOfBandLoadBalancingTest,
@@ -578,6 +579,83 @@ var MultiHeaderConsistentHashHeaderLoadBalancing = suite.ConformanceTest{
 			})
 		}
 	},
+}
+
+const (
+	weightedHashRequests = 200
+	// infra-backend-v1 carries weight 20 of 100, so it should receive about 40 of the requests.
+	weightedHashV1Low  = 20
+	weightedHashV1High = 60
+)
+
+var WeightedBackendConsistentHashLoadBalancing = suite.ConformanceTest{
+	ShortName:   "WeightedBackendConsistentHashLoadBalancing",
+	Description: "Test that consistent hash load balancing honors backendRef weights",
+	Manifests: []string{
+		"testdata/load_balancing_consistent_hash_weighted_backend.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "weighted-header-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: SameNamespaceGateway.Name, Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "weighted-header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		expectedResponse := &http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/weighted-header",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+
+		for _, header := range []string{"user-a", "user-b", "user-c"} {
+			t.Run(header, func(t *testing.T) {
+				req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
+				req.Headers["Lb-Test-Header"] = []string{header}
+				runConsistentHashLoadBalancingTest(t, suite, &req, expectedResponse)
+			})
+		}
+
+		// Both backends run two replicas, so ignoring the weights would split traffic evenly.
+		t.Run("distinct headers follow backendRef weights", func(t *testing.T) {
+			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (bool, error) {
+				return weightedHashDistributionMatches(t, suite, gwAddr, expectedResponse), nil
+			}); err != nil {
+				tlog.Errorf(t, "backendRef weights are not honored by consistent hash load balancing: %v", err)
+			}
+		})
+	},
+}
+
+func weightedHashDistributionMatches(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expectedResponse *http.ExpectedResponse) bool {
+	trafficMap := make(map[string]int)
+	for i := range weightedHashRequests {
+		req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
+		req.Headers["Lb-Test-Header"] = []string{fmt.Sprintf("user-%d", i)}
+		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+		if err != nil {
+			tlog.Logf(t, "failed to get expected response: %v", err)
+			return false
+		}
+		if err := http.CompareRoundTrip(t, &req, cReq, cResp, *expectedResponse); err != nil {
+			tlog.Logf(t, "failed to compare request and response: %v", err)
+			return false
+		}
+		trafficMap[extractPodNamePrefix(cReq.Pod, "infra-backend")]++
+	}
+
+	v1, v2 := trafficMap["infra-backend-v1"], trafficMap["infra-backend-v2"]
+	tlog.Logf(t, "traffic map: %v", trafficMap)
+	return v1+v2 == weightedHashRequests && v1 >= weightedHashV1Low && v1 <= weightedHashV1High
 }
 
 func runConsistentHashLoadBalancingTest(t *testing.T, suite *suite.ConformanceTestSuite, req *roundtripper.Request, expectedResponse *http.ExpectedResponse) {
