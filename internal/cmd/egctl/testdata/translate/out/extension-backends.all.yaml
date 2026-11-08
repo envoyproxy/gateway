@@ -146,7 +146,7 @@ infraIR:
           kind: GatewayClass
           name: eg
       name: default/eg
-      namespace: ""
+      namespace: envoy-gateway-system
 xdsIR:
   default/eg:
     accessLog:

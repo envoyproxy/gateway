@@ -105,7 +105,7 @@ infraIR:
           kind: GatewayClass
           name: eg
       name: envoy-gateway-system/eg
-      namespace: ""
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway-system/eg:
     accessLog:
