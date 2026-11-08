@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -386,29 +387,44 @@ func (t *Translator) translateExtServerPolicyForGateway(
 ) bool {
 	irKey := t.getIRKey(gateway.Gateway)
 	gwIR := xdsIR[irKey]
+
+	// Resolve the targeted listeners through the Gateway rather than scanning gwIR by name, so that
+	// with mergeGateways only this Gateway's listeners in the shared IR are matched. A whole-Gateway
+	// target covers every listener, including those contributed by ListenerSets, while a sectionName
+	// only matches the Gateway's own listeners, consistent with the other Gateway-scoped policy types.
+	listenerNames := sets.New[string]()
+	for _, listener := range gatewayPolicyTargetListeners(gateway, target) {
+		listenerNames.Insert(irListenerName(listener))
+	}
+
+	return t.attachExtensionRefToListeners(gwIR, gateway, policy, listenerNames)
+}
+
+// attachExtensionRefToListeners appends policy as an ExtensionRef to every listener in gwIR whose
+// name is in listenerNames. It reports whether at least one listener was matched.
+func (t *Translator) attachExtensionRefToListeners(gwIR *ir.Xds,
+	gwCtx *GatewayContext, policy *unstructured.Unstructured, listenerNames sets.Set[string],
+) bool {
 	found := false
 	for _, currListener := range gwIR.HTTP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+		if !listenerNames.Has(currListener.Name) {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gwCtx, policy))
 		found = true
 	}
 	for _, currListener := range gwIR.TCP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+		if !listenerNames.Has(currListener.Name) {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gwCtx, policy))
 		found = true
 	}
 	for _, currListener := range gwIR.UDP {
-		listenerName := currListener.Name[strings.LastIndex(currListener.Name, "/")+1:]
-		if target.SectionName != nil && string(*target.SectionName) != listenerName {
+		if !listenerNames.Has(currListener.Name) {
 			continue
 		}
-		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gateway, policy))
+		currListener.ExtensionRefs = append(currListener.ExtensionRefs, t.getOrCreateExtensionResource(gwIR, gwCtx, policy))
 		found = true
 	}
 	return found
