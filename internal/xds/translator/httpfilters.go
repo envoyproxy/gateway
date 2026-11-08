@@ -98,6 +98,8 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	// the remaining filters is skipped when rejected early
 	// Important: After adding new filter types, don't forget to modify the validation rule of the EnvoyFilter type in the API
 	switch {
+	case filter.Name == authenticationGateName:
+		order = 11
 	case isFilterType(filter, egv1a1.EnvoyFilterCustomResponse):
 		order = 0
 	case isFilterType(filter, egv1a1.EnvoyFilterHealthCheck):
@@ -335,8 +337,8 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 	}
 
 	// Sort the filters in the correct order.
-	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters, t.FilterOrder)
-	return nil
+	mgr.HttpFilters = orderAuthenticationGate(sortHTTPFilters(mgr.HttpFilters, t.FilterOrder))
+	return validateAuthenticationFilterOrder(mgr, irListener)
 }
 
 // patchRouteWithPerRouteConfig appends per-route filter configuration to the

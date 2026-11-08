@@ -119,8 +119,12 @@ type Operation struct {
 // or any other identity that can be extracted from a custom header.
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.clientIPGeoLocations))",message="at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.clientIPGeoLocations) || has(self.basicAuth))",message="at least one of clientCIDRs, jwt, basicAuth, headers, or clientIPGeoLocations must be specified"
 type Principal struct {
+	// BasicAuth matches a username verified by this policy's BasicAuth filter.
+	// +optional
+	BasicAuth *BasicAuthPrincipal `json:"basicAuth,omitempty"`
+
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
 	//
@@ -335,3 +339,12 @@ const (
 	// AuthorizationActionDeny is the action to deny the request.
 	AuthorizationActionDeny AuthorizationAction = "Deny"
 )
+
+// BasicAuthPrincipal matches verified Basic authentication usernames.
+type BasicAuthPrincipal struct {
+	// Users are exact, case-sensitive usernames.
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=128
+	// +listType=set
+	Users []string `json:"users"`
+}

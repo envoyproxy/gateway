@@ -1003,7 +1003,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // - Empty/no Authorization is allowed and results in no-op on L4.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
-	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
+	if p.Spec.Authentication != nil || p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
 		return fmt.Errorf("only authorization is supported for %s (routes/listeners)", proto)
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
@@ -1022,6 +1022,9 @@ func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
 		}
 		if rule.Principal == nil {
 			continue
+		}
+		if rule.Principal.BasicAuth != nil {
+			return fmt.Errorf("rule %d: BasicAuth not supported for %s", i, proto)
 		}
 		if rule.Principal.JWT != nil {
 			return fmt.Errorf("rule %d: JWT not supported for %s", i, proto)
@@ -1279,6 +1282,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		hasNonExtAuthError bool
 	)
 
+	errs = validateAuthentication(policy)
 	if policy.Spec.CORS != nil {
 		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
 			err = perr.WithMessage(err, "CORS")
@@ -1403,16 +1407,21 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 		}
 
+		if orderErr := validateAuthenticationOrder(policy, gtwCtx.envoyProxy); orderErr != nil {
+			errs = errors.Join(errs, orderErr)
+			hasNonExtAuthError = true
+		}
 		// Pre-create security features to avoid repeated allocations
 		securityFeatures := &ir.SecurityFeatures{
-			CORS:          cors,
-			CSRF:          csrf,
-			JWT:           jwt,
-			OIDC:          oidc,
-			APIKeyAuth:    apiKeyAuth,
-			BasicAuth:     basicAuth,
-			ExtAuth:       extAuth,
-			Authorization: authorization,
+			AuthenticationAny: authenticationAny(policy),
+			CORS:              cors,
+			CSRF:              csrf,
+			JWT:               jwt,
+			OIDC:              oidc,
+			APIKeyAuth:        apiKeyAuth,
+			BasicAuth:         basicAuth,
+			ExtAuth:           authenticationExtAuthMetadata(extAuth, jwt, basicAuth, policy),
+			Authorization:     authorization,
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
@@ -1628,6 +1637,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		hasNonExtAuthError    bool
 	)
 
+	errs = errors.Join(validateAuthentication(policy), validateAuthenticationOrder(policy, gtwCtx.envoyProxy))
 	if policy.Spec.CORS != nil {
 		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
 			err = perr.WithMessage(err, "CORS")
@@ -1723,14 +1733,15 @@ func (t *Translator) translateSecurityPolicyForListeners(
 
 	// Pre-create security features and error response to avoid repeated allocations
 	securityFeatures := &ir.SecurityFeatures{
-		CORS:          cors,
-		CSRF:          csrf,
-		JWT:           jwt,
-		OIDC:          oidc,
-		APIKeyAuth:    apiKeyAuth,
-		BasicAuth:     basicAuth,
-		ExtAuth:       extAuth,
-		Authorization: authorization,
+		AuthenticationAny: authenticationAny(policy),
+		CORS:              cors,
+		CSRF:              csrf,
+		JWT:               jwt,
+		OIDC:              oidc,
+		APIKeyAuth:        apiKeyAuth,
+		BasicAuth:         basicAuth,
+		ExtAuth:           authenticationExtAuthMetadata(extAuth, jwt, basicAuth, policy),
+		Authorization:     authorization,
 	}
 
 	routesWithDirectResponse := sets.New[string]()
@@ -1993,10 +2004,10 @@ func (t *Translator) buildJWT(
 	}
 
 	return &ir.JWT{
-		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
+		AllowMissing:         authenticationAny(policy) || ptr.Deref(policy.Spec.JWT.Optional, false),
 		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
 		Providers:            providers,
-		Name:                 jwtName(policy, owners),
+		Name:                 authenticationJWTName(policy, owners),
 	}, nil
 }
 
@@ -3195,7 +3206,9 @@ func (t *Translator) buildBasicAuth(
 	}
 
 	return &ir.BasicAuth{
-		Name:                  irConfigName(ownerPolicy),
+		AllowMissing:          authenticationAny(policy),
+		EmitDynamicMetadata:   authenticationMetadataRequired(policy),
+		Name:                  authenticationBasicName(policy, owners),
 		Users:                 usersSecretBytes,
 		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
 	}, nil
@@ -3529,6 +3542,16 @@ func (t *Translator) buildAuthorization(
 				return nil, fmt.Errorf("unable to translate authorization rule: jwt provider %q is not defined in jwt.providers", rule.Principal.JWT.Provider)
 			}
 
+			if rule.Principal.BasicAuth != nil {
+				if policy.Spec.BasicAuth == nil {
+					return nil, errors.New("basicAuth principal requires basicAuth")
+				}
+				if len(rule.Principal.BasicAuth.Users) == 0 {
+					return nil, errors.New("basicAuth principal requires users")
+				}
+				irPrincipal.BasicAuth = rule.Principal.BasicAuth.DeepCopy()
+				irPrincipal.BasicAuthFilter = "envoy.filters.http.basic_auth/" + authenticationBasicName(policy, owners)
+			}
 			irPrincipal.JWT = rule.Principal.JWT
 			irPrincipal.Headers = rule.Principal.Headers
 			irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations

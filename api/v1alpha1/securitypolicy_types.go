@@ -53,6 +53,10 @@ type SecurityPolicy struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute'])))", message="mergeType can only be used with xRoute targets"
 // +kubebuilder:validation:XValidation:rule="(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules) && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt) : false)) ? has(self.jwt) : true", message="if authorization.rules.principal.jwt is used, jwt must be defined, unless mergeType is set and the jwt providers are inherited from the parent policy"
 type SecurityPolicySpec struct {
+	// Authentication controls composition of authentication methods.
+	// +optional
+	Authentication *Authentication `json:"authentication,omitempty"`
+
 	PolicyTargetReferences `json:",inline"`
 
 	// MergeType determines how this configuration is merged with existing SecurityPolicy
@@ -123,3 +127,22 @@ type SecurityPolicyList struct {
 func init() {
 	localSchemeBuilder.Register(&SecurityPolicy{}, &SecurityPolicyList{})
 }
+
+// Authentication controls composition of authentication methods.
+type Authentication struct {
+	// Mode defaults to All. Any requires JWT and BasicAuth and accepts either.
+	// +kubebuilder:validation:Enum=All;Any
+	// +kubebuilder:default=All
+	// +optional
+	Mode AuthenticationMode `json:"mode,omitempty"`
+}
+
+// AuthenticationMode defines how authentication methods compose.
+type AuthenticationMode string
+
+const (
+	// AuthenticationModeAll requires every configured authentication method.
+	AuthenticationModeAll AuthenticationMode = "All"
+	// AuthenticationModeAny requires successful JWT or Basic authentication.
+	AuthenticationModeAny AuthenticationMode = "Any"
+)

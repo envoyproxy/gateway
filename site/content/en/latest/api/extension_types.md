@@ -248,6 +248,35 @@ _Appears in:_
 | `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTPS protocol.<br /> | 
 
 
+#### Authentication
+
+
+
+Authentication controls composition of authentication methods.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `mode` | _[AuthenticationMode](#authenticationmode)_ |  false  | All | Mode defaults to All. Any requires JWT and BasicAuth and accepts either. |
+
+
+#### AuthenticationMode
+
+_Underlying type:_ _string_
+
+AuthenticationMode defines how authentication methods compose.
+
+_Appears in:_
+- [Authentication](#authentication)
+
+| Value | Description |
+| ----- | ----------- |
+| `All` | AuthenticationModeAll requires every configured authentication method.<br /> |
+| `Any` | AuthenticationModeAny requires successful JWT or Basic authentication.<br /> |
+
+
 #### Authorization
 
 
@@ -848,6 +877,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details. |
 | `forwardUsernameHeader` | _string_ |  false  |  | This field specifies the header name to forward a successfully authenticated user to<br />the backend. The header will be added to the request with the username as the value.<br />If it is not specified, the username will not be forwarded. |
+
+
+#### BasicAuthPrincipal
+
+
+
+BasicAuthPrincipal matches verified Basic authentication usernames.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `users` | _string array_ |  true  |  | Users are exact, case-sensitive usernames. |
 
 
 #### BodyToExtAuth
@@ -2577,6 +2620,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `includeAuthenticationMetadata` | _boolean_ |  false  |  | IncludeAuthenticationMetadata sends verified JWT payloads and Basic usernames to a gRPC service.<br />The service must run after authentication, fail closed, and not recompute routes. |
 | `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  |  | GRPC defines the gRPC External Authorization service.<br />Either GRPCService or HTTPService must be specified,<br />and only one of them can be provided. |
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  |  | HTTP defines the HTTP External Authorization service.<br />Either GRPCService or HTTPService must be specified,<br />and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  |  | HeadersToExtAuth defines the client request headers that will be included<br />in the request to the external authorization service.<br />Note: If not specified, the default behavior for gRPC and HTTP external<br />authorization services is different due to backward compatibility reasons.<br />All headers will be included in the check request to a gRPC authorization server.<br />Only the following headers will be included in the check request to an HTTP<br />authorization server: Host, Method, Path, Content-Length, and Authorization.<br />And these headers will always be included to the check request to an HTTP<br />authorization server by default, no matter whether they are specified<br />in HeadersToExtAuth or not. |
@@ -5320,6 +5364,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `basicAuth` | _[BasicAuthPrincipal](#basicauthprincipal)_ |  false  |  | BasicAuth matches a username verified by this policy's BasicAuth filter. |
 | `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected.<br />For TCPRoute and UDPRoute targets (raw L4 traffic), HTTP headers such as<br />X-Forwarded-For are not available. The client IP is obtained from the<br />TCP connection's peer address, or from the source address of the UDP<br />datagram. If intermediaries (load balancers, NAT) terminate or proxy the<br />traffic, the original client IP will only be available if the<br />intermediary preserves the source address (for example by enabling the<br />PROXY protocol or avoiding SNAT). Note that the PROXY protocol is not<br />available on the UDP path, so a UDPRoute target relies entirely on the<br />datagram source address being preserved. Ensure your L4 proxy is<br />configured to preserve the source IP to enable correct client-IP<br />matching for TCPRoute and UDPRoute targets. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 | `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
@@ -6656,6 +6701,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `authentication` | _[Authentication](#authentication)_ |  false  |  | Authentication controls composition of authentication methods. |
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11. |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |

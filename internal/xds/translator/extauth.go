@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 
+	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
@@ -18,6 +19,7 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -99,9 +101,17 @@ func extAuthFilterName(extAuth *ir.ExtAuth) string {
 
 func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 	config := &extauthv3.ExtAuthz{
-		TransportApiVersion: corev3.ApiVersion_V3,
+		TransportApiVersion:       corev3.ApiVersion_V3,
+		MetadataContextNamespaces: extAuth.AuthenticationMetadataNamespaces,
 	}
 
+	if len(extAuth.AuthenticationMetadataNamespaces) > 0 {
+		config.DecoderHeaderMutationRules = &mutationrulesv3.HeaderMutationRules{
+			DisallowExpression: &matcherv3.RegexMatcher{Regex: "(?i)^(:.*|host|authorization)$"},
+			DisallowIsError:    wrapperspb.Bool(true),
+		}
+		config.EnableDynamicMetadataIngestion = wrapperspb.Bool(false)
+	}
 	if extAuth.FailOpen != nil {
 		config.FailureModeAllow = *extAuth.FailOpen
 	}

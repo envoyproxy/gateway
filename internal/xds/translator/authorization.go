@@ -278,8 +278,18 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			}
 		}
 
+		var basicPredicate *matcherv3.Matcher_MatcherList_Predicate
+		if rule.Principal.BasicAuth != nil {
+			basicPredicate, err = buildBasicAuthPredicate(rule.Principal.BasicAuthFilter, rule.Principal.BasicAuth.Users)
+			if err != nil {
+				return nil, err
+			}
+		}
 		// AND all the predicates together.
 		var allPredicates []*matcherv3.Matcher_MatcherList_Predicate
+		if basicPredicate != nil {
+			allPredicates = append(allPredicates, basicPredicate)
+		}
 		if methodPredicate != nil {
 			allPredicates = append(allPredicates, methodPredicate)
 		}

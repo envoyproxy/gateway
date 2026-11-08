@@ -171,6 +171,19 @@ spec:
                 - credentialRefs
                 - extractFrom
                 type: object
+              authentication:
+                description: Authentication controls composition of authentication
+                  methods.
+                properties:
+                  mode:
+                    default: All
+                    description: Mode defaults to All. Any requires JWT and BasicAuth
+                      and accepts either.
+                    enum:
+                    - All
+                    - Any
+                    type: string
+                type: object
               authorization:
                 description: Authorization defines the authorization configuration.
                 properties:
@@ -312,6 +325,21 @@ spec:
                             For example, if there are two principals: one for client IP and one for JWT claim,
                             the rule will match only if both the client IP and the JWT claim match.
                           properties:
+                            basicAuth:
+                              description: BasicAuth matches a username verified by
+                                this policy's BasicAuth filter.
+                              properties:
+                                users:
+                                  description: Users are exact, case-sensitive usernames.
+                                  items:
+                                    type: string
+                                  maxItems: 128
+                                  minItems: 1
+                                  type: array
+                                  x-kubernetes-list-type: set
+                              required:
+                              - users
+                              type: object
                             clientCIDRs:
                               description: |-
                                 ClientCIDRs are the IP CIDR ranges of the client.
@@ -552,10 +580,10 @@ spec:
                                 rule: (has(self.claims) || has(self.scopes))
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, jwt, headers, or
-                              clientIPGeoLocations must be specified
+                          - message: at least one of clientCIDRs, jwt, basicAuth,
+                              headers, or clientIPGeoLocations must be specified
                             rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
-                              || has(self.clientIPGeoLocations))
+                              || has(self.clientIPGeoLocations) || has(self.basicAuth))
                       required:
                       - action
                       type: object
@@ -4256,6 +4284,11 @@ spec:
                       rule: '!(has(self.path) && has(self.pathOverride))'
                     - message: http3 is only supported for route backends
                       rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
+                  includeAuthenticationMetadata:
+                    description: |-
+                      IncludeAuthenticationMetadata sends verified JWT payloads and Basic usernames to a gRPC service.
+                      The service must run after authentication, fail closed, and not recompute routes.
+                    type: boolean
                   includeRouteMetadata:
                     description: |-
                       IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
