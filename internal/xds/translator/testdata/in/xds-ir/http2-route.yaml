@@ -32,8 +32,8 @@ http:
         name: "first-route-dest/backend/0"
     traffic:
       http2:
-        initialConnectionWindowSize: 1048576
-        initialStreamWindowSize: 524288000
+        initialStreamWindowSize: 1048576
+        initialConnectionWindowSize: 524288000
         maxConcurrentStreams: 200
         resetStreamOnError: true
         connectionKeepalive:
@@ -72,8 +72,8 @@ http:
     useClientProtocol: true
     traffic:
       http2:
-        initialConnectionWindowSize: 1048576
-        initialStreamWindowSize: 524288000
+        initialStreamWindowSize: 1048576
+        initialConnectionWindowSize: 524288000
         maxConcurrentStreams: 200
         resetStreamOnError: false
   - name: "fourth-route-not-http2"
@@ -90,7 +90,7 @@ http:
         name: "fourth-route-dest/backend/0"
     traffic:
       http2:
-        initialConnectionWindowSize: 1048576
-        initialStreamWindowSize: 524288000
+        initialStreamWindowSize: 1048576
+        initialConnectionWindowSize: 524288000
         maxConcurrentStreams: 200
         resetStreamOnError: true

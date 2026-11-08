@@ -883,9 +883,9 @@ type HTTP10Settings struct {
 // +k8s:deepcopy-gen=true
 type HTTP2Settings struct {
 	// InitialStreamWindowSize is the initial window size for a stream.
-	InitialStreamWindowSize *uint32 `json:"initialConnectionWindowSize,omitempty" yaml:"initialConnectionWindowSize,omitempty"`
+	InitialStreamWindowSize *uint32 `json:"initialStreamWindowSize,omitempty" yaml:"initialStreamWindowSize,omitempty"`
 	// InitialConnectionWindowSize is the initial window size for a connection.
-	InitialConnectionWindowSize *uint32 `json:"initialStreamWindowSize,omitempty" yaml:"initialStreamWindowSize,omitempty"`
+	InitialConnectionWindowSize *uint32 `json:"initialConnectionWindowSize,omitempty" yaml:"initialConnectionWindowSize,omitempty"`
 	// MaxConcurrentStreams is the maximum number of concurrent streams that can be opened on a connection.
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
