@@ -36,6 +36,10 @@ const (
 	// will change in a future release. Users should prepare by migrating to the recommended alternative.
 	PolicyReasonBehaviorChange gwapiv1.PolicyConditionReason = "BehaviorChange"
 
+	// PolicyReasonMultipleSourceCIDR is used with the "Warning" condition when a rate limit rule
+	// has more than one sourceCIDR clientSelector and only the last one is applied.
+	PolicyReasonMultipleSourceCIDR gwapiv1.PolicyConditionReason = "MultipleSourceCIDR"
+
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
 	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
