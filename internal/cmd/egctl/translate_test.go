@@ -310,6 +310,29 @@ func TestTranslate(t *testing.T) {
 			to:     "gateway-api",
 			expect: true,
 		},
+		{
+			name:   "listenerset",
+			from:   "gateway-api",
+			to:     "gateway-api,ir",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
+			name:         "listenerset",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(RouteEnvoyConfigType),
+			expect:       true,
+		},
+		{
+			name:         "listenerset",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(ListenerEnvoyConfigType),
+			expect:       true,
+		},
 	}
 
 	flag.Parse()

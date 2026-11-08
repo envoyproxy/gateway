@@ -271,6 +271,20 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 				Spec: typedSpec.(gwapiv1.HTTPRouteSpec),
 			}
 			resources.HTTPRoutes = append(resources.HTTPRoutes, httpRoute)
+		case KindListenerSet:
+			typedSpec := spec.Interface()
+			listenerSet := &gwapiv1.ListenerSet{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       KindListenerSet,
+					APIVersion: gv,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(gwapiv1.ListenerSetSpec),
+			}
+			resources.ListenerSets = append(resources.ListenerSets, listenerSet)
 		case KindGRPCRoute:
 			typedSpec := spec.Interface()
 			grpcRoute := &gwapiv1.GRPCRoute{
