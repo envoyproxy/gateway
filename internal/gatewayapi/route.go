@@ -2732,6 +2732,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		var (
 			routeBackendDestinations []routeBackendRefDestination
 			resolveErrs              = &status.MultiStatusError{}
+			noEndpointsErrs          = &status.MultiStatusError{}
 			destName                 = irRouteDestinationName(udpRoute, -1 /*rule index*/)
 			routeRuleMetadata        = buildResourceMetadata(udpRoute, udpRoute.Spec.Rules[0].Name)
 		)
@@ -2751,7 +2752,13 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			// backendDest.ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
 			backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, udpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			if err != nil {
-				resolveErrs.Add(err)
+				// Gateway API conformance: When backendRef Service exists but has no endpoints,
+				// the ResolvedRefs condition should NOT be set to False.
+				if err.Reason() == status.RouteReasonEndpointsNotFound {
+					noEndpointsErrs.Add(err)
+				} else {
+					resolveErrs.Add(err)
+				}
 				continue
 			}
 
@@ -2779,6 +2786,15 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				gwapiv1.RouteReasonResolvedRefs,
 				"Resolved all the Object references for the Route",
 			)
+		}
+		if !noEndpointsErrs.Empty() {
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				udpRoute.GetGeneration(),
+				status.RouteConditionBackendsAvailable,
+				metav1.ConditionFalse,
+				noEndpointsErrs.Reason(),
+				noEndpointsErrs.Error())
 		}
 
 		// Skip parent refs that did not accept the route
@@ -2897,6 +2913,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		var (
 			routeBackendDestinations []routeBackendRefDestination
 			resolveErrs              = &status.MultiStatusError{}
+			noEndpointsErrs          = &status.MultiStatusError{}
 			destName                 = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
 			routeRuleMetadata        = buildResourceMetadata(tcpRoute, tcpRoute.Spec.Rules[0].Name)
 		)
@@ -2915,7 +2932,13 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			backendDest, _, err := t.processBackendRef(destName, i, backendRefCtx, parentRef, tcpRoute, resources, gatewayCtx, btpRoutingType, xdsIR, mergeIncompatible)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
-				resolveErrs.Add(err)
+				// Gateway API conformance: When backendRef Service exists but has no endpoints,
+				// the ResolvedRefs condition should NOT be set to False.
+				if err.Reason() == status.RouteReasonEndpointsNotFound {
+					noEndpointsErrs.Add(err)
+				} else {
+					resolveErrs.Add(err)
+				}
 				continue
 			}
 
@@ -2943,6 +2966,15 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				gwapiv1.RouteReasonResolvedRefs,
 				"Resolved all the Object references for the Route",
 			)
+		}
+		if !noEndpointsErrs.Empty() {
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				tcpRoute.GetGeneration(),
+				status.RouteConditionBackendsAvailable,
+				metav1.ConditionFalse,
+				noEndpointsErrs.Reason(),
+				noEndpointsErrs.Error())
 		}
 
 		// Skip parent refs that did not accept the route
