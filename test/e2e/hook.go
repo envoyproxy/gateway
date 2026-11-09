@@ -34,15 +34,18 @@ var Hook = func(t *testing.T, test suite.ConformanceTest, suite *suite.Conforman
 	tests.CollectAndDump(t, suite.RestConfig)
 }
 
-// WrapConformanceTestsWithHook runs Hook at the end of each test body, while the resources the
-// test created are still in the cluster. ConformanceOptions.Hook alone is not enough: the suite
-// runs it from a t.Cleanup registered before the test applies its manifests, and cleanups run
-// last-in-first-out, so it only runs once the test resources have been deleted. A deferred call
-// still runs when the test fails with t.Fatal or require, and before any t.Cleanup of the test.
+// WrapConformanceTestsWithHook runs Hook from a t.Cleanup registered at the start of each test
+// body, while the resources the test created are still in the cluster. ConformanceOptions.Hook
+// alone is not enough: the suite runs it from a t.Cleanup registered before the test applies its
+// manifests, and cleanups run last-in-first-out, so it only runs once the test resources have been
+// deleted. The cleanup registered here runs after the manifest cleanup was registered, so before it
+// runs, and it also runs after any parallel subtests of the test have finished, so their failures
+// are visible to t.Failed(). A deferred call would run as soon as the body returns, before the
+// parallel subtests resume.
 //
 // Keep setting ConformanceOptions.Hook as well: it covers failures this wrapper cannot see, such
-// as a manifest that fails to apply before the test body starts, or a failing t.Cleanup of the
-// test. Hook dumps each failed test only once, so a failure is never dumped twice.
+// as a manifest that fails to apply before the test body starts. Hook dumps each failed test only
+// once, so a failure is never dumped twice.
 //
 // TODO: remove once https://github.com/kubernetes-sigs/gateway-api/pull/5185 is released.
 func WrapConformanceTestsWithHook(tests []suite.ConformanceTest) []suite.ConformanceTest {
@@ -51,7 +54,7 @@ func WrapConformanceTestsWithHook(tests []suite.ConformanceTest) []suite.Conform
 	for _, test := range tests {
 		original := test.Test
 		test.Test = func(t *testing.T, suite *suite.ConformanceTestSuite) {
-			defer Hook(t, test, suite)
+			t.Cleanup(func() { Hook(t, test, suite) })
 			original(t, suite)
 		}
 		wrapped = append(wrapped, test)
