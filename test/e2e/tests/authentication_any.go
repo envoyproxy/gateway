@@ -56,6 +56,7 @@ var AuthenticationAnyTest = suite.ConformanceTest{
 			{name: "invalid Basic", path: "/authentication-any", authorization: invalidBasic, status: 401},
 			{name: "invalid JWT", path: "/authentication-any", authorization: "Bearer " + invalidToken, status: 401},
 			{name: "valid Basic with invalid JWT", path: "/authentication-any?access_token=" + invalidToken, authorization: validBasic, status: 401},
+			{name: "valid JWT with invalid Basic", path: "/authentication-any?access_token=" + v1Token, authorization: invalidBasic, status: 401},
 		} {
 			t.Run(test.name, func(t *testing.T) {
 				request := http.Request{Path: test.path}

@@ -71,15 +71,15 @@ func TestAuthenticationAnyNames(t *testing.T) {
 	allPolicy.Spec.Authentication = nil
 	owners := &securityPolicyOwners{}
 
-	require.NotEqual(t, authenticationBasicName(allPolicy, allPolicy), authenticationBasicName(anyPolicy, anyPolicy))
-	require.Equal(t, irConfigName(allPolicy), authenticationBasicName(allPolicy, allPolicy))
+	require.NotEqual(t, basicAuthName(allPolicy, allPolicy), basicAuthName(anyPolicy, anyPolicy))
+	require.Equal(t, irConfigName(allPolicy), basicAuthName(allPolicy, allPolicy))
 	require.NotEqual(t, jwtName(allPolicy, owners), jwtName(anyPolicy, owners))
 
 	parent := anyPolicy.DeepCopy()
 	parent.Name = "parent"
 	parent.Spec.Authentication = nil
-	require.Equal(t, irConfigName(parent), authenticationBasicName(allPolicy, parent))
-	require.Equal(t, irConfigName(parent)+authenticationAnySuffix, authenticationBasicName(anyPolicy, parent))
+	require.Equal(t, irConfigName(parent), basicAuthName(allPolicy, parent))
+	require.Equal(t, irConfigName(parent)+authenticationAnySuffix, basicAuthName(anyPolicy, parent))
 }
 
 func TestAuthenticationAnyLongJWTNames(t *testing.T) {

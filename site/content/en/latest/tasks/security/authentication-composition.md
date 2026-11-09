@@ -74,7 +74,8 @@ from a parent policy through `mergeType`. It does not support:
 - `recomputeRoute` on JWT providers.
 - `basicAuth.forwardUsernameHeader`. Envoy's Basic authentication filter leaves that
   header untouched when it lets a request through without Basic credentials, so a client
-  authenticated by JWT could set it to any username.
+  authenticated by JWT could set it to any username
+  ([envoyproxy/envoy#48957](https://github.com/envoyproxy/envoy/issues/48957)).
 
 A policy that violates these restrictions through an inherited configuration is marked
 invalid, and the route returns 500.

@@ -3204,7 +3204,7 @@ func (t *Translator) buildBasicAuth(
 
 	return &ir.BasicAuth{
 		AllowMissing:          authenticationAny(policy),
-		Name:                  authenticationBasicName(policy, ownerPolicy),
+		Name:                  basicAuthName(policy, ownerPolicy),
 		Users:                 usersSecretBytes,
 		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
 	}, nil

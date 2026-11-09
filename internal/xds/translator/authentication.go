@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"slices"
 
 	rbacconfigv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -40,24 +41,19 @@ func (*authenticationGate) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener
 	if irListener == nil {
 		return errors.New("ir listener is nil")
 	}
-	if hcmContainsFilter(mgr, authenticationGateName) {
+	if hcmContainsFilter(mgr, authenticationGateName) ||
+		!slices.ContainsFunc(irListener.Routes, func(route *ir.HTTPRoute) bool { return authenticationAny(route.Security) }) {
 		return nil
 	}
-	for _, route := range irListener.Routes {
-		if !authenticationAny(route.Security) {
-			continue
-		}
-		gateAny, err := anypb.New(&rbacv3.RBAC{})
-		if err != nil {
-			return err
-		}
-		mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
-			Name:       authenticationGateName,
-			ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: gateAny},
-			Disabled:   true,
-		})
-		return nil
+	gateAny, err := anypb.New(&rbacv3.RBAC{})
+	if err != nil {
+		return err
 	}
+	mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
+		Name:       authenticationGateName,
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: gateAny},
+		Disabled:   true,
+	})
 	return nil
 }
 

@@ -43,7 +43,8 @@ func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
 		return errors.New("authentication mode Any does not support jwt.failOpen")
 	}
 	for _, provider := range spec.JWT.Providers {
-		// The gate's per-route config is selected before a recomputed route takes effect.
+		// Envoy enables per-route filters from the original route, while the gate
+		// reads its rules from the recomputed one, so the two can disagree.
 		if ptr.Deref(provider.RecomputeRoute, false) {
 			return fmt.Errorf("authentication mode Any does not support recomputeRoute on JWT provider %q", provider.Name)
 		}
@@ -51,10 +52,10 @@ func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
 	return nil
 }
 
-// authenticationBasicName keeps Any-mode BasicAuth in a separate filter from an
+// basicAuthName keeps Any-mode BasicAuth in a separate filter from an
 // All-mode filter built from the same owner policy, since allow_missing is a
 // filter-wide setting.
-func authenticationBasicName(policy, ownerPolicy *egv1a1.SecurityPolicy) string {
+func basicAuthName(policy, ownerPolicy *egv1a1.SecurityPolicy) string {
 	name := irConfigName(ownerPolicy)
 	if authenticationAny(policy) {
 		name += authenticationAnySuffix

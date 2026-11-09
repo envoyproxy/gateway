@@ -33511,6 +33511,30 @@ spec:
                 - credentialRefs
                 - extractFrom
                 type: object
+              authentication:
+                description: Authentication defines how the configured authentication
+                  methods combine.
+                properties:
+                  mode:
+                    default: All
+                    description: |-
+                      Mode defines how the configured authentication methods combine.
+                      All applies each configured method on its own terms, so JWT and BasicAuth
+                      are both required unless jwt.optional or jwt.failOpen relaxes JWT.
+                      Any requires JWT and BasicAuth to be configured and accepts a request
+                      authenticated by either of them; jwt.optional has no effect.
+                      A request without credentials for either method is rejected with
+                      403 Forbidden and no WWW-Authenticate challenge.
+                      A request presenting invalid credentials for either method is rejected.
+                      Authorization rules with a jwt principal never match a request
+                      authenticated by BasicAuth.
+                      Any does not support OIDC, APIKeyAuth, ExtAuth, jwt.failOpen, JWT route
+                      recomputation or basicAuth.forwardUsernameHeader.
+                    enum:
+                    - All
+                    - Any
+                    type: string
+                type: object
               authorization:
                 description: Authorization defines the authorization configuration.
                 properties:
@@ -42049,6 +42073,26 @@ spec:
               rule: '(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules)
                 && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
                 : false)) ? has(self.jwt) : true'
+            - message: authentication.mode Any requires jwt and basicAuth, unless
+                mergeType is set and they are inherited from the parent policy
+              rule: '(has(self.authentication) && has(self.authentication.mode) &&
+                self.authentication.mode == ''Any'' && !has(self.mergeType)) ? (has(self.jwt)
+                && has(self.basicAuth)) : true'
+            - message: authentication.mode Any does not support oidc, apiKeyAuth or
+                extAuth
+              rule: '(has(self.authentication) && has(self.authentication.mode) &&
+                self.authentication.mode == ''Any'') ? (!has(self.oidc) && !has(self.apiKeyAuth)
+                && !has(self.extAuth)) : true'
+            - message: authentication.mode Any does not support jwt.failOpen or recomputeRoute
+                on JWT providers
+              rule: '(has(self.authentication) && has(self.authentication.mode) &&
+                self.authentication.mode == ''Any'' && has(self.jwt)) ? ((!has(self.jwt.failOpen)
+                || !self.jwt.failOpen) && self.jwt.providers.all(p, !has(p.recomputeRoute)
+                || !p.recomputeRoute)) : true'
+            - message: authentication.mode Any does not support basicAuth.forwardUsernameHeader
+              rule: '(has(self.authentication) && has(self.authentication.mode) &&
+                self.authentication.mode == ''Any'' && has(self.basicAuth)) ? !has(self.basicAuth.forwardUsernameHeader)
+                : true'
           status:
             description: Status defines the current status of SecurityPolicy.
             properties:
