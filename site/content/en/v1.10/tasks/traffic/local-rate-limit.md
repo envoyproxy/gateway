@@ -1,0 +1,1087 @@
+---
+title: "Local Rate Limit"
+---
+
+Rate limit is a feature that allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
+
+Here are some reasons why you may want to implement Rate limits
+
+* To prevent malicious activity such as DDoS attacks.
+* To prevent applications and its resources (such as a database) from getting overloaded.
+* To create API limits based on user entitlements.
+
+Envoy Gateway supports two types of rate limiting: [Global rate limiting][] and [Local rate limiting][].
+
+[Local rate limiting][] applies rate limits to the traffic flowing through a single instance of Envoy proxy. This means
+that if the data plane has 2 replicas of Envoy running, and the rate limit is 10 requests/second, each replica will allow
+10 requests/second. This is in contrast to [Global Rate Limiting][] which applies rate limits to the traffic flowing through
+all instances of Envoy proxy.
+
+Envoy Gateway introduces a new CRD called [BackendTrafficPolicy][] that allows the user to describe their rate limit intent.
+This instantiated resource can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
+
+**Note:** Limit is applied per route. Even if a [BackendTrafficPolicy][] targets a gateway, each route in that gateway
+still has a separate rate limit bucket. For example, if a gateway has 2 routes, and the limit is 100r/s, then each route
+has its own 100r/s rate limit bucket.
+
+## Prerequisites
+
+{{< boilerplate prerequisites >}}
+
+## Rate Limit Specific User
+
+Here is an example of a rate limit implemented by the application developer to limit a specific user by matching on a custom `x-user-id` header
+with a value set to `one`.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-user-id
+            value: one
+        limit:
+          requests: 3
+          unit: Hour
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-user-id
+            value: one
+        limit:
+          requests: 3
+          unit: Hour
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+### HTTPRoute
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
+
+```shell
+kubectl get httproute/http-ratelimit -o yaml
+```
+
+Get the Gateway's address:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Let's query `ratelimit.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests
+and then receive a `429` status code for the 4th request since the limit is set at 3 requests/Hour for the request which contains the header `x-user-id`
+and value `one`.
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: one" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
+You should be able to send requests with the `x-user-id` header and a different value and receive successful responses from the server.
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: two" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:34:36 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:34:37 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:34:38 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:34:39 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+```
+
+## Rate Limit Specific User Unless within Test Org
+
+Here is an example of a rate limit implemented by the application developer to limit a specific user by matching on a custom `x-user-id` header
+with a value set to `one`. But the user must not be limited if logging in within Test org, determined by custom header `x-org-id` set to `test`.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-user-id
+            value: one
+          - name: x-org-id
+            value: test
+            invert: true
+        limit:
+          requests: 3
+          unit: Hour
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-user-id
+            value: one
+          - name: x-org-id
+            value: test
+            invert: true
+        limit:
+          requests: 3
+          unit: Hour
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+### HTTPRoute
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
+
+```shell
+kubectl get httproute/http-ratelimit -o yaml
+```
+
+Get the Gateway's address:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Let's query `ratelimit.example/get` 4 times with `x-user-id` set to `one` and `x-org-id` set to `org1`. We should receive a `200` response from the example Gateway for the first 3 requests and the last request should be rate limited.
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: one" --header "x-org-id: org1" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
+Let's query `ratelimit.example/get` 4 times with `x-user-id` set to `one` and `x-org-id` set to `test`. We should receive a `200` response from the example Gateway for all the 4 requests, unlike previous example where the last request was rate limited.
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: one" --header "x-org-id: test" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+```
+
+## Rate Limit All Requests
+
+This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - limit:
+          requests: 3
+          unit: Hour
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - limit:
+          requests: 3
+          unit: Hour
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+### HTTPRoute
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
+**Note:** Local rate limiting supports `Distinct` matching since v1.4.0. See [Rate Limit Distinct Clients](#rate-limit-distinct-clients).
+
+## Rate Limit Distinct Clients
+
+For a single selector of type `Distinct`, local rate limiting keeps a separate token bucket per distinct matched value, subject to the cache capacity described below. A `sourceCIDR` selector distinguishes the detected client IP addresses within the CIDR, and a header selector distinguishes header values.
+
+Envoy keys a `sourceCIDR` selector on the client address it detects. When clients reach Envoy through trusted proxies that pass their addresses in `X-Forwarded-For`, first configure `clientIPDetection` in a `ClientTrafficPolicy` targeting the Gateway for that proxy chain; see [Configure Client IP Detection](../client-traffic-policy/#configure-client-ip-detection). Otherwise the directly connected peer's address is used, and every client behind the same proxy shares one bucket.
+
+This example limits each client IP to 10 requests/Minute. The `0.0.0.0/0` CIDR only covers IPv4 clients; add a second rule with `::/0` to limit IPv6 clients too.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 10
+          unit: Minute
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - sourceCIDR:
+            type: Distinct
+            value: 0.0.0.0/0
+        limit:
+          requests: 10
+          unit: Minute
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Each Envoy proxy keeps these buckets in its own memory, in a bounded least recently used cache per rule with a `Distinct` selector on each route. The cache holds 10,000 entries. A client whose requests reach different proxies gets a separate budget on each, and every bucket starts full again when the proxy restarts. When a new value does not fit in the cache, the least recently used entry is evicted; if that value appears again, its bucket starts full, so cache churn can let a value exceed its configured rate. Use [Global Rate Limiting][] when the limit must be shared across proxies.
+
+## Rate Limit Based on Path
+
+This example shows you how to rate limit requests based on the request path. In this case, we want to limit requests to `/api/users` to 3 requests/Hour.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - path:
+            type: Exact
+            value: /api/users
+        limit:
+          requests: 3
+          unit: Hour
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - path:
+            type: Exact
+            value: /api/users
+        limit:
+          requests: 3
+          unit: Hour
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+The path matching supports three types:
+- `Exact`: Matches the exact path (e.g., `/api/users`)
+- `PathPrefix`: Matches paths with a specific prefix (e.g., `/api/`)
+- `RegularExpression`: Matches paths using regex patterns (e.g., `/api/users/[0-9]+`)
+
+### HTTPRoute
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Let's test the path-based rate limit by querying `/api/users` and `/api/products`. The rate limit of 3 requests/Hour is only applied to `/api/users`:
+
+```shell
+# First, test the rate-limited path /api/users - 4 requests (4th should be rate limited)
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" http://${GATEWAY_HOST}/api/users ; sleep 1; done
+
+# Now test a different path that should not be rate limited
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" http://${GATEWAY_HOST}/api/products ; sleep 1; done
+```
+
+```console
+# Requests to /api/users (rate limited after 3 requests)
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+# Requests to /api/products (not rate limited)
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:35 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:36 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:37 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:38 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+```
+
+As you can see, requests to `/api/users` are rate limited after the 3rd request (returning 429), while all requests to `/api/products` succeed without any rate limit.
+
+## Rate Limit Based on HTTP Method
+
+This example shows you how to rate limit requests based on the HTTP method. In this case, we want to limit POST requests to 3 requests/Hour.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - methods:
+          - value: POST
+        limit:
+          requests: 3
+          unit: Hour
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy 
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    local:
+      rules:
+      - clientSelectors:
+        - methods:
+          - value: POST
+        limit:
+          requests: 3
+          unit: Hour
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+### HTTPRoute
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+Let's test the method-based rate limit. POST requests are limited to 3 requests/Hour, while GET requests are not limited:
+
+```shell
+# Send 4 POST requests - the 4th one should be rate limited
+for i in {1..4}; do curl -X POST -I --header "Host: ratelimit.example" http://${GATEWAY_HOST}/api/data ; sleep 1; done
+
+# GET requests should not be rate limited
+for i in {1..4}; do curl -X GET -I --header "Host: ratelimit.example" http://${GATEWAY_HOST}/api/data ; sleep 1; done
+```
+
+```console
+# POST requests (rate limited after 3 requests)
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+# GET requests (not rate limited)
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:35 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:36 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:37 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:38 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+```
+
+As you can see, POST requests are rate limited after the 3rd request (returning 429), while GET requests to the same path are not rate limited.
+
+[Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
+[Local rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/local_rate_limiting
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/

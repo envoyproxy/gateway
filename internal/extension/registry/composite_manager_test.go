@@ -9,8 +9,12 @@ import (
 	"fmt"
 	"testing"
 
+	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -26,6 +30,7 @@ type mockManager struct {
 	preHookErr        error
 	postHookClient    extTypes.XDSHookClient
 	postHookErr       error
+	postHookCalls     int
 }
 
 func (m *mockManager) HasExtension(g gwapiv1.Group, k gwapiv1.Kind) bool {
@@ -48,6 +53,7 @@ func (m *mockManager) GetPreXDSHookClient(_ egv1a1.XDSTranslatorHook) (extTypes.
 }
 
 func (m *mockManager) GetPostXDSHookClient(_ egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
+	m.postHookCalls++
 	return m.postHookClient, m.postHookErr
 }
 
@@ -300,6 +306,71 @@ func TestCompositeManager_GetPostXDSHookClient(t *testing.T) {
 		assert.True(t, ok)
 		require.Len(t, compositeClient.entries, 1)
 		assert.Equal(t, "mgr2", compositeClient.entries[0].name)
+	})
+}
+
+func TestCompositeManager_GetPostXDSHookClient_Secret(t *testing.T) {
+	certGVK := schema.GroupVersionKind{Group: "example.io", Version: "v1alpha1", Kind: "ExampleCertificate"}
+	brokenGVK := schema.GroupVersionKind{Group: "broken.example.io", Version: "v1", Kind: "BrokenCertificate"}
+	newCert := func(gvk schema.GroupVersionKind) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{Object: map[string]interface{}{}}
+		obj.SetGroupVersionKind(gvk)
+		obj.SetNamespace("default")
+		obj.SetName("app-cert")
+		return obj
+	}
+
+	t.Run("nil when no extension registers secret kinds", func(t *testing.T) {
+		composite := NewCompositeManager([]namedManager{
+			{name: "mgr1", manager: &mockManager{postHookClient: &mockXDSHookClient{}}},
+		})
+		client, err := composite.GetPostXDSHookClient(egv1a1.XDSSecret)
+		require.NoError(t, err)
+		assert.Nil(t, client)
+	})
+
+	t.Run("an unrelated extension that fails to connect does not block the owner", func(t *testing.T) {
+		broken := &mockManager{postHookErr: fmt.Errorf("connection failed")}
+		owner := &mockManager{postHookClient: &mockXDSHookClient{
+			resolveSecret: func(*extTypes.SecretContext) (*extTypes.SecretResolution, error) {
+				return &extTypes.SecretResolution{SdsSecretConfig: &tls.SdsSecretConfig{Name: "owner"}}, nil
+			},
+		}}
+		// The broken extension is declared first, so building every client up front would fail.
+		composite := NewCompositeManager([]namedManager{
+			{name: "broken", manager: broken, gkSets: extensionGKSets{secret: sets.New(brokenGVK.GroupKind())}},
+			{name: "owner", manager: owner, gkSets: extensionGKSets{secret: sets.New(certGVK.GroupKind())}},
+		})
+
+		client, err := composite.GetPostXDSHookClient(egv1a1.XDSSecret)
+		require.NoError(t, err)
+		require.NotNil(t, client)
+		assert.Zero(t, broken.postHookCalls, "no client is built before a secret is resolved")
+		assert.Zero(t, owner.postHookCalls, "no client is built before a secret is resolved")
+
+		got, err := client.ResolveSecretHook(&extTypes.SecretContext{Secret: newCert(certGVK)})
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "owner", got.SdsSecretConfig.Name)
+		assert.Zero(t, broken.postHookCalls, "the non-owning extension's client must not be built")
+
+		_, err = client.ResolveSecretHook(&extTypes.SecretContext{Secret: newCert(brokenGVK)})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `extension "broken"`)
+		assert.Contains(t, err.Error(), "connection failed")
+	})
+
+	t.Run("returns error when the owner does not register the Secret hook", func(t *testing.T) {
+		composite := NewCompositeManager([]namedManager{
+			{name: "owner", manager: &mockManager{}, gkSets: extensionGKSets{secret: sets.New(certGVK.GroupKind())}},
+		})
+		client, err := composite.GetPostXDSHookClient(egv1a1.XDSSecret)
+		require.NoError(t, err)
+		require.NotNil(t, client)
+
+		_, err = client.ResolveSecretHook(&extTypes.SecretContext{Secret: newCert(certGVK)})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "hook is not registered")
 	})
 }
 

@@ -16,6 +16,7 @@ import (
 
 	perr "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -331,6 +332,36 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	t.buildGatewayPolicyMap(backendTrafficPolicies, gateways, gatewayMap, gatewayPolicyMap, resources.ReferenceGrants)
 	// Build ListenerSet policy maps, which are needed when processing the policies targeting xRoutes.
 	t.buildListenerSetBackendTrafficPolicyMap(backendTrafficPolicies, listenerSetMap, listenerSetPolicyMap, resources)
+	var mergeCache backendTrafficPolicyMergeCache
+
+	// Resolve once, then reuse these targets during route policy application.
+	// Count targets rather than policies because selectors can match many routes.
+	targetsByPolicy := make([][]policyTargetReferenceWithSectionName, policyMapSize)
+	httpRouteTargets := 0
+	for i, policy := range backendTrafficPolicies {
+		targetsByPolicy[i] = resolvePolicyTargets(policy.Spec.PolicyTargetReferences, routes,
+			resources.ReferenceGrants, egv1a1.GroupName, egv1a1.KindBackendTrafficPolicy, policy.Namespace, t.GetNamespace)
+		for _, target := range targetsByPolicy[i] {
+			if target.Kind != resource.KindHTTPRoute && target.Kind != resource.KindGRPCRoute {
+				continue
+			}
+			key := policyTargetRouteKey{
+				Kind:      string(target.Kind),
+				Namespace: string(target.Namespace),
+				Name:      string(target.Name),
+			}
+			if routeMap[key] != nil {
+				httpRouteTargets++
+			}
+		}
+	}
+	var httpRouteIndex backendTrafficPolicyHTTPRouteIndex
+	// Amortize index construction over a larger target set, even when each
+	// source route produces only one generated match and scanning is cheaper.
+	const minHTTPRouteIndexTargets = 128
+	if httpRouteTargets >= minHTTPRouteIndexTargets {
+		httpRouteIndex = make(backendTrafficPolicyHTTPRouteIndex)
+	}
 
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range backendTrafficPolicies {
@@ -346,7 +377,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
+				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex, &mergeCache,
 					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
@@ -355,15 +386,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Process the policies targeting Routes
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := resolvePolicyTargets(
-			currPolicy.Spec.PolicyTargetReferences,
-			routes,
-			resources.ReferenceGrants,
-			egv1a1.GroupName,
-			egv1a1.KindBackendTrafficPolicy,
-			currPolicy.Namespace,
-			t.GetNamespace)
-		for _, currTarget := range targetRefs {
+		for _, currTarget := range targetsByPolicy[i] {
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
@@ -372,7 +395,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				t.processBackendTrafficPolicyForRoute(xdsIR,
+				t.processBackendTrafficPolicyForRoute(xdsIR, httpRouteIndex, &mergeCache,
 					routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
 			}
 		}
@@ -959,6 +982,8 @@ func (t *Translator) buildListenerSetBackendTrafficPolicyMap(
 
 func (t *Translator) processBackendTrafficPolicyForRoute(
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
+	mergeCache *backendTrafficPolicyMergeCache,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	listenerSetMap map[types.NamespacedName]*policyListenerSetTargetContext,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
@@ -1079,7 +1104,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	}
 
 	if policy.Spec.MergeType == nil {
-		h3WarningsByListener, buildErr := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil)
+		h3WarningsByListener, buildErr := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, httpRouteIndex, nil)
 		// Set each listener's warnings on the ancestor of the parentRef. A parentRef naming a whole Gateway or ListenerSet
 		// reaches several listeners; their repeated warnings merge into one message on that ancestor in SetWarningForPolicyAncestor.
 		for _, parent := range parentRefCtxs {
@@ -1098,6 +1123,12 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			)
 		}
 	} else {
+		// A single target on one listener cannot reuse a merge. Selectors may
+		// resolve to multiple targets, so keep the cache for those policies.
+		if len(policy.Spec.TargetRefs) <= 1 && len(policy.Spec.TargetSelectors) == 0 &&
+			len(parentRefCtxs) == 1 && len(parentRefCtxs[0].listeners) == 1 {
+			mergeCache = nil
+		}
 		// Merge with the closest policy in the Route's attachment hierarchy.
 		// Gateway listeners check the Gateway listener policy first, then the
 		// Gateway policy. ListenerSet listeners check the ListenerSet listener
@@ -1149,7 +1180,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 					h3Warnings, applied := h3WarningsByListener[name]
 					// a listener may occur multiple times in the parentRefCtxs, so we only need to translate once per listener
 					if !applied {
-						h3WarningsByListener, err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, listener)
+						h3WarningsByListener, err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, httpRouteIndex, listener)
 						h3Warnings = h3WarningsByListener[name]
 						h3WarningsByListener[name], listenerErrs[name] = h3Warnings, err
 					}
@@ -1173,7 +1204,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				if !applied {
 					var err error
 					h3Warnings, err = t.translateBackendTrafficPolicyForRouteWithMerge(
-						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR,
+						policy, parentPolicy, currTarget, listener, targetedRoute, xdsIR, httpRouteIndex, mergeCache,
 					)
 					if err != nil {
 						errMsgs.Insert(status.Error2ConditionMsg(err))
@@ -1641,6 +1672,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	route RouteContext,
 	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 	policyTargetListener *ListenerContext,
 ) (map[string]http3Warnings, error) {
 	h3Warnings := map[string]http3Warnings{}
@@ -1662,10 +1694,19 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 			// Skip if not the gateway wanted
 			continue
 		}
-		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, targetListenerName, h3Warnings)
+		t.applyTrafficFeatureToRoute(route, tf, errs, policy, target, x, httpRouteIndex, targetListenerName, h3Warnings)
 	}
 
 	return h3Warnings, errs
+}
+
+// Reuse consecutive merges of the same policy pair within one policy pass.
+// A single entry avoids a map and retaining every merged policy until the pass ends.
+type backendTrafficPolicyMergeCache struct {
+	key    [2]*egv1a1.BackendTrafficPolicy
+	policy *egv1a1.BackendTrafficPolicy
+	owners *backendTrafficPolicyOwners
+	err    error
 }
 
 func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
@@ -1673,8 +1714,24 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	target policyTargetReferenceWithSectionName,
 	policyTargetListener *ListenerContext, route RouteContext,
 	xdsIR resource.XdsIRMap,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
+	mergeCache *backendTrafficPolicyMergeCache,
 ) (http3Warnings, error) {
-	mergedPolicy, owners, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
+	var (
+		mergedPolicy *egv1a1.BackendTrafficPolicy
+		owners       *backendTrafficPolicyOwners
+		err          error
+	)
+	if mergeCache == nil {
+		mergedPolicy, owners, err = t.mergeBackendTrafficPolicy(policy, parentPolicy)
+	} else {
+		key := [2]*egv1a1.BackendTrafficPolicy{policy, parentPolicy}
+		if mergeCache.key != key {
+			mergedPolicy, owners, err = t.mergeBackendTrafficPolicy(policy, parentPolicy)
+			*mergeCache = backendTrafficPolicyMergeCache{key: key, policy: mergedPolicy, owners: owners, err: err}
+		}
+		mergedPolicy, owners, err = mergeCache.policy, mergeCache.owners, mergeCache.err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("error merging policies: %w", err)
 	}
@@ -1724,9 +1781,44 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		return nil, nil
 	}
 	h3Warnings := map[string]http3Warnings{}
-	t.applyTrafficFeatureToRoute(route, tf, buildErr, mergedPolicy, target, x, irListenerName(policyTargetListener), h3Warnings)
+	t.applyTrafficFeatureToRoute(route, tf, buildErr, mergedPolicy, target, x, httpRouteIndex, irListenerName(policyTargetListener), h3Warnings)
 
 	return h3Warnings[irListenerName(policyTargetListener)], buildErr
+}
+
+// The index lives for one policy pass. A listener's first lookup uses the
+// existing scan; only repeated lookups pay the cost of building an index.
+type backendTrafficPolicyHTTPRouteIndex map[*ir.HTTPListener]map[policyTargetRouteKey][]*ir.HTTPRoute
+
+func (idx backendTrafficPolicyHTTPRouteIndex) routesFor(listener *ir.HTTPListener, route RouteContext) []*ir.HTTPRoute {
+	if idx == nil {
+		return listener.Routes
+	}
+	routes, ok := idx[listener]
+	if !ok {
+		idx[listener] = nil
+		return listener.Routes
+	}
+	if routes == nil {
+		routes = make(map[policyTargetRouteKey][]*ir.HTTPRoute)
+		for _, r := range listener.Routes {
+			if r.Metadata == nil {
+				continue
+			}
+			key := policyTargetRouteKey{
+				Kind:      r.Metadata.Kind,
+				Namespace: r.Metadata.Namespace,
+				Name:      r.Metadata.Name,
+			}
+			routes[key] = append(routes[key], r)
+		}
+		idx[listener] = routes
+	}
+	return routes[policyTargetRouteKey{
+		Kind:      string(route.GetRouteType()),
+		Namespace: route.GetNamespace(),
+		Name:      route.GetName(),
+	}]
 }
 
 // applyTrafficFeatureToRoute applies tf to the route's IR entries in x. A non-nil buildErr
@@ -1737,6 +1829,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	policy *egv1a1.BackendTrafficPolicy,
 	target policyTargetReferenceWithSectionName,
 	x *ir.Xds,
+	httpRouteIndex backendTrafficPolicyHTTPRouteIndex,
 	policyTargetListenerName string,
 	h3Warnings map[string]http3Warnings,
 ) {
@@ -1807,7 +1900,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 			perListener = http3Warnings{}
 			h3Warnings[http.Name] = perListener
 		}
-		for _, r := range http.Routes {
+		for _, r := range httpRouteIndex.routesFor(http, route) {
 			// If specified the sectionName in policy target, must match route rule from ir route metadata.
 			if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 				continue
@@ -2011,7 +2104,10 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
+	if cp, err = buildCompression(policy.Spec.Compression, policy.Spec.Compressor); err != nil {
+		err = perr.WithMessage(err, "Compression")
+		errs = errors.Join(errs, err)
+	}
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 	if rb != nil && len(httpUpgrade) > 0 {
 		err = errors.New("requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade")
@@ -3181,7 +3277,7 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		strconv.Itoa(index))
 }
 
-func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compression {
+func buildCompression(compression, compressor []*egv1a1.Compression) ([]*ir.Compression, error) {
 	// Handle the Compressor field first (higher priority)
 	if len(compressor) > 0 {
 		result := make([]*ir.Compression, 0, len(compressor))
@@ -3203,21 +3299,20 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 				}
 				setCompressorSettings(&irCompression, c)
-				if c.MinContentLength != nil {
-					minContentLength, ok := c.MinContentLength.AsInt64()
-					if ok {
-						irCompression.MinContentLength = new(uint32(minContentLength))
-					}
+				minContentLength, err := minContentLengthToUint32(c.MinContentLength)
+				if err != nil {
+					return nil, err
 				}
+				irCompression.MinContentLength = minContentLength
 				result = append(result, &irCompression)
 			}
 		}
-		return result
+		return result, nil
 	}
 
 	// Fallback to the deprecated Compression field
 	if compression == nil {
-		return nil
+		return nil, nil
 	}
 	result := make([]*ir.Compression, 0, len(compression))
 	types := sets.New[egv1a1.CompressorType]()
@@ -3232,16 +3327,32 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
 		}
 		setCompressorSettings(&irCompression, c)
-		if c.MinContentLength != nil {
-			minContentLength, ok := c.MinContentLength.AsInt64()
-			if ok {
-				irCompression.MinContentLength = new(uint32(minContentLength))
-			}
+		minContentLength, err := minContentLengthToUint32(c.MinContentLength)
+		if err != nil {
+			return nil, err
 		}
+		irCompression.MinContentLength = minContentLength
 		result = append(result, &irCompression)
 	}
 
-	return result
+	return result, nil
+}
+
+// minContentLengthToUint32 converts the CRD quantity to the uint32 Envoy expects.
+// It rejects out-of-range values.
+func minContentLengthToUint32(q *apiresource.Quantity) (*uint32, error) {
+	if q == nil {
+		return nil, nil
+	}
+	v, ok := q.AsInt64()
+	if !ok {
+		return nil, fmt.Errorf("invalid minContentLength value %s", q.String())
+	}
+	ui32, ok := int64ToUint32(v)
+	if !ok {
+		return nil, fmt.Errorf("invalid minContentLength value %d", v)
+	}
+	return &ui32, nil
 }
 
 // setCompressorSettings copies the settings of the compressor library matching the compressor
