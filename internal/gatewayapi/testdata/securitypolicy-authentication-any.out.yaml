@@ -15,7 +15,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 4
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -42,11 +42,11 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-1
+    name: httproute-any
     namespace: default
   spec:
     hostnames:
-    - www.foo.com
+    - any.example.com
     parentRefs:
     - name: gateway-1
       namespace: default
@@ -55,15 +55,6 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      matches:
-      - path:
-          value: /foo1
-    - backendRefs:
-      - name: service-2
-        port: 8080
-      matches:
-      - path:
-          value: /foo2
   status:
     parents:
     - conditions:
@@ -85,22 +76,87 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-2
+    name: httproute-merge
     namespace: default
   spec:
     hostnames:
-    - www.bar.com
+    - merge.example.com
     parentRefs:
     - name: gateway-1
       namespace: default
       sectionName: http
     rules:
     - backendRefs:
-      - name: service-3
+      - name: service-1
         port: 8080
-      matches:
-      - path:
-          value: /bar
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-invalid
+    namespace: default
+  spec:
+    hostnames:
+    - invalid.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-all
+    namespace: default
+  spec:
+    hostnames:
+    - all.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
   status:
     parents:
     - conditions:
@@ -142,8 +198,7 @@ securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    generation: 10
-    name: policy-for-http-route-1
+    name: policy-any
     namespace: default
   spec:
     authentication:
@@ -169,10 +224,10 @@ securityPolicies:
         name: issuer
         remoteJWKS:
           uri: https://issuer.example/keys
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: httproute-1
+      name: httproute-any
   status:
     ancestors:
     - ancestorRef:
@@ -184,30 +239,92 @@ securityPolicies:
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
-        observedGeneration: 10
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        observedGeneration: 10
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    generation: 20
-    name: policy-for-gateway-1
+    name: policy-merge
+    namespace: default
+  spec:
+    authentication:
+      mode: Any
+    mergeType: JSONMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-merge
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy default/policy-gateway
+        reason: Merged
+        status: "True"
+        type: Merged
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-invalid
+    namespace: default
+  spec:
+    authentication:
+      mode: Any
+    basicAuth:
+      users:
+        name: users-secret1
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-invalid
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Authentication mode Any requires jwt and basicAuth.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: policy-gateway
     namespace: default
   spec:
     basicAuth:
       users:
         name: users-secret2
-    targetRef:
-      group: gateway.networking.k8s.io
+    jwt:
+      providers:
+      - audiences:
+        - test-api
+        issuer: https://issuer.example
+        name: issuer
+        remoteJWKS:
+          uri: https://issuer.example/keys
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -220,24 +337,21 @@ securityPolicies:
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
-        observedGeneration: 20
         reason: Accepted
         status: "True"
         type: Accepted
       - lastTransitionTime: null
+        message: 'This policy is being merged by other securityPolicies for these
+          routes: [default/httproute-merge]'
+        reason: Merged
+        status: "True"
+        type: Merged
+      - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
-          routes: [default/httproute-1]'
-        observedGeneration: 20
+          routes: [default/httproute-any default/httproute-invalid]'
         reason: Overridden
         status: "True"
         type: Overridden
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        observedGeneration: 20
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
@@ -284,9 +398,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: httproute-any
             namespace: default
-          name: httproute/default/httproute-1/rule/0
+          name: httproute/default/httproute-any/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -297,20 +411,16 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: httproute/default/httproute-any/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: www.foo.com
+        hostname: any.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-any
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /foo1
+        name: httproute/default/httproute-any/rule/0/match/-1/any_example_com
         security:
           authenticationAny: true
           authorization:
@@ -325,11 +435,11 @@ xdsIR:
                   - read
           basicAuth:
             allowMissing: true
-            name: securitypolicy/default/policy-for-http-route-1/authentication-any
+            name: securitypolicy/default/policy-any/authentication-any
             users: '[redacted]'
           jwt:
             allowMissing: true
-            name: default/policy-for-http-route-1/authentication-any
+            name: default/policy-any/authentication-any
             providers:
             - audiences:
               - test-api
@@ -340,9 +450,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: httproute-merge
             namespace: default
-          name: httproute/default/httproute-1/rule/1
+          name: httproute/default/httproute-merge/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -350,42 +460,28 @@ xdsIR:
               port: 8080
             metadata:
               kind: Service
-              name: service-2
+              name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/1/backend/0
+            name: httproute/default/httproute-merge/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: www.foo.com
+        hostname: merge.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-merge
           namespace: default
-        name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /foo2
+        name: httproute/default/httproute-merge/rule/0/match/-1/merge_example_com
         security:
           authenticationAny: true
-          authorization:
-            defaultAction: Deny
-            rules:
-            - action: Allow
-              name: reader
-              principal:
-                jwt:
-                  provider: issuer
-                  scopes:
-                  - read
           basicAuth:
             allowMissing: true
-            name: securitypolicy/default/policy-for-http-route-1/authentication-any
+            name: securitypolicy/default/policy-gateway/authentication-any
             users: '[redacted]'
           jwt:
             allowMissing: true
-            name: default/policy-for-http-route-1/authentication-any
+            name: default/policy-merge+default/policy-gateway/authentication-any
             providers:
             - audiences:
               - test-api
@@ -396,9 +492,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-2
+            name: httproute-invalid
             namespace: default
-          name: httproute/default/httproute-2/rule/0
+          name: httproute/default/httproute-invalid/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -406,27 +502,66 @@ xdsIR:
               port: 8080
             metadata:
               kind: Service
-              name: service-3
+              name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-2/rule/0/backend/0
+            name: httproute/default/httproute-invalid/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: www.bar.com
+        directResponse:
+          statusCode: 500
+        hostname: invalid.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-2
+          name: httproute-invalid
           namespace: default
-        name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /bar
+        name: httproute/default/httproute-invalid/rule/0/match/-1/invalid_example_com
+        security:
+          authenticationAny: true
+          basicAuth:
+            allowMissing: true
+            name: securitypolicy/default/policy-invalid/authentication-any
+            users: '[redacted]'
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-all
+            namespace: default
+          name: httproute/default/httproute-all/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-all/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: all.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-all
+          namespace: default
+        name: httproute/default/httproute-all/rule/0/match/-1/all_example_com
         security:
           basicAuth:
-            name: securitypolicy/default/policy-for-gateway-1
+            name: securitypolicy/default/policy-gateway
             users: '[redacted]'
+          jwt:
+            name: default/policy-gateway
+            providers:
+            - audiences:
+              - test-api
+              issuer: https://issuer.example
+              name: issuer
+              remoteJWKS:
+                uri: https://issuer.example/keys
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

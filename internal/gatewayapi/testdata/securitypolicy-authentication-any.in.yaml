@@ -33,58 +33,77 @@ httpRoutes:
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: httproute-1
+      name: httproute-any
     spec:
       hostnames:
-        - www.foo.com
+        - any.example.com
       parentRefs:
         - namespace: default
           name: gateway-1
           sectionName: http
       rules:
-        - matches:
-            - path:
-                value: /foo1
-          backendRefs:
+        - backendRefs:
             - name: service-1
-              port: 8080
-        - matches:
-            - path:
-                value: /foo2
-          backendRefs:
-            - name: service-2
               port: 8080
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: httproute-2
+      name: httproute-merge
     spec:
       hostnames:
-        - www.bar.com
+        - merge.example.com
       parentRefs:
         - namespace: default
           name: gateway-1
           sectionName: http
       rules:
-        - matches:
-            - path:
-                value: /bar
-          backendRefs:
-            - name: service-3
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-invalid
+    spec:
+      hostnames:
+        - invalid.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-all
+    spec:
+      hostnames:
+        - all.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: service-1
               port: 8080
 securityPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:
       namespace: default
-      name: policy-for-http-route-1
-      generation: 10
+      name: policy-any
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
+      targetRefs:
+      - group: gateway.networking.k8s.io
         kind: HTTPRoute
-        name: httproute-1
+        name: httproute-any
       authentication:
         mode: Any
       jwt:
@@ -105,18 +124,52 @@ securityPolicies:
               scopes: [read]
       basicAuth:
         users:
-          name: "users-secret1"
+          name: users-secret1
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:
       namespace: default
-      name: policy-for-gateway-1               # This will only apply to the httproute-2
-      generation: 20
+      name: policy-merge
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-merge
+      mergeType: JSONMerge
+      authentication:
+        mode: Any
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-invalid
+    spec:
+      targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-invalid
+      authentication:
+        mode: Any
       basicAuth:
         users:
-          name: "users-secret2"
+          name: users-secret1
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-gateway
+    spec:
+      targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+      jwt:
+        providers:
+        - name: issuer
+          issuer: https://issuer.example
+          audiences: [test-api]
+          remoteJWKS:
+            uri: https://issuer.example/keys
+      basicAuth:
+        users:
+          name: users-secret2
