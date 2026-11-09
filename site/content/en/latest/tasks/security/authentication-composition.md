@@ -2,10 +2,10 @@
 title: "Authentication Composition"
 ---
 
-By default, every authentication method configured in a [SecurityPolicy][] must succeed.
-With JWT and Basic authentication on the same route, that means no request can pass: a
-client sends either a Bearer token or Basic credentials, and the method that does not
-find its credentials rejects the request.
+By default, each authentication method configured in a [SecurityPolicy][] applies on its
+own. With JWT and Basic authentication on the same route, both are required unless
+`jwt.optional` relaxes JWT, so a client that sends either a Bearer token or Basic
+credentials is rejected by the method that does not find its credentials.
 
 Setting `authentication.mode` to `Any` accepts a request authenticated by either JWT or
 Basic authentication.
@@ -53,15 +53,23 @@ and does not send a `WWW-Authenticate` challenge, because Envoy's RBAC filter ha
 configurable deny status.
 
 Authorization rules still apply after authentication. A rule with a `jwt` principal only
-matches requests authenticated by JWT, so with `defaultAction: Deny`, Basic-authenticated
-requests need a rule that matches them by other attributes.
+matches requests authenticated by JWT:
+
+- With `defaultAction: Deny`, Basic-authenticated requests need an `Allow` rule that
+  matches them by other attributes.
+- With `defaultAction: Allow`, a `Deny` rule with a `jwt` principal never matches a
+  Basic-authenticated request, so it does not restrict Basic users. Match them by other
+  attributes, or use `defaultAction: Deny`.
+
+`jwt.optional` has no effect in `Any` mode, since JWT already lets requests without a
+token through.
 
 ## Restrictions
 
 `mode: Any` requires both `jwt` and `basicAuth`, either in the policy itself or inherited
 from a parent policy through `mergeType`. It does not support:
 
-- `oidc` or `apiKeyAuth`.
+- `oidc`, `apiKeyAuth` or `extAuth`.
 - `jwt.failOpen`, which would accept requests with invalid tokens.
 - `recomputeRoute` on JWT providers.
 - `basicAuth.forwardUsernameHeader`. Envoy's Basic authentication filter leaves that

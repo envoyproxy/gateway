@@ -259,7 +259,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `mode` | _[AuthenticationMode](#authenticationmode)_ |  false  | All | Mode defines how the configured authentication methods combine.<br />All requires every configured method to succeed.<br />Any requires JWT and BasicAuth to be configured and accepts a request<br />authenticated by either of them. A request without credentials for either<br />method is rejected with 403 Forbidden and no WWW-Authenticate challenge.<br />A request presenting invalid credentials for either method is rejected.<br />Any does not support OIDC, APIKeyAuth, jwt.failOpen, JWT route<br />recomputation or basicAuth.forwardUsernameHeader. |
+| `mode` | _[AuthenticationMode](#authenticationmode)_ |  false  | All | Mode defines how the configured authentication methods combine.<br />All applies each configured method on its own terms, so JWT and BasicAuth<br />are both required unless jwt.optional or jwt.failOpen relaxes JWT.<br />Any requires JWT and BasicAuth to be configured and accepts a request<br />authenticated by either of them; jwt.optional has no effect.<br />A request without credentials for either method is rejected with<br />403 Forbidden and no WWW-Authenticate challenge.<br />A request presenting invalid credentials for either method is rejected.<br />Authorization rules with a jwt principal never match a request<br />authenticated by BasicAuth.<br />Any does not support OIDC, APIKeyAuth, ExtAuth, jwt.failOpen, JWT route<br />recomputation or basicAuth.forwardUsernameHeader. |
 
 
 #### AuthenticationMode

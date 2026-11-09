@@ -30,7 +30,6 @@ http:
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1/authentication-any
         allowMissing: true
-        emitDynamicMetadata: true
         users: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
       jwt:
         name: default/policy-for-http-route-1/authentication-any

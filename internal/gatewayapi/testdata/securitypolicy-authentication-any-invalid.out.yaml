@@ -299,7 +299,6 @@ xdsIR:
           authenticationAny: true
           basicAuth:
             allowMissing: true
-            emitDynamicMetadata: true
             name: securitypolicy/default/policy-for-http-route-1/authentication-any
             users: '[redacted]'
       - destination:
@@ -338,7 +337,6 @@ xdsIR:
           authenticationAny: true
           basicAuth:
             allowMissing: true
-            emitDynamicMetadata: true
             name: securitypolicy/default/policy-for-http-route-1/authentication-any
             users: '[redacted]'
       - destination:

@@ -1759,10 +1759,10 @@ type OIDCProvider struct {
 //
 // +k8s:deepcopy-gen=true
 type BasicAuth struct {
-	// AllowMissing permits requests without Basic credentials.
+	// AllowMissing permits requests without Basic credentials and stores the
+	// verified username in the filter's dynamic metadata, which Envoy requires
+	// alongside allow_missing.
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
-	// EmitDynamicMetadata stores the verified username in the filter's dynamic metadata.
-	EmitDynamicMetadata bool `json:"emitDynamicMetadata,omitempty" yaml:"emitDynamicMetadata,omitempty"`
 
 	// Name is a unique name for an BasicAuth configuration.
 	// The xds translator only generates one basic auth filter for each unique name.

@@ -325,7 +325,6 @@ xdsIR:
                   - read
           basicAuth:
             allowMissing: true
-            emitDynamicMetadata: true
             name: securitypolicy/default/policy-for-http-route-1/authentication-any
             users: '[redacted]'
           jwt:
@@ -382,7 +381,6 @@ xdsIR:
                   - read
           basicAuth:
             allowMissing: true
-            emitDynamicMetadata: true
             name: securitypolicy/default/policy-for-http-route-1/authentication-any
             users: '[redacted]'
           jwt:

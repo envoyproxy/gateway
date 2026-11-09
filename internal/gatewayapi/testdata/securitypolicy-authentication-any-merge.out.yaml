@@ -309,7 +309,6 @@ xdsIR:
           authenticationAny: true
           basicAuth:
             allowMissing: true
-            emitDynamicMetadata: true
             name: securitypolicy/default/policy-for-gateway-1/authentication-any
             users: '[redacted]'
           jwt:
@@ -356,7 +355,6 @@ xdsIR:
           authenticationAny: true
           basicAuth:
             allowMissing: true
-            emitDynamicMetadata: true
             name: securitypolicy/default/policy-for-gateway-1/authentication-any
             users: '[redacted]'
           jwt:

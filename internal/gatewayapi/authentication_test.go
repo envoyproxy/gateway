@@ -42,12 +42,12 @@ func TestValidateAuthentication(t *testing.T) {
 				policy.Spec.BasicAuth.ForwardUsernameHeader = new("x-user")
 			},
 		},
-		{name: "unknown mode", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.Authentication.Mode = "Unknown" }, wantErr: "unsupported authentication mode"},
 		{name: "missing jwt", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT = nil }, wantErr: "requires jwt and basicAuth"},
 		{name: "missing providers", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers = nil }, wantErr: "requires jwt and basicAuth"},
 		{name: "missing basic", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.BasicAuth = nil }, wantErr: "requires jwt and basicAuth"},
-		{name: "oidc", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.OIDC = &egv1a1.OIDC{} }, wantErr: "oidc or apiKeyAuth"},
-		{name: "api key", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.APIKeyAuth = &egv1a1.APIKeyAuth{} }, wantErr: "oidc or apiKeyAuth"},
+		{name: "oidc", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.OIDC = &egv1a1.OIDC{} }, wantErr: "oidc, apiKeyAuth or extAuth"},
+		{name: "api key", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.APIKeyAuth = &egv1a1.APIKeyAuth{} }, wantErr: "oidc, apiKeyAuth or extAuth"},
+		{name: "ext auth", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.ExtAuth = &egv1a1.ExtAuth{} }, wantErr: "oidc, apiKeyAuth or extAuth"},
 		{name: "forwarded username", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.BasicAuth.ForwardUsernameHeader = new("x-user") }, wantErr: "forwardUsernameHeader"},
 		{name: "jwt fail open", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.FailOpen = new(true) }, wantErr: "jwt.failOpen"},
 		{name: "jwt route recomputation", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers[0].RecomputeRoute = new(true) }, wantErr: "recomputeRoute"},
@@ -71,16 +71,15 @@ func TestAuthenticationAnyNames(t *testing.T) {
 	allPolicy.Spec.Authentication = nil
 	owners := &securityPolicyOwners{}
 
-	require.NotEqual(t, authenticationBasicName(allPolicy, owners), authenticationBasicName(anyPolicy, owners))
-	require.Equal(t, irConfigName(allPolicy), authenticationBasicName(allPolicy, owners))
+	require.NotEqual(t, authenticationBasicName(allPolicy, allPolicy), authenticationBasicName(anyPolicy, anyPolicy))
+	require.Equal(t, irConfigName(allPolicy), authenticationBasicName(allPolicy, allPolicy))
 	require.NotEqual(t, jwtName(allPolicy, owners), jwtName(anyPolicy, owners))
 
 	parent := anyPolicy.DeepCopy()
 	parent.Name = "parent"
 	parent.Spec.Authentication = nil
-	inherited := &securityPolicyOwners{basicAuth: parent}
-	require.Equal(t, irConfigName(parent), authenticationBasicName(allPolicy, inherited))
-	require.Equal(t, irConfigName(parent)+authenticationAnySuffix, authenticationBasicName(anyPolicy, inherited))
+	require.Equal(t, irConfigName(parent), authenticationBasicName(allPolicy, parent))
+	require.Equal(t, irConfigName(parent)+authenticationAnySuffix, authenticationBasicName(anyPolicy, parent))
 }
 
 func TestAuthenticationAnyLongJWTNames(t *testing.T) {

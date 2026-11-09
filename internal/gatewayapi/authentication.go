@@ -24,13 +24,6 @@ func authenticationAny(policy *egv1a1.SecurityPolicy) bool {
 // configurations that admission cannot see, such as JWT or BasicAuth inherited
 // from a parent policy.
 func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
-	if policy.Spec.Authentication != nil {
-		switch policy.Spec.Authentication.Mode {
-		case "", egv1a1.AuthenticationModeAll, egv1a1.AuthenticationModeAny:
-		default:
-			return fmt.Errorf("unsupported authentication mode %q", policy.Spec.Authentication.Mode)
-		}
-	}
 	if !authenticationAny(policy) {
 		return nil
 	}
@@ -38,8 +31,8 @@ func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
 	if spec.JWT == nil || len(spec.JWT.Providers) == 0 || spec.BasicAuth == nil {
 		return errors.New("authentication mode Any requires jwt and basicAuth")
 	}
-	if spec.OIDC != nil || spec.APIKeyAuth != nil {
-		return errors.New("authentication mode Any does not support oidc or apiKeyAuth")
+	if spec.OIDC != nil || spec.APIKeyAuth != nil || spec.ExtAuth != nil {
+		return errors.New("authentication mode Any does not support oidc, apiKeyAuth or extAuth")
 	}
 	// basic_auth leaves a client-supplied username header untouched when it
 	// passes a request without Basic credentials, so a JWT client could set it.
@@ -61,8 +54,8 @@ func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
 // authenticationBasicName keeps Any-mode BasicAuth in a separate filter from an
 // All-mode filter built from the same owner policy, since allow_missing is a
 // filter-wide setting.
-func authenticationBasicName(policy *egv1a1.SecurityPolicy, owners *securityPolicyOwners) string {
-	name := irConfigName(policyOwnerOr(owners.basicAuth, policy))
+func authenticationBasicName(policy, ownerPolicy *egv1a1.SecurityPolicy) string {
+	name := irConfigName(ownerPolicy)
 	if authenticationAny(policy) {
 		name += authenticationAnySuffix
 	}

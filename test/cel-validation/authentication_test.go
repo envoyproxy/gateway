@@ -57,7 +57,35 @@ func TestAuthenticationMode(t *testing.T) {
 					ExtractFrom:    []*egv1a1.ExtractFrom{{Headers: []string{"x-api-key"}}},
 				}
 			},
-			wantErr: "authentication.mode Any does not support oidc or apiKeyAuth",
+			wantErr: "authentication.mode Any does not support oidc, apiKeyAuth or extAuth",
+		},
+		{
+			name: "any with extAuth",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.ExtAuth = &egv1a1.ExtAuth{HTTP: &egv1a1.HTTPExtAuthService{
+					BackendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
+						BackendObjectReference: gwapiv1.BackendObjectReference{Name: "authz", Port: new(gwapiv1.PortNumber(80))},
+					}}},
+				}}
+			},
+			wantErr: "authentication.mode Any does not support oidc, apiKeyAuth or extAuth",
+		},
+		{
+			name:    "any with jwt failOpen",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.JWT.FailOpen = new(true) },
+			wantErr: "authentication.mode Any does not support jwt.failOpen or recomputeRoute on JWT providers",
+		},
+		{
+			name:    "any with jwt recomputeRoute",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.JWT.Providers[0].RecomputeRoute = new(true) },
+			wantErr: "authentication.mode Any does not support jwt.failOpen or recomputeRoute on JWT providers",
+		},
+		{
+			name: "all with jwt failOpen",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.Authentication.Mode = egv1a1.AuthenticationModeAll
+				spec.JWT.FailOpen = new(true)
+			},
 		},
 		{
 			name:    "any with forwarded username",
