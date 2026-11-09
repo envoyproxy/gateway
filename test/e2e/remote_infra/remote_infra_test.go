@@ -46,6 +46,7 @@ func TestRemoteInfra(t *testing.T) {
 		RestConfig:          cfg,
 		ConfigurableOptions: suiteOpts,
 		ManifestFS:          []fs.FS{e2e.Manifests},
+		Hook:                e2e.Hook,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

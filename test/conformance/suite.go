@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
+	"github.com/envoyproxy/gateway/test/e2e"
 	egtests "github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
@@ -47,6 +48,7 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 		)
 	}
 
+	opts.Hook = e2e.Hook
 	opts.FailFast = true
 
 	return opts

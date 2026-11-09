@@ -51,6 +51,7 @@ func TestMultipleGC(t *testing.T) {
 		internetGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:              c,
 			RestConfig:          cfg,
+			Hook:                e2e.Hook,
 			ConfigurableOptions: opts,
 		})
 		if err != nil {
@@ -80,6 +81,7 @@ func TestMultipleGC(t *testing.T) {
 		privateGatewaySuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 			Client:              c,
 			RestConfig:          cfg,
+			Hook:                e2e.Hook,
 			ConfigurableOptions: opts,
 		})
 		if err != nil {

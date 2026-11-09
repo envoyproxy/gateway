@@ -90,6 +90,7 @@ func TestE2E(t *testing.T) {
 		RestConfig:          cfg,
 		ConfigurableOptions: suiteOpts,
 		ManifestFS:          []fs.FS{Manifests},
+		Hook:                Hook,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

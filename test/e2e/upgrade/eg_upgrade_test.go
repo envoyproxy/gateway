@@ -55,6 +55,7 @@ func TestEGUpgrade(t *testing.T) {
 		RestConfig:          cfg,
 		ManifestFS:          []fs.FS{e2e.UpgradeManifests},
 		BaseManifests:       "upgrade/manifests.yaml",
+		Hook:                e2e.Hook,
 		ConfigurableOptions: suiteOpts,
 	})
 	if err != nil {
