@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -51,7 +52,8 @@ var (
 	ErrTLSSDSSecretNameEmpty                    = errors.New("field SDS SecretName must be specified")
 	ErrTLSSDSSchemeEmpty                        = errors.New("field SDS Scheme must be specified")
 	ErrTLSSDSAddressEmpty                       = errors.New("field SDS Address must be specified")
-	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS or inline certificate fields may be specified")
+	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS, ExtensionRef or inline certificate fields may be specified")
+	ErrTLSExtensionRefEmpty                     = errors.New("field ExtensionRef Object or Name must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
@@ -94,6 +96,7 @@ var (
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
 	ErrBackendClusterMergedDynamicResolver      = errors.New("a BackendCluster must not be a dynamic resolver")
 	ErrBackendClusterRefNotFound                = errors.New("field BackendClusterRefs references a BackendCluster name that does not exist")
+	ErrExtensionBackendRefNotFound              = errors.New("field Backends references an ExtensionBackend name that does not exist")
 
 	redacted = []byte("[redacted]")
 )
@@ -193,6 +196,9 @@ type Xds struct {
 	// BackendClusters holds every distinct merged BackendCluster for this gateway - the single
 	// source of truth for a cluster's Settings/Metadata.
 	BackendClusters []*BackendCluster `json:"backendClusters,omitempty" yaml:"backendClusters,omitempty"`
+	// ExtensionBackends holds callout destinations once per generated cluster name.
+	// Routes reference these definitions through EnvoyExtensionFeatures.Backends.
+	ExtensionBackends []*ExtensionBackend `json:"extensionBackends,omitempty" yaml:"extensionBackends,omitempty"`
 	// ExtensionResources holds extension-introduced resources deduplicated into a single shared
 	// entry, keyed by their Name. Other IR fields reference these via UnstructuredRef.Name instead
 	// of embedding Object.
@@ -232,6 +238,35 @@ func (x *Xds) Validate() error {
 	}
 	if err := x.validateBackendClusterRefs(); err != nil {
 		errs = errors.Join(errs, err)
+	}
+	if err := x.validateExtensionBackends(); err != nil {
+		errs = errors.Join(errs, err)
+	}
+	return errs
+}
+
+// Routes store backend names instead of definitions. Check that the names resolve
+// before publishing the IR, so missing definitions cannot reach extension callouts.
+func (x *Xds) validateExtensionBackends() error {
+	names := make(map[string]struct{}, len(x.ExtensionBackends))
+	var errs error
+	for _, backend := range x.ExtensionBackends {
+		names[backend.Name] = struct{}{}
+		if err := backend.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, listener := range x.HTTP {
+		for _, route := range listener.Routes {
+			if route.EnvoyExtensions == nil {
+				continue
+			}
+			for alias, name := range route.EnvoyExtensions.Backends {
+				if _, ok := names[name]; !ok {
+					errs = errors.Join(errs, fmt.Errorf("%w: route %s alias %s: %s", ErrExtensionBackendRefNotFound, route.Name, alias, name))
+				}
+			}
+		}
 	}
 	return errs
 }
@@ -557,6 +592,10 @@ type TLSCertificate struct {
 	Name string `json:"name" yaml:"name"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
+	// ExtensionRef holds the custom resource this certificate was resolved from, for a
+	// kind registered in ExtensionManager.SecretResources. How Envoy obtains the
+	// certificate is decided by the extension server via the Secret hook.
+	ExtensionRef *UnstructuredRef `json:"extensionRef,omitempty" yaml:"extensionRef,omitempty"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
@@ -661,6 +700,18 @@ type SubjectAltName struct {
 
 func (t *TLSCertificate) Validate() error {
 	var errs error
+	if t.SDS != nil && t.ExtensionRef != nil {
+		return errors.Join(errs, ErrTLSCertificateMultipleSources)
+	}
+	if t.ExtensionRef != nil {
+		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
+			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
+		}
+		if t.ExtensionRef.Object == nil && t.ExtensionRef.Name == "" {
+			errs = errors.Join(errs, ErrTLSExtensionRefEmpty)
+		}
+		return errs
+	}
 	if t.SDS != nil {
 		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
 			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
@@ -732,6 +783,20 @@ type ProxyProtocolSettings struct {
 	// If set to false, the listener will reject requests without a Proxy Protocol header.
 	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
 	Optional bool `json:"optional,omitempty" yaml:"optional,omitempty"`
+	// ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+	// destination port. Only takes effect when PROXY protocol is enabled.
+	// +optional
+	ForwardProto *ForwardProtoConfig `json:"forwardProtoConfig,omitempty" yaml:"forwardProtoConfig,omitempty"`
+}
+
+// ForwardProtoConfig holds configuration for inferring the x-forwarded-proto header
+// from the PROXY protocol destination port.
+// +k8s:deepcopy-gen=true
+type ForwardProtoConfig struct {
+	// HTTPSDestinationPorts are the destination ports treated as HTTPS.
+	HTTPSDestinationPorts []uint32 `json:"httpsDestinationPorts,omitempty" yaml:"httpsDestinationPorts,omitempty"`
+	// HTTPDestinationPorts are the destination ports treated as HTTP.
+	HTTPDestinationPorts []uint32 `json:"httpDestinationPorts,omitempty" yaml:"httpDestinationPorts,omitempty"`
 }
 
 type WithUnderscoresAction egv1a1.WithUnderscoresAction
@@ -883,11 +948,14 @@ type ResponseOverrideRule struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
-// When both statusCodes and responseHeaders are specified, both must match.
+// When more than one of statusCodes, requestHeaders and responseHeaders is specified, all of them must match.
 // +k8s:deepcopy-gen=true
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
 	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Request headers to match on. The match evaluates to true if all matches are successful.
+	RequestHeaders []StringMatch `json:"requestHeaders,omitempty"`
 
 	// Response headers to match on. The match evaluates to true if all matches are successful.
 	ResponseHeaders []StringMatch `json:"responseHeaders,omitempty"`
@@ -1098,6 +1166,8 @@ type HTTPRoute struct {
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// Credentials to be injected into the request.
 	CredentialInjection *CredentialInjection `json:"credentialInjection,omitempty" yaml:"credentialInjection,omitempty"`
+	// GRPCJSONTranscoder defines the gRPC-JSON transcoding configuration for this route.
+	GRPCJSONTranscoder *GRPCJSONTranscoder `json:"grpcJSONTranscoder,omitempty" yaml:"grpcJSONTranscoder,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters or on the backendRef as a dynamic backend
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 	// ExtensionServerPolicies holds unstructured resources that were introduced by an extension and
@@ -1139,17 +1209,24 @@ func (h *HTTPRoute) GetRetry() *Retry {
 }
 
 func (h *HTTPRoute) NeedsClusterPerSetting() bool {
+	return len(h.ClusterPerSettingReasons()) > 0
+}
+
+// ClusterPerSettingReasons returns why each of HTTPRoute's destination settings needs its own cluster,
+// or nil when they can share one.
+func (h *HTTPRoute) ClusterPerSettingReasons() []string {
+	var reasons []string
 	if h.Traffic != nil &&
 		h.Traffic.LoadBalancer != nil &&
 		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
-		return true
+		reasons = append(reasons, "the load balancer uses preferLocal or weightedZones")
 	}
 	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
 	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
-		return true
+	if weights := h.Destination.ToBackendWeights(); weights.Invalid > 0 || weights.NoEndpoints > 0 {
+		reasons = append(reasons, "some backendRefs are invalid or have no endpoints")
 	}
-	return h.Destination.NeedsClusterPerSetting()
+	return append(reasons, h.Destination.ClusterPerSettingReasons()...)
 }
 
 // IsDynamicResolverRoute reports whether h's destination is a dynamic resolver.
@@ -1385,6 +1462,8 @@ type SecurityFeatures struct {
 // EnvoyExtensionFeatures holds the information associated with the Envoy Extension Policy.
 // +k8s:deepcopy-gen=true
 type EnvoyExtensionFeatures struct {
+	// Backends maps extension aliases to cluster names in Xds.ExtensionBackends.
+	Backends map[string]string `json:"backends,omitempty" yaml:"backends,omitempty"`
 	// External Processing extensions
 	ExtProcs []ExtProc `json:"extProcs,omitempty" yaml:"extProcs,omitempty"`
 	// Wasm extensions
@@ -1393,6 +1472,13 @@ type EnvoyExtensionFeatures struct {
 	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
 	// Dynamic Module extensions
 	DynamicModules []DynamicModule `json:"dynamicModules,omitempty" yaml:"dynamicModules,omitempty"`
+}
+
+// ExtensionBackend holds a callout destination and its cluster settings.
+// +k8s:deepcopy-gen=true
+type ExtensionBackend struct {
+	RouteDestination `json:",inline" yaml:",inline"`
+	Traffic          *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1469,6 +1555,10 @@ type JWT struct {
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+
+	// Name is a unique name for this JWT configuration. The xds translator uses
+	// it as the jwt_authn requirement name, so JWTs that share a name must be equal.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // JWTProvider defines the schema for the JWT Provider.
@@ -1622,6 +1712,10 @@ type OIDC struct {
 	// If a specific cookie is not configured, it will use the default xds value of disabled.
 	// +optional
 	CookieConfig *egv1a1.OIDCCookieConfig `json:"cookieConfig,omitempty"`
+
+	// TokenCookieChunking splits a token too large for one cookie across several cookies,
+	// within Envoy's default limits.
+	TokenCookieChunking bool `json:"tokenCookieChunking,omitempty"`
 
 	// Skips OIDC authentication when the request contains any header that will be extracted by the JWT
 	// filter, normally "Authorization: Bearer ...". This is typically used for non-browser clients that
@@ -1816,6 +1910,10 @@ type BodyToExtAuth struct {
 	// reaches the number set in this field.
 	// Note that this setting will have precedence over failOpen mode.
 	MaxRequestBytes uint32 `json:"maxRequestBytes"`
+
+	// PackAsBytes sends the request body to the external authorization service as raw bytes.
+	// Only supported for gRPC external authorization services.
+	PackAsBytes bool `json:"packAsBytes,omitempty"`
 }
 
 // ContextExtension is analogous to http_request.headers, however these
@@ -2173,8 +2271,9 @@ type RouteDestination struct {
 	// reused
 	Name     string  `json:"name" yaml:"name"`
 	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
-	// Settings holds this destination's own, non-merged backends. Never shared with another
-	// route.
+	// Settings holds this destination's own, non-merged backends. Setting objects may
+	// be shared across matches and listeners of the same rule; consumers must not
+	// mutate them.
 	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 	// BackendClusterRefs holds references to backend clusters for this route rule. The
 	// referenced BackendCluster's data lives exclusively in the owning Xds's Backends registry,
@@ -2207,11 +2306,43 @@ func (r *RouteDestination) Validate() error {
 }
 
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
-	return r.HasMixedEndpoints() ||
-		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
-		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings()
+	return len(r.ClusterPerSettingReasons()) > 0
+}
+
+// ClusterPerSettingReasons returns why each of RouteDestination's settings needs its own cluster, or nil when
+// they can share one.
+func (r *RouteDestination) ClusterPerSettingReasons() []string {
+	var reasons []string
+	if r.HasMixedEndpoints() {
+		reasons = append(reasons, "FQDN endpoints are mixed with IP or UDS endpoints")
+	}
+	if r.HasFiltersInSettings() {
+		reasons = append(reasons, "backendRefs have filters other than backendPriority")
+	}
+	if len(r.Settings) > 1 && r.HasPreferLocalZone() {
+		reasons = append(reasons, "backends use preferLocal")
+	}
+	if r.HasMixedUpstreamProtocolRequirements() {
+		reasons = append(reasons, "backends require different upstream protocols")
+	}
+	if r.HasMixedAutoSNISettings() {
+		reasons = append(reasons, "only some backends use autoSNI from the endpoint hostname")
+	}
+	return reasons
+}
+
+// HasPriorityFailover reports whether RouteDestination's usable settings span more than one locality priority,
+// i.e. traffic is expected to fail over between them.
+func (r *RouteDestination) HasPriorityFailover() bool {
+	priorities := sets.New[uint32]()
+	for _, s := range r.Settings {
+		if s == nil || s.Invalid || (s.Weight != nil && *s.Weight == 0) ||
+			(len(s.Endpoints) == 0 && !s.IsDynamicResolver && !s.IsCustomBackend) {
+			continue
+		}
+		priorities.Insert(ptr.Deref(s.Priority, 0))
+	}
+	return priorities.Len() > 1
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -3096,6 +3227,9 @@ type GlobalResources struct {
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
 	// RateLimitServiceCluster holds the rate limit service endpoints discovered from Kubernetes resources.
 	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
+	// RateLimitServiceClusterTraffic holds the cluster-scoped traffic settings of the rate limit
+	// service cluster, translated from EnvoyGateway.RateLimit.ServiceSettings.
+	RateLimitServiceClusterTraffic *ClusterTrafficFeatures `json:"rateLimitServiceClusterTraffic,omitempty" yaml:"rateLimitServiceClusterTraffic,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.
@@ -3843,6 +3977,10 @@ type HTTPHealthChecker struct {
 	Host string `json:"host" yaml:"host"`
 	// Path defines the HTTP path that will be requested during health checking.
 	Path string `json:"path" yaml:"path"`
+	// Protocol defines the HTTP protocol used to send health check requests.
+	// If unset or set to Auto, it's derived from the effective upstream protocol of
+	// the backend.
+	Protocol *egv1a1.HTTPHealthCheckProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	// Method defines the HTTP method used for health checking.
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
@@ -3919,6 +4057,10 @@ type GRPCHealthChecker struct {
 	// which the health check should be requested. If not specified, then the default
 	// is to send a health check request for the entire server.
 	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
+	// Authority is the value of the :authority header in the gRPC health check request.
+	// If not specified, the effective route hostname is used, and if that is not
+	// available either, Envoy falls back to the cluster name.
+	Authority string `json:"authority,omitempty" yaml:"authority,omitempty"`
 }
 
 // TCPHealthChecker defines the settings of tcp health check.
@@ -4215,6 +4357,8 @@ type ConnectionLimit struct {
 	// MaxConnectionDuration is the maximum amount of time a connection can remain established
 	// before being drained and/or closed.
 	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty" yaml:"maxConnectionDuration,omitempty"`
+	// MaxConnectionDurationJitter is the percentage (0-100) of MaxConnectionDuration added as random jitter.
+	MaxConnectionDurationJitter *uint32 `json:"maxConnectionDurationJitter,omitempty" yaml:"maxConnectionDurationJitter,omitempty"`
 	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
 	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
 	MaxRequestsPerConnection *uint32 `json:"maxRequestsPerConnection,omitempty" yaml:"maxRequestsPerConnection,omitempty"`
@@ -4317,6 +4461,10 @@ type Wasm struct {
 	// Name is a unique name for an Wasm configuration.
 	// The xds translator only generates one Wasm filter for each unique name.
 	Name string `json:"name"`
+
+	// VMID overrides the VM ID to allow compatible extensions to share a VM.
+	// If unset, Name is used to keep different Wasm entries in separate VMs.
+	VMID string `json:"vmID,omitempty"`
 
 	// RootID is a unique ID for a set of extensions in a VM which will share a
 	// RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).
@@ -4466,6 +4614,8 @@ type PreferLocalZone struct {
 	MinEndpointsThreshold *uint64 `json:"minEndpointsThreshold,omitempty" yaml:"minEndpointsThreshold,omitempty"`
 	// Configures percentage of requests that will be considered for zone aware routing if zone aware routing is configured. If not specified, the default is 100%.
 	PercentageEnabled *uint32 `json:"percentageEnabled,omitempty" yaml:"percentageEnabled,omitempty"`
+	// FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the cluster is in panic mode.
+	FailTrafficOnPanic *bool `json:"failTrafficOnPanic,omitempty" yaml:"failTrafficOnPanic,omitempty"`
 }
 
 // ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -4498,6 +4648,20 @@ type EndpointOverride struct {
 type EndpointOverrideExtractFrom struct {
 	// Header defines the header to get the override endpoint addresses.
 	Header *string `json:"header,omitempty" yaml:"header,omitempty"`
+}
+
+// GRPCJSONTranscoder holds the gRPC-JSON transcoder configuration of a route.
+// +k8s:deepcopy-gen=true
+type GRPCJSONTranscoder struct {
+	// Name is the name of the transcoder filter.
+	Name string `json:"name" yaml:"name"`
+	// ProtoDescriptorBin is the binary FileDescriptorSet of the gRPC services.
+	ProtoDescriptorBin []byte `json:"protoDescriptorBin" yaml:"protoDescriptorBin"`
+	// Services are the full names of the gRPC services to transcode.
+	Services                     []string                 `json:"services" yaml:"services"`
+	PrintOptions                 *egv1a1.JSONPrintOptions `json:"printOptions,omitempty" yaml:"printOptions,omitempty"`
+	IgnoreUnknownQueryParameters *bool                    `json:"ignoreUnknownQueryParameters,omitempty" yaml:"ignoreUnknownQueryParameters,omitempty"`
+	ConvertGRPCStatus            *bool                    `json:"convertGRPCStatus,omitempty" yaml:"convertGRPCStatus,omitempty"`
 }
 
 // LoadBalancerType defines the type of load balancer for IR.

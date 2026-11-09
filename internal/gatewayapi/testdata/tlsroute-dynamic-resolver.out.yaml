@@ -157,6 +157,10 @@ xdsIR:
           name: tlsroute/default/tlsroute-1/rule/-1
           settings:
           - isDynamicResolver: true
+            metadata:
+              kind: Backend
+              name: backend-dynamic-resolver
+              namespace: default
             name: tlsroute/default/tlsroute-1/rule/-1/backend/0
             protocol: TCP
             weight: 1

@@ -1,0 +1,6 @@
+**
+!examples/
+!examples/static-file-server/
+!examples/static-file-server/**
+!examples/wasm-module-test/
+!examples/wasm-module-test/**

@@ -67,6 +67,7 @@
               path:
                 exact: /foo/logout
             statPrefix: securitypolicy/default/policy-for-first-route
+            tokenCookieChunking: {}
             tokenEndpoint:
               cluster: oauth_foo_com_443
               timeout: 10s

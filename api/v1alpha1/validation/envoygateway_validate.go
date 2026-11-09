@@ -8,10 +8,12 @@ package validation
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -83,18 +85,6 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	}
 
 	return nil
-}
-
-// WarnEnvoyGateway returns deprecation warnings for the provided EnvoyGateway configuration.
-func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
-	if eg == nil || eg.ExtensionAPIs == nil {
-		return nil
-	}
-	var warnings []string
-	if eg.ExtensionAPIs.DisableLua != nil {
-		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
-	}
-	return warnings
 }
 
 func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKubernetesProvider) error {
@@ -291,7 +281,11 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 
 	if len(eg.ExtensionManagers) > 0 {
 		names := make(map[string]struct{})
-		for i, em := range eg.ExtensionManagers {
+		// The Secret hook calls only the extension that registered a secret kind, and certificate
+		// refs carry no version, so a group and kind may be registered by one extension only.
+		secretKindOwners := make(map[string]string)
+		for i := range eg.ExtensionManagers {
+			em := &eg.ExtensionManagers[i]
 			if em.Name == "" {
 				return fmt.Errorf("extension manager at index %d: name is required", i)
 			}
@@ -299,8 +293,15 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 				return fmt.Errorf("extension manager at index %d: duplicate name %q", i, em.Name)
 			}
 			names[em.Name] = struct{}{}
-			if err := validateEnvoyGatewayExtensionManager(&eg.ExtensionManagers[i]); err != nil {
+			if err := validateEnvoyGatewayExtensionManager(em); err != nil {
 				return fmt.Errorf("extension manager %q: %w", em.Name, err)
+			}
+			for _, rsrc := range em.SecretResources {
+				groupKind := rsrc.Group + "/" + rsrc.Kind
+				if owner, exists := secretKindOwners[groupKind]; exists && owner != em.Name {
+					return fmt.Errorf("extension manager %q: secret kind %s is already registered by %q", em.Name, groupKind, owner)
+				}
+				secretKindOwners[groupKind] = em.Name
 			}
 		}
 		return nil
@@ -322,11 +323,51 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 		return fmt.Errorf("registered extension has no hooks specified")
 	}
 
+	if err := validateExtensionBackendResources(extensionManager.BackendResources); err != nil {
+		return err
+	}
+
+	if len(extensionManager.SecretResources) > 0 &&
+		!slices.Contains(extensionManager.Hooks.XDSTranslator.Post, egv1a1.XDSSecret) {
+		return fmt.Errorf("secretResources requires the %s hook to be registered", egv1a1.XDSSecret)
+	}
+
 	err := validateExtensionService(extensionManager.Service)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+// builtinBackendGroupKinds are the backendRef group/kinds Envoy Gateway resolves itself.
+//
+// They can't be registered as extension backend resources. Extension backends are matched by
+// group and kind, and an unset backendRef group means the core group, so registering one of these
+// would not add a backend type: it would take over every backendRef of that kind in the cluster.
+// Each of those backendRefs would then skip Envoy Gateway's backendRef validation and endpoint
+// resolution (EndpointSlices, service routing, IP family, backend merging, ...) and be handed to
+// the extension instead, and the provider would forward every object of that kind to the
+// extension on each reconcile. Extensions that need to adjust these backends should use the xDS
+// translator hooks (e.g. the Cluster hook) on the clusters Envoy Gateway generates.
+//
+// See https://github.com/envoyproxy/gateway/issues/10255.
+var builtinBackendGroupKinds = map[egv1a1.GroupVersionKind]struct{}{
+	{Group: "", Kind: "Service"}:                            {},
+	{Group: "multicluster.x-k8s.io", Kind: "ServiceImport"}: {},
+	{Group: egv1a1.GroupName, Kind: egv1a1.KindBackend}:     {},
+}
+
+// validateExtensionBackendResources rejects extension backend resources that are built-in backend
+// kinds. Those don't need an extension, and registering them would only bypass the backendRef
+// validation Envoy Gateway applies to them.
+func validateExtensionBackendResources(backendResources []egv1a1.GroupVersionKind) error {
+	for _, gvk := range backendResources {
+		if _, ok := builtinBackendGroupKinds[egv1a1.GroupVersionKind{Group: gvk.Group, Kind: gvk.Kind}]; ok {
+			return fmt.Errorf("extension backendResources must not include the built-in backend kind %s",
+				schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+		}
+	}
 	return nil
 }
 

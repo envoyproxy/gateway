@@ -143,6 +143,9 @@ func processSDSClusters(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) error {
 	for _, bc := range xdsIR.BackendClusters {
 		collectSDSURLs([]*ir.DestinationSetting{bc.Setting})
 	}
+	for _, backend := range xdsIR.ExtensionBackends {
+		collectSDSURLs(backend.Settings)
+	}
 
 	for _, httpListener := range xdsIR.HTTP {
 		if httpListener.TLS != nil {

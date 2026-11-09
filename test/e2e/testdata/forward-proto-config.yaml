@@ -1,0 +1,172 @@
+# This is used to test forward_proto_config, which infers the x-forwarded-proto
+# header from the PROXY protocol destination port.
+# Traffic from http 80 is redirected to https://www.example.com:443 with proxy
+# protocol enabled (injected by the BackendTrafficPolicy on the http route).
+# The https listener has proxyProtocol.forwardProtoConfig set, so the request
+# reaching the backend on the https listener should have x-forwarded-proto: https.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: forward-proto-gtw
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-com-tls
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: forward-proto-policy
+  namespace: gateway-conformance-infra
+spec:
+  proxyProtocol:
+    forwardProtoConfig:
+      httpsDestinationPorts:
+        - 443
+      httpDestinationPorts:
+        - 80
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: forward-proto-gtw
+      sectionName: https
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: forward-proto-http
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - kind: Gateway
+      name: forward-proto-gtw
+      sectionName: http
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            hostname: www.example.com
+      backendRefs:
+        - group: "gateway.envoyproxy.io"
+          kind: Backend
+          name: forward-proto-backend
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: forward-proto-https
+  namespace: gateway-conformance-infra
+spec:
+  hostnames:
+    - www.example.com
+  parentRefs:
+    - kind: Gateway
+      name: forward-proto-gtw
+      sectionName: https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: forward-proto-btp
+  namespace: gateway-conformance-infra
+spec:
+  proxyProtocol:
+    version: V2
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: forward-proto-http
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: forward-proto-backend
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        # the service name of the gateway, this is not right in gateway namespace mode
+        hostname: envoy-gateway-conformance-infra-forward-proto-gtw-8b69893b.envoy-gateway-system.svc
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: btls-forward-proto-backend
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: forward-proto-backend
+  validation:
+    caCertificateRefs:
+      - name: example-ca
+        group: ""
+        kind: ConfigMap
+    hostname: www.example.com
+---
+apiVersion: v1
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDVTCCAj2gAwIBAgIUHGXfOoYLN5xK7lgRr0Rm/rmygXkwDQYJKoZIhvcNAQEL
+    BQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv
+    bTAeFw0yNjA2MjAxMDI2NDdaFw0zNjA2MTcxMDI2NDdaMC0xFTATBgNVBAoMDGV4
+    YW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB
+    AQUAA4IBDwAwggEKAoIBAQC80KsHYU07Ku6nbWqRTzJ2qs6bWzOEQ00hXb9Mziqs
+    2CgwbM4v8U5b/P4I7pdTI8+x6tZBc3osEvULP4acFFzNiHWiojO8STgJZ1TsvqJT
+    OsNkE+A5OhDgu9cYGSJHqNDutQkadSo7MNPbOTIpD8HXVPUJxYrz9t/Gy2kk6zvB
+    1YxKJNoznwrxMOMCumCWFdPYFBCpHLQzoF8ftn862YcO3cLypM4cNbO3znxkr1kP
+    523u8gqZelLeNXe7Pk+BZ6qY/ZuF2567yLjJKxnK5rt4np2EPEpUI4CO84LjYIHb
+    eV6lwqqrXOSWXMJ+04sNIeAJztxSsOzCW8P7n9Xy42+zAgMBAAGjbTBrMB0GA1Ud
+    DgQWBBR7KdihkDXIVdK5MFYwO4FrjsL5LjAfBgNVHSMEGDAWgBR7KdihkDXIVdK5
+    MFYwO4FrjsL5LjAPBgNVHRMBAf8EBTADAQH/MBgGA1UdEQQRMA+CDSouZXhhbXBs
+    ZS5jb20wDQYJKoZIhvcNAQELBQADggEBACQmmnTx40GFMieiNSbcgxDjlPHz/r7x
+    4WaiChsRCvDhfKoOfq14PZyKYgRXs5QUziFv3S8gItXUEhT1QwJeMaUZE7GKQddD
+    p/V4qP7ba9QLAq7Bm0hGWc7WyabJY0hJZ3Y8nUhNeaF4fJLsP06jIRL8pUJlSC+t
+    9XhpMPSd3o6XvfVcwn6Cqer3PvgkjuB8G9hf85rOR7HtzhJ6dfJrkVyA2pdiKasU
+    5cVtmJ4/9jBXkxNzlN3ef4z09dG4kX0nKkwN8lgmEDfkgLq/ZbPUtHYkGeavkU2o
+    tL5c35gwtorGxAWt2G9YcVlOsKWLnypSz4LbY62eiCToFFeJr1sHO10=
+    -----END CERTIFICATE-----
+kind: ConfigMap
+metadata:
+  name: example-ca
+  namespace: gateway-conformance-infra
+---
+apiVersion: v1
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURWVENDQWoyZ0F3SUJBZ0lVSEdYZk9vWUxONXhLN2xnUnIwUm0vcm15Z1hrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVJRd0VnWURWUVFEREF0bGVHRnRjR3hsTG1OdgpiVEFlRncweU5qQTJNakF4TURJMk5EZGFGdzB6TmpBMk1UY3hNREkyTkRkYU1DMHhGVEFUQmdOVkJBb01ER1Y0CllXMXdiR1VnU1c1akxqRVVNQklHQTFVRUF3d0xaWGhoYlhCc1pTNWpiMjB3Z2dFaU1BMEdDU3FHU0liM0RRRUIKQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUM4MEtzSFlVMDdLdTZuYldxUlR6SjJxczZiV3pPRVEwMGhYYjlNemlxcwoyQ2d3Yk00djhVNWIvUDRJN3BkVEk4K3g2dFpCYzNvc0V2VUxQNGFjRkZ6TmlIV2lvak84U1RnSloxVHN2cUpUCk9zTmtFK0E1T2hEZ3U5Y1lHU0pIcU5EdXRRa2FkU283TU5QYk9USXBEOEhYVlBVSnhZcno5dC9HeTJrazZ6dkIKMVl4S0pOb3pud3J4TU9NQ3VtQ1dGZFBZRkJDcEhMUXpvRjhmdG44NjJZY08zY0x5cE00Y05iTzN6bnhrcjFrUAo1MjN1OGdxWmVsTGVOWGU3UGsrQlo2cVkvWnVGMjU2N3lMakpLeG5LNXJ0NG5wMkVQRXBVSTRDTzg0TGpZSUhiCmVWNmx3cXFyWE9TV1hNSiswNHNOSWVBSnp0eFNzT3pDVzhQN245WHk0Mit6QWdNQkFBR2piVEJyTUIwR0ExVWQKRGdRV0JCUjdLZGloa0RYSVZkSzVNRll3TzRGcmpzTDVMakFmQmdOVkhTTUVHREFXZ0JSN0tkaWhrRFhJVmRLNQpNRll3TzRGcmpzTDVMakFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQmdHQTFVZEVRUVJNQStDRFNvdVpYaGhiWEJzClpTNWpiMjB3RFFZSktvWklodmNOQVFFTEJRQURnZ0VCQUNRbW1uVHg0MEdGTWllaU5TYmNneERqbFBIei9yN3gKNFdhaUNoc1JDdkRoZktvT2ZxMTRQWnlLWWdSWHM1UVV6aUZ2M1M4Z0l0WFVFaFQxUXdKZU1hVVpFN0dLUWRkRApwL1Y0cVA3YmE5UUxBcTdCbTBoR1djN1d5YWJKWTBoSlozWThuVWhOZWFGNGZKTHNQMDZqSVJMOHBVSmxTQyt0CjlYaHBNUFNkM282WHZmVmN3bjZDcWVyM1B2Z2tqdUI4RzloZjg1ck9SN0h0emhKNmRmSnJrVnlBMnBkaUthc1UKNWNWdG1KNC85akJYa3hOemxOM2VmNHowOWRHNGtYMG5La3dOOGxnbUVEZmtnTHEvWmJQVXRIWWtHZWF2a1Uybwp0TDVjMzVnd3Rvckd4QVd0Mkc5WWNWbE9zS1dMbnlwU3o0TGJZNjJlaUNUb0ZGZUpyMXNITzEwPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQwakNDQXJxZ0F3SUJBZ0lVTjhYcXM2RjdZV1dOTGlXYmExMUJVZzdZVGVNd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVJRd0VnWURWUVFEREF0bGVHRnRjR3hsTG1OdgpiVEFlRncweU5qQTJNakF4TURJMk5EaGFGdzB6TmpBMk1UY3hNREkyTkRoYU1Ea3hHREFXQmdOVkJBTU1EM2QzCmR5NWxlR0Z0Y0d4bExtTnZiVEVkTUJzR0ExVUVDZ3dVWlhoaGJYQnNaU0J2Y21kaGJtbDZZWFJwYjI0d2dnRWkKTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFEQnAzTUhST3hBYU04TXplTjdxaGNWYjAxbAo3YUphUkhqWDIrZm5vTkpFZlZsTFN2R2ZVU0dLVTA2NjBYcWdSZUJDZEQrc0xMUzcrN2ZmZXB0Ukk5VWFSSE54Ck4wZ0haakRnSHVwcXNPcmhoS1hlYVhEZjFsNWpqLzE0OGh1Wjh3dTcvTEh3ZkF3L0JKRXRpT21sSDlicVdMVkcKQ3U5SUluTUMxOTNpakVMd3BTREQrazFURjhtMEVXNDBERmVaTkVlMTdsSkVhMjdVK3VQNmRyYnQ5UHNWVzUxVQpROTRtVWNIR2tmejZ4SnhJakVoZHplOWpwNk9xRXVtb2hYN3VNaC82cnZzYzdlU2VTaXUvbHpCa0hnUWUzR3JICmtZY0NmUnAyYUJSVjJFcEpEZDhHblN0L09SOTExeE1xeTlTWk9hbCt1ZERCUG0rbzVrRHo5ZEQ3U1pMZEFnTUIKQUFHamdkMHdnZG93SFFZRFZSME9CQllFRklZb1djdU5xeC9ZT0NMMng3ZHFESzRYREY0Y01HZ0dBMVVkSXdSaApNRitBRkhzcDJLR1FOY2hWMHJrd1ZqQTdnV3VPd3ZrdW9UR2tMekF0TVJVd0V3WURWUVFLREF4bGVHRnRjR3hsCklFbHVZeTR4RkRBU0JnTlZCQU1NQzJWNFlXMXdiR1V1WTI5dGdoUWNaZDg2aGdzM25FcnVXQkd2UkdiK3ViS0IKZVRBTUJnTlZIUk1FQlRBREFRSC9NQXNHQTFVZER3UUVBd0lDL0RBYUJnTlZIUkVFRXpBUmdnOTNkM2N1WlhoaApiWEJzWlM1amIyMHdHQVlEVlIwU0JCRXdENElOS2k1bGVHRnRjR3hsTG1OdmJUQU5CZ2txaGtpRzl3MEJBUXNGCkFBT0NBUUVBQituQnJtMTV0Sld4ZHB4dVI0YjkySStjNCs5b3kzNGE0WWFqaDZnU0RVVmRBOE16MWlaT2dtSjcKOFlPWk9Nd2h3YXFmYXhyVWl6UzRDK1REVW9qeUhXZE5PbmczcjhFUk1FTmFDT0IrbmhxZ0JWaWFPdnh6MjlzegppaXZEdnZEbU5ncHJhZE5hRDZ3VitZZDNtVUxoY2J6eGI5UmUrbFN6NTRnY0FvQ1AxT0N5Q3hHUnU1UEx6Z2JGCmQzbXhtV2NGWklpRjBoallwTE5XYlh3b29VZlBNZjJaRHlGempzNFBWKy9uZEtoSExJMGIxSC9HWlROM2l4b3EKTmsxMDZ2RlpQNC9YQVR4MFdjZ0hTam1zc0lpMUZhcGk0SHR1dk1SL2VnQmVpTm9nSVk5ZFJ0TXVmZ1VaMm5kQwpuQ2FRVlQyVVEwL0d6MTllRmdMZXJpZ0tzMXBpd3c9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRREJwM01IUk94QWFNOE0KemVON3FoY1ZiMDFsN2FKYVJIalgyK2Zub05KRWZWbExTdkdmVVNHS1UwNjYwWHFnUmVCQ2REK3NMTFM3KzdmZgplcHRSSTlVYVJITnhOMGdIWmpEZ0h1cHFzT3JoaEtYZWFYRGYxbDVqai8xNDhodVo4d3U3L0xId2ZBdy9CSkV0CmlPbWxIOWJxV0xWR0N1OUlJbk1DMTkzaWpFTHdwU0REK2sxVEY4bTBFVzQwREZlWk5FZTE3bEpFYTI3VSt1UDYKZHJidDlQc1ZXNTFVUTk0bVVjSEdrZno2eEp4SWpFaGR6ZTlqcDZPcUV1bW9oWDd1TWgvNnJ2c2M3ZVNlU2l1LwpsekJrSGdRZTNHckhrWWNDZlJwMmFCUlYyRXBKRGQ4R25TdC9PUjkxMXhNcXk5U1pPYWwrdWREQlBtK281a0R6CjlkRDdTWkxkQWdNQkFBRUNnZ0VBR3lpSHFrSlJPNnMzTmwxOWhLOVM4MitibENyaWRQUmJXako5OEc4T2JncUMKUmx2cFRPV001YUJQVDBYbmc2aXBEY2pOMFRDbjNDRXVKVXBGay9pSmYxaVFOQldEcFg0QVpyNFBOQTFCczRUdAoyaVpCYlRMY0kreGlxTjZUWG1ER2lZT2oxTTBnem9tdWJvdGY4UWRwRlk2QlJhUnM4Rm5jZFU2ZTBKSEpKWVJVCmcxTVBrTDY5bzdacnhidm5zdlpjZTBWa3lrT3M4cUlTTWtDMXhFVzdlV3V0S2xBVExrdloyMEduQ2NJOS85bTMKQlN5OFdsdjdYR2RERDkyZW1nR3ZLTytxRDRIWjlTSXV6bmNvYXJ2VkVSQ2tsMXlxaUJnWFVqMjQ3emE4L0pHWAo0dVp2eHdSZkJPSnhaRnBDMlA5WlRZNThHTWs1all2bW4vUWVqVmFqSVFLQmdRRGVxMkZoY29BNEkrWXc0ekNHClV5Tytpd2VMNlZ0TFZHZE5rQlN3VnJkUDF1YjRSQmpvYkpsNjBMTHRVVE4xZFJZSTFZakN6bzg4ODNJTWpBek4KaGlLSXFYM21RMDQ1emNpZ05WSGhjTE1SWFV2YTh1LzF4eEJxd0tCeURxY1NEcHdNdDYvdW04OGZ4QVlNWVlNbQpCQkdlenVzVjNOdENKWkUzcUx0ZW82TXBCUUtCZ1FEZXBEWExZTHlhVXdkMld1dzJCZHhvN0hVdjdldXpXeXRBCjg5ZDdrMFdXR1ZuT1FpK0t1d0FORE9SUk43ajlHV0c1VDJhSEdtUmRkSklkeUhtRC9QVDFhcEl0b29FZ2hla3cKWXMyMW53c0c1WjF3alJpNkVtRVdlc2tGakpXRGtDSVh0SCt6SFBSMDdCS2tLYzR0YTJZWE1nNCt6RWtLdXdhMQpQSTZGazRlSitRS0JnUURKdDJQT2paWE9SZWRBbm0vVkgvZ2ZvMzlBcGpRSU4vd2xiY0x3Ukg1b0czeTlwNk1RCjIyRG11NjE4QTdXa1VGK1h2U25ab0pwdVV2UWNuYnJ6YlBKWDc0T1lWNXpFRE1JVk1IaHV6RlBNQlVLMHBLUHgKZVZaTC94amFlcCtyWWdUSUdKZU9oeVBKMlNESmtvVG1xWVQwNHVwZ3NlVUhOVlVxb1Bhc3MzMFpxUUtCZ1FERQpYVHg4OWdNaWNaeWhUS3dOTWJvbWFIY3JJTUxEMitNWVZIaDNLM3N5V1lXVm4xWmpHMjkrRXlMRVowc25IOTNMCkhUYW1iaWFiTHBjNDRYb2JhVjE3bnRUeW51TVlsa01IUS8xKzlKazdLZ1ZrSVczdm53bzJVM0U5RGJOSTZEVEoKaDQ4aG9LWVRBYXVuVXAvZisxdDlsYzV1b0tyRFpoVVNnQ2lMczRUVnNRS0JnUUNUUWdZWUlmeUlNVHhZdEI3ZQpKNjFicHlpVk1CYzZ4dmVXc3JYQVhtaDU1WjFKR2s3S2tManl4blR0UHhjeW1ycUFPUU5GTGVvSDdEZXRjWVQyCmtEeXI2Q0pWcTl4TUVRZ1NsSVdMUkx6WS8yeVo2ajR3aDlkSDBuQ2lRQUtLWVFOZjhHUUIzRnVia0d0RUJuSlEKTVIwNElrMjlJdjZ6TS9IVDFmdEw4WGRpTUE9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: example-com-tls
+  namespace: gateway-conformance-infra
+type: kubernetes.io/tls

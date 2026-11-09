@@ -14,6 +14,7 @@ http:
       exact: "foo/bar"
     security:
       jwt:
+        name: default/policy-1
         providers:
         - name: example
           issuer: https://www.example.com
@@ -58,6 +59,7 @@ http:
       exact: "foo/baz"
     security:
       jwt:
+        name: default/policy-2
         providers:
         - name: example
           issuer: https://www.example.com

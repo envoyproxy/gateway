@@ -63,6 +63,11 @@ const (
 	// has been merged with another policy targeting the parent(e.g. Gateway).
 	PolicyReasonMerged gwapiv1.PolicyConditionReason = "Merged"
 
+	// PolicyReasonNotMerged is used with the "Accepted" condition when a policy targeting a
+	// backend cannot be applied because the backend was not merged into a cluster. It is used
+	// with the "Warning" condition when only some of the policy's backend targets were not merged.
+	PolicyReasonNotMerged gwapiv1.PolicyConditionReason = "NotMerged"
+
 	// PolicyConditionWarning indicates that the policy configuration contains
 	// non-critical issues that are accepted but requires attention.
 	PolicyConditionWarning gwapiv1.PolicyConditionType = "Warning"
@@ -425,7 +430,7 @@ const (
 // XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
 // for the xds-translator
 //
-// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster;Endpoints
+// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster;Endpoints;Secret
 type XDSTranslatorHook string
 
 const (
@@ -435,6 +440,7 @@ const (
 	XDSCluster      XDSTranslatorHook = "Cluster"
 	XDSEndpoints    XDSTranslatorHook = "Endpoints"
 	XDSTranslation  XDSTranslatorHook = "Translation"
+	XDSSecret       XDSTranslatorHook = "Secret"
 )
 
 // StringMatch defines how to match any strings.
@@ -636,7 +642,7 @@ type BackendCluster struct {
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	// +optional
 	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 
@@ -905,8 +911,8 @@ type ResponseOverride struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
-// When both statusCodes and responseHeaders are specified, both must match.
-// +kubebuilder:validation:XValidation:rule="has(self.statusCodes) || has(self.responseHeaders)",message="at least one of statusCodes or responseHeaders must be specified"
+// When more than one of statusCodes, requestHeaders and responseHeaders is specified, all of them must match.
+// +kubebuilder:validation:XValidation:rule="has(self.statusCodes) || has(self.requestHeaders) || has(self.responseHeaders)",message="at least one of statusCodes, requestHeaders or responseHeaders must be specified"
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
 	//
@@ -914,6 +920,15 @@ type CustomResponseMatch struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
 	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// Request headers to match on. The match evaluates to true if all matches are successful.
+	// Note that the request headers are not available for all Envoy-generated responses,
+	// in which case a request header match never evaluates to true.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	RequestHeaders []ResponseOverrideHeaderMatch `json:"requestHeaders,omitempty"`
 
 	// Response headers to match on. The match evaluates to true if all matches are successful.
 	//
@@ -923,7 +938,7 @@ type CustomResponseMatch struct {
 	ResponseHeaders []ResponseOverrideHeaderMatch `json:"responseHeaders,omitempty"`
 }
 
-// ResponseOverrideHeaderMatch defines the configuration for matching a response header.
+// ResponseOverrideHeaderMatch defines the configuration for matching a request or response header.
 type ResponseOverrideHeaderMatch struct {
 	// Name of the HTTP header.
 	// The header name is case-insensitive.

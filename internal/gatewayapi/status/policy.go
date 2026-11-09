@@ -7,6 +7,8 @@ package status
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 
@@ -17,6 +19,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 )
 
 const (
@@ -129,15 +132,25 @@ func SetAcceptedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRe
 		gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, message, generation)
 }
 
+// SetNotMergedForPolicyAncestor marks the ancestor not accepted because its targets were not merged,
+// unless an Accepted condition is already set for it.
+func SetNotMergedForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, message string) {
+	if getPolicyAncestorCondition(policyStatus, ancestorRef, controllerName, gwapiv1.PolicyConditionAccepted) != nil {
+		return
+	}
+	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, egv1a1.PolicyReasonNotMerged, message, generation)
+}
+
 // SetDeprecatedFieldsWarningForPolicyAncestors sets deprecated fields warning conditions for each ancestor reference.
-func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]DeprecatedField) {
 	for _, ancestorRef := range ancestorRefs {
 		SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation, deprecatedFields)
 	}
 }
 
 // SetDeprecatedFieldsWarningForPolicyAncestor sets a deprecated fields warning condition for a specific ancestor reference.
-func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]DeprecatedField) {
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
 }
 
@@ -253,39 +266,25 @@ func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 	policyStatus.Ancestors = append(policyStatus.Ancestors[:worst], policyStatus.Ancestors[worst+1:]...)
 }
 
-// buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to
-// their alternatives. Values that contain a space are treated as free-form suffixes and emitted
-// as "<key> is deprecated, <value>"; plain field-path values (no spaces) use the standard form
-// "<key> is deprecated, use <value> instead".
-func buildDeprecationWarningMessage(deprecatedFields map[string]string) string {
+// DeprecatedFieldsRemovalRelease is the release that removes the deprecated fields tracked in
+// https://github.com/envoyproxy/gateway/issues/10211.
+const DeprecatedFieldsRemovalRelease = deprecation.DeprecatedFieldsRemovalRelease
+
+// DeprecatedField describes the replacement for a deprecated field.
+type DeprecatedField = deprecation.DeprecatedField
+
+// buildDeprecationWarningMessage builds a warning message from a map of deprecated fields to their alternatives.
+func buildDeprecationWarningMessage(deprecatedFields map[string]DeprecatedField) string {
 	if len(deprecatedFields) == 0 {
 		return ""
 	}
 
 	// Sort the keys to ensure deterministic message ordering
-	keys := make([]string, 0, len(deprecatedFields))
-	for k := range deprecatedFields {
-		keys = append(keys, k)
+	messages := make([]string, 0, len(deprecatedFields))
+	for _, path := range slices.Sorted(maps.Keys(deprecatedFields)) {
+		messages = append(messages, deprecatedFields[path].Message(path))
 	}
-	sort.Strings(keys)
-
-	var builder strings.Builder
-	for i, deprecated := range keys {
-		if i > 0 {
-			builder.WriteString("; ")
-		}
-		alt := deprecatedFields[deprecated]
-		builder.WriteString(deprecated)
-		if strings.ContainsRune(alt, ' ') {
-			builder.WriteString(" is deprecated, ")
-			builder.WriteString(alt)
-		} else {
-			builder.WriteString(" is deprecated, use ")
-			builder.WriteString(alt)
-			builder.WriteString(" instead")
-		}
-	}
-	return builder.String()
+	return strings.Join(messages, "; ")
 }
 
 // buildBehaviorChangeWarningMessage formats behavior-change warnings for a set of fields.

@@ -36,6 +36,9 @@ Certain restrictions apply on the value of hostnames and addresses. For example,
 
 Envoy Gateway does not manage the lifecycle of unix domain sockets referenced by the Backend resource. Envoy Gateway admins are responsible for creating and mounting the sockets into the envoy proxy pod. The latter can be achieved by patching the envoy deployment using the [EnvoyProxy][] resource.
 
+Envoy Gateway does not resolve DNS for FQDN endpoints and defers this responsibility to Envoy. When targeting a Kubernetes `Service` using a FQDN endpoint, Envoy will not consider Kubernetes `Endpoint` information (such as zone, draining status, specific pod IP).
+As a result, features like load balancing, session persistence, draining and zone aware routing may not work as expected. When targeting a Kubernetes `Service`, consider using the `KubernetesService` endpoint type.
+
 ## Kubernetes Service Backends
 
 A `Backend` with `type: KubernetesService` points at a `Service` in the same namespace. Envoy Gateway discovers the endpoints from the Service's EndpointSlices, the same way it does for a `Service` backendRef, so pod-level load balancing, session persistence, health checking, endpoint draining and zone-aware routing still apply. Backend settings such as `tls` and `appProtocols` are layered on top.
@@ -459,12 +462,12 @@ spec:
 
 [Backend]: ../../../api/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md
-[BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#backendobjectreference
+[BackendObjectReference]: {{<gateway-api-spec>}}#backendobjectreference
 [extension resource]: https://gateway-api.sigs.k8s.io/guides/getting-started/migrating-from-ingress/#approach-to-extensibility
 [CVE-2021-25740]: https://nvd.nist.gov/vuln/detail/CVE-2021-25740
 [upstream recommendations]: https://github.com/kubernetes/kubernetes/issues/103675
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
-[TLSRoute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#tlsroute
+[TLSRoute]: {{<gateway-api-spec>}}#tlsroute
 [Envoy Extension Policy]: ../../../api/extension_types#envoyextensionpolicy
 [Security Policy]: ../../../api/extension_types#oidcprovider
 [Backend TLS Policy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/

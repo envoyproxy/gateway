@@ -436,7 +436,7 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+      uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6  # v4.7.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -481,4 +481,4 @@ jobs:
     steps:
     - run: |
         echo "CI checks completed"
-        [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "false" ] || exit 1
+        [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'abandoned') }}" == "false" ] || exit 1

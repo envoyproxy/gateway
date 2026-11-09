@@ -851,7 +851,7 @@ func TestIsMergeableBackendKind(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tr := &Translator{ExtensionGroupKinds: tc.extensionGroupKinds}
+			tr := &Translator{ExtensionBackendGroupKinds: tc.extensionGroupKinds}
 			backendMap := map[types.NamespacedName]*egv1a1.Backend{}
 			if tc.backend != nil {
 				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend
@@ -934,12 +934,25 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 		name              string
 		backendRefs       []gwapiv1.BackendObjectReference
 		sessionPersistent bool
+		backendPriority   bool
 		want              bool
 	}{
 		{
-			name:        "single backendRef is always compatible",
+			name:        "single fallback backendRef is compatible",
 			backendRefs: []gwapiv1.BackendObjectReference{fallbackRef},
 			want:        false,
+		},
+		{
+			name:            "single backendRef with a backendPriority filter",
+			backendRefs:     []gwapiv1.BackendObjectReference{serviceRef1},
+			backendPriority: true,
+			want:            true,
+		},
+		{
+			name:            "multiple backendRefs with a backendPriority filter",
+			backendRefs:     []gwapiv1.BackendObjectReference{serviceRef1, serviceRef2},
+			backendPriority: true,
+			want:            true,
 		},
 		{
 			name:              "multiple backendRefs with session persistence",
@@ -963,7 +976,7 @@ func TestMergeIncompatibleForWeightedRule(t *testing.T) {
 			tr := &Translator{TranslatorContext: &TranslatorContext{
 				BackendMap: map[types.NamespacedName]*egv1a1.Backend{{Namespace: "default", Name: "be-fallback"}: fallbackBackend},
 			}}
-			got := tr.mergeIncompatibleForWeightedRule(route, tc.backendRefs, tc.sessionPersistent)
+			got := tr.mergeIncompatibleForWeightedRule(route, tc.backendRefs, tc.sessionPersistent, tc.backendPriority)
 			require.Equal(t, tc.want, got)
 		})
 	}

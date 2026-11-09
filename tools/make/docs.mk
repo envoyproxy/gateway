@@ -12,6 +12,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	ntia.gov \
 	nvd.nist.gov \
 	github.com \
+	linkedin.com \
 	jwt.io \
 	presence.decionis.com \
 	githubusercontent.com \
@@ -64,7 +65,7 @@ sync-benchmark-dashboard: ## Sync release benchmark dashboard data and rebuild t
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Copy the current release docs to the docs folder
 	@$(LOG_TARGET)
-	@CURRENT_RELEASE=$(shell ls $(ROOT_DIR)/site/content/en | grep -E '^v[0-9]+\.[0-9]+$$' | sort | tail -n 1); \
+	@CURRENT_RELEASE=$(shell ls $(ROOT_DIR)/site/content/en | grep -E '^v[0-9]+\.[0-9]+$$' | sort -V | tail -n 1); \
 	echo "Copying the current release $$CURRENT_RELEASE docs to the docs folder"; \
 	rm -rf $(ROOT_DIR)/site/content/en/docs; \
 	mkdir -p $(ROOT_DIR)/site/content/en/docs; \
@@ -179,7 +180,7 @@ docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-
 .PHONY: docs-check-links
 docs-check-links: $(tools/linkinator) # Check for broken links in the docs
 	@$(LOG_TARGET)
-	$(tools/linkinator) site/public/ -r --concurrency $(LINKINATOR_CONCURRENCY) --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
+	$(tools/linkinator) site/public/ -r --concurrency $(LINKINATOR_CONCURRENCY) --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --status-code "408:warn" --skip $(LINKINATOR_IGNORE) --verbosity error
 
 docs-markdown-lint: $(tools/markdownlint)
 	$(tools/markdownlint) -c .github/markdown_lint_config.json site/content/*

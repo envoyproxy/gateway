@@ -7,22 +7,29 @@ package gatewayapi
 
 import (
 	"bytes"
+	"container/list"
 	"context"
 	"crypto/sha1" //nolint:gosec // SHA1 is required to validate htpasswd {SHA} format
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/mail"
 	"net/netip"
 	"net/url"
+	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -37,6 +44,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -54,6 +62,9 @@ const (
 	defaultOIDCHTTPTimeout       = 5 * time.Second
 	defaultOIDCMaxRedirects      = 3
 
+	// defaultExtAuthMaxRequestBytes matches the default per-connection buffer limit.
+	defaultExtAuthMaxRequestBytes = 32768
+
 	// nolint: gosec
 	oidcHMACSecretName = "envoy-oidc-hmac"
 	oidcHMACSecretKey  = "hmac-secret"
@@ -64,18 +75,28 @@ const (
 var newOIDCDiscoveryHTTPClient = newGuardedOIDCDiscoveryHTTPClient
 
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
-	deprecatedFields := make(map[string]string)
+func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
 	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
+		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
 	}
 	if policy.Spec.ExtAuth != nil {
-		if policy.Spec.ExtAuth.GRPC != nil && policy.Spec.ExtAuth.GRPC.BackendRef != nil {
-			deprecatedFields["spec.extAuth.grpc.backendRef"] = "spec.extAuth.grpc.backendRefs"
+		if policy.Spec.ExtAuth.GRPC != nil {
+			deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.extAuth.grpc", &policy.Spec.ExtAuth.GRPC.BackendCluster, nil)
 		}
-		if policy.Spec.ExtAuth.HTTP != nil && policy.Spec.ExtAuth.HTTP.BackendRef != nil {
-			deprecatedFields["spec.extAuth.http.backendRef"] = "spec.extAuth.http.backendRefs"
+		if policy.Spec.ExtAuth.HTTP != nil {
+			deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.extAuth.http", &policy.Spec.ExtAuth.HTTP.BackendCluster, nil)
 		}
+	}
+	if policy.Spec.JWT != nil {
+		for i := range policy.Spec.JWT.Providers {
+			if jwks := policy.Spec.JWT.Providers[i].RemoteJWKS; jwks != nil {
+				deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, fmt.Sprintf("spec.jwt.providers[%d].remoteJWKS", i), &jwks.BackendCluster, nil)
+			}
+		}
+	}
+	if policy.Spec.OIDC != nil {
+		deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.oidc.provider", &policy.Spec.OIDC.Provider.BackendCluster, nil)
 	}
 	return deprecatedFields
 }
@@ -89,6 +110,8 @@ func (t *Translator) ProcessSecurityPolicies(
 ) []*egv1a1.SecurityPolicy {
 	// Cache is only reused during one translation across multiple routes and gateways.
 	// The failed fetches will be retried in the next translation when the provider resources are reconciled again.
+	// The last successful discovery result per issuer is retained across translations in
+	// oidcDiscoveryFallback and used when a later discovery attempt fails.
 	t.oidcDiscoveryCache = newOIDCDiscoveryCache()
 
 	// SecurityPolicies are already sorted by the provider layer
@@ -123,6 +146,10 @@ func (t *Translator) ProcessSecurityPolicies(
 		key := utils.NamespacedName(ls)
 		listenerSetMap[key] = &policyListenerSetTargetContext{ListenerSet: ls}
 	}
+
+	// jwtNames is shared by every policy of this translation, so a conflict between
+	// policies is caught in the order the policies are applied.
+	jwtNames := newJWTRequirementNames()
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
@@ -167,7 +194,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget, jwtNames)
 			}
 		}
 	}
@@ -191,7 +218,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, overrides, merged, policy, currTarget, jwtNames)
 			}
 		}
 	}
@@ -214,7 +241,7 @@ func (t *Translator) ProcessSecurityPolicies(
 						res = append(res, policy)
 					}
 
-					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget, jwtNames)
 				}
 			}
 		}
@@ -239,7 +266,7 @@ func (t *Translator) ProcessSecurityPolicies(
 						res = append(res, policy)
 					}
 
-					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget)
+					t.processSecurityPolicyForListenerSet(resources, xdsIR, gatewayMap, listenerSetMap, overrides, merged, policy, currTarget, jwtNames)
 				}
 			}
 		}
@@ -259,7 +286,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget, jwtNames)
 			}
 		}
 	}
@@ -284,7 +311,7 @@ func (t *Translator) ProcessSecurityPolicies(
 					res = append(res, policy)
 				}
 
-				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget)
+				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, overrides, merged, policy, currTarget, jwtNames)
 			}
 		}
 	}
@@ -416,6 +443,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	merged policyScopeGraph,
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
+	jwtNames jwtRequirementNames,
 ) {
 	var (
 		targetedRoute RouteContext
@@ -507,7 +535,10 @@ func (t *Translator) processSecurityPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
-
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -530,14 +561,16 @@ func (t *Translator) processSecurityPolicyForRoute(
 			policy.Generation,
 			status.Error2ConditionMsg(fmt.Errorf("%s: %w", errMsg, err)),
 		)
-
+		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
 		// No merging - use existing translation logic
-		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil); err != nil {
+		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil, jwtNames); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -592,7 +625,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 				if parentPolicy == nil {
 					// No parent policy found, fall back to current policy
-					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
+					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, listener, jwtNames); err != nil {
 						errMsgs.Insert(status.Error2ConditionMsg(err))
 					}
 					continue
@@ -611,7 +644,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Apply merged policy
-				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener); err != nil {
+				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, listener, jwtNames); err != nil {
 					errMsgs.Insert(status.Error2ConditionMsg(err))
 					continue
 				}
@@ -669,6 +702,7 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 	merged policyScopeGraph,
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
+	jwtNames jwtRequirementNames,
 ) {
 	var (
 		targeted   *gwapiv1.ListenerSet
@@ -707,6 +741,10 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -720,7 +758,7 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 		overrides.Add(gatewayScope(parentGatewayNN), listenerSetScope(listenerSetNN))
 	}
 
-	if err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForListenerSet(policy, gateway.GatewayContext, targeted, currTarget, resources, xdsIR, jwtNames); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -783,6 +821,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	merged policyScopeGraph,
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
+	jwtNames jwtRequirementNames,
 ) {
 	var (
 		targetedGateway *GatewayContext
@@ -810,6 +849,10 @@ func (t *Translator) processSecurityPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
+		// The policy is still admitted, so report its deprecated fields too.
+		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
+		}
 		return
 	}
 
@@ -820,7 +863,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR); err != nil {
+	if err := t.translateSecurityPolicyForGateway(policy, targetedGateway, currTarget, resources, xdsIR, jwtNames); err != nil {
 		status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 			&ancestorRef,
 			t.GatewayControllerName,
@@ -1224,6 +1267,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	targetListener *ListenerContext,
+	jwtNames jwtRequirementNames,
 ) error {
 	// Build IR
 	var (
@@ -1282,6 +1326,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	prefix := irRoutePrefix(route)
 	parentRefs := GetParentReferences(route)
 	routesWithDirectResponse := sets.New[string]()
+	// A requirement name conflict is reported once however many routes it refuses.
+	var jwtConflictReported bool
 
 	var targetListenerName string
 	var targetGatewayNN types.NamespacedName
@@ -1470,6 +1516,16 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							}
 
 							r.Security = securityFeatures
+							if err := jwtNames.record(irKey, r); err != nil {
+								if !jwtConflictReported {
+									jwtConflictReported = true
+									errs = errors.Join(errs, err)
+								}
+								// The requirement would replace another route's; refuse the route.
+								r.DirectResponse = directResponse
+								routesWithDirectResponse.Insert(r.Name)
+								continue
+							}
 
 							// Validate GeoIP if clientIPGeoLocations is used in the Authorization.
 							// We have to validate GeoIP here because it reuses the listener-level ClientIPDetection configuration from CTP.
@@ -1520,6 +1576,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	jwtNames jwtRequirementNames,
 ) error {
 	return t.translateSecurityPolicyForListeners(
 		policy,
@@ -1527,6 +1584,7 @@ func (t *Translator) translateSecurityPolicyForListenerSet(
 		resources,
 		xdsIR,
 		listenerSetPolicyTargetListeners(gtwCtx, listenerSet, target),
+		jwtNames,
 	)
 }
 
@@ -1536,6 +1594,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	target policyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	jwtNames jwtRequirementNames,
 ) error {
 	return t.translateSecurityPolicyForListeners(
 		policy,
@@ -1543,6 +1602,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		resources,
 		xdsIR,
 		gatewayPolicyTargetListeners(gtwCtx, target),
+		jwtNames,
 	)
 }
 
@@ -1552,6 +1612,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
 	targetListeners []*ListenerContext,
+	jwtNames jwtRequirementNames,
 ) error {
 	// Build IR
 	noOwners := &securityPolicyOwners{}
@@ -1675,6 +1736,8 @@ func (t *Translator) translateSecurityPolicyForListeners(
 	routesWithDirectResponse := sets.New[string]()
 	hasBaseErrs := errs != nil
 	directResponse := &ir.CustomResponse{StatusCode: new(uint32(500))}
+	// A requirement name conflict is reported once however many routes it refuses.
+	var jwtConflictReported bool
 	for _, h := range x.HTTP {
 		if !listenerNames.Has(h.Name) {
 			continue
@@ -1717,6 +1780,16 @@ func (t *Translator) translateSecurityPolicyForListeners(
 				continue
 			}
 			r.Security = securityFeatures
+			if err := jwtNames.record(irKey, r); err != nil {
+				if !jwtConflictReported {
+					jwtConflictReported = true
+					errs = errors.Join(errs, err)
+				}
+				// The requirement would replace another route's; refuse the route.
+				r.DirectResponse = directResponse
+				routesWithDirectResponse.Insert(r.Name)
+				continue
+			}
 			if errorResponse != nil {
 				r.DirectResponse = errorResponse
 				routesWithDirectResponse.Insert(r.Name)
@@ -1923,7 +1996,90 @@ func (t *Translator) buildJWT(
 		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
 		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
 		Providers:            providers,
+		Name:                 jwtName(policy, owners),
 	}, nil
+}
+
+// maxJWTNameLength bounds the length of a JWT name, which the xds translator uses as
+// the jwt_authn requirement name. A merged policy's name joins two policy names, and
+// would otherwise exceed it.
+const maxJWTNameLength = 256
+
+// jwtName names the JWT config a SecurityPolicy applies to a route after the
+// policy: <namespace>/<name>, or for a merged policy the route and parent policies
+// it was built from, <route namespace>/<route name>+<parent namespace>/<parent name>.
+//
+// The xds translator uses the name as the jwt_authn requirement name, which the
+// listener's requirement_map and the routes' requirement_name both carry. The name
+// depends only on which policies apply, not on their JWT config, so an edit of the
+// providers, optional or failOpen changes only the requirement content and does not
+// rename the requirement that routes refer to. The whole JWT config is derived from
+// the named policies, so routes that share a name carry the same JWT.
+func jwtName(policy *egv1a1.SecurityPolicy, owners *securityPolicyOwners) string {
+	// A merged policy takes its metadata from the route policy, so policy names the
+	// route policy either way.
+	name := utils.NamespacedName(policy).String()
+	if owners.mergedParent != nil {
+		// Kubernetes namespaces and names cannot contain '+', so the separator never
+		// reads as part of a policy name.
+		name += "+" + utils.NamespacedName(owners.mergedParent).String()
+	}
+	if len(name) <= maxJWTNameLength {
+		return name
+	}
+	// Hash the full name, so a truncated name still depends only on the policies
+	// and two long names do not collide.
+	sum := sha256.Sum256([]byte(name))
+	suffix := "_" + hex.EncodeToString(sum[:8])
+	return name[:maxJWTNameLength-len(suffix)] + suffix
+}
+
+// jwtRequirementNames keeps one translation's jwt_authn requirement names
+// unambiguous. One requirement_map holds the routes of every listener on a port,
+// and a name shared by two different requirements would let one silently replace
+// the other.
+//
+// buildJWT does not produce such conflicts today (see jwtName). This guards against
+// a later change breaking that: the first JWT config recorded under a name in an
+// xds IR keeps it, and a later route that carries a different config under the
+// same name is refused. SecurityPolicies are applied in a fixed order (oldest
+// first, then by name), so the same route keeps the name on every translation.
+type jwtRequirementNames map[jwtRequirementNameScope]*ir.JWT
+
+// jwtRequirementNameScope is one requirement name within one xds IR.
+type jwtRequirementNameScope struct {
+	irKey string
+	name  string
+}
+
+func newJWTRequirementNames() jwtRequirementNames {
+	return jwtRequirementNames{}
+}
+
+// record is called once a route of the xds IR irKey has its SecurityFeatures set.
+// It returns an error, and drops the route's JWT so the requirement never reaches
+// the requirement_map, when another route already holds the name with a different
+// config. The caller refuses the route.
+func (n jwtRequirementNames) record(irKey string, r *ir.HTTPRoute) error {
+	if r.Security == nil || r.Security.JWT == nil || r.Security.JWT.Name == "" {
+		return nil
+	}
+	scope := jwtRequirementNameScope{irKey: irKey, name: r.Security.JWT.Name}
+	first, ok := n[scope]
+	if !ok {
+		n[scope] = r.Security.JWT
+		return nil
+	}
+	if reflect.DeepEqual(first, r.Security.JWT) {
+		return nil
+	}
+	// Routes share SecurityFeatures; copy them so the other routes keep their JWT.
+	security := *r.Security
+	security.JWT = nil
+	r.Security = &security
+	return perr.WithMessage(fmt.Errorf(
+		"the jwt requirement %s differs from the one another route of the same gateway already holds",
+		scope.name), "JWT")
 }
 
 func validateJWTProvider(providers []egv1a1.JWTProvider) error {
@@ -2103,10 +2259,11 @@ func (t *Translator) buildLocalJWKS(
 			return jwksBytes, nil
 		}
 		if len(cm.Data) > 0 {
-			// Fallback to the first entry in the ConfigMap data if "jwks" key is not present
-			for _, v := range cm.Data {
-				return v, nil
-			}
+			// Fallback to the first entry in the ConfigMap data if "jwks" key is not present.
+			// Take the first key in sorted order rather than in map iteration order, so
+			// every build of the policy's JWT, on any route and any translation, picks the
+			// same entry.
+			return cm.Data[slices.Sorted(maps.Keys(cm.Data))[0]], nil
 		}
 
 		return "", fmt.Errorf(
@@ -2267,6 +2424,7 @@ func (t *Translator) buildOIDC(
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,
 		CookieDomain:           policy.Spec.OIDC.CookieDomain,
 		CookieConfig:           policy.Spec.OIDC.CookieConfig,
+		TokenCookieChunking:    !t.OIDCTokenCookieChunkingDisabled,
 		HMACSecret:             hmacData,
 		PassThroughAuthHeader:  passThroughAuthHeader,
 		DisableTokenEncryption: disableTokenEncryption,
@@ -2377,7 +2535,7 @@ func (t *Translator) buildOIDCProvider(
 	// If either of them is not provided, we need to fetch them from the issuer's well-known url.
 	if userProvidedAuthorizationEndpoint == "" || userProvidedTokenEndpoint == "" {
 		// Fetch the endpoints from the issuer's well-known url.
-		discoveredConfig, err := t.fetchEndpointsFromIssuer(provider.Issuer, providerTLS)
+		discoveredConfig, err := t.fetchEndpointsFromIssuer(provider.Issuer, providerTLS, userProvidedTokenEndpoint != "")
 		if err != nil {
 			return nil, err
 		}
@@ -2575,7 +2733,9 @@ func (o *OpenIDConfig) validate() error {
 	return nil
 }
 
-func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
+// fetchEndpointsFromIssuer discovers the OpenID configuration of the issuer. tokenEndpointOverridden
+// reports that the policy sets its own token endpoint, so the discovered one is not used.
+func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig, tokenEndpointOverridden bool) (*OpenIDConfig, error) {
 	if config, cachedErr, ok := t.oidcDiscoveryCache.Get(issuerURL); ok {
 		if cachedErr != nil {
 			return nil, cachedErr
@@ -2585,10 +2745,28 @@ func (t *Translator) fetchEndpointsFromIssuer(issuerURL string, providerTLS *ir.
 
 	config, err := discoverEndpointsFromIssuer(issuerURL, providerTLS)
 	if err != nil {
+		// Fall back to the last configuration successfully discovered for this issuer, if any,
+		// so that a transient discovery failure does not break every route protected by it.
+		// Errors in the local issuer or TLS configuration are surfaced instead of being masked.
+		var configErr *oidcDiscoveryConfigError
+		if !errors.As(err, &configErr) {
+			if fallback, ok := oidcDiscoveryFallback.Get(issuerURL); ok {
+				t.Logger.Error(err, "OIDC discovery failed, using the last successfully discovered configuration",
+					"issuer", issuerURL)
+				t.oidcDiscoveryCache.Set(issuerURL, fallback, nil)
+				return fallback, nil
+			}
+		}
 		t.oidcDiscoveryCache.Set(issuerURL, nil, err)
 		return nil, err
 	}
 
+	// Only retain a result whose token endpoint passes the validation applied when the provider
+	// is built, so that an unusable discovery result never replaces a usable fallback. The check
+	// is skipped when the policy overrides the token endpoint, since the discovered one is unused.
+	if tokenEndpointOverridden || validateTokenEndpoint(config.TokenEndpoint) == nil {
+		oidcDiscoveryFallback.Set(issuerURL, config)
+	}
 	t.oidcDiscoveryCache.Set(issuerURL, config, nil)
 	return config, nil
 }
@@ -2709,15 +2887,26 @@ func isBlockedOIDCDiscoveryAddr(addr netip.Addr) bool {
 		addr.IsMulticast()
 }
 
+// oidcDiscoveryConfigError reports a discovery failure caused by the local issuer or TLS
+// configuration rather than by the remote issuer. Such failures are never masked by the
+// last successfully discovered configuration.
+type oidcDiscoveryConfigError struct {
+	err error
+}
+
+func (e *oidcDiscoveryConfigError) Error() string { return e.err.Error() }
+
+func (e *oidcDiscoveryConfigError) Unwrap() error { return e.err }
+
 func discoverEndpointsFromIssuer(issuerURL string, providerTLS *ir.TLSUpstreamConfig) (*OpenIDConfig, error) {
 	issuer, err := validateOIDCIssuerURL(issuerURL)
 	if err != nil {
-		return nil, err
+		return nil, &oidcDiscoveryConfigError{err: err}
 	}
 
 	client, err := newOIDCDiscoveryHTTPClient(providerTLS)
 	if err != nil {
-		return nil, err
+		return nil, &oidcDiscoveryConfigError{err: err}
 	}
 	discoveryURL := buildOIDCDiscoveryURL(issuer)
 
@@ -2798,6 +2987,83 @@ func (c *oidcDiscoveryCache) Set(issuer string, cfg *OpenIDConfig, err error) {
 		config: cfg,
 		err:    err,
 	}
+}
+
+// maxOIDCDiscoveryFallbackEntries caps the number of issuers whose last successful discovery
+// result is retained across translations. The number of OIDC providers used by a cluster is
+// typically small, so a small bound with LRU eviction is sufficient.
+const maxOIDCDiscoveryFallbackEntries = 128
+
+// oidcDiscoveryFallback retains the last successfully discovered OpenID configuration per issuer
+// for the lifetime of the process. It is shared by all translations and consulted when discovery
+// fails, so that a transient IdP outage does not result in a 500 response on every route
+// protected by that issuer.
+var oidcDiscoveryFallback = newOIDCDiscoveryFallbackCache(maxOIDCDiscoveryFallbackEntries)
+
+// oidcDiscoveryFallbackCache is a size-capped LRU cache of OpenID configurations keyed by issuer.
+// It is safe for concurrent use.
+type oidcDiscoveryFallbackCache struct {
+	mu         sync.Mutex
+	maxEntries int
+	entries    map[string]*list.Element
+	// order holds *oidcDiscoveryFallbackEntry values, most recently used first.
+	order *list.List
+}
+
+type oidcDiscoveryFallbackEntry struct {
+	issuer string
+	config *OpenIDConfig
+}
+
+func newOIDCDiscoveryFallbackCache(maxEntries int) *oidcDiscoveryFallbackCache {
+	return &oidcDiscoveryFallbackCache{
+		maxEntries: maxEntries,
+		entries:    make(map[string]*list.Element),
+		order:      list.New(),
+	}
+}
+
+// Get returns the last configuration successfully discovered for the issuer, if any, and marks
+// it as the most recently used entry.
+func (c *oidcDiscoveryFallbackCache) Get(issuer string) (*OpenIDConfig, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	elem, ok := c.entries[issuer]
+	if !ok {
+		return nil, false
+	}
+	c.order.MoveToFront(elem)
+
+	return elem.Value.(*oidcDiscoveryFallbackEntry).config, true
+}
+
+// Set stores the configuration discovered for the issuer as the most recently used entry,
+// evicting the least recently used entries beyond the cap.
+func (c *oidcDiscoveryFallbackCache) Set(issuer string, cfg *OpenIDConfig) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if elem, ok := c.entries[issuer]; ok {
+		elem.Value.(*oidcDiscoveryFallbackEntry).config = cfg
+		c.order.MoveToFront(elem)
+		return
+	}
+
+	c.entries[issuer] = c.order.PushFront(&oidcDiscoveryFallbackEntry{issuer: issuer, config: cfg})
+	for c.order.Len() > c.maxEntries {
+		oldest := c.order.Back()
+		c.order.Remove(oldest)
+		delete(c.entries, oldest.Value.(*oidcDiscoveryFallbackEntry).issuer)
+	}
+}
+
+// Len returns the number of entries currently retained.
+func (c *oidcDiscoveryFallbackCache) Len() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.order.Len()
 }
 
 func retryable(code int) bool {
@@ -3083,7 +3349,8 @@ func (t *Translator) buildExtAuth(
 
 	if policy.Spec.ExtAuth.BodyToExtAuth != nil {
 		extAuth.BodyToExtAuth = &ir.BodyToExtAuth{
-			MaxRequestBytes: policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes,
+			MaxRequestBytes: ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.MaxRequestBytes, defaultExtAuthMaxRequestBytes),
+			PackAsBytes:     ptr.Deref(policy.Spec.ExtAuth.BodyToExtAuth.PackAsBytes, false),
 		}
 	}
 
@@ -3415,6 +3682,10 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 }
 
 type securityPolicyOwners struct {
+	// mergedParent is the parent policy a merged policy was built from, rather than
+	// the owner of a field. It is nil when the policy is not merged.
+	mergedParent *egv1a1.SecurityPolicy
+
 	basicAuth                *egv1a1.SecurityPolicy
 	apiKeyAuthCredentialRefs *egv1a1.SecurityPolicy
 	authorizationRules       *egv1a1.SecurityPolicy
@@ -3446,6 +3717,7 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 // and to derive IR resource names tied to the owning policy.
 func buildSecurityPolicyOwners(route, parent *egv1a1.SecurityPolicy) *securityPolicyOwners {
 	return &securityPolicyOwners{
+		mergedParent: parent,
 		basicAuth: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
 			return p.Spec.BasicAuth != nil
 		}),
