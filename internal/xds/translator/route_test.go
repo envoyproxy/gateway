@@ -7,7 +7,7 @@ package translator
 
 import (
 	"reflect"
-	"regexp"
+	"strings"
 	"testing"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -462,21 +462,53 @@ func TestBuildXdsURLRewriteAction_RootPrefixReplacePrefixMatch(t *testing.T) {
 	pathMatch := &ir.StringMatch{Prefix: new("/")}
 
 	got := buildXdsURLRewriteAction(baseRoute, urlRewrite, pathMatch, nil)
-	if got.GetRegexRewrite().GetSubstitution() != "/prefix-match/" {
-		t.Errorf("RegexRewrite substitution = %q, want %q (PrefixRewrite = %q)",
-			got.GetRegexRewrite().GetSubstitution(), "/prefix-match/", got.GetPrefixRewrite())
+	if got.GetPrefixRewrite() != "/prefix-match/" {
+		t.Errorf("PrefixRewrite = %q, want %q", got.GetPrefixRewrite(), "/prefix-match/")
 	}
-	// Apply the rewrite the way Envoy does (regex replace, literal substitution)
-	// and check the upstream path keeps its separator.
-	re := regexp.MustCompile(got.GetRegexRewrite().GetPattern().GetRegex())
+	// Apply the prefix rewrite the way Envoy does: the matched "/" prefix is
+	// replaced by the rewrite value and the rest of the path is appended.
 	for in, want := range map[string]string{
 		"/doc":     "/prefix-match/doc",
 		"/":        "/prefix-match/",
 		"/a/b.txt": "/prefix-match/a/b.txt",
 	} {
-		if gotPath := re.ReplaceAllLiteralString(in, got.GetRegexRewrite().GetSubstitution()); gotPath != want {
+		if gotPath := got.GetPrefixRewrite() + strings.TrimPrefix(in, "/"); gotPath != want {
 			t.Errorf("rewritten path for %q = %q, want %q", in, gotPath, want)
 		}
+	}
+}
+
+func TestBuildXdsURLRewriteAction_RootPrefixReplacePrefixMatchIsLiteral(t *testing.T) {
+	baseRoute := &ir.HTTPRoute{
+		Name: "test-route",
+		Destination: &ir.RouteDestination{
+			Name: "test-dest",
+			Settings: []*ir.DestinationSetting{
+				{
+					Endpoints: []*ir.DestinationEndpoint{
+						{Host: "1.2.3.4", Port: 8080},
+					},
+				},
+			},
+		},
+	}
+	// Envoy's regex substitution uses RE2 rewrite syntax, so a backslash
+	// reference in ReplacePrefixMatch must not reach RegexRewrite unescaped.
+	urlRewrite := &ir.URLRewrite{
+		Path: &ir.ExtendedHTTPPathModifier{
+			HTTPPathModifier: ir.HTTPPathModifier{
+				PrefixMatchReplace: new(`/v1/\1/`),
+			},
+		},
+	}
+	pathMatch := &ir.StringMatch{Prefix: new("/")}
+
+	got := buildXdsURLRewriteAction(baseRoute, urlRewrite, pathMatch, nil)
+	if got.GetRegexRewrite() != nil {
+		t.Errorf("RegexRewrite = %v, want nil so the replace value is applied literally", got.GetRegexRewrite())
+	}
+	if got.GetPrefixRewrite() != `/v1/\1/` {
+		t.Errorf("PrefixRewrite = %q, want %q", got.GetPrefixRewrite(), `/v1/\1/`)
 	}
 }
 

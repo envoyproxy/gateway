@@ -603,13 +603,8 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 			} else if pathMatch != nil && pathMatch.Prefix != nil && *pathMatch.Prefix == "/" {
 				// Trimming the trailing "/" below would drop the separator for a root prefix,
 				// e.g. "/" -> "/prefix-match/" would yield "/prefix-matchdoc" for "/doc".
-				// Keep the replace string as-is and consume exactly one leading "/" of the request path.
-				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
-					Pattern: &matcherv3.RegexMatcher{
-						Regex: `^/`,
-					},
-					Substitution: *urlRewrite.Path.PrefixMatchReplace,
-				}
+				// PrefixRewrite is applied literally, whereas RegexRewrite uses RE2 substitution syntax.
+				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
 			} else {
 				// remove trailing / to fix #3989
 				// when the pathMath.Prefix has suffix / but EG has removed it,
