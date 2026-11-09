@@ -37,6 +37,10 @@ const (
 	RouteReasonRouteRulesOverlap    gwapiv1.RouteConditionReason = "RouteRulesOverlap"
 	RouteConditionRouteRulesOverlap gwapiv1.RouteConditionType   = "RouteRulesOverlap"
 
+	// Ineffective backend priority reason and condition type
+	RouteReasonBackendPriorityIneffective    gwapiv1.RouteConditionReason = "BackendPriorityIneffective"
+	RouteConditionBackendPriorityIneffective gwapiv1.RouteConditionType   = "BackendPriorityIneffective"
+
 	// Network configuration related condition types
 	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"
 )

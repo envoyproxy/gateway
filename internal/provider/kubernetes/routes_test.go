@@ -313,6 +313,79 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "httproute with extension filter of kind HTTPRouteFilter in another group",
+			routes: []*gwapiv1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: httpRouteNS,
+						Name:      "test",
+					},
+					Spec: gwapiv1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1.CommonRouteSpec{
+							ParentRefs: []gwapiv1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1.HTTPPathMatch{
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/"),
+										},
+									},
+								},
+								Filters: []gwapiv1.HTTPRouteFilter{
+									{
+										Type: gwapiv1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1.LocalObjectReference{
+											Group: gwapiv1.Group("gateway.example.io"),
+											Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+											Name:  gwapiv1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1.BackendRef{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(resource.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			extensionFilters: []*unstructured.Unstructured{
+				{
+					Object: map[string]interface{}{
+						"apiVersion": "gateway.example.io/v1alpha1",
+						"kind":       egv1a1.KindHTTPRouteFilter,
+						"metadata": map[string]interface{}{
+							"name":      "test",
+							"namespace": httpRouteNS,
+						},
+					},
+				},
+			},
+			extensionAPIGroups: []schema.GroupVersionKind{
+				{
+					Group:   "gateway.example.io",
+					Version: "v1alpha1",
+					Kind:    egv1a1.KindHTTPRouteFilter,
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "httproute with invalid timeout setting for HTTPRouteRule",
 			routes: []*gwapiv1.HTTPRoute{
 				{
@@ -641,7 +714,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				objs = append(objs, filter)
 			}
 			r.client = fakeclient.NewClientBuilder().
-				WithScheme(envoygateway.GetScheme()).
+				WithScheme(newTestScheme(tc.extensionAPIGroups...)).
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
 				Build()
@@ -947,7 +1020,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				objs = append(objs, filter)
 			}
 			r.client = fakeclient.NewClientBuilder().
-				WithScheme(envoygateway.GetScheme()).
+				WithScheme(newTestScheme(tc.extensionAPIGroups...)).
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
 				WithIndex(&gwapiv1.GRPCRoute{}, listenerSetGRPCRouteIndex, listenerSetGRPCRouteIndexFunc).

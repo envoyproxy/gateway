@@ -116,6 +116,13 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 
 	logger.Info("received shutdown ready request")
 
+	// Allow the readiness wait and final response to outlast the server write timeout.
+	if err := http.NewResponseController(w).SetWriteDeadline(startTime.Add(readyTimeout + 5*time.Second)); err != nil {
+		logger.Error(err, "error setting shutdown readiness write deadline")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	// Poll for shutdown readiness
 	for {
 		// Check if ready timeout is exceeded

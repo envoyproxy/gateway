@@ -248,7 +248,7 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httpRouteFilterRefs := make(map[string]struct{})
 	for _, rule := range httproute.Spec.Rules {
 		for _, filter := range rule.Filters {
-			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+			if gatewayapi.IsHTTPRouteFilterRef(filter.ExtensionRef) {
 				httpRouteFilterRefs[types.NamespacedName{
 					Namespace: httproute.Namespace,
 					Name:      string(filter.ExtensionRef.Name),
@@ -257,7 +257,7 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 		}
 		for _, backendRef := range rule.BackendRefs {
 			for _, filter := range backendRef.Filters {
-				if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+				if gatewayapi.IsHTTPRouteFilterRef(filter.ExtensionRef) {
 					httpRouteFilterRefs[types.NamespacedName{
 						Namespace: httproute.Namespace,
 						Name:      string(filter.ExtensionRef.Name),
@@ -280,7 +280,7 @@ func httpRouteFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
 	// backendRef-level filters are intentionally not indexed.
 	for _, rule := range grpcroute.Spec.Rules {
 		for _, filter := range rule.Filters {
-			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+			if gatewayapi.IsHTTPRouteFilterRef(filter.ExtensionRef) {
 				httpRouteFilterRefs[types.NamespacedName{
 					Namespace: grpcroute.Namespace,
 					Name:      string(filter.ExtensionRef.Name),

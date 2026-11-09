@@ -557,13 +557,8 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 		}
 		validListenerCountByPort[listener.Port]++
 
-		if len(listener.tls.extensionCertificates) > 0 {
-			sdsListenersByPort[listener.Port] = append(sdsListenersByPort[listener.Port], listener)
-			continue
-		}
-
 		for _, secret := range listener.tls.secrets {
-			if secret.Type == egv1a1.SDSSecretType {
+			if secret.extensionSecret != nil || secret.kubernetesSecret.Type == egv1a1.SDSSecretType {
 				sdsListenersByPort[listener.Port] = append(sdsListenersByPort[listener.Port], listener)
 				break
 			}
