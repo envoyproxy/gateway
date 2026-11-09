@@ -1,1 +1,1 @@
-Added JWT-or-Basic authentication composition, authorization rules for verified Basic usernames, and opt-in delivery of verified authentication metadata to gRPC external authorization services.
+Added `authentication.mode: Any` to SecurityPolicy, which accepts a request authenticated by either JWT or Basic authentication.

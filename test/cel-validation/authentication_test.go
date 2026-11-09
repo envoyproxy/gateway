@@ -12,42 +12,86 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func TestAuthenticationAPI(t *testing.T) {
+func TestAuthenticationMode(t *testing.T) {
+	routeTarget := egv1a1.PolicyTargetReferences{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "HTTPRoute", Name: "backend"},
+	}}}
+	jwt := &egv1a1.JWT{Providers: []egv1a1.JWTProvider{{
+		Name:       "example",
+		Issuer:     "https://issuer.example",
+		RemoteJWKS: &egv1a1.RemoteJWKS{URI: "https://issuer.example/keys"},
+	}}}
+	basicAuth := func() *egv1a1.BasicAuth {
+		return &egv1a1.BasicAuth{Users: gwapiv1.SecretObjectReference{Name: "users"}}
+	}
+
 	for _, test := range []struct {
 		name    string
-		mode    egv1a1.AuthenticationMode
-		users   []string
-		invalid bool
+		spec    func(*egv1a1.SecurityPolicySpec)
+		wantErr string
 	}{
-		{"any", egv1a1.AuthenticationModeAny, []string{"alice"}, false},
-		{"all", egv1a1.AuthenticationModeAll, []string{"alice"}, false},
-		{"default", "", []string{"alice"}, false},
-		{"unknown", "Unknown", []string{"alice"}, true},
-		{"empty-users", egv1a1.AuthenticationModeAny, []string{}, true},
+		{name: "any", spec: func(*egv1a1.SecurityPolicySpec) {}},
+		{name: "all", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.Mode = egv1a1.AuthenticationModeAll }},
+		{name: "default", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.Mode = "" }},
+		{name: "unknown", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.Mode = "Unknown" }, wantErr: "supported values"},
+		{name: "any without jwt", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.JWT = nil }, wantErr: "authentication.mode Any requires jwt and basicAuth"},
+		{name: "any without basic", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.BasicAuth = nil }, wantErr: "authentication.mode Any requires jwt and basicAuth"},
+		{
+			name: "any inherits methods with mergeType",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.JWT, spec.BasicAuth = nil, nil
+				spec.MergeType = new(egv1a1.JSONMerge)
+			},
+		},
+		{
+			name: "any with apiKeyAuth",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.APIKeyAuth = &egv1a1.APIKeyAuth{
+					CredentialRefs: []gwapiv1.SecretObjectReference{{Name: "keys"}},
+					ExtractFrom:    []*egv1a1.ExtractFrom{{Headers: []string{"x-api-key"}}},
+				}
+			},
+			wantErr: "authentication.mode Any does not support oidc or apiKeyAuth",
+		},
+		{
+			name:    "any with forwarded username",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.BasicAuth.ForwardUsernameHeader = new("x-user") },
+			wantErr: "authentication.mode Any does not support basicAuth.forwardUsernameHeader",
+		},
+		{
+			name: "all with forwarded username",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.Authentication.Mode = egv1a1.AuthenticationModeAll
+				spec.BasicAuth.ForwardUsernameHeader = new("x-user")
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			policy := &egv1a1.SecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: "authentication-" + test.name, Namespace: "default"}, Spec: egv1a1.SecurityPolicySpec{
-				PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "HTTPRoute", Name: "backend"}}}},
-				Authentication:         &egv1a1.Authentication{Mode: test.mode},
-				JWT:                    &egv1a1.JWT{Providers: []egv1a1.JWTProvider{{Name: "example", Issuer: "https://issuer.example", RemoteJWKS: &egv1a1.RemoteJWKS{URI: "https://issuer.example/keys"}}}},
-				BasicAuth:              &egv1a1.BasicAuth{Users: gwapiv1.SecretObjectReference{Name: "users"}},
-				Authorization:          &egv1a1.Authorization{Rules: []egv1a1.AuthorizationRule{{Action: egv1a1.AuthorizationActionAllow, Principal: &egv1a1.Principal{BasicAuth: &egv1a1.BasicAuthPrincipal{Users: test.users}}}}},
-			}}
+			policy := &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "authentication-", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: routeTarget,
+					Authentication:         &egv1a1.Authentication{Mode: egv1a1.AuthenticationModeAny},
+					JWT:                    jwt.DeepCopy(),
+					BasicAuth:              basicAuth(),
+				},
+			}
+			test.spec(&policy.Spec)
+
 			err := c.Create(t.Context(), policy)
-			if test.invalid {
-				require.True(t, apierrors.IsInvalid(err), "expected admission rejection, got %v", err)
+			if test.wantErr != "" {
+				require.ErrorContains(t, err, test.wantErr)
 				return
 			}
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, c.Delete(context.WithoutCancel(t.Context()), policy)) })
-			if test.mode == "" {
+			if test.name == "default" {
 				require.Equal(t, egv1a1.AuthenticationModeAll, policy.Spec.Authentication.Mode)
 			}
 		})

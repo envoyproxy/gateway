@@ -13,11 +13,6 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // +kubebuilder:validation:XValidation:rule="(has(self.grpc) && !has(self.http)) || (!has(self.grpc) && has(self.http))",message="only one of grpc or http can be specified"
 // +kubebuilder:validation:XValidation:rule="!has(self.bodyToExtAuth) || !has(self.bodyToExtAuth.packAsBytes) || !self.bodyToExtAuth.packAsBytes || has(self.grpc)",message="packAsBytes can only be enabled when grpc is specified"
 type ExtAuth struct {
-	// IncludeAuthenticationMetadata sends verified JWT payloads and Basic usernames to a gRPC service.
-	// The service must run after authentication, fail closed, and not recompute routes.
-	// +optional
-	IncludeAuthenticationMetadata *bool `json:"includeAuthenticationMetadata,omitempty"`
-
 	// GRPC defines the gRPC External Authorization service.
 	// Either GRPCService or HTTPService must be specified,
 	// and only one of them can be provided.

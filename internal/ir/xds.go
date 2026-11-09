@@ -1441,7 +1441,8 @@ func (b *TrafficFeatures) Validate() error {
 // SecurityFeatures holds the information associated with the Security Policy.
 // +k8s:deepcopy-gen=true
 type SecurityFeatures struct {
-	// AuthenticationAny requires at least one configured authentication method to succeed.
+	// AuthenticationAny requires JWT or BasicAuth authentication to succeed, with each
+	// method tolerating missing credentials on its own.
 	AuthenticationAny bool `json:"authenticationAny,omitempty" yaml:"authenticationAny,omitempty"`
 
 	// CORS policy for the route.
@@ -1760,7 +1761,7 @@ type OIDCProvider struct {
 type BasicAuth struct {
 	// AllowMissing permits requests without Basic credentials.
 	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
-	// EmitDynamicMetadata publishes verified usernames for authorization.
+	// EmitDynamicMetadata stores the verified username in the filter's dynamic metadata.
 	EmitDynamicMetadata bool `json:"emitDynamicMetadata,omitempty" yaml:"emitDynamicMetadata,omitempty"`
 
 	// Name is a unique name for an BasicAuth configuration.
@@ -1839,9 +1840,6 @@ type ExtractFrom struct {
 //
 // +k8s:deepcopy-gen=true
 type ExtAuth struct {
-	// AuthenticationMetadataNamespaces identifies verified authentication metadata.
-	AuthenticationMetadataNamespaces []string `json:"authenticationMetadataNamespaces,omitempty"`
-
 	// Name is a unique name for an ExtAuth configuration.
 	// The xds translator only generates one external authorization filter for each unique name.
 	Name string `json:"name" yaml:"name"`
@@ -2053,11 +2051,6 @@ type AuthorizationRule struct {
 //
 // +k8s:deepcopy-gen=true
 type Principal struct {
-	// BasicAuth matches a verified username.
-	BasicAuth *egv1a1.BasicAuthPrincipal `json:"basicAuth,omitempty"`
-	// BasicAuthFilter identifies the applicable metadata namespace.
-	BasicAuthFilter string `json:"basicAuthFilter,omitempty"`
-
 	// ClientCIDRs defines the client CIDRs to be matched.
 	ClientCIDRs []*CIDRMatch `json:"clientCIDRs,omitempty"`
 	// JWT defines the JWT principal to be matched.

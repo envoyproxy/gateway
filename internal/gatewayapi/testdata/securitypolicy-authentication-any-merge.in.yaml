@@ -88,14 +88,6 @@ securityPolicies:
       mergeType: JSONMerge
       authentication:
         mode: Any
-      authorization:
-        defaultAction: Deny
-        rules:
-        - name: reader
-          action: Allow
-          principal:
-            basicAuth:
-              users: [user1]
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:

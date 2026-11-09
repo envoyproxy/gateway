@@ -165,7 +165,7 @@ securityPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Authentication Any requires JWT and BasicAuth without OIDC or APIKeyAuth.
+        message: Authentication mode Any requires jwt and basicAuth.
         observedGeneration: 10
         reason: Invalid
         status: "False"

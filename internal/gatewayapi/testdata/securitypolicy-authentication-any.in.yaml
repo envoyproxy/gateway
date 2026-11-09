@@ -100,8 +100,9 @@ securityPolicies:
         - name: reader
           action: Allow
           principal:
-            basicAuth:
-              users: [user1]
+            jwt:
+              provider: issuer
+              scopes: [read]
       basicAuth:
         users:
           name: "users-secret1"

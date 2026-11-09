@@ -148,15 +148,6 @@ securityPolicies:
   spec:
     authentication:
       mode: Any
-    authorization:
-      defaultAction: Deny
-      rules:
-      - action: Allow
-        name: reader
-        principal:
-          basicAuth:
-            users:
-            - user1
     mergeType: JSONMerge
     targetRef:
       group: gateway.networking.k8s.io
@@ -316,16 +307,6 @@ xdsIR:
           prefix: /foo1
         security:
           authenticationAny: true
-          authorization:
-            defaultAction: Deny
-            rules:
-            - action: Allow
-              name: reader
-              principal:
-                basicAuth:
-                  users:
-                  - user1
-                basicAuthFilter: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-gateway-1/authentication-any
           basicAuth:
             allowMissing: true
             emitDynamicMetadata: true
@@ -373,16 +354,6 @@ xdsIR:
           prefix: /foo2
         security:
           authenticationAny: true
-          authorization:
-            defaultAction: Deny
-            rules:
-            - action: Allow
-              name: reader
-              principal:
-                basicAuth:
-                  users:
-                  - user1
-                basicAuthFilter: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-gateway-1/authentication-any
           basicAuth:
             allowMissing: true
             emitDynamicMetadata: true

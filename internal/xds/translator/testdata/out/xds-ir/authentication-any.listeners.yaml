@@ -1,0 +1,98 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
+            users:
+              inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        - disabled: true
+          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1/authentication-any
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
+            allowMissing: true
+            emitDynamicMetadata: true
+            users:
+              inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              example_ced70d98fe975d58:
+                audiences:
+                - foo.com
+                forward: true
+                issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: example
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 10s
+                    uri: https://localhost/jwt/public-key/jwks.json
+              other_8920e62427dc207f:
+                audiences:
+                - foo.com
+                forward: true
+                issuer: https://other.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: other
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 10s
+                    uri: https://localhost/jwt/other/jwks.json
+            requirementMap:
+              default/policy-for-http-route-1/authentication-any:
+                requiresAny:
+                  requirements:
+                  - providerName: example_ced70d98fe975d58
+                  - providerName: other_8920e62427dc207f
+                  - allowMissing: {}
+        - disabled: true
+          name: envoy.filters.http.rbac/authentication-any
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: default/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: default/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: default/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

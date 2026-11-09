@@ -154,9 +154,10 @@ securityPolicies:
       - action: Allow
         name: reader
         principal:
-          basicAuth:
-            users:
-            - user1
+          jwt:
+            provider: issuer
+            scopes:
+            - read
     basicAuth:
       users:
         name: users-secret1
@@ -318,10 +319,10 @@ xdsIR:
             - action: Allow
               name: reader
               principal:
-                basicAuth:
-                  users:
-                  - user1
-                basicAuthFilter: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1/authentication-any
+                jwt:
+                  provider: issuer
+                  scopes:
+                  - read
           basicAuth:
             allowMissing: true
             emitDynamicMetadata: true
@@ -375,10 +376,10 @@ xdsIR:
             - action: Allow
               name: reader
               principal:
-                basicAuth:
-                  users:
-                  - user1
-                basicAuthFilter: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1/authentication-any
+                jwt:
+                  provider: issuer
+                  scopes:
+                  - read
           basicAuth:
             allowMissing: true
             emitDynamicMetadata: true

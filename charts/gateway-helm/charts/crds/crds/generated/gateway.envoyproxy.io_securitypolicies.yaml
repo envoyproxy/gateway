@@ -171,13 +171,20 @@ spec:
                 - extractFrom
                 type: object
               authentication:
-                description: Authentication controls composition of authentication
-                  methods.
+                description: Authentication defines how the configured authentication
+                  methods combine.
                 properties:
                   mode:
                     default: All
-                    description: Mode defaults to All. Any requires JWT and BasicAuth
-                      and accepts either.
+                    description: |-
+                      Mode defines how the configured authentication methods combine.
+                      All requires every configured method to succeed.
+                      Any requires JWT and BasicAuth to be configured and accepts a request
+                      authenticated by either of them. A request without credentials for either
+                      method is rejected with 403 Forbidden and no WWW-Authenticate challenge.
+                      A request presenting invalid credentials for either method is rejected.
+                      Any does not support OIDC, APIKeyAuth, jwt.failOpen, JWT route
+                      recomputation or basicAuth.forwardUsernameHeader.
                     enum:
                     - All
                     - Any
@@ -324,21 +331,6 @@ spec:
                             For example, if there are two principals: one for client IP and one for JWT claim,
                             the rule will match only if both the client IP and the JWT claim match.
                           properties:
-                            basicAuth:
-                              description: BasicAuth matches a username verified by
-                                this policy's BasicAuth filter.
-                              properties:
-                                users:
-                                  description: Users are exact, case-sensitive usernames.
-                                  items:
-                                    type: string
-                                  maxItems: 128
-                                  minItems: 1
-                                  type: array
-                                  x-kubernetes-list-type: set
-                              required:
-                              - users
-                              type: object
                             clientCIDRs:
                               description: |-
                                 ClientCIDRs are the IP CIDR ranges of the client.
@@ -579,10 +571,10 @@ spec:
                                 rule: (has(self.claims) || has(self.scopes))
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, jwt, basicAuth,
-                              headers, or clientIPGeoLocations must be specified
+                          - message: at least one of clientCIDRs, jwt, headers, or
+                              clientIPGeoLocations must be specified
                             rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
-                              || has(self.clientIPGeoLocations) || has(self.basicAuth))
+                              || has(self.clientIPGeoLocations))
                       required:
                       - action
                       type: object
@@ -4283,11 +4275,6 @@ spec:
                       rule: '!(has(self.path) && has(self.pathOverride))'
                     - message: http3 is only supported for route backends
                       rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
-                  includeAuthenticationMetadata:
-                    description: |-
-                      IncludeAuthenticationMetadata sends verified JWT payloads and Basic usernames to a gRPC service.
-                      The service must run after authentication, fail closed, and not recompute routes.
-                    type: boolean
                   includeRouteMetadata:
                     description: |-
                       IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
@@ -8741,6 +8728,19 @@ spec:
               rule: '(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules)
                 && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
                 : false)) ? has(self.jwt) : true'
+            - message: authentication.mode Any requires jwt and basicAuth, unless
+                mergeType is set and they are inherited from the parent policy
+              rule: '(has(self.authentication) && has(self.authentication.mode) &&
+                self.authentication.mode == ''Any'' && !has(self.mergeType)) ? (has(self.jwt)
+                && has(self.basicAuth)) : true'
+            - message: authentication.mode Any does not support oidc or apiKeyAuth
+              rule: '(has(self.authentication) && has(self.authentication.mode) &&
+                self.authentication.mode == ''Any'') ? (!has(self.oidc) && !has(self.apiKeyAuth))
+                : true'
+            - message: authentication.mode Any does not support basicAuth.forwardUsernameHeader
+              rule: '(has(self.authentication) && has(self.authentication.mode) &&
+                self.authentication.mode == ''Any'' && has(self.basicAuth)) ? !has(self.basicAuth.forwardUsernameHeader)
+                : true'
           status:
             description: Status defines the current status of SecurityPolicy.
             properties:

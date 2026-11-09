@@ -1023,9 +1023,6 @@ func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
 		if rule.Principal == nil {
 			continue
 		}
-		if rule.Principal.BasicAuth != nil {
-			return fmt.Errorf("rule %d: BasicAuth not supported for %s", i, proto)
-		}
 		if rule.Principal.JWT != nil {
 			return fmt.Errorf("rule %d: JWT not supported for %s", i, proto)
 		}
@@ -1407,10 +1404,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 		}
 
-		if orderErr := validateAuthenticationOrder(policy, gtwCtx.envoyProxy); orderErr != nil {
-			errs = errors.Join(errs, orderErr)
-			hasNonExtAuthError = true
-		}
 		// Pre-create security features to avoid repeated allocations
 		securityFeatures := &ir.SecurityFeatures{
 			AuthenticationAny: authenticationAny(policy),
@@ -1420,7 +1413,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			OIDC:              oidc,
 			APIKeyAuth:        apiKeyAuth,
 			BasicAuth:         basicAuth,
-			ExtAuth:           authenticationExtAuthMetadata(extAuth, jwt, basicAuth, policy),
+			ExtAuth:           extAuth,
 			Authorization:     authorization,
 		}
 
@@ -1637,7 +1630,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		hasNonExtAuthError    bool
 	)
 
-	errs = errors.Join(validateAuthentication(policy), validateAuthenticationOrder(policy, gtwCtx.envoyProxy))
+	errs = validateAuthentication(policy)
 	if policy.Spec.CORS != nil {
 		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
 			err = perr.WithMessage(err, "CORS")
@@ -1740,7 +1733,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		OIDC:              oidc,
 		APIKeyAuth:        apiKeyAuth,
 		BasicAuth:         basicAuth,
-		ExtAuth:           authenticationExtAuthMetadata(extAuth, jwt, basicAuth, policy),
+		ExtAuth:           extAuth,
 		Authorization:     authorization,
 	}
 
@@ -2007,7 +2000,7 @@ func (t *Translator) buildJWT(
 		AllowMissing:         authenticationAny(policy) || ptr.Deref(policy.Spec.JWT.Optional, false),
 		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
 		Providers:            providers,
-		Name:                 authenticationJWTName(policy, owners),
+		Name:                 jwtName(policy, owners),
 	}, nil
 }
 
@@ -2034,6 +2027,10 @@ func jwtName(policy *egv1a1.SecurityPolicy, owners *securityPolicyOwners) string
 		// Kubernetes namespaces and names cannot contain '+', so the separator never
 		// reads as part of a policy name.
 		name += "+" + utils.NamespacedName(owners.mergedParent).String()
+	}
+	if authenticationAny(policy) {
+		// allow_missing is part of the requirement, so Any and All need distinct names.
+		name += authenticationAnySuffix
 	}
 	if len(name) <= maxJWTNameLength {
 		return name
@@ -3207,7 +3204,7 @@ func (t *Translator) buildBasicAuth(
 
 	return &ir.BasicAuth{
 		AllowMissing:          authenticationAny(policy),
-		EmitDynamicMetadata:   authenticationMetadataRequired(policy),
+		EmitDynamicMetadata:   authenticationAny(policy),
 		Name:                  authenticationBasicName(policy, owners),
 		Users:                 usersSecretBytes,
 		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
@@ -3542,16 +3539,6 @@ func (t *Translator) buildAuthorization(
 				return nil, fmt.Errorf("unable to translate authorization rule: jwt provider %q is not defined in jwt.providers", rule.Principal.JWT.Provider)
 			}
 
-			if rule.Principal.BasicAuth != nil {
-				if policy.Spec.BasicAuth == nil {
-					return nil, errors.New("basicAuth principal requires basicAuth")
-				}
-				if len(rule.Principal.BasicAuth.Users) == 0 {
-					return nil, errors.New("basicAuth principal requires users")
-				}
-				irPrincipal.BasicAuth = rule.Principal.BasicAuth.DeepCopy()
-				irPrincipal.BasicAuthFilter = "envoy.filters.http.basic_auth/" + authenticationBasicName(policy, owners)
-			}
 			irPrincipal.JWT = rule.Principal.JWT
 			irPrincipal.Headers = rule.Principal.Headers
 			irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
