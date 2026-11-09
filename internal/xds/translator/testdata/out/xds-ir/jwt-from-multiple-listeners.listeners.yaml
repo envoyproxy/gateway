@@ -87,12 +87,12 @@
                     timeout: 10s
                     uri: https://www.googleapis.com/oauth2/v3/certs
             requirementMap:
-              jwt1-or-missing_6f7e920fc2a0617c:
+              default/policy-1:
                 requiresAny:
                   requirements:
                   - providerName: jwt1_cb766da7fa6f1202
                   - allowMissing: {}
-              jwt2-or-missing_554e269f8327a7aa:
+              default/policy-2:
                 requiresAny:
                   requirements:
                   - providerName: jwt2_d1e60459ce7ec72c
