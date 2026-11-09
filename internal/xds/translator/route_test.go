@@ -7,6 +7,7 @@ package translator
 
 import (
 	"reflect"
+	"regexp"
 	"testing"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -434,6 +435,48 @@ func TestBuildXdsURLRewriteAction_PathRegexHostRewrite(t *testing.T) {
 				t.Errorf("HostRewritePathRegex substitution = %v, want %v", got.GetHostRewritePathRegex().GetSubstitution(), "backend-\\1.service.namespace.svc.cluster.local")
 			}
 		})
+	}
+}
+
+func TestBuildXdsURLRewriteAction_RootPrefixReplacePrefixMatch(t *testing.T) {
+	baseRoute := &ir.HTTPRoute{
+		Name: "test-route",
+		Destination: &ir.RouteDestination{
+			Name: "test-dest",
+			Settings: []*ir.DestinationSetting{
+				{
+					Endpoints: []*ir.DestinationEndpoint{
+						{Host: "1.2.3.4", Port: 8080},
+					},
+				},
+			},
+		},
+	}
+	urlRewrite := &ir.URLRewrite{
+		Path: &ir.ExtendedHTTPPathModifier{
+			HTTPPathModifier: ir.HTTPPathModifier{
+				PrefixMatchReplace: new("/prefix-match/"),
+			},
+		},
+	}
+	pathMatch := &ir.StringMatch{Prefix: new("/")}
+
+	got := buildXdsURLRewriteAction(baseRoute, urlRewrite, pathMatch, nil)
+	if got.GetRegexRewrite().GetSubstitution() != "/prefix-match/" {
+		t.Errorf("RegexRewrite substitution = %q, want %q (PrefixRewrite = %q)",
+			got.GetRegexRewrite().GetSubstitution(), "/prefix-match/", got.GetPrefixRewrite())
+	}
+	// Apply the rewrite the way Envoy does (regex replace, literal substitution)
+	// and check the upstream path keeps its separator.
+	re := regexp.MustCompile(got.GetRegexRewrite().GetPattern().GetRegex())
+	for in, want := range map[string]string{
+		"/doc":     "/prefix-match/doc",
+		"/":        "/prefix-match/",
+		"/a/b.txt": "/prefix-match/a/b.txt",
+	} {
+		if gotPath := re.ReplaceAllLiteralString(in, got.GetRegexRewrite().GetSubstitution()); gotPath != want {
+			t.Errorf("rewritten path for %q = %q, want %q", in, gotPath, want)
+		}
 	}
 }
 

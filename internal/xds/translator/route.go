@@ -600,6 +600,16 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
 			if useRegexRewriteForPrefixMatchReplace(pathMatch, *urlRewrite.Path.PrefixMatchReplace) {
 				routeAction.RegexRewrite = prefix2RegexRewrite(*pathMatch.Prefix)
+			} else if pathMatch != nil && pathMatch.Prefix != nil && *pathMatch.Prefix == "/" {
+				// Trimming the trailing "/" below would drop the separator for a root prefix,
+				// e.g. "/" -> "/prefix-match/" would yield "/prefix-matchdoc" for "/doc".
+				// Keep the replace string as-is and consume exactly one leading "/" of the request path.
+				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
+					Pattern: &matcherv3.RegexMatcher{
+						Regex: `^/`,
+					},
+					Substitution: *urlRewrite.Path.PrefixMatchReplace,
+				}
 			} else {
 				// remove trailing / to fix #3989
 				// when the pathMath.Prefix has suffix / but EG has removed it,
