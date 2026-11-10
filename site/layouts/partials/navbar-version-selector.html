@@ -23,7 +23,19 @@
         {{ if ne $baseURL "/" }}
         {{ $href := printf "%s%s%s" $baseURL $url $path -}}
         {{ end }}
-        <li><a class="dropdown-item" href="{{ $href }}">{{ $text }}</a></li>
+        <li><a class="dropdown-item" href="{{ $href }}" data-version="{{ .version }}" data-eol="{{ $eol_time.Format "2006-01-02" }}">{{ $text }}</a></li>
         {{ end -}}
     </ul>
 </div>
+<script>
+  // The site is static, so the EOL label rendered at build time goes stale
+  // until the next rebuild. Recompute it in the browser against today's date.
+  (function () {
+    var now = Date.now();
+    document.querySelectorAll('.dropdown-item[data-eol]').forEach(function (el) {
+      var eol = Date.parse(el.dataset.eol); // "YYYY-MM-DD" parses as UTC midnight, same as Hugo
+      if (isNaN(eol)) return;
+      el.textContent = now > eol ? el.dataset.version + ' (EOL)' : el.dataset.version;
+    });
+  })();
+</script>
