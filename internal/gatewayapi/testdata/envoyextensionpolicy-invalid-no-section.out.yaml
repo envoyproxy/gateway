@@ -28,6 +28,12 @@ envoyExtensionPolicies:
         reason: TargetNotFound
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -58,6 +64,12 @@ envoyExtensionPolicies:
         reason: TargetNotFound
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

@@ -15,6 +15,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -139,21 +140,21 @@ func TestNewManager(t *testing.T) {
 		require.False(t, mgr.HasExtension("bar.io", "BarPolicy"))
 		require.False(t, mgr.HasExtension("baz.io", "Baz"))
 
-		// Verify named managers have the correct policyGKSets and resourceGKSets.
+		// Verify named managers have the correct policy and resource GK sets.
 		// Matching is by group+kind only; Version from ExtensionManager.Resources is dropped.
 		require.Equal(t, "ext1", composite.managers[0].name)
-		require.Len(t, composite.managers[0].policyGKSet, 1)
-		require.Contains(t, composite.managers[0].policyGKSet, schema.GroupKind{Group: "foo.io", Kind: "FooPolicy"})
-		require.Len(t, composite.managers[0].resourceGKSet, 2)
-		require.Contains(t, composite.managers[0].resourceGKSet, schema.GroupKind{Group: "foo.io", Kind: "Foo"})
-		require.Contains(t, composite.managers[0].resourceGKSet, schema.GroupKind{Group: "foo.io", Kind: "FooBackend"})
+		require.Len(t, composite.managers[0].gkSets.policy, 1)
+		require.Contains(t, composite.managers[0].gkSets.policy, schema.GroupKind{Group: "foo.io", Kind: "FooPolicy"})
+		require.Len(t, composite.managers[0].gkSets.resource, 2)
+		require.Contains(t, composite.managers[0].gkSets.resource, schema.GroupKind{Group: "foo.io", Kind: "Foo"})
+		require.Contains(t, composite.managers[0].gkSets.resource, schema.GroupKind{Group: "foo.io", Kind: "FooBackend"})
 
 		require.Equal(t, "ext2", composite.managers[1].name)
-		require.Len(t, composite.managers[1].policyGKSet, 1)
-		require.Contains(t, composite.managers[1].policyGKSet, schema.GroupKind{Group: "bar.io", Kind: "BarPolicy"})
-		require.Len(t, composite.managers[1].resourceGKSet, 2)
-		require.Contains(t, composite.managers[1].resourceGKSet, schema.GroupKind{Group: "bar.io", Kind: "Bar"})
-		require.Contains(t, composite.managers[1].resourceGKSet, schema.GroupKind{Group: "bar.io", Kind: "BarBackend"})
+		require.Len(t, composite.managers[1].gkSets.policy, 1)
+		require.Contains(t, composite.managers[1].gkSets.policy, schema.GroupKind{Group: "bar.io", Kind: "BarPolicy"})
+		require.Len(t, composite.managers[1].gkSets.resource, 2)
+		require.Contains(t, composite.managers[1].gkSets.resource, schema.GroupKind{Group: "bar.io", Kind: "Bar"})
+		require.Contains(t, composite.managers[1].gkSets.resource, schema.GroupKind{Group: "bar.io", Kind: "BarBackend"})
 	})
 }
 
@@ -474,7 +475,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, hook)
 
-			_, err = hook.PostRouteModifyHook(
+			_, _, err = hook.PostRouteModifyHook(
 				&routev3.Route{
 					Name: "test-route",
 				}, nil, nil, nil)
@@ -484,6 +485,55 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 				return
 			}
 		})
+	}
+}
+
+// Test_Integration_Timeout_UnreachableServer checks that ExtensionService.Timeout
+// bounds a hook call against an unreachable extension server. Without it,
+// waitForReady keeps the call queued until the server comes back.
+func Test_Integration_Timeout_UnreachableServer(t *testing.T) {
+	// Reserve a port, then release it so connects are refused.
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := lis.Addr().(*net.TCPAddr).Port
+	require.NoError(t, lis.Close())
+
+	mgr := &Manager{
+		extension: egv1a1.ExtensionManager{
+			Hooks: &egv1a1.ExtensionHooks{
+				XDSTranslator: &egv1a1.XDSTranslatorHooks{
+					Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+				},
+			},
+			Service: &egv1a1.ExtensionService{
+				BackendEndpoint: egv1a1.BackendEndpoint{
+					IP: &egv1a1.IPEndpoint{
+						Address: "127.0.0.1",
+						Port:    int32(port),
+					},
+				},
+				Timeout: new(gwapiv1.Duration("500ms")),
+			},
+		},
+	}
+	t.Cleanup(mgr.CleanupHookConns)
+
+	hook, err := mgr.GetPostXDSHookClient(egv1a1.XDSRoute)
+	require.NoError(t, err)
+	require.NotNil(t, hook)
+
+	done := make(chan error, 1)
+	go func() {
+		_, _, err := hook.PostRouteModifyHook(&routev3.Route{Name: "test-route"}, nil, nil, nil)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.Error(t, err)
+		require.Equal(t, codes.DeadlineExceeded, status.Code(err))
+	case <-time.After(5 * time.Second):
+		t.Fatal("PostRouteModifyHook did not return within 5s against an unreachable extension server")
 	}
 }
 

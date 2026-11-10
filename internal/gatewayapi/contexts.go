@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +18,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -31,6 +33,10 @@ type GatewayContext struct {
 	listeners             []*ListenerContext
 	envoyProxy            *egv1a1.EnvoyProxy
 	envoyProxyFromGateway bool
+	// gatewayEnvoyProxy is the EnvoyProxy referenced by the Gateway itself, as provided by the
+	// user. Unlike envoyProxy, it is neither merged nor stripped of its invalid fields, so it is
+	// the object whose status is updated and that is returned in the TranslateResult.
+	gatewayEnvoyProxy *egv1a1.EnvoyProxy
 
 	backendTLS *egv1a1.BackendTLSConfig
 }
@@ -107,16 +113,21 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
 				g.envoyProxyFromGateway = true
-				gatewayProxy = ep
+				g.gatewayEnvoyProxy = ep
+				gatewayProxy = validation.DropInvalidFields(ep)
 			}
 		}
 	}
 
 	// Merge all EnvoyProxy configs. On error, MergeEnvoyProxyConfigs returns a fallback
 	// configuration so the gateway can continue to function.
+	//
+	// Invalid fields are unset on each layer before merging, so an invalid override is ignored
+	// and the valid value it would have overridden in a less specific layer still applies. The
+	// EnvoyGateway default spec is validated strictly when the configuration is loaded.
 	merged, err := MergeEnvoyProxyConfigs(
 		resources.EnvoyProxyDefaultSpec,
-		resources.EnvoyProxyForGatewayClass,
+		validation.DropInvalidFields(resources.EnvoyProxyForGatewayClass),
 		gatewayProxy,
 	)
 	g.envoyProxy = merged
@@ -167,9 +178,17 @@ type ListenerContext struct {
 }
 
 type ListenerTLSConfig struct {
-	secrets               []*corev1.Secret
+	// secrets are the listener's secrets in the configured order.
+	secrets               []listenerSecret
 	certDNSNames          []string
 	frontendTLSValidation *ListenerFrontendTLSValidation
+}
+
+// listenerSecret is a listener secret from a Kubernetes Secret, or from a resource of a kind
+// registered in ExtensionManager.SecretResources. Exactly one field is set.
+type listenerSecret struct {
+	kubernetesSecret *corev1.Secret
+	extensionSecret  *unstructured.Unstructured
 }
 
 type ListenerFrontendTLSValidation struct {
@@ -330,8 +349,8 @@ func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionTy
 	}
 }
 
-func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
-	l.tls.secrets = tlsSecrets
+func (l *ListenerContext) SetTLSSecrets(secrets []listenerSecret) {
+	l.tls.secrets = secrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
@@ -644,6 +663,27 @@ func GetManagedParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	return managed
 }
 
+// GetManagedRouteParentContexts returns the RouteParentContexts of the route in
+// spec.parentRefs order. Iterating the ParentRefs map directly is nondeterministic,
+// which matters when several parentRefs compete for the same listener.
+func GetManagedRouteParentContexts(route RouteContext) []*RouteParentContext {
+	parentRefs := GetParentReferences(route)
+	ctxs := make([]*RouteParentContext, 0, len(parentRefs))
+	seen := make(map[*RouteParentContext]struct{}, len(parentRefs))
+	for _, parentRef := range parentRefs {
+		ctx := route.GetRouteParentContext(parentRef)
+		if ctx == nil {
+			continue
+		}
+		if _, ok := seen[ctx]; ok {
+			continue
+		}
+		seen[ctx] = struct{}{}
+		ctxs = append(ctxs, ctx)
+	}
+	return ctxs
+}
+
 // GetRouteStatus returns the RouteStatus object associated with the Route.
 func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 	return route.GetRouteStatus()
@@ -809,6 +849,35 @@ func (r *RouteParentContext) GetGateway() *GatewayContext {
 	return r.listeners[0].gateway
 }
 
+// PolicyAncestorRef returns this parent as a policy status ancestorRef, with group, kind
+// and namespace always filled in.
+func (r *RouteParentContext) PolicyAncestorRef() gwapiv1.ParentReference {
+	parentNN := types.NamespacedName{
+		Namespace: NamespaceDerefOr(r.Namespace, r.routeNamespace()),
+		Name:      string(r.Name),
+	}
+	if r.Kind != nil && *r.Kind == resource.KindListenerSet {
+		return getAncestorRefForListenerSetPolicy(parentNN, r.SectionName)
+	}
+	return getAncestorRefForPolicy(parentNN, r.SectionName)
+}
+
+func (r *RouteParentContext) routeNamespace() string {
+	switch {
+	case r.HTTPRoute != nil:
+		return r.HTTPRoute.Namespace
+	case r.GRPCRoute != nil:
+		return r.GRPCRoute.Namespace
+	case r.TLSRoute != nil:
+		return r.TLSRoute.Namespace
+	case r.TCPRoute != nil:
+		return r.TCPRoute.Namespace
+	case r.UDPRoute != nil:
+		return r.UDPRoute.Namespace
+	}
+	return ""
+}
+
 func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 	r.listeners = append(r.listeners, listeners...)
 }
@@ -905,6 +974,12 @@ type ResolvedCAKey struct {
 	Name         string
 }
 
+// ExtensionBackendKey scopes a generated callout cluster name to its output IR.
+type ExtensionBackendKey struct {
+	GatewayIRKey string
+	Name         string
+}
+
 type TranslatorContext struct {
 	NamespaceMap            map[types.NamespacedName]*corev1.Namespace
 	ServiceMap              map[types.NamespacedName]*corev1.Service
@@ -915,12 +990,20 @@ type TranslatorContext struct {
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
+	ExtensionBackendMap     map[ExtensionBackendKey]*ir.ExtensionBackend
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
 	ResolvedCAMap           map[ResolvedCAKey]string
+	protoDescriptors        map[types.NamespacedName]*parsedProtoDescriptor
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex
+	BTPRejectedPolicies     map[types.NamespacedName]backendPolicyRejection
 	CTPClusterSettingsIndex *CTPClusterSettingsIndex
+	BackendTLSPolicyIndex   BackendTLSPolicyIndex
+	// ExtensionRefIndex is held by value, unlike the policy indexes above: it only holds maps, so
+	// copying it is cheap and shares the entries, and its zero value is an empty index whose
+	// lookups find nothing instead of panicking when a context is built without it.
+	ExtensionRefIndex ExtensionRefIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {
@@ -1043,23 +1126,23 @@ func (t *TranslatorContext) GetEndpointSlicesForBackend(svcNamespace, svcName, b
 func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.EndpointSlice) {
 	t.EndpointSliceMap = make(map[backendServiceKey][]*discoveryv1.EndpointSlice)
 
-	var kind, svcName string
+	// A slice may carry both service-name labels (e.g. Cilium ClusterMesh MCS
+	// slices), so file it under every backend it belongs to.
 	for _, slice := range slices {
 		if name, ok := slice.Labels[discoveryv1.LabelServiceName]; ok {
-			kind = resource.KindService
-			svcName = name
-		} else if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
-			kind = resource.KindServiceImport
-			svcName = name
-		} else {
-			continue
+			t.addEndpointSliceForBackend(resource.KindService, name, slice)
 		}
-
-		key := backendServiceKey{
-			kind:      kind,
-			namespace: slice.Namespace,
-			name:      svcName,
+		if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
+			t.addEndpointSliceForBackend(resource.KindServiceImport, name, slice)
 		}
-		t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 	}
+}
+
+func (t *TranslatorContext) addEndpointSliceForBackend(kind, svcName string, slice *discoveryv1.EndpointSlice) {
+	key := backendServiceKey{
+		kind:      kind,
+		namespace: slice.Namespace,
+		name:      svcName,
+	}
+	t.EndpointSliceMap[key] = append(t.EndpointSliceMap[key], slice)
 }

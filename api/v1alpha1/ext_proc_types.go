@@ -70,6 +70,7 @@ type ExtProcProcessingMode struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:message="If FullDuplexStreamed body processing mode is used, FailOpen must be false.",rule="!(has(self.failOpen) && self.failOpen == true && has(self.processingMode) && ((has(self.processingMode.request) && has(self.processingMode.request.body) && self.processingMode.request.body == 'FullDuplexStreamed') || (has(self.processingMode.response) && has(self.processingMode.response.body) && self.processingMode.response.body == 'FullDuplexStreamed')))"
 // +kubebuilder:validation:XValidation:message="If shadowMode is enabled, body processing mode must be Streamed or unset.",rule="!(has(self.shadowMode) && self.shadowMode == true && has(self.processingMode) && ((has(self.processingMode.request) && has(self.processingMode.request.body) && self.processingMode.request.body != 'Streamed') || (has(self.processingMode.response) && has(self.processingMode.response.body) && self.processingMode.response.body != 'Streamed')))"
+// +kubebuilder:validation:XValidation:message="http1 is not supported for ExtProc backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
 type ExtProc struct {
 	BackendCluster `json:",inline"`
 

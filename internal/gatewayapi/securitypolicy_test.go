@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -229,6 +231,170 @@ func Test_extractRedirectPath(t *testing.T) {
 			if err == nil {
 				assert.Equalf(t, tt.want, got, "extractRedirectPath(%v)", tt.redirectURL)
 			}
+		})
+	}
+}
+
+func Test_validatePostLogoutRedirectURI(t *testing.T) {
+	tests := []struct {
+		name    string
+		uri     string
+		wantErr bool
+	}{
+		{
+			name: "https",
+			uri:  "https://www.example.com/loggedout",
+		},
+		{
+			name: "http",
+			uri:  "http://www.example.com/",
+		},
+		{
+			name: "with port",
+			uri:  "https://www.example.com:9080/loggedout",
+		},
+		{
+			name: "header value syntax",
+			uri:  "%REQ(x-forwarded-proto)%://%REQ(:authority)%/loggedout",
+		},
+		{
+			// Unlike extractRedirectPath, the header is not restricted to x-forwarded-proto.
+			name: "any request header as scheme",
+			uri:  "%REQ(x-scheme)%://www.example.com/loggedout",
+		},
+		{
+			name: "pseudo header as scheme",
+			uri:  "%REQ(:scheme)%://www.example.com/loggedout",
+		},
+		{
+			// Envoy rejects the whole config on a malformed command operator, so these must
+			// not reach the xDS translation.
+			name:    "empty command operator as scheme",
+			uri:     "%%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unknown command operator as scheme",
+			uri:     "%BOGUS%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator without header",
+			uri:     "%REQ()%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator missing parentheses",
+			uri:     "%REQ%://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "request command operator unterminated",
+			uri:     "%REQ(x-scheme://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name: "command operators in host and path",
+			uri:  "%REQ(x-forwarded-proto)%://%REQ(:authority)%/%REQ(x-tenant)%/loggedout",
+		},
+		{
+			name: "alternate header command operator",
+			uri:  "https://%REQ(x-a?x-b)%/loggedout",
+		},
+		{
+			name: "escaped literal percent",
+			uri:  "https://www.example.com/logged%%20out",
+		},
+		{
+			// Envoy only knows %REQ()% here; any other operator would fail filter creation
+			// and NACK the whole configuration.
+			name:    "unsupported command operator in path",
+			uri:     "https://www.example.com/%BOGUS%",
+			wantErr: true,
+		},
+		{
+			name:    "unsupported command operator in host",
+			uri:     "https://%DOWNSTREAM_LOCAL_ADDRESS%/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unterminated command operator in path",
+			uri:     "https://www.example.com/%REQ(x-tenant)",
+			wantErr: true,
+		},
+		{
+			name:    "unpaired percent in path",
+			uri:     "https://www.example.com/logged%20out",
+			wantErr: true,
+		},
+		{
+			// The provider redirects to the host root, which is a valid post logout landing page.
+			name: "without path",
+			uri:  "https://www.example.com/",
+		},
+		{
+			name: "without trailing slash",
+			uri:  "https://www.example.com",
+		},
+		{
+			// URI schemes are case-insensitive, and Envoy passes the value through as-is.
+			name: "uppercase scheme",
+			uri:  "HTTPS://www.example.com/loggedout",
+		},
+		{
+			name: "truncated header command operator",
+			uri:  "https://%REQ(x-tenant):32%/loggedout",
+		},
+		{
+			name:    "truncated header command operator with non-numeric length",
+			uri:     "https://%REQ(x-tenant):abc%/loggedout",
+			wantErr: true,
+		},
+		{
+			// The provider would have nowhere to redirect to.
+			name:    "without host",
+			uri:     "https://",
+			wantErr: true,
+		},
+		{
+			name:    "without host but with path",
+			uri:     "https:///loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "relative path",
+			uri:     "/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "without scheme",
+			uri:     "www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "empty scheme",
+			uri:     "://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "unsupported scheme",
+			uri:     "htttps://www.example.com/loggedout",
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			uri:     "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatePostLogoutRedirectURI(tt.uri)
+			if tt.wantErr {
+				require.Errorf(t, err, "validatePostLogoutRedirectURI(%v)", tt.uri)
+				return
+			}
+			require.NoErrorf(t, err, "validatePostLogoutRedirectURI(%v)", tt.uri)
 		})
 	}
 }
@@ -592,6 +758,43 @@ func Test_JWTProvider(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildLocalJWKSValueRefFallback(t *testing.T) {
+	policy := &egv1a1.SecurityPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "policy"}}
+	localJWKS := &egv1a1.LocalJWKS{
+		Type:     new(egv1a1.LocalJWKSTypeValueRef),
+		ValueRef: &gwapiv1.LocalObjectReference{Kind: "ConfigMap", Name: "jwks"},
+	}
+	translatorFor := func(data map[string]string) *Translator {
+		return &Translator{
+			TranslatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: "default", Name: "jwks"}: {
+						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "jwks"},
+						Data:       data,
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("jwks key", func(t *testing.T) {
+		tr := translatorFor(map[string]string{"a": "a-value", JWKSConfigMapKey: "jwks-value"})
+		jwks, err := tr.buildLocalJWKS(policy, localJWKS)
+		require.NoError(t, err)
+		require.Equal(t, "jwks-value", jwks)
+	})
+
+	t.Run("first key in sorted order", func(t *testing.T) {
+		tr := translatorFor(map[string]string{"c": "c-value", "a": "a-value", "b": "b-value"})
+		// Map iteration order is random, so repeat to catch a fallback that depends on it.
+		for range 20 {
+			jwks, err := tr.buildLocalJWKS(policy, localJWKS)
+			require.NoError(t, err)
+			require.Equal(t, "a-value", jwks)
+		}
+	})
 }
 
 func Test_APIKeyAuth(t *testing.T) {
@@ -972,6 +1175,78 @@ func TestBuildAuthorizationJWTProvider(t *testing.T) {
 	}
 }
 
+// Test_OIDC_PostLogoutRedirect_Merge checks how a route's postLogoutRedirect combines with the
+// parent's. The field has a replace patch strategy, so under StrategicMerge the route's block
+// replaces the parent's. Under JSONMerge the keys merge, so the parent's uri and the route's
+// disabled: true both survive and the merged policy must be rejected.
+func Test_OIDC_PostLogoutRedirect_Merge(t *testing.T) {
+	const parentURI = "https://www.example.com/loggedout"
+	policyWith := func(mergeType *egv1a1.MergeType, plr *egv1a1.OIDCPostLogoutRedirect) *egv1a1.SecurityPolicy {
+		return &egv1a1.SecurityPolicy{
+			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: mergeType,
+				OIDC:      &egv1a1.OIDC{PostLogoutRedirect: plr},
+			},
+		}
+	}
+	parentWithURI := func() *egv1a1.SecurityPolicy {
+		return policyWith(nil, &egv1a1.OIDCPostLogoutRedirect{URI: ToPointer(parentURI)})
+	}
+	strategicMerge := egv1a1.StrategicMerge
+	jsonMerge := egv1a1.JSONMerge
+
+	t.Run("StrategicMerge route disabled replaces parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Nil(t, plr.URI)
+		require.True(t, *plr.Disabled)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	t.Run("StrategicMerge route uri replaces parent disabled", func(t *testing.T) {
+		parent := policyWith(nil, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{URI: ToPointer("https://other.example.com/bye")})
+		merged, _, err := mergeSecurityPolicy(route, parent)
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Equal(t, "https://other.example.com/bye", *plr.URI)
+		require.Nil(t, plr.Disabled)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	t.Run("StrategicMerge route without postLogoutRedirect inherits parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, nil)
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		require.Equal(t, parentURI, *merged.Spec.OIDC.PostLogoutRedirect.URI)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	// The route's block replaces the parent's, so disabled: false alone leaves no uri and
+	// Envoy falls back to its default post logout redirect URI.
+	t.Run("StrategicMerge route disabled false does not inherit parent uri", func(t *testing.T) {
+		route := policyWith(&strategicMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(false)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.Nil(t, plr.URI)
+		require.NoError(t, validateSecurityPolicy(merged))
+	})
+
+	t.Run("JSONMerge route disabled with parent uri is rejected", func(t *testing.T) {
+		route := policyWith(&jsonMerge, &egv1a1.OIDCPostLogoutRedirect{Disabled: ToPointer(true)})
+		merged, _, err := mergeSecurityPolicy(route, parentWithURI())
+		require.NoError(t, err)
+		plr := merged.Spec.OIDC.PostLogoutRedirect
+		require.NotNil(t, plr.URI, "expected the parent's uri to survive JSONMerge")
+		require.NotNil(t, plr.Disabled, "expected the route's disabled to survive JSONMerge")
+		require.ErrorContains(t, validateSecurityPolicy(merged),
+			"OIDC.PostLogoutRedirect.uri cannot be set when OIDC.PostLogoutRedirect.disabled is true")
+	})
+}
+
 func ToPointer[T any](v T) *T {
 	return &v
 }
@@ -1286,6 +1561,25 @@ func useInsecureOIDCDiscoveryHTTPClient(t *testing.T) {
 	t.Cleanup(func() {
 		newOIDCDiscoveryHTTPClient = original
 	})
+
+	// Successful discovery results are retained process-wide, isolate them per test.
+	useFreshOIDCDiscoveryFallbackCache(t)
+}
+
+// testOIDCTokenEndpoint is a token endpoint that passes validateTokenEndpoint; the httptest
+// server URL does not, since it uses an IP literal.
+const testOIDCTokenEndpoint = "https://idp.example.com/token" //nolint:gosec // Test endpoint URL, not a credential.
+
+// useFreshOIDCDiscoveryFallbackCache replaces the process-wide OIDC discovery fallback cache
+// with an empty one for the duration of the test.
+func useFreshOIDCDiscoveryFallbackCache(t *testing.T) {
+	t.Helper()
+
+	original := oidcDiscoveryFallback
+	oidcDiscoveryFallback = newOIDCDiscoveryFallbackCache(maxOIDCDiscoveryFallbackEntries)
+	t.Cleanup(func() {
+		oidcDiscoveryFallback = original
+	})
 }
 
 func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
@@ -1310,17 +1604,17 @@ func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
 
-	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	require.Equal(t, int32(1), callCount.Load())
 
-	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
 	require.NoError(t, err)
 	require.NotNil(t, cfgCached)
 	require.Equal(t, int32(1), callCount.Load(), "second fetch should use cache")
 
-	cfgAgain, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	cfgAgain, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
 	require.NoError(t, err)
 	require.NotNil(t, cfgAgain)
 	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cache")
@@ -1347,20 +1641,298 @@ func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
 
-	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
 	require.Error(t, err)
 	require.Nil(t, cfg)
 	require.Equal(t, int32(1), callCount.Load())
 
-	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
 	require.Error(t, err)
 	require.Nil(t, cfgCached)
 	require.Equal(t, int32(1), callCount.Load(), "second fetch should use cached error")
 
-	cfgAfter, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	cfgAfter, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
 	require.Error(t, err)
 	require.Nil(t, cfgAfter)
 	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cached error")
+}
+
+func TestTranslatorFetchEndpointsFromIssuerFallsBackToLastSuccessfulDiscovery(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		fail      atomic.Bool
+		server    *httptest.Server
+	)
+
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		if fail.Load() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, testOIDCTokenEndpoint, server.URL+"/authorize")
+	}))
+	t.Cleanup(server.Close)
+	useInsecureOIDCDiscoveryHTTPClient(t)
+
+	// First translation: discovery succeeds.
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err)
+	require.Equal(t, testOIDCTokenEndpoint, cfg.TokenEndpoint)
+	require.Equal(t, server.URL+"/authorize", cfg.AuthorizationEndpoint)
+	require.Equal(t, int32(1), callCount.Load())
+
+	// Second translation (new Translator, new per-translation cache): the issuer is temporarily
+	// failing. The endpoints discovered previously must be reused instead of failing the policy.
+	fail.Store(true)
+	tr = &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfgFallback, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err, "failed discovery should fall back to the last successful one")
+	require.Equal(t, cfg.TokenEndpoint, cfgFallback.TokenEndpoint)
+	require.Equal(t, cfg.AuthorizationEndpoint, cfgFallback.AuthorizationEndpoint)
+	require.Greater(t, callCount.Load(), int32(1), "discovery should be re-attempted in a new translation")
+
+	// Within the same translation the fallback result is reused without contacting the issuer again.
+	attempts := callCount.Load()
+	cfgAgain, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err)
+	require.Equal(t, cfgFallback, cfgAgain)
+	require.Equal(t, attempts, callCount.Load(), "fallback should be reused within the same translation")
+
+	// Once the issuer recovers, fresh discovery results are used again.
+	fail.Store(false)
+	tr = &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfgRecovered, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err)
+	require.Equal(t, testOIDCTokenEndpoint, cfgRecovered.TokenEndpoint)
+	require.Equal(t, attempts+1, callCount.Load())
+}
+
+func TestTranslatorFetchEndpointsFromIssuerNoFallbackWithoutPriorSuccess(t *testing.T) {
+	var callCount atomic.Int32
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		callCount.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(server.Close)
+	useInsecureOIDCDiscoveryHTTPClient(t)
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Positive(t, callCount.Load())
+	require.Equal(t, 0, oidcDiscoveryFallback.Len(), "failed discovery must not be retained")
+}
+
+func TestTranslatorFetchEndpointsFromIssuerNoFallbackOnTLSConfigError(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+	)
+
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, testOIDCTokenEndpoint, server.URL+"/authorize")
+	}))
+	t.Cleanup(server.Close)
+	useInsecureOIDCDiscoveryHTTPClient(t)
+
+	// First translation: discovery succeeds and the result is retained.
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load())
+
+	// Second translation: the client certificate configured for the issuer is now invalid.
+	// Building the HTTP client fails before any request is sent; this is a local configuration
+	// error and must be surfaced rather than masked by the retained discovery result.
+	newOIDCDiscoveryHTTPClient = newGuardedOIDCDiscoveryHTTPClient
+	tr = &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	invalidTLS := &ir.TLSUpstreamConfig{
+		TLSConfig: ir.TLSConfig{
+			ClientCertificates: []ir.TLSCertificate{{
+				Name:        "client",
+				Certificate: []byte("not a certificate"),
+				PrivateKey:  []byte("not a key"),
+			}},
+		},
+	}
+	cfg, err = tr.fetchEndpointsFromIssuer(server.URL, invalidTLS, false)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load(), "no request should be made with an invalid TLS configuration")
+	require.Equal(t, 1, oidcDiscoveryFallback.Len(), "the earlier successful discovery is still retained")
+}
+
+func TestTranslatorFetchEndpointsFromIssuerDoesNotRetainInvalidDiscovery(t *testing.T) {
+	var (
+		mode   atomic.Int32 // 0: valid, 1: token endpoint rejected by validateTokenEndpoint, 2: unavailable
+		server *httptest.Server
+	)
+
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		tokenEndpoint := testOIDCTokenEndpoint
+		switch mode.Load() {
+		case 1:
+			tokenEndpoint = "https://192.0.2.10/token" //nolint:gosec // Test endpoint URL, not a credential.
+		case 2:
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, tokenEndpoint, server.URL+"/authorize")
+	}))
+	t.Cleanup(server.Close)
+	useInsecureOIDCDiscoveryHTTPClient(t)
+	useFreshOIDCDiscoveryFallbackCache(t)
+
+	newTranslator := func() *Translator {
+		tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+		tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+		return tr
+	}
+
+	cfg, err := newTranslator().fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err)
+	require.Equal(t, testOIDCTokenEndpoint, cfg.TokenEndpoint)
+
+	// Discovery succeeds but returns a token endpoint the provider build will reject: it is
+	// returned for this translation, but must not replace the usable retained result.
+	mode.Store(1)
+	cfg, err = newTranslator().fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err)
+	require.Error(t, validateTokenEndpoint(cfg.TokenEndpoint))
+
+	mode.Store(2)
+	cfg, err = newTranslator().fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err)
+	require.Equal(t, testOIDCTokenEndpoint, cfg.TokenEndpoint, "the last usable configuration is retained")
+}
+
+func TestTranslatorFetchEndpointsFromIssuerRetainsDiscoveryWhenTokenEndpointOverridden(t *testing.T) {
+	var (
+		fail   atomic.Bool
+		server *httptest.Server
+	)
+
+	// The issuer advertises a token endpoint that validateTokenEndpoint rejects.
+	server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if fail.Load() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, "https://192.0.2.10/token", server.URL+"/authorize")
+	}))
+	t.Cleanup(server.Close)
+	useInsecureOIDCDiscoveryHTTPClient(t)
+	useFreshOIDCDiscoveryFallbackCache(t)
+
+	newTranslator := func() *Translator {
+		tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+		tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+		return tr
+	}
+
+	// A policy that sets its own token endpoint only needs the discovered authorization
+	// endpoint, so the result is retained even though the discovered token endpoint is unusable.
+	cfg, err := newTranslator().fetchEndpointsFromIssuer(server.URL, nil, true)
+	require.NoError(t, err)
+	require.Equal(t, server.URL+"/authorize", cfg.AuthorizationEndpoint)
+	require.Equal(t, 1, oidcDiscoveryFallback.Len())
+
+	fail.Store(true)
+	cfg, err = newTranslator().fetchEndpointsFromIssuer(server.URL, nil, true)
+	require.NoError(t, err)
+	require.Equal(t, server.URL+"/authorize", cfg.AuthorizationEndpoint)
+
+	// Without the override the same discovery result is not retained.
+	useFreshOIDCDiscoveryFallbackCache(t)
+	fail.Store(false)
+	_, err = newTranslator().fetchEndpointsFromIssuer(server.URL, nil, false)
+	require.NoError(t, err)
+	require.Equal(t, 0, oidcDiscoveryFallback.Len())
+}
+
+func TestOIDCDiscoveryFallbackCacheEvictsLeastRecentlyUsed(t *testing.T) {
+	cache := newOIDCDiscoveryFallbackCache(2)
+	cfgA := &OpenIDConfig{AuthorizationEndpoint: "https://a/authorize"}
+	cfgB := &OpenIDConfig{AuthorizationEndpoint: "https://b/authorize"}
+	cfgC := &OpenIDConfig{AuthorizationEndpoint: "https://c/authorize"}
+
+	cache.Set("https://a", cfgA)
+	cache.Set("https://b", cfgB)
+	require.Equal(t, 2, cache.Len())
+
+	// Touch a so that b becomes the least recently used entry.
+	got, ok := cache.Get("https://a")
+	require.True(t, ok)
+	require.Equal(t, cfgA, got)
+
+	cache.Set("https://c", cfgC)
+	require.Equal(t, 2, cache.Len())
+
+	_, ok = cache.Get("https://b")
+	require.False(t, ok, "least recently used issuer should be evicted")
+	got, ok = cache.Get("https://a")
+	require.True(t, ok)
+	require.Equal(t, cfgA, got)
+	got, ok = cache.Get("https://c")
+	require.True(t, ok)
+	require.Equal(t, cfgC, got)
+
+	// Updating an existing entry replaces its value without growing the cache.
+	cfgA2 := &OpenIDConfig{AuthorizationEndpoint: "https://a/authorize2"}
+	cache.Set("https://a", cfgA2)
+	require.Equal(t, 2, cache.Len())
+	got, ok = cache.Get("https://a")
+	require.True(t, ok)
+	require.Equal(t, cfgA2, got)
+}
+
+func TestOIDCDiscoveryFallbackCacheConcurrentAccess(t *testing.T) {
+	cache := newOIDCDiscoveryFallbackCache(4)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			issuer := fmt.Sprintf("https://issuer-%d", i%6)
+			for j := 0; j < 200; j++ {
+				cache.Set(issuer, &OpenIDConfig{TokenEndpoint: issuer + "/token"})
+				if cfg, ok := cache.Get(issuer); ok {
+					require.Equal(t, issuer+"/token", cfg.TokenEndpoint)
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	require.LessOrEqual(t, cache.Len(), 4)
 }
 
 // / tiny helper to build a minimal SecurityPolicy
@@ -1399,7 +1971,7 @@ func SetRouteParentContext(route RouteContext, parentRef gwapiv1.ParentReference
 	route.SetRouteParentContext(parentRef, ctx)
 }
 
-// --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
+// --- L4 branch: validateSecurityPolicyForL4(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
 	trContext := &TranslatorContext{}
@@ -1466,7 +2038,7 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target, newJWTRequirementNames())
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1545,13 +2117,13 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
 	listenerSetMap := make(map[types.NamespacedName]*policyListenerSetTargetContext)
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target)
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, listenerSetMap, gatewayPolicyMap, listenerSetPolicyMap, newPolicyScopeGraph(), newPolicyScopeGraph(), policy, target, newJWTRequirementNames())
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
 }
 
-func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
+func Test_validateSecurityPolicyForL4_Table(t *testing.T) {
 	tests := []struct {
 		name    string
 		spec    egv1a1.SecurityPolicySpec
@@ -1623,6 +2195,44 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 							Action: egv1a1.AuthorizationActionDeny,
 							Principal: &egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			// The L4 matcher only looks at client CIDRs, so accepting an operation
+			// would silently widen the rule to all traffic from those CIDRs.
+			name: "operation with methods is rejected",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action:    egv1a1.AuthorizationActionAllow,
+							Operation: &egv1a1.Operation{Methods: []gwapiv1.HTTPMethod{gwapiv1.HTTPMethodGet}},
+							Principal: &egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "operation with path is rejected",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Operation: &egv1a1.Operation{Path: &egv1a1.PathMatch{
+								Value: "/admin",
+							}},
+							Principal: &egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
 							},
 						},
 					},
@@ -1718,17 +2328,36 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
-			err := validateSecurityPolicyForTCP(p)
-			if tc.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
+	// TCP and UDP share the same rules, so every case must hold for both.
+	for _, proto := range []string{"TCP", "UDP"} {
+		for _, tc := range tests {
+			t.Run(proto+"/"+tc.name, func(t *testing.T) {
+				p := &egv1a1.SecurityPolicy{Spec: tc.spec}
+				err := validateSecurityPolicyForL4(p, proto)
+				if tc.wantErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
 	}
+
+	// Rejections that are about the protocol rather than the input name it, so the
+	// status condition tells the user which listener protocol refused the field.
+	t.Run("protocol named in protocol-specific errors", func(t *testing.T) {
+		p := &egv1a1.SecurityPolicy{Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{{
+					Action:    egv1a1.AuthorizationActionAllow,
+					Principal: &egv1a1.Principal{Headers: []egv1a1.AuthorizationHeaderMatch{{Name: "x-user", Values: []string{"foo"}}}},
+				}},
+			},
+		}}
+
+		require.ErrorContains(t, validateSecurityPolicyForL4(p, "TCP"), "headers not supported for TCP")
+		require.ErrorContains(t, validateSecurityPolicyForL4(p, "UDP"), "headers not supported for UDP")
+	})
 }
 
 func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
@@ -2586,5 +3215,96 @@ func Test_securityPolicyOwnerChoose(t *testing.T) {
 
 		assert.Same(t, parentPolicy, owners.extAuth)
 		assert.Same(t, parentPolicy, owners.extAuthBackendRefs)
+	})
+}
+
+func TestJWTRequirementNamesConflict(t *testing.T) {
+	jwtFor := func(name, issuer string, allowMissing bool) *ir.JWT {
+		return &ir.JWT{
+			AllowMissing: allowMissing,
+			Name:         name,
+			Providers:    []ir.JWTProvider{{Name: "example", Issuer: issuer}},
+		}
+	}
+	// The routes of one policy share one SecurityFeatures, as the translator
+	// assigns them.
+	stable := &ir.SecurityFeatures{JWT: jwtFor("default/stable", "https://stable.example.com", false)}
+	tests := []struct {
+		irKey   string
+		route   *ir.HTTPRoute
+		wantErr bool
+	}{
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "a/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", false)}}},
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "a/stable", Security: stable}},
+		// The same config under the name is shared.
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict-same", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", false)}}},
+		// A different config under the name is refused, whether the providers or
+		// the mode differ.
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://b.example.com", false)}}, wantErr: true},
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/conflict-missing", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://a.example.com", true)}}, wantErr: true},
+		{irKey: "gateway-1", route: &ir.HTTPRoute{Name: "b/stable", Security: stable}},
+		// The same name in another xds IR is a different requirement_map.
+		{irKey: "gateway-2", route: &ir.HTTPRoute{Name: "c/conflict", Security: &ir.SecurityFeatures{JWT: jwtFor("default/conflict", "https://c.example.com", false)}}},
+	}
+
+	names := newJWTRequirementNames()
+	for _, tc := range tests {
+		jwt := tc.route.Security.JWT
+		err := names.record(tc.irKey, tc.route)
+		if !tc.wantErr {
+			require.NoError(t, err, tc.route.Name)
+			require.Same(t, jwt, tc.route.Security.JWT, tc.route.Name)
+			continue
+		}
+		require.ErrorContains(t, err, "default/conflict", tc.route.Name)
+		// The refused route carries no JWT, so its requirement never reaches the
+		// requirement_map.
+		require.Nil(t, tc.route.Security.JWT, tc.route.Name)
+	}
+	// Refusing a route leaves the SecurityFeatures it shared untouched.
+	require.NotNil(t, stable.JWT)
+}
+
+func TestJWTName(t *testing.T) {
+	policyFor := func(namespace, name string) *egv1a1.SecurityPolicy {
+		return &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				JWT:       &egv1a1.JWT{Providers: []egv1a1.JWTProvider{{Name: "example"}}},
+			},
+		}
+	}
+	routePolicy := policyFor("default", "policy-for-route")
+	parentPolicy := policyFor("envoy-gateway", "policy-for-gateway")
+
+	t.Run("policy", func(t *testing.T) {
+		require.Equal(t, "default/policy-for-route", jwtName(routePolicy, &securityPolicyOwners{}))
+	})
+
+	t.Run("merged policy", func(t *testing.T) {
+		// The merged policy keeps the route policy's metadata, which jwtName relies
+		// on to name the route policy.
+		merged, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
+		require.Equal(t, "default/policy-for-route+envoy-gateway/policy-for-gateway", jwtName(merged, owners))
+		// The same route policy merged with another parent is another JWT.
+		other, otherOwners, err := mergeSecurityPolicy(routePolicy, policyFor("envoy-gateway", "policy-for-listener"))
+		require.NoError(t, err)
+		require.NotEqual(t, jwtName(merged, owners), jwtName(other, otherOwners))
+	})
+
+	t.Run("bounded", func(t *testing.T) {
+		// A 63-character namespace and a 253-character name, the Kubernetes maximums,
+		// exceed the bound. The two parents differ only past the truncated prefix.
+		long := func(last string) *egv1a1.SecurityPolicy {
+			return policyFor(strings.Repeat("n", 63), strings.Repeat("p", 252)+last)
+		}
+		route := long("r")
+		name := jwtName(route, buildSecurityPolicyOwners(route, long("a")))
+		other := jwtName(route, buildSecurityPolicyOwners(route, long("b")))
+		require.Len(t, name, maxJWTNameLength)
+		require.Equal(t, name, jwtName(route, buildSecurityPolicyOwners(route, long("a"))))
+		require.NotEqual(t, name, other)
 	})
 }

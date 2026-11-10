@@ -55,7 +55,7 @@ type GlobalRateLimit struct {
 	// to rate limit the request.
 	//
 	// +kubebuilder:validation:MaxItems=256
-	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.name) || self.filter(r2, has(r2.name) && r2.name == r.name).size() == 1)", message="rate limit rule names must be unique within the global rules slice"
+	// +kubebuilder:validation:XValidation:rule="[self.map(r, has(r.name), r.name)].all(names, names.all(name, names.exists_one(n, n == name)))", message="rate limit rule names must be unique within the global rules slice"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -70,7 +70,7 @@ type LocalRateLimit struct {
 	// +kubebuilder:validation:MaxItems=16
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
-	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.name) || self.filter(r2, has(r2.name) && r2.name == r.name).size() == 1)", message="rate limit rule names must be unique within the local rules slice"
+	// +kubebuilder:validation:XValidation:rule="[self.map(r, has(r.name), r.name)].all(names, names.all(name, names.exists_one(n, n == name)))", message="rate limit rule names must be unique within the local rules slice"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.name) || (has(r.clientSelectors) && r.clientSelectors.size() > 0))", message="local rate limit rule names require clientSelectors"
 	Rules []RateLimitRule `json:"rules"`
 }
