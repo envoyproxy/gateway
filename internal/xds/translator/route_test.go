@@ -512,6 +512,44 @@ func TestBuildXdsURLRewriteAction_RootPrefixReplacePrefixMatchIsLiteral(t *testi
 	}
 }
 
+func TestBuildXdsURLRewriteAction_ImplicitRootReplacePrefixMatch(t *testing.T) {
+	baseRoute := &ir.HTTPRoute{
+		Name: "test-route",
+		Destination: &ir.RouteDestination{
+			Name: "test-dest",
+			Settings: []*ir.DestinationSetting{
+				{
+					Endpoints: []*ir.DestinationEndpoint{
+						{Host: "1.2.3.4", Port: 8080},
+					},
+				},
+			},
+		},
+	}
+	urlRewrite := &ir.URLRewrite{
+		Path: &ir.ExtendedHTTPPathModifier{
+			HTTPPathModifier: ir.HTTPPathModifier{
+				PrefixMatchReplace: new("/prefix-match/"),
+			},
+		},
+	}
+
+	// A nil PathMatch is translated to a "/" prefix match, so the trailing
+	// separator of the replace value must be kept as it is for a root prefix.
+	got := buildXdsURLRewriteAction(baseRoute, urlRewrite, nil, nil)
+	if got.GetPrefixRewrite() != "/prefix-match/" {
+		t.Errorf("PrefixRewrite = %q, want %q", got.GetPrefixRewrite(), "/prefix-match/")
+	}
+	for in, want := range map[string]string{
+		"/doc": "/prefix-match/doc",
+		"/":    "/prefix-match/",
+	} {
+		if gotPath := got.GetPrefixRewrite() + strings.TrimPrefix(in, "/"); gotPath != want {
+			t.Errorf("rewritten path for %q = %q, want %q", in, gotPath, want)
+		}
+	}
+}
+
 func TestBuildXdsRequestMirrorPolicies(t *testing.T) {
 	tests := []struct {
 		name           string
