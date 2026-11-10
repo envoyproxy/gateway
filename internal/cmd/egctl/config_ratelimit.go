@@ -74,8 +74,10 @@ func retrieveRateLimitConfig(cli kubernetes.CLIClient, ns string) ([]byte, error
 		return nil, fmt.Errorf("failed to get global rate limit status: %w", err)
 	}
 
-	// Filter out all rate limit pods in the Running state
-	rlNN, err := fetchRunningRateLimitPods(cli, ns, ratelimit.LabelSelector())
+	// Filter out all rate limit pods in the Running state. The stable (prefix-
+	// independent) labels are used, so this also finds the pods of instances
+	// running with a per-instance resource prefix in a shared namespace.
+	rlNN, err := fetchRunningRateLimitPods(cli, ns, ratelimit.StableLabelSelector())
 	if err != nil {
 		return nil, err
 	}

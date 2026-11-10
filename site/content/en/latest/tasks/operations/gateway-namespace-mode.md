@@ -94,8 +94,11 @@ subjects:
 Envoy Gateway also supports configuration to watch resources only in specific namespaces by using:
 - `EnvoyGateway.provider.kubernetes.watch.namespaces` - An explicit list of namespace names
 - `EnvoyGateway.provider.kubernetes.watch.namespaceSelector` - A label selector for dynamic namespace selection
+- `EnvoyGateway.provider.kubernetes.watch.objectSelector` - An optional label selector that, in addition to the namespace scoping above, filters the watched objects (Gateway, ListenerSet, the route kinds and the policy kinds) by their own labels. It does not apply to GatewayClass, referenced resources (including the EnvoyProxy, Backend and HTTPRouteFilter objects looked up by name from the resources above), or Envoy Gateway-managed infrastructure. An empty selector (no `matchLabels` and no `matchExpressions`) matches every object.
 
 The namespace where Envoy Gateway runs is always included in addition to the configured watched namespaces. Envoy Gateway uses this namespace for its own managed infrastructure resources, such as Envoy data plane Services and Deployments.
+
+Note that `objectSelector` is not a permission boundary: it only filters the objects the controller reconciles, the controller keeps the same list/watch RBAC it would have without the selector. To run several Envoy Gateway instances in a single shared namespace, see [Multiple Envoy Gateway instances in a single namespace](/latest/tasks/operations/deployment-mode/#multiple-envoy-gateway-instances-in-a-single-namespace).
 
 #### Using Explicit Namespace List
 

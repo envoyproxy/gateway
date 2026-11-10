@@ -47,6 +47,7 @@ type fakeKubernetesInfraProvider struct {
 	ControllerNamespace          string
 	ControllerName               string
 	ControllerFullName           string
+	ControllerResourcePrefix     string
 	ControllerServiceAccountName string
 	DNSDomain                    string
 	EnvoyGateway                 *egv1a1.EnvoyGateway
@@ -57,6 +58,7 @@ func newFakeKubernetesInfraProvider(cfg *config.Server) KubernetesInfraProvider 
 		ControllerNamespace:          cfg.ControllerNamespace,
 		ControllerName:               cfg.ControllerName,
 		ControllerFullName:           cfg.ControllerFullName,
+		ControllerResourcePrefix:     cfg.ControllerResourcePrefix,
 		ControllerServiceAccountName: cfg.ControllerServiceAccountName,
 		DNSDomain:                    cfg.DNSDomain,
 		EnvoyGateway:                 cfg.EnvoyGateway,
@@ -73,6 +75,10 @@ func (f *fakeKubernetesInfraProvider) GetControllerName() string {
 
 func (f *fakeKubernetesInfraProvider) GetControllerFullName() string {
 	return f.ControllerFullName
+}
+
+func (f *fakeKubernetesInfraProvider) GetControllerResourcePrefix() string {
+	return f.ControllerResourcePrefix
 }
 
 func (f *fakeKubernetesInfraProvider) GetControllerServiceAccountName() string {
@@ -228,11 +234,22 @@ func TestDeployment(t *testing.T) {
 		concurrency          *int32
 		extraArgs            []string
 		gatewayNamespaceMode bool
+		resourcePrefix       string
 	}{
 		{
 			caseName: "default",
 			infra:    newTestInfra(),
 			deploy:   nil,
+		},
+		{
+			// A per-instance resource prefix scopes the shared control-plane
+			// resources the proxy references (xDS Service, cert Secret, Service
+			// Account audience) so co-located instances in one namespace do not
+			// collide.
+			caseName:       "prefixed",
+			infra:          newTestInfra(),
+			deploy:         nil,
+			resourcePrefix: "tenant-a",
 		},
 		{
 			caseName: "custom",
@@ -740,6 +757,11 @@ func TestDeployment(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
+			if tc.resourcePrefix != "" {
+				cfg.ControllerResourcePrefix = tc.resourcePrefix
+			} else {
+				cfg.ControllerResourcePrefix = config.EnvoyGatewayServiceName
+			}
 			kube := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
 			if tc.deploy != nil {
 				kube.EnvoyDeployment = tc.deploy

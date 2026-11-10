@@ -49,12 +49,23 @@ var ownerReferenceUID = map[string]types.UID{
 func TestRateLimitLabelSelector(t *testing.T) {
 	cases := []struct {
 		name     string
+		prefix   string
 		expected []string
 	}{
 		{
-			name: "rateLimit-labelSelector",
+			name:   "rateLimit-labelSelector",
+			prefix: "",
 			expected: []string{
 				"app.kubernetes.io/name=envoy-ratelimit",
+				"app.kubernetes.io/component=ratelimit",
+				"app.kubernetes.io/managed-by=envoy-gateway",
+			},
+		},
+		{
+			name:   "rateLimit-labelSelector-prefixed",
+			prefix: "tenant-a",
+			expected: []string{
+				"app.kubernetes.io/name=tenant-a-envoy-ratelimit",
 				"app.kubernetes.io/component=ratelimit",
 				"app.kubernetes.io/managed-by=envoy-gateway",
 			},
@@ -63,7 +74,7 @@ func TestRateLimitLabelSelector(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := LabelSelector()
+			got := LabelSelector(tc.prefix)
 			require.ElementsMatch(t, tc.expected, got)
 		})
 	}
@@ -72,12 +83,23 @@ func TestRateLimitLabelSelector(t *testing.T) {
 func TestRateLimitLabels(t *testing.T) {
 	cases := []struct {
 		name     string
+		prefix   string
 		expected map[string]string
 	}{
 		{
-			name: "rateLimit-labels",
+			name:   "rateLimit-labels",
+			prefix: "",
 			expected: map[string]string{
 				"app.kubernetes.io/name":       InfraName,
+				"app.kubernetes.io/component":  "ratelimit",
+				"app.kubernetes.io/managed-by": "envoy-gateway",
+			},
+		},
+		{
+			name:   "rateLimit-labels-prefixed",
+			prefix: "tenant-a",
+			expected: map[string]string{
+				"app.kubernetes.io/name":       "tenant-a-" + InfraName,
 				"app.kubernetes.io/component":  "ratelimit",
 				"app.kubernetes.io/managed-by": "envoy-gateway",
 			},
@@ -86,7 +108,7 @@ func TestRateLimitLabels(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := rateLimitLabels()
+			got := rateLimitLabels(tc.prefix)
 			require.Equal(t, tc.expected, got)
 		})
 	}
@@ -104,7 +126,7 @@ func TestServiceAccount(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
@@ -117,8 +139,9 @@ func TestService(t *testing.T) {
 	require.NoError(t, err)
 
 	cases := []struct {
-		caseName  string
-		rateLimit *egv1a1.RateLimit
+		caseName       string
+		rateLimit      *egv1a1.RateLimit
+		resourcePrefix string
 	}{
 		{
 			caseName: "default",
@@ -149,11 +172,29 @@ func TestService(t *testing.T) {
 				},
 			},
 		},
+		{
+			// A per-instance resource prefix scopes the rate limit infra so
+			// co-located instances in one namespace do not collide.
+			caseName:       "prefixed",
+			resourcePrefix: "tenant-a",
+			rateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
+						URL: new("redis.redis.svc:6379"),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range cases {
+		prefix := tc.resourcePrefix
+		if prefix == "" {
+			prefix = cfg.ControllerResourcePrefix
+		}
 		cfg.EnvoyGateway.RateLimit = tc.rateLimit
-		r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+		r := NewResourceRender(cfg.ControllerNamespace, prefix, cfg.EnvoyGateway, ownerReferenceUID)
 
 		svc, err := r.Service()
 		require.NoError(t, err)
@@ -173,7 +214,7 @@ func TestConfigmap(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 	cm, err := r.ConfigMap("")
 	require.NoError(t, err)
 	requireObject[corev1.ConfigMap](t, cm, "testdata/envoy-ratelimit-configmap.yaml")
@@ -246,7 +287,7 @@ func TestPDB(t *testing.T) {
 					},
 				},
 			}
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 			pdb, err := r.PodDisruptionBudget()
 			require.NoError(t, err)
 
@@ -267,10 +308,11 @@ func TestDeployment(t *testing.T) {
 		},
 	}
 	cases := []struct {
-		caseName  string
-		rateLimit *egv1a1.RateLimit
-		deploy    *egv1a1.KubernetesDeploymentSpec
-		hpa       *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+		caseName       string
+		rateLimit      *egv1a1.RateLimit
+		deploy         *egv1a1.KubernetesDeploymentSpec
+		hpa            *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+		resourcePrefix string
 	}{
 		{
 			caseName:  "default",
@@ -829,9 +871,21 @@ func TestDeployment(t *testing.T) {
 				MaxReplicas: new(int32(10)),
 			},
 		},
+		{
+			// A per-instance resource prefix scopes the rate limit infra so
+			// co-located instances in one namespace do not collide.
+			caseName:       "prefixed",
+			rateLimit:      rateLimit,
+			deploy:         cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+			resourcePrefix: "tenant-a",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
+			prefix := tc.resourcePrefix
+			if prefix == "" {
+				prefix = cfg.ControllerResourcePrefix
+			}
 			cfg.EnvoyGateway.RateLimit = tc.rateLimit
 
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
@@ -843,7 +897,7 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 			}
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, prefix, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 			requireObject[appsv1.Deployment](t, dp, fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName))
@@ -952,7 +1006,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 					},
 				},
 			}
-			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+			r := NewResourceRender(cfg.ControllerNamespace, cfg.ControllerResourcePrefix, cfg.EnvoyGateway, ownerReferenceUID)
 			hpa, err := r.HorizontalPodAutoscaler()
 			require.NoError(t, err)
 
@@ -988,8 +1042,11 @@ func requireObject[ObjectT any](t *testing.T, got *ObjectT, filename string) {
 }
 
 func TestGetServiceURL(t *testing.T) {
-	got := GetServiceURL("envoy-gateway-system", "example-cluster.local")
+	got := GetServiceURL("", "envoy-gateway-system", "example-cluster.local")
 	require.Equal(t, "grpc://envoy-ratelimit.envoy-gateway-system.svc.example-cluster.local:8081", got)
+
+	got = GetServiceURL("tenant-a", "envoy-gateway-system", "example-cluster.local")
+	require.Equal(t, "grpc://tenant-a-envoy-ratelimit.envoy-gateway-system.svc.example-cluster.local:8081", got)
 }
 
 func TestValidateRedisURLRef(t *testing.T) {

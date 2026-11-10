@@ -247,7 +247,10 @@ func (r *Runner) addNewSnapshot(ctx context.Context, resource types.XdsResources
 	if err != nil {
 		return fmt.Errorf("failed to generate a config snapshot: %w", err)
 	}
-	err = r.cache.SetSnapshot(ctx, ratelimit.InfraName, snapshot)
+	// Publish the snapshot under the node ID this instance's rate-limit pods
+	// subscribe with (CONFIG_GRPC_XDS_NODE_ID), so that co-located instances
+	// each receive only their own snapshot.
+	err = r.cache.SetSnapshot(ctx, config.InstanceResourceName(r.ControllerResourcePrefix, ratelimit.InfraName), snapshot)
 	if err != nil {
 		return fmt.Errorf("failed to set a config snapshot: %w", err)
 	}

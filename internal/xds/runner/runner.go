@@ -217,7 +217,9 @@ func (r *Runner) Start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to create Kubernetes client: %w", err)
 		}
-		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, r.ControllerNamespace, r.DNSDomain)
+		saAudience := fmt.Sprintf("%s.%s.svc.%s",
+			config.InstanceResourceName(r.ControllerResourcePrefix, config.EnvoyGatewayServiceName),
+			r.ControllerNamespace, r.DNSDomain)
 		jwtInterceptor := kubejwt.NewJWTAuthInterceptor(
 			r.Logger,
 			clientset,
@@ -346,7 +348,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {
 					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
-						ServiceURL: ratelimit.GetServiceURL(r.ControllerNamespace, r.DNSDomain),
+						ServiceURL: ratelimit.GetServiceURL(r.ControllerResourcePrefix, r.ControllerNamespace, r.DNSDomain),
 						FailClosed: r.EnvoyGateway.RateLimit.FailClosed,
 					}
 					if r.EnvoyGateway.RateLimit.Timeout != nil {

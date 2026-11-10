@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/metrics"
@@ -742,7 +743,7 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 func (i *Infra) getEnvoyGatewayCA(ctx context.Context) string {
 	secret := &corev1.Secret{}
 	err := i.Client.Get(ctx, types.NamespacedName{
-		Name:      "envoy",
+		Name:      config.InstanceResourceName(i.ControllerResourcePrefix, config.EnvoyPrefix),
 		Namespace: i.ControllerNamespace,
 	}, secret)
 	if err != nil {

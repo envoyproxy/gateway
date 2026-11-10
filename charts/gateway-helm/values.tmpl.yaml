@@ -196,6 +196,16 @@ createNamespace: false
 # Defaults to the release namespace.
 namespaceOverride: ""
 
+# -- Prefix for the names of the control plane resources created by this release
+# (Deployment, Service, ServiceAccount, ConfigMap, certgen Secrets, xDS Service,
+# leader election lease). Leave empty to keep the historic resource names, which
+# only support one Envoy Gateway instance per namespace. Set a unique value per
+# release to run multiple Envoy Gateway instances in the same namespace, and
+# combine it with a unique `config.envoyGateway.gateway.controllerName` and a
+# disjoint `config.envoyGateway.provider.kubernetes.watch.objectSelector`
+# so that each instance reconciles only its own resources.
+resourcePrefix: ""
+
 kubernetesClusterDomain: cluster.local
 
 # -- Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected.

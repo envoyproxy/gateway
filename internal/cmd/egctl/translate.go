@@ -391,7 +391,9 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		xTranslator := &translator.Translator{
 			// Set some default settings for translation
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
-				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
+				// The resource prefix is an install-time (env) setting, not part of the
+				// translated resources, so the historic service name is used here.
+				ServiceURL: ratelimit.GetServiceURL("", namespace, dnsDomain),
 			},
 			// Use the order from the IR, which has invalid fields of the EnvoyProxy dropped.
 			FilterOrder: val.FilterOrder,

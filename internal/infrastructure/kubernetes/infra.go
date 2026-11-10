@@ -56,6 +56,12 @@ type Infra struct {
 	// ControllerFullName is the Helm release fullname used for certgen and other release-scoped resources.
 	ControllerFullName string
 
+	// ControllerResourcePrefix is the prefix applied to the names of the
+	// shared control-plane resources owned by this instance (certgen
+	// Secrets, xDS Service, leader election lease, ...). Defaults to
+	// config.EnvoyGatewayServiceName.
+	ControllerResourcePrefix string
+
 	// ControllerServiceAccountName is the service account name of the Envoy Gateway controller pod.
 	ControllerServiceAccountName string
 
@@ -93,6 +99,7 @@ func NewInfra(cli client.Client, cfg *config.Server, errors message.RunnerErrorN
 		ControllerNamespace:          cfg.ControllerNamespace,
 		ControllerName:               cfg.ControllerName,
 		ControllerFullName:           cfg.ControllerFullName,
+		ControllerResourcePrefix:     cfg.ControllerResourcePrefix,
 		ControllerServiceAccountName: cfg.ControllerServiceAccountName,
 		DNSDomain:                    cfg.DNSDomain,
 		EnvoyGateway:                 cfg.EnvoyGateway,

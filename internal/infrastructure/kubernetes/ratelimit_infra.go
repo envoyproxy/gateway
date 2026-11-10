@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 )
 
@@ -25,7 +26,7 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 	ownerReferenceUID := make(map[string]types.UID)
 	key := types.NamespacedName{
 		Namespace: i.ControllerNamespace,
-		Name:      "envoy-gateway",
+		Name:      config.InstanceResourceName(i.ControllerResourcePrefix, config.EnvoyGatewayServiceName),
 	}
 
 	serviceUID, err := i.Client.GetUID(ctx, key, &corev1.Service{})
@@ -46,13 +47,13 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 	}
 	ownerReferenceUID[ratelimit.ResourceKindServiceAccount] = serviceAccountUID
 
-	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.EnvoyGateway, ownerReferenceUID)
+	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.ControllerResourcePrefix, i.EnvoyGateway, ownerReferenceUID)
 	return i.createOrUpdate(ctx, r)
 }
 
 // DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
 func (i *Infra) DeleteRateLimitInfra(ctx context.Context) error {
 	// Delete ratelimit infra do not require the uid of owner reference.
-	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.EnvoyGateway, nil)
+	r := ratelimit.NewResourceRender(i.ControllerNamespace, i.ControllerResourcePrefix, i.EnvoyGateway, nil)
 	return i.delete(ctx, r)
 }

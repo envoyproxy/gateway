@@ -53,6 +53,10 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        {{- with .Values.resourcePrefix }}
+        - name: ENVOY_GATEWAY_RESOURCE_PREFIX
+          value: {{ . }}
+        {{- end }}
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
         image: {{ include "eg.image" . }}
