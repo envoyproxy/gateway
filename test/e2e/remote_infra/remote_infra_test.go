@@ -56,7 +56,7 @@ func TestRemoteInfra(t *testing.T) {
 	t.Cleanup(func() {
 		recorder.Report(t)
 	})
-	timedTests := e2e.WrapConformanceTestsWithTiming(tests.RemoteInfraTests, recorder)
+	timedTests := e2e.WrapConformanceTestsWithHook(e2e.WrapConformanceTestsWithTiming(tests.RemoteInfraTests, recorder))
 
 	// Apply the base conformance resources (namespaces, backends, secrets, etc.) and
 	// wait for them to be ready. Unlike the merge_gateways/multiple_gc suites, the
