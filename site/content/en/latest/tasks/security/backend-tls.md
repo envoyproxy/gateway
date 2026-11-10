@@ -75,7 +75,7 @@ kubectl create configmap example-ca --from-file=ca.crt
 Save and apply the following resource to your cluster:
 
 ```shell
-apiVersion: certificates.k8s.io/v1beta1
+apiVersion: certificates.k8s.io/v1
 kind: ClusterTrustBundle
 metadata:
   name: example-ca

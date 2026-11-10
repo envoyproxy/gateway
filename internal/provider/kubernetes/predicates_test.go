@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -2458,7 +2458,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		// include BackendTLSPolicy, e.g. OpenShift's Ingress-Operator-managed set.
 		btlsCRDAbsent bool
 		configs       []client.Object
-		ctb           *certificatesv1b1.ClusterTrustBundle
+		ctb           *certificatesv1.ClusterTrustBundle
 		expect        bool
 	}{
 		{

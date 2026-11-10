@@ -16,7 +16,6 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -99,7 +98,8 @@ type gatewayAPIReconciler struct {
 	extBackendCRDExists    map[schema.GroupVersionKind]bool
 	extSecretCRDExists     map[schema.GroupVersionKind]bool
 
-	clusterTrustBundleExits bool
+	// clusterTrustBundleGV is the served ClusterTrustBundle API version, empty if none is served.
+	clusterTrustBundleGV schema.GroupVersion
 
 	// Experimental Gateway API features
 }
@@ -1495,8 +1495,7 @@ func (r *gatewayAPIReconciler) processClusterTrustBundleRef(
 	resourceTree *resource.Resources,
 	ref gwapiv1.SecretObjectReference,
 ) error {
-	trustBundle := &certificatesv1b1.ClusterTrustBundle{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: string(ref.Name)}, trustBundle)
+	trustBundle, err := r.getClusterTrustBundle(ctx, string(ref.Name))
 	if err != nil {
 		return fmt.Errorf("unable to find the ClusterTrustBundle %s: %w", string(ref.Name), err)
 	}
