@@ -470,7 +470,7 @@ func irStringKey(gatewayNs, gatewayName string) string {
 // extractGatewayNameFromListener extracts the gateway name from an IR listener name.
 // The listener name format can be:
 // - Gateway: "namespace/gateway/listener"
-// - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
+// - ListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
 // Returns "namespace/gateway/" in both cases.
 func extractGatewayNameFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
