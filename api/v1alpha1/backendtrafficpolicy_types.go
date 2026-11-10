@@ -228,6 +228,7 @@ type ConnectConfig struct {
 	Terminate *bool `json:"terminate,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="has(self.limit)", message="limit must be set"
 type RequestBuffer struct {
 	// Limit specifies the maximum size in bytes that Envoy may buffer for an incoming request body.
 	// If a request's buffered body exceeds this limit, the request is rejected with HTTP 413 Content
