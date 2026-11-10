@@ -70,12 +70,31 @@ kubectl create configmap example-ca --from-file=ca.crt
 
 {{% /tab %}}
 
-{{% tab header="ClusterTrustBundle" %}}
+{{% tab header="ClusterTrustBundle (Kubernetes 1.37+)" %}}
 
+ClusterTrustBundle is GA and served as `certificates.k8s.io/v1` by default since Kubernetes 1.37.
 Save and apply the following resource to your cluster:
 
-```shell
+```yaml
 apiVersion: certificates.k8s.io/v1
+kind: ClusterTrustBundle
+metadata:
+  name: example-ca
+spec:
+  trustBundle: |
+    [content from ca.crt]
+```
+
+{{% /tab %}}
+
+{{% tab header="ClusterTrustBundle (Kubernetes 1.34-1.36)" %}}
+
+Before Kubernetes 1.37, ClusterTrustBundle is only available as `certificates.k8s.io/v1beta1`, which is disabled by default.
+Enable it on the API server with `--runtime-config=certificates.k8s.io/v1beta1/clustertrustbundles=true` and `--feature-gates=ClusterTrustBundle=true`,
+then save and apply the following resource to your cluster:
+
+```yaml
+apiVersion: certificates.k8s.io/v1beta1
 kind: ClusterTrustBundle
 metadata:
   name: example-ca
