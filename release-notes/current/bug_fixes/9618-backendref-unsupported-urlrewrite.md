@@ -1,0 +1,1 @@
+Fixed `HTTPRouteFilter` URL rewrites in the filters of a `backendRef` being silently ignored. Path rewrites and hostname rewrites of type `Header`, `Backend` or `PathRegex` are now rejected there with an `InvalidBackendFilters` status, and requests sent to that `backendRef` receive a `500` response, because only a literal hostname rewrite is supported for a `backendRef`.
