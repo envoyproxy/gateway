@@ -42,7 +42,7 @@
                     timeout: 10s
                     uri: https://oidc.example.com/auth/realms/example/protocol/openid-connect/certs
             requirementMap:
-              exjwt_0c84dc547de3534c:
+              default/policy:
                 providerName: exjwt_7e856c9609a79109
         - name: envoy.filters.http.rbac
           typedConfig:

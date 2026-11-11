@@ -206,6 +206,15 @@ func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
 	return false
 }
 
+// IsHTTPRouteFilterRef returns true if the extensionRef refers to Envoy Gateway
+// HTTPRouteFilter. Both group and kind must match, since an extension may register
+// a resource with the same kind in a different group.
+func IsHTTPRouteFilterRef(ref *gwapiv1.LocalObjectReference) bool {
+	return ref != nil &&
+		string(ref.Group) == egv1a1.GroupName &&
+		string(ref.Kind) == egv1a1.KindHTTPRouteFilter
+}
+
 // ValidateHTTPRouteFilter validates the provided filter within HTTPRoute.
 func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
@@ -222,8 +231,7 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+		case IsHTTPRouteFilterRef(filter.ExtensionRef):
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -252,8 +260,7 @@ func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+		case IsHTTPRouteFilterRef(filter.ExtensionRef):
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -463,7 +470,7 @@ func irStringKey(gatewayNs, gatewayName string) string {
 // extractGatewayNameFromListener extracts the gateway name from an IR listener name.
 // The listener name format can be:
 // - Gateway: "namespace/gateway/listener"
-// - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
+// - ListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
 // Returns "namespace/gateway/" in both cases.
 func extractGatewayNameFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
@@ -594,19 +601,19 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 
 // irTLSConfigs produces a defaulted IR TLSConfig
 func (t *Translator) irTLSConfigs(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
-	if len(config.secrets) == 0 && len(config.extensionCertificates) == 0 && config.frontendTLSValidation == nil {
+	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
-		Certificates: make([]ir.TLSCertificate, len(config.secrets), len(config.secrets)+len(config.extensionCertificates)),
+		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
-	for i, tlsSecret := range config.secrets {
-		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(tlsSecret)
-	}
-	for i := range config.extensionCertificates {
-		tlsListenerConfigs.Certificates = append(tlsListenerConfigs.Certificates,
-			t.getTLSCertificateFromExtensionRef(&config.extensionCertificates[i], gwIR, gatewayCtx))
+	for i, secret := range config.secrets {
+		if secret.extensionSecret != nil {
+			tlsListenerConfigs.Certificates[i] = t.getTLSCertificateFromExtensionRef(secret.extensionSecret, gwIR, gatewayCtx)
+			continue
+		}
+		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(secret.kubernetesSecret)
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
