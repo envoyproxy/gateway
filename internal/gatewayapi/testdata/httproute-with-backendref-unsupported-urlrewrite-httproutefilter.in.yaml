@@ -72,6 +72,36 @@ httpRoutes:
                     group: gateway.envoyproxy.io
                     kind: HTTPRouteFilter
                     name: rewrite-path-regex
+        - matches:
+            - path:
+                value: "/append-x-forwarded-host"
+          backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: URLRewrite
+                  urlRewrite:
+                    hostname: "rewritten.example.com"
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: append-x-forwarded-host
+        - matches:
+            - path:
+                value: "/no-x-forwarded-host"
+          backendRefs:
+            - name: service-1
+              port: 8080
+              filters:
+                - type: URLRewrite
+                  urlRewrite:
+                    hostname: "rewritten.example.com"
+                - type: ExtensionRef
+                  extensionRef:
+                    group: gateway.envoyproxy.io
+                    kind: HTTPRouteFilter
+                    name: no-x-forwarded-host
 httpFilters:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: HTTPRouteFilter
@@ -116,3 +146,19 @@ httpFilters:
           replaceRegexMatch:
             pattern: "^/regex-path"
             substitution: "/rewritten"
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: append-x-forwarded-host
+    spec:
+      urlRewrite:
+        appendXForwardedHost: true
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: no-x-forwarded-host
+    spec:
+      urlRewrite:
+        appendXForwardedHost: false

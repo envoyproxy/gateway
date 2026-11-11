@@ -3426,8 +3426,9 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 }
 
 // validateBackendRefURLRewrite rejects URL rewrites that a backendRef filter cannot apply.
-// Envoy weighted clusters only support a literal host rewrite, so path rewrites and
-// hostname rewrites derived from a header, the backend or the path would be ignored.
+// Envoy weighted clusters only support a literal host rewrite, so path rewrites, hostname
+// rewrites derived from a header, the backend or the path, and appending the original host
+// to X-Forwarded-Host would be ignored.
 func validateBackendRefURLRewrite(rewrite *ir.URLRewrite) error {
 	if rewrite == nil {
 		return nil
@@ -3448,6 +3449,9 @@ func validateBackendRefURLRewrite(rewrite *ir.URLRewrite) error {
 		if hostnameType != "" {
 			return fmt.Errorf("URLRewrite hostname modifier of type %s is not supported in the filters of a backendRef", hostnameType)
 		}
+	}
+	if ptr.Deref(rewrite.AppendXForwardedHost, false) {
+		return errors.New("URLRewrite appendXForwardedHost: true is not supported in the filters of a backendRef")
 	}
 	return nil
 }
