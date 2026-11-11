@@ -152,6 +152,44 @@ func (t *testingExtensionServer) PostVirtualHostModify(_ context.Context, req *p
 		return &pb.PostVirtualHostModifyResponse{
 			VirtualHost: modifiedVH,
 		}, nil
+	case "listener-foo/foo_example_io",
+		"listener-bar/bar_example_io":
+		if len(req.PostVirtualHostContext.ExtensionResources) == 0 {
+			return nil, fmt.Errorf("expected a policy in the extension resources array")
+		}
+		extensionResource := unstructured.Unstructured{}
+		if err := extensionResource.UnmarshalJSON(req.PostVirtualHostContext.ExtensionResources[0].UnstructuredBytes); err != nil {
+			return &pb.PostVirtualHostModifyResponse{
+				VirtualHost: req.VirtualHost,
+			}, err
+		}
+		spec, ok := extensionResource.Object["spec"].(map[string]any)
+		if !ok {
+			return &pb.PostVirtualHostModifyResponse{
+				VirtualHost: req.VirtualHost,
+			}, fmt.Errorf("can't find the spec section")
+		}
+		data, ok := spec["data"].(string)
+		if !ok {
+			return &pb.PostVirtualHostModifyResponse{
+				VirtualHost: req.VirtualHost,
+			}, fmt.Errorf("can't find the expected information")
+		}
+		modifiedVH := proto.Clone(req.VirtualHost).(*routeV3.VirtualHost)
+		modifiedVH.Routes = append(modifiedVH.Routes, &routeV3.Route{
+			Name: data,
+			Match: &routeV3.RouteMatch{
+				PathSpecifier: &routeV3.RouteMatch_Prefix{Prefix: "/" + data},
+			},
+			Action: &routeV3.Route_DirectResponse{
+				DirectResponse: &routeV3.DirectResponseAction{
+					Status: uint32(200),
+				},
+			},
+		})
+		return &pb.PostVirtualHostModifyResponse{
+			VirtualHost: modifiedVH,
+		}, nil
 	}
 	return &pb.PostVirtualHostModifyResponse{
 		VirtualHost: req.VirtualHost,
@@ -530,4 +568,49 @@ func getTargetRefKind(obj *unstructured.Unstructured) (string, error) {
 	}
 
 	return kind, nil
+}
+
+// ResolveSecret resolves a secret based on the referenced resource's name:
+//   - "refuse-*": refused with a failure reason (provider not ready)
+//   - "error-*":  the call fails
+//   - "reserved-<secret>": resolved to <secret>, for testing reserved names
+//   - "sds-*":    resolved to a name served over SDS
+//   - otherwise:  resolved to a name only
+func (t *testingExtensionServer) ResolveSecret(_ context.Context, req *pb.ResolveSecretRequest) (*pb.ResolveSecretResponse, error) {
+	secretCtx := req.GetSecretContext()
+	var secret unstructured.Unstructured
+	if err := secret.UnmarshalJSON(secretCtx.GetSecretResource().GetUnstructuredBytes()); err != nil {
+		return nil, err
+	}
+
+	name := secret.GetName()
+	switch {
+	case strings.HasPrefix(name, "refuse-"):
+		return &pb.ResolveSecretResponse{
+			FailureReason:  "NotReady",
+			FailureMessage: fmt.Sprintf("secret %s is not ready", name),
+		}, nil
+	case strings.HasPrefix(name, "error-"):
+		return nil, errors.New("secret resolve error")
+	case strings.HasPrefix(name, "reserved-"):
+		return &pb.ResolveSecretResponse{
+			SdsSecretConfig: &tlsV3.SdsSecretConfig{Name: strings.TrimPrefix(name, "reserved-")},
+		}, nil
+	case strings.HasPrefix(name, "sds-"):
+		return &pb.ResolveSecretResponse{
+			SdsSecretConfig: &tlsV3.SdsSecretConfig{
+				Name: "sds/" + name,
+				SdsConfig: &coreV3.ConfigSource{
+					ResourceApiVersion:    coreV3.ApiVersion_V3,
+					ConfigSourceSpecifier: &coreV3.ConfigSource_Ads{Ads: &coreV3.AggregatedConfigSource{}},
+				},
+			},
+		}, nil
+	default:
+		return &pb.ResolveSecretResponse{
+			SdsSecretConfig: &tlsV3.SdsSecretConfig{
+				Name: fmt.Sprintf("%s/%s/%s", secretCtx.GetProxy().GetNamespace(), secretCtx.GetProxy().GetName(), name),
+			},
+		}, nil
+	}
 }

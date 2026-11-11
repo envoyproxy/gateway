@@ -75,13 +75,13 @@
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
-              example-cookie-or-example-header-or-missing-or-failed_f403d1f429347916:
+              default/policy-1:
                 requiresAny:
                   requirements:
                   - providerName: example-cookie_0cd81fec67dbf176
                   - providerName: example-header_18dee9d5ffa8102b
                   - allowMissingOrFailed: {}
-              example-or-missing-or-failed_3adbd87437a23687:
+              default/policy-2:
                 requiresAny:
                   requirements:
                   - providerName: example_ced70d98fe975d58

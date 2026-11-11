@@ -1,0 +1,237 @@
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    name: lookup
+    namespace: default
+  spec:
+    backends:
+    - backendRef:
+        group: ""
+        kind: Service
+        name: lookup
+        port: 8080
+      name: resolver
+    lua:
+    - inline: |
+        function envoy_on_request(handle)
+          local cluster = handle:route():metadata():get("resolver")
+          handle:httpCall(cluster, {
+            [":method"] = "GET",
+            [":path"] = "/",
+            [":authority"] = "lookup"
+          }, nil, 2000)
+        end
+      type: Inline
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: app
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: eg
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: eg
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: eg
+    namespace: default
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: app
+    namespace: default
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: app
+        port: 8080
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: eg
+infraIR:
+  default/eg:
+    proxy:
+      listeners:
+      - name: default/eg/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: eg
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: eg
+      name: default/eg
+      namespace: ""
+xdsIR:
+  default/eg:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    extensionBackends:
+    - metadata:
+        kind: EnvoyExtensionPolicy
+        name: lookup
+        namespace: default
+      name: envoyextensionpolicy/default/lookup/backend/resolver/gateway/default/eg/0
+      settings:
+      - endpoints:
+        - host: 10.0.0.2
+          port: 8080
+        metadata:
+          kind: Service
+          name: lookup
+          namespace: default
+          sectionName: "8080"
+        name: envoyextensionpolicy/default/lookup/backend/resolver/gateway/default/eg/0/backend/0
+        protocol: HTTP
+        weight: 1
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: eg
+        namespace: default
+        sectionName: http
+      name: default/eg/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: app
+            namespace: default
+          name: httproute/default/app/rule/0
+          settings:
+          - endpoints:
+            - host: 10.0.0.1
+              port: 8080
+            metadata:
+              kind: Service
+              name: app
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/app/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions:
+          backends:
+            resolver: envoyextensionpolicy/default/lookup/backend/resolver/gateway/default/eg/0
+          luas:
+          - Code: |
+              function envoy_on_request(handle)
+                local cluster = handle:route():metadata():get("resolver")
+                handle:httpCall(cluster, {
+                  [":method"] = "GET",
+                  [":path"] = "/",
+                  [":authority"] = "lookup"
+                }, nil, 2000)
+              end
+            FilterContext: null
+            Name: envoyextensionpolicy/default/lookup/lua/0
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: app
+          namespace: default
+        name: httproute/default/app/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

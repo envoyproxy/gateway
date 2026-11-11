@@ -23,7 +23,46 @@
         {{ if ne $baseURL "/" }}
         {{ $href := printf "%s%s%s" $baseURL $url $path -}}
         {{ end }}
-        <li><a class="dropdown-item" href="{{ $href }}">{{ $text }}</a></li>
+        <li><a class="dropdown-item" href="{{ $href }}" data-version="{{ .version }}" data-eol="{{ $eol_time.Format "2006-01-02" }}">{{ $text }}</a></li>
         {{ end -}}
+        <li class="d-none" data-eol-toggle-item><hr class="dropdown-divider"></li>
+        <li class="d-none" data-eol-toggle-item><button type="button" class="dropdown-item text-muted" data-eol-toggle></button></li>
     </ul>
 </div>
+<script>
+  // The site is static, so the EOL label rendered at build time goes stale
+  // until the next rebuild. Recompute it in the browser against today's date,
+  // and collapse EOL versions behind a toggle so the menu stays short.
+  (function () {
+    var now = Date.now();
+    document.querySelectorAll('.dropdown-menu').forEach(function (menu) {
+      var eolItems = [];
+      menu.querySelectorAll('.dropdown-item[data-eol]').forEach(function (el) {
+        var eol = Date.parse(el.dataset.eol); // "YYYY-MM-DD" parses as UTC midnight, same as Hugo
+        if (isNaN(eol)) return;
+        var isEol = now > eol;
+        el.textContent = isEol ? el.dataset.version + ' (EOL)' : el.dataset.version;
+        if (isEol) {
+          el.parentElement.classList.add('d-none');
+          eolItems.push(el.parentElement);
+        }
+      });
+      var toggle = menu.querySelector('[data-eol-toggle]');
+      if (!toggle || eolItems.length === 0) return;
+      var expanded = false;
+      var label = function () {
+        toggle.textContent = (expanded ? 'Hide' : 'Show') + ' EOL versions (' + eolItems.length + ')';
+      };
+      label();
+      menu.querySelectorAll('[data-eol-toggle-item]').forEach(function (li) {
+        li.classList.remove('d-none');
+      });
+      toggle.addEventListener('click', function (e) {
+        e.stopPropagation(); // keep the Bootstrap dropdown open
+        expanded = !expanded;
+        eolItems.forEach(function (li) { li.classList.toggle('d-none', !expanded); });
+        label();
+      });
+    });
+  })();
+</script>

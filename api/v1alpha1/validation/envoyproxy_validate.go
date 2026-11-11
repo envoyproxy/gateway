@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/netip"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/dominikbraun/graph"
@@ -37,10 +38,113 @@ func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
 	return utilerrors.NewAggregate(errs)
 }
 
+// InvalidField is an EnvoyProxy field that failed validation but can be unset without
+// affecting the proxy infrastructure or the rest of the EnvoyProxy configuration.
+type InvalidField struct {
+	// Path is the path of the field relative to the EnvoyProxy spec.
+	Path string
+	Err  error
+}
+
+func (f InvalidField) Error() string {
+	return fmt.Sprintf("%s: %v", f.Path, f.Err)
+}
+
+// ValidateEnvoyProxyFields validates the provided EnvoyProxy like ValidateEnvoyProxy, but
+// returns the errors scoped to a field that DropInvalidFields can unset separately from the
+// errors that make the whole EnvoyProxy unusable.
+func ValidateEnvoyProxyFields(proxy *egv1a1.EnvoyProxy) ([]InvalidField, error) {
+	if proxy == nil {
+		return nil, errors.New("envoyproxy is nil")
+	}
+	invalid := append(invalidTelemetryFields(&proxy.Spec), invalidFilterOrderFields(&proxy.Spec)...)
+	return invalid, utilerrors.NewAggregate(validateEnvoyProxySpecFatal(&proxy.Spec))
+}
+
+// DropInvalidFields returns a copy of proxy with every field reported by
+// ValidateEnvoyProxyFields as an InvalidField unset. It returns proxy itself when there is
+// nothing to drop.
+//
+// It is intentionally separate from ValidateEnvoyProxyFields rather than a single
+// validate-and-sanitize function: the translator validates each source EnvoyProxy to report
+// status on it, and separately sanitizes each layer before merging it into the EnvoyProxy that
+// reaches the IR, so a combined function would deep copy every EnvoyProxy on the status path
+// just to throw the copy away. The cost is that both functions must cover the same fields; when adding an
+// InvalidField check, clear the field here too. TestValidateEnvoyProxyFields asserts that
+// nothing is reported after DropInvalidFields.
+func DropInvalidFields(proxy *egv1a1.EnvoyProxy) *egv1a1.EnvoyProxy {
+	if proxy == nil {
+		return nil
+	}
+	if len(invalidTelemetryFields(&proxy.Spec)) == 0 && len(invalidFilterOrderFields(&proxy.Spec)) == 0 {
+		return proxy
+	}
+
+	out := proxy.DeepCopy()
+	spec := &out.Spec
+	if spec.FilterOrder != nil && validateFilterOrder(spec.FilterOrder) != nil {
+		spec.FilterOrder = nil
+	}
+	if spec.Telemetry == nil {
+		return out
+	}
+	if al := spec.Telemetry.AccessLog; al != nil && !ptr.Deref(al.Disable, false) {
+		// An invalid format makes the whole setting unusable, while an invalid sink only
+		// affects itself.
+		al.Settings = slices.DeleteFunc(al.Settings, func(setting egv1a1.ProxyAccessLogSetting) bool {
+			return validateProxyAccessLogFormat(setting.Format) != nil
+		})
+		for i := range al.Settings {
+			al.Settings[i].Sinks = slices.DeleteFunc(al.Settings[i].Sinks, func(sink egv1a1.ProxyAccessLogSink) bool {
+				return validateProxyAccessLogSink(&sink) != nil
+			})
+		}
+		// A setting needs at least one sink, so one whose sinks were all invalid is dropped
+		// too. When no setting is left, settings is unset rather than empty, so that a merged
+		// EnvoyProxy keeps the settings of the less specific layer.
+		al.Settings = slices.DeleteFunc(al.Settings, func(setting egv1a1.ProxyAccessLogSetting) bool {
+			return len(setting.Sinks) == 0
+		})
+		if len(al.Settings) == 0 {
+			al.Settings = nil
+		}
+	}
+	if validateProxyTracing(spec.Telemetry.Tracing) != nil {
+		spec.Telemetry.Tracing = nil
+	}
+	if m := spec.Telemetry.Metrics; m != nil {
+		m.Sinks = slices.DeleteFunc(m.Sinks, func(sink egv1a1.ProxyMetricSink) bool {
+			return len(validateProxyMetricSink(&sink)) > 0
+		})
+		if m.ClusterStatName != nil && ValidateClusterStatName(*m.ClusterStatName) != nil {
+			m.ClusterStatName = nil
+		}
+		if m.Prometheus != nil && m.Prometheus.Compression != nil &&
+			validatePrometheusCompression(m.Prometheus.Compression) != nil {
+			m.Prometheus.Compression = nil
+		}
+	}
+	return out
+}
+
 // validateEnvoyProxySpec validates the provided EnvoyProxy spec.
 // This method validates everything except for the bootstrap section, because validating the bootstrap
 // section in this method would require calling into the internal apis, and would cause an import cycle.
 func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
+	errs := validateEnvoyProxySpecFatal(spec)
+	for _, f := range invalidTelemetryFields(spec) {
+		errs = append(errs, f.Err)
+	}
+	for _, f := range invalidFilterOrderFields(spec) {
+		errs = append(errs, f.Err)
+	}
+
+	return utilerrors.NewAggregate(errs)
+}
+
+// validateEnvoyProxySpecFatal returns the errors that can't be scoped to a field that is
+// safe to unset, because they affect the proxy infrastructure.
+func validateEnvoyProxySpecFatal(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 
 	if spec == nil {
@@ -53,11 +157,6 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 		errs = append(errs, validateProviderErrs...)
 	}
 
-	validateProxyTelemetryErrs := validateProxyTelemetry(spec)
-	if len(validateProxyTelemetryErrs) != 0 {
-		errs = append(errs, validateProxyTelemetryErrs...)
-	}
-
 	// Mirrors the EnvoyProxySpec CEL rule "mergeGateways and mergeBackends cannot
 	// both be enabled". The CEL rule only runs through Kubernetes admission, which
 	// the embedded default EnvoyProxy spec loaded from an EnvoyGateway file never
@@ -66,14 +165,17 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 		errs = append(errs, errors.New("mergeGateways and mergeBackends cannot both be enabled"))
 	}
 
-	// validate filter order
-	if spec != nil && spec.FilterOrder != nil {
-		if err := validateFilterOrder(spec.FilterOrder); err != nil {
-			errs = append(errs, err)
-		}
-	}
+	return errs
+}
 
-	return utilerrors.NewAggregate(errs)
+func invalidFilterOrderFields(spec *egv1a1.EnvoyProxySpec) []InvalidField {
+	if spec == nil || spec.FilterOrder == nil {
+		return nil
+	}
+	if err := validateFilterOrder(spec.FilterOrder); err != nil {
+		return []InvalidField{{Path: "filterOrder", Err: err}}
+	}
+	return nil
 }
 
 // TODO: remove this function if CEL validation became stable
@@ -203,56 +305,86 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 	return errs
 }
 
-func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
-	var errs []error
-
-	if spec != nil &&
-		spec.Telemetry != nil &&
-		spec.Telemetry.AccessLog != nil {
-		accessLogErrs := validateProxyAccessLog(spec.Telemetry.AccessLog)
-		if len(accessLogErrs) > 0 {
-			errs = append(errs, accessLogErrs...)
-		}
+func invalidTelemetryFields(spec *egv1a1.EnvoyProxySpec) []InvalidField {
+	if spec == nil || spec.Telemetry == nil {
+		return nil
 	}
+	var invalid []InvalidField
 
-	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Tracing != nil {
-		p := spec.Telemetry.Tracing.Provider
-		if p.Type == egv1a1.TracingProviderTypeOpenTelemetry &&
-			p.BackendSettings != nil && p.BackendSettings.HTTP1 != nil {
-			errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry tracing backends, which use gRPC"))
-		}
-	}
-
-	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Metrics != nil {
-		for _, sink := range spec.Telemetry.Metrics.Sinks {
-			if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
-				if sink.OpenTelemetry == nil {
-					err := fmt.Errorf("opentelemetry is required if the sink type is OpenTelemetry")
-					errs = append(errs, err)
+	if al := spec.Telemetry.AccessLog; al != nil && !ptr.Deref(al.Disable, false) {
+		for i, setting := range al.Settings {
+			if err := validateProxyAccessLogFormat(setting.Format); err != nil {
+				invalid = append(invalid, InvalidField{Path: fmt.Sprintf("telemetry.accessLog.settings[%d].format", i), Err: err})
+			}
+			for j := range setting.Sinks {
+				if err := validateProxyAccessLogSink(&setting.Sinks[j]); err != nil {
+					invalid = append(invalid, InvalidField{Path: fmt.Sprintf("telemetry.accessLog.settings[%d].sinks[%d]", i, j), Err: err})
 				}
 			}
-			// Check regardless of sink.Type: when sink.Type is omitted, CRD defaults are not
-			// applied to embedded EnvoyProxy templates, so processMetrics processes any non-nil
-			// sink.OpenTelemetry as gRPC, making http1 silently ignored.
-			if sink.OpenTelemetry != nil && sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
-				errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry metrics backends, which use gRPC"))
+		}
+	}
+
+	if err := validateProxyTracing(spec.Telemetry.Tracing); err != nil {
+		invalid = append(invalid, InvalidField{Path: "telemetry.tracing", Err: err})
+	}
+
+	if m := spec.Telemetry.Metrics; m != nil {
+		for i := range m.Sinks {
+			for _, err := range validateProxyMetricSink(&m.Sinks[i]) {
+				invalid = append(invalid, InvalidField{Path: fmt.Sprintf("telemetry.metrics.sinks[%d]", i), Err: err})
 			}
 		}
 
-		if spec.Telemetry.Metrics.ClusterStatName != nil {
-			if clusterStatErr := ValidateClusterStatName(*spec.Telemetry.Metrics.ClusterStatName); clusterStatErr != nil {
-				errs = append(errs, clusterStatErr)
+		if m.ClusterStatName != nil {
+			if err := ValidateClusterStatName(*m.ClusterStatName); err != nil {
+				invalid = append(invalid, InvalidField{Path: "telemetry.metrics.clusterStatName", Err: err})
 			}
 		}
 
-		if prometheus := spec.Telemetry.Metrics.Prometheus; prometheus != nil && prometheus.Compression != nil {
-			if err := ValidateMinContentLength(prometheus.Compression.MinContentLength); err != nil {
-				errs = append(errs, fmt.Errorf("invalid prometheus compression: %w", err))
+		if m.Prometheus != nil && m.Prometheus.Compression != nil {
+			if err := validatePrometheusCompression(m.Prometheus.Compression); err != nil {
+				invalid = append(invalid, InvalidField{Path: "telemetry.metrics.prometheus.compression", Err: err})
 			}
 		}
 	}
 
+	return invalid
+}
+
+func validateProxyTracing(tracing *egv1a1.ProxyTracing) error {
+	if tracing == nil {
+		return nil
+	}
+	p := tracing.Provider
+	if p.Type == egv1a1.TracingProviderTypeOpenTelemetry &&
+		p.BackendSettings != nil && p.BackendSettings.HTTP1 != nil {
+		return fmt.Errorf("http1 is not supported for OpenTelemetry tracing backends, which use gRPC")
+	}
+	return nil
+}
+
+func validateProxyMetricSink(sink *egv1a1.ProxyMetricSink) []error {
+	var errs []error
+	if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
+		if sink.OpenTelemetry == nil {
+			err := fmt.Errorf("opentelemetry is required if the sink type is OpenTelemetry")
+			errs = append(errs, err)
+		}
+	}
+	// Check regardless of sink.Type: when sink.Type is omitted, CRD defaults are not
+	// applied to embedded EnvoyProxy templates, so processMetrics processes any non-nil
+	// sink.OpenTelemetry as gRPC, making http1 silently ignored.
+	if sink.OpenTelemetry != nil && sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
+		errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry metrics backends, which use gRPC"))
+	}
 	return errs
+}
+
+func validatePrometheusCompression(compression *egv1a1.Compression) error {
+	if err := ValidateMinContentLength(compression.MinContentLength); err != nil {
+		return fmt.Errorf("invalid prometheus compression: %w", err)
+	}
+	return nil
 }
 
 // ValidateMinContentLength validates that the compression minContentLength fits the uint32 Envoy field.
@@ -274,43 +406,61 @@ func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
 	}
 
 	var errs []error
-
-	for _, setting := range accessLog.Settings {
-		if setting.Format != nil && setting.Format.Type != nil {
-			switch *setting.Format.Type {
-			case egv1a1.ProxyAccessLogFormatTypeText:
-				if setting.Format.Text == nil {
-					err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
-					errs = append(errs, err)
-				}
-			case egv1a1.ProxyAccessLogFormatTypeJSON:
-				// TODO: add JSON format validation if needed
-			}
-		}
-
-		for _, sink := range setting.Sinks {
-			switch sink.Type {
-			case egv1a1.ProxyAccessLogSinkTypeFile:
-				if sink.File == nil {
-					err := fmt.Errorf("unable to configure access log when using File sink type but \"file\" field being empty")
-					errs = append(errs, err)
-				}
-			case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
-				if sink.OpenTelemetry == nil {
-					err := fmt.Errorf("unable to configure access log when using OpenTelemetry sink type but \"openTelemetry\" field being empty")
-					errs = append(errs, err)
-				} else if sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
-					errs = append(errs, fmt.Errorf("http1 is not supported for OpenTelemetry access log backends, which use gRPC"))
-				}
-			case egv1a1.ProxyAccessLogSinkTypeALS:
-				if sink.ALS != nil && sink.ALS.BackendSettings != nil && sink.ALS.BackendSettings.HTTP1 != nil {
-					errs = append(errs, fmt.Errorf("http1 is not supported for ALS backends, which use gRPC"))
-				}
-			}
-		}
+	for i := range accessLog.Settings {
+		errs = append(errs, validateProxyAccessLogSetting(&accessLog.Settings[i])...)
 	}
 
 	return errs
+}
+
+func validateProxyAccessLogSetting(setting *egv1a1.ProxyAccessLogSetting) []error {
+	var errs []error
+	if err := validateProxyAccessLogFormat(setting.Format); err != nil {
+		errs = append(errs, err)
+	}
+	for i := range setting.Sinks {
+		if err := validateProxyAccessLogSink(&setting.Sinks[i]); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
+func validateProxyAccessLogFormat(format *egv1a1.ProxyAccessLogFormat) error {
+	if format == nil || format.Type == nil {
+		return nil
+	}
+	switch *format.Type {
+	case egv1a1.ProxyAccessLogFormatTypeText:
+		if format.Text == nil {
+			return fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
+		}
+	case egv1a1.ProxyAccessLogFormatTypeJSON:
+		// TODO: add JSON format validation if needed
+	}
+	return nil
+}
+
+func validateProxyAccessLogSink(sink *egv1a1.ProxyAccessLogSink) error {
+	switch sink.Type {
+	case egv1a1.ProxyAccessLogSinkTypeFile:
+		if sink.File == nil {
+			return fmt.Errorf("unable to configure access log when using File sink type but \"file\" field being empty")
+		}
+	case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
+		if sink.OpenTelemetry == nil {
+			return fmt.Errorf("unable to configure access log when using OpenTelemetry sink type but \"openTelemetry\" field being empty")
+		} else if sink.OpenTelemetry.BackendSettings != nil && sink.OpenTelemetry.BackendSettings.HTTP1 != nil {
+			return fmt.Errorf("http1 is not supported for OpenTelemetry access log backends, which use gRPC")
+		}
+	case egv1a1.ProxyAccessLogSinkTypeALS:
+		if sink.ALS == nil {
+			return fmt.Errorf("unable to configure access log when using ALS sink type but \"als\" field being empty")
+		} else if sink.ALS.BackendSettings != nil && sink.ALS.BackendSettings.HTTP1 != nil {
+			return fmt.Errorf("http1 is not supported for ALS backends, which use gRPC")
+		}
+	}
+	return nil
 }
 
 func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {

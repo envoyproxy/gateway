@@ -21,8 +21,9 @@ const (
 	StatusSuccess = "success"
 	StatusFailure = "failure"
 
-	ReasonError    = "error"
-	ReasonConflict = "conflict"
+	ReasonError     = "error"
+	ReasonConflict  = "conflict"
+	ReasonTransient = "transient"
 )
 
 // A Label provides a named dimension for a Metric.

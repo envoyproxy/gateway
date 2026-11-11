@@ -217,6 +217,134 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "clientValidation mode VerifyIfGiven with subjectAltNames",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						ClientValidation: &egv1a1.ClientValidationContext{
+							Mode: new(egv1a1.ClientValidationVerifyIfGiven),
+							SubjectAltNames: &egv1a1.SubjectAltNames{
+								DNSNames: []egv1a1.StringMatch{{Value: "client.example.com"}},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.tls.clientValidation: Invalid value:",
+				"cannot be used with mode VerifyIfGiven",
+			},
+		},
+		{
+			desc: "clientValidation mode VerifyIfGiven with certificateHashes",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						ClientValidation: &egv1a1.ClientValidationContext{
+							Mode:              new(egv1a1.ClientValidationVerifyIfGiven),
+							CertificateHashes: []string{"df6ff72fe9116521268f6f2dd4966f51df479883fe7037b39f75916ac3049d1a"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.tls.clientValidation: Invalid value:",
+				"cannot be used with mode VerifyIfGiven",
+			},
+		},
+		{
+			desc: "clientValidation optional true with spkiHashes",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						ClientValidation: &egv1a1.ClientValidationContext{
+							Optional:   true,
+							SPKIHashes: []string{"NvqYIYSbgK2vCJpQhObf77vv+bQWtc5ek5RIOwPiC9A="},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.tls.clientValidation: Invalid value:",
+				"cannot be used with mode VerifyIfGiven",
+			},
+		},
+		{
+			desc: "clientValidation mode RequireAndVerify with subjectAltNames",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						ClientValidation: &egv1a1.ClientValidationContext{
+							Mode: new(egv1a1.ClientValidationRequireAndVerify),
+							SubjectAltNames: &egv1a1.SubjectAltNames{
+								DNSNames: []egv1a1.StringMatch{{Value: "client.example.com"}},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "clientValidation mode VerifyIfGiven without matchers",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						ClientValidation: &egv1a1.ClientValidationContext{
+							Mode:              new(egv1a1.ClientValidationVerifyIfGiven),
+							CACertificateRefs: []gwapiv1.SecretObjectReference{{Name: "client-ca"}},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "clientIPDetection xForwardedFor and customHeader set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{

@@ -430,7 +430,7 @@ const (
 // XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
 // for the xds-translator
 //
-// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster;Endpoints
+// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster;Endpoints;Secret
 type XDSTranslatorHook string
 
 const (
@@ -440,6 +440,7 @@ const (
 	XDSCluster      XDSTranslatorHook = "Cluster"
 	XDSEndpoints    XDSTranslatorHook = "Endpoints"
 	XDSTranslation  XDSTranslatorHook = "Translation"
+	XDSSecret       XDSTranslatorHook = "Secret"
 )
 
 // StringMatch defines how to match any strings.
@@ -641,7 +642,7 @@ type BackendCluster struct {
 	// BackendRef references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	// +optional
 	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 
