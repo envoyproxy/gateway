@@ -1124,7 +1124,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcp` | _[TCPClientTimeout](#tcpclienttimeout)_ |  false  |  | Timeout settings for TCP. |
 | `http` | _[HTTPClientTimeout](#httpclienttimeout)_ |  false  |  | Timeout settings for HTTP. |
-| `udp` | _[UDPClientTimeout](#udpclienttimeout)_ |  false  |  | Timeout settings for UDP. |
+| `udp` | _[UDPClientTimeout](#udpclienttimeout)_ |  false  |  | Timeout settings for UDP listeners. These do not apply to HTTP/3 (QUIC)<br />traffic on HTTPS listeners. |
 
 
 #### ClientTrafficPolicy
@@ -7294,7 +7294,8 @@ _Appears in:_
 
 
 
-UDPClientTimeout only provides timeout configuration on the listener whose protocol is UDP.
+UDPClientTimeout configures sessions on listeners whose protocol is UDP.
+It has no effect on other listeners, including HTTP/3 (QUIC) on HTTPS listeners.
 
 _Appears in:_
 - [ClientTimeout](#clienttimeout)

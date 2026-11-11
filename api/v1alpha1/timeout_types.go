@@ -72,13 +72,15 @@ type ClientTimeout struct {
 	// +optional
 	HTTP *HTTPClientTimeout `json:"http,omitempty"`
 
-	// Timeout settings for UDP.
+	// Timeout settings for UDP listeners. These do not apply to HTTP/3 (QUIC)
+	// traffic on HTTPS listeners.
 	//
 	// +optional
 	UDP *UDPClientTimeout `json:"udp,omitempty"`
 }
 
-// UDPClientTimeout only provides timeout configuration on the listener whose protocol is UDP.
+// UDPClientTimeout configures sessions on listeners whose protocol is UDP.
+// It has no effect on other listeners, including HTTP/3 (QUIC) on HTTPS listeners.
 type UDPClientTimeout struct {
 	// IdleTimeout for a UDP session. Idle time is defined as a period in which
 	// there are no datagrams sent or received on either the upstream or
