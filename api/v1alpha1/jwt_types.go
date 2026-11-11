@@ -50,6 +50,7 @@ type JWT struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.recomputeRoute) && self.recomputeRoute) ? size(self.claimToHeaders) > 0 : true", message="claimToHeaders must be specified if recomputeRoute is enabled."
 // +kubebuilder:validation:XValidation:rule="has(self.remoteJWKS) || has(self.localJWKS)", message="either remoteJWKS or localJWKS must be specified."
 // +kubebuilder:validation:XValidation:rule="!(has(self.remoteJWKS) && has(self.localJWKS))", message="remoteJWKS and localJWKS cannot both be specified."
+// +kubebuilder:validation:XValidation:rule="!(has(self.sanitize) && self.sanitize && has(self.extractFrom) && has(self.extractFrom.cookies) && size(self.extractFrom.cookies) > 0)", message="sanitize cannot be enabled when the JWT is extracted from cookies."
 type JWTProvider struct {
 	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
 	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
@@ -107,6 +108,15 @@ type JWTProvider struct {
 	//
 	// +optional
 	ExtractFrom *JWTExtractor `json:"extractFrom,omitempty"`
+
+	// Sanitize removes the JWT from the request after it is verified, so the
+	// backend does not receive the token. The whole header or query parameter
+	// that carried the token is removed; headers set by ClaimToHeaders are still
+	// sent. It cannot be used with cookie extraction, because Envoy does not
+	// remove tokens from cookies. Defaults to false.
+	//
+	// +optional
+	Sanitize *bool `json:"sanitize,omitempty"`
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.

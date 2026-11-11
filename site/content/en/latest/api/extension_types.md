@@ -4179,6 +4179,7 @@ _Appears in:_
 | `claimToHeaders` | _[ClaimToHeader](#claimtoheader) array_ |  false  |  | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers<br />For examples, following config:<br />The claim must be of type; string, int, double, bool. Array type claims are not supported |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers generated from the claim are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 | `extractFrom` | _[JWTExtractor](#jwtextractor)_ |  false  |  | ExtractFrom defines different ways to extract the JWT token from HTTP request.<br />If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema<br />or access_token from query parameters. |
+| `sanitize` | _boolean_ |  false  |  | Sanitize removes the JWT from the request after it is verified, so the<br />backend does not receive the token. The whole header or query parameter<br />that carried the token is removed; headers set by ClaimToHeaders are still<br />sent. It cannot be used with cookie extraction, because Envoy does not<br />remove tokens from cookies. Defaults to false. |
 
 
 #### JWTScope

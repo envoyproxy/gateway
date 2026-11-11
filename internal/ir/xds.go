@@ -1599,6 +1599,9 @@ type JWTProvider struct {
 	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
 	// or access_token from query parameters.
 	ExtractFrom *egv1a1.JWTExtractor `json:"extractFrom,omitempty"`
+
+	// Sanitize removes the JWT from the request after it is verified.
+	Sanitize *bool `json:"sanitize,omitempty"`
 }
 
 // RemoteJWKSBackend holds the configuration for a remote JWKS backend.

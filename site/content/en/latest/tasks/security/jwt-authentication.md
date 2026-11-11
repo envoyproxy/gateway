@@ -399,6 +399,37 @@ data:
 
 With the above configuration, the [SecurityPolicy] resource will use the JWKS stored in the `jwt-local-jwks` ConfigMap to authenticate requests for the `foo` HTTPRoute.
 
+## Remove the JWT before forwarding the request
+
+By default, the verified JWT is sent on to the backend. Set `sanitize: true` on a provider to remove it once
+it has been verified. This is useful when the backend is outside the token's audience, such as a third-party
+API, and should not receive a credential it could reuse.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: foo
+  jwt:
+    providers:
+    - name: example
+      remoteJWKS:
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+      sanitize: true
+      claimToHeaders:
+      - claim: sub
+        header: x-sub
+```
+
+The whole header or query parameter that carried the token is removed, while headers from `claimToHeaders`
+are still sent, so the backend can identify the caller without seeing the token. `sanitize` cannot be used
+when the JWT is extracted from cookies, because Envoy does not remove tokens from cookies.
+
 ## Clean-Up
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
