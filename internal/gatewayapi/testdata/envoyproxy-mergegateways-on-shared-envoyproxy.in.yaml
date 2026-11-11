@@ -1,0 +1,64 @@
+envoyProxyDefaultSpec:
+  mergeGateways: true
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: shared
+  spec:
+    mergeGateways: false
+envoyProxiesForGateways:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyProxy
+    metadata:
+      namespace: envoy-gateway
+      name: shared
+    spec:
+      mergeGateways: false
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyProxy
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-only
+    spec:
+      mergeGateways: false
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      infrastructure:
+        parametersRef:
+          group: gateway.envoyproxy.io
+          kind: EnvoyProxy
+          name: shared
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-2
+    spec:
+      gatewayClassName: envoy-gateway-class
+      infrastructure:
+        parametersRef:
+          group: gateway.envoyproxy.io
+          kind: EnvoyProxy
+          name: gateway-only
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 8080
+          allowedRoutes:
+            namespaces:
+              from: All

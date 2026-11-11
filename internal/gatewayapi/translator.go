@@ -725,7 +725,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 						"error", errors.Join(fieldErrors(invalidFields)...).Error())...)
 				}
 				t.setEnvoyProxyWarnings(gwEP, ancestor, invalidFields,
-					status.UnsupportedFieldsWarning(gatewayUnsupportedFieldsUsedInEnvoyProxy(gwEP)))
+					status.UnsupportedFieldsWarning(gatewayUnsupportedFieldsUsedInEnvoyProxy(gwEP, resources.EnvoyProxyForGatewayClass)))
 			}
 		}
 
@@ -761,8 +761,12 @@ func (t *Translator) setEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwap
 
 // gatewayUnsupportedFieldsUsedInEnvoyProxy returns the fields set on the given EnvoyProxy that
 // only take effect on an EnvoyProxy referenced by a GatewayClass, so callers can surface that
-// they were ignored on an EnvoyProxy referenced by a Gateway.
-func gatewayUnsupportedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) []string {
+// they were ignored on an EnvoyProxy referenced by a Gateway. It returns nothing when the
+// GatewayClass references the same EnvoyProxy, because the fields do take effect there.
+func gatewayUnsupportedFieldsUsedInEnvoyProxy(ep, classEP *egv1a1.EnvoyProxy) []string {
+	if classEP != nil && utils.NamespacedName(classEP) == utils.NamespacedName(ep) {
+		return nil
+	}
 	var fields []string
 	// MergeGateways is only read from the GatewayClass's EnvoyProxy, see IsMergeGatewaysEnabled.
 	if ep.Spec.MergeGateways != nil {
