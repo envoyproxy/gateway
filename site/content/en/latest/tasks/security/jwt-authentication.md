@@ -427,7 +427,9 @@ spec:
 ```
 
 The whole header or query parameter that carried the token is removed, while headers from `claimToHeaders`
-are still sent, so the backend can identify the caller without seeing the token. `sanitize` cannot be used
+are still sent, so the backend can identify the caller without seeing the token. The token is removed from the
+request itself, so filters that run after JWT authentication, such as rate limiting, no longer see it either.
+`sanitize` cannot be used
 when the JWT is extracted from cookies, because Envoy does not remove tokens from cookies.
 
 ## Clean-Up

@@ -6268,11 +6268,12 @@ spec:
                             rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                         sanitize:
                           description: |-
-                            Sanitize removes the JWT from the request after it is verified, so the
-                            backend does not receive the token. The whole header or query parameter
-                            that carried the token is removed; headers set by ClaimToHeaders are still
-                            sent. It cannot be used with cookie extraction, because Envoy does not
-                            remove tokens from cookies. Defaults to false.
+                            Sanitize removes the JWT from the request after it is verified. The whole
+                            header or query parameter that carried the token is removed, so filters
+                            that run after JWT authentication (such as rate limiting or ext_proc) and
+                            the backend no longer see it; headers set by ClaimToHeaders are still sent.
+                            It cannot be used with cookie extraction, because Envoy does not remove
+                            tokens from cookies. Defaults to false.
                           type: boolean
                       required:
                       - name
