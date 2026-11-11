@@ -57,9 +57,11 @@ func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPol
 				fmt.Sprintf("spec.backends[%d].backendSettings.loadBalancer", i), backend.BackendSettings.LoadBalancer)
 		}
 	}
+	// One warning covers every entry; the replacement spells out both halves of the migration.
 	for _, w := range policy.Spec.Wasm {
 		if w.Code != nil {
-			deprecatedFields["spec.wasm.code"] = status.DeprecatedField{Replacement: "EnvoyProxy spec.wasmModules"}
+			deprecatedFields["spec.wasm.code"] = deprecatedField(
+				"spec.wasm.name referencing a module registered in EnvoyProxy spec.wasmModules")
 			break
 		}
 	}

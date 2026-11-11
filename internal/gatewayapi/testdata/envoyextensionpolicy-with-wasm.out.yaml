@@ -44,7 +44,8 @@ envoyExtensionPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.wasm.code is deprecated, use EnvoyProxy spec.wasmModules instead
+          instead; spec.wasm.code is deprecated, use spec.wasm.name referencing a
+          module registered in EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -103,7 +104,8 @@ envoyExtensionPolicies:
         type: Accepted
       - lastTransitionTime: null
         message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.wasm.code is deprecated, use EnvoyProxy spec.wasmModules instead
+          instead; spec.wasm.code is deprecated, use spec.wasm.name referencing a
+          module registered in EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
