@@ -423,6 +423,13 @@ func createRegistryTLSForWasmTest(t *testing.T, suite *suite.ConformanceTestSuit
 		t.Fatalf("failed to create registry CA configmap: %v", err)
 	}
 
+	// The registry is redeployed by each test using it, with a certificate for its new LB address.
+	// Remove the certificate so the next registry doesn't start with this one.
+	t.Cleanup(func() {
+		_ = suite.Client.Delete(context.Background(), secret)
+		_ = suite.Client.Delete(context.Background(), caConfigMap)
+	})
+
 	return certPEM
 }
 

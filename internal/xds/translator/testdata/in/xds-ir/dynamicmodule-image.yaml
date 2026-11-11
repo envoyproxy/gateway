@@ -1,0 +1,54 @@
+globalResources:
+  envoyClientCertificate:
+    name: envoy-gateway-system/envoy
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+http:
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
+    hostname: www.example.com
+    isHTTP2: false
+    name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    envoyExtensions:
+      dynamicModules:
+      - config:
+          authEndpoint: https://auth.example.com
+        doNotClose: false
+        filterName: auth-check
+        loadGlobally: false
+        name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
+        image:
+          originalURL: oci://www.example.com/dynamic-modules/auth:v1.0.0
+          servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/f96b8466d5317edfd8535bf53c582dce7660147b3a30a10d850e63145c5b7474.so
+          sha256: b821ee1aed2e4fad9f5bcadb72be3b364ba4d8fbdc2a5e9fa2ba6087205cfb7a
+        terminalFilter: false
+      - doNotClose: true
+        filterName: ratelimit
+        loadGlobally: false
+        name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1
+        image:
+          originalURL: oci://www.example.com/dynamic-modules/ratelimit:latest
+          servingURL: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/62926588cb952f4c41fe6bcd58545bdc9f8cbfc72577cfceb7463cc5ab7642b5.so
+          sha256: 7f061b9b6477df1f87cdfff7c3ac2a73c63495c1a215204108e92fb7ca6a3663
+        terminalFilter: false

@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -20,6 +21,15 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
+)
+
+const (
+	// The retry policy for fetching a dynamic module from the Envoy Gateway HTTP server.
+	dynamicModuleFetchNumRetries   = uint32(10)
+	dynamicModuleFetchBaseInterval = 1 * time.Second
+	dynamicModuleFetchMaxInterval  = 30 * time.Second
+	// dynamicModuleFetchTimeout is the timeout of a single fetch.
+	dynamicModuleFetchTimeout = 10 * time.Second
 )
 
 func init() {
@@ -121,6 +131,33 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 }
 
 func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) {
+	if dm.Image != nil {
+		// EG serves the shared library extracted from the OCI image through the
+		// same built-in HTTP server that serves Wasm modules, reached through a
+		// dedicated cluster.
+		return &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Remote{
+				Remote: &corev3.RemoteDataSource{
+					HttpUri: &corev3.HttpUri{
+						Uri: dm.Image.ServingURL,
+						HttpUpstreamType: &corev3.HttpUri_Cluster{
+							Cluster: dynamicModuleHTTPServiceClusterName,
+						},
+						Timeout: durationpb.New(dynamicModuleFetchTimeout),
+					},
+					Sha256: dm.Image.SHA256,
+					RetryPolicy: &corev3.RetryPolicy{
+						NumRetries: wrapperspb.UInt32(dynamicModuleFetchNumRetries),
+						RetryBackOff: &corev3.BackoffStrategy{
+							BaseInterval: durationpb.New(dynamicModuleFetchBaseInterval),
+							MaxInterval:  durationpb.New(dynamicModuleFetchMaxInterval),
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
 	if dm.Remote != nil {
 		uc, err := url2Cluster(dm.Remote.URL)
 		if err != nil {
