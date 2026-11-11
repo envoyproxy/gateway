@@ -237,7 +237,7 @@ func newTranslateResult(
 	envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
-	xListenerSets []*gwapiv1.ListenerSet,
+	listenerSets []*gwapiv1.ListenerSet,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -326,8 +326,8 @@ func newTranslateResult(
 	if len(backends) > 0 {
 		translateResult.Backends = backends
 	}
-	if len(xListenerSets) > 0 {
-		translateResult.ListenerSets = xListenerSets
+	if len(listenerSets) > 0 {
+		translateResult.ListenerSets = listenerSets
 	}
 
 	return translateResult
