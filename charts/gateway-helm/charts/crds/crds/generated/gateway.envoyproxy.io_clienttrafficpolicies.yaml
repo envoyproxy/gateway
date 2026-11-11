@@ -1731,7 +1731,9 @@ spec:
                         type: string
                     type: object
                   udp:
-                    description: Timeout settings for UDP.
+                    description: |-
+                      Timeout settings for UDP listeners. These do not apply to HTTP/3 (QUIC)
+                      traffic on HTTPS listeners.
                     properties:
                       idleTimeout:
                         description: |-

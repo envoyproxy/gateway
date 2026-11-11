@@ -1017,8 +1017,9 @@ func translatePathSettings(pathSettings *egv1a1.PathSettings, httpIR *ir.HTTPLis
 }
 
 func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout, error) {
-	// Return early if not set
-	if clientTimeout == nil {
+	// Return early if no TCP or HTTP timeout is set. UDP listeners build their own
+	// timeout with buildUDPClientTimeout.
+	if clientTimeout == nil || (clientTimeout.TCP == nil && clientTimeout.HTTP == nil) {
 		return nil, nil
 	}
 
@@ -1085,12 +1086,6 @@ func buildClientTimeout(clientTimeout *egv1a1.ClientTimeout) (*ir.ClientTimeout,
 		}
 		irClientTimeout.HTTP = irHTTPTimeout
 	}
-
-	irUDPTimeout, err := buildUDPClientTimeout(clientTimeout)
-	if err != nil {
-		return nil, err
-	}
-	irClientTimeout.UDP = irUDPTimeout
 
 	return irClientTimeout, nil
 }
