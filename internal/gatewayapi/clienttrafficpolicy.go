@@ -754,13 +754,15 @@ const (
 	tlsSettingsNotEvaluated tlsSettingsResult = iota
 	// tlsSettingsApplied means the listener terminates TLS, so the TLS settings apply to it.
 	tlsSettingsApplied
-	// tlsSettingsIgnored means the listener is translated but does not terminate TLS, so the TLS
-	// settings have no effect on it.
+	// tlsSettingsIgnored means the listener is translated but does not terminate TLS (including
+	// UDP listeners, which never do), so the TLS settings have no effect on it.
 	tlsSettingsIgnored
 )
 
-func tlsSettingsResultForListener(policy *egv1a1.ClientTrafficPolicy, httpIR *ir.HTTPListener, tcpIR *ir.TCPListener) tlsSettingsResult {
-	if policy.Spec.TLS == nil || (httpIR == nil && tcpIR == nil) {
+func tlsSettingsResultForListener(policy *egv1a1.ClientTrafficPolicy, httpIR *ir.HTTPListener, tcpIR *ir.TCPListener,
+	udpIR *ir.UDPListener,
+) tlsSettingsResult {
+	if policy.Spec.TLS == nil || (httpIR == nil && tcpIR == nil && udpIR == nil) {
 		return tlsSettingsNotEvaluated
 	}
 	if (httpIR != nil && httpIR.TLS != nil) || (tcpIR != nil && tcpIR.TLS != nil) {
@@ -771,7 +773,7 @@ func tlsSettingsResultForListener(policy *egv1a1.ClientTrafficPolicy, httpIR *ir
 
 func ignoredTLSSettingsWarningMessage(listenerNames []string) string {
 	return fmt.Sprintf("TLS settings have no effect because the targeted listeners (%s) do not terminate TLS; "+
-		"set the listener protocol to HTTPS, or TLS with mode Terminate, and configure certificateRefs",
+		"they only apply to HTTPS listeners and to TLS listeners with mode Terminate",
 		strings.Join(listenerNames, ", "))
 }
 
@@ -823,7 +825,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 
 	// Decided here, from the listener IR the settings are applied to, so a listener that was not
 	// translated (and therefore has no IR) never reports its TLS settings as ignored.
-	tlsResult := tlsSettingsResultForListener(policy, httpIR, tcpIR)
+	tlsResult := tlsSettingsResultForListener(policy, httpIR, tcpIR, gwXdsIR.GetUDPListener(irListenerName))
 
 	// HTTP and TCP listeners can both be configured by common fields below.
 	var (

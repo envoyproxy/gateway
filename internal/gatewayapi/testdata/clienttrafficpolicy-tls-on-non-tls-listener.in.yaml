@@ -49,6 +49,31 @@ clientTrafficPolicies:
       name: gateway-3
     tls:
       minVersion: "1.2"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-4-udp
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-4
+      sectionName: udp
+    tls:
+      minVersion: "1.2"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-5-udp-only
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-5
+    tls:
+      minVersion: "1.2"
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -114,6 +139,34 @@ gateways:
         certificateRefs:
         - name: missing-secret
           namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-4
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: udp
+      protocol: UDP
+      port: 5300
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-5
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: udp
+      protocol: UDP
+      port: 5301
+      allowedRoutes:
+        namespaces:
+          from: All
 secrets:
 - apiVersion: v1
   kind: Secret
