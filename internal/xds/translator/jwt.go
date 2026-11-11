@@ -193,7 +193,7 @@ func buildJWTProvider(irProvider *ir.JWTProvider) (*jwtauthnv3.JwtProvider, erro
 		Audiences:         irProvider.Audiences,
 		PayloadInMetadata: irProvider.Name,
 		ClaimToHeaders:    claimToHeaders,
-		Forward:           true,
+		Forward:           !ptr.Deref(irProvider.Sanitize, false),
 		NormalizePayloadInMetadata: &jwtauthnv3.JwtProvider_NormalizePayload{
 			// Normalize the scopes to facilitate matching in Authorization.
 			SpaceDelimitedClaims: []string{"scope", "scp"},

@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, JWTTest, JWTClaimPathTest, OptionalJWTTest, LocalJWKSInlineTest, LocalJWKSValueRefTest)
+	ConformanceTests = append(ConformanceTests, JWTTest, JWTClaimPathTest, OptionalJWTTest, LocalJWKSInlineTest, LocalJWKSValueRefTest, JWTSanitizeTest)
 }
 
 const (
@@ -312,4 +312,65 @@ func testLocalJWKS(t *testing.T, suite *suite.ConformanceTestSuite) {
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
 		})
 	}
+}
+
+var JWTSanitizeTest = suite.ConformanceTest{
+	ShortName:   "JWTSanitize",
+	Description: "Verified JWT is removed from the request only when sanitize is enabled",
+	Manifests:   []string{"testdata/jwt-sanitize.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+			kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false,
+			types.NamespacedName{Name: "jwt-sanitize", Namespace: ns},
+			types.NamespacedName{Name: "jwt-forward", Namespace: ns})
+
+		testCases := []http.ExpectedResponse{
+			{
+				TestCaseName: "sanitize removes the token but keeps claim headers",
+				Request: http.Request{
+					Path:    "/jwt-sanitize",
+					Headers: map[string]string{"Authorization": "Bearer " + v1Token},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path:    "/jwt-sanitize",
+						Headers: map[string]string{"x-sub": "1234567890"},
+					},
+					AbsentHeaders: []string{"Authorization"},
+				},
+				Backend:   "infra-backend-v1",
+				Response:  http.Response{StatusCodes: []int{200}},
+				Namespace: ns,
+			},
+			{
+				TestCaseName: "token is forwarded by default",
+				Request: http.Request{
+					Path:    "/jwt-forward",
+					Headers: map[string]string{"Authorization": "Bearer " + v1Token},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/jwt-forward",
+						Headers: map[string]string{
+							"Authorization": "Bearer " + v1Token,
+							"x-sub":         "1234567890",
+						},
+					},
+				},
+				Backend:   "infra-backend-v1",
+				Response:  http.Response{StatusCodes: []int{200}},
+				Namespace: ns,
+			},
+		}
+
+		for i := range testCases {
+			tc := testCases[i]
+			t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+				t.Parallel()
+				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
+			})
+		}
+	},
 }
