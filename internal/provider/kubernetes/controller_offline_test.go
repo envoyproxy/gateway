@@ -116,6 +116,61 @@ func TestNewOfflineGatewayAPIController(t *testing.T) {
 		require.Equal(t, config.DefaultNamespace, resources.ExtensionRefFilters[0].GetNamespace())
 		require.Equal(t, config.DefaultNamespace, resources.ExtensionRefFilters[1].GetNamespace())
 	})
+
+	t.Run("offline controller registers resources from every extension manager", func(t *testing.T) {
+		cfg, err := config.New(os.Stdout, os.Stderr)
+		require.NoError(t, err)
+
+		extGVK := egv1a1.GroupVersionKind{
+			Group:   "gateway.example.io",
+			Version: "v1alpha1",
+			Kind:    "CustomRouteFilterResource",
+		}
+		extServerPolicyGVK := egv1a1.GroupVersionKind{
+			Group:   "extensions.example.io",
+			Version: "v1alpha1",
+			Kind:    "CustomExtensionServerPolicy",
+		}
+		extBackendGVK := egv1a1.GroupVersionKind{
+			Group:   "backend.example.io",
+			Version: "v1alpha1",
+			Kind:    "CustomBackendResource",
+		}
+		extSecretGVK := egv1a1.GroupVersionKind{
+			Group:   "cert.example.io",
+			Version: "v1alpha1",
+			Kind:    "CustomCertificate",
+		}
+		cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+			Type: egv1a1.ProviderTypeCustom,
+		}
+		cfg.EnvoyGateway.ExtensionManagers = []egv1a1.ExtensionManager{
+			{
+				Name:            "first",
+				Resources:       []egv1a1.GroupVersionKind{extGVK},
+				PolicyResources: []egv1a1.GroupVersionKind{extServerPolicyGVK},
+			},
+			{
+				Name:             "second",
+				BackendResources: []egv1a1.GroupVersionKind{extBackendGVK},
+				SecretResources:  []egv1a1.GroupVersionKind{extSecretGVK},
+			},
+		}
+		pResources := new(message.ProviderResources)
+		reconciler, err := NewOfflineGatewayAPIController(context.Background(), cfg, nil, pResources)
+		require.NoError(t, err)
+		require.NotNil(t, reconciler)
+
+		require.Equal(t, []schema.GroupVersionKind{schema.GroupVersionKind(extGVK)}, reconciler.extGVKs)
+		require.Equal(t, []schema.GroupVersionKind{schema.GroupVersionKind(extServerPolicyGVK)}, reconciler.extServerPolicies)
+		require.Equal(t, []schema.GroupVersionKind{schema.GroupVersionKind(extBackendGVK)}, reconciler.extBackendGVKs)
+		require.Equal(t, []schema.GroupVersionKind{schema.GroupVersionKind(extSecretGVK)}, reconciler.extSecretGVKs)
+		require.True(t, reconciler.extBackendCRDExists[schema.GroupVersionKind(extBackendGVK)])
+		require.True(t, reconciler.extSecretCRDExists[schema.GroupVersionKind(extSecretGVK)])
+		for _, gvk := range []egv1a1.GroupVersionKind{extGVK, extServerPolicyGVK, extBackendGVK, extSecretGVK} {
+			assert.True(t, reconciler.client.Scheme().Recognizes(schema.GroupVersionKind(gvk)), "%s is not registered", gvk.Kind)
+		}
+	})
 }
 
 func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {

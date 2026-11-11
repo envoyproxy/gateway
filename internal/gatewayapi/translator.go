@@ -184,6 +184,12 @@ type Translator struct {
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
 
+	// ExtensionBackendGroupKinds stores the group/kind of the resources an Extension registers as
+	// custom backends (ExtensionManager.BackendResources). Only these are dispatched to the
+	// extension as backendRefs: ExtensionGroupKinds also includes ExtensionManager.Resources,
+	// which may name a built-in backend kind for use as an extensionRef filter.
+	ExtensionBackendGroupKinds []schema.GroupKind
+
 	// ExtensionSecretGroupKinds stores the group/kind for resources registered in
 	// ExtensionManager.SecretResources. A listener's tls.certificateRefs may
 	// reference these kinds.
@@ -231,7 +237,7 @@ func newTranslateResult(
 	envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
-	xListenerSets []*gwapiv1.ListenerSet,
+	listenerSets []*gwapiv1.ListenerSet,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -320,8 +326,8 @@ func newTranslateResult(
 	if len(backends) > 0 {
 		translateResult.Backends = backends
 	}
-	if len(xListenerSets) > 0 {
-		translateResult.ListenerSets = xListenerSets
+	if len(listenerSets) > 0 {
+		translateResult.ListenerSets = listenerSets
 	}
 
 	return translateResult
@@ -501,6 +507,10 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	)
 	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
 	phases.End()
+
+	// Runs after BackendTrafficPolicies too, since their load balancer settings can split a
+	// rule into one cluster per backendRef.
+	t.checkIneffectiveBackendPriority(httpRoutes, grpcRoutes, xdsIR)
 
 	// Process SecurityPolicies
 	phases.Start("GatewayApiTranslator.ProcessSecurityPolicies",

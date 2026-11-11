@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-simple-extension-server
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/envoyproxy/gateway v1.9.2
@@ -10,7 +10,7 @@ require (
 )
 
 require (
-	cel.dev/expr v0.25.3 // indirect
+	cel.dev/expr v0.26.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
