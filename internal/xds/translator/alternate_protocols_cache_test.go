@@ -57,7 +57,7 @@ func TestAlternateProtocolsCacheMixedBackendModes(t *testing.T) {
 			listener := &ir.HTTPListener{Routes: []*ir.HTTPRoute{route}}
 			hcm := &hcmv3.HttpConnectionManager{}
 			require.NoError(t, tr.patchHCMWithAlternateProtocolsCache(hcm, listener))
-			filterName := string(egv1a1.EnvoyFilterAlternateProtocolsCache)
+			filterName := egv1a1.EnvoyFilterAlternateProtocolsCache.String()
 			require.Equal(t, tc.wantCache, hcmContainsFilter(hcm, filterName))
 
 			xdsRoute := &routev3.Route{}

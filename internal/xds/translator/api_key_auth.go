@@ -38,7 +38,7 @@ func (*apiKeyAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 	if irListener == nil {
 		return errors.New("ir listener is nil")
 	}
-	if hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterAPIKeyAuth)) {
+	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterAPIKeyAuth.String()) {
 		return nil
 	}
 
@@ -83,7 +83,7 @@ func buildHCMAPIKeyAuthFilter() (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: string(egv1a1.EnvoyFilterAPIKeyAuth),
+		Name: egv1a1.EnvoyFilterAPIKeyAuth.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: apiKeyAuthAny,
 		},
@@ -111,11 +111,11 @@ func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 	}
 
 	perFilterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := perFilterCfg[string(egv1a1.EnvoyFilterAPIKeyAuth)]; ok {
+	if _, ok := perFilterCfg[egv1a1.EnvoyFilterAPIKeyAuth.String()]; ok {
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf("route already contains filter config: %s, %+v",
-			string(egv1a1.EnvoyFilterAPIKeyAuth), route)
+			egv1a1.EnvoyFilterAPIKeyAuth.String(), route)
 	}
 
 	// Build the per route config. It carries this route's own credentials and key sources.
@@ -128,7 +128,7 @@ func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 	if perFilterCfg == nil {
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
-	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterAPIKeyAuth)] = apiKeyAuthAny
+	route.TypedPerFilterConfig[egv1a1.EnvoyFilterAPIKeyAuth.String()] = apiKeyAuthAny
 
 	return nil
 }

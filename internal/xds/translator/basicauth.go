@@ -137,7 +137,7 @@ func (*basicAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf("route already contains filter config: %s, %+v",
-			string(egv1a1.EnvoyFilterBasicAuth), route)
+			egv1a1.EnvoyFilterBasicAuth.String(), route)
 	}
 
 	// Overwrite the HCM level filter config with the per route filter config.

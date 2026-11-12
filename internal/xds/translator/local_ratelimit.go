@@ -60,7 +60,7 @@ func (*localRateLimit) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 
 	// Return early if filter already exists.
 	for _, httpFilter := range mgr.HttpFilters {
-		if httpFilter.Name == string(egv1a1.EnvoyFilterLocalRateLimit) {
+		if httpFilter.Name == egv1a1.EnvoyFilterLocalRateLimit.String() {
 			return nil
 		}
 	}
@@ -81,7 +81,7 @@ func (*localRateLimit) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 	// empty filter. The real configuration is done at the route level.
 	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/local_rate_limit_filter
 	filter := &hcmv3.HttpFilter{
-		Name: string(egv1a1.EnvoyFilterLocalRateLimit),
+		Name: egv1a1.EnvoyFilterLocalRateLimit.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: localRlAny,
 		},
@@ -143,7 +143,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 	rateLimits, descriptors := buildRouteLocalRateLimits(local)
 
 	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[string(egv1a1.EnvoyFilterLocalRateLimit)]; ok {
+	if _, ok := filterCfg[egv1a1.EnvoyFilterLocalRateLimit.String()]; ok {
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf(
@@ -212,7 +212,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
 
-	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterLocalRateLimit)] = localRlAny
+	route.TypedPerFilterConfig[egv1a1.EnvoyFilterLocalRateLimit.String()] = localRlAny
 	return nil
 }
 

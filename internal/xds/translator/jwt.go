@@ -56,7 +56,7 @@ func (*jwt) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 	jwtAuthnFilterIndex := -1
 	// Add providers to existing JwtAuthentication if present.
 	for index, httpFilter := range mgr.HttpFilters {
-		if httpFilter.Name == string(egv1a1.EnvoyFilterJWTAuthn) {
+		if httpFilter.Name == egv1a1.EnvoyFilterJWTAuthn.String() {
 			jwtAuthnFilterIndex = index
 			if err := httpFilter.GetTypedConfig().UnmarshalTo(&jwtAuthn); err != nil {
 				return err
@@ -90,7 +90,7 @@ func buildHCMJWTFilter(jwtAuthn *jwtauthnv3.JwtAuthentication) (*hcmv3.HttpFilte
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: string(egv1a1.EnvoyFilterJWTAuthn),
+		Name: egv1a1.EnvoyFilterJWTAuthn.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: jwtAuthnAny,
 		},
@@ -390,7 +390,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 	}
 
 	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[string(egv1a1.EnvoyFilterJWTAuthn)]; !ok {
+	if _, ok := filterCfg[egv1a1.EnvoyFilterJWTAuthn.String()]; !ok {
 		if !routeContainsJWTAuthn(irRoute) {
 			return nil
 		}
@@ -413,7 +413,7 @@ func (*jwt) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 			route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 		}
 
-		route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterJWTAuthn)] = routeCfgAny
+		route.TypedPerFilterConfig[egv1a1.EnvoyFilterJWTAuthn.String()] = routeCfgAny
 	}
 
 	return nil

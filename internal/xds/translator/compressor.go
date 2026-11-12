@@ -66,7 +66,7 @@ func (*compressor) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 }
 
 func compressorFilterName(compressorType egv1a1.CompressorType) string {
-	return fmt.Sprintf("%s.%s", string(egv1a1.EnvoyFilterCompressor), strings.ToLower(string(compressorType)))
+	return fmt.Sprintf("%s.%s", egv1a1.EnvoyFilterCompressor.String(), strings.ToLower(string(compressorType)))
 }
 
 // buildCompressorFilter builds a compressor filter with the provided compressionType.

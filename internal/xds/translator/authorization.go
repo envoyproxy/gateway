@@ -66,7 +66,7 @@ func (*rbac) patchHCM(
 
 	// Return early if filter already exists.
 	for _, f := range mgr.HttpFilters {
-		if f.Name == string(egv1a1.EnvoyFilterRBAC) {
+		if f.Name == egv1a1.EnvoyFilterRBAC.String() {
 			return nil
 		}
 	}
@@ -90,7 +90,7 @@ func buildHCMRBACFilter() (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: string(egv1a1.EnvoyFilterRBAC),
+		Name: egv1a1.EnvoyFilterRBAC.String(),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: rbacAny,
 		},
@@ -126,7 +126,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	}
 
 	filterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := filterCfg[string(egv1a1.EnvoyFilterRBAC)]; ok {
+	if _, ok := filterCfg[egv1a1.EnvoyFilterRBAC.String()]; ok {
 		// This should not happen since this is the only place where the RBAC
 		// filter is added in a route.
 		return fmt.Errorf("route already contains rbac config: %+v", route)
@@ -150,7 +150,7 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
 
-	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterRBAC)] = cfgAny
+	route.TypedPerFilterConfig[egv1a1.EnvoyFilterRBAC.String()] = cfgAny
 
 	return nil
 }
