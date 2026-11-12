@@ -233,3 +233,14 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 
 	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
 }
+
+// GetResourceAttributes returns the preferred resource attributes for OpenTelemetry access logs.
+func (o *OpenTelemetryEnvoyProxyAccessLog) GetResourceAttributes() map[string]string {
+	if o == nil {
+		return nil
+	}
+	if o.ResourceAttributes != nil {
+		return o.ResourceAttributes
+	}
+	return o.Resources
+}

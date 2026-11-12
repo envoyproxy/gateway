@@ -183,15 +183,3 @@ func DefaultShutdownManagerContainerResourceRequirements() *corev1.ResourceRequi
 		},
 	}
 }
-
-// GetOpenTelemetryResourceAttributes returns the preferred resource attributes for
-// OpenTelemetry access logs, falling back to the deprecated resources field.
-func GetOpenTelemetryResourceAttributes(o *egv1a1.OpenTelemetryEnvoyProxyAccessLog) map[string]string {
-	if o == nil {
-		return nil
-	}
-	if o.ResourceAttributes != nil {
-		return o.ResourceAttributes
-	}
-	return o.Resources
-}
