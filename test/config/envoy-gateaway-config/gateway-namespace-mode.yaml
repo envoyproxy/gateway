@@ -24,8 +24,6 @@ data:
       enableLua: true
       enableExtensionBackends: true
       enableSDSSecretRef: true
-    gatewayAPI:
-      enabled: [XListenerSet]
     rateLimit:
       backend:
         type: Redis

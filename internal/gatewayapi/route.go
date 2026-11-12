@@ -3478,7 +3478,7 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our Gateways' listeners or the attached
-// XListenerSet's listeners, and if so, gets the list of listeners that allow it to attach for each parentRef.
+// ListenerSet's listeners, and if so, gets the list of listeners that allow it to attach for each parentRef.
 func (t *Translator) processAllowedListenersForParentRefs(
 	routeContext RouteContext,
 	gateways []*GatewayContext,

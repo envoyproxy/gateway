@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
+
+	"github.com/envoyproxy/gateway/test/e2e"
 )
 
 func TestExperimentalConformance(t *testing.T) {
@@ -53,8 +55,9 @@ func TestExperimentalConformance(t *testing.T) {
 		require.NoError(t, experimentalConformanceReport(t.Logf, report, opts.ReportOutputPath))
 	})
 
-	cSuite.Setup(t, tests.ConformanceTests)
-	if err := cSuite.Run(t, tests.ConformanceTests); err != nil {
+	conformanceTests := e2e.WrapConformanceTestsWithHook(tests.ConformanceTests)
+	cSuite.Setup(t, conformanceTests)
+	if err := cSuite.Run(t, conformanceTests); err != nil {
 		t.Fatalf("error running conformance tests: %v", err)
 	}
 }
