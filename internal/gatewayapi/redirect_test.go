@@ -452,6 +452,90 @@ func TestRedirectReferenceValidationIncludesDirectResponseBody(t *testing.T) {
 	require.Contains(t, strings.Join(messages, "; "), "can't find the referenced configmap default/missing")
 }
 
+func TestRedirectReferenceValidationIncludesGRPCJSONTranscoder(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		ref        gwapiv1.LocalObjectReference
+		configMaps []*corev1.ConfigMap
+		wantErr    string
+	}{
+		{
+			name:    "missing configmap",
+			ref:     protoDescriptorRef("missing").ValueRef,
+			wantErr: "can't find the referenced configmap default/missing",
+		},
+		{
+			name: "configmap in another namespace",
+			ref:  protoDescriptorRef("descriptor").ValueRef,
+			configMaps: []*corev1.ConfigMap{{
+				ObjectMeta: metav1.ObjectMeta{Name: "descriptor", Namespace: "other"},
+			}},
+			wantErr: "can't find the referenced configmap default/descriptor",
+		},
+		{
+			name:    "unsupported kind",
+			ref:     gwapiv1.LocalObjectReference{Kind: "Secret", Name: "descriptor"},
+			wantErr: "only ConfigMap is supported",
+		},
+		{
+			name:    "unsupported group",
+			ref:     gwapiv1.LocalObjectReference{Group: "example.com", Kind: "ConfigMap", Name: "descriptor"},
+			wantErr: "only ConfigMap is supported",
+		},
+		{
+			name:       "existing configmap is not parsed",
+			ref:        protoDescriptorRef("descriptor").ValueRef,
+			configMaps: []*corev1.ConfigMap{configMap("descriptor", map[string]string{"proto-descriptor": "invalid"}, nil)},
+		},
+	} {
+		for _, transcoderFirst := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/transcoderFirst=%t", tc.name, transcoderFirst), func(t *testing.T) {
+				translator := &Translator{TranslatorContext: &TranslatorContext{}}
+				translator.SetConfigMaps(tc.configMaps)
+				resources := &resource.Resources{HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
+						Spec: egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+							Type:              egv1a1.RegexHTTPPathModifier,
+							ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "(", Substitution: "/new"},
+						}}},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "transcoder", Namespace: "default"},
+						Spec: egv1a1.HTTPRouteFilterSpec{GRPCJSONTranscoder: &egv1a1.GRPCJSONTranscoder{
+							ProtoDescriptor: egv1a1.ProtoDescriptor{ValueRef: tc.ref},
+						}},
+					},
+				}}
+				filters := []gwapiv1.HTTPRouteFilter{
+					{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{
+						Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "redirect",
+					}},
+					{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{
+						Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "transcoder",
+					}},
+				}
+				if transcoderFirst {
+					slices.Reverse(filters)
+				}
+				route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+				got, errs := translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0].Error(), "valid RE2")
+				require.Equal(t, gwapiv1.RouteConditionAccepted, errs[0].Type())
+				require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, errs[0].Reason())
+				if tc.wantErr != "" {
+					require.Contains(t, errs[0].Error(), tc.wantErr)
+				} else {
+					require.NotContains(t, strings.ToLower(errs[0].Error()), "invalid filter")
+				}
+				require.Nil(t, got.GRPCJSONTranscoder)
+				require.Empty(t, translator.protoDescriptors)
+			})
+		}
+	}
+}
+
 func TestValidateRedirectSubstitution(t *testing.T) {
 	for _, tc := range []struct {
 		value string

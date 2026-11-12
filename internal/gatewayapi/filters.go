@@ -1139,7 +1139,14 @@ func (t *Translator) validateExtensionRefHTTPFilter(ref *gwapiv1.LocalObjectRefe
 					}
 				}
 				if hrf.Spec.CredentialInjection != nil {
-					return t.validateCredentialInjectionFilter(hrf, namespace, resources, context)
+					if err := t.validateCredentialInjectionFilter(hrf, namespace, resources, context); err != nil {
+						return err
+					}
+				}
+				if hrf.Spec.GRPCJSONTranscoder != nil {
+					if _, err := t.getProtoDescriptorConfigMap(hrf.Spec.GRPCJSONTranscoder.ProtoDescriptor, namespace); err != nil {
+						return t.processInvalidHTTPFilter(egv1a1.KindHTTPRouteFilter, context, err)
+					}
 				}
 				return nil
 			}
