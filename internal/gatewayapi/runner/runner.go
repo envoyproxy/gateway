@@ -30,6 +30,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
@@ -199,7 +200,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
-	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() {
+	if apihelpers.IsRunningOnKubernetes(r.EnvoyGateway.Provider) {
 		cacheOption.CacheDir = "/var/lib/eg/wasm"
 	} else {
 		h, _ := os.UserHomeDir() // Assume we always get the home directory.
@@ -325,28 +326,28 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					GatewayControllerName:           r.EnvoyGateway.Gateway.ControllerName,
 					GatewayClassName:                gwapiv1.ObjectName(resources.GatewayClass.Name),
 					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
-					RateLimitClusterSettings:        r.EnvoyGateway.RateLimit.GetServiceSettings(),
+					RateLimitClusterSettings:        apihelpers.GetRateLimitServiceSettings(r.EnvoyGateway.RateLimit),
 					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					EnvoyProxyPatchDisabled:         !r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
-					CTPHTTP1ClientScopeOnly:         r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly),
-					OIDCTokenCookieChunkingDisabled: !r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.OIDCTokenCookieChunking),
+					EnvoyProxyPatchDisabled:         !apihelpers.IsRuntimeFlagEnabled(r.EnvoyGateway.RuntimeFlags, egv1a1.EnvoyProxyPatch),
+					CTPHTTP1ClientScopeOnly:         apihelpers.IsRuntimeFlagEnabled(r.EnvoyGateway.RuntimeFlags, egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly),
+					OIDCTokenCookieChunkingDisabled: !apihelpers.IsRuntimeFlagEnabled(r.EnvoyGateway.RuntimeFlags, egv1a1.OIDCTokenCookieChunking),
 					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
 					ExtensionBackendsEnabled:        r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableExtensionBackends,
 					SDSSecretRefEnabled:             r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableSDSSecretRef,
 					ControllerNamespace:             r.ControllerNamespace,
-					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
+					GatewayNamespaceMode:            apihelpers.GatewayNamespaceMode(r.EnvoyGateway),
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
 					MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
-					PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
+					PerResourceSystemCASecret:       apihelpers.IsRuntimeFlagEnabled(r.EnvoyGateway.RuntimeFlags, egv1a1.PerResourceSystemCASecret),
 					WasmCache:                       r.wasmCache,
-					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
-					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
+					RunningOnHost:                   r.EnvoyGateway.Provider != nil && apihelpers.IsRunningOnHost(r.EnvoyGateway.Provider),
+					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && apihelpers.IsInfraManagedRemotely(r.EnvoyGateway.Provider),
 					Logger:                          traceLogger,
-					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
+					LuaEnvoyExtensionPolicyDisabled: apihelpers.LuaDisabled(r.EnvoyGateway.ExtensionAPIs),
 				}
 
 				// If extensions are loaded, pass their supported groups/kinds to the translator
-				if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
+				if extensions := apihelpers.GetExtensionManagers(&r.EnvoyGateway.EnvoyGatewaySpec); len(extensions) > 0 {
 					var extGKs, extBackendGKs, extSecretGKs []schema.GroupKind
 					for i := range extensions {
 						em := &extensions[i]
@@ -694,7 +695,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 
 func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error) {
 	switch {
-	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+	case apihelpers.IsRunningOnKubernetes(r.EnvoyGateway.Provider):
 		salt, err := hmac(ctx, r.ControllerNamespace)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get hmac secret: %w", err)
@@ -706,7 +707,7 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error)
 		}
 		return tlsConfig, salt, nil
 
-	case r.EnvoyGateway.Provider.IsRunningOnHost():
+	case apihelpers.IsRunningOnHost(r.EnvoyGateway.Provider):
 		// Get config
 		var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
 		if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&

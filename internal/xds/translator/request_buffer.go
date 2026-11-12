@@ -44,7 +44,7 @@ func (r *requestBuffer) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *i
 	}
 
 	for _, existingFilter := range mgr.HttpFilters {
-		if existingFilter.Name == egv1a1.EnvoyFilterBuffer.String() {
+		if existingFilter.Name == string(egv1a1.EnvoyFilterBuffer) {
 			return nil
 		}
 	}
@@ -88,7 +88,7 @@ func buildHCMRequestBufferFilter(spec *ir.RequestBuffer) (*hcmv3.HttpFilter, err
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: egv1a1.EnvoyFilterBuffer.String(),
+		Name: string(egv1a1.EnvoyFilterBuffer),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: bufferAny,
 		},
@@ -115,7 +115,7 @@ func (r *requestBuffer) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, 
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
 
-	route.TypedPerFilterConfig[egv1a1.EnvoyFilterBuffer.String()] = filter
+	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterBuffer)] = filter
 
 	return nil
 }

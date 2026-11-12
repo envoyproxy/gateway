@@ -16,6 +16,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 var (
@@ -24,7 +25,7 @@ var (
 )
 
 func TestValidateEnvoyGateway(t *testing.T) {
-	eg := egv1a1.DefaultEnvoyGateway()
+	eg := apihelpers.DefaultEnvoyGateway()
 
 	testCases := []struct {
 		name   string
@@ -45,7 +46,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "unspecified gateway",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: false,
@@ -54,7 +55,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "unspecified provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 				},
 			},
 			expect: false,
@@ -64,7 +65,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 					Gateway:  &egv1a1.Gateway{ControllerName: ""},
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: false,
@@ -73,7 +74,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "nil custom provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type:   egv1a1.ProviderTypeCustom,
 						Custom: nil,
@@ -86,7 +87,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "empty custom provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type:   egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{},
@@ -99,7 +100,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "custom provider with file resource provider and host infra provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
@@ -123,7 +124,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "custom provider with file provider and k8s infra provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
@@ -143,7 +144,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "custom provider with unsupported resource provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
@@ -160,7 +161,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "custom provider with file provider but no file struct",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
@@ -177,7 +178,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "custom provider with file provider and host infra provider but no host struct",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
@@ -200,7 +201,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "custom provider with file provider and unsupported infra provider",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
@@ -223,7 +224,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "custom provider with file provider and host infra provider but no paths assign in resource",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
@@ -245,8 +246,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "empty ratelimit",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:   egv1a1.DefaultGateway(),
-					Provider:  egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:   apihelpers.DefaultGateway(),
+					Provider:  apihelpers.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{},
 				},
 			},
@@ -256,8 +257,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "empty ratelimit redis setting",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type:  egv1a1.RedisBackendType,
@@ -272,8 +273,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "unknown ratelimit redis url format",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
@@ -290,8 +291,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "happy ratelimit redis settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
@@ -308,8 +309,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "happy ratelimit redis sentinel settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
@@ -326,8 +327,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "happy ratelimit redis cluster settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					RateLimit: &egv1a1.RateLimit{
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
@@ -344,8 +345,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "happy extension settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -378,8 +379,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "extension certificate resources with the Secret hook",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						SecretResources: []egv1a1.GroupVersionKind{
 							{
@@ -408,8 +409,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "extension certificate resources without the Secret hook",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						SecretResources: []egv1a1.GroupVersionKind{
 							{
@@ -438,8 +439,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "happy extension settings tls",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -482,8 +483,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "happy extension settings no resources",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Hooks: &egv1a1.ExtensionHooks{
 							XDSTranslator: &egv1a1.XDSTranslatorHooks{
@@ -519,8 +520,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "unknown TLS certificateRef in extension settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -563,8 +564,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "empty service in extension settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -593,8 +594,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "empty hooks in extension settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -616,8 +617,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "valid gateway logging level info",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Logging: &egv1a1.EnvoyGatewayLogging{
 						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
 							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelInfo,
@@ -631,8 +632,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "valid gateway logging level warn",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Logging: &egv1a1.EnvoyGatewayLogging{
 						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
 							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelWarn,
@@ -646,8 +647,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "valid gateway logging level error",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Logging: &egv1a1.EnvoyGatewayLogging{
 						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
 							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelError,
@@ -661,8 +662,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "valid gateway logging level debug",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Logging: &egv1a1.EnvoyGatewayLogging{
 						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
 							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelDebug,
@@ -677,8 +678,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "invalid gateway logging level",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Logging: &egv1a1.EnvoyGatewayLogging{
 						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
 							egv1a1.LogComponentGatewayDefault: "inffo",
@@ -692,8 +693,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "valid gateway metrics sink",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
 						Metrics: &egv1a1.EnvoyGatewayMetrics{
 							Sinks: []egv1a1.EnvoyGatewayMetricSink{
@@ -716,8 +717,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "invalid gateway metrics sink",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
 						Metrics: &egv1a1.EnvoyGatewayMetrics{
 							Sinks: []egv1a1.EnvoyGatewayMetricSink{
@@ -735,8 +736,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "valid gateway traces sink",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
 						Traces: &egv1a1.EnvoyGatewayTraces{
 							Sink: egv1a1.EnvoyGatewayTraceSink{
@@ -757,8 +758,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "invalid gateway traces sink",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
 						Traces: &egv1a1.EnvoyGatewayTraces{
 							Sink: egv1a1.EnvoyGatewayTraceSink{
@@ -774,7 +775,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "invalid gateway watch mode",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -793,7 +794,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "happy namespaces must be set when watch mode is Namespaces",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -813,7 +814,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "fail namespaces is not be set when watch mode is Namespaces",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -833,7 +834,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "happy namespaceSelector must be set when watch mode is NamespaceSelector",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -853,7 +854,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "fail namespaceSelector is not be set when watch mode is NamespaceSelector",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -872,8 +873,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "no extension server target set",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -894,8 +895,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "both host and path targets are set for extension server",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -924,8 +925,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "multiple backend targets are set for extension server",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -955,8 +956,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "both host and path targets are set for extension server",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{
@@ -984,8 +985,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "both extensionManager and extensionManagers set",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Hooks: &egv1a1.ExtensionHooks{
 							XDSTranslator: &egv1a1.XDSTranslatorHooks{
@@ -1013,8 +1014,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "extensionManagers explicitly empty",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:           egv1a1.DefaultGateway(),
-					Provider:          egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:           apihelpers.DefaultGateway(),
+					Provider:          apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManagers: []egv1a1.ExtensionManager{},
 				},
 			},
@@ -1024,8 +1025,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "extensionManagers with duplicate names",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManagers: []egv1a1.ExtensionManager{
 						{
 							Name: "ext1",
@@ -1054,8 +1055,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "extensionManagers registering the same secret kind",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManagers: []egv1a1.ExtensionManager{
 						{
 							Name:            "ext1",
@@ -1087,8 +1088,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "extensionManagers registering different secret kinds",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManagers: []egv1a1.ExtensionManager{
 						{
 							Name:            "ext1",
@@ -1119,8 +1120,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "extensionManagers with missing name",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManagers: []egv1a1.ExtensionManager{
 						{
 							Hooks: &egv1a1.ExtensionHooks{
@@ -1139,8 +1140,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "extensionManagers with invalid individual extension manager",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManagers: []egv1a1.ExtensionManager{
 						{
 							Name: "good-ext",
@@ -1165,8 +1166,8 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "valid extensionManagers plural config",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManagers: []egv1a1.ExtensionManager{
 						{
 							Name: "ai-gateway",
@@ -1195,14 +1196,14 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			name: "invalid EnvoyProxy in EnvoyGateway",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					EnvoyProxy: &egv1a1.EnvoyProxySpec{
 						Provider: &egv1a1.EnvoyProxyProvider{
 							// Invalid provider type
 							Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 								EnvoyService: &egv1a1.KubernetesServiceSpec{
-									Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+									Type: apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 								},
 							},
 						},
@@ -1226,21 +1227,21 @@ func TestValidateEnvoyGateway(t *testing.T) {
 }
 
 func TestEnvoyGateway(t *testing.T) {
-	envoyGateway := egv1a1.DefaultEnvoyGateway()
+	envoyGateway := apihelpers.DefaultEnvoyGateway()
 	assert.NotNil(t, envoyGateway.Provider)
 	assert.NotNil(t, envoyGateway.Gateway)
 	assert.NotNil(t, envoyGateway.Logging)
-	envoyGateway.SetEnvoyGatewayDefaults()
-	assert.Equal(t, envoyGateway.Logging, egv1a1.DefaultEnvoyGatewayLogging())
+	apihelpers.SetEnvoyGatewayDefaults(envoyGateway)
+	assert.Equal(t, envoyGateway.Logging, apihelpers.DefaultEnvoyGatewayLogging())
 
-	logging := egv1a1.DefaultEnvoyGatewayLogging()
+	logging := apihelpers.DefaultEnvoyGatewayLogging()
 	assert.NotNil(t, logging)
 	assert.Equal(t, egv1a1.LogLevelInfo, logging.Level[egv1a1.LogComponentGatewayDefault])
 
 	gatewayLogging := &egv1a1.EnvoyGatewayLogging{
 		Level: logging.Level,
 	}
-	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
+	apihelpers.SetEnvoyGatewayLoggingDefaults(gatewayLogging)
 	assert.NotNil(t, gatewayLogging)
 	assert.Equal(t, egv1a1.LogLevelInfo, gatewayLogging.Level[egv1a1.LogComponentGatewayDefault])
 }
@@ -1384,7 +1385,7 @@ func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			logging := &egv1a1.EnvoyGatewayLogging{}
-			if got := logging.DefaultEnvoyGatewayLoggingLevel(tt.args.level); got != tt.want {
+			if got := apihelpers.DefaultEnvoyGatewayLoggingLevel(logging, tt.args.level); got != tt.want {
 				t.Errorf("defaultLevel() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1394,16 +1395,16 @@ func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGateway := &egv1a1.EnvoyGateway{
 		TypeMeta:         metav1.TypeMeta{},
-		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{Provider: egv1a1.DefaultEnvoyGatewayProvider()},
+		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{Provider: apihelpers.DefaultEnvoyGatewayProvider()},
 	}
 	assert.NotNil(t, envoyGateway.Provider)
 
-	envoyGatewayProvider := envoyGateway.GetEnvoyGatewayProvider()
+	envoyGatewayProvider := apihelpers.GetEnvoyGatewayProvider(envoyGateway)
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes)
 	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
 
-	envoyGatewayProvider.Kubernetes = egv1a1.DefaultEnvoyGatewayKubeProvider()
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultRateLimitImage))
+	envoyGatewayProvider.Kubernetes = apihelpers.DefaultEnvoyGatewayKubeProvider()
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, apihelpers.DefaultKubernetesDeployment(egv1a1.DefaultRateLimitImage))
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
@@ -1420,7 +1421,7 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas)
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod)
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container)
-	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
+	envoyGatewayKubeProvider := apihelpers.GetEnvoyGatewayKubeProvider(envoyGatewayProvider)
 
 	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
 		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
@@ -1435,31 +1436,31 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 		},
 	}
 	assert.Nil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources)
-	envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
+	apihelpers.GetEnvoyGatewayKubeProvider(envoyGatewayProvider)
 
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes)
 	assert.Equal(t, envoyGatewayProvider.Kubernetes, envoyGatewayKubeProvider)
 
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, apihelpers.DefaultKubernetesDeployment(egv1a1.DefaultRateLimitImage))
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, egv1a1.DefaultKubernetesPod())
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, apihelpers.DefaultKubernetesPod())
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, egv1a1.DefaultKubernetesContainer(egv1a1.DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, apihelpers.DefaultKubernetesContainer(egv1a1.DefaultRateLimitImage))
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, egv1a1.DefaultResourceRequirements())
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, apihelpers.DefaultResourceRequirements())
 	assert.NotNil(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, egv1a1.DefaultKubernetesContainerImage(egv1a1.DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, apihelpers.DefaultKubernetesContainerImage(egv1a1.DefaultRateLimitImage))
 }
 
 func TestEnvoyGatewayAdmin(t *testing.T) {
 	// default envoygateway config admin should not be nil
-	eg := egv1a1.DefaultEnvoyGateway()
+	eg := apihelpers.DefaultEnvoyGateway()
 	assert.NotNil(t, eg.Admin)
 
 	// get default admin config from envoygateway
 	// values should be set in default
-	egAdmin := eg.GetEnvoyGatewayAdmin()
+	egAdmin := apihelpers.GetEnvoyGatewayAdmin(eg)
 	assert.NotNil(t, egAdmin)
 	assert.Equal(t, egv1a1.GatewayAdminPort, egAdmin.Address.Port)
 	assert.Equal(t, egv1a1.GatewayAdminHost, egAdmin.Address.Host)
@@ -1477,15 +1478,15 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 		EnablePprof:      true,
 	}
 
-	assert.Equal(t, 19010, eg.GetEnvoyGatewayAdmin().Address.Port)
-	assert.Equal(t, "0.0.0.0", eg.GetEnvoyGatewayAdmin().Address.Host)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().EnableDumpConfig)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().EnablePprof)
+	assert.Equal(t, 19010, apihelpers.GetEnvoyGatewayAdmin(eg).Address.Port)
+	assert.Equal(t, "0.0.0.0", apihelpers.GetEnvoyGatewayAdmin(eg).Address.Host)
+	assert.True(t, apihelpers.GetEnvoyGatewayAdmin(eg).EnableDumpConfig)
+	assert.True(t, apihelpers.GetEnvoyGatewayAdmin(eg).EnablePprof)
 
 	// set eg defaults when admin is nil
 	// the admin should not be nil
 	eg.Admin = nil
-	eg.SetEnvoyGatewayDefaults()
+	apihelpers.SetEnvoyGatewayDefaults(eg)
 	assert.NotNil(t, eg.Admin)
 	assert.Equal(t, egv1a1.GatewayAdminPort, eg.Admin.Address.Port)
 	assert.Equal(t, egv1a1.GatewayAdminHost, eg.Admin.Address.Host)
@@ -1495,12 +1496,12 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 
 func TestEnvoyGatewayTelemetry(t *testing.T) {
 	// default envoygateway config telemetry should not be nil
-	eg := egv1a1.DefaultEnvoyGateway()
+	eg := apihelpers.DefaultEnvoyGateway()
 	assert.NotNil(t, eg.Telemetry)
 
 	// get default telemetry config from envoygateway
 	// values should be set in default
-	egTelemetry := eg.GetEnvoyGatewayTelemetry()
+	egTelemetry := apihelpers.GetEnvoyGatewayTelemetry(eg)
 	assert.NotNil(t, egTelemetry)
 	assert.NotNil(t, egTelemetry.Metrics)
 	assert.False(t, egTelemetry.Metrics.Prometheus.Disable)
@@ -1531,14 +1532,14 @@ func TestEnvoyGatewayTelemetry(t *testing.T) {
 		},
 	}
 
-	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable)
-	assert.Len(t, eg.GetEnvoyGatewayTelemetry().Metrics.Sinks, 2)
-	assert.Equal(t, egv1a1.MetricSinkTypeOpenTelemetry, eg.GetEnvoyGatewayTelemetry().Metrics.Sinks[0].Type)
+	assert.True(t, apihelpers.GetEnvoyGatewayTelemetry(eg).Metrics.Prometheus.Disable)
+	assert.Len(t, apihelpers.GetEnvoyGatewayTelemetry(eg).Metrics.Sinks, 2)
+	assert.Equal(t, egv1a1.MetricSinkTypeOpenTelemetry, apihelpers.GetEnvoyGatewayTelemetry(eg).Metrics.Sinks[0].Type)
 
 	// set eg defaults when telemetry is nil
 	// the telemetry should not be nil
 	eg.Telemetry = nil
-	eg.SetEnvoyGatewayDefaults()
+	apihelpers.SetEnvoyGatewayDefaults(eg)
 	assert.NotNil(t, eg.Telemetry)
 	assert.NotNil(t, eg.Telemetry.Metrics)
 	assert.False(t, eg.Telemetry.Metrics.Prometheus.Disable)
@@ -1548,7 +1549,7 @@ func TestEnvoyGatewayTelemetry(t *testing.T) {
 func TestGetExtensionManagers(t *testing.T) {
 	t.Run("both nil returns nil", func(t *testing.T) {
 		spec := egv1a1.EnvoyGatewaySpec{}
-		assert.Nil(t, spec.GetExtensionManagers())
+		assert.Nil(t, apihelpers.GetExtensionManagers(&spec))
 	})
 
 	t.Run("only singular set returns it as slice", func(t *testing.T) {
@@ -1556,7 +1557,7 @@ func TestGetExtensionManagers(t *testing.T) {
 		spec := egv1a1.EnvoyGatewaySpec{
 			ExtensionManager: &ext,
 		}
-		result := spec.GetExtensionManagers()
+		result := apihelpers.GetExtensionManagers(&spec)
 		require.Len(t, result, 1)
 		assert.Equal(t, "ext1", result[0].Name)
 	})
@@ -1568,7 +1569,7 @@ func TestGetExtensionManagers(t *testing.T) {
 				{Name: "ext2"},
 			},
 		}
-		result := spec.GetExtensionManagers()
+		result := apihelpers.GetExtensionManagers(&spec)
 		require.Len(t, result, 2)
 		assert.Equal(t, "ext1", result[0].Name)
 		assert.Equal(t, "ext2", result[1].Name)
@@ -1583,7 +1584,7 @@ func TestGetExtensionManagers(t *testing.T) {
 				{Name: "plural2"},
 			},
 		}
-		result := spec.GetExtensionManagers()
+		result := apihelpers.GetExtensionManagers(&spec)
 		require.Len(t, result, 2)
 		assert.Equal(t, "plural1", result[0].Name)
 		assert.Equal(t, "plural2", result[1].Name)
@@ -1682,7 +1683,7 @@ func TestLuaDisabled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, tc.ext.LuaDisabled())
+			assert.Equal(t, tc.expected, apihelpers.LuaDisabled(tc.ext))
 		})
 	}
 }

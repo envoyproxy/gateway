@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package v1alpha1
+package apihelpers
 
 import (
 	"fmt"
@@ -13,18 +13,20 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
-func DefaultEnvoyProxyProvider() *EnvoyProxyProvider {
-	return &EnvoyProxyProvider{
-		Type: EnvoyProxyProviderTypeKubernetes,
+func DefaultEnvoyProxyProvider() *egv1a1.EnvoyProxyProvider {
+	return &egv1a1.EnvoyProxyProvider{
+		Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 	}
 }
 
 // GetEnvoyProxyProvider returns the EnvoyProxyProvider of EnvoyProxy or a default EnvoyProxyProvider
 // if unspecified.
-func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
+func GetEnvoyProxyProvider(e *egv1a1.EnvoyProxy) *egv1a1.EnvoyProxyProvider {
 	if e.Spec.Provider != nil {
 		return e.Spec.Provider
 	}
@@ -34,9 +36,9 @@ func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
 }
 
 // DefaultEnvoyProxyKubeProvider returns a new EnvoyProxyKubernetesProvider with default settings.
-func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
-	return &EnvoyProxyKubernetesProvider{
-		EnvoyDeployment: DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
+func DefaultEnvoyProxyKubeProvider() *egv1a1.EnvoyProxyKubernetesProvider {
+	return &egv1a1.EnvoyProxyKubernetesProvider{
+		EnvoyDeployment: DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage),
 		EnvoyService:    DefaultKubernetesService(),
 	}
 }
@@ -58,7 +60,7 @@ func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 }
 
 // NeedToSwitchPorts returns true if the EnvoyProxy needs to switch ports.
-func (e *EnvoyProxy) NeedToSwitchPorts() bool {
+func NeedToSwitchPorts(e *egv1a1.EnvoyProxy) bool {
 	if e.Spec.Provider == nil {
 		return true
 	}
@@ -77,8 +79,8 @@ func (e *EnvoyProxy) NeedToSwitchPorts() bool {
 // GetEnvoyProxyHostProvider returns the EnvoyProxyHostProvider of EnvoyProxyProvider or
 // a nil EnvoyProxyHostProvider if unspecified. If EnvoyProxyProvider is not of
 // type "Host", a nil EnvoyProxyHostProvider is returned.
-func (r *EnvoyProxyProvider) GetEnvoyProxyHostProvider() *EnvoyProxyHostProvider {
-	if r.Type != EnvoyProxyProviderTypeHost {
+func GetEnvoyProxyHostProvider(r *egv1a1.EnvoyProxyProvider) *egv1a1.EnvoyProxyHostProvider {
+	if r.Type != egv1a1.EnvoyProxyProviderTypeHost {
 		return nil
 	}
 	return r.Host
@@ -87,8 +89,8 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyHostProvider() *EnvoyProxyHostProvider
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
 // a default EnvoyProxyKubernetesProvider if unspecified. If EnvoyProxyProvider is not of
 // type "Kubernetes", a nil EnvoyProxyKubernetesProvider is returned.
-func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
-	if r.Type != EnvoyProxyProviderTypeKubernetes {
+func GetEnvoyProxyKubeProvider(r *egv1a1.EnvoyProxyProvider) *egv1a1.EnvoyProxyKubernetesProvider {
+	if r.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil
 	}
 
@@ -99,17 +101,17 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 
 	// if EnvoyDeployment and EnvoyDaemonSet are both nil, use EnvoyDeployment
 	if r.Kubernetes.EnvoyDeployment == nil && r.Kubernetes.EnvoyDaemonSet == nil {
-		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
+		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage)
 	}
 
 	// if use EnvoyDeployment, set default values
 	if r.Kubernetes.EnvoyDeployment != nil {
-		r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
+		defaultKubernetesDeploymentSpec(r.Kubernetes.EnvoyDeployment, egv1a1.DefaultEnvoyProxyImage)
 	}
 
 	// if use EnvoyDaemonSet, set default values
 	if r.Kubernetes.EnvoyDaemonSet != nil {
-		r.Kubernetes.EnvoyDaemonSet.defaultKubernetesDaemonSetSpec(DefaultEnvoyProxyImage)
+		defaultKubernetesDaemonSetSpec(r.Kubernetes.EnvoyDaemonSet, egv1a1.DefaultEnvoyProxyImage)
 	}
 
 	if r.Kubernetes.EnvoyService == nil {
@@ -117,19 +119,19 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	if r.Kubernetes.EnvoyService.Type == nil {
-		r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeLoadBalancer)
+		r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer)
 	}
 
 	if r.Kubernetes.EnvoyHpa != nil {
-		r.Kubernetes.EnvoyHpa.setDefault()
+		setHPADefaults(r.Kubernetes.EnvoyHpa)
 	}
 
 	return r.Kubernetes
 }
 
 // GetEnvoyVersion returns the version of Envoy to use.
-// This method gracefully handles nil pointers.
-func (e *EnvoyProxyHostProvider) GetEnvoyVersion() string {
+// This function gracefully handles nil pointers.
+func GetEnvoyVersion(e *egv1a1.EnvoyProxyHostProvider) string {
 	if e == nil || e.EnvoyVersion == nil {
 		return ""
 	}
@@ -138,21 +140,21 @@ func (e *EnvoyProxyHostProvider) GetEnvoyVersion() string {
 
 // DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.
 // If unspecified, defaults to "warn". When specified, all other logging components are ignored.
-func (logging *ProxyLogging) DefaultEnvoyProxyLoggingLevel() LogLevel {
-	if logging.Level[LogComponentDefault] != "" {
-		return logging.Level[LogComponentDefault]
+func DefaultEnvoyProxyLoggingLevel(logging *egv1a1.ProxyLogging) egv1a1.LogLevel {
+	if logging.Level[egv1a1.LogComponentDefault] != "" {
+		return logging.Level[egv1a1.LogComponentDefault]
 	}
 
-	return LogLevelWarn
+	return egv1a1.LogLevelWarn
 }
 
 // GetEnvoyProxyComponentLevel returns envoy proxy component log level args.
 // xref: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-component-log-level
-func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
+func GetEnvoyProxyComponentLevel(logging *egv1a1.ProxyLogging) string {
 	var args []string
 
 	for component, level := range logging.Level {
-		if component == LogComponentDefault {
+		if component == egv1a1.LogComponentDefault {
 			// Skip default component
 			continue
 		}
@@ -176,13 +178,20 @@ func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
 func DefaultShutdownManagerContainerResourceRequirements() *corev1.ResourceRequirements {
 	return &corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(DefaultShutdownManagerCPUResourceRequests),
-			corev1.ResourceMemory: resource.MustParse(DefaultShutdownManagerMemoryResourceRequests),
+			corev1.ResourceCPU:    resource.MustParse(egv1a1.DefaultShutdownManagerCPUResourceRequests),
+			corev1.ResourceMemory: resource.MustParse(egv1a1.DefaultShutdownManagerMemoryResourceRequests),
 		},
 	}
 }
 
-// String returns the string representation of the EnvoyFilter type.
-func (f EnvoyFilter) String() string {
-	return string(f)
+// GetOpenTelemetryResourceAttributes returns the preferred resource attributes for
+// OpenTelemetry access logs, falling back to the deprecated resources field.
+func GetOpenTelemetryResourceAttributes(o *egv1a1.OpenTelemetryEnvoyProxyAccessLog) map[string]string {
+	if o == nil {
+		return nil
+	}
+	if o.ResourceAttributes != nil {
+		return o.ResourceAttributes
+	}
+	return o.Resources
 }

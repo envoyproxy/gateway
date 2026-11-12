@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 // ValidateEnvoyGateway validates the provided EnvoyGateway.
@@ -411,7 +412,7 @@ func validateEnvoyGatewayDebounce(debounce *egv1a1.Debounce) error {
 		return nil
 	}
 
-	after, maxHold, err := debounce.ResolveDurations()
+	after, maxHold, err := apihelpers.ResolveDebounceDurations(debounce)
 	if err != nil {
 		return err
 	}

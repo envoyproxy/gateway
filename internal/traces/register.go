@@ -20,6 +20,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -45,7 +46,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		return nil
 	}
 
-	tracesConfig := r.cfg.EnvoyGateway.GetEnvoyGatewayTelemetry().Traces
+	tracesConfig := apihelpers.GetEnvoyGatewayTelemetry(r.cfg.EnvoyGateway).Traces
 	sinkConfig := tracesConfig.Sink
 	configObj := sinkConfig.OpenTelemetry
 

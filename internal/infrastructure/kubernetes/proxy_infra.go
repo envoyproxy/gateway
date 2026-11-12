@@ -14,6 +14,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -82,7 +83,7 @@ func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (ma
 		return nil, errors.New("infra proxy metadata owner reference ir is nil")
 	}
 
-	if i.EnvoyGateway.GatewayNamespaceMode() {
+	if apihelpers.GatewayNamespaceMode(i.EnvoyGateway) {
 		key := types.NamespacedName{
 			Namespace: i.GetResourceNamespace(irInfra),
 			Name:      irInfra.GetProxyInfra().GetProxyMetadata().OwnerReference.Name,
@@ -107,7 +108,7 @@ func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (ma
 }
 
 func (i *Infra) GetResourceNamespace(irInfra *ir.Infra) string {
-	if i.EnvoyGateway.GatewayNamespaceMode() {
+	if apihelpers.GatewayNamespaceMode(i.EnvoyGateway) {
 		return irInfra.Proxy.Namespace
 	}
 	return i.ControllerNamespace

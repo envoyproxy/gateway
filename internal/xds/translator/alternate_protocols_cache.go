@@ -35,7 +35,7 @@ func (t *Translator) patchHCMWithAlternateProtocolsCache(mgr *hcmv3.HttpConnecti
 		return errors.New("ir listener is nil")
 	}
 
-	filterName := egv1a1.EnvoyFilterAlternateProtocolsCache.String()
+	filterName := string(egv1a1.EnvoyFilterAlternateProtocolsCache)
 	if hcmContainsFilter(mgr, filterName) {
 		return nil
 	}
@@ -63,7 +63,7 @@ func patchRouteWithAlternateProtocolsCache(route *routev3.Route, irRoute *ir.HTT
 	if !routeUsesAutoHTTP3(irRoute, backendIndex) {
 		return nil
 	}
-	return enableFilterOnRoute(route, egv1a1.EnvoyFilterAlternateProtocolsCache.String(), &routev3.FilterConfig{
+	return enableFilterOnRoute(route, string(egv1a1.EnvoyFilterAlternateProtocolsCache), &routev3.FilterConfig{
 		Config: &anypb.Any{},
 	})
 }

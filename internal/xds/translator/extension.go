@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -257,10 +258,10 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	translationConfig := extManager.GetTranslationHookConfig()
 
 	// Determine which resources to include based on configuration
-	includeClusters := translationConfig.ShouldIncludeClusters()
-	includeSecrets := translationConfig.ShouldIncludeSecrets()
-	includeListeners := translationConfig.ShouldIncludeListeners()
-	includeRoutes := translationConfig.ShouldIncludeRoutes()
+	includeClusters := apihelpers.ShouldIncludeClusters(translationConfig)
+	includeSecrets := apihelpers.ShouldIncludeSecrets(translationConfig)
+	includeListeners := apihelpers.ShouldIncludeListeners(translationConfig)
+	includeRoutes := apihelpers.ShouldIncludeRoutes(translationConfig)
 
 	// Prepare resources based on configuration
 	var oldClusters []*clusterv3.Cluster

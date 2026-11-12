@@ -50,7 +50,7 @@ func (*fault) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 
 	// Return early if the fault filter already exists.
 	for _, existingFilter := range mgr.HttpFilters {
-		if existingFilter.Name == egv1a1.EnvoyFilterFault.String() {
+		if existingFilter.Name == string(egv1a1.EnvoyFilterFault) {
 			return nil
 		}
 	}
@@ -73,7 +73,7 @@ func buildHCMFaultFilter() (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: egv1a1.EnvoyFilterFault.String(),
+		Name: string(egv1a1.EnvoyFilterFault),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: faultAny,
 		},

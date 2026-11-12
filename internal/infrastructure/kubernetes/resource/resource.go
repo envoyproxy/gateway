@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 // GetSelector returns a label selector used to select resources
@@ -26,7 +27,7 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	serviceSpec.Type = corev1.ServiceType(*service.Type)
 	serviceSpec.SessionAffinity = corev1.ServiceAffinityNone
 	if service.ExternalTrafficPolicy == nil {
-		service.ExternalTrafficPolicy = egv1a1.DefaultKubernetesServiceExternalTrafficPolicy()
+		service.ExternalTrafficPolicy = apihelpers.DefaultKubernetesServiceExternalTrafficPolicy()
 	}
 	switch *service.Type {
 	case egv1a1.ServiceTypeLoadBalancer:

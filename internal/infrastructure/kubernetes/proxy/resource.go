@@ -16,6 +16,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
@@ -208,7 +209,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
 			Env:                      expectedContainerEnv(nil),
-			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
+			Resources:                *apihelpers.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			VolumeMounts: []corev1.VolumeMount{

@@ -38,7 +38,7 @@ func (*headerMutation) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir
 		return errors.New("ir listener is nil")
 	}
 
-	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterHeaderMutation.String()) {
+	if hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterHeaderMutation)) {
 		return nil
 	}
 
@@ -149,7 +149,7 @@ func buildHeaderMutationFilter(headers *ir.HeaderSettings) (*hcmv3.HttpFilter, e
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: egv1a1.EnvoyFilterHeaderMutation.String(),
+		Name: string(egv1a1.EnvoyFilterHeaderMutation),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: mutationAny,
 		},

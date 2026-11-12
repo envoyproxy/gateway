@@ -16,6 +16,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -89,8 +90,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
 	// to avoid multiple EG instances processing envoy proxy infra resources.
-	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
-		!ptr.Deref(r.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false) {
+	if apihelpers.IsRunningOnKubernetes(r.EnvoyGateway.Provider) &&
+		!ptr.Deref(apihelpers.GetKubernetesConfiguration(r.EnvoyGateway.Provider).LeaderElection.Disable, false) {
 		r.done.Go(func() {
 			select {
 			case <-ctx.Done():
@@ -205,7 +206,7 @@ func (r *Runner) initializeRateLimitInfra(ctx context.Context) {
 }
 
 func (r *Runner) waitForProviderReady(ctx context.Context) bool {
-	if !r.EnvoyGateway.Provider.IsRunningOnKubernetes() {
+	if !apihelpers.IsRunningOnKubernetes(r.EnvoyGateway.Provider) {
 		return true
 	}
 

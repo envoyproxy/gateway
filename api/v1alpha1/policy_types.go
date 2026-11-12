@@ -105,10 +105,3 @@ type TargetSelectorNamespaces struct {
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 }
-
-func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
-	if p.TargetRef != nil {
-		return []gwapiv1.LocalPolicyTargetReferenceWithSectionName{*p.TargetRef}
-	}
-	return p.TargetRefs
-}
