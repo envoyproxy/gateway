@@ -3047,6 +3047,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		}
 	}
 
+	// Validate redirect attachments before zero-weight and custom-backend exits.
+	if err := validateBackendRefRedirectFilters(routeType, backendRefContext, route.GetNamespace(), resources); err != nil {
+		return emptyDS, nil, err
+	}
+
 	// Skip processing backends with 0 weight
 	if weight == 0 {
 		return emptyDS, nil, nil
@@ -3379,6 +3384,38 @@ func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 		}
 	}
 
+	return nil
+}
+
+func validateBackendRefRedirectFilters(routeType gwapiv1.Kind, backendRefContext BackendRefContext, namespace string, resources *resource.Resources) status.Error {
+	var extRefs []*gwapiv1.LocalObjectReference
+	switch filters := getBackendFilters(routeType, backendRefContext).(type) {
+	case []gwapiv1.HTTPRouteFilter:
+		for _, filter := range filters {
+			if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
+				extRefs = append(extRefs, filter.ExtensionRef)
+			}
+		}
+	case []gwapiv1.GRPCRouteFilter:
+		for _, filter := range filters {
+			if filter.Type == gwapiv1.GRPCRouteFilterExtensionRef {
+				extRefs = append(extRefs, filter.ExtensionRef)
+			}
+		}
+	}
+	for _, ref := range extRefs {
+		if ref == nil || string(ref.Group) != egv1a1.GroupName || string(ref.Kind) != egv1a1.KindHTTPRouteFilter {
+			continue
+		}
+		for _, hrf := range resources.HTTPRouteFilters {
+			if hrf.Namespace == namespace && hrf.Name == string(ref.Name) && hrf.Spec.Redirect != nil {
+				return status.NewRouteStatusError(
+					errors.New("HTTPRouteFilter redirect is not supported on backendRefs"),
+					status.RouteReasonInvalidBackendFilters,
+				)
+			}
+		}
+	}
 	return nil
 }
 

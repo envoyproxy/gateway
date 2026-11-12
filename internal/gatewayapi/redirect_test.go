@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -640,5 +642,88 @@ func TestRedirectExtensionBackendRef(t *testing.T) {
 				}}}, nil)
 			require.ErrorContains(t, err, "not supported on backendRefs")
 		})
+	}
+}
+
+func TestRedirectExtensionBackendRefEarlyReturns(t *testing.T) {
+	for _, custom := range []bool{false, true} {
+		for _, weight := range []int32{0, 1} {
+			for _, grpc := range []bool{false, true} {
+				t.Run(fmt.Sprintf("custom=%t/weight=%d/grpc=%t", custom, weight, grpc), func(t *testing.T) {
+					customBackend := unstructured.Unstructured{}
+					customBackend.SetAPIVersion("custom.example.io/v1")
+					customBackend.SetKind("CustomBackend")
+					customBackend.SetNamespace("default")
+					customBackend.SetName("backend")
+					resources := &resource.Resources{
+						ExtensionRefFilters: []unstructured.Unstructured{customBackend},
+						HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{{
+							ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
+							Spec: egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+								Type:              egv1a1.RegexHTTPPathModifier,
+								ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "^/old$", Substitution: "/new"},
+							}}},
+						}},
+					}
+					translator := &Translator{
+						EndpointRoutingDisabled:    true,
+						ExtensionBackendGroupKinds: []schema.GroupKind{{Group: "custom.example.io", Kind: "CustomBackend"}},
+						TranslatorContext: &TranslatorContext{
+							ExtensionRefIndex: BuildExtensionRefIndex(resources.ExtensionRefFilters),
+						},
+					}
+					translator.SetServices([]*corev1.Service{{
+						ObjectMeta: metav1.ObjectMeta{Name: "backend", Namespace: "default"},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "10.0.0.1",
+							Ports:     []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}},
+						},
+					}})
+					backendRef := BackendRefWithFilters{
+						BackendRef: &gwapiv1.BackendRef{
+							BackendObjectReference: gwapiv1.BackendObjectReference{
+								Name: "backend",
+								Port: new(gwapiv1.PortNumber(8080)),
+							},
+							Weight: &weight,
+						},
+						Filters: []gwapiv1.HTTPRouteFilter{{
+							Type: gwapiv1.HTTPRouteFilterExtensionRef,
+							ExtensionRef: &gwapiv1.LocalObjectReference{
+								Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "redirect",
+							},
+						}},
+					}
+					if custom {
+						backendRef.BackendRef.Group = new(gwapiv1.Group("custom.example.io"))
+						backendRef.BackendRef.Kind = new(gwapiv1.Kind("CustomBackend"))
+					}
+					var route RouteContext = &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+					if grpc {
+						route = &GRPCRouteContext{GRPCRoute: &gwapiv1.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+						backendRef.Filters = []gwapiv1.GRPCRouteFilter{{
+							Type: gwapiv1.GRPCRouteFilterExtensionRef,
+							ExtensionRef: &gwapiv1.LocalObjectReference{
+								Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "redirect",
+							},
+						}}
+					}
+					parent := &RouteParentContext{ParentReference: &gwapiv1.ParentReference{Name: "gateway"}}
+
+					ds, extensionRef, err := translator.processDestination("backend", backendRef, parent, route, resources, nil, nil, nil)
+					if grpc && !custom {
+						require.ErrorContains(t, err, "Specific filter is not supported within BackendRef")
+						require.Equal(t, status.RouteReasonUnsupportedRefValue, err.Reason())
+					} else {
+						require.ErrorContains(t, err, "HTTPRouteFilter redirect is not supported on backendRefs")
+						require.Equal(t, status.RouteReasonInvalidBackendFilters, err.Reason())
+					}
+					require.Equal(t, gwapiv1.RouteConditionResolvedRefs, err.Type())
+					require.Nil(t, extensionRef)
+					require.False(t, ds.IsCustomBackend)
+					require.Nil(t, ds.Filters)
+				})
+			}
+		}
 	}
 }
