@@ -27,10 +27,10 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
+        message: 'spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead; spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
         reason: Warnings
         status: "True"
         type: Warning
@@ -64,10 +64,10 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
+        message: 'spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead; spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
         reason: Warnings
         status: "True"
         type: Warning
@@ -102,10 +102,10 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
+        message: 'spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead; spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
         reason: Warnings
         status: "True"
         type: Warning
@@ -139,10 +139,10 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
+        message: 'spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead; spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
         reason: Warnings
         status: "True"
         type: Warning
@@ -177,10 +177,10 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
+        message: 'spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead; spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
         reason: Warnings
         status: "True"
         type: Warning

@@ -92,7 +92,7 @@
                     timeout: 10s
                     uri: https://oauth.foo.com/jwt/public-key/jwks.json
             requirementMap:
-              example1-or-example2-or-example3-or-example4_f1dce4fcb58e4627:
+              default/policy:
                 requiresAny:
                   requirements:
                   - providerName: example1_080509a58e5880a9

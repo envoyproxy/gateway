@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -51,7 +52,8 @@ var (
 	ErrTLSSDSSecretNameEmpty                    = errors.New("field SDS SecretName must be specified")
 	ErrTLSSDSSchemeEmpty                        = errors.New("field SDS Scheme must be specified")
 	ErrTLSSDSAddressEmpty                       = errors.New("field SDS Address must be specified")
-	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS or inline certificate fields may be specified")
+	ErrTLSCertificateMultipleSources            = errors.New("only one of SDS, ExtensionRef or inline certificate fields may be specified")
+	ErrTLSExtensionRefEmpty                     = errors.New("field ExtensionRef Object or Name must be specified")
 	ErrRouteNameEmpty                           = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty                   = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty                     = errors.New("field Name must be specified")
@@ -590,6 +592,10 @@ type TLSCertificate struct {
 	Name string `json:"name" yaml:"name"`
 	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
 	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
+	// ExtensionRef holds the custom resource this certificate was resolved from, for a
+	// kind registered in ExtensionManager.SecretResources. How Envoy obtains the
+	// certificate is decided by the extension server via the Secret hook.
+	ExtensionRef *UnstructuredRef `json:"extensionRef,omitempty" yaml:"extensionRef,omitempty"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
@@ -694,6 +700,18 @@ type SubjectAltName struct {
 
 func (t *TLSCertificate) Validate() error {
 	var errs error
+	if t.SDS != nil && t.ExtensionRef != nil {
+		return errors.Join(errs, ErrTLSCertificateMultipleSources)
+	}
+	if t.ExtensionRef != nil {
+		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
+			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
+		}
+		if t.ExtensionRef.Object == nil && t.ExtensionRef.Name == "" {
+			errs = errors.Join(errs, ErrTLSExtensionRefEmpty)
+		}
+		return errs
+	}
 	if t.SDS != nil {
 		if len(t.Certificate) > 0 || len(t.PrivateKey) > 0 || len(t.OCSPStaple) > 0 {
 			errs = errors.Join(errs, ErrTLSCertificateMultipleSources)
@@ -1191,17 +1209,24 @@ func (h *HTTPRoute) GetRetry() *Retry {
 }
 
 func (h *HTTPRoute) NeedsClusterPerSetting() bool {
+	return len(h.ClusterPerSettingReasons()) > 0
+}
+
+// ClusterPerSettingReasons returns why each of HTTPRoute's destination settings needs its own cluster,
+// or nil when they can share one.
+func (h *HTTPRoute) ClusterPerSettingReasons() []string {
+	var reasons []string
 	if h.Traffic != nil &&
 		h.Traffic.LoadBalancer != nil &&
 		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
-		return true
+		reasons = append(reasons, "the load balancer uses preferLocal or weightedZones")
 	}
 	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
 	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
-		return true
+	if weights := h.Destination.ToBackendWeights(); weights.Invalid > 0 || weights.NoEndpoints > 0 {
+		reasons = append(reasons, "some backendRefs are invalid or have no endpoints")
 	}
-	return h.Destination.NeedsClusterPerSetting()
+	return append(reasons, h.Destination.ClusterPerSettingReasons()...)
 }
 
 // IsDynamicResolverRoute reports whether h's destination is a dynamic resolver.
@@ -1530,6 +1555,10 @@ type JWT struct {
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+
+	// Name is a unique name for this JWT configuration. The xds translator uses
+	// it as the jwt_authn requirement name, so JWTs that share a name must be equal.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // JWTProvider defines the schema for the JWT Provider.
@@ -2277,11 +2306,43 @@ func (r *RouteDestination) Validate() error {
 }
 
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
-	return r.HasMixedEndpoints() ||
-		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
-		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings()
+	return len(r.ClusterPerSettingReasons()) > 0
+}
+
+// ClusterPerSettingReasons returns why each of RouteDestination's settings needs its own cluster, or nil when
+// they can share one.
+func (r *RouteDestination) ClusterPerSettingReasons() []string {
+	var reasons []string
+	if r.HasMixedEndpoints() {
+		reasons = append(reasons, "FQDN endpoints are mixed with IP or UDS endpoints")
+	}
+	if r.HasFiltersInSettings() {
+		reasons = append(reasons, "backendRefs have filters other than backendPriority")
+	}
+	if len(r.Settings) > 1 && r.HasPreferLocalZone() {
+		reasons = append(reasons, "backends use preferLocal")
+	}
+	if r.HasMixedUpstreamProtocolRequirements() {
+		reasons = append(reasons, "backends require different upstream protocols")
+	}
+	if r.HasMixedAutoSNISettings() {
+		reasons = append(reasons, "only some backends use autoSNI from the endpoint hostname")
+	}
+	return reasons
+}
+
+// HasPriorityFailover reports whether RouteDestination's usable settings span more than one locality priority,
+// i.e. traffic is expected to fail over between them.
+func (r *RouteDestination) HasPriorityFailover() bool {
+	priorities := sets.New[uint32]()
+	for _, s := range r.Settings {
+		if s == nil || s.Invalid || (s.Weight != nil && *s.Weight == 0) ||
+			(len(s.Endpoints) == 0 && !s.IsDynamicResolver && !s.IsCustomBackend) {
+			continue
+		}
+		priorities.Insert(ptr.Deref(s.Priority, 0))
+	}
+	return priorities.Len() > 1
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -3166,6 +3227,9 @@ type GlobalResources struct {
 	EnvoyClientCertificate *TLSCertificate `json:"envoyClientCertificate,omitempty" yaml:"envoyClientCertificate,omitempty"`
 	// RateLimitServiceCluster holds the rate limit service endpoints discovered from Kubernetes resources.
 	RateLimitServiceCluster *RouteDestination `json:"rateLimitServiceCluster,omitempty" yaml:"rateLimitServiceCluster,omitempty"`
+	// RateLimitServiceClusterTraffic holds the cluster-scoped traffic settings of the rate limit
+	// service cluster, translated from EnvoyGateway.RateLimit.ServiceSettings.
+	RateLimitServiceClusterTraffic *ClusterTrafficFeatures `json:"rateLimitServiceClusterTraffic,omitempty" yaml:"rateLimitServiceClusterTraffic,omitempty"`
 	// ProxyServiceCluster holds the local cluster of EnvoyProxy instances
 	ProxyServiceCluster *RouteDestination `json:"proxyServiceCluster,omitempty" yaml:"proxyServiceCluster,omitempty"`
 	// HMACSecret holds the HMAC Secret used by the OIDC.

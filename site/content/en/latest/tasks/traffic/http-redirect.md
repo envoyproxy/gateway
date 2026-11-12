@@ -686,5 +686,5 @@ You should receive a `302` with a redirect location of `http://path.redirect.exa
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httprequestredirectfilter
-[sectionName]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#commonroutespec
+[req_filter]: {{<gateway-api-spec>}}#httprequestredirectfilter
+[sectionName]: {{<gateway-api-spec>}}#commonroutespec

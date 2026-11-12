@@ -16,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/test/e2e"
 )
 
 func TestGatewayAPIConformance(t *testing.T) {
@@ -32,8 +34,9 @@ func TestGatewayAPIConformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating conformance test suite: %v", err)
 	}
-	cSuite.Setup(t, tests.ConformanceTests)
-	if err := cSuite.Run(t, tests.ConformanceTests); err != nil {
+	conformanceTests := e2e.WrapConformanceTestsWithHook(tests.ConformanceTests)
+	cSuite.Setup(t, conformanceTests)
+	if err := cSuite.Run(t, conformanceTests); err != nil {
 		t.Fatalf("Error running conformance tests: %v", err)
 	}
 }

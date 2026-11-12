@@ -36,6 +36,7 @@ http:
       prefix: /
     security:
       jwt:
+        name: default/policy
         providers:
         - audiences:
           - foo.bar.com

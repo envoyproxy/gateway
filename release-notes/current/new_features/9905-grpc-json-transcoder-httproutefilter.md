@@ -1,1 +1,0 @@
-Added gRPC-JSON transcoding to `HTTPRouteFilter` with the `grpcJSONTranscoder` field, so REST/JSON clients can call gRPC backends. The proto descriptor set is read from a ConfigMap and validated when the route is translated.

@@ -10,7 +10,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -2179,6 +2181,100 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 	}
 }
 
+// routeIdentity identifies a route resource without building a string key.
+type routeIdentity struct {
+	kind, namespace, name string
+}
+
+// checkIneffectiveBackendPriority sets a BackendPriorityIneffective condition on HTTPRoutes and
+// GRPCRoutes with a rule whose backends span several locality priorities (set by a
+// backendPriority filter or a fallback Backend) but are split into separate clusters. Envoy
+// only fails over between priorities within one cluster, so the priorities have no effect.
+func (t *Translator) checkIneffectiveBackendPriority(httpRoutes []*HTTPRouteContext, grpcRoutes []*GRPCRouteContext, xdsIR resource.XdsIRMap) {
+	// route -> IR listener name -> IR destination name -> reasons the rule is split.
+	// A rule shows up once per match and hostname, all sharing one destination.
+	type splitRules map[string][]string
+	ineffective := make(map[routeIdentity]map[string]splitRules)
+
+	for _, xds := range xdsIR {
+		for _, httpListener := range xds.HTTP {
+			for _, r := range httpListener.Routes {
+				if r.Metadata == nil || r.Destination == nil || r.DirectResponse != nil || r.Redirect != nil ||
+					!r.Destination.HasPriorityFailover() {
+					continue
+				}
+				reasons := r.ClusterPerSettingReasons()
+				if len(reasons) == 0 {
+					continue
+				}
+				id := routeIdentity{r.Metadata.Kind, r.Metadata.Namespace, r.Metadata.Name}
+				if ineffective[id] == nil {
+					ineffective[id] = make(map[string]splitRules)
+				}
+				if ineffective[id][httpListener.Name] == nil {
+					ineffective[id][httpListener.Name] = make(splitRules)
+				}
+				ineffective[id][httpListener.Name][r.Destination.Name] = reasons
+			}
+		}
+	}
+
+	if len(ineffective) == 0 {
+		return
+	}
+
+	report := func(route RouteContext) {
+		byListener, ok := ineffective[routeIdentity{string(route.GetRouteType()), route.GetNamespace(), route.GetName()}]
+		if !ok {
+			return
+		}
+		rulePrefix := irRoutePrefix(route) + "rule/"
+		routeStatus := GetRouteStatus(route)
+		for _, parentRef := range GetParentReferences(route) {
+			routeParent := route.GetRouteParentContext(parentRef)
+			if routeParent == nil {
+				continue
+			}
+			// Only report the rules split on the listeners this parentRef attaches to, since
+			// load balancer settings and backend merging can differ per Gateway.
+			rules := make(map[int][]string)
+			for _, listener := range routeParent.listeners {
+				for destName, reasons := range byListener[irListenerName(listener)] {
+					ruleIdx, err := strconv.Atoi(strings.TrimPrefix(destName, rulePrefix))
+					if err != nil {
+						continue
+					}
+					rules[ruleIdx] = reasons
+				}
+			}
+			if len(rules) == 0 {
+				continue
+			}
+
+			msgs := make([]string, 0, len(rules))
+			for _, ruleIdx := range slices.Sorted(maps.Keys(rules)) {
+				msgs = append(msgs, fmt.Sprintf(
+					"Backend priority has no effect on rule %d because its backends are split into separate clusters: %s.",
+					ruleIdx, strings.Join(rules[ruleIdx], ", ")))
+			}
+			status.SetRouteStatusCondition(routeStatus,
+				routeParent.routeParentStatusIdx,
+				route.GetGeneration(),
+				status.RouteConditionBackendPriorityIneffective,
+				metav1.ConditionTrue,
+				status.RouteReasonBackendPriorityIneffective,
+				strings.Join(msgs, " "),
+			)
+		}
+	}
+	for _, hr := range httpRoutes {
+		report(hr)
+	}
+	for _, gr := range grpcRoutes {
+		report(gr)
+	}
+}
+
 // buildOverlapKey returns a canonical key capturing a route's match conditions.
 // Two routes with the same overlapKey match the exact same set of requests.
 // Header names are normalized to lowercase since HTTP header names are
@@ -2932,7 +3028,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	}
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
-	if !t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
+	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
+	// Extension backend resources are matched by group and kind, so they must be dispatched to the
+	// extension even when their kind collides with a built-in one (e.g. custom.example.io/Service).
+	isCustomBackend := t.isCustomBackendResource(backendRef.Group, backendKind)
+	if !isCustomBackend {
 		err = t.validateBackendRef(backendRefContext, route, resources, backendNamespace, routeType)
 		{
 			// Empty DS means the backend is invalid and an error to fail the associated route.
@@ -2982,13 +3082,34 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
 	}
 
-	switch KindDerefOr(backendRef.Kind, resource.KindService) {
-	case resource.KindServiceImport:
+	switch {
+	case isCustomBackend:
+		// Handle custom backend resources defined in extension manager
+		// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
+		unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources, gwIR, gatewayCtx)
+
+		// Check if the custom backend resource was found
+		if unstructuredRef == nil {
+			return emptyDS, nil, status.NewRouteStatusError(
+				fmt.Errorf("custom backend %s %s/%s not found",
+					backendKind,
+					backendNamespace,
+					backendRef.Name),
+				gwapiv1.RouteReasonBackendNotFound,
+			).WithType(gwapiv1.RouteConditionResolvedRefs)
+		}
+
+		return &ir.DestinationSetting{
+			Name:            name,
+			Weight:          &weight,
+			IsCustomBackend: true,
+		}, unstructuredRef, nil
+	case backendKind == resource.KindServiceImport:
 		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
 		}
-	case resource.KindService:
+	case backendKind == resource.KindService:
 		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
@@ -2996,37 +3117,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		svc := t.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
-	case egv1a1.KindBackend:
+	case backendKind == egv1a1.KindBackend:
 		ds, err = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
-		}
-	default:
-		// Handle custom backend resources defined in extension manager
-		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
-			// Add the custom backend resource to ExtensionRefFilters so it can be processed by the extension system
-			var gwIR *ir.Xds
-			if gatewayCtx != nil {
-				gwIR = xdsIR[t.getIRKey(gatewayCtx.Gateway)]
-			}
-			unstructuredRef = t.processBackendExtensions(backendRef.BackendObjectReference, backendNamespace, resources, gwIR, gatewayCtx)
-
-			// Check if the custom backend resource was found
-			if unstructuredRef == nil {
-				return emptyDS, nil, status.NewRouteStatusError(
-					fmt.Errorf("custom backend %s %s/%s not found",
-						KindDerefOr(backendRef.Kind, resource.KindService),
-						backendNamespace,
-						backendRef.Name),
-					gwapiv1.RouteReasonBackendNotFound,
-				).WithType(gwapiv1.RouteConditionResolvedRefs)
-			}
-
-			return &ir.DestinationSetting{
-				Name:            name,
-				Weight:          &weight,
-				IsCustomBackend: true,
-			}, unstructuredRef, nil
 		}
 	}
 
@@ -3106,6 +3200,13 @@ func (t *Translator) processServiceImportDestinationSetting(
 	)
 
 	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
+	// validateBackendRef normally rejects a missing ServiceImport, but it is skipped for
+	// group/kinds allowlisted as extension backends, so check again before dereferencing.
+	if serviceImport == nil {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("service import %s/%s not found", backendNamespace, backendRef.Name),
+			gwapiv1.RouteReasonBackendNotFound)
+	}
 	var servicePort mcsapiv1a1.ServicePort
 	for _, port := range serviceImport.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -3168,6 +3269,14 @@ func (t *Translator) processServiceDestinationSetting(
 	protocol := defaultProtocol
 
 	service := t.GetService(backendNamespace, string(backendRef.Name))
+	// validateBackendRef normally rejects a missing Service, but it is skipped for group/kinds
+	// allowlisted as extension backends (e.g. a Service kind in a non-core group), so check
+	// again before dereferencing.
+	if service == nil {
+		return nil, status.NewRouteStatusError(
+			fmt.Errorf("service %s/%s not found", backendNamespace, string(backendRef.Name)),
+			gwapiv1.RouteReasonBackendNotFound)
+	}
 	// ExternalName Services have no ClusterIP and no EndpointSlices, so they cannot be
 	// translated into a valid backend.
 	// Backend with FQDN endpoint should be used instead of ExternalName Service to route to external services.
@@ -3369,7 +3478,7 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our Gateways' listeners or the attached
-// XListenerSet's listeners, and if so, gets the list of listeners that allow it to attach for each parentRef.
+// ListenerSet's listeners, and if so, gets the list of listeners that allow it to attach for each parentRef.
 func (t *Translator) processAllowedListenersForParentRefs(
 	routeContext RouteContext,
 	gateways []*GatewayContext,
@@ -3504,7 +3613,7 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 // isCustomBackendResource checks if the given group and kind match any of the configured custom backend resources
 func (t *Translator) isCustomBackendResource(group *gwapiv1.Group, kind string) bool {
 	groupStr := GroupDerefOr(group, "")
-	for _, gk := range t.ExtensionGroupKinds {
+	for _, gk := range t.ExtensionBackendGroupKinds {
 		if gk.Group == groupStr && gk.Kind == kind {
 			return true
 		}

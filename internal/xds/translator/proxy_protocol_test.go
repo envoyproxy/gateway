@@ -148,7 +148,7 @@ func TestHCMForwardProtoConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tr := &Translator{}
 			xdsListener := &listenerv3.Listener{Name: "test"}
-			require.NoError(t, tr.addHCMToXDSListener(xdsListener, httpListener(tc.proxyProtocol), nil, nil, false, nil))
+			require.NoError(t, tr.addHCMToXDSListener(xdsListener, httpListener(tc.proxyProtocol), nil, nil, false, nil, nil))
 
 			hcm := extractHCM(t, xdsListener)
 			if tc.wantConfigNil {

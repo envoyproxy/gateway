@@ -1,1 +1,0 @@
-Extension server policies targeting a `Gateway` (without `sectionName`) are now forwarded to `PostVirtualHostModifyHook` via the hook context's `extension_resources` field. Each virtual host receives only the policies attached to its own listener (or containing Gateway).

@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
@@ -77,6 +78,7 @@ type gatewayAPIReconciler struct {
 	extGVKs              []schema.GroupVersionKind
 	extServerPolicies    []schema.GroupVersionKind
 	extBackendGVKs       []schema.GroupVersionKind
+	extSecretGVKs        []schema.GroupVersionKind
 	gatewayNamespaceMode bool
 
 	backendCRDExists       bool
@@ -95,6 +97,7 @@ type gatewayAPIReconciler struct {
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
 	extBackendCRDExists    map[schema.GroupVersionKind]bool
+	extSecretCRDExists     map[schema.GroupVersionKind]bool
 
 	clusterTrustBundleExits bool
 
@@ -163,7 +166,10 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
 	var extBackendGVKs []schema.GroupVersionKind
-	for _, em := range cfg.EnvoyGateway.GetExtensionManagers() {
+	var extSecretGVKs []schema.GroupVersionKind
+	extensionManagers := cfg.EnvoyGateway.GetExtensionManagers()
+	for i := range extensionManagers {
+		em := &extensionManagers[i]
 		for _, rsrc := range em.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
@@ -175,6 +181,10 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		for _, rsrc := range em.BackendResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extBackendGVKs = append(extBackendGVKs, gvk)
+		}
+		for _, rsrc := range em.SecretResources {
+			gvk := schema.GroupVersionKind(rsrc)
+			extSecretGVKs = append(extSecretGVKs, gvk)
 		}
 	}
 
@@ -193,6 +203,8 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		extServerPolicies:    extServerPoliciesGVKs,
 		extBackendGVKs:       extBackendGVKs,
 		extBackendCRDExists:  make(map[schema.GroupVersionKind]bool),
+		extSecretGVKs:        extSecretGVKs,
+		extSecretCRDExists:   make(map[schema.GroupVersionKind]bool),
 		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
 	}
 
@@ -312,6 +324,9 @@ func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	}
 }
 
+// isTransientError reports whether err is likely to clear up on its own, either an
+// API server response such as a timeout or throttling, or a connection-level failure
+// (refused, reset, dropped) that client-go returns without a Kubernetes status.
 func isTransientError(err error) bool {
 	return kerrors.IsServerTimeout(err) ||
 		kerrors.IsTimeout(err) ||
@@ -321,7 +336,12 @@ func isTransientError(err error) bool {
 		kerrors.IsInternalError(err) ||
 		kerrors.IsUnexpectedServerError(err) ||
 		errors.Is(err, context.Canceled) ||
-		errors.Is(err, context.DeadlineExceeded)
+		errors.Is(err, context.DeadlineExceeded) ||
+		utilnet.IsConnectionRefused(err) ||
+		utilnet.IsConnectionReset(err) ||
+		utilnet.IsHTTP2ConnectionLost(err) ||
+		utilnet.IsProbableEOF(err) ||
+		utilnet.IsTimeout(err)
 }
 
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
@@ -593,6 +613,14 @@ func (r *gatewayAPIReconciler) reconcileGatewayClass(ctx context.Context, manage
 		}
 	}
 
+	if err = r.processExtensionSecrets(ctx, gwcResource); err != nil {
+		if isTransientError(err) {
+			gcLogger.Error(err, "transient error processing extension secrets")
+			return nil, err
+		}
+		gcLogger.Error(err, "failed to process extension secrets for GatewayClass")
+	}
+
 	// ExtensionServerPolicies must be processed before policy target ReferenceGrants,
 	// so that grants allowing them to target resources in other namespaces are collected.
 	if err = r.processExtensionServerPolicies(ctx, gwcResource); err != nil {
@@ -748,8 +776,33 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		var endpointSliceLabelKey string
 		var endpointSliceIndex string
 		endpointSliceName := string(backendRef.Name)
-		switch backendRefKind {
-		case resource.KindService:
+		// Custom backend resources are matched by group and kind, and must be handled before the
+		// kind switch: an extension can register a kind that collides with a built-in one in its
+		// own group (e.g. custom.example.io/Service).
+		switch {
+		case r.isCustomBackendResource(backendRef.Group, backendRefKind):
+			// Handle custom backend resources defined in extension manager
+			resourceMappings.allAssociatedNamespaces.Insert(string(*backendRef.Namespace))
+			key := utils.NamespacedNameWithGroupKind{
+				NamespacedName: types.NamespacedName{
+					Namespace: string(*backendRef.Namespace),
+					Name:      string(backendRef.Name),
+				},
+				GroupKind: schema.GroupKind{
+					Group: gatewayapi.GroupDerefOr(backendRef.Group, ""),
+					Kind:  backendRefKind,
+				},
+			}
+			if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
+				resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
+				if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; exists {
+					resourceMappings.extensionRefFilters[key] = extRefFilter
+					gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
+					logger.Info("added custom backend resource to resource tree")
+				}
+			}
+
+		case backendRefKind == resource.KindService:
 			service := new(corev1.Service)
 			err := r.client.Get(ctx, nn, service)
 			if err != nil {
@@ -769,7 +822,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
 			endpointSliceIndex = serviceEndpointSliceIndex
 
-		case resource.KindServiceImport:
+		case backendRefKind == resource.KindServiceImport:
 			serviceImport := new(mcsapiv1a1.ServiceImport)
 			err := r.client.Get(ctx, nn, serviceImport)
 			if err != nil {
@@ -790,7 +843,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 			endpointSliceIndex = serviceImportEndpointSliceIndex
 
-		case egv1a1.KindBackend:
+		case backendRefKind == egv1a1.KindBackend:
 			if r.backendAPIDisabled() {
 				logger.V(6).Info("skipping Backend processing as Backend API is disabled.")
 				continue
@@ -875,29 +928,6 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 						r.log.Error(err,
 							"failed to process ClientTLS secret for Backend",
 							"backend", backend, "clientCertificateRef", certRef.Name)
-					}
-				}
-			}
-		default:
-			// Handle custom backend resources defined in extension manager
-			if r.isCustomBackendResource(backendRef.Group, backendRefKind) {
-				resourceMappings.allAssociatedNamespaces.Insert(string(*backendRef.Namespace))
-				key := utils.NamespacedNameWithGroupKind{
-					NamespacedName: types.NamespacedName{
-						Namespace: string(*backendRef.Namespace),
-						Name:      string(backendRef.Name),
-					},
-					GroupKind: schema.GroupKind{
-						Group: string(*backendRef.Group),
-						Kind:  backendRefKind,
-					},
-				}
-				if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
-					resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
-					if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; exists {
-						resourceMappings.extensionRefFilters[key] = extRefFilter
-						gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
-						logger.Info("added custom backend resource to resource tree")
 					}
 				}
 			}
@@ -1968,6 +1998,17 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 							r.log.Error(err, "failed to process TLS SecretRef for gateway",
 								"gateway", gtw, "secretRef", certRef)
 						}
+					} else if r.isExtensionSecretResource(certRef.Group, gatewayapi.KindDerefOr(certRef.Kind, resource.KindSecret)) {
+						if err := r.processExtensionSecretRef(ctx,
+							resourceMap, resourceTree,
+							resource.KindGateway, gtw.Namespace, gtw.Name,
+							certRef); err != nil {
+							if isTransientError(err) {
+								return err
+							}
+							r.log.Error(err, "failed to process TLS extension secret ref for gateway",
+								"gateway", gtw, "secretRef", certRef)
+						}
 					}
 				}
 			}
@@ -2198,7 +2239,7 @@ func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, n
 // processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree
 func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
 	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
-	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+	if err := r.client.List(ctx, &envoyPatchPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
 	}
 
@@ -2207,6 +2248,9 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		envoyPatchPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		envoyPatchPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindEnvoyPatchPolicy))
 		if !resourceMap.allAssociatedEnvoyPatchPolicies.Has(utils.NamespacedName(envoyPatchPolicy).String()) {
 			resourceMap.allAssociatedEnvoyPatchPolicies.Insert(utils.NamespacedName(envoyPatchPolicy).String())
 			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, envoyPatchPolicy)
@@ -2220,7 +2264,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
+	if err := r.client.List(ctx, &clientTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
 	}
 
@@ -2229,6 +2273,9 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		clientTrafficPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		clientTrafficPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindClientTrafficPolicy))
 		if !resourceMap.allAssociatedClientTrafficPolicies.Has(utils.NamespacedName(clientTrafficPolicy).String()) {
 			resourceMap.allAssociatedClientTrafficPolicies.Insert(utils.NamespacedName(clientTrafficPolicy).String())
 			resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, clientTrafficPolicy)
@@ -2280,6 +2327,17 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 						r.log.Error(err, "failed to process TLS SecretRef for ListenerSet",
 							"listenerSet", ls, "secretRef", certRef)
 					}
+				} else if r.isExtensionSecretResource(certRef.Group, gatewayapi.KindDerefOr(certRef.Kind, resource.KindSecret)) {
+					if err := r.processExtensionSecretRef(ctx,
+						resourceMap, resourceTree,
+						resource.KindListenerSet, ls.Namespace, ls.Name,
+						certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err, "failed to process TLS extension secret ref for ListenerSet",
+							"listenerSet", ls, "secretRef", certRef)
+					}
 				}
 			}
 		}
@@ -2302,7 +2360,7 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
-	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
+	if err := r.client.List(ctx, &backendTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
 	}
 
@@ -2311,6 +2369,9 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backendTrafficPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		backendTrafficPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindBackendTrafficPolicy))
 		if !resourceMap.allAssociatedBackendTrafficPolicies.Has(utils.NamespacedName(backendTrafficPolicy).String()) {
 			resourceMap.allAssociatedBackendTrafficPolicies.Insert(utils.NamespacedName(backendTrafficPolicy).String())
 			resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, backendTrafficPolicy)
@@ -2324,7 +2385,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	securityPolicies := egv1a1.SecurityPolicyList{}
-	if err := r.client.List(ctx, &securityPolicies); err != nil {
+	if err := r.client.List(ctx, &securityPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing SecurityPolicies: %w", err)
 	}
 
@@ -2333,6 +2394,9 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		securityPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		securityPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindSecurityPolicy))
 		if !resourceMap.allAssociatedSecurityPolicies.Has(utils.NamespacedName(securityPolicy).String()) {
 			resourceMap.allAssociatedSecurityPolicies.Insert(utils.NamespacedName(securityPolicy).String())
 			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, securityPolicy)
@@ -2348,7 +2412,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
+	if err := r.client.List(ctx, &backendTLSPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
 
@@ -2357,6 +2421,9 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backendTLSPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		backendTLSPolicy.SetGroupVersionKind(gwapiv1.SchemeGroupVersion.WithKind(resource.KindBackendTLSPolicy))
 		if !resourceMap.allAssociatedBackendTLSPolicies.Has(utils.NamespacedName(backendTLSPolicy).String()) {
 			resourceMap.allAssociatedBackendTLSPolicies.Insert(utils.NamespacedName(backendTLSPolicy).String())
 			resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, backendTLSPolicy)
@@ -3144,6 +3211,27 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 		r.log.Info("Watching additional backend resource", "resource", gvk.String())
 	}
+	for _, gvk := range r.extSecretGVKs {
+		crdExists, err := checkCRD(gvk.Kind, gvk.GroupVersion().String())
+		if err != nil {
+			return err
+		}
+		if !crdExists {
+			r.log.Info("secret resource CRD not found, skipping watch", "resource", gvk.String())
+			continue
+		}
+		r.extSecretCRDExists[gvk] = true
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		if err := c.Watch(source.Kind(mgr.GetCache(), u,
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, si *unstructured.Unstructured) []reconcile.Request {
+				return r.enqueueClass(ctx, si)
+			}),
+			r.secretResourcePredicates()...)); err != nil {
+			return err
+		}
+		r.log.Info("Watching additional secret resource", "resource", gvk.String())
+	}
 
 	r.hrfCRDExists, err = checkCRD(resource.KindHTTPRouteFilter, egv1a1.GroupVersion.String())
 	if err != nil {
@@ -3440,7 +3528,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	envoyExtensionPolicies := egv1a1.EnvoyExtensionPolicyList{}
-	if err := r.client.List(ctx, &envoyExtensionPolicies); err != nil {
+	if err := r.client.List(ctx, &envoyExtensionPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing EnvoyExtensionPolicies: %w", err)
 	}
 
@@ -3449,6 +3537,9 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		envoyExtensionPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		envoyExtensionPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindEnvoyExtensionPolicy))
 		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(envoyExtensionPolicy).String()) {
 			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(envoyExtensionPolicy).String())
 			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, envoyExtensionPolicy)
@@ -3654,5 +3745,101 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicyObjectRefs(
 			}
 		}
 	}
+	return nil
+}
+
+// secretResourcePredicates omits the generation-change filter used for other extension
+// resources, so a status-only update from the provider retriggers secret resolution.
+func (r *gatewayAPIReconciler) secretResourcePredicates() []predicate.TypedPredicate[*unstructured.Unstructured] {
+	var predicates []predicate.TypedPredicate[*unstructured.Unstructured]
+	if r.namespaceLabel != nil {
+		predicates = append(predicates, predicate.NewTypedPredicateFuncs(func(obj *unstructured.Unstructured) bool {
+			return r.hasMatchingNamespaceLabels(obj)
+		}))
+	}
+	return predicates
+}
+
+// processExtensionSecrets adds extension secret resources to the resourceTree.
+func (r *gatewayAPIReconciler) processExtensionSecrets(
+	ctx context.Context, resourceTree *resource.Resources,
+) error {
+	for _, gvk := range r.extSecretGVKs {
+		if r.extSecretCRDExists != nil && !r.extSecretCRDExists[gvk] {
+			continue
+		}
+
+		secretList := unstructured.UnstructuredList{}
+		secretList.SetAPIVersion(gvk.GroupVersion().String())
+		secretList.SetKind(gvk.Kind)
+
+		if err := r.client.List(ctx, &secretList); err != nil {
+			return fmt.Errorf("error listing extension secret %s: %w", gvk, err)
+		}
+
+		resourceTree.ExtensionSecrets = append(resourceTree.ExtensionSecrets, secretList.Items...)
+	}
+
+	return nil
+}
+
+// isExtensionSecretResource checks if the given group and kind match any of the configured extension secret resources.
+func (r *gatewayAPIReconciler) isExtensionSecretResource(group *gwapiv1.Group, kind string) bool {
+	groupStr := gatewayapi.GroupDerefOr(group, "")
+	for _, gvk := range r.extSecretGVKs {
+		if gvk.Group == groupStr && gvk.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// processExtensionSecretRef adds the ReferenceGrant permitting a cross-namespace reference to an
+// extension secret resource to the resourceTree. The resource itself is added by processExtensionSecrets.
+func (r *gatewayAPIReconciler) processExtensionSecretRef(
+	ctx context.Context,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+	ownerKind string,
+	ownerNS string,
+	ownerName string,
+	secretRef gwapiv1.SecretObjectReference,
+) error {
+	kind := gatewayapi.KindDerefOr(secretRef.Kind, resource.KindSecret)
+	if !r.isExtensionSecretResource(secretRef.Group, kind) {
+		return nil
+	}
+	secretNS := gatewayapi.NamespaceDerefOr(secretRef.Namespace, ownerNS)
+	if secretNS == ownerNS {
+		return nil
+	}
+
+	from := ObjectKindNamespacedName{
+		kind:      ownerKind,
+		namespace: ownerNS,
+		name:      ownerName,
+	}
+	to := ObjectKindNamespacedName{
+		kind:      kind,
+		namespace: secretNS,
+		name:      string(secretRef.Name),
+	}
+	refGrant, err := r.findReferenceGrant(ctx, from, to)
+	switch {
+	case err != nil:
+		return fmt.Errorf("failed to find ReferenceGrant: %w", err)
+	case refGrant == nil:
+		return fmt.Errorf(
+			"no matching ReferenceGrants found: from %s/%s to %s/%s",
+			from.kind, from.namespace, to.kind, to.namespace)
+	default:
+		if !resourceMap.allAssociatedReferenceGrants.Has(utils.NamespacedName(refGrant).String()) {
+			resourceMap.allAssociatedReferenceGrants.Insert(utils.NamespacedName(refGrant).String())
+			resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, refGrant)
+			r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+				"name", refGrant.Name)
+		}
+	}
+	resourceMap.allAssociatedNamespaces.Insert(secretNS)
 	return nil
 }

@@ -24,13 +24,14 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/traces/phase"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/validation"
 	"github.com/envoyproxy/gateway/internal/wasm"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -123,6 +124,11 @@ type Translator struct {
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
 
+	// RateLimitClusterSettings holds the settings of the rate limit service cluster,
+	// as configured on EnvoyGateway.RateLimit.ServiceSettings. The CRD schema defaults are
+	// expected to be applied already, see config.ApplyEnvoyGatewaySchemaDefaults.
+	RateLimitClusterSettings *egv1a1.ClusterSettings
+
 	// EndpointRoutingDisabled can be set to true to use
 	// the Service Cluster IP for routing to the backend
 	// instead.
@@ -178,6 +184,17 @@ type Translator struct {
 	// store referenced resources in the IR for later use.
 	ExtensionGroupKinds []schema.GroupKind
 
+	// ExtensionBackendGroupKinds stores the group/kind of the resources an Extension registers as
+	// custom backends (ExtensionManager.BackendResources). Only these are dispatched to the
+	// extension as backendRefs: ExtensionGroupKinds also includes ExtensionManager.Resources,
+	// which may name a built-in backend kind for use as an extensionRef filter.
+	ExtensionBackendGroupKinds []schema.GroupKind
+
+	// ExtensionSecretGroupKinds stores the group/kind for resources registered in
+	// ExtensionManager.SecretResources. A listener's tls.certificateRefs may
+	// reference these kinds.
+	ExtensionSecretGroupKinds []schema.GroupKind
+
 	// ControllerNamespace is the namespace that Envoy Gateway controller runs in.
 	ControllerNamespace string
 
@@ -220,7 +237,7 @@ func newTranslateResult(
 	envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
-	xListenerSets []*gwapiv1.ListenerSet,
+	listenerSets []*gwapiv1.ListenerSet,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -240,10 +257,10 @@ func newTranslateResult(
 			translateResult.Gateways[i] = gateway.Gateway
 			// If the EnvoyProxy is from the Gateway itself, add it to the result so that the status can be updated in the provider layer.
 			// If it's inherited from GatewayClass, it should be handled in EnvoyProxyForGatewayClass(L164).
-			if gateway.envoyProxyFromGateway && gateway.envoyProxy != nil {
-				epKey := utils.NamespacedName(gateway.envoyProxy)
+			if gateway.envoyProxyFromGateway && gateway.gatewayEnvoyProxy != nil {
+				epKey := utils.NamespacedName(gateway.gatewayEnvoyProxy)
 				if !epProxiesSet.Has(epKey) {
-					translateResult.EnvoyProxiesForGateways = append(translateResult.EnvoyProxiesForGateways, gateway.envoyProxy)
+					translateResult.EnvoyProxiesForGateways = append(translateResult.EnvoyProxiesForGateways, gateway.gatewayEnvoyProxy)
 					epProxiesSet.Insert(epKey)
 				}
 			}
@@ -309,8 +326,8 @@ func newTranslateResult(
 	if len(backends) > 0 {
 		translateResult.Backends = backends
 	}
-	if len(xListenerSets) > 0 {
-		translateResult.ListenerSets = xListenerSets
+	if len(listenerSets) > 0 {
+		translateResult.ListenerSets = listenerSets
 	}
 
 	return translateResult
@@ -491,6 +508,10 @@ func (t *Translator) Translate(ctx context.Context, resources *resource.Resource
 	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
 	phases.End()
 
+	// Runs after BackendTrafficPolicies too, since their load balancer settings can split a
+	// rule into one cluster per backendRef.
+	t.checkIneffectiveBackendPriority(httpRoutes, grpcRoutes, xdsIR)
+
 	// Process SecurityPolicies
 	phases.Start("GatewayApiTranslator.ProcessSecurityPolicies",
 		attribute.Int("security-policies.count", len(resources.SecurityPolicies)),
@@ -555,12 +576,18 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 ) {
 	envoyproxyMap := make(map[types.NamespacedName]*egv1a1.EnvoyProxy, len(resources.EnvoyProxiesForGateways)+1)
 	envoyproxyValidationErrorMap := make(map[types.NamespacedName]error, len(resources.EnvoyProxiesForGateways))
+	// Invalid fields don't reject the EnvoyProxy; they are unset and reported as a warning.
+	envoyproxyInvalidFieldsMap := make(map[types.NamespacedName][]validation.InvalidField, len(resources.EnvoyProxiesForGateways))
 
 	for _, ep := range resources.EnvoyProxiesForGateways {
 		key := utils.NamespacedName(ep)
 		envoyproxyMap[key] = ep
-		if err := validateEnvoyProxy(ep); err != nil {
+		invalidFields, err := validateEnvoyProxy(ep)
+		if err != nil {
 			envoyproxyValidationErrorMap[key] = err
+		}
+		if len(invalidFields) > 0 {
+			envoyproxyInvalidFieldsMap[key] = invalidFields
 		}
 	}
 
@@ -578,7 +605,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 		}
 
-		err := validateEnvoyProxy(ep)
+		invalidFields, err := validateEnvoyProxy(ep)
 		if err != nil {
 			envoyproxyValidationErrorMap[utils.NamespacedName(ep)] = err
 			t.Logger.Error(err, "Skipping GatewayClass because EnvoyProxy is invalid",
@@ -590,6 +617,8 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
+			// The EnvoyProxy is not applied at all, so no warning about it applies either.
+			status.SetEnvoyProxyWarnings(ep, ancestor)
 		} else {
 			// TODO: remove this nil check after we update all the testdata.
 			if resources.GatewayClass != nil {
@@ -606,10 +635,11 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
 				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-			status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
-			if t.EnvoyProxyPatchDisabled {
-				status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
+			if len(invalidFields) > 0 {
+				t.Logger.Info("Ignoring invalid EnvoyProxy fields",
+					"envoyproxy", ep.Name, "namespace", ep.Namespace, "error", errors.Join(fieldErrors(invalidFields)...).Error())
 			}
+			t.setEnvoyProxyWarnings(ep, ancestor, invalidFields)
 		}
 	}
 
@@ -676,19 +706,25 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 					fmt.Sprintf("%s: %v", "Invalid parametersRef:", err.Error()))
 
 				if gCtx.envoyProxyFromGateway {
-					status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+					status.UpdateEnvoyProxyStatusAccepted(gCtx.gatewayEnvoyProxy, ancestor,
 						egv1a1.EnvoyProxyReasonInvalidParameters, err.Error())
+					// The EnvoyProxy is not applied at all, so no warning about it applies either.
+					status.SetEnvoyProxyWarnings(gCtx.gatewayEnvoyProxy, ancestor)
 				}
 				continue
 			}
 
-			if gCtx.envoyProxyFromGateway {
-				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
+			// The status is set on the EnvoyProxy as provided by the user rather than on the
+			// merged and sanitized one, which is only used for translation.
+			if gwEP := gCtx.gatewayEnvoyProxy; gCtx.envoyProxyFromGateway {
+				status.UpdateEnvoyProxyStatusAccepted(gwEP, ancestor,
 					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
-				status.SetEnvoyProxyDeprecatedFieldsWarning(ep, ancestor, deprecatedFieldsUsedInEnvoyProxy(ep))
-				if t.EnvoyProxyPatchDisabled {
-					status.SetEnvoyProxyPatchDisabledWarning(ep, ancestor, disabledPatchFieldsUsedInEnvoyProxy(ep))
+				invalidFields := envoyproxyInvalidFieldsMap[utils.NamespacedName(gwEP)]
+				if len(invalidFields) > 0 {
+					t.Logger.Info("Ignoring invalid EnvoyProxy fields", append(logKeysAndValues,
+						"error", errors.Join(fieldErrors(invalidFields)...).Error())...)
 				}
+				t.setEnvoyProxyWarnings(gwEP, ancestor, invalidFields)
 			}
 		}
 
@@ -707,24 +743,43 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	return acceptedGateways, failedGateways
 }
 
-func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
-	if err := validation.ValidateEnvoyProxy(ep); err != nil {
-		return err
+// setEnvoyProxyWarnings sets the Warning condition on the ancestor status of ep, combining
+// every reason the EnvoyProxy is warned about, or removes it when there is none.
+func (t *Translator) setEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, invalidFields []validation.InvalidField) {
+	warnings := []*status.EnvoyProxyWarning{status.DeprecatedFieldsWarning(deprecatedFieldsUsedInEnvoyProxy(ep))}
+	if t.EnvoyProxyPatchDisabled {
+		warnings = append(warnings, status.PatchDisabledWarning(disabledPatchFieldsUsedInEnvoyProxy(ep)))
+	}
+	warnings = append(warnings, status.InvalidFieldsWarning(invalidFields))
+	status.SetEnvoyProxyWarnings(ep, ancestor, warnings...)
+}
+
+// validateEnvoyProxy returns the fields of ep that are invalid but can be unset, and an error
+// if ep is unusable as a whole.
+func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) ([]validation.InvalidField, error) {
+	invalidFields, err := validation.ValidateEnvoyProxyFields(ep)
+	if err != nil {
+		return invalidFields, err
 	}
 
 	if err := bootstrap.Validate(ep.Spec.Bootstrap); err != nil {
-		return err
+		return invalidFields, err
 	}
 
-	return nil
+	return invalidFields, nil
 }
 
-func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]string {
-	deprecatedFields := make(map[string]string)
-	if ep.Spec.LuaValidation != nil {
-		deprecatedFields["spec.luaValidation"] = "spec.lua.validationType"
+func fieldErrors(fields []validation.InvalidField) []error {
+	errs := make([]error, 0, len(fields))
+	for _, f := range fields {
+		errs = append(errs, f)
 	}
+	return errs
+}
 
+func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
+	deprecatedFields := make(map[string]status.DeprecatedField)
+	deprecation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
 	return deprecatedFields
 }
 

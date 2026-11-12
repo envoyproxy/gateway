@@ -756,6 +756,25 @@ type RateLimit struct {
 	// Telemetry defines telemetry configuration for RateLimit.
 	// +optional
 	Telemetry *RateLimitTelemetry `json:"telemetry,omitempty"`
+
+	// ServiceSettings holds configuration for the Envoy cluster that connects the proxies
+	// to the rate limit service, such as circuit breakers, timeouts and health checks.
+	//
+	// The rate limit service is a gRPC (HTTP/2) service reached over mTLS, with no
+	// associated route, so NOT all of the ClusterSettings fields are supported here.
+	// Fields are supported on a best-effort basis: a field that only applies to routes
+	// or to other protocols (e.g. timeout.http.streamIdleTimeout) may have no effect.
+	//
+	// Envoy Gateway fails to start if any of these known-unsupported fields are set:
+	//
+	//   - http1, http3 and proxyProtocol: the rate limit service only accepts gRPC over mTLS.
+	//   - healthCheck.active of type HTTP: the rate limit service only serves its HTTP
+	//     health endpoint in plaintext; use the GRPC or TCP type instead.
+	//   - timeout.http.requestTimeout: use RateLimit.Timeout instead.
+	//   - loadBalancer of type ConsistentHash: there is no route to compute the hash from.
+	//
+	// +optional
+	ServiceSettings *ClusterSettings `json:"serviceSettings,omitempty"`
 }
 
 type RateLimitTelemetry struct {
@@ -901,8 +920,24 @@ type ExtensionManager struct {
 	// backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)
 	// that are not natively supported by Envoy Gateway.
 	//
+	// The backend kinds Envoy Gateway resolves itself (core Service,
+	// multicluster.x-k8s.io/ServiceImport and gateway.envoyproxy.io/Backend) are not allowed:
+	// backendRefs are matched by group and kind, so listing one of them would hand every backendRef
+	// of that kind in the cluster to the extension, bypassing Envoy Gateway's own validation and
+	// endpoint resolution for it. Use the xDS translator hooks to adjust the clusters Envoy Gateway
+	// generates for those backends instead.
+	//
 	// +optional
 	BackendResources []GroupVersionKind `json:"backendResources,omitempty"`
+
+	// SecretResources defines the set of K8s resources the extension will handle as secret
+	// sources. These resources can be referenced in place of a Kubernetes Secret by group
+	// and kind, allowing Envoy to use a secret held by an external provider. Currently this
+	// covers a Gateway or ListenerSet listener's tls.certificateRefs; other secret consumers
+	// may be added over time.
+	//
+	// +optional
+	SecretResources []GroupVersionKind `json:"secretResources,omitempty"`
 
 	// Hooks defines the set of hooks the extension supports
 	//
@@ -923,6 +958,8 @@ type ExtensionManager struct {
 	// When set to true, if the Extension Service hooks return an error, no changes will be applied to the
 	// source of the configuration which was sent to the extension server. The errors are ignored and the resulting
 	// xDS configuration is updated in the xDS snapshot.
+	//
+	// FailOpen does not apply to the Secret hook: its errors are never ignored.
 	//
 	// Default: false
 	//
@@ -1013,14 +1050,14 @@ type ExtensionService struct {
 
 	// Host define the extension service hostname.
 	//
-	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix). This field will be removed in v1.11.
 	//
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
 	//
-	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
+	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix). This field will be removed in v1.11.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

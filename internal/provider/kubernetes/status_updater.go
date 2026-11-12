@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -75,6 +76,16 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 	return u
 }
 
+// statusRetryBackoff paces retries after conflicts and after errors that usually clear
+// up on their own, such as API server timeouts, throttling or a brief outage. It waits
+// about 1.5s in total, because every other status write queues up behind the one being retried.
+var statusRetryBackoff = wait.Backoff{
+	Steps:    5,
+	Duration: 100 * time.Millisecond,
+	Factor:   2.0,
+	Jitter:   0.1,
+}
+
 func (u *UpdateHandler) apply(update Update) {
 	var (
 		startTime = time.Now()
@@ -88,9 +99,15 @@ func (u *UpdateHandler) apply(update Update) {
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
 
-	if err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
+	if err := retry.OnError(statusRetryBackoff, func(err error) bool {
 		if kerrors.IsConflict(err) {
 			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
+			log.Info("retrying status update after a conflict error", "error", err.Error())
+			return true
+		}
+		if isTransientError(err) {
+			statusUpdateTotal.WithFailure(metrics.ReasonTransient, kindLabel.Value(objKind)).Increment()
+			log.Info("retrying status update after a transient error", "error", err.Error())
 			return true
 		}
 		return false
