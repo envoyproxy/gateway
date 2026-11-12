@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -157,8 +158,8 @@ func daemonSetModeInfra() *ir.Infra {
 				Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 					// DaemonSet mode: Deployment() returns nil, DaemonSet() returns non-nil.
-					EnvoyDaemonSet: egv1a1.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage),
-					EnvoyService:   egv1a1.DefaultKubernetesService(),
+					EnvoyDaemonSet: apihelpers.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage),
+					EnvoyService:   apihelpers.DefaultKubernetesService(),
 				},
 			},
 		},

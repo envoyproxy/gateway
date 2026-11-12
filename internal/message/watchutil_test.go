@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -29,7 +29,7 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 
 	var calls int
 	message.HandleSubscription(
-		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		logging.NewLogger(t.Output(), apihelpers.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		ch,
 		func(_ message.Update[string, any], _ chan error) { calls++ },
@@ -82,7 +82,7 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 
 	numCalls := 0
 	message.HandleSubscription(
-		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		logging.NewLogger(t.Output(), apihelpers.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
 		func(update message.Update[string, any], _ chan error) {
@@ -111,7 +111,7 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 	var storeCalls int
 	var deleteCalls int
 	message.HandleSubscription(
-		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		logging.NewLogger(t.Output(), apihelpers.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
 		func(update message.Update[string, any], _ chan error) {
@@ -134,7 +134,7 @@ func TestHandleSubscriptionMarksInitialState(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	message.HandleSubscription(
-		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		logging.NewLogger(t.Output(), apihelpers.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(ctx),
 		func(update message.Update[string, *resource.ControllerResourcesContext], _ chan error) {
@@ -322,7 +322,7 @@ func TestControllerResourceUpdate(t *testing.T) {
 
 			updates := 0
 			message.HandleSubscription(
-				logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+				logging.NewLogger(t.Output(), apihelpers.DefaultEnvoyGatewayLogging()),
 				message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResourcesContext], _ chan error) {
 					cancel()
 					if u.Key == "test" {

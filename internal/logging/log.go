@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 type Logger struct {
@@ -43,7 +44,7 @@ func FileLogger(file, name string, level egv1a1.LogLevel) Logger {
 		panic(err)
 	}
 
-	logging := egv1a1.DefaultEnvoyGatewayLogging()
+	logging := apihelpers.DefaultEnvoyGatewayLogging()
 	logger := initZapLogger(writer, logging, level)
 
 	return Logger{
@@ -55,7 +56,7 @@ func FileLogger(file, name string, level egv1a1.LogLevel) Logger {
 }
 
 func DefaultLogger(out io.Writer, level egv1a1.LogLevel) Logger {
-	logging := egv1a1.DefaultEnvoyGatewayLogging()
+	logging := apihelpers.DefaultEnvoyGatewayLogging()
 	logger := initZapLogger(out, logging, level)
 
 	return Logger{
@@ -134,7 +135,7 @@ func (l Logger) Sugar() *zap.SugaredLogger {
 }
 
 func initZapLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging, level egv1a1.LogLevel) *zap.Logger {
-	parseLevel, _ := zapcore.ParseLevel(string(logging.DefaultEnvoyGatewayLoggingLevel(level)))
+	parseLevel, _ := zapcore.ParseLevel(string(apihelpers.DefaultEnvoyGatewayLoggingLevel(logging, level)))
 	cfg := zap.NewProductionEncoderConfig()
 	cfg.EncodeTime = zapcore.ISO8601TimeEncoder
 	var encoder zapcore.Encoder

@@ -24,6 +24,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
@@ -118,16 +119,16 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		controllerSAName:         kubeInfra.GetControllerServiceAccountName(),
 		DNSDomain:                kubeInfra.GetDNSDomain(),
 		infra:                    infra.GetProxyInfra(),
-		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
-		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
-		EnvoyProxyPatchDisabled:  !kubeInfra.GetEnvoyGateway().RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
-		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
+		ShutdownManager:          apihelpers.GetEnvoyGatewayKubeProvider(apihelpers.GetEnvoyGatewayProvider(kubeInfra.GetEnvoyGateway())).ShutdownManager,
+		TopologyInjectorDisabled: apihelpers.TopologyInjectorDisabled(kubeInfra.GetEnvoyGateway()),
+		EnvoyProxyPatchDisabled:  !apihelpers.IsRuntimeFlagEnabled(kubeInfra.GetEnvoyGateway().RuntimeFlags, egv1a1.EnvoyProxyPatch),
+		GatewayNamespaceMode:     apihelpers.GatewayNamespaceMode(kubeInfra.GetEnvoyGateway()),
 		ownerReferenceUID:        ownerReference,
 	}, nil
 }
 
 func (r *ResourceRender) serviceAccountName() string {
-	prov := r.infra.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+	prov := apihelpers.GetEnvoyProxyKubeProvider(apihelpers.GetEnvoyProxyProvider(r.infra.GetProxyConfig()))
 	if prov != nil &&
 		prov.EnvoyServiceAccount != nil &&
 		prov.EnvoyServiceAccount.Name != nil {
@@ -359,8 +360,8 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	annotations := map[string]string{}
 	maps.Copy(annotations, r.infra.GetProxyMetadata().Annotations)
 
-	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
+	provider := apihelpers.GetEnvoyProxyProvider(r.infra.GetProxyConfig())
+	envoyServiceConfig := apihelpers.GetEnvoyProxyKubeProvider(provider).EnvoyService
 	if envoyServiceConfig.Annotations != nil {
 		maps.Copy(annotations, envoyServiceConfig.Annotations)
 	}
@@ -503,11 +504,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get the EnvoyProxy config to configure the deployment.
-	provider := proxyConfig.GetEnvoyProxyProvider()
+	provider := apihelpers.GetEnvoyProxyProvider(proxyConfig)
 	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
-	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
+	deploymentConfig := apihelpers.GetEnvoyProxyKubeProvider(provider).EnvoyDeployment
 
 	// If deployment config is nil, it's not Deployment installation.
 	if deploymentConfig == nil {
@@ -534,7 +535,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	// patch, Envoy Gateway doesn't take ownership of it and won't revert the replica
 	// count computed by the HPA on subsequent reconciliations.
 	replicas := deploymentConfig.Replicas
-	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil {
+	if apihelpers.GetEnvoyProxyKubeProvider(provider).EnvoyHpa != nil {
 		replicas = nil
 	}
 
@@ -610,12 +611,12 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	proxyConfig := r.infra.GetProxyConfig()
 
 	// Get the EnvoyProxy config to configure the daemonset.
-	provider := proxyConfig.GetEnvoyProxyProvider()
+	provider := apihelpers.GetEnvoyProxyProvider(proxyConfig)
 	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
-	daemonSetConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDaemonSet
+	daemonSetConfig := apihelpers.GetEnvoyProxyKubeProvider(provider).EnvoyDaemonSet
 
 	// If daemonset config is nil, it's not DaemonSet installation.
 	if daemonSetConfig == nil {
@@ -681,12 +682,12 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 }
 
 func (r *ResourceRender) pdbConfig() (*egv1a1.KubernetesPodDisruptionBudgetSpec, error) {
-	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
+	provider := apihelpers.GetEnvoyProxyProvider(r.infra.GetProxyConfig())
 	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
-	podDisruptionBudget := provider.GetEnvoyProxyKubeProvider().EnvoyPDB
+	podDisruptionBudget := apihelpers.GetEnvoyProxyKubeProvider(provider).EnvoyPDB
 	if podDisruptionBudget == nil || podDisruptionBudget.MinAvailable == nil && podDisruptionBudget.MaxUnavailable == nil && podDisruptionBudget.Patch == nil {
 		return nil, nil
 	}
@@ -711,12 +712,12 @@ func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, e
 }
 
 func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
-	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
+	provider := apihelpers.GetEnvoyProxyProvider(r.infra.GetProxyConfig())
 	if provider.Type != egv1a1.EnvoyProxyProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 
-	hpaConfig := provider.GetEnvoyProxyKubeProvider().EnvoyHpa
+	hpaConfig := apihelpers.GetEnvoyProxyKubeProvider(provider).EnvoyHpa
 	if hpaConfig == nil {
 		return nil, nil
 	}
@@ -745,7 +746,7 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	// set deployment target ref name
-	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
+	deploymentConfig := apihelpers.GetEnvoyProxyKubeProvider(provider).EnvoyDeployment
 	if deploymentConfig.Name != nil {
 		hpa.Spec.ScaleTargetRef.Name = *deploymentConfig.Name
 	} else {

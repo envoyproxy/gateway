@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/metrics"
@@ -83,7 +84,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 // ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) (err error) {
 	var caCert string
-	if i.EnvoyGateway.GatewayNamespaceMode() {
+	if apihelpers.GatewayNamespaceMode(i.EnvoyGateway) {
 		caCert = i.getEnvoyGatewayCA(ctx)
 	}
 
@@ -773,7 +774,7 @@ func noGatewayIdentityLabels(labels map[string]string) bool {
 // requests. Even with the live read there is a small window where a same-named
 // resource can be created between this check and the apply (see #8764, #9132).
 func (i *Infra) checkOwnership(ctx context.Context, obj client.Object) error {
-	if !i.EnvoyGateway.GatewayNamespaceMode() || noGatewayIdentityLabels(obj.GetLabels()) {
+	if !apihelpers.GatewayNamespaceMode(i.EnvoyGateway) || noGatewayIdentityLabels(obj.GetLabels()) {
 		return nil
 	}
 

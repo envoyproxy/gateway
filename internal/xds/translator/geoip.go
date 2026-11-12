@@ -177,7 +177,7 @@ func (*geoip) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 		return nil
 	}
 
-	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterGeoIP.String()) {
+	if hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterGeoIP)) {
 		return nil
 	}
 
@@ -225,7 +225,7 @@ func buildHCMGeoIPFilter(irListener *ir.HTTPListener, requirements geoIPFieldReq
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: egv1a1.EnvoyFilterGeoIP.String(),
+		Name: string(egv1a1.EnvoyFilterGeoIP),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: typedConfig,
 		},

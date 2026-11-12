@@ -30,6 +30,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -1258,8 +1259,8 @@ func TestNamespacedProvider(t *testing.T) {
 				Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
 				Namespaces: []string{"ns1", "ns2"},
 			},
-			LeaderElection: egv1a1.DefaultLeaderElection(),
-			Client:         egv1a1.DefaultKubernetesClient(),
+			LeaderElection: apihelpers.DefaultLeaderElection(),
+			Client:         apihelpers.DefaultKubernetesClient(),
 		},
 		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
 			// Disable webhook server for provider test to avoid non-existent cert errors
@@ -1325,8 +1326,8 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 				Type:              egv1a1.KubernetesWatchModeTypeNamespaceSelector,
 				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"label-1": "true", "label-2": "true"}},
 			},
-			LeaderElection: egv1a1.DefaultLeaderElection(),
-			Client:         egv1a1.DefaultKubernetesClient(),
+			LeaderElection: apihelpers.DefaultLeaderElection(),
+			Client:         apihelpers.DefaultKubernetesClient(),
 		},
 		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
 			// Disable webhook server for provider test to avoid non-existent cert errors

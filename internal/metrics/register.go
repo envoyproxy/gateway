@@ -22,6 +22,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/metrics/restclient"
 	"github.com/envoyproxy/gateway/internal/metrics/workqueue"
@@ -108,7 +109,7 @@ func (r *Runner) newOptions() (registerOptions, error) {
 	newOpts := registerOptions{}
 	newOpts.address = net.JoinHostPort(egv1a1.GatewayMetricsHost, fmt.Sprint(egv1a1.GatewayMetricsPort))
 
-	if r.cfg.EnvoyGateway.DisablePrometheus() {
+	if apihelpers.DisablePrometheus(r.cfg.EnvoyGateway) {
 		newOpts.pullOptions.disable = true
 	} else {
 		newOpts.pullOptions.disable = false
@@ -121,7 +122,7 @@ func (r *Runner) newOptions() (registerOptions, error) {
 		}
 	}
 
-	for _, config := range r.cfg.EnvoyGateway.GetEnvoyGatewayTelemetry().Metrics.Sinks {
+	for _, config := range apihelpers.GetEnvoyGatewayTelemetry(r.cfg.EnvoyGateway).Metrics.Sinks {
 		sink := metricsSink{
 			host:     config.OpenTelemetry.Host,
 			port:     config.OpenTelemetry.Port,

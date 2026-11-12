@@ -3,7 +3,10 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package v1alpha1
+// Package apihelpers holds the defaulting and accessor logic for the
+// gateway.envoyproxy.io/v1alpha1 types. It lives outside the API package so
+// that package only carries the API itself.
+package apihelpers
 
 import (
 	"fmt"
@@ -14,16 +17,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
-func DefaultEnvoyGateway() *EnvoyGateway {
-	return &EnvoyGateway{
-		metav1.TypeMeta{
-			Kind:       KindEnvoyGateway,
-			APIVersion: GroupVersion.String(),
+func DefaultEnvoyGateway() *egv1a1.EnvoyGateway {
+	return &egv1a1.EnvoyGateway{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       egv1a1.KindEnvoyGateway,
+			APIVersion: egv1a1.GroupVersion.String(),
 		},
-		EnvoyGatewaySpec{
+		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 			Gateway:   DefaultGateway(),
 			Provider:  DefaultEnvoyGatewayProvider(),
 			Logging:   DefaultEnvoyGatewayLogging(),
@@ -35,20 +40,20 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 }
 
 // SetEnvoyGatewayDefaults sets default EnvoyGateway configuration parameters.
-func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
+func SetEnvoyGatewayDefaults(e *egv1a1.EnvoyGateway) {
 	if e.Kind == "" {
-		e.Kind = KindEnvoyGateway
+		e.Kind = egv1a1.KindEnvoyGateway
 	}
 	if e.APIVersion == "" {
-		e.APIVersion = GroupVersion.String()
+		e.APIVersion = egv1a1.GroupVersion.String()
 	}
 	if e.Provider == nil {
 		e.Provider = DefaultEnvoyGatewayProvider()
 	}
 
 	if e.Provider.Kubernetes == nil {
-		e.Provider.Kubernetes = &EnvoyGatewayKubernetesProvider{
-			EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
+		e.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
+			EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
 				LeaderElection: DefaultLeaderElection(),
 			},
 		}
@@ -61,9 +66,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 		e.Provider.Kubernetes.Client = DefaultKubernetesClient()
 	}
 
-	if e.Provider != nil && e.Provider.Custom != nil && e.Provider.Custom.Resource.Type == ResourceProviderTypeKubernetes {
+	if e.Provider != nil && e.Provider.Custom != nil && e.Provider.Custom.Resource.Type == egv1a1.ResourceProviderTypeKubernetes {
 		if e.Provider.Custom.Resource.Kubernetes == nil {
-			e.Provider.Custom.Resource.Kubernetes = &EnvoyGatewayKubernetesCustomProvider{}
+			e.Provider.Custom.Resource.Kubernetes = &egv1a1.EnvoyGatewayKubernetesCustomProvider{}
 		}
 		if e.Provider.Custom.Resource.Kubernetes.LeaderElection == nil {
 			e.Provider.Custom.Resource.Kubernetes.LeaderElection = DefaultLeaderElection()
@@ -92,7 +97,7 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 }
 
 // GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
-func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
+func GetEnvoyGatewayAdmin(e *egv1a1.EnvoyGateway) *egv1a1.EnvoyGatewayAdmin {
 	if e.Admin != nil {
 		if e.Admin.Address == nil {
 			e.Admin.Address = DefaultEnvoyGatewayAdminAddress()
@@ -105,8 +110,8 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 }
 
 // GetEnvoyGatewayAdminAddress returns the EnvoyGateway Admin Address.
-func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
-	address := e.GetEnvoyGatewayAdmin().Address
+func GetEnvoyGatewayAdminAddress(e *egv1a1.EnvoyGateway) string {
+	address := GetEnvoyGatewayAdmin(e).Address
 	if address != nil {
 		return net.JoinHostPort(address.Host, strconv.Itoa(address.Port))
 	}
@@ -115,29 +120,29 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 }
 
 // WatchesNamespaces returns true when Envoy Gateway is configured to watch specific Kubernetes namespaces.
-func (e *EnvoyGateway) WatchesNamespaces() bool {
-	if e.Provider == nil || !e.Provider.IsRunningOnKubernetes() {
+func WatchesNamespaces(e *egv1a1.EnvoyGateway) bool {
+	if e.Provider == nil || !IsRunningOnKubernetes(e.Provider) {
 		return false
 	}
 
-	cfg := e.Provider.GetKubernetesConfiguration()
+	cfg := GetKubernetesConfiguration(e.Provider)
 
 	return cfg.Watch != nil &&
-		cfg.Watch.Type == KubernetesWatchModeTypeNamespaces &&
+		cfg.Watch.Type == egv1a1.KubernetesWatchModeTypeNamespaces &&
 		len(cfg.Watch.Namespaces) > 0
 }
 
 // GatewayNamespaceMode returns true if controller uses gateway namespace mode for infra deployments.
-func (e *EnvoyGateway) GatewayNamespaceMode() bool {
+func GatewayNamespaceMode(e *egv1a1.EnvoyGateway) bool {
 	return e.Provider != nil &&
 		e.Provider.Kubernetes != nil &&
 		e.Provider.Kubernetes.Deploy != nil &&
 		e.Provider.Kubernetes.Deploy.Type != nil &&
-		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
+		*e.Provider.Kubernetes.Deploy.Type == egv1a1.KubernetesDeployModeTypeGatewayNamespace
 }
 
 // TopologyInjectorDisabled checks whether the provided EnvoyGateway disables TopologyInjector
-func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
+func TopologyInjectorDisabled(e *egv1a1.EnvoyGateway) bool {
 	if e.Provider != nil &&
 		e.Provider.Kubernetes != nil &&
 		e.Provider.Kubernetes.TopologyInjector != nil {
@@ -149,7 +154,7 @@ func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
 // LuaDisabled returns true if Lua EnvoyExtensionPolicies should be disabled.
 // EnableLua takes precedence over the deprecated DisableLua field.
 // When neither is set, Lua is disabled by default.
-func (e *ExtensionAPISettings) LuaDisabled() bool {
+func LuaDisabled(e *egv1a1.ExtensionAPISettings) bool {
 	if e == nil {
 		return true
 	}
@@ -165,12 +170,12 @@ func (e *ExtensionAPISettings) LuaDisabled() bool {
 
 // GetEnvoyProxyDefaultSpec returns the default EnvoyProxySpec if specified,
 // otherwise returns nil.
-func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
+func GetEnvoyProxyDefaultSpec(e *egv1a1.EnvoyGateway) *egv1a1.EnvoyProxySpec {
 	return e.EnvoyProxy
 }
 
-// GetServiceSettings returns the settings of the rate limit service cluster, or nil if unset.
-func (r *RateLimit) GetServiceSettings() *ClusterSettings {
+// GetRateLimitServiceSettings returns the settings of the rate limit service cluster, or nil if unset.
+func GetRateLimitServiceSettings(r *egv1a1.RateLimit) *egv1a1.ClusterSettings {
 	if r == nil {
 		return nil
 	}
@@ -178,15 +183,15 @@ func (r *RateLimit) GetServiceSettings() *ClusterSettings {
 }
 
 // defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
-var defaultRuntimeFlags = map[RuntimeFlag]bool{
-	XDSNameSchemeV2:         false,
-	EndpointSliceIndex:      true,
-	EnvoyProxyPatch:         true,
-	OIDCTokenCookieChunking: true,
+var defaultRuntimeFlags = map[egv1a1.RuntimeFlag]bool{
+	egv1a1.XDSNameSchemeV2:         false,
+	egv1a1.EndpointSliceIndex:      true,
+	egv1a1.EnvoyProxyPatch:         true,
+	egv1a1.OIDCTokenCookieChunking: true,
 }
 
-// IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
-func (f *GatewayAPISettings) IsEnabled(api GatewayAPI) bool {
+// IsGatewayAPIEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
+func IsGatewayAPIEnabled(f *egv1a1.GatewayAPISettings, api egv1a1.GatewayAPI) bool {
 	if f != nil {
 		for _, enable := range f.Enabled {
 			if enable == api {
@@ -198,8 +203,8 @@ func (f *GatewayAPISettings) IsEnabled(api GatewayAPI) bool {
 	return false
 }
 
-// IsEnabled checks if a runtime flag is enabled in the EnvoyGateway configuration.
-func (f *RuntimeFlags) IsEnabled(flag RuntimeFlag) bool {
+// IsRuntimeFlagEnabled checks if a runtime flag is enabled in the EnvoyGateway configuration.
+func IsRuntimeFlagEnabled(f *egv1a1.RuntimeFlags, flag egv1a1.RuntimeFlag) bool {
 	if f != nil {
 		for _, disable := range f.Disabled {
 			if disable == flag {
@@ -220,8 +225,8 @@ func (f *RuntimeFlags) IsEnabled(flag RuntimeFlag) bool {
 }
 
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
-func DefaultLeaderElection() *LeaderElection {
-	return &LeaderElection{
+func DefaultLeaderElection() *egv1a1.LeaderElection {
+	return &egv1a1.LeaderElection{
 		RenewDeadline: new(gwapiv1.Duration("10s")),
 		RetryPeriod:   new(gwapiv1.Duration("2s")),
 		LeaseDuration: new(gwapiv1.Duration("15s")),
@@ -230,25 +235,25 @@ func DefaultLeaderElection() *LeaderElection {
 }
 
 // DefaultKubernetesClient returns a new DefaultKubernetesClient with default parameters.
-func DefaultKubernetesClient() *KubernetesClient {
-	return &KubernetesClient{
-		RateLimit: &KubernetesClientRateLimit{
-			QPS:   new(DefaultKubernetesClientQPS),
-			Burst: new(DefaultKubernetesClientBurst),
+func DefaultKubernetesClient() *egv1a1.KubernetesClient {
+	return &egv1a1.KubernetesClient{
+		RateLimit: &egv1a1.KubernetesClientRateLimit{
+			QPS:   new(egv1a1.DefaultKubernetesClientQPS),
+			Burst: new(egv1a1.DefaultKubernetesClientBurst),
 		},
 	}
 }
 
 // DefaultGateway returns a new Gateway with default configuration parameters.
-func DefaultGateway() *Gateway {
-	return &Gateway{
-		ControllerName: GatewayControllerName,
+func DefaultGateway() *egv1a1.Gateway {
+	return &egv1a1.Gateway{
+		ControllerName: egv1a1.GatewayControllerName,
 	}
 }
 
 // DefaultXDSServer returns a new XDSServer with default configuration parameters.
-func DefaultXDSServer() *XDSServer {
-	return &XDSServer{}
+func DefaultXDSServer() *egv1a1.XDSServer {
+	return &egv1a1.XDSServer{}
 }
 
 const (
@@ -261,16 +266,16 @@ const (
 	DefaultDebounceMax = 10 * time.Second
 )
 
-// Enabled reports whether debouncing of resource changes is turned on. Debouncing
-// is opt in, so defining the config is what turns it on.
-func (d *Debounce) Enabled() bool {
+// IsDebounceEnabled reports whether debouncing of resource changes is turned on.
+// Debouncing is opt in, so defining the config is what turns it on.
+func IsDebounceEnabled(d *egv1a1.Debounce) bool {
 	return d != nil
 }
 
-// ResolveDurations returns the quiet period and the maximum hold time, substituting
+// ResolveDebounceDurations returns the quiet period and the maximum hold time, substituting
 // the defaults for any field left unset. It is the single place these fields are
 // parsed, so every consumer agrees on what a given configuration means.
-func (d *Debounce) ResolveDurations() (after, maxHold time.Duration, err error) {
+func ResolveDebounceDurations(d *egv1a1.Debounce) (after, maxHold time.Duration, err error) {
 	after, maxHold = DefaultDebounceAfter, DefaultDebounceMax
 	if d == nil {
 		return after, maxHold, nil
@@ -298,16 +303,16 @@ func (d *Debounce) ResolveDurations() (after, maxHold time.Duration, err error) 
 }
 
 // DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
-func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
-	return &EnvoyGatewayLogging{
-		Level: map[EnvoyGatewayLogComponent]LogLevel{
-			LogComponentGatewayDefault: LogLevelInfo,
+func DefaultEnvoyGatewayLogging() *egv1a1.EnvoyGatewayLogging {
+	return &egv1a1.EnvoyGatewayLogging{
+		Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
+			egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelInfo,
 		},
 	}
 }
 
 // GetEnvoyGatewayTelemetry returns the EnvoyGatewayTelemetry of EnvoyGateway or a default EnvoyGatewayTelemetry if unspecified.
-func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
+func GetEnvoyGatewayTelemetry(e *egv1a1.EnvoyGateway) *egv1a1.EnvoyGatewayTelemetry {
 	if e.Telemetry != nil {
 		if e.Telemetry.Metrics == nil {
 			e.Telemetry.Metrics = DefaultEnvoyGatewayMetrics()
@@ -323,38 +328,38 @@ func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 }
 
 // DisablePrometheus returns if disable prometheus.
-func (e *EnvoyGateway) DisablePrometheus() bool {
-	return e.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable
+func DisablePrometheus(e *egv1a1.EnvoyGateway) bool {
+	return GetEnvoyGatewayTelemetry(e).Metrics.Prometheus.Disable
 }
 
 // DefaultEnvoyGatewayTelemetry returns a new EnvoyGatewayTelemetry with default configuration parameters.
-func DefaultEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
-	return &EnvoyGatewayTelemetry{
+func DefaultEnvoyGatewayTelemetry() *egv1a1.EnvoyGatewayTelemetry {
+	return &egv1a1.EnvoyGatewayTelemetry{
 		Metrics: DefaultEnvoyGatewayMetrics(),
 	}
 }
 
 // DefaultEnvoyGatewayMetrics returns a new EnvoyGatewayMetrics with default configuration parameters.
-func DefaultEnvoyGatewayMetrics() *EnvoyGatewayMetrics {
-	return &EnvoyGatewayMetrics{
+func DefaultEnvoyGatewayMetrics() *egv1a1.EnvoyGatewayMetrics {
+	return &egv1a1.EnvoyGatewayMetrics{
 		Prometheus: DefaultEnvoyGatewayPrometheus(),
 	}
 }
 
 // DefaultEnvoyGatewayPrometheus returns a new EnvoyGatewayMetrics with default configuration parameters.
-func DefaultEnvoyGatewayPrometheus() *EnvoyGatewayPrometheusProvider {
-	return &EnvoyGatewayPrometheusProvider{
+func DefaultEnvoyGatewayPrometheus() *egv1a1.EnvoyGatewayPrometheusProvider {
+	return &egv1a1.EnvoyGatewayPrometheusProvider{
 		// Enable prometheus pull by default.
 		Disable: false,
 	}
 }
 
 // DefaultEnvoyGatewayProvider returns a new EnvoyGatewayProvider with default configuration parameters.
-func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
-	return &EnvoyGatewayProvider{
-		Type: ProviderTypeKubernetes,
-		Kubernetes: &EnvoyGatewayKubernetesProvider{
-			EnvoyGatewayKubernetesConfiguration: EnvoyGatewayKubernetesConfiguration{
+func DefaultEnvoyGatewayProvider() *egv1a1.EnvoyGatewayProvider {
+	return &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeKubernetes,
+		Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+			EnvoyGatewayKubernetesConfiguration: egv1a1.EnvoyGatewayKubernetesConfiguration{
 				LeaderElection: DefaultLeaderElection(),
 				Client:         DefaultKubernetesClient(),
 			},
@@ -363,7 +368,7 @@ func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 }
 
 // GetEnvoyGatewayProvider returns the EnvoyGatewayProvider of EnvoyGateway or a default EnvoyGatewayProvider if unspecified.
-func (e *EnvoyGateway) GetEnvoyGatewayProvider() *EnvoyGatewayProvider {
+func GetEnvoyGatewayProvider(e *egv1a1.EnvoyGateway) *egv1a1.EnvoyGatewayProvider {
 	if e.Provider != nil {
 		return e.Provider
 	}
@@ -373,17 +378,17 @@ func (e *EnvoyGateway) GetEnvoyGatewayProvider() *EnvoyGatewayProvider {
 }
 
 // DefaultEnvoyGatewayKubeProvider returns a new EnvoyGatewayKubernetesProvider with default settings.
-func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
-	return &EnvoyGatewayKubernetesProvider{
-		EnvoyGatewayKubernetesInfrastructureConfiguration: EnvoyGatewayKubernetesInfrastructureConfiguration{
-			RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
+func DefaultEnvoyGatewayKubeProvider() *egv1a1.EnvoyGatewayKubernetesProvider {
+	return &egv1a1.EnvoyGatewayKubernetesProvider{
+		EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+			RateLimitDeployment: DefaultKubernetesDeployment(egv1a1.DefaultRateLimitImage),
 		},
 	}
 }
 
 // DefaultEnvoyGatewayAdmin returns a new EnvoyGatewayAdmin with default configuration parameters.
-func DefaultEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
-	return &EnvoyGatewayAdmin{
+func DefaultEnvoyGatewayAdmin() *egv1a1.EnvoyGatewayAdmin {
+	return &egv1a1.EnvoyGatewayAdmin{
 		Address:          DefaultEnvoyGatewayAdminAddress(),
 		EnableDumpConfig: false,
 		EnablePprof:      false,
@@ -391,18 +396,18 @@ func DefaultEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 }
 
 // DefaultEnvoyGatewayAdminAddress returns a new EnvoyGatewayAdminAddress with default configuration parameters.
-func DefaultEnvoyGatewayAdminAddress() *EnvoyGatewayAdminAddress {
-	return &EnvoyGatewayAdminAddress{
-		Port: GatewayAdminPort,
-		Host: GatewayAdminHost,
+func DefaultEnvoyGatewayAdminAddress() *egv1a1.EnvoyGatewayAdminAddress {
+	return &egv1a1.EnvoyGatewayAdminAddress{
+		Port: egv1a1.GatewayAdminPort,
+		Host: egv1a1.GatewayAdminHost,
 	}
 }
 
 // GetEnvoyGatewayKubeProvider returns the EnvoyGatewayKubernetesProvider of Provider or
 // a default EnvoyGatewayKubernetesProvider if unspecified. If EnvoyGatewayProvider is not of
 // type "Kubernetes", a nil EnvoyGatewayKubernetesProvider is returned.
-func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
-	if !r.IsRunningOnKubernetes() {
+func GetEnvoyGatewayKubeProvider(r *egv1a1.EnvoyGatewayProvider) *egv1a1.EnvoyGatewayKubernetesProvider {
+	if !IsRunningOnKubernetes(r) {
 		return nil
 	}
 
@@ -426,34 +431,36 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {
-		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(DefaultRateLimitImage)
+		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(egv1a1.DefaultRateLimitImage)
 	}
 
-	r.Kubernetes.RateLimitDeployment.defaultKubernetesDeploymentSpec(DefaultRateLimitImage)
+	defaultKubernetesDeploymentSpec(r.Kubernetes.RateLimitDeployment, egv1a1.DefaultRateLimitImage)
 
 	if r.Kubernetes.RateLimitHpa != nil {
-		r.Kubernetes.RateLimitHpa.setDefault()
+		setHPADefaults(r.Kubernetes.RateLimitHpa)
 	}
 
 	if r.Kubernetes.ShutdownManager == nil {
-		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: new(DefaultShutdownManagerImage)}
+		r.Kubernetes.ShutdownManager = &egv1a1.ShutdownManager{Image: new(egv1a1.DefaultShutdownManagerImage)}
 	}
 
 	return r.Kubernetes
 }
 
-func (r *EnvoyGatewayProvider) IsRunningOnKubernetes() bool {
-	if r.Type == ProviderTypeKubernetes {
+// IsRunningOnKubernetes returns true if Envoy Gateway reads its resources from Kubernetes.
+func IsRunningOnKubernetes(r *egv1a1.EnvoyGatewayProvider) bool {
+	if r.Type == egv1a1.ProviderTypeKubernetes {
 		return true
 	}
-	if r.Type == ProviderTypeCustom && r.Custom != nil {
-		return r.Custom.Resource.Type == ResourceProviderTypeKubernetes
+	if r.Type == egv1a1.ProviderTypeCustom && r.Custom != nil {
+		return r.Custom.Resource.Type == egv1a1.ResourceProviderTypeKubernetes
 	}
 	return false
 }
 
-func (r *EnvoyGatewayProvider) IsInfraManagedRemotely() bool {
-	if r.Type != ProviderTypeCustom {
+// IsInfraManagedRemotely returns true if a custom provider hands infrastructure to a remote manager.
+func IsInfraManagedRemotely(r *egv1a1.EnvoyGatewayProvider) bool {
+	if r.Type != egv1a1.ProviderTypeCustom {
 		return false
 	}
 
@@ -461,74 +468,79 @@ func (r *EnvoyGatewayProvider) IsInfraManagedRemotely() bool {
 		return false
 	}
 
-	return r.Custom.Infrastructure.Type == InfrastructureProviderTypeRemote
+	return r.Custom.Infrastructure.Type == egv1a1.InfrastructureProviderTypeRemote
 }
 
-func (r *EnvoyGatewayProvider) IsRunningOnHost() bool {
-	return r.Type == ProviderTypeCustom &&
+// IsRunningOnHost returns true if a custom provider runs the infrastructure on the host.
+func IsRunningOnHost(r *egv1a1.EnvoyGatewayProvider) bool {
+	return r.Type == egv1a1.ProviderTypeCustom &&
 		r.Custom.Infrastructure != nil &&
-		r.Custom.Infrastructure.Type == InfrastructureProviderTypeHost
+		r.Custom.Infrastructure.Type == egv1a1.InfrastructureProviderTypeHost
 }
 
-func (r *EnvoyGatewayProvider) GetKubernetesConfiguration() EnvoyGatewayKubernetesConfiguration {
-	if r.Type == ProviderTypeKubernetes && r.Kubernetes != nil {
+// GetKubernetesConfiguration returns the Kubernetes configuration of the provider, or an empty one if unset.
+func GetKubernetesConfiguration(r *egv1a1.EnvoyGatewayProvider) egv1a1.EnvoyGatewayKubernetesConfiguration {
+	if r.Type == egv1a1.ProviderTypeKubernetes && r.Kubernetes != nil {
 		return r.Kubernetes.EnvoyGatewayKubernetesConfiguration
 	}
 
-	if r.Type == ProviderTypeCustom && r.Custom != nil &&
-		r.Custom.Resource.Type == ResourceProviderTypeKubernetes &&
+	if r.Type == egv1a1.ProviderTypeCustom && r.Custom != nil &&
+		r.Custom.Resource.Type == egv1a1.ResourceProviderTypeKubernetes &&
 		r.Custom.Resource.Kubernetes != nil {
 		return r.Custom.Resource.Kubernetes.EnvoyGatewayKubernetesConfiguration
 	}
-	return EnvoyGatewayKubernetesConfiguration{}
+	return egv1a1.EnvoyGatewayKubernetesConfiguration{}
 }
 
-func (r *EnvoyGatewayProvider) GetKubernetesInfrastructureConfiguration() EnvoyGatewayKubernetesInfrastructureConfiguration {
-	if r.Type == ProviderTypeKubernetes && r.Kubernetes != nil {
+// GetKubernetesInfrastructureConfiguration returns the Kubernetes infrastructure configuration
+// of the provider, or an empty one if unset.
+func GetKubernetesInfrastructureConfiguration(r *egv1a1.EnvoyGatewayProvider) egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration {
+	if r.Type == egv1a1.ProviderTypeKubernetes && r.Kubernetes != nil {
 		return r.Kubernetes.EnvoyGatewayKubernetesInfrastructureConfiguration
 	}
-	return EnvoyGatewayKubernetesInfrastructureConfiguration{}
+	return egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{}
 }
 
 // DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
 // When v1alpha1.LogComponentGatewayDefault specified, all other logging components are ignored.
-func (logging *EnvoyGatewayLogging) DefaultEnvoyGatewayLoggingLevel(level LogLevel) LogLevel {
+func DefaultEnvoyGatewayLoggingLevel(logging *egv1a1.EnvoyGatewayLogging, level egv1a1.LogLevel) egv1a1.LogLevel {
 	if level != "" {
 		return level
 	}
 
-	if logging.Level[LogComponentGatewayDefault] != "" {
-		return logging.Level[LogComponentGatewayDefault]
+	if logging.Level[egv1a1.LogComponentGatewayDefault] != "" {
+		return logging.Level[egv1a1.LogComponentGatewayDefault]
 	}
 
-	return LogLevelInfo
+	return egv1a1.LogLevelInfo
 }
 
 // SetEnvoyGatewayLoggingDefaults sets default EnvoyGatewayLogging configuration parameters.
-func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
-	if logging != nil && logging.Level != nil && logging.Level[LogComponentGatewayDefault] == "" {
-		logging.Level[LogComponentGatewayDefault] = LogLevelInfo
+func SetEnvoyGatewayLoggingDefaults(logging *egv1a1.EnvoyGatewayLogging) {
+	if logging != nil && logging.Level != nil && logging.Level[egv1a1.LogComponentGatewayDefault] == "" {
+		logging.Level[egv1a1.LogComponentGatewayDefault] = egv1a1.LogLevelInfo
 	}
 }
 
-func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
+// GetQPSAndBurst returns the Kubernetes client QPS and burst, falling back to the defaults.
+func GetQPSAndBurst(kcr *egv1a1.KubernetesClientRateLimit) (float32, int) {
 	if kcr == nil {
-		return float32(DefaultKubernetesClientQPS), int(DefaultKubernetesClientBurst)
+		return float32(egv1a1.DefaultKubernetesClientQPS), int(egv1a1.DefaultKubernetesClientBurst)
 	}
-	qps := ptr.Deref(kcr.QPS, DefaultKubernetesClientQPS)
-	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
+	qps := ptr.Deref(kcr.QPS, egv1a1.DefaultKubernetesClientQPS)
+	burst := ptr.Deref(kcr.Burst, egv1a1.DefaultKubernetesClientBurst)
 	return float32(qps), int(burst)
 }
 
 // GetExtensionManagers normalizes the singular ExtensionManager and plural ExtensionManagers
 // fields into a single list. The plural field takes precedence. If only the singular field
 // is set, it is returned as a single-element list. Returns nil if neither is set.
-func (e *EnvoyGatewaySpec) GetExtensionManagers() []ExtensionManager {
+func GetExtensionManagers(e *egv1a1.EnvoyGatewaySpec) []egv1a1.ExtensionManager {
 	if len(e.ExtensionManagers) > 0 {
 		return e.ExtensionManagers
 	}
 	if e.ExtensionManager != nil {
-		return []ExtensionManager{*e.ExtensionManager}
+		return []egv1a1.ExtensionManager{*e.ExtensionManager}
 	}
 	return nil
 }
@@ -536,7 +548,7 @@ func (e *EnvoyGatewaySpec) GetExtensionManagers() []ExtensionManager {
 // ShouldIncludeClusters returns true if clusters should be included in the translation hook.
 // When TranslationConfig is nil, defaults to true for backward compatibility.
 // When TranslationConfig is explicitly set, uses the configuration.
-func (tc *TranslationConfig) ShouldIncludeClusters() bool {
+func ShouldIncludeClusters(tc *egv1a1.TranslationConfig) bool {
 	if tc == nil || tc.Cluster == nil {
 		// Default behavior: include clusters for backward compatibility
 		return true
@@ -548,7 +560,7 @@ func (tc *TranslationConfig) ShouldIncludeClusters() bool {
 // ShouldIncludeSecrets returns true if secrets should be included in the translation hook.
 // When TranslationConfig is nil, defaults to true for backward compatibility.
 // When TranslationConfig is explicitly set, uses the configuration.
-func (tc *TranslationConfig) ShouldIncludeSecrets() bool {
+func ShouldIncludeSecrets(tc *egv1a1.TranslationConfig) bool {
 	if tc == nil || tc.Secret == nil {
 		// Default behavior: include secrets for backward compatibility
 		return true
@@ -560,7 +572,7 @@ func (tc *TranslationConfig) ShouldIncludeSecrets() bool {
 // ShouldIncludeListeners returns true if listeners should be included in the translation hook.
 // When TranslationConfig is nil, defaults to false for backward compatibility.
 // When TranslationConfig is explicitly set, uses the configuration.
-func (tc *TranslationConfig) ShouldIncludeListeners() bool {
+func ShouldIncludeListeners(tc *egv1a1.TranslationConfig) bool {
 	if tc == nil || tc.Listener == nil {
 		// Default behavior: exclude listeners for backward compatibility
 		return false
@@ -572,7 +584,7 @@ func (tc *TranslationConfig) ShouldIncludeListeners() bool {
 // ShouldIncludeRoutes returns true if routes should be included in the translation hook.
 // When TranslationConfig is nil, defaults to false for backward compatibility.
 // When TranslationConfig is explicitly set, uses the configuration.
-func (tc *TranslationConfig) ShouldIncludeRoutes() bool {
+func ShouldIncludeRoutes(tc *egv1a1.TranslationConfig) bool {
 	if tc == nil || tc.Route == nil {
 		// Default behavior: exclude routes for backward compatibility
 		return false

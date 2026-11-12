@@ -21,6 +21,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -826,7 +827,7 @@ func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *
 		// to true in the Gateway API translator
 		status.UpdateGatewayStatusAccepted(gtw)
 		// update address field and programmed condition
-		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.nodeAddressesForGateway(ctx, gtw, svc), r.envoyGateway.Provider.IsInfraManagedRemotely())
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, envoyObj, r.nodeAddressesForGateway(ctx, gtw, svc), apihelpers.IsInfraManagedRemotely(r.envoyGateway.Provider))
 	}
 
 	key := utils.NamespacedName(gtw)

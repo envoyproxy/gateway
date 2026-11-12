@@ -17,12 +17,13 @@ import (
 	"github.com/telepresenceio/watchable"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 func TestCoalesceUpdates(t *testing.T) {
 	t.Parallel()
-	logger := logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
+	logger := logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging())
 	tests := []struct {
 		name     string
 		input    []watchable.Update[string, int]

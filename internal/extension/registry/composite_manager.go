@@ -9,6 +9,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 )
 
@@ -79,16 +80,16 @@ func (c *CompositeManager) GetTranslationHookConfig() *egv1a1.TranslationConfig 
 
 	for _, nm := range c.managers {
 		tc := nm.manager.GetTranslationHookConfig()
-		if tc.ShouldIncludeListeners() {
+		if apihelpers.ShouldIncludeListeners(tc) {
 			includeListeners = true
 		}
-		if tc.ShouldIncludeRoutes() {
+		if apihelpers.ShouldIncludeRoutes(tc) {
 			includeRoutes = true
 		}
-		if tc.ShouldIncludeClusters() {
+		if apihelpers.ShouldIncludeClusters(tc) {
 			includeClusters = true
 		}
-		if tc.ShouldIncludeSecrets() {
+		if apihelpers.ShouldIncludeSecrets(tc) {
 			includeSecrets = true
 		}
 	}

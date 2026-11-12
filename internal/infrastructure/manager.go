@@ -12,6 +12,7 @@ import (
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
@@ -70,7 +71,7 @@ func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging
 		return host.NewInfra(ctx, cfg, logger, errors)
 	case egv1a1.InfrastructureProviderTypeRemote:
 		var k8sClient k8scli.Client
-		if cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() {
+		if apihelpers.IsRunningOnKubernetes(cfg.EnvoyGateway.Provider) {
 			k8sClient = cfg.KubernetesClient.Get()
 			if k8sClient == nil {
 				return nil, fmt.Errorf("kubernetes client not found in server config")

@@ -49,7 +49,7 @@ func (s *sessionPersistence) patchHCM(mgr *hcmv3.HttpConnectionManager, irListen
 	if irListener == nil {
 		return errors.New("ir listener is nil")
 	}
-	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterSessionPersistence.String()) {
+	if hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterSessionPersistence)) {
 		return nil
 	}
 
@@ -92,7 +92,7 @@ func buildHCMStatefulSessionFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, erro
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: egv1a1.EnvoyFilterSessionPersistence.String(),
+		Name: string(egv1a1.EnvoyFilterSessionPersistence),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: statefulSessionAny,
 		},
@@ -136,7 +136,7 @@ func buildStatefulSessionFilterConfig(route *ir.HTTPRoute) (*statefulsessionv3.S
 
 	sessionCfgAny, err := anypb.New(sessionCfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal %s config: %w", egv1a1.EnvoyFilterSessionPersistence.String(), err)
+		return nil, fmt.Errorf("failed to marshal %s config: %w", string(egv1a1.EnvoyFilterSessionPersistence), err)
 	}
 
 	return &statefulsessionv3.StatefulSession{
@@ -172,11 +172,11 @@ func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRo
 	}
 
 	perFilterCfg := route.GetTypedPerFilterConfig()
-	if _, ok := perFilterCfg[egv1a1.EnvoyFilterSessionPersistence.String()]; ok {
+	if _, ok := perFilterCfg[string(egv1a1.EnvoyFilterSessionPersistence)]; ok {
 		// This should not happen since this is the only place where the filter
 		// config is added in a route.
 		return fmt.Errorf("route already contains filter config: %s, %+v",
-			egv1a1.EnvoyFilterSessionPersistence.String(), route)
+			string(egv1a1.EnvoyFilterSessionPersistence), route)
 	}
 
 	// Overwrite the HCM level filter config with the per route filter config.
@@ -192,7 +192,7 @@ func (s *sessionPersistence) patchRoute(route *routev3.Route, irRoute *ir.HTTPRo
 	if perFilterCfg == nil {
 		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
 	}
-	route.TypedPerFilterConfig[egv1a1.EnvoyFilterSessionPersistence.String()] = statefulSessionAny
+	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterSessionPersistence)] = statefulSessionAny
 
 	return nil
 }

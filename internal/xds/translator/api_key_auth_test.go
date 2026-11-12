@@ -51,7 +51,7 @@ func TestPatchHCMWithAPIKeyAuth(t *testing.T) {
 
 	require.Len(t, mgr.HttpFilters, 1)
 	filter := mgr.HttpFilters[0]
-	require.Equal(t, egv1a1.EnvoyFilterAPIKeyAuth.String(), filter.Name)
+	require.Equal(t, string(egv1a1.EnvoyFilterAPIKeyAuth), filter.Name)
 	require.True(t, filter.Disabled)
 
 	cfg := &apikeyauthv3.ApiKeyAuth{}
@@ -74,7 +74,7 @@ func TestPatchHCMWithAPIKeyAuthNotNeeded(t *testing.T) {
 
 func TestPatchHCMWithAPIKeyAuthAlreadyPresent(t *testing.T) {
 	mgr := &hcmv3.HttpConnectionManager{
-		HttpFilters: []*hcmv3.HttpFilter{{Name: egv1a1.EnvoyFilterAPIKeyAuth.String()}},
+		HttpFilters: []*hcmv3.HttpFilter{{Name: string(egv1a1.EnvoyFilterAPIKeyAuth)}},
 	}
 	listener := &ir.HTTPListener{
 		Name: "listener-1",

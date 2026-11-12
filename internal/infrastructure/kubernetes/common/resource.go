@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 // ResourceKind indicates the main resources of envoy-ratelimit,
@@ -58,7 +59,7 @@ func GetPodDisruptionBudget(pdb *egv1a1.KubernetesPodDisruptionBudgetSpec,
 	podDisruptionBudget.OwnerReferences = append(podDisruptionBudget.OwnerReferences, ownerReferences...)
 
 	// apply merge patch to PodDisruptionBudget
-	podDisruptionBudget, err := pdb.ApplyMergePatch(podDisruptionBudget, disablePatch)
+	podDisruptionBudget, err := apihelpers.ApplyPodDisruptionBudgetPatch(pdb, podDisruptionBudget, disablePatch)
 	if err != nil {
 		return nil, err
 	}

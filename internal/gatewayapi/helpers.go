@@ -27,6 +27,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -1446,7 +1447,7 @@ func resolvePolicyTargetsFromReferences(
 	targetRefs egv1a1.PolicyTargetReferences,
 	policyNamespace string,
 ) []policyTargetReferenceWithSectionName {
-	refs := targetRefs.GetTargetRefs()
+	refs := apihelpers.GetTargetRefs(targetRefs)
 	ret := make([]policyTargetReferenceWithSectionName, 0, len(refs))
 	var emptyTargetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName
 	for _, v := range refs {

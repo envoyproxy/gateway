@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 func TestValidateEnvoyProxy(t *testing.T) {
@@ -120,7 +121,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type: egv1a1.GetKubernetesServiceType(""),
+								Type: apihelpers.GetKubernetesServiceType(""),
 							},
 						},
 					},
@@ -140,7 +141,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceType(corev1.ServiceTypeNodePort)),
+								Type: apihelpers.GetKubernetesServiceType(egv1a1.ServiceType(corev1.ServiceTypeNodePort)),
 							},
 						},
 					},
@@ -160,7 +161,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								Type: apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 							},
 						},
 					},
@@ -180,7 +181,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+								Type: apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 							},
 						},
 					},
@@ -200,7 +201,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								Type:                          apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 								AllocateLoadBalancerNodePorts: new(false),
 							},
 						},
@@ -221,7 +222,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+								Type:                          apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 								AllocateLoadBalancerNodePorts: new(false),
 							},
 						},
@@ -243,7 +244,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								Type:                     apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
 							},
 						},
@@ -264,7 +265,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								Type:                     apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerSourceRanges: []string{"2001:db8::/32"},
 							},
 						},
@@ -285,7 +286,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+								Type:                     apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
 							},
 						},
@@ -306,7 +307,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								Type:           apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerIP: new("10.11.12.13"),
 							},
 						},
@@ -327,7 +328,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								Type:           apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerIP: new("invalid-ip"),
 							},
 						},
@@ -348,7 +349,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								Type:           apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 								LoadBalancerIP: new("2001:db8::68"),
 							},
 						},
@@ -1191,35 +1192,34 @@ func TestValidateEnvoyProxy(t *testing.T) {
 func TestEnvoyProxyProvider(t *testing.T) {
 	envoyProxy := &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
-			Provider: egv1a1.DefaultEnvoyProxyProvider(),
+			Provider: apihelpers.DefaultEnvoyProxyProvider(),
 		},
 	}
 	assert.NotNil(t, envoyProxy.Spec.Provider)
 
-	envoyProxyProvider := envoyProxy.GetEnvoyProxyProvider()
+	envoyProxyProvider := apihelpers.GetEnvoyProxyProvider(envoyProxy)
 	assert.Nil(t, envoyProxyProvider.Kubernetes)
 	assert.True(t, reflect.DeepEqual(envoyProxy.Spec.Provider, envoyProxyProvider))
 
-	envoyProxyKubeProvider := envoyProxyProvider.GetEnvoyProxyKubeProvider()
+	envoyProxyKubeProvider := apihelpers.GetEnvoyProxyKubeProvider(envoyProxyProvider)
 
 	assert.NotNil(t, envoyProxyProvider.Kubernetes)
 	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes, envoyProxyKubeProvider))
-
-	envoyProxyProvider.GetEnvoyProxyKubeProvider()
+	apihelpers.GetEnvoyProxyKubeProvider(envoyProxyProvider)
 
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, apihelpers.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage))
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, egv1a1.DefaultKubernetesPod())
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, apihelpers.DefaultKubernetesPod())
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, egv1a1.DefaultKubernetesContainer(egv1a1.DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, apihelpers.DefaultKubernetesContainer(egv1a1.DefaultEnvoyProxyImage))
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, egv1a1.DefaultResourceRequirements())
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, apihelpers.DefaultResourceRequirements())
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, egv1a1.DefaultKubernetesContainerImage(egv1a1.DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, apihelpers.DefaultKubernetesContainerImage(egv1a1.DefaultEnvoyProxyImage))
 
 	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyService)
-	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer)))
+	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer)))
 }
 
 func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
@@ -1264,7 +1264,7 @@ func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run("", func(t *testing.T) {
-			got := tc.logging.DefaultEnvoyProxyLoggingLevel()
+			got := apihelpers.DefaultEnvoyProxyLoggingLevel(&tc.logging)
 			require.Equal(t, tc.expected, got)
 		})
 	}
@@ -1331,7 +1331,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run("", func(t *testing.T) {
-			got := tc.logging.GetEnvoyProxyComponentLevel()
+			got := apihelpers.GetEnvoyProxyComponentLevel(&tc.logging)
 			require.Equal(t, tc.expected, got)
 		})
 	}

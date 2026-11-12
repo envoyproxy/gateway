@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config/loader"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
@@ -57,7 +57,7 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 			runnerErrors := &message.RunnerErrors{}
 			defer runnerErrors.Close()
 			go message.HandleSubscription(
-				logging.NewLogger(cmd.OutOrStdout(), egv1a1.DefaultEnvoyGatewayLogging()),
+				logging.NewLogger(cmd.OutOrStdout(), apihelpers.DefaultEnvoyGatewayLogging()),
 				message.Metadata{Runner: "runner-errors", Message: message.RunnerErrorsMessageName},
 				runnerErrors.Subscribe(cmd.Context()),
 				func(update message.Update[string, message.WatchableError], _ chan error) {
@@ -150,10 +150,10 @@ func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, 
 			return nil, err
 		}
 		// Set defaults for unset fields
-		eg.SetEnvoyGatewayDefaults()
+		apihelpers.SetEnvoyGatewayDefaults(eg)
 		cfg.EnvoyGateway = eg
 		// update cfg logger
-		eg.Logging.SetEnvoyGatewayLoggingDefaults()
+		apihelpers.SetEnvoyGatewayLoggingDefaults(eg.Logging)
 		cfg.Logger = logging.NewLogger(stdout, eg.Logging)
 	}
 
@@ -205,7 +205,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 
 	// Setup the Extension Manager
 	var extMgr types.Manager
-	if extMgr, err = extensionregistry.NewManager(cfg, cfg.EnvoyGateway.Provider.IsRunningOnKubernetes()); err != nil {
+	if extMgr, err = extensionregistry.NewManager(cfg, apihelpers.IsRunningOnKubernetes(cfg.EnvoyGateway.Provider)); err != nil {
 		return err
 	}
 

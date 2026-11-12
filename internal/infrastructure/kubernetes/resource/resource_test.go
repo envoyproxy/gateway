@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 func TestExpectedServiceSpec(t *testing.T) {
@@ -28,7 +29,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "LoadBalancer",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				Type: apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                  corev1.ServiceTypeLoadBalancer,
@@ -39,8 +40,8 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "LoadBalancerWithExternalTrafficPolicyCluster",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-				ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
+				Type:                  apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				ExternalTrafficPolicy: apihelpers.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                  corev1.ServiceTypeLoadBalancer,
@@ -51,7 +52,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "LoadBalancerWithClass",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type:              egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				Type:              apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 				LoadBalancerClass: &loadbalancerClass,
 			}},
 			want: corev1.ServiceSpec{
@@ -64,7 +65,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "LoadBalancerWithAllocateLoadBalancerNodePorts",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				Type:                          apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 				AllocateLoadBalancerNodePorts: new(true),
 			}},
 			want: corev1.ServiceSpec{
@@ -77,7 +78,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "LoadBalancerWithLoadBalancerSourceRanges",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				Type:                     apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 				LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
 			}},
 			want: corev1.ServiceSpec{
@@ -90,7 +91,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "LoadBalancerWithLoadBalancerIP",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				Type:           apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 				LoadBalancerIP: new("10.11.12.13"),
 			}},
 			want: corev1.ServiceSpec{
@@ -103,7 +104,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "ClusterIP",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+				Type: apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 			}},
 			want: corev1.ServiceSpec{
 				Type:            corev1.ServiceTypeClusterIP,
@@ -113,7 +114,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "NodePort",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeNodePort),
+				Type: apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeNodePort),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                  corev1.ServiceTypeNodePort,
@@ -124,8 +125,8 @@ func TestExpectedServiceSpec(t *testing.T) {
 		{
 			name: "NodePortWithExternalTrafficPolicyCluster",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
-				Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeNodePort),
-				ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
+				Type:                  apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeNodePort),
+				ExternalTrafficPolicy: apihelpers.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                  corev1.ServiceTypeNodePort,

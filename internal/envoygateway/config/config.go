@@ -16,6 +16,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/env"
@@ -113,7 +114,7 @@ func (h *KubernetesClientHolder) GetAPIReader() client.Reader {
 // New returns a Server with default parameters.
 func New(stdout, stderr io.Writer) (*Server, error) {
 	return &Server{
-		EnvoyGateway:                 egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway:                 apihelpers.DefaultEnvoyGateway(),
 		ControllerNamespace:          env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		ControllerName:               EnvoyGatewayServiceName,
 		ControllerFullName:           env.Lookup("ENVOY_GATEWAY_FULLNAME", EnvoyGatewayServiceName),
