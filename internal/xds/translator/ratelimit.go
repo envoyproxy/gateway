@@ -103,7 +103,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) []*hcmv3.
 
 	var filters []*hcmv3.HttpFilter
 	for _, domain := range domainList {
-		filterName := string(egv1a1.EnvoyFilterRateLimit)
+		filterName := egv1a1.EnvoyFilterRateLimit.String()
 		if domain != irListener.Name {
 			filterName += "/" + domain
 		}
@@ -189,7 +189,7 @@ func patchRouteWithRateLimit(irListener *ir.HTTPListener, route *routev3.Route, 
 	// all but one discarded by the RLS.
 	listenerName := irListener.Name
 	for domain, rls := range buildRouteRateLimits(listenerName, irRoute) {
-		filterName := string(egv1a1.EnvoyFilterRateLimit)
+		filterName := egv1a1.EnvoyFilterRateLimit.String()
 		if domain != listenerName {
 			filterName += "/" + domain
 		}
