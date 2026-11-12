@@ -1,4 +1,4 @@
-# Backends for the InferencePoolWeightedClusters test. Each InferencePool selects its own echo
+# Backends for the ExtensionServerInferencePool test. Each InferencePool selects its own echo
 # Deployment. The simple extension server turns each pool's cluster into an ORIGINAL_DST cluster
 # that reads the endpoint from a header specific to that pool, so the client sends one header per
 # pool and the pod that answers shows which cluster Envoy picked.
@@ -7,7 +7,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pool-a
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
   labels:
     app: pool-a
 spec:
@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
               valueFrom:
@@ -42,7 +42,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pool-b
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
   labels:
     app: pool-b
 spec:
@@ -77,7 +77,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pool-svc
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
   labels:
     app: pool-svc
 spec:
@@ -92,7 +92,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
+          image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
               valueFrom:
@@ -112,7 +112,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pool-svc
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
 spec:
   selector:
     app: pool-svc
@@ -126,7 +126,7 @@ apiVersion: inference.networking.k8s.io/v1
 kind: InferencePool
 metadata:
   name: pool-a
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
   annotations:
     # The simple extension server routes this pool's cluster to the endpoint in this header.
     simple-extension-server.envoyproxy.io/destination-header: x-pool-a-endpoint
@@ -141,7 +141,7 @@ apiVersion: inference.networking.k8s.io/v1
 kind: InferencePool
 metadata:
   name: pool-b
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
   annotations:
     # The simple extension server routes this pool's cluster to the endpoint in this header.
     simple-extension-server.envoyproxy.io/destination-header: x-pool-b-endpoint
@@ -156,7 +156,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: inference-pools-weighted
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
 spec:
   parentRefs:
     - name: all-namespaces
@@ -180,7 +180,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: inference-pool-and-service
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
 spec:
   parentRefs:
     - name: all-namespaces
@@ -203,7 +203,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: inference-pool-zero-weight
-  namespace: gateway-resilience
+  namespace: gateway-conformance-infra
 spec:
   parentRefs:
     - name: all-namespaces

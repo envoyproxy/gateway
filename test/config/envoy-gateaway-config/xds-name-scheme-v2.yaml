@@ -41,10 +41,15 @@ data:
       - group: extserver.example.io
         version: v1alpha1
         kind: VHostMetadataPolicy
+      backendResources:
+      - group: inference.networking.k8s.io
+        version: v1
+        kind: InferencePool
       hooks:
         xdsTranslator:
           post:
           - VirtualHost
+          - Cluster
       service:
         fqdn:
           hostname: gateway-simple-extension-server.envoy-gateway-system.svc.cluster.local

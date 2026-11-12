@@ -10,5 +10,5 @@ With `--inference-pool`, the server also handles `InferencePool` (`inference.net
 
 This server is used in the following tests:
 - test/resilience/tests/extensionserver.go
-- test/resilience/tests/inference_pool.go (with `--inference-pool`)
+- test/e2e/tests/extension_server.go (`ExtensionServerInferencePool` uses `--inference-pool`)
 
