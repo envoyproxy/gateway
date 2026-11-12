@@ -230,7 +230,7 @@ func (t *Translator) ProcessHTTPFilters(
 	}
 
 	if redirectPath != nil {
-if httpFiltersContext.RedirectResponse == nil {
+		if httpFiltersContext.RedirectResponse == nil {
 			if len(errs.GetAllErrors()) == 0 {
 				httpFiltersContext.RedirectResponse = &ir.Redirect{StatusCode: new(int32(302))}
 			}
