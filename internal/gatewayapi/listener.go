@@ -1025,7 +1025,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches:         validExprs,
-					ResourceAttributes: ir.MapToSlice(apihelpers.GetOpenTelemetryResourceAttributes(sink.OpenTelemetry)),
+					ResourceAttributes: ir.MapToSlice(sink.OpenTelemetry.GetResourceAttributes()),
 					Headers:            sink.OpenTelemetry.Headers,
 					Authority:          getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
