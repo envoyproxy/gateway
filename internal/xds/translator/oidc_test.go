@@ -126,6 +126,82 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 			input:  ir.OIDC{RedirectPath: "/oauth2;v2/callback"},
 			expect: expectedRedirectPathOnlyCookieConfigs(""),
 		},
+		{
+			// A browser rejects a __Host- cookie that is not set with Path=/, so
+			// the redirect path scoping has to give way for that name.
+			name: "a __Host- nonce cookie is set with Path=/ instead of the redirect path",
+			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
+				CookieNameOverrides: &egv1a1.OIDCCookieNames{
+					OAuthNonce: new("__Host-OauthNonce-abc"),
+				},
+			},
+			expect: &oauth2v3.CookieConfigs{
+				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{Path: "/"},
+				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{Path: "/oauth2/callback"},
+			},
+		},
+		{
+			name: "a __Host- code verifier cookie is set with Path=/ instead of the redirect path",
+			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
+				CookieNameOverrides: &egv1a1.OIDCCookieNames{
+					CodeVerifier: new("__Host-CodeVerifier-abc"),
+				},
+			},
+			expect: &oauth2v3.CookieConfigs{
+				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{Path: "/oauth2/callback"},
+				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{Path: "/"},
+			},
+		},
+		{
+			// Path=/ is still forced when the redirect path is one Envoy would
+			// reject, so the flow cookie survives either way.
+			name: "a __Host- nonce cookie is set with Path=/ even when the redirect path is invalid",
+			input: ir.OIDC{
+				RedirectPath: "/oauth2;v2/callback",
+				CookieNameOverrides: &egv1a1.OIDCCookieNames{
+					OAuthNonce: new("__Host-OauthNonce-abc"),
+				},
+			},
+			expect: &oauth2v3.CookieConfigs{
+				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{Path: "/"},
+				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{Path: ""},
+			},
+		},
+		{
+			// A renamed cookie that is not a __Host- one keeps the scoping.
+			name: "a renamed nonce cookie without the __Host- prefix keeps the redirect path",
+			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
+				CookieNameOverrides: &egv1a1.OIDCCookieNames{
+					OAuthNonce: new("my-nonce"),
+				},
+			},
+			expect: expectedRedirectPathOnlyCookieConfigs("/oauth2/callback"),
+		},
+		{
+			// SameSite is applied on top of the forced path.
+			name: "SameSite and a __Host- nonce cookie",
+			input: ir.OIDC{
+				RedirectPath: "/oauth2/callback",
+				CookieConfig: &egv1a1.OIDCCookieConfig{
+					SameSite: new("Lax"),
+				},
+				CookieNameOverrides: &egv1a1.OIDCCookieNames{
+					OAuthNonce: new("__Host-OauthNonce-abc"),
+				},
+			},
+			expect: &oauth2v3.CookieConfigs{
+				BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX},
+				OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX, Path: "/"},
+				CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: oauth2v3.CookieConfig_LAX, Path: "/oauth2/callback"},
+			},
+		},
 	}
 
 	for i := range tests {
