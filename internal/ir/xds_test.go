@@ -256,8 +256,8 @@ var (
 		Redirect: &Redirect{
 			Scheme:   new("https"),
 			Hostname: new("redirect.example.com"),
-			Path: &HTTPPathModifier{
-				FullReplace: new("/redirect"),
+			Path: &ExtendedHTTPPathModifier{
+				HTTPPathModifier: HTTPPathModifier{FullReplace: new("/redirect")},
 			},
 			Port:       new(uint32(8443)),
 			StatusCode: new(int32(301)),
@@ -284,7 +284,7 @@ var (
 		Redirect: &Redirect{
 			Scheme:     new("err"),
 			Hostname:   new("redirect.example.com"),
-			Path:       &HTTPPathModifier{},
+			Path:       &ExtendedHTTPPathModifier{},
 			Port:       new(uint32(8443)),
 			StatusCode: new(int32(305)),
 		},
@@ -298,9 +298,11 @@ var (
 		Redirect: &Redirect{
 			Scheme:   new("https"),
 			Hostname: new("redirect.example.com"),
-			Path: &HTTPPathModifier{
-				FullReplace:        new("/redirect"),
-				PrefixMatchReplace: new("/redirect"),
+			Path: &ExtendedHTTPPathModifier{
+				HTTPPathModifier: HTTPPathModifier{
+					FullReplace:        new("/redirect"),
+					PrefixMatchReplace: new("/redirect"),
+				},
 			},
 			Port:       new(uint32(8443)),
 			StatusCode: new(int32(301)),

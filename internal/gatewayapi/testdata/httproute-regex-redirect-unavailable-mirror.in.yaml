@@ -1,0 +1,73 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: standalone-redirect-unavailable-mirror
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: /redirect
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: regex-redirect
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            name: unavailable-mirror
+            port: 8080
+      backendRefs:
+      - name: service-1
+        port: 8080
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    namespace: default
+    name: regex-redirect
+  spec:
+    matches:
+    - cookies:
+      - name: cohort
+        value: redirect
+    redirect:
+      path:
+        type: ReplaceRegexMatch
+        replaceRegexMatch:
+          pattern: '^/redirect/(.*)$'
+          substitution: '/new/\1'
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: unavailable-mirror
+  spec:
+    clusterIP: 10.0.0.2
+    ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080

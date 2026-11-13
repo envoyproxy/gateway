@@ -37,6 +37,54 @@ func TestHTTPRouteFilter(t *testing.T) {
 		wantErrors   []string
 	}{
 		{
+			desc: "valid regex redirect",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.Redirect = &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+					Type:              egv1a1.RegexHTTPPathModifier,
+					ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: `^/blogs/([0-9]+)$`, Substitution: `/post-\1`},
+				}}
+			},
+		},
+		{
+			desc: "redirect conflicts with rewrite",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.Redirect = &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+					Type:              egv1a1.RegexHTTPPathModifier,
+					ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "old", Substitution: "new"},
+				}}
+				hrf.Spec.URLRewrite = &egv1a1.HTTPURLRewriteFilter{}
+			},
+			wantErrors: []string{"redirect cannot be combined with urlRewrite or directResponse"},
+		},
+		{
+			desc: "redirect conflicts with direct response",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.Redirect = &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+					Type:              egv1a1.RegexHTTPPathModifier,
+					ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "old", Substitution: "new"},
+				}}
+				hrf.Spec.DirectResponse = &egv1a1.HTTPDirectResponseFilter{}
+			},
+			wantErrors: []string{"redirect cannot be combined with urlRewrite or directResponse"},
+		},
+		{
+			desc: "redirect missing regex settings",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.Redirect = &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{Type: egv1a1.RegexHTTPPathModifier}}
+			},
+			wantErrors: []string{"If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch field needs to be set."},
+		},
+		{
+			desc: "redirect empty substitution",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.Redirect = &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+					Type:              egv1a1.RegexHTTPPathModifier,
+					ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "old"},
+				}}
+			},
+			wantErrors: []string{"redirect substitution must not be empty"},
+		},
+		{
 			desc: "Valid RegexHTTPPathModifier",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
