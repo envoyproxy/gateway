@@ -1,7 +1,8 @@
-{{- if not (or (eq .Values.dashboard.mode "configmap") (eq .Values.dashboard.mode "grafana-operator")) }}
+{{- $mode := .Values.dashboard.mode | default "configmap" }}
+{{- if not (or (eq $mode "configmap") (eq $mode "grafana-operator")) }}
 {{- fail "dashboard.mode must be one of: configmap, grafana-operator" }}
 {{- end }}
-{{- if eq .Values.dashboard.mode "configmap" }}
+{{- if eq $mode "configmap" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

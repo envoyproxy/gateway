@@ -1,4 +1,5 @@
-{{- if eq .Values.dashboard.mode "grafana-operator" }}
+{{- $mode := .Values.dashboard.mode | default "configmap" }}
+{{- if eq $mode "grafana-operator" }}
 {{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
 {{- $dashboardName := $path | base | trimSuffix ".json" }}
 ---
