@@ -1,0 +1,98 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.envoyproxy.io"
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-directresponse-then-response-header
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    # Later valid filters must still be validated, but must not change the
+    # programmed DirectResponse (no extra response headers on the local reply).
+    - matches:
+      - path:
+          value: "/direct-response-then-header"
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-inline
+      - type: ResponseHeaderModifier
+        responseHeaderModifier:
+          add:
+          - name: X-After-Direct-Response
+            value: should-not-apply
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-directresponse-then-match-filter
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    # An HTTPRouteFilter with matches after DirectResponse must not narrow
+    # which requests receive the terminal response.
+    - matches:
+      - path:
+          value: "/direct-response-then-match"
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: direct-response-inline
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: cookie-match
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: direct-response-inline
+    namespace: default
+  spec:
+    directResponse:
+      contentType: text/plain
+      statusCode: 418
+      body:
+        type: Inline
+        inline: "OK"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: cookie-match
+    namespace: default
+  spec:
+    matches:
+    - cookies:
+      - name: session
+        value: abc
