@@ -7,11 +7,13 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -313,6 +315,64 @@ func TestGetExtensionBackendResources(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, result, tc.expectedCount)
 			}
+		})
+	}
+}
+
+func TestCanListResource(t *testing.T) {
+	gvk := schema.GroupVersionKind{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"}
+
+	forbidden := kerrors.NewForbidden(
+		schema.GroupResource{Group: gvk.Group, Resource: "s3backends"},
+		"",
+		errors.New("s3backends.storage.example.io is forbidden: User cannot list resource"),
+	)
+
+	testCases := []struct {
+		name            string
+		listInterceptor func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error
+		expectedAllowed bool
+		expectedError   bool
+	}{
+		{
+			name:            "list permitted",
+			expectedAllowed: true,
+		},
+		{
+			// The case this guards: discovery says the Kind is served, but the
+			// ServiceAccount has no list rule. Skipping beats crash-looping.
+			name: "forbidden is reported as not allowed, not as an error",
+			listInterceptor: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+				return forbidden
+			},
+			expectedAllowed: false,
+		},
+		{
+			// A transient failure must not be mistaken for a permanent RBAC gap,
+			// or a blip would silently drop the watch until the next restart.
+			name: "transient error is surfaced",
+			listInterceptor: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+				return context.DeadlineExceeded
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := fakeclient.NewClientBuilder().WithScheme(newTestScheme(gvk))
+			if tc.listInterceptor != nil {
+				builder = builder.WithInterceptorFuncs(interceptor.Funcs{List: tc.listInterceptor})
+			}
+
+			allowed, err := canListResource(t.Context(), builder.Build(), gvk)
+
+			if tc.expectedError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedAllowed, allowed)
 		})
 	}
 }
