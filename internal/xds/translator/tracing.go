@@ -88,12 +88,17 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		providerName = envoyZipkin
 
 		providerConfig = func() (*anypb.Any, error) {
+			traceContextOption := tracecfg.ZipkinConfig_USE_B3
+			if ptr.Deref(tracing.Provider.Zipkin.TraceContextOption, "") == egv1a1.ZipkinTraceContextOptionUseB3WithW3CPropagation {
+				traceContextOption = tracecfg.ZipkinConfig_USE_B3_WITH_W3C_PROPAGATION
+			}
 			config := &tracecfg.ZipkinConfig{
 				CollectorCluster:         tracing.Destination.Name,
 				CollectorEndpoint:        "/api/v2/spans",
 				TraceId_128Bit:           ptr.Deref(tracing.Provider.Zipkin.Enable128BitTraceID, false),
 				SharedSpanContext:        wrapperspb.Bool(!ptr.Deref(tracing.Provider.Zipkin.DisableSharedSpanContext, false)),
 				CollectorEndpointVersion: tracecfg.ZipkinConfig_HTTP_JSON,
+				TraceContextOption:       traceContextOption,
 			}
 
 			return proto.ToAnyWithValidation(config)
