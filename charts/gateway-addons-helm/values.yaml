@@ -12,10 +12,9 @@ dashboard:
   # GrafanaDashboard mode options
   # The Grafana folder the dashboards are provisioned into.
   folder: envoy-gateway
-  # Selects the Grafana instance the dashboards are imported into.
-  instanceSelector:
-    matchLabels:
-      dashboards: grafana
+  # -- Selects the Grafana instances the dashboards are imported into. The template merges
+  # in matchLabels.dashboards=grafana by default. Set matchLabels: null for expressions only.
+  instanceSelector: {}
 
 # Values for Grafana dependency
 grafana:

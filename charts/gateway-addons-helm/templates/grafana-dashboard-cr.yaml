@@ -1,13 +1,19 @@
 {{- $mode := .Values.dashboard.mode | default "configmap" }}
 {{- if eq $mode "grafana-operator" }}
-{{/* Old releases upgraded with --reuse-values lack these keys. Preserve explicit empty values. */}}
+{{/* Old releases upgraded with --reuse-values lack these keys. */}}
 {{- $folder := "envoy-gateway" }}
 {{- if hasKey .Values.dashboard "folder" }}
 {{- $folder = .Values.dashboard.folder }}
 {{- end }}
-{{- $instanceSelector := dict "matchLabels" (dict "dashboards" "grafana") }}
-{{- if hasKey .Values.dashboard "instanceSelector" }}
-{{- $instanceSelector = .Values.dashboard.instanceSelector }}
+{{/* Keep selector defaults here so Helm coalescing preserves explicit null label overrides. */}}
+{{- $instanceSelector := mergeOverwrite (dict "matchLabels" (dict "dashboards" "grafana")) (deepCopy (.Values.dashboard.instanceSelector | default dict)) }}
+{{- if and (hasKey $instanceSelector "matchLabels") (eq (get $instanceSelector "matchLabels") nil) }}
+{{- $_ := unset $instanceSelector "matchLabels" }}
+{{- end }}
+{{- range $key, $value := $instanceSelector.matchLabels }}
+{{- if eq $value nil }}
+{{- $_ := unset $instanceSelector.matchLabels $key }}
+{{- end }}
 {{- end }}
 {{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
 {{- $dashboardName := $path | base | trimSuffix ".json" }}

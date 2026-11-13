@@ -80,7 +80,7 @@ helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version 
 ```
 
 The selector supports both `matchLabels` and `matchExpressions`; all requirements must match.
-Helm merges maps with defaults. To use only expressions, set `dashboard.instanceSelector.matchLabels: null`.
+The template merges selector maps with defaults. To use only expressions, set `dashboard.instanceSelector.matchLabels: null`.
 Dashboards may be imported into matching instances in other namespaces.
 Switching `dashboard.mode` does not disable the bundled Grafana; set `grafana.enabled: false` explicitly.
 
@@ -93,7 +93,7 @@ Switching `dashboard.mode` does not disable the bundled Grafana; set `grafana.en
 | alloy.fullnameOverride | string | `"alloy"` |  |
 | dashboard.annotations | object | `{}` |  |
 | dashboard.folder | string | `"envoy-gateway"` |  |
-| dashboard.instanceSelector.matchLabels.dashboards | string | `"grafana"` |  |
+| dashboard.instanceSelector | object | `{}` | Selects the Grafana instances the dashboards are imported into. The template merges in matchLabels.dashboards=grafana by default. Set matchLabels: null for expressions only. |
 | dashboard.labels | object | `{}` |  |
 | dashboard.mode | string | `"configmap"` |  |
 | fluent-bit.config.filters | string | `"[FILTER]\n    Name kubernetes\n    Match kube.*\n    Merge_Log On\n    Keep_Log Off\n    K8S-Logging.Parser On\n    K8S-Logging.Exclude On\n\n[FILTER]\n    Name grep\n    Match kube.*\n    Regex $kubernetes['container_name'] ^envoy$\n\n[FILTER]\n    Name parser\n    Match kube.*\n    Key_Name log\n    Parser envoy\n    Reserve_Data True\n"` |  |
