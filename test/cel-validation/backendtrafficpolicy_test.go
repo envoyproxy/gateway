@@ -6058,4 +6058,35 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%q", err, wantError)
 		}
 	})
+
+	// An unset limit cannot be expressed through the typed API (resource.Quantity is a struct, so
+	// omitempty does not drop it), so these cases use unstructured objects.
+	for name, requestBuffer := range map[string]map[string]any{
+		"request buffer without limit - should fail":               {},
+		"request buffer with only mode and no limit - should fail": {"mode": string(egv1a1.RequestBufferModeLimitOnly)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			btp := &unstructured.Unstructured{Object: map[string]any{
+				"apiVersion": egv1a1.GroupVersion.String(),
+				"kind":       egv1a1.KindBackendTrafficPolicy,
+				"metadata": map[string]any{
+					"name":      fmt.Sprintf("btp-%v", time.Now().UnixNano()),
+					"namespace": metav1.NamespaceDefault,
+				},
+				"spec": map[string]any{
+					"targetRef": map[string]any{
+						"group": "gateway.networking.k8s.io",
+						"kind":  "Gateway",
+						"name":  "eg",
+					},
+					"requestBuffer": requestBuffer,
+				},
+			}}
+
+			wantError := "limit must be set"
+			if err := c.Create(ctx, btp); err == nil || !strings.Contains(err.Error(), wantError) {
+				t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%q", err, wantError)
+			}
+		})
+	}
 }
