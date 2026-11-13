@@ -496,6 +496,8 @@ spec:
 
                   - envoy.filters.http.credential_injector
 
+                  - envoy.filters.http.adaptive_concurrency
+
                   - envoy.filters.http.compressor
 
                   - envoy.filters.http.dynamic_forward_proxy
@@ -540,6 +542,7 @@ spec:
                       - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
+                      - envoy.filters.http.adaptive_concurrency
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
                       - envoy.filters.http.alternate_protocols_cache
@@ -575,6 +578,7 @@ spec:
                       - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
+                      - envoy.filters.http.adaptive_concurrency
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
                       - envoy.filters.http.alternate_protocols_cache
@@ -608,6 +612,7 @@ spec:
                       - envoy.filters.http.grpc_json_transcoder
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
+                      - envoy.filters.http.adaptive_concurrency
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
                       - envoy.filters.http.alternate_protocols_cache
