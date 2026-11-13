@@ -311,6 +311,27 @@ func TestTranslate(t *testing.T) {
 			expect: true,
 		},
 		{
+			name:         "oidc",
+			from:         "gateway-api",
+			to:           "gateway-api,xds",
+			resourceType: string(RouteEnvoyConfigType),
+			expect:       true,
+		},
+		{
+			name:   "oidc",
+			from:   "gateway-api",
+			to:     "ir",
+			expect: true,
+		},
+		{
+			name:         "oidc-custom-namespace",
+			from:         "gateway-api",
+			to:           "gateway-api,xds",
+			resourceType: string(RouteEnvoyConfigType),
+			expect:       true,
+			extraArgs:    []string{"--namespace", "custom-ns"},
+		},
+		{
 			name:   "listenerset",
 			from:   "gateway-api",
 			to:     "gateway-api,ir",

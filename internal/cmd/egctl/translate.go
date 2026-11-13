@@ -244,7 +244,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		for _, outType := range outTypes {
 			// Translate
 			if outType == gatewayAPIType {
-				result.Resources, err = translateGatewayAPIToGatewayAPI(resources)
+				result.Resources, err = translateGatewayAPIToGatewayAPI(resources, namespace)
 				if err != nil {
 					return err
 				}
@@ -264,7 +264,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				result.Xds = res
 			}
 			if outType == irType {
-				res, err := translateGatewayAPIToIR(resources)
+				res, err := translateGatewayAPIToIR(resources, namespace)
 				if err != nil {
 					return err
 				}
@@ -283,7 +283,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.TranslateResult, error) {
+func translateGatewayAPIToIR(resources *resource.Resources, namespace string) (*gatewayapi.TranslateResult, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
@@ -291,6 +291,7 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 	t := &gatewayapi.Translator{
 		GatewayControllerName:    string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:         gwapiv1.ObjectName(resources.GatewayClass.Name),
+		ControllerNamespace:      namespace,
 		GlobalRateLimitEnabled:   true,
 		EndpointRoutingDisabled:  true,
 		EnvoyPatchPolicyEnabled:  true,
@@ -313,7 +314,7 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 	return result, nil
 }
 
-func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Resources, error) {
+func translateGatewayAPIToGatewayAPI(resources *resource.Resources, namespace string) (resource.Resources, error) {
 	if resources.GatewayClass == nil {
 		return resource.Resources{}, fmt.Errorf("the GatewayClass resource is required")
 	}
@@ -322,6 +323,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:    string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:         gwapiv1.ObjectName(resources.GatewayClass.Name),
+		ControllerNamespace:      namespace,
 		GlobalRateLimitEnabled:   true,
 		EndpointRoutingDisabled:  true,
 		EnvoyPatchPolicyEnabled:  true,
@@ -368,6 +370,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:    string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:         gwapiv1.ObjectName(resources.GatewayClass.Name),
+		ControllerNamespace:      namespace,
 		GlobalRateLimitEnabled:   opts.GlobalRateLimitEnabled,
 		EndpointRoutingDisabled:  opts.EndpointRoutingDisabled,
 		EnvoyPatchPolicyEnabled:  opts.EnvoyPatchPolicyEnabled,
@@ -389,6 +392,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 	for _, key := range keys {
 		val := gRes.XdsIR[key]
 		xTranslator := &translator.Translator{
+			ControllerNamespace: namespace,
 			// Set some default settings for translation
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),

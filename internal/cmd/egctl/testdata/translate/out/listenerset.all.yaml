@@ -122,7 +122,7 @@ infraIR:
           kind: GatewayClass
           name: eg
       name: envoy-gateway-system/eg
-      namespace: ""
+      namespace: envoy-gateway-system
 listenerSets:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: ListenerSet
