@@ -61841,6 +61841,23 @@ spec:
                               rule: (has(self.claim) && !has(self.claimPath)) || (!has(self.claim)
                                 && has(self.claimPath))
                           type: array
+                        clockSkew:
+                          description: |-
+                            ClockSkew defines the tolerance applied when validating time-based claims
+                            such as "exp" and "nbf". If not specified, Envoy's default of 60s is used.
+
+                            Envoy only supports whole seconds and treats 0 as "not specified", applying
+                            its 60s default. So the value must be a whole number of seconds, and 0 is
+                            rejected here instead of being silently ignored: the valid range is 1s to 24h.
+                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                          type: string
+                          x-kubernetes-validations:
+                          - message: clockSkew must be at least 1s
+                            rule: duration(self) >= duration('1s')
+                          - message: clockSkew must be at most 24h
+                            rule: duration(self) <= duration('24h')
+                          - message: clockSkew must be a whole number of seconds
+                            rule: duration(self).getMilliseconds() % 1000 == 0
                         extractFrom:
                           description: |-
                             ExtractFrom defines different ways to extract the JWT token from HTTP request.

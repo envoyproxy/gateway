@@ -1976,6 +1976,13 @@ func (t *Translator) buildJWT(
 			RecomputeRoute: p.RecomputeRoute,
 			ExtractFrom:    p.ExtractFrom,
 		}
+		if p.ClockSkew != nil {
+			d, err := time.ParseDuration(string(*p.ClockSkew))
+			if err != nil {
+				return nil, fmt.Errorf("invalid clockSkew: %w", err)
+			}
+			provider.ClockSkew = ir.MetaV1DurationPtr(d)
+		}
 		if p.RemoteJWKS != nil {
 			remoteJWKS, err := t.buildRemoteJWKS(jwtOwnerPolicy, p.RemoteJWKS, i, resources, gtwCtx)
 			if err != nil {
