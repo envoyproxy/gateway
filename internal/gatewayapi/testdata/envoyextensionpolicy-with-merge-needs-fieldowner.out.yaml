@@ -46,6 +46,12 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.wasm.code is deprecated, use spec.wasm.name referencing a module
+          registered in EnvoyProxy spec.wasmModules instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
