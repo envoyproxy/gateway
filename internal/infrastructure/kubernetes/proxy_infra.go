@@ -73,6 +73,13 @@ func (i *Infra) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 	return i.EnvoyGateway
 }
 
+// GetKubernetesVersion returns the cached API server git version.
+// An empty string means discovery failed or was not configured.
+func (i *Infra) GetKubernetesVersion(ctx context.Context) string {
+	i.ResolveKubernetesVersion(ctx)
+	return i.kubeVersion
+}
+
 func (i *Infra) GetOwnerReferenceUID(ctx context.Context, irInfra *ir.Infra) (map[string]types.UID, error) {
 	ownerReferenceUID := make(map[string]types.UID)
 	if irInfra.GetProxyInfra().GetProxyMetadata() == nil {
