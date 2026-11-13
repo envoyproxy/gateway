@@ -173,6 +173,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.credential_injector
 	//
+	// - envoy.filters.http.adaptive_concurrency
+	//
 	// - envoy.filters.http.compressor
 	//
 	// - envoy.filters.http.dynamic_forward_proxy
@@ -418,7 +420,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_json_transcoder;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy;envoy.filters.http.alternate_protocols_cache
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_json_transcoder;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.adaptive_concurrency;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy;envoy.filters.http.alternate_protocols_cache
 type EnvoyFilter string
 
 const (
@@ -500,6 +502,9 @@ const (
 
 	// EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.
 	EnvoyFilterCredentialInjector EnvoyFilter = "envoy.filters.http.credential_injector"
+
+	// EnvoyFilterAdaptiveConcurrency defines the Envoy HTTP adaptive concurrency filter.
+	EnvoyFilterAdaptiveConcurrency EnvoyFilter = "envoy.filters.http.adaptive_concurrency"
 
 	// EnvoyFilterCompressor defines the Envoy HTTP compressor filter.
 	EnvoyFilterCompressor EnvoyFilter = "envoy.filters.http.compressor"

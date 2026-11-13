@@ -64,6 +64,8 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.http3) || !has(self.useClientProtocol) || !self.useClientProtocol", message="useClientProtocol cannot be used together with http3"
 // +kubebuilder:validation:XValidation:rule="!has(self.requestBuffer) || self.requestBuffer.mode == 'LimitOnly' || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0", message="requestBuffer with mode BufferAndLimit cannot be used together with httpUpgrade"
 // +kubebuilder:validation:XValidation:rule="!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'Service', 'ServiceImport', 'Backend']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'Service', 'ServiceImport', 'Backend'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute'])))", message="admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRef/targetRefs (targetSelectors is not supported for those kinds)"
+// +kubebuilder:validation:XValidation:rule="!has(self.adaptiveConcurrency) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute'])))", message="adaptiveConcurrency can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets"
+// +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.adaptiveConcurrency)", message="adaptiveConcurrency is not allowed when targeting a backend"
 // +kubebuilder:validation:XValidation:rule="!((has(self.targetRef) && self.targetRef.kind in ['Service', 'ServiceImport', 'Backend']) || (has(self.targetRefs) && self.targetRefs.exists(ref, ref.kind in ['Service', 'ServiceImport', 'Backend']))) || !has(self.timeout) || !has(self.timeout.http) || (!has(self.timeout.http.requestTimeout) && !has(self.timeout.http.streamIdleTimeout))", message="timeout.http.requestTimeout and timeout.http.streamIdleTimeout are not allowed when targeting a backend"
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
@@ -101,6 +103,15 @@ type BackendTrafficPolicySpec struct {
 	// configurable sliding time window.
 	// +optional
 	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty"`
+
+	// AdaptiveConcurrency defines the configuration for Envoy's adaptive
+	// concurrency filter, which dynamically adjusts the allowed request
+	// concurrency limit based on sampled latencies. This helps protect
+	// backends from overload by automatically shedding load when latency
+	// increases.
+	//
+	// +optional
+	AdaptiveConcurrency *AdaptiveConcurrency `json:"adaptiveConcurrency,omitempty"`
 
 	// UseClientProtocol configures Envoy to prefer sending requests to backends using
 	// the same HTTP protocol that the incoming request used. Defaults to false, which means
