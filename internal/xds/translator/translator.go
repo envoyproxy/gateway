@@ -1378,7 +1378,7 @@ func (t *Translator) addClosedFilterChains(
 	statPrefix := fmt.Sprintf("unresolved-certificate-%d", xdsListener.GetAddress().GetSocketAddress().GetPortValue())
 	for _, chain := range chains {
 		filterChain, err := buildTCPFilterChain(&ir.TCPRoute{Name: chain.name + "/unresolved-certificate"},
-			emptyClusterName, statPrefix, accessLog, timeout, nil)
+			emptyClusterName, statPrefix, accessLog, timeout, nil, nil)
 		if err != nil {
 			return err
 		}
