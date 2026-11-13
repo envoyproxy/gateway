@@ -37,6 +37,16 @@ spec:
             kind: Secret
             name: client-mtls-certificate
         mode: Terminate
+    - name: alpn-h2-only
+      port: 8443
+      protocol: HTTPS
+      hostname: tls-settings.example.com
+      tls:
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: client-tls-settings-certificate
+        mode: Terminate
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -148,3 +158,18 @@ spec:
       - P-256
     alpnProtocols:
       - http/1.1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: ctp-client-tls-alpn-h2-only
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: client-mtls-gateway
+    sectionName: alpn-h2-only
+  tls:
+    alpnProtocols:
+      - h2

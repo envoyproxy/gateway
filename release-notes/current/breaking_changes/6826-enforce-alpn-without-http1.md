@@ -1,0 +1,1 @@
+HTTPS listeners whose ClientTrafficPolicy sets `tls.alpnProtocols` to a list without `http/1.1` or `http/1.0`, such as `[h2]`, now reject clients that don't offer one of the listed protocols through ALPN, including clients that send no ALPN at all. These clients were previously served over HTTP/1.1. Add `http/1.1` to the list to keep accepting them.
