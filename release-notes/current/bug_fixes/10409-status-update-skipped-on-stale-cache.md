@@ -1,0 +1,1 @@
+Fixed the status updater skipping a status write as unchanged when its cache had not yet seen its own previous write, which could leave a resource with an outdated status, for example a GatewayClass keeping the observedGeneration of its previous generation.
