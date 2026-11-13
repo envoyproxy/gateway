@@ -11,11 +11,15 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 const sendRequests = 50
@@ -95,10 +99,21 @@ func runWeightedBackendTest(t *testing.T, suite *suite.ConformanceTestSuite, gat
 
 	weightMap := make(map[string]int)
 	for range sendRequests {
-		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-		if err != nil {
-			t.Errorf("failed to get expected response: %v", err)
-		}
+		var (
+			cReq  *roundtripper.CapturedRequest
+			cResp *roundtripper.CapturedResponse
+		)
+		// Retry on network errors (e.g. "no route to host" while a newly assigned
+		// LoadBalancer IP is still being announced) instead of failing the test.
+		require.Eventually(t, func() bool {
+			var err error
+			cReq, cResp, err = suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				tlog.Logf(t, "failed to capture round trip due to network error: %v, retrying...", err)
+				return false
+			}
+			return true
+		}, suite.TimeoutConfig.MaxTimeToConsistency, time.Second)
 
 		if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 			t.Errorf("failed to compare request and response: %v", err)
@@ -107,7 +122,7 @@ func runWeightedBackendTest(t *testing.T, suite *suite.ConformanceTestSuite, gat
 		podName := cReq.Pod
 		if len(podName) == 0 {
 			// it shouldn't be missing here
-			t.Errorf("failed to get pod header in response: %v", err)
+			t.Errorf("failed to get pod header in response")
 		} else {
 			// all we need is the pod Name prefix
 			podNamePrefix := extractPodNamePrefix(podName, backendName)
