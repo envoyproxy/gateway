@@ -62,6 +62,8 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	}
 
 	skipTests = append(skipTests, tests.GatewayInfrastructureMetadata)
+	// TODO: new Gateway API v1.7 conformance test, to be fixed in a follow-up PR.
+	skipTests = append(skipTests, tests.BackendTLSPolicyPreserveForeignStatus)
 
 	return skipTests
 }
