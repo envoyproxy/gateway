@@ -1441,6 +1441,10 @@ func (b *TrafficFeatures) Validate() error {
 // SecurityFeatures holds the information associated with the Security Policy.
 // +k8s:deepcopy-gen=true
 type SecurityFeatures struct {
+	// AuthenticationAny requires JWT or BasicAuth authentication to succeed, with each
+	// method tolerating missing credentials on its own.
+	AuthenticationAny bool `json:"authenticationAny,omitempty" yaml:"authenticationAny,omitempty"`
+
 	// CORS policy for the route.
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 	// CSRF policy for the route.
@@ -1755,6 +1759,11 @@ type OIDCProvider struct {
 //
 // +k8s:deepcopy-gen=true
 type BasicAuth struct {
+	// AllowMissing permits requests without Basic credentials and stores the
+	// verified username in the filter's dynamic metadata, which Envoy requires
+	// alongside allow_missing.
+	AllowMissing bool `json:"allowMissing,omitempty" yaml:"allowMissing,omitempty"`
+
 	// Name is a unique name for an BasicAuth configuration.
 	// The xds translator only generates one basic auth filter for each unique name.
 	Name string `json:"name" yaml:"name"`

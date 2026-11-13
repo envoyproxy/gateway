@@ -1,0 +1,175 @@
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: default
+      name: users-secret1
+    data:
+      .htpasswd: "dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo="
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: default
+      name: users-secret2
+    data:
+      .htpasswd: "Zm9vOntTSEF9WXMyM0FnLzVJT1dxWkN3OVFHYVZEZEh3SDAwPQpmb28xOntTSEF9ZGpaMTFxSFkwS09pamV5bUs3YUt2WXV2aHZNPQo="
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: default
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-any
+    spec:
+      hostnames:
+        - any.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-merge
+    spec:
+      hostnames:
+        - merge.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-invalid
+    spec:
+      hostnames:
+        - invalid.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-all
+    spec:
+      hostnames:
+        - all.example.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+securityPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-any
+    spec:
+      targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-any
+      authentication:
+        mode: Any
+      jwt:
+        providers:
+        - name: issuer
+          issuer: https://issuer.example
+          audiences: [test-api]
+          remoteJWKS:
+            uri: https://issuer.example/keys
+      authorization:
+        defaultAction: Deny
+        rules:
+        - name: reader
+          action: Allow
+          principal:
+            jwt:
+              provider: issuer
+              scopes: [read]
+      basicAuth:
+        users:
+          name: users-secret1
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-merge
+    spec:
+      targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-merge
+      mergeType: JSONMerge
+      authentication:
+        mode: Any
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-invalid
+    spec:
+      targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-invalid
+      authentication:
+        mode: Any
+      basicAuth:
+        users:
+          name: users-secret1
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-gateway
+    spec:
+      targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+      jwt:
+        providers:
+        - name: issuer
+          issuer: https://issuer.example
+          audiences: [test-api]
+          remoteJWKS:
+            uri: https://issuer.example/keys
+      basicAuth:
+        users:
+          name: users-secret2

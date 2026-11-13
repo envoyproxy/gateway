@@ -52,6 +52,10 @@ type SecurityPolicy struct {
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute"
 // +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute'])))", message="mergeType can only be used with xRoute targets"
 // +kubebuilder:validation:XValidation:rule="(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules) && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt) : false)) ? has(self.jwt) : true", message="if authorization.rules.principal.jwt is used, jwt must be defined, unless mergeType is set and the jwt providers are inherited from the parent policy"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.mode) && self.authentication.mode == 'Any' && !has(self.mergeType)) ? (has(self.jwt) && has(self.basicAuth)) : true", message="authentication.mode Any requires jwt and basicAuth, unless mergeType is set and they are inherited from the parent policy"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.mode) && self.authentication.mode == 'Any') ? (!has(self.oidc) && !has(self.apiKeyAuth) && !has(self.extAuth)) : true", message="authentication.mode Any does not support oidc, apiKeyAuth or extAuth"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.mode) && self.authentication.mode == 'Any' && has(self.jwt)) ? ((!has(self.jwt.failOpen) || !self.jwt.failOpen) && self.jwt.providers.all(p, !has(p.recomputeRoute) || !p.recomputeRoute)) : true", message="authentication.mode Any does not support jwt.failOpen or recomputeRoute on JWT providers"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.mode) && self.authentication.mode == 'Any' && has(self.basicAuth)) ? !has(self.basicAuth.forwardUsernameHeader) : true", message="authentication.mode Any does not support basicAuth.forwardUsernameHeader"
 type SecurityPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 
@@ -66,6 +70,11 @@ type SecurityPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self != 'Replace'",message="Replace is not a valid MergeType for SecurityPolicy"
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
+
+	// Authentication defines how the configured authentication methods combine.
+	//
+	// +optional
+	Authentication *Authentication `json:"authentication,omitempty"`
 
 	// APIKeyAuth defines the configuration for the API Key Authentication.
 	//
@@ -123,3 +132,34 @@ type SecurityPolicyList struct {
 func init() {
 	localSchemeBuilder.Register(&SecurityPolicy{}, &SecurityPolicyList{})
 }
+
+// Authentication defines how the configured authentication methods combine.
+type Authentication struct {
+	// Mode defines how the configured authentication methods combine.
+	// All applies each configured method on its own terms, so JWT and BasicAuth
+	// are both required unless jwt.optional or jwt.failOpen relaxes JWT.
+	// Any requires JWT and BasicAuth to be configured and accepts a request
+	// authenticated by either of them; jwt.optional has no effect.
+	// A request without credentials for either method is rejected with
+	// 403 Forbidden and no WWW-Authenticate challenge.
+	// A request presenting invalid credentials for either method is rejected.
+	// Authorization rules with a jwt principal never match a request
+	// authenticated by BasicAuth.
+	// Any does not support OIDC, APIKeyAuth, ExtAuth, jwt.failOpen, JWT route
+	// recomputation or basicAuth.forwardUsernameHeader.
+	//
+	// +kubebuilder:validation:Enum=All;Any
+	// +kubebuilder:default=All
+	// +optional
+	Mode AuthenticationMode `json:"mode,omitempty"`
+}
+
+// AuthenticationMode defines how the configured authentication methods combine.
+type AuthenticationMode string
+
+const (
+	// AuthenticationModeAll requires every configured authentication method to succeed.
+	AuthenticationModeAll AuthenticationMode = "All"
+	// AuthenticationModeAny requires JWT or BasicAuth authentication to succeed.
+	AuthenticationModeAny AuthenticationMode = "Any"
+)
