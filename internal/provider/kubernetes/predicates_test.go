@@ -1800,6 +1800,43 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
+			name: "service referenced by SecurityPolicy OIDC provider",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "oidc",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						OIDC: &egv1a1.OIDC{
+							Provider: egv1a1.OIDCProvider{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "oidc-provider-service",
+												Namespace: new(gwapiv1.Namespace("idp")),
+											},
+										},
+									},
+								},
+								Issuer: "https://idp.example.com",
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "oidc-provider-service", Namespace: "idp"}, nil, nil),
+			expect:  true,
+		},
+		{
 			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service",
 			configs: []client.Object{
 				&egv1a1.EnvoyExtensionPolicy{

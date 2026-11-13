@@ -905,6 +905,11 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
+	if securityPolicy.Spec.OIDC != nil {
+		for _, backendRef := range securityPolicy.Spec.OIDC.Provider.BackendRefs {
+			backendRefs = append(backendRefs, backendRef.BackendObjectReference)
+		}
+	}
 
 	for _, reference := range backendRefs {
 		values = append(values,
