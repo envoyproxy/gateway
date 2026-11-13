@@ -1,0 +1,1 @@
+Fixed HTTPS listeners that share a port with an SDS-backed listener keeping HTTP/2 when their certificate SANs did not overlap the SDS listener hostname, which let clients coalesce their requests onto the SDS listener; every same-port peer now defaults to HTTP/1.1 unless ALPN is configured with ClientTrafficPolicy.
