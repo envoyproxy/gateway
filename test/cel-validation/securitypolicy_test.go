@@ -3594,3 +3594,83 @@ func TestSecurityPolicyOIDCCookieNames(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityPolicyBasicAuthRealm(t *testing.T) {
+	ctx := context.Background()
+	baseSP := egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sp",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.SecurityPolicySpec{
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group("gateway.networking.k8s.io"),
+						Kind:  gwapiv1.Kind("Gateway"),
+						Name:  gwapiv1.ObjectName("eg"),
+					},
+				},
+			},
+			BasicAuth: &egv1a1.BasicAuth{
+				Users: gwapiv1.SecretObjectReference{
+					Name: "users-secret",
+				},
+			},
+		},
+	}
+
+	cases := []struct {
+		desc       string
+		realm      *string
+		wantErrors []string
+	}{
+		{
+			desc:       "realm not set (optional field absent)",
+			realm:      nil,
+			wantErrors: []string{},
+		},
+		{
+			desc:       "valid realm",
+			realm:      func() *string { s := "myapp"; return &s }(),
+			wantErrors: []string{},
+		},
+		{
+			desc:       "valid realm with spaces",
+			realm:      func() *string { s := "My Application"; return &s }(),
+			wantErrors: []string{},
+		},
+		{
+			desc:       "valid realm with quotes and backslash (allowed at admission; Envoy escapes them)",
+			realm:      func() *string { s := `Corp"SSO`; return &s }(),
+			wantErrors: []string{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := baseSP.DeepCopy()
+			sp.Name = fmt.Sprintf("sp-basic-auth-realm-%v", time.Now().UnixNano())
+			sp.Spec.BasicAuth.Realm = tc.realm
+
+			err := c.Create(ctx, sp)
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+
+			if err == nil {
+				_ = c.Delete(ctx, sp)
+			}
+		})
+	}
+}
