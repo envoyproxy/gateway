@@ -33,6 +33,7 @@ data:
       enabled:
       - XDSNameSchemeV2
       - EnvoyProxyPatch
+      - DropBackendRefsWithoutEndpoints
     extensionManager:
       maxMessageSize: 1000M
       policyResources:
