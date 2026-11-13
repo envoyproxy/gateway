@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -84,8 +85,10 @@ var ExtensionServerInferencePoolTest = suite.ConformanceTest{
 			types.NamespacedName{Name: "inference-pool-zero-weight", Namespace: ns},
 		)
 
-		podA := runningPodWithIP(t, suite, ns, "pool-a")
-		podB := runningPodWithIP(t, suite, ns, "pool-b")
+		podA := readyPodWithIP(t, suite, ns, "pool-a")
+		podB := readyPodWithIP(t, suite, ns, "pool-b")
+		// pool-svc is reached through its Service (EDS), so make sure its pod is ready as well.
+		readyPodWithIP(t, suite, ns, "pool-svc")
 		headers := map[string]string{
 			"x-pool-a-endpoint": net.JoinHostPort(podA.Status.PodIP, "3000"),
 			"x-pool-b-endpoint": net.JoinHostPort(podB.Status.PodIP, "3000"),
@@ -107,9 +110,36 @@ var ExtensionServerInferencePoolTest = suite.ConformanceTest{
 					Response:  http.Response{StatusCodes: []int{200}},
 					Namespace: ns,
 				}
-				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expected)
-
 				req := http.MakeRequest(t, &expected, gwAddr, "HTTP", "http")
+
+				// A single successful response is not enough here: the rule splits traffic across
+				// clusters that converge independently (e.g. the EDS cluster of pool-svc may not
+				// have endpoints yet while the ORIGINAL_DST cluster of pool-a already works).
+				// Wait until every expected backend has answered successfully before measuring.
+				http.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+					func(elapsed time.Duration) bool {
+						seen := map[string]bool{}
+						for range 20 {
+							cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+							if err != nil {
+								tlog.Logf(t, "request failed after %v: %v", elapsed, err)
+								return false
+							}
+							if err := http.CompareRoundTrip(t, &req, cReq, cResp, expected); err != nil {
+								tlog.Logf(t, "response not as expected after %v: %v", elapsed, err)
+								return false
+							}
+							seen[deploymentForPod(cReq.Pod)] = true
+						}
+						for app := range tc.expected {
+							if !seen[app] {
+								tlog.Logf(t, "backend %s has not answered yet after %v, seen %v", app, elapsed, seen)
+								return false
+							}
+						}
+						return true
+					})
+
 				got := map[string]int{}
 				for range requests {
 					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
@@ -132,8 +162,8 @@ var ExtensionServerInferencePoolTest = suite.ConformanceTest{
 	},
 }
 
-// runningPodWithIP waits for a running pod with the given app label and an IP, and returns it.
-func runningPodWithIP(t *testing.T, suite *suite.ConformanceTestSuite, ns, app string) *corev1.Pod {
+// readyPodWithIP waits for a running and ready pod with the given app label and an IP, and returns it.
+func readyPodWithIP(t *testing.T, suite *suite.ConformanceTestSuite, ns, app string) *corev1.Pod {
 	var pod *corev1.Pod
 	require.Eventually(t, func() bool {
 		pods := &corev1.PodList{}
@@ -142,14 +172,23 @@ func runningPodWithIP(t *testing.T, suite *suite.ConformanceTestSuite, ns, app s
 		}
 		for i := range pods.Items {
 			p := &pods.Items[i]
-			if p.Status.Phase == corev1.PodRunning && p.Status.PodIP != "" && p.DeletionTimestamp == nil {
+			if p.Status.Phase == corev1.PodRunning && p.Status.PodIP != "" && p.DeletionTimestamp == nil && isPodReady(p) {
 				pod = p
 				return true
 			}
 		}
 		return false
-	}, suite.TimeoutConfig.MaxTimeToConsistency, time.Second, "no running pod for app %s", app)
+	}, suite.TimeoutConfig.MaxTimeToConsistency, time.Second, "no ready pod for app %s", app)
 	return pod
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	for _, c := range pod.Status.Conditions {
+		if c.Type == corev1.PodReady {
+			return c.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
 
 // deploymentForPod returns the Deployment name for a pod name like "<deployment>-<hash>-<id>".
