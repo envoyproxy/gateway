@@ -8,6 +8,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
@@ -105,15 +107,17 @@ func runWeightedBackendTest(t *testing.T, suite *suite.ConformanceTestSuite, gat
 		)
 		// Retry on network errors (e.g. "no route to host" while a newly assigned
 		// LoadBalancer IP is still being announced) instead of failing the test.
-		require.Eventually(t, func() bool {
+		// The first attempt runs immediately, so healthy samples are not delayed.
+		pollErr := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
 			var err error
 			cReq, cResp, err = suite.RoundTripper.CaptureRoundTrip(req)
 			if err != nil {
 				tlog.Logf(t, "failed to capture round trip due to network error: %v, retrying...", err)
-				return false
+				return false, nil
 			}
-			return true
-		}, suite.TimeoutConfig.MaxTimeToConsistency, time.Second)
+			return true, nil
+		})
+		require.NoError(t, pollErr, "failed to get response from %s", gwAddr)
 
 		if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 			t.Errorf("failed to compare request and response: %v", err)
