@@ -1,5 +1,14 @@
 {{- $mode := .Values.dashboard.mode | default "configmap" }}
 {{- if eq $mode "grafana-operator" }}
+{{/* Old releases upgraded with --reuse-values lack these keys. Preserve explicit empty values. */}}
+{{- $folder := "envoy-gateway" }}
+{{- if hasKey .Values.dashboard "folder" }}
+{{- $folder = .Values.dashboard.folder }}
+{{- end }}
+{{- $instanceSelector := dict "matchLabels" (dict "dashboards" "grafana") }}
+{{- if hasKey .Values.dashboard "instanceSelector" }}
+{{- $instanceSelector = .Values.dashboard.instanceSelector }}
+{{- end }}
 {{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
 {{- $dashboardName := $path | base | trimSuffix ".json" }}
 ---
@@ -15,9 +24,9 @@ metadata:
   annotations: {{- $anns | toYaml | nindent 4 }}
 spec:
   allowCrossNamespaceImport: true
-  folder: {{ $.Values.dashboard.folder | quote }}
+  folder: {{ $folder | quote }}
   instanceSelector:
-    {{- $.Values.dashboard.instanceSelector | toYaml | nindent 4 }}
+    {{- $instanceSelector | toYaml | nindent 4 }}
   json: {{ $.Files.Get $path | toJson }}
 {{- end }}
 {{- end }}
