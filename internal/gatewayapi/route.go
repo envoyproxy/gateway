@@ -3413,6 +3413,9 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 	if httpFiltersContext.GRPCJSONTranscoder != nil {
 		return nil, nil, errors.New("grpcJSONTranscoder is not supported in the filters of a backendRef")
 	}
+	if err := validateBackendRefURLRewrite(httpFiltersContext.URLRewrite); err != nil {
+		return nil, nil, err
+	}
 
 	destFilters := buildDestinationFilters(httpFiltersContext)
 	if destFilters == nil {
@@ -3424,6 +3427,37 @@ func (t *Translator) processDestinationFilters(routeType gwapiv1.Kind, backendRe
 		destFilters = &ir.DestinationFilters{}
 	}
 	return destFilters, httpFiltersContext.BackendPriority, nil
+}
+
+// validateBackendRefURLRewrite rejects URL rewrites that a backendRef filter cannot apply.
+// Envoy weighted clusters only support a literal host rewrite, so path rewrites, hostname
+// rewrites derived from a header, the backend or the path, and appending the original host
+// to X-Forwarded-Host would be ignored.
+func validateBackendRefURLRewrite(rewrite *ir.URLRewrite) error {
+	if rewrite == nil {
+		return nil
+	}
+	if rewrite.Path != nil {
+		return errors.New("URLRewrite path modifier is not supported in the filters of a backendRef")
+	}
+	if host := rewrite.Host; host != nil {
+		var hostnameType egv1a1.HTTPHostnameModifierType
+		switch {
+		case host.Header != nil:
+			hostnameType = egv1a1.HeaderHTTPHostnameModifier
+		case host.Backend != nil:
+			hostnameType = egv1a1.BackendHTTPHostnameModifier
+		case host.PathRegex != nil:
+			hostnameType = egv1a1.PathRegexHTTPHostnameModifier
+		}
+		if hostnameType != "" {
+			return fmt.Errorf("URLRewrite hostname modifier of type %s is not supported in the filters of a backendRef", hostnameType)
+		}
+	}
+	if ptr.Deref(rewrite.AppendXForwardedHost, false) {
+		return errors.New("URLRewrite appendXForwardedHost: true is not supported in the filters of a backendRef")
+	}
+	return nil
 }
 
 func buildDestinationFilters(httpFiltersContext *HTTPFiltersContext) *ir.DestinationFilters {
