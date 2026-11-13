@@ -1,0 +1,28 @@
+- ignorePortInHostMatching: true
+  name: http-shifted
+  virtualHosts:
+  - domains:
+    - '*'
+    name: http-shifted/*
+    routes:
+    - match:
+        prefix: /
+      name: http-route
+      route:
+        cluster: http-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: http-not-shifted
+  virtualHosts:
+  - domains:
+    - '*'
+    name: http-not-shifted/*
+    routes:
+    - match:
+        prefix: /
+      name: http-not-shifted-route
+      route:
+        cluster: http-not-shifted-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -24,6 +24,17 @@
         statPrefix: tls-passthrough-10091
     name: tlsroute/default/tlsroute-2
   listenerFilters:
+  - name: envoy.filters.listener.set_filter_state
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.set_filter_state.v3.Config
+      onAccept:
+      - formatString:
+          textFormatSource:
+            inlineString: "91"
+        objectKey: envoy.filters.listener.original_dst.local_port
+  - name: envoy.filters.listener.original_dst
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector

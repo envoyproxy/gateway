@@ -77,10 +77,10 @@ var ForwardProtoConfigTest = suite.ConformanceTest{
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client,
 			suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-		// The http listener redirects to https://www.example.com:443 with PROXY protocol v2 injected by the
-		// BackendTrafficPolicy. The https listener has proxyProtocol.forwardProtoConfig.httpsDestinationPorts=[443],
-		// so Envoy infers x-forwarded-proto=https from the PROXY protocol destination port (443) and the backend
-		// receives that header.
+		// The http listener forwards the request to the https listener over TLS, with a PROXY protocol v2
+		// header injected by the BackendTrafficPolicy. The header's destination is the http listener's port,
+		// 80, and the https listener has proxyProtocol.forwardProtoConfig.httpDestinationPorts=[80], so Envoy
+		// infers x-forwarded-proto=http from it, instead of https from the TLS connection.
 		expectedResponse := httputils.ExpectedResponse{
 			Request: httputils.Request{
 				Path: "/",
@@ -89,7 +89,7 @@ var ForwardProtoConfigTest = suite.ConformanceTest{
 				Request: httputils.Request{
 					Path: "/",
 					Headers: map[string]string{
-						"X-Forwarded-Proto": "https",
+						"X-Forwarded-Proto": "http",
 					},
 				},
 			},

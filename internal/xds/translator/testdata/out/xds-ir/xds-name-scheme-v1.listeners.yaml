@@ -30,6 +30,18 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http1
+  listenerFilters:
+  - name: envoy.filters.listener.set_filter_state
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.set_filter_state.v3.Config
+      onAccept:
+      - formatString:
+          textFormatSource:
+            inlineString: "80"
+        objectKey: envoy.filters.listener.original_dst.local_port
+  - name: envoy.filters.listener.original_dst
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http1
   perConnectionBufferLimitBytes: 32768
@@ -129,6 +141,17 @@
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   listenerFilters:
+  - name: envoy.filters.listener.set_filter_state
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.set_filter_state.v3.Config
+      onAccept:
+      - formatString:
+          textFormatSource:
+            inlineString: "443"
+        objectKey: envoy.filters.listener.original_dst.local_port
+  - name: envoy.filters.listener.original_dst
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
@@ -243,6 +266,18 @@
             tlsMinimumProtocolVersion: TLSv1_2
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
+  listenerFilters:
+  - name: envoy.filters.listener.set_filter_state
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.set_filter_state.v3.Config
+      onAccept:
+      - formatString:
+          textFormatSource:
+            inlineString: "1443"
+        objectKey: envoy.filters.listener.original_dst.local_port
+  - name: envoy.filters.listener.original_dst
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-2/https-http3
   perConnectionBufferLimitBytes: 32768
@@ -272,6 +307,17 @@
         statPrefix: tls-passthrough-10090
     name: tlsroute/default/tlsroute-2
   listenerFilters:
+  - name: envoy.filters.listener.set_filter_state
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.set_filter_state.v3.Config
+      onAccept:
+      - formatString:
+          textFormatSource:
+            inlineString: "90"
+        objectKey: envoy.filters.listener.original_dst.local_port
+  - name: envoy.filters.listener.original_dst
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
@@ -290,6 +336,18 @@
         cluster: tcproute/default/tcproute
         statPrefix: tcp-10091
     name: tcproute/default/tcproute-1
+  listenerFilters:
+  - name: envoy.filters.listener.set_filter_state
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.set_filter_state.v3.Config
+      onAccept:
+      - formatString:
+          textFormatSource:
+            inlineString: "91"
+        objectKey: envoy.filters.listener.original_dst.local_port
+  - name: envoy.filters.listener.original_dst
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/tcp
   perConnectionBufferLimitBytes: 32768
