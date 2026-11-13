@@ -129,9 +129,40 @@ func TestSetEnvoyProxyWarnings(t *testing.T) {
 		assert.Equal(t, string(egv1a1.EnvoyProxyReasonInvalidField), conds[0].Reason)
 	})
 
+	t.Run("sets an UnsupportedField warning for fields that have no effect", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		SetEnvoyProxyWarnings(ep, ancestor, UnsupportedFieldsWarning([]string{"spec.mergeGateways"}))
+
+		require.Len(t, ep.Status.Ancestors, 1)
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, string(EnvoyProxyReasonUnsupportedField), cond.Reason)
+		assert.Equal(t, "The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
+			"set them on the EnvoyProxy referenced by the GatewayClass instead: spec.mergeGateways", cond.Message)
+	})
+
+	t.Run("merges an UnsupportedField warning with the other warnings", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		SetEnvoyProxyWarnings(ep, ancestor, DeprecatedFieldsWarning(map[string]DeprecatedField{
+			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
+		}), PatchDisabledWarning([]string{"spec.provider.kubernetes.envoyDeployment.patch"}),
+			UnsupportedFieldsWarning([]string{"spec.mergeGateways"}))
+
+		require.Len(t, ep.Status.Ancestors, 1)
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, string(egv1a1.EnvoyProxyReasonMultipleWarnings), cond.Reason)
+		assert.Equal(t, "spec.luaValidation is deprecated, use spec.lua.validationType instead; "+
+			"The following patch fields were ignored because patching is disabled in the EnvoyGateway configuration: "+
+			"spec.provider.kubernetes.envoyDeployment.patch; "+
+			"The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, "+
+			"set them on the EnvoyProxy referenced by the GatewayClass instead: spec.mergeGateways", cond.Message)
+	})
+
 	t.Run("no-op when every warning is nil", func(t *testing.T) {
 		ep := &egv1a1.EnvoyProxy{}
-		SetEnvoyProxyWarnings(ep, ancestor, nil, DeprecatedFieldsWarning(nil), InvalidFieldsWarning(nil), PatchDisabledWarning(nil))
+		SetEnvoyProxyWarnings(ep, ancestor, nil, DeprecatedFieldsWarning(nil), InvalidFieldsWarning(nil), PatchDisabledWarning(nil),
+			UnsupportedFieldsWarning(nil))
 		assert.Empty(t, ep.Status.Ancestors)
 	})
 }
@@ -166,4 +197,31 @@ func TestSetEnvoyProxyWarningKeepsLaterWarningWhenFull(t *testing.T) {
 	assert.Len(t, cond.Message, conditionMessageMaxLength)
 	assert.Contains(t, cond.Message, "spec.provider.kubernetes.envoyDeployment.patch")
 	assert.Equal(t, string(egv1a1.EnvoyProxyReasonMultipleWarnings), cond.Reason)
+}
+
+func TestSetEnvoyProxyWarningsKeepsUnsupportedFieldWarningWhenTruncating(t *testing.T) {
+	ancestor := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName("eg")}
+	invalid := make([]validation.InvalidField, 0, 2000)
+	for i := range 2000 {
+		invalid = append(invalid, validation.InvalidField{
+			Path: fmt.Sprintf("telemetry.accessLog.settings[%d].sinks[0]", i),
+			Err:  errors.New("unsupported sink type"),
+		})
+	}
+	unsupportedMsg := "The following fields have no effect on an EnvoyProxy referenced by a Gateway and were ignored, " +
+		"set them on the EnvoyProxy referenced by the GatewayClass instead: spec.mergeGateways"
+
+	ep := &egv1a1.EnvoyProxy{}
+	SetEnvoyProxyWarnings(ep, ancestor,
+		PatchDisabledWarning([]string{"spec.provider.kubernetes.envoyDeployment.patch"}),
+		InvalidFieldsWarning(invalid),
+		UnsupportedFieldsWarning([]string{"spec.mergeGateways"}))
+
+	require.Len(t, ep.Status.Ancestors, 1)
+	cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+	require.NotNil(t, cond)
+	assert.Equal(t, string(egv1a1.EnvoyProxyReasonMultipleWarnings), cond.Reason)
+	assert.LessOrEqual(t, len(cond.Message), conditionMessageMaxLength)
+	assert.Contains(t, cond.Message, conditionMessageTruncationSuffix)
+	assert.True(t, strings.HasSuffix(cond.Message, "; "+unsupportedMsg), "the UnsupportedField warning must be kept in full")
 }

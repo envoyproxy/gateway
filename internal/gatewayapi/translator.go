@@ -724,7 +724,8 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 					t.Logger.Info("Ignoring invalid EnvoyProxy fields", append(logKeysAndValues,
 						"error", errors.Join(fieldErrors(invalidFields)...).Error())...)
 				}
-				t.setEnvoyProxyWarnings(gwEP, ancestor, invalidFields)
+				t.setEnvoyProxyWarnings(gwEP, ancestor, invalidFields,
+					status.UnsupportedFieldsWarning(gatewayUnsupportedFieldsUsedInEnvoyProxy(gwEP, resources.EnvoyProxyForGatewayClass)))
 			}
 		}
 
@@ -744,14 +745,34 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 }
 
 // setEnvoyProxyWarnings sets the Warning condition on the ancestor status of ep, combining
-// every reason the EnvoyProxy is warned about, or removes it when there is none.
-func (t *Translator) setEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, invalidFields []validation.InvalidField) {
+// every reason the EnvoyProxy is warned about, including any extra warnings that only apply where
+// it is referenced, or removes it when there is none.
+func (t *Translator) setEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference,
+	invalidFields []validation.InvalidField, extra ...*status.EnvoyProxyWarning,
+) {
 	warnings := []*status.EnvoyProxyWarning{status.DeprecatedFieldsWarning(deprecatedFieldsUsedInEnvoyProxy(ep))}
 	if t.EnvoyProxyPatchDisabled {
 		warnings = append(warnings, status.PatchDisabledWarning(disabledPatchFieldsUsedInEnvoyProxy(ep)))
 	}
 	warnings = append(warnings, status.InvalidFieldsWarning(invalidFields))
+	warnings = append(warnings, extra...)
 	status.SetEnvoyProxyWarnings(ep, ancestor, warnings...)
+}
+
+// gatewayUnsupportedFieldsUsedInEnvoyProxy returns the fields set on the given EnvoyProxy that
+// only take effect on an EnvoyProxy referenced by a GatewayClass, so callers can surface that
+// they were ignored on an EnvoyProxy referenced by a Gateway. It returns nothing when the
+// GatewayClass references the same EnvoyProxy, because the fields do take effect there.
+func gatewayUnsupportedFieldsUsedInEnvoyProxy(ep, classEP *egv1a1.EnvoyProxy) []string {
+	if classEP != nil && utils.NamespacedName(classEP) == utils.NamespacedName(ep) {
+		return nil
+	}
+	var fields []string
+	// MergeGateways is only read from the GatewayClass's EnvoyProxy, see IsMergeGatewaysEnabled.
+	if ep.Spec.MergeGateways != nil {
+		fields = append(fields, "spec.mergeGateways")
+	}
+	return fields
 }
 
 // validateEnvoyProxy returns the fields of ep that are invalid but can be unset, and an error
