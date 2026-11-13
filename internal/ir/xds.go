@@ -2322,6 +2322,9 @@ func (r *RouteDestination) ClusterPerSettingReasons() []string {
 	if len(r.Settings) > 1 && r.HasPreferLocalZone() {
 		reasons = append(reasons, "backends use preferLocal")
 	}
+	if r.HasCustomBackend() {
+		reasons = append(reasons, "backendRefs have custom backend kind")
+	}
 	if r.HasMixedUpstreamProtocolRequirements() {
 		reasons = append(reasons, "backends require different upstream protocols")
 	}
@@ -2532,6 +2535,15 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	return w
 }
 
+func (r *RouteDestination) HasCustomBackend() bool {
+	for _, s := range r.Settings {
+		if s.IsCustomBackend {
+			return true
+		}
+	}
+	return false
+}
+
 // BackendCluster is a shared, identity-deduplicated backend: exactly one backend identity, one
 // setting. Only ever constructed for genuinely merged backends.
 // +kubebuilder:object:generate=true
@@ -2599,6 +2611,12 @@ type DestinationSetting struct {
 
 	// IsCustomBackend specifies whether the destination is a custom backend.
 	IsCustomBackend bool `json:"isCustomBackend,omitempty" yaml:"isCustomBackend,omitempty"`
+	// TODO: we might want to merge IsDynamicResolver and IsCustomBackend into a single field indicating the type of destination.
+
+	// CustomBackendRef is the custom backend resource this destination was built from.
+	// It is only set when IsCustomBackend is true, and is passed to the extension's cluster hook
+	// only for the cluster built from this destination.
+	CustomBackendRef *UnstructuredRef `json:"customBackendRef,omitempty" yaml:"customBackendRef,omitempty"`
 
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a

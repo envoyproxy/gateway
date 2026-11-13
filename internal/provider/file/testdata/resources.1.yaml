@@ -31,6 +31,9 @@ gateways:
     name: eg-1
     namespace: envoy-gateway-system
   spec:
+    allowedListeners:
+      namespaces:
+        from: Same
     gatewayClassName: eg-1
     listeners:
     - allowedRoutes:
@@ -66,6 +69,27 @@ httpRoutes:
           value: /
   status:
     parents: null
+listenerSets:
+- kind: ListenerSet
+  apiVersion: gateway.networking.k8s.io/v1
+  metadata:
+    creationTimestamp: null
+    name: eg-1-ls
+    namespace: envoy-gateway-system
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      hostname: extra.example.com
+      name: extra
+      port: 9000
+      protocol: HTTP
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg-1
+  status: {}
 namespaces:
 - kind: Namespace
   apiVersion: v1

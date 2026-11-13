@@ -1,0 +1,255 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: eg
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    allowedListeners:
+      namespaces:
+        from: All
+    gatewayClassName: eg
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    attachedListenerSets: 1
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: app
+    namespace: apps
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: apps
+      sectionName: app
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: app
+        port: 80
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: apps
+        sectionName: app
+infraIR:
+  envoy-gateway-system/eg:
+    proxy:
+      listeners:
+      - name: envoy-gateway-system/eg/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      - name: envoy-gateway-system/eg/apps/apps/app
+        ports:
+        - containerPort: 8080
+          name: http-8080
+          protocol: HTTP
+          servicePort: 8080
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: eg
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
+        ownerReference:
+          kind: GatewayClass
+          name: eg
+      name: envoy-gateway-system/eg
+      namespace: envoy-gateway-system
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: apps
+    namespace: apps
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      hostname: app.example.com
+      name: app
+      port: 8080
+      protocol: HTTP
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+      namespace: envoy-gateway-system
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are programmed
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: app
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+xdsIR:
+  envoy-gateway-system/eg:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: eg
+        namespace: envoy-gateway-system
+        sectionName: http
+      name: envoy-gateway-system/eg/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      externalPort: 8080
+      hostnames:
+      - app.example.com
+      metadata:
+        kind: Gateway
+        name: eg
+        namespace: envoy-gateway-system
+        sectionName: app
+      name: envoy-gateway-system/eg/apps/apps/app
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: app
+            namespace: apps
+          name: httproute/apps/app/rule/0
+          settings:
+          - endpoints:
+            - host: 10.0.0.1
+              port: 80
+            metadata:
+              kind: Service
+              name: app
+              namespace: apps
+              sectionName: "80"
+            name: httproute/apps/app/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: app.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: app
+          namespace: apps
+        name: httproute/apps/app/rule/0/match/0/app_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

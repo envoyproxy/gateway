@@ -331,6 +331,29 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 			extraArgs:    []string{"--namespace", "custom-ns"},
 		},
+		{
+			name:   "listenerset",
+			from:   "gateway-api",
+			to:     "gateway-api,ir",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
+			name:         "listenerset",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(RouteEnvoyConfigType),
+			expect:       true,
+		},
+		{
+			name:         "listenerset",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(ListenerEnvoyConfigType),
+			expect:       true,
+		},
 	}
 
 	flag.Parse()

@@ -60,6 +60,7 @@ jobs:
           CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}.yaml
           KIND_NODE_TAG: ${{ matrix.target.version }}
           IMAGE_PULL_POLICY: IfNotPresent
+          E2E_ARTIFACTS_DIR: ${{ github.workspace }}/artifacts/experimental-conformance
         run: make experimental-conformance
 
       - name: Upload Conformance Report
@@ -67,3 +68,11 @@ jobs:
         with:
           name: conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}
           path: ./test/conformance/conformance-report-k8s-${{ matrix.target.version }}-${{ matrix.target.profile }}.yaml
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: experimental-conformance-failure-artifacts-${{ matrix.target.version }}-${{ matrix.target.ipFamily }}-${{ matrix.target.profile }}
+          path: artifacts/experimental-conformance/
+          if-no-files-found: ignore
