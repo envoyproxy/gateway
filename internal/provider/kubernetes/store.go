@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"net"
+	"slices"
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
@@ -34,7 +35,8 @@ func newProviderStore() *kubernetesProviderStore {
 	}
 }
 
-func (p *kubernetesProviderStore) addNode(n *corev1.Node) {
+// addNode adds the node to the store and reports whether its addresses changed.
+func (p *kubernetesProviderStore) addNode(n *corev1.Node) bool {
 	details := nodeDetails{name: n.Name}
 
 	var internalIPs, externalIPs status.NodeAddresses
@@ -65,13 +67,19 @@ func (p *kubernetesProviderStore) addNode(n *corev1.Node) {
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	prev := p.nodes[n.Name]
 	p.nodes[n.Name] = details
+	return !slices.Equal(prev.addresses.IPv4, details.addresses.IPv4) ||
+		!slices.Equal(prev.addresses.IPv6, details.addresses.IPv6)
 }
 
-func (p *kubernetesProviderStore) removeNode(n *corev1.Node) {
+// removeNode removes the node from the store and reports whether it had any addresses.
+func (p *kubernetesProviderStore) removeNode(n *corev1.Node) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	prev := p.nodes[n.Name]
 	delete(p.nodes, n.Name)
+	return len(prev.addresses.IPv4) > 0 || len(prev.addresses.IPv6) > 0
 }
 
 func (p *kubernetesProviderStore) listNodeAddresses() status.NodeAddresses {

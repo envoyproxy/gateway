@@ -210,3 +210,68 @@ func TestRace(t *testing.T) {
 	got := s.listNodeAddresses()
 	require.Empty(t, got)
 }
+
+func TestNodeAddressesChanged(t *testing.T) {
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node1"}}
+	nodeWithAddress := node.DeepCopy()
+	nodeWithAddress.Status.Addresses = []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}}
+
+	testCases := []struct {
+		name      string
+		storeNode *corev1.Node
+		node      *corev1.Node
+		remove    bool
+		expect    bool
+	}{
+		{
+			name:   "add node without addresses",
+			node:   node,
+			expect: false,
+		},
+		{
+			name:   "add node with an address",
+			node:   nodeWithAddress,
+			expect: true,
+		},
+		{
+			name:      "address set",
+			storeNode: node,
+			node:      nodeWithAddress,
+			expect:    true,
+		},
+		{
+			name:      "address unchanged",
+			storeNode: nodeWithAddress,
+			node:      nodeWithAddress,
+			expect:    false,
+		},
+		{
+			name:      "remove node with an address",
+			storeNode: nodeWithAddress,
+			node:      nodeWithAddress,
+			remove:    true,
+			expect:    true,
+		},
+		{
+			name:      "remove node without addresses",
+			storeNode: node,
+			node:      node,
+			remove:    true,
+			expect:    false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newProviderStore()
+			if tc.storeNode != nil {
+				store.addNode(tc.storeNode)
+			}
+			if tc.remove {
+				assert.Equal(t, tc.expect, store.removeNode(tc.node))
+			} else {
+				assert.Equal(t, tc.expect, store.addNode(tc.node))
+			}
+		})
+	}
+}

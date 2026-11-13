@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
@@ -21,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -1001,6 +1003,19 @@ func (r *gatewayAPIReconciler) updateGatewayStatus(gateway *gwapiv1.Gateway) {
 	r.resources.GatewayStatuses.Store(gwName, status)
 }
 
+// nodeAddressesChangedPredicate filters out Node updates that don't change the node addresses.
+// GenerationChangedPredicate can't be used since Nodes have no generation.
+func nodeAddressesChangedPredicate() predicate.TypedPredicate[*corev1.Node] {
+	return predicate.TypedFuncs[*corev1.Node]{
+		UpdateFunc: func(e event.TypedUpdateEvent[*corev1.Node]) bool {
+			if e.ObjectOld == nil || e.ObjectNew == nil {
+				return false
+			}
+			return !slices.Equal(e.ObjectOld.Status.Addresses, e.ObjectNew.Status.Addresses)
+		},
+	}
+}
+
 func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
 	ctx := context.Background()
 	node, ok := obj.(*corev1.Node)
@@ -1012,15 +1027,47 @@ func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
 	key := types.NamespacedName{Name: node.Name}
 	if err := r.client.Get(ctx, key, node); err != nil {
 		if kerrors.IsNotFound(err) {
-			r.store.removeNode(node)
+			if r.store.removeNode(node) {
+				r.updateStatusForNodePortGateways(ctx)
+			}
 			return true
 		}
 		r.log.Error(err, "unable to find node", "name", node.Name)
 		return false
 	}
 
-	r.store.addNode(node)
+	if r.store.addNode(node) {
+		r.updateStatusForNodePortGateways(ctx)
+	}
 	return true
+}
+
+// updateStatusForNodePortGateways updates the status of the Gateways exposed by a NodePort Service,
+// since their addresses are the node addresses.
+func (r *gatewayAPIReconciler) updateStatusForNodePortGateways(ctx context.Context) {
+	services := new(corev1.ServiceList)
+	if err := r.client.List(ctx, services); err != nil {
+		r.log.Error(err, "unable to list services")
+		return
+	}
+
+	for i := range services.Items {
+		svc := &services.Items[i]
+		if svc.Spec.Type != corev1.ServiceTypeNodePort {
+			continue
+		}
+		labels := svc.GetLabels()
+		if gtw := r.findOwningGateway(ctx, labels); gtw != nil {
+			r.updateGatewayStatus(gtw)
+			continue
+		}
+		// Merged gateways will have only this label, update status of all Gateways under found GatewayClass.
+		if gcName, ok := labels[gatewayapi.OwningGatewayClassLabel]; ok && r.isGatewayClassMerged(gcName) {
+			if err := r.updateStatusForGatewaysUnderGatewayClass(ctx, gcName); err != nil {
+				r.log.Info("no Gateways found under GatewayClass", "name", gcName)
+			}
+		}
+	}
 }
 
 // validateConfigMapForReconcile checks whether the ConfigMap belongs to a valid EG resource.
