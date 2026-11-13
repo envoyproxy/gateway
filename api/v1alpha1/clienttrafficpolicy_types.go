@@ -209,7 +209,48 @@ type HeaderSettings struct {
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	MaxRequestHeaderLimit *resource.Quantity `json:"maxRequestHeaderLimit,omitempty"`
+
+	// ServerHeader configures how the Server response header is handled.
+	// If not set, the Server header is passed through untouched, which hides Envoy from it.
+	//
+	// +optional
+	ServerHeader *ServerHeader `json:"serverHeader,omitempty"`
 }
+
+// ServerHeader configures how the Server response header is handled.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.value) ? self.type in ['Overwrite', 'AppendIfAbsent'] : true",message="value can only be set when type is Overwrite or AppendIfAbsent."
+type ServerHeader struct {
+	// Type determines how the Server response header is handled, mapping to the Envoy
+	// `server_header_transformation` HTTP connection manager setting.
+	Type ServerHeaderTransformation `json:"type"`
+
+	// Value is the value written to the Server response header, mapping to the Envoy
+	// `server_name` HTTP connection manager setting. It only takes effect when
+	// Type is set to Overwrite or AppendIfAbsent.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern="^[!-~]([ \t!-~]*[!-~])?$"
+	// +optional
+	Value *string `json:"value,omitempty"`
+}
+
+// ServerHeaderTransformation determines how the Server response header is handled.
+// +kubebuilder:validation:Enum=Overwrite;AppendIfAbsent;PassThrough
+type ServerHeaderTransformation string
+
+const (
+	// ServerHeaderTransformationOverwrite overwrites any Server header with the configured
+	// Value.
+	ServerHeaderTransformationOverwrite ServerHeaderTransformation = "Overwrite"
+	// ServerHeaderTransformationAppendIfAbsent sets the Server header to the configured
+	// Value if the response does not already carry one.
+	ServerHeaderTransformationAppendIfAbsent ServerHeaderTransformation = "AppendIfAbsent"
+	// ServerHeaderTransformationPassThrough leaves the Server header untouched. This is the
+	// default.
+	ServerHeaderTransformationPassThrough ServerHeaderTransformation = "PassThrough"
+)
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
 // is encountered.
