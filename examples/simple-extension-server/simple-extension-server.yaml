@@ -64,6 +64,10 @@ spec:
         - name: gateway-simple-extension-server
           image: envoyproxy/gateway-simple-extension-server:latest
           imagePullPolicy: IfNotPresent
+          args:
+            - server
+            # Only takes effect when the Cluster hook and InferencePool backendResources are configured.
+            - --inference-pool
           ports:
             - name: grpc-gw-ext
               containerPort: 5005
