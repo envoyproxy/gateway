@@ -1,0 +1,150 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-2
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-routing
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    routingType: Endpoint
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: http-1-routing
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-1
+    routingType: Service
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: pinned-rule-routing
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+      sectionName: pinned
+    routingType: Endpoint
+httpRoutes:
+# Omits sectionName: http-1 gets its own Service-routed backends and mirror, http-2 keeps
+# the Gateway's Endpoint routing and the existing names.
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: /weighted
+      filters:
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            name: service-3
+            port: 8080
+      backendRefs:
+      - name: service-1
+        port: 8080
+        weight: 2
+      - name: service-2
+        port: 8080
+        weight: 3
+# One parentRef per listener: each parentRef resolves its own listener's routing and keeps
+# the plain name, as before. Known limitation, unchanged from main: both parentRefs share one
+# cluster name, and only the first one's endpoints reach Envoy.
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http-1
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http-2
+    rules:
+    - matches:
+      - path:
+          value: /explicit
+      backendRefs:
+      - name: service-4
+        port: 8080
+# A rule-level policy overrides the listener for every listener alike.
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - name: pinned
+      matches:
+      - path:
+          value: /pinned
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - name: inherited
+      matches:
+      - path:
+          value: /inherited
+      backendRefs:
+      - name: service-2
+        port: 8080
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    hostnames:
+    - grpc.example.com
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
