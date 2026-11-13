@@ -1,0 +1,178 @@
+securityPolicies:
+# this policy status
+# - Accepted: true
+# - Merged: true
+#   - default/route-merge
+# - Overridden: true
+#   - envoy-gateway/gateway-1/http-8080
+#   - default/route
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    cors:
+      allowOrigins:
+      - "https://gateway.example.com"
+# this policy status
+# - Accepted: true
+# - Merged: true
+#   - default/route-merge
+# - Overridden: true
+#   - default/route
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-listener
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-8080
+    cors:
+      allowOrigins:
+      - "https://listener.example.com"
+# this policy status
+# - Accepted: true on gateway-1 port 80 and on gateway-1 port 8080
+# - Merged: true
+#   - envoy-gateway/policy-for-gateway on gateway-1/http (through the port 80 parentRef)
+#   - envoy-gateway/policy-for-listener on gateway-1/http-8080 (through the port 8080 parentRef)
+# The parentRefs differ only by port, so each of them gets its own ancestor.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-merge
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: route-merge
+    cors:
+      allowOrigins:
+      - "https://route.example.com"
+# this policy status
+# - Accepted: true on gateway-1 port 80, gateway-1 port 8080, ext-listeners port 8081 and ext-listeners port 8082
+# The parentRefs differ only by port, so each of them gets its own ancestor.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: route
+    cors:
+      allowOrigins:
+      - "https://route.example.com"
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-merge
+  spec:
+    hostnames:
+    - merge.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      port: 80
+    - namespace: envoy-gateway
+      name: gateway-1
+      port: 8080
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route
+  spec:
+    hostnames:
+    - route.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      port: 80
+    - namespace: envoy-gateway
+      name: gateway-1
+      port: 8080
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+      port: 8081
+    - namespace: envoy-gateway
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+      name: ext-listeners
+      port: 8082
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-8080
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: gateway-1
+    listeners:
+    - name: ext-http-1
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: ext-http-2
+      protocol: HTTP
+      port: 8082
+      allowedRoutes:
+        namespaces:
+          from: All
