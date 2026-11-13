@@ -93,7 +93,7 @@ var ScaleHTTPRoutes = suite.BenchmarkTest{
 								Response: http.Response{
 									StatusCodes: []int{200},
 								},
-							}, bSuite.TimeoutConfig.RequiredConsecutiveSuccesses, bSuite.TimeoutConfig.MaxTimeToConsistency)
+							}, bSuite.TimeoutConfig)
 
 							d := time.Since(applyAt)
 							convergenceTimeByHost[host] = d

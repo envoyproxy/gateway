@@ -60,9 +60,9 @@ grpcRoutes:
           type: Exact
       sessionPersistence:
         absoluteTimeout: 10s
-        cookieConfig:
+        cookie:
           lifetimeType: Permanent
-        sessionName: Session-A
+          name: Session-A
         type: Cookie
   status:
     parents:

@@ -17,8 +17,8 @@
 
 set -euo pipefail
 
-: "${GATEWAY_API_VERSION:=v1.6.1}"
-: "${GATEWAY_API_MINOR_VERSION:=1.6}"
+: "${GATEWAY_API_VERSION:=v1.7.0}"
+: "${GATEWAY_API_MINOR_VERSION:=1.7}"
 : "${RAW_BASE_URL:=https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/${GATEWAY_API_VERSION}}"
 : "${DOC_SRC_PATH:=site/content/en/reference/api-types}"
 : "${DOC_DEST_DIR:=site/content/en/latest/api/gateway_api}"

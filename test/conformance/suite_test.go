@@ -9,6 +9,7 @@
 package conformance
 
 import (
+	"slices"
 	"testing"
 
 	"sigs.k8s.io/gateway-api/pkg/features"
@@ -37,13 +38,13 @@ func TestEnvoyGatewaySuite(t *testing.T) {
 		t.Run(tc.name, func(*testing.T) {
 			got := EnvoyGatewaySuite(tc.gatewayNamespaceMode, tc.standardChannel)
 			for _, in := range tc.includedFeatures {
-				if !got.SupportedFeatures.Has(in) {
+				if !slices.Contains(got.SupportedFeatures, in) {
 					t.Fatalf("%s should be included", in)
 				}
 			}
 
 			for _, in := range tc.excludedFeatures {
-				if got.SupportedFeatures.Has(in) {
+				if slices.Contains(got.SupportedFeatures, in) {
 					t.Fatalf("%s should be excluded", in)
 				}
 			}
