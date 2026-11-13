@@ -1,0 +1,1 @@
+Fixed ClusterTrustBundle references failing on Kubernetes 1.37+, where only `certificates.k8s.io/v1` is served. Envoy Gateway now prefers `certificates.k8s.io/v1` and falls back to `certificates.k8s.io/v1beta1` on older clusters. Updates to a referenced ClusterTrustBundle's `trustBundle`, such as CA rotation, now trigger a reconcile.

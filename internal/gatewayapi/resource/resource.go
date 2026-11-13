@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -74,7 +74,7 @@ type Resources struct {
 	Backends                []*egv1a1.Backend              `json:"backends,omitempty" yaml:"backends,omitempty"`
 	HTTPRouteFilters        []*egv1a1.HTTPRouteFilter      `json:"httpFilters,omitempty" yaml:"httpFilters,omitempty"`
 
-	ClusterTrustBundles []*certificatesv1b1.ClusterTrustBundle `json:"clusterTrustBundles,omitempty" yaml:"clusterTrustBundles,omitempty"`
+	ClusterTrustBundles []*certificatesv1.ClusterTrustBundle `json:"clusterTrustBundles,omitempty" yaml:"clusterTrustBundles,omitempty"`
 }
 
 func NewResources() *Resources {

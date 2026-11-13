@@ -7,7 +7,7 @@ package test
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -471,12 +471,12 @@ func GetHTTPRouteFilter(nsName types.NamespacedName) *egv1a1.HTTPRouteFilter {
 	}
 }
 
-func GetClusterTrustBundle(name string) *certificatesv1b1.ClusterTrustBundle {
-	return &certificatesv1b1.ClusterTrustBundle{
+func GetClusterTrustBundle(name string) *certificatesv1.ClusterTrustBundle {
+	return &certificatesv1.ClusterTrustBundle{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: certificatesv1b1.ClusterTrustBundleSpec{
+		Spec: certificatesv1.ClusterTrustBundleSpec{
 			TrustBundle: "fake-trust-bundle",
 		},
 	}
