@@ -90,6 +90,7 @@ type xdsClusterArgs struct {
 	dns               *ir.DNS
 	admissionControl  *ir.AdmissionControl
 	useClientProtocol bool
+	strictSession     bool
 	ipFamily          *egv1a1.IPFamily
 	metadata          *ir.ResourceMetadata
 	statName          *string
@@ -260,6 +261,18 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 	if args.statName != nil {
 		cluster.AltStatName = *args.statName
+	}
+	if args.strictSession {
+		// Preserve Envoy's default override states and let existing sessions finish
+		// on draining endpoints. Ordinary load balancing still excludes them.
+		cluster.CommonLbConfig.OverrideHostStatus = &corev3.HealthStatusSet{
+			Statuses: []corev3.HealthStatus{
+				corev3.HealthStatus_UNKNOWN,
+				corev3.HealthStatus_HEALTHY,
+				corev3.HealthStatus_DEGRADED,
+				corev3.HealthStatus_DRAINING,
+			},
+		}
 	}
 
 	// 50% is the Envoy default value for panic threshold. No need to explicitly set it in this case.
@@ -1792,6 +1805,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	}
 
 	applyTraffic(clusterArgs, httpRoute.Traffic.ClusterFeatures())
+	clusterArgs.strictSession = httpRoute.SessionPersistence != nil && httpRoute.SessionPersistence.Strict
 
 	return clusterArgs
 }

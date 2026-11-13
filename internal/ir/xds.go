@@ -1252,6 +1252,9 @@ type DNS struct {
 // SessionPersistence defines the desired state of SessionPersistence.
 // +k8s:deepcopy-gen=true
 type SessionPersistence struct {
+	// Strict fails requests when their session destination is unavailable instead
+	// of selecting another endpoint.
+	Strict bool `json:"strict,omitempty" yaml:"strict,omitempty"`
 	// Cookie defines the configuration for cookie-based session persistence.
 	// Either Cookie or Header must be non-empty.
 	Cookie *CookieBasedSessionPersistence `json:"cookie,omitempty" yaml:"cookie,omitempty"`

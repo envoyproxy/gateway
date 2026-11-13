@@ -3640,6 +3640,7 @@ _Appears in:_
 | `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
 | `requestMirror` | _[HTTPRequestMirrorFilter](#httprequestmirrorfilter)_ |  false  |  | RequestMirror defines configuration for request mirroring modifiers.<br />This configuration works together with the Gateway API RequestMirror filter<br />on the attached HTTPRoute rule. |
 | `grpcJSONTranscoder` | _[GRPCJSONTranscoder](#grpcjsontranscoder)_ |  false  |  | GRPCJSONTranscoder converts a JSON/HTTP request to a gRPC request, and the gRPC<br />response back to JSON.<br />It can only be used in the rule filters of an HTTPRoute. It is not supported in a<br />GRPCRoute or in the filters of a backendRef. |
+| `sessionPersistence` | _[HTTPSessionPersistenceFilter](#httpsessionpersistencefilter)_ |  false  |  | SessionPersistence extends the session persistence settings of an HTTPRoute or<br />GRPCRoute rule. The same rule must configure SessionPersistence. This filter is<br />not supported on backend references. |
 | `matches` | _[HTTPRouteMatchFilter](#httproutematchfilter) array_ |  false  |  | Matches defines additional matching criteria for the HTTPRoute rule.<br />As with HTTPRouteRule.Matches, the rule is matched if any one match applies.<br />When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the<br />effective matching is the logical AND of the two sets. |
 | `backendPriority` | _integer_ |  false  |  | BackendPriority sets the Envoy locality priority of the endpoints belonging to the<br />backendRef this filter is attached to, enabling priority-based failover between the<br />backendRefs of a single route rule. 0 is the highest priority.<br />Envoy sends traffic to the lowest priority value that has enough healthy endpoints,<br />and only spills over to the next value as that health degrades. It is highly<br />recommended to configure active or passive health checks so that failover can be<br />detected when the higher priority backends become unhealthy.<br />This overrides the priority derived from the referenced Backend's fallback field.<br />For additional details, see<br />https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/priority<br />This filter is only valid when referenced from a backendRef's filters. Referencing it<br />from a route rule's filters is rejected: a rule-level filter applies uniformly to every<br />backendRef of the rule, and a uniform priority carries no failover meaning. |
 
@@ -3657,6 +3658,20 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `cookies` | _[HTTPCookieMatch](#httpcookiematch) array_ |  true  |  | Cookies is a list of cookie matchers evaluated against the HTTP request.<br />All specified matchers must match. |
+
+
+#### HTTPSessionPersistenceFilter
+
+
+
+HTTPSessionPersistenceFilter extends Gateway API session persistence.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `strict` | _boolean_ |  false  |  | Strict keeps an existing session on its destination. If the destination is<br />unavailable, it returns HTTP 503 or gRPC UNAVAILABLE instead of falling back<br />to another endpoint. Existing sessions can continue on draining endpoints<br />in per-rule clusters. Merged backend clusters use their default override<br />eligibility.<br />Defaults to false, which allows load balancing to select another endpoint. |
 
 
 #### HTTPStatus

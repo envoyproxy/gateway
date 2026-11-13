@@ -86,6 +86,9 @@ func buildHCMStatefulSessionFilter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, erro
 		return nil, fmt.Errorf("failed to build stateful session filter config: %w",
 			err)
 	}
+	// Strict belongs to the per-route override. Keep the disabled listener default
+	// independent of the first route's setting to avoid unnecessary LDS changes.
+	statefulSessionProto.Strict = false
 	statefulSessionAny, err := proto.ToAnyWithValidation(statefulSessionProto)
 	if err != nil {
 		return nil, err
@@ -140,6 +143,7 @@ func buildStatefulSessionFilterConfig(route *ir.HTTPRoute) (*statefulsessionv3.S
 	}
 
 	return &statefulsessionv3.StatefulSession{
+		Strict: sp.Strict,
 		SessionState: &corev3.TypedExtensionConfig{
 			Name:        configName,
 			TypedConfig: sessionCfgAny,
