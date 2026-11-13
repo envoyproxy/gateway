@@ -64,7 +64,7 @@ helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version 
 ```
 
 The selector supports both `matchLabels` and `matchExpressions`; all requirements must match.
-Helm merges maps with defaults. To use only expressions, set `dashboard.instanceSelector.matchLabels: null`.
+The template merges selector maps with defaults. To use only expressions, set `dashboard.instanceSelector.matchLabels: null`.
 Dashboards may be imported into matching instances in other namespaces.
 Switching `dashboard.mode` does not disable the bundled Grafana; set `grafana.enabled: false` explicitly.
 
