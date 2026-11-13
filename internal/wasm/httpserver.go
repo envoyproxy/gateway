@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -75,6 +76,7 @@ type HTTPServer struct {
 	server *http.Server
 	// The namespace where the Envoy Gateway is running.
 	controllerNamespace string
+	dnsDomain           string
 	// logger
 	logger logging.Logger
 }
@@ -98,7 +100,10 @@ type wasmModuleEntry struct {
 // NewHTTPServerWithFileCache creates a HTTP server with a local file cache for Wasm modules.
 // The local file cache is used to store the Wasm modules downloaded from the original URL.
 // The HTTP server serves the cached Wasm modules over HTTP to the Envoy Proxies.
-func NewHTTPServerWithFileCache(serverOptions ServerOptions, cacheOptions CacheOptions, controllerNamespace string, logger logging.Logger) *HTTPServer {
+func NewHTTPServerWithFileCache(serverOptions ServerOptions, cacheOptions CacheOptions, controllerNamespace, dnsDomain string, logger logging.Logger) *HTTPServer {
+	if dnsDomain == "" {
+		dnsDomain = config.DefaultDNSDomain
+	}
 	logger = logger.WithName("wasm-cache")
 	serverOptions.setDefault()
 	return &HTTPServer{
@@ -107,6 +112,7 @@ func NewHTTPServerWithFileCache(serverOptions ServerOptions, cacheOptions CacheO
 		failedAttempts:      make(map[string]attemptEntry),
 		cache:               newLocalFileCache(cacheOptions, logger),
 		controllerNamespace: controllerNamespace,
+		dnsDomain:           dnsDomain,
 		logger:              logger,
 	}
 }
@@ -219,7 +225,7 @@ func (s *HTTPServer) Get(originalURL string, opts *GetOptions) (servingURL, chec
 	if s.enableTLS() {
 		scheme = "https"
 	}
-	serverHostFQDN := fmt.Sprintf("%s.%s.svc.cluster.local", serverHost, s.controllerNamespace)
+	serverHostFQDN := fmt.Sprintf("%s.%s.svc.%s", serverHost, s.controllerNamespace, s.dnsDomain)
 	servingURL = fmt.Sprintf("%s://%s:%d/%s", scheme, serverHostFQDN, serverPort, mappingPath)
 	return servingURL, checksum, nil
 }
