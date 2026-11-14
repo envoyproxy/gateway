@@ -91,6 +91,21 @@ spec:
           port: 8000
 ---
 apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: extra
+  namespace: default
+spec:
+  parentRef:
+    name: eg
+    namespace: envoy-gateway-system
+  listeners:
+    - name: extra
+      protocol: HTTP
+      port: 8080
+      hostname: extra.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: backend

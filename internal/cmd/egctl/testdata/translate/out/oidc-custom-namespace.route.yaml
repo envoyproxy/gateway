@@ -1,0 +1,216 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: eg
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: eg
+    namespace: default
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: backend
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 80
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: eg
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: oidc
+    namespace: default
+  spec:
+    oidc:
+      clientID: client-id
+      clientSecret:
+        group: ""
+        kind: Secret
+        name: client-secret
+      provider:
+        authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
+        issuer: https://accounts.google.com
+        tokenEndpoint: https://oauth2.googleapis.com/token
+      redirectURL: https://www.example.com/oauth2/callback
+      refreshToken: true
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: eg
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+xds:
+  default/eg:
+    '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+    dynamicRouteConfigs:
+    - routeConfig:
+        '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+        ignorePortInHostMatching: true
+        name: default/eg/http
+        virtualHosts:
+        - domains:
+          - www.example.com
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: Gateway
+                  name: eg
+                  namespace: default
+                  sectionName: http
+          name: default/eg/http/www_example_com
+          routes:
+          - match:
+              prefix: /
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: HTTPRoute
+                    name: backend
+                    namespace: default
+            name: httproute/default/backend/rule/0/match/0/www_example_com
+            route:
+              cluster: httproute/default/backend/rule/0
+              upgradeConfigs:
+              - upgradeType: websocket
+            typedPerFilterConfig:
+              envoy.filters.http.oauth2:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
+                config:
+                  authScopes:
+                  - openid
+                  authType: BASIC_AUTH
+                  authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
+                  cookieConfigs:
+                    codeVerifierCookieConfig:
+                      path: /oauth2/callback
+                    oauthNonceCookieConfig:
+                      path: /oauth2/callback
+                  credentials:
+                    clientId: client-id
+                    cookieNames:
+                      bearerToken: AccessToken-811c9dc5
+                      codeVerifier: CodeVerifier-811c9dc5
+                      idToken: IdToken-811c9dc5
+                      oauthExpires: OauthExpires-811c9dc5
+                      oauthHmac: OauthHMAC-811c9dc5
+                      oauthNonce: OauthNonce-811c9dc5
+                      refreshToken: RefreshToken-811c9dc5
+                    hmacSecret:
+                      name: oauth2/hmac_secret/securitypolicy/default/oidc
+                      sdsConfig:
+                        ads: {}
+                        resourceApiVersion: V3
+                    tokenSecret:
+                      name: oauth2/client_secret/securitypolicy/default/oidc
+                      sdsConfig:
+                        ads: {}
+                        resourceApiVersion: V3
+                  preserveAuthorizationHeader: true
+                  redirectPathMatcher:
+                    path:
+                      exact: /oauth2/callback
+                  redirectUri: https://www.example.com/oauth2/callback
+                  signoutPath:
+                    path:
+                      exact: /logout
+                  statPrefix: securitypolicy/default/oidc
+                  tokenCookieChunking: {}
+                  tokenEndpoint:
+                    cluster: oauth2_googleapis_com_443
+                    timeout: 10s
+                    uri: https://oauth2.googleapis.com/token
+                  useRefreshToken: true
