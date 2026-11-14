@@ -21,6 +21,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -55,7 +56,7 @@ func NewOfflineGatewayAPIController(
 		extSecretGVKs          []schema.GroupVersionKind
 	)
 
-	extensionManagers := cfg.EnvoyGateway.GetExtensionManagers()
+	extensionManagers := apihelpers.GetExtensionManagers(&cfg.EnvoyGateway.EnvoyGatewaySpec)
 	for i := range extensionManagers {
 		em := &extensionManagers[i]
 		for _, rsrc := range em.Resources {
@@ -77,7 +78,7 @@ func NewOfflineGatewayAPIController(
 	}
 	allExtensions := slices.Concat(extGVKs, extServerPoliciesGVKs, extBackendPoliciesGVKs, extSecretGVKs)
 
-	cli := newOfflineGatewayAPIClient(allExtensions, cfg.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EndpointSliceIndex))
+	cli := newOfflineGatewayAPIClient(allExtensions, apihelpers.IsRuntimeFlagEnabled(cfg.EnvoyGateway.RuntimeFlags, egv1a1.EndpointSliceIndex))
 
 	// Seed the fake client with the secrets that the CertGen job would create
 	// in Kubernetes mode. This prevents spurious errors during reconciliation

@@ -15,6 +15,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 var inPath = "./testdata/decoder/in/"
@@ -33,7 +34,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
@@ -46,7 +47,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 				},
 			},
 			expect: true,
@@ -59,8 +60,8 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
@@ -73,7 +74,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
@@ -86,7 +87,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 				},
 			},
 			expect: true,
@@ -99,8 +100,8 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Gateway:  egv1a1.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
 				},
 			},
 			expect: false,
@@ -113,8 +114,8 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Gateway:  egv1a1.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
 				},
 			},
 			expect: false,
@@ -127,13 +128,13 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 							EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
 								RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-									Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+									Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 									Container: &egv1a1.KubernetesContainerSpec{
 										Env: []corev1.EnvVar{
 											{
@@ -146,7 +147,7 @@ func TestDecode(t *testing.T) {
 											},
 										},
 										Image:     new("envoyproxy/ratelimit:latest"),
-										Resources: egv1a1.DefaultResourceRequirements(),
+										Resources: apihelpers.DefaultResourceRequirements(),
 										SecurityContext: &corev1.SecurityContext{
 											RunAsUser:                new(int64(2000)),
 											AllowPrivilegeEscalation: new(false),
@@ -193,8 +194,8 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					Gateway:  egv1a1.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
 					RateLimit: &egv1a1.RateLimit{
 						Timeout:    new(gwapiv1.Duration("10ms")),
 						FailClosed: true,
@@ -220,7 +221,7 @@ func TestDecode(t *testing.T) {
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 					},
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Logging: &egv1a1.EnvoyGatewayLogging{
 						Level: map[egv1a1.EnvoyGatewayLogComponent]egv1a1.LogLevel{
 							egv1a1.LogComponentGatewayDefault: egv1a1.LogLevelInfo,
@@ -252,7 +253,7 @@ func TestDecode(t *testing.T) {
 							},
 						},
 					},
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 				},
 			},
 			expect: true,
@@ -290,7 +291,7 @@ func TestDecode(t *testing.T) {
 							},
 						},
 					},
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 				},
 			},
 			expect: true,
@@ -331,7 +332,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -357,7 +358,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
@@ -396,7 +397,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway: egv1a1.DefaultGateway(),
+					Gateway: apihelpers.DefaultGateway(),
 					Provider: &egv1a1.EnvoyGatewayProvider{
 						Type: egv1a1.ProviderTypeCustom,
 						Custom: &egv1a1.EnvoyGatewayCustomProvider{
@@ -414,7 +415,7 @@ func TestDecode(t *testing.T) {
 							},
 						},
 					},
-					Logging: egv1a1.DefaultEnvoyGatewayLogging(),
+					Logging: apihelpers.DefaultEnvoyGatewayLogging(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Resources: []egv1a1.GroupVersionKind{
 							{

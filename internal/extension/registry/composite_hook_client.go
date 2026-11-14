@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -168,16 +169,16 @@ func (c *compositeXDSHookClient) PostTranslateModifyHook(
 		var entrySecrets []*tls.Secret
 		var entryListeners []*listener.Listener
 		var entryRoutes []*route.RouteConfiguration
-		if tc.ShouldIncludeClusters() {
+		if apihelpers.ShouldIncludeClusters(tc) {
 			entryClusters = currentClusters
 		}
-		if tc.ShouldIncludeSecrets() {
+		if apihelpers.ShouldIncludeSecrets(tc) {
 			entrySecrets = currentSecrets
 		}
-		if tc.ShouldIncludeListeners() {
+		if apihelpers.ShouldIncludeListeners(tc) {
 			entryListeners = currentListeners
 		}
-		if tc.ShouldIncludeRoutes() {
+		if apihelpers.ShouldIncludeRoutes(tc) {
 			entryRoutes = currentRoutes
 		}
 
@@ -192,16 +193,16 @@ func (c *compositeXDSHookClient) PostTranslateModifyHook(
 		}
 
 		// Only take back resource types the extension declared interest in
-		if tc.ShouldIncludeClusters() {
+		if apihelpers.ShouldIncludeClusters(tc) {
 			currentClusters = rc
 		}
-		if tc.ShouldIncludeSecrets() {
+		if apihelpers.ShouldIncludeSecrets(tc) {
 			currentSecrets = rs
 		}
-		if tc.ShouldIncludeListeners() {
+		if apihelpers.ShouldIncludeListeners(tc) {
 			currentListeners = rl
 		}
-		if tc.ShouldIncludeRoutes() {
+		if apihelpers.ShouldIncludeRoutes(tc) {
 			currentRoutes = rr
 		}
 	}

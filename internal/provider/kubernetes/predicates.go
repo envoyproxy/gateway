@@ -26,6 +26,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -1214,7 +1215,7 @@ func (r *gatewayAPIReconciler) isNodePortLocalEnvoyService(namespace, name strin
 // isProxyServiceCluster returns true if the provided labels reference an owning Gateway or GatewayClass
 func (r *gatewayAPIReconciler) isProxyServiceCluster(labels map[string]string) bool {
 	// Skip processing if topology injector is disabled
-	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
+	if r.envoyGateway != nil && apihelpers.TopologyInjectorDisabled(r.envoyGateway) {
 		return false
 	}
 

@@ -33,6 +33,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -161,7 +162,7 @@ func (t *Translator) xdsNameSchemeV2() bool {
 	if t.RuntimeFlags == nil {
 		return false
 	}
-	return t.RuntimeFlags.IsEnabled(egv1a1.XDSNameSchemeV2)
+	return apihelpers.IsRuntimeFlagEnabled(t.RuntimeFlags, egv1a1.XDSNameSchemeV2)
 }
 
 // clusterHTTP1Settings returns the http1 settings to seed into backend clusters.
@@ -178,7 +179,7 @@ func (t *Translator) clusterHTTP1Settings(s *ir.HTTP1Settings) *ir.HTTP1Settings
 	if s == nil {
 		return nil
 	}
-	if t.RuntimeFlags != nil && t.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly) {
+	if t.RuntimeFlags != nil && apihelpers.IsRuntimeFlagEnabled(t.RuntimeFlags, egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly) {
 		return nil
 	}
 	// Strip listener-only fields; keep only cluster-relevant ones.

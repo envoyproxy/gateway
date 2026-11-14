@@ -13,6 +13,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -122,8 +123,8 @@ func TestValidate(t *testing.T) {
 			cfg: &Server{
 				EnvoyGateway: &egv1a1.EnvoyGateway{
 					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-						Gateway:  egv1a1.DefaultGateway(),
-						Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+						Gateway:  apihelpers.DefaultGateway(),
+						Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					},
 				},
 				ControllerNamespace: "",
@@ -143,8 +144,8 @@ func TestValidate(t *testing.T) {
 			cfg: &Server{
 				EnvoyGateway: &egv1a1.EnvoyGateway{
 					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-						Gateway:  egv1a1.DefaultGateway(),
-						Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+						Gateway:  apihelpers.DefaultGateway(),
+						Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 						EnvoyProxy: &egv1a1.EnvoyProxySpec{
 							Bootstrap: &egv1a1.ProxyBootstrap{
 								Value: &differentXdsClusterAddressBootstrap,
@@ -166,8 +167,8 @@ func TestValidate(t *testing.T) {
 			cfg: &Server{
 				EnvoyGateway: &egv1a1.EnvoyGateway{
 					EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-						Gateway:  egv1a1.DefaultGateway(),
-						Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+						Gateway:  apihelpers.DefaultGateway(),
+						Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 						EnvoyProxy: &egv1a1.EnvoyProxySpec{
 							MergeGateways: new(true),
 							MergeBackends: &egv1a1.MergeBackendsConfig{},

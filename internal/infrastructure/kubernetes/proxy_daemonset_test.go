@@ -17,6 +17,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -67,8 +68,8 @@ func setupCreateOrUpdateProxyDaemonSet(t *testing.T, gatewayNamespaceMode bool) 
 				Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 					// Use daemonset, instead of deployment.
-					EnvoyDaemonSet: egv1a1.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage),
-					EnvoyService:   egv1a1.DefaultKubernetesService(),
+					EnvoyDaemonSet: apihelpers.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage),
+					EnvoyService:   apihelpers.DefaultKubernetesService(),
 				},
 			},
 		},

@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/filewatcher"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -77,8 +78,8 @@ func (r *Loader) Start(ctx context.Context, logOut io.Writer) error {
 
 				// Set defaults for unset fields before validation so the validator
 				// always sees a fully-defaulted struct.
-				eg.SetEnvoyGatewayDefaults()
-				eg.Logging.SetEnvoyGatewayLoggingDefaults()
+				apihelpers.SetEnvoyGatewayDefaults(eg)
+				apihelpers.SetEnvoyGatewayLoggingDefaults(eg.Logging)
 
 				if err := config.ValidateEnvoyGateway(eg); err != nil {
 					r.logger.Error(err, "failed to validate EnvoyGateway config")

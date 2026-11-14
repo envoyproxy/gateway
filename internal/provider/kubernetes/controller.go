@@ -45,6 +45,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -167,7 +168,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	var extGVKs []schema.GroupVersionKind
 	var extBackendGVKs []schema.GroupVersionKind
 	var extSecretGVKs []schema.GroupVersionKind
-	extensionManagers := cfg.EnvoyGateway.GetExtensionManagers()
+	extensionManagers := apihelpers.GetExtensionManagers(&cfg.EnvoyGateway.EnvoyGatewaySpec)
 	for i := range extensionManagers {
 		em := &extensionManagers[i]
 		for _, rsrc := range em.Resources {
@@ -205,11 +206,11 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		extBackendCRDExists:  make(map[schema.GroupVersionKind]bool),
 		extSecretGVKs:        extSecretGVKs,
 		extSecretCRDExists:   make(map[schema.GroupVersionKind]bool),
-		gatewayNamespaceMode: cfg.EnvoyGateway.GatewayNamespaceMode(),
+		gatewayNamespaceMode: apihelpers.GatewayNamespaceMode(cfg.EnvoyGateway),
 	}
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
-		r.namespaceLabel = cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().Watch.NamespaceSelector
+		r.namespaceLabel = apihelpers.GetKubernetesConfiguration(cfg.EnvoyGateway.Provider).Watch.NamespaceSelector
 		// Always allow controller-namespace infrastructure resources to bypass
 		// user namespace selectors.
 		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel, cfg.ControllerNamespace)
@@ -217,9 +218,9 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 
 	debounce := cfg.EnvoyGateway.Debounce
 	var debounceAfter, debounceMax time.Duration
-	if debounce.Enabled() {
+	if apihelpers.IsDebounceEnabled(debounce) {
 		var err error
-		if debounceAfter, debounceMax, err = debounce.ResolveDurations(); err != nil {
+		if debounceAfter, debounceMax, err = apihelpers.ResolveDebounceDurations(debounce); err != nil {
 			return err
 		}
 		r.log.Info("debouncing reconcile requests", "after", debounceAfter, "max", debounceMax)
@@ -236,7 +237,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 				Name:            controllerName,
 				MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
 			})
-			if !debounce.Enabled() {
+			if !apihelpers.IsDebounceEnabled(debounce) {
 				return q
 			}
 			return newDebouncingQueue(q, debounceAfter, debounceMax)
@@ -252,11 +253,11 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		return fmt.Errorf("error watching resources: %w", err)
 	}
 
-	leaderElectionEnabled := cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
-		!ptr.Deref(cfg.EnvoyGateway.Provider.GetKubernetesConfiguration().LeaderElection.Disable, false)
+	leaderElectionEnabled := apihelpers.IsRunningOnKubernetes(cfg.EnvoyGateway.Provider) &&
+		!ptr.Deref(apihelpers.GetKubernetesConfiguration(cfg.EnvoyGateway.Provider).LeaderElection.Disable, false)
 	if err := mgr.Add(&statusSubscriptionRunnable{
 		reconciler:              r,
-		extensionManagerEnabled: len(cfg.EnvoyGateway.GetExtensionManagers()) > 0,
+		extensionManagerEnabled: len(apihelpers.GetExtensionManagers(&cfg.EnvoyGateway.EnvoyGatewaySpec)) > 0,
 		leaderElection:          leaderElectionEnabled,
 	}); err != nil {
 		return fmt.Errorf("error adding status subscription runnable: %w", err)
@@ -304,14 +305,14 @@ func (r *gatewayAPIReconciler) endpointSliceIndexEnabled() bool {
 	if r != nil && r.envoyGateway != nil {
 		flags = r.envoyGateway.RuntimeFlags
 	}
-	return flags.IsEnabled(egv1a1.EndpointSliceIndex)
+	return apihelpers.IsRuntimeFlagEnabled(flags, egv1a1.EndpointSliceIndex)
 }
 
 func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	if eg.Provider == nil {
 		return false
 	}
-	watch := eg.Provider.GetKubernetesConfiguration().Watch
+	watch := apihelpers.GetKubernetesConfiguration(eg.Provider).Watch
 	if watch == nil {
 		return false
 	}
@@ -442,7 +443,7 @@ func (r *gatewayAPIReconciler) reconcileGatewayClass(ctx context.Context, manage
 	// Set default EnvoyProxySpec from EnvoyGateway configuration if available.
 	// This serves as the lowest priority fallback when no GatewayClass or Gateway level EnvoyProxy is specified.
 	if r.envoyGateway != nil {
-		gwcResource.EnvoyProxyDefaultSpec = r.envoyGateway.GetEnvoyProxyDefaultSpec()
+		gwcResource.EnvoyProxyDefaultSpec = apihelpers.GetEnvoyProxyDefaultSpec(r.envoyGateway)
 	}
 
 	gwcResourceMapping := newResourceMapping()
@@ -2176,7 +2177,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 // Called on a GatewayClass when merged gateways mode is enabled for it.
 func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ctx context.Context, ep *egv1a1.EnvoyProxy, gatewayClass *gwapiv1.GatewayClass, resourceMap *resourceMappings) {
 	// Skip processing if topology injector is disabled
-	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
+	if r.envoyGateway != nil && apihelpers.TopologyInjectorDisabled(r.envoyGateway) {
 		return
 	}
 
@@ -2184,7 +2185,7 @@ func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ctx context.
 
 	// Check if the service name was specified in EnvoyProxy
 	if ep != nil {
-		provider := ep.GetEnvoyProxyProvider()
+		provider := apihelpers.GetEnvoyProxyProvider(ep)
 		if provider.Kubernetes != nil && provider.Kubernetes.EnvoyService != nil && provider.Kubernetes.EnvoyService.Name != nil {
 			proxySvcName = *provider.Kubernetes.EnvoyService.Name
 		}
@@ -2196,7 +2197,7 @@ func (r *gatewayAPIReconciler) processServiceClusterForGatewayClass(ctx context.
 // Called on a Gateway when merged gateways mode is not enabled for its parent GatewayClass.
 func (r *gatewayAPIReconciler) processServiceClusterForGateway(ctx context.Context, ep *egv1a1.EnvoyProxy, gateway *gwapiv1.Gateway, resourceMap *resourceMappings) {
 	// Skip processing if topology injector is disabled
-	if r.envoyGateway != nil && r.envoyGateway.TopologyInjectorDisabled() {
+	if r.envoyGateway != nil && apihelpers.TopologyInjectorDisabled(r.envoyGateway) {
 		return
 	}
 
@@ -2209,7 +2210,7 @@ func (r *gatewayAPIReconciler) processServiceClusterForGateway(ctx context.Conte
 
 	// Check if the service name was specified in EnvoyProxy
 	if ep != nil {
-		provider := ep.GetEnvoyProxyProvider()
+		provider := apihelpers.GetEnvoyProxyProvider(ep)
 		if provider.Kubernetes != nil && provider.Kubernetes.EnvoyService != nil && provider.Kubernetes.EnvoyService.Name != nil {
 			proxySvcName = *provider.Kubernetes.EnvoyService.Name
 		}

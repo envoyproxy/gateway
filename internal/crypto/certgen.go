@@ -18,6 +18,7 @@ import (
 	"time"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
@@ -105,12 +106,12 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		}
 
 		var egDNSNames, envoyDNSNames []string
-		egProvider := cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type
+		egProvider := apihelpers.GetEnvoyGatewayProvider(cfg.EnvoyGateway).Type
 
-		if cfg.EnvoyGateway.GetEnvoyGatewayProvider().IsRunningOnKubernetes() {
+		if apihelpers.IsRunningOnKubernetes(apihelpers.GetEnvoyGatewayProvider(cfg.EnvoyGateway)) {
 			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.ControllerNamespace, cfg.DNSDomain)
 			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.ControllerNamespace))
-		} else if cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type == egv1a1.ProviderTypeCustom {
+		} else if apihelpers.GetEnvoyGatewayProvider(cfg.EnvoyGateway).Type == egv1a1.ProviderTypeCustom {
 			// For custom provider (host mode), use localhost for xDS communication
 			egDNSNames = []string{"localhost"}
 			envoyDNSNames = []string{"localhost"}

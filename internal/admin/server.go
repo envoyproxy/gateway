@@ -14,6 +14,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/envoyproxy/gateway/internal/admin/console"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 )
@@ -38,7 +39,7 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Start(_ context.Context) error {
-	if r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
+	if apihelpers.GetEnvoyGatewayAdmin(r.cfg.EnvoyGateway).EnableDumpConfig {
 		spewConfig := spew.NewDefaultConfig()
 		spewConfig.DisableMethods = true
 		spewConfig.Dump(r.cfg)
@@ -62,8 +63,8 @@ func (r *Runner) Close() error {
 
 func (r *Runner) start() error {
 	handlers := http.NewServeMux()
-	address := r.cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
-	adminConfig := r.cfg.EnvoyGateway.GetEnvoyGatewayAdmin()
+	address := apihelpers.GetEnvoyGatewayAdminAddress(r.cfg.EnvoyGateway)
+	adminConfig := apihelpers.GetEnvoyGatewayAdmin(r.cfg.EnvoyGateway)
 	enablePprof := adminConfig.EnablePprof
 
 	adminLogger := r.cfg.Logger.WithName("admin")

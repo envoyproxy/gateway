@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -20,7 +21,7 @@ import (
 
 func TestStaticFiles(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 

@@ -24,6 +24,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -32,7 +33,7 @@ import (
 
 func TestHandleAPIInfo(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -60,7 +61,7 @@ func TestHandleAPIInfo(t *testing.T) {
 
 func TestHandleAPIInfoMethodNotAllowed(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -76,7 +77,7 @@ func TestHandleAPIInfoMethodNotAllowed(t *testing.T) {
 
 func TestHandleAPIServerInfo(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -119,7 +120,7 @@ func TestHandleAPIServerInfo(t *testing.T) {
 
 func TestHandleAPIConfigDump(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -148,7 +149,7 @@ func TestHandleAPIConfigDump(t *testing.T) {
 
 func TestLoadConfigDumpWithData(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -321,7 +322,7 @@ func TestGetGatewayStatus(t *testing.T) {
 
 func TestHandleAPIConfigDumpWithResourceAll(t *testing.T) {
 	cfg := &config.Server{
-		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+		Logger: logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging()),
 	}
 
 	providerRes := &message.ProviderResources{}
@@ -367,7 +368,7 @@ func TestHandleAPIConfigDumpWithResourceAll(t *testing.T) {
 
 func TestHandleAPIConfigDumpWithResourceAllRedactsSecrets(t *testing.T) {
 	cfg := &config.Server{
-		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+		Logger: logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging()),
 	}
 
 	providerRes := &message.ProviderResources{}
@@ -445,7 +446,7 @@ func TestHandleAPIConfigDumpWithResourceAllRedactsSecrets(t *testing.T) {
 
 func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 	cfg := &config.Server{
-		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+		Logger: logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging()),
 	}
 
 	providerRes := &message.ProviderResources{}
@@ -703,7 +704,7 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 
 func TestHandleAPIConfigDumpWithInvalidResourceFilter(t *testing.T) {
 	cfg := &config.Server{
-		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+		Logger: logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging()),
 	}
 	handler := NewHandler(cfg, (*message.ProviderResources)(nil))
 
@@ -717,7 +718,7 @@ func TestHandleAPIConfigDumpWithInvalidResourceFilter(t *testing.T) {
 
 func TestHandleAPIConfigDumpWithResourceAllMethodNotAllowed(t *testing.T) {
 	cfg := &config.Server{
-		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+		Logger: logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging()),
 	}
 
 	handler := NewHandler(cfg, (*message.ProviderResources)(nil))
@@ -732,7 +733,7 @@ func TestHandleAPIConfigDumpWithResourceAllMethodNotAllowed(t *testing.T) {
 
 func TestHandleAPIMetrics(t *testing.T) {
 	cfg := &config.Server{
-		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+		Logger: logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging()),
 	}
 
 	handler := NewHandler(cfg, (*message.ProviderResources)(nil))
@@ -757,7 +758,7 @@ func TestHandleAPIMetrics(t *testing.T) {
 
 func TestHandleAPIMetricsMethodNotAllowed(t *testing.T) {
 	cfg := &config.Server{
-		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+		Logger: logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging()),
 	}
 
 	handler := NewHandler(cfg, (*message.ProviderResources)(nil))

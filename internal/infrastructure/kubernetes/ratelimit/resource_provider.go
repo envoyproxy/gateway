@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -53,7 +54,7 @@ type ResourceRender struct {
 
 // NewResourceRender returns a new ResourceRender.
 func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
-	prov := gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider()
+	prov := apihelpers.GetEnvoyGatewayKubeProvider(apihelpers.GetEnvoyGatewayProvider(gateway))
 
 	render := &ResourceRender{
 		namespace:           ns,
@@ -138,7 +139,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	labels := rateLimitLabels()
 	kubernetesServiceSpec := &egv1a1.KubernetesServiceSpec{
-		Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+		Type: apihelpers.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 	}
 	serviceSpec := resource.ExpectedServiceSpec(kubernetesServiceSpec)
 	serviceSpec.Ports = ports

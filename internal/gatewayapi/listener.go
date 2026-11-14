@@ -23,6 +23,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -1442,7 +1443,7 @@ func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *e
 	}
 
 	if envoyProxy != nil {
-		if !envoyProxy.NeedToSwitchPorts() {
+		if !apihelpers.NeedToSwitchPorts(envoyProxy) {
 			return servicePort
 		}
 	}

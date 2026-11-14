@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 )
@@ -46,7 +46,7 @@ func subscribeToGatewayStatuses(t *testing.T, pr *message.ProviderResources) *st
 	}
 	sub := pr.GatewayStatuses.Subscribe(t.Context())
 	go message.HandleSubscription(
-		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+		logging.NewLogger(t.Output(), apihelpers.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "test", Message: message.GatewayStatusMessageName},
 		sub,
 		func(update message.Update[types.NamespacedName, *gwapiv1.GatewayStatus], _ chan error) {

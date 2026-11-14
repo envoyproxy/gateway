@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
@@ -22,7 +23,7 @@ func TestMetricServer(t *testing.T) {
 		EnvoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{},
 		},
-		Logger: logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging()),
+		Logger: logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging()),
 	}
 
 	runner := New(cfg)
