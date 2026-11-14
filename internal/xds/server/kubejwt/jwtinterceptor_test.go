@@ -148,7 +148,6 @@ func TestAuthenticate_Stream(t *testing.T) {
 				ServerStream: mock,
 				ctx:          tt.ctx,
 				interceptor:  interceptor,
-				validated:    false,
 			}
 
 			err := ws.RecvMsg(tt.msg)
@@ -176,17 +175,19 @@ func TestAuthenticate_Unary(t *testing.T) {
 	}
 }
 
-func TestExtractNodeID(t *testing.T) {
+func TestExtractNode(t *testing.T) {
 	tests := []struct {
-		name    string
-		msg     any
-		want    string
-		wantErr string
+		name        string
+		msg         any
+		want        string
+		wantCluster string
+		wantErr     string
 	}{
 		{
-			name: "DeltaDiscoveryRequest with valid node ID",
-			msg:  &discoveryv3.DeltaDiscoveryRequest{Node: &corev3.Node{Id: "pod-1"}},
-			want: "pod-1",
+			name:        "DeltaDiscoveryRequest with valid node ID",
+			msg:         &discoveryv3.DeltaDiscoveryRequest{Node: &corev3.Node{Id: "pod-1", Cluster: "ns/gw"}},
+			want:        "pod-1",
+			wantCluster: "ns/gw",
 		},
 		{
 			name: "DiscoveryRequest with valid node ID",
@@ -227,14 +228,15 @@ func TestExtractNodeID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := extractNodeID(tt.msg)
+			got, err := extractNode(tt.msg)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, got.GetId())
+			assert.Equal(t, tt.wantCluster, got.GetCluster())
 		})
 	}
 }
@@ -247,14 +249,26 @@ func TestRecvMsg(t *testing.T) {
 		ServerStream: mock,
 		ctx:          context.Background(),
 		interceptor:  interceptor,
-		validated:    true,
+		authNode:     &corev3.Node{Id: "pod-1", Cluster: "ns-1/gw-1"},
 	}
 
-	// Passes when already validated, even without metadata.
-	err := ws.RecvMsg(&discoveryv3.DeltaDiscoveryRequest{
-		Node: &corev3.Node{Id: "pod-1"},
+	// A later request that repeats the authenticated node passes, even without
+	// metadata, because the stream is already authenticated.
+	require.NoError(t, ws.RecvMsg(&discoveryv3.DeltaDiscoveryRequest{
+		Node: &corev3.Node{Id: "pod-1", Cluster: "ns-1/gw-1"},
+	}))
+
+	// A later request that omits the node passes; the xDS server reuses the first node.
+	require.NoError(t, ws.RecvMsg(&discoveryv3.DeltaDiscoveryRequest{}))
+
+	// A later request that switches to a different node is rejected, so an
+	// authenticated stream cannot pull another proxy's resources.
+	err := ws.RecvMsg(&discoveryv3.DiscoveryRequest{
+		Node: &corev3.Node{Id: "pod-2", Cluster: "ns-2/gw-2"},
 	})
-	require.NoError(t, err)
+	require.Error(t, err)
+	assert.Equal(t, codes.Unauthenticated, status.Code(err))
+	assert.Contains(t, err.Error(), "node changed within stream")
 }
 
 func TestStreamInterceptor(t *testing.T) {

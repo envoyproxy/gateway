@@ -9,6 +9,7 @@ import (
 	"context"
 	"strings"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -41,34 +42,38 @@ type wrappedStream struct {
 	grpc.ServerStream
 	ctx         context.Context
 	interceptor *JWTAuthInterceptor
-	validated   bool
+	// authNode is the node authenticated on the first request. It pins the stream:
+	// later requests may omit the node (the xDS server reuses the first one) but must
+	// not switch to a different node.
+	authNode *corev3.Node
 }
 
-func (i *JWTAuthInterceptor) authenticate(ctx context.Context, msg any) error {
-	nodeID, err := extractNodeID(msg)
+func (i *JWTAuthInterceptor) authenticate(ctx context.Context, msg any) (*corev3.Node, error) {
+	node, err := extractNode(msg)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	nodeID := node.GetId()
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return status.Errorf(codes.Unauthenticated, "missing metadata for node %s", nodeID)
+		return nil, status.Errorf(codes.Unauthenticated, "missing metadata for node %s", nodeID)
 	}
 
 	authHeader := md.Get("authorization")
 	if len(authHeader) == 0 {
-		return status.Errorf(codes.Unauthenticated, "missing authorization header for node %s", nodeID)
+		return nil, status.Errorf(codes.Unauthenticated, "missing authorization header for node %s", nodeID)
 	}
 	token := strings.TrimPrefix(authHeader[0], "Bearer ")
 
-	if err := i.validateKubeJWT(ctx, token, nodeID); err != nil {
+	if err := i.validateKubeJWT(ctx, token, nodeID, node.GetCluster()); err != nil {
 		if s, ok := status.FromError(err); ok {
-			return status.Errorf(s.Code(), "failed to validate the token for node %s: %s", nodeID, s.Message())
+			return nil, status.Errorf(s.Code(), "failed to validate the token for node %s: %s", nodeID, s.Message())
 		}
-		return status.Errorf(codes.Unauthenticated, "failed to validate the token for node %s: %v", nodeID, err)
+		return nil, status.Errorf(codes.Unauthenticated, "failed to validate the token for node %s: %v", nodeID, err)
 	}
 
-	return nil
+	return node, nil
 }
 
 func (w *wrappedStream) RecvMsg(m any) error {
@@ -76,18 +81,31 @@ func (w *wrappedStream) RecvMsg(m any) error {
 		return err
 	}
 
-	if !w.validated {
-		if err := w.interceptor.authenticate(w.ctx, m); err != nil {
+	if w.authNode == nil {
+		node, err := w.interceptor.authenticate(w.ctx, m)
+		if err != nil {
 			return err
 		}
-		w.validated = true
+		w.authNode = node
+		return nil
+	}
+
+	// The xDS server keys watches off the per-request node, and only the first
+	// request is guaranteed to carry it. A later request may omit the node, but if
+	// it carries one it must match the authenticated node: otherwise an
+	// authenticated stream could pull another proxy's resources by switching node.
+	if node := requestNode(m); node != nil && node.GetId() != "" &&
+		(node.GetId() != w.authNode.GetId() || node.GetCluster() != w.authNode.GetCluster()) {
+		return status.Errorf(codes.Unauthenticated,
+			"node changed within stream: authenticated %s/%s, got %s/%s",
+			w.authNode.GetCluster(), w.authNode.GetId(), node.GetCluster(), node.GetId())
 	}
 
 	return nil
 }
 
 func newWrappedStream(s grpc.ServerStream, ctx context.Context, interceptor *JWTAuthInterceptor) grpc.ServerStream {
-	return &wrappedStream{s, ctx, interceptor, false}
+	return &wrappedStream{ServerStream: s, ctx: ctx, interceptor: interceptor}
 }
 
 // Stream intercepts streaming gRPC calls for authorization.
@@ -101,26 +119,36 @@ func (i *JWTAuthInterceptor) Stream() grpc.StreamServerInterceptor {
 // Unary intercepts unary gRPC calls for authorization.
 func (i *JWTAuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		if err := i.authenticate(ctx, req); err != nil {
+		if _, err := i.authenticate(ctx, req); err != nil {
 			return nil, err
 		}
 		return handler(ctx, req)
 	}
 }
 
-func extractNodeID(m any) (string, error) {
+// requestNode returns the node carried by a discovery request, or nil for an
+// unknown message type or a request without a node.
+func requestNode(m any) *corev3.Node {
 	switch req := m.(type) {
 	case *discoveryv3.DeltaDiscoveryRequest:
-		if req.Node == nil || req.Node.Id == "" {
-			return "", status.Error(codes.InvalidArgument, "missing node ID")
-		}
-		return req.Node.Id, nil
+		return req.GetNode()
 	case *discoveryv3.DiscoveryRequest:
-		if req.Node == nil || req.Node.Id == "" {
-			return "", status.Error(codes.InvalidArgument, "missing node ID")
-		}
-		return req.Node.Id, nil
+		return req.GetNode()
 	default:
-		return "", status.Errorf(codes.InvalidArgument, "unexpected message type: %T", m)
+		return nil
+	}
+}
+
+// extractNode returns the node of a discovery request, requiring a non-empty
+// node ID. The first request on a stream must carry it.
+func extractNode(m any) (*corev3.Node, error) {
+	switch m.(type) {
+	case *discoveryv3.DeltaDiscoveryRequest, *discoveryv3.DiscoveryRequest:
+		if node := requestNode(m); node != nil && node.GetId() != "" {
+			return node, nil
+		}
+		return nil, status.Error(codes.InvalidArgument, "missing node ID")
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "unexpected message type: %T", m)
 	}
 }

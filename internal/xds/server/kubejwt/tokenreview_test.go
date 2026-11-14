@@ -86,8 +86,9 @@ func TestValidateKubeJWTPodName(t *testing.T) {
 					Status: authenticationv1.TokenReviewStatus{
 						Authenticated: true,
 						User: authenticationv1.UserInfo{
-							Groups: []string{"system:serviceaccounts"},
-							Extra:  tt.extra,
+							Username: serviceaccount.MakeUsername("ns-1", "sa-1"),
+							Groups:   []string{"system:serviceaccounts"},
+							Extra:    tt.extra,
 						},
 					},
 				})
@@ -102,11 +103,89 @@ func TestValidateKubeJWTPodName(t *testing.T) {
 				audience:  "envoy-gateway",
 			}
 
-			err = interceptor.validateKubeJWT(context.Background(), "test-token", "pod-1")
+			err = interceptor.validateKubeJWT(context.Background(), "test-token", "pod-1", "ns-1/gw-1")
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.Equal(t, codes.Unauthenticated, status.Code(err))
 				assert.Equal(t, tt.wantErr, status.Convert(err).Message())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestValidateKubeJWTNodeCluster covers binding the requested node cluster to the
+// authenticated service account's namespace, so a proxy cannot pull another
+// namespace's xDS resources by changing node.cluster.
+func TestValidateKubeJWTNodeCluster(t *testing.T) {
+	tests := []struct {
+		name     string
+		username string
+		cluster  string
+		wantErr  string
+	}{
+		{
+			name:     "cluster namespace matches service account namespace",
+			username: serviceaccount.MakeUsername("tenant-a", "gw"),
+			cluster:  "tenant-a/gw",
+		},
+		{
+			name:     "cross-namespace cluster is rejected",
+			username: serviceaccount.MakeUsername("tenant-a", "gw"),
+			cluster:  "tenant-b/gw",
+			wantErr:  `node cluster namespace "tenant-b" does not match service account namespace "tenant-a"`,
+		},
+		{
+			name:     "non-namespaced cluster is rejected",
+			username: serviceaccount.MakeUsername("tenant-a", "gw"),
+			cluster:  "gw",
+			wantErr:  `node cluster "gw" is not namespaced`,
+		},
+		{
+			name:     "empty cluster is rejected",
+			username: serviceaccount.MakeUsername("tenant-a", "gw"),
+			cluster:  "",
+			wantErr:  `node cluster "" is not namespaced`,
+		},
+		{
+			name:     "non service account username is rejected",
+			username: "kube:admin",
+			cluster:  "tenant-a/gw",
+			wantErr:  `invalid service account username "kube:admin"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				err := json.NewEncoder(w).Encode(&authenticationv1.TokenReview{
+					TypeMeta: metav1.TypeMeta{APIVersion: "authentication.k8s.io/v1", Kind: "TokenReview"},
+					Status: authenticationv1.TokenReviewStatus{
+						Authenticated: true,
+						User: authenticationv1.UserInfo{
+							Username: tt.username,
+							Groups:   []string{"system:serviceaccounts"},
+							Extra: map[string]authenticationv1.ExtraValue{
+								serviceaccount.PodNameKey: {"pod-1"},
+							},
+						},
+					},
+				})
+				assert.NoError(t, err)
+			}))
+			t.Cleanup(server.Close)
+
+			clientset, err := kubernetes.NewForConfig(&rest.Config{Host: server.URL})
+			require.NoError(t, err)
+			interceptor := &JWTAuthInterceptor{clientset: clientset, audience: "envoy-gateway"}
+
+			err = interceptor.validateKubeJWT(context.Background(), "test-token", "pod-1", tt.cluster)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Equal(t, codes.Unauthenticated, status.Code(err))
+				assert.Contains(t, status.Convert(err).Message(), tt.wantErr)
 			} else {
 				require.NoError(t, err)
 			}

@@ -1,0 +1,1 @@
+In Gateway Namespace Mode, the xDS server now binds the node cluster in a discovery request to the authenticated proxy's service account namespace, so a proxy holding a valid token for its own pod can no longer receive another namespace's xDS resources (including SDS secrets) by sending a different node cluster.
