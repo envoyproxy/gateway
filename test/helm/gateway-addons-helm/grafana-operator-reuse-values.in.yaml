@@ -1,0 +1,20 @@
+# Simulate opting into operator mode with values from an older release.
+# Null removes the new defaults during Helm's values coalescing.
+dashboard:
+  mode: grafana-operator
+  folder: null
+  instanceSelector: null
+prometheus:
+  enabled: false
+grafana:
+  enabled: false
+fluent-bit:
+  enabled: false
+alloy:
+  enabled: false
+loki:
+  enabled: false
+tempo:
+  enabled: false
+opentelemetry-collector:
+  enabled: false

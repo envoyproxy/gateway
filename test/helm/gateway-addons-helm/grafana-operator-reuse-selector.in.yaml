@@ -1,0 +1,26 @@
+# Simulate a partial selector override while opting into operator mode on an old release.
+dashboard:
+  mode: grafana-operator
+  folder: null
+  instanceSelector:
+    matchLabels:
+      team: gateway
+    matchExpressions:
+      - key: environment
+        operator: In
+        values:
+          - production
+prometheus:
+  enabled: false
+grafana:
+  enabled: false
+fluent-bit:
+  enabled: false
+alloy:
+  enabled: false
+loki:
+  enabled: false
+tempo:
+  enabled: false
+opentelemetry-collector:
+  enabled: false

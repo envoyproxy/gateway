@@ -1,0 +1,38 @@
+{{- $mode := .Values.dashboard.mode | default "configmap" }}
+{{- if eq $mode "grafana-operator" }}
+{{/* Old releases upgraded with --reuse-values lack these keys. */}}
+{{- $folder := "envoy-gateway" }}
+{{- if hasKey .Values.dashboard "folder" }}
+{{- $folder = .Values.dashboard.folder }}
+{{- end }}
+{{/* Keep selector defaults here so Helm coalescing preserves explicit null label overrides. */}}
+{{- $instanceSelector := mergeOverwrite (dict "matchLabels" (dict "dashboards" "grafana")) (deepCopy (.Values.dashboard.instanceSelector | default dict)) }}
+{{- if and (hasKey $instanceSelector "matchLabels") (eq (get $instanceSelector "matchLabels") nil) }}
+{{- $_ := unset $instanceSelector "matchLabels" }}
+{{- end }}
+{{- range $key, $value := $instanceSelector.matchLabels }}
+{{- if eq $value nil }}
+{{- $_ := unset $instanceSelector.matchLabels $key }}
+{{- end }}
+{{- end }}
+{{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
+{{- $dashboardName := $path | base | trimSuffix ".json" }}
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: {{ $dashboardName | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $.Release.Namespace | quote }}
+  {{- with $.Values.dashboard.labels }}
+  labels: {{- . | toYaml | nindent 4 }}
+  {{- end }}
+  {{- $anns := merge (dict) ($.Values.dashboard.annotations | default dict) (dict "argocd.argoproj.io/sync-options" "ServerSideApply=true") }}
+  annotations: {{- $anns | toYaml | nindent 4 }}
+spec:
+  allowCrossNamespaceImport: true
+  folder: {{ $folder | quote }}
+  instanceSelector:
+    {{- $instanceSelector | toYaml | nindent 4 }}
+  json: {{ $.Files.Get $path | toJson }}
+{{- end }}
+{{- end }}
