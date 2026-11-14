@@ -71,6 +71,9 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
+					Headers: map[string]string{
+						"Set-Cookie": "ext-auth-session=user1; Path=/; HttpOnly",
+					},
 				},
 				Namespace: ns,
 			}

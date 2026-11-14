@@ -132,4 +132,7 @@ http:
               headersToBackend:
                 - header1
                 - header2
+              headersToClientOnSuccess:
+                - set-cookie
+                - x-rate-limit-remaining
               path: /auth

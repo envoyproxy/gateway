@@ -888,6 +888,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 									},
 								},
 							},
+							HeadersToClientOnSuccess: []string{"set-cookie"},
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{

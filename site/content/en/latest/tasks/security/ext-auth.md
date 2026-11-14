@@ -90,8 +90,10 @@ kubectl get httproute/myapp -o yaml
 
 Create a new SecurityPolicy resource to configure the external authorization. This SecurityPolicy targets the HTTPRoute
 "myApp" created in the previous step. It calls the HTTP external authorization service "http-ext-auth" on port 9002 for
-authorization. The `headersToBackend` field specifies the headers that will be sent to the backend service if the request
-is successfully authorized.
+authorization. The `headersToBackend` field selects authorization response headers that will be added to the request sent
+to the backend service. The `headersToClientOnSuccess` field selects authorization response headers that will be added to
+the response sent to the client after authorization succeeds. Header names use exact, case-insensitive matching. In this
+example, the authorization service sets a session cookie, so `set-cookie` is included.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -113,6 +115,7 @@ spec:
         - name: http-ext-auth
           port: 9002
       headersToBackend: ["x-current-user"]
+      headersToClientOnSuccess: ["set-cookie"]
 EOF
 ```
 
@@ -137,6 +140,7 @@ spec:
         - name: http-ext-auth
           port: 9002
       headersToBackend: ["x-current-user"]
+      headersToClientOnSuccess: ["set-cookie"]
 ```
 
 {{% /tab %}}
@@ -195,6 +199,16 @@ you should see the `x-current-user` header in the response.
    "user1"
   ],
 ```
+
+The successful external authorization response also sets the selected cookie,
+so the client response contains:
+
+```text
+< set-cookie: ext-auth-session=user1; Path=/; HttpOnly
+```
+
+This header comes from the successful external authorization response, not
+from the backend response.
 
 ## GRPC External Authorization Service
 
