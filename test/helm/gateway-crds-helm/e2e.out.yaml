@@ -39606,6 +39606,15 @@ spec:
                               !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true
                           - message: http3 is only supported for route backends
                             rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
+                        sanitize:
+                          description: |-
+                            Sanitize removes the JWT from the request after it is verified. The whole
+                            header or query parameter that carried the token is removed, so filters
+                            that run after JWT authentication (such as rate limiting or ext_proc) and
+                            the backend no longer see it; headers set by ClaimToHeaders are still sent.
+                            It cannot be used with cookie extraction, because Envoy does not remove
+                            tokens from cookies. Defaults to false.
+                          type: boolean
                       required:
                       - name
                       type: object
@@ -39618,6 +39627,11 @@ spec:
                         rule: has(self.remoteJWKS) || has(self.localJWKS)
                       - message: remoteJWKS and localJWKS cannot both be specified.
                         rule: '!(has(self.remoteJWKS) && has(self.localJWKS))'
+                      - message: sanitize cannot be enabled when the JWT is extracted
+                          from cookies.
+                        rule: '!(has(self.sanitize) && self.sanitize && has(self.extractFrom)
+                          && has(self.extractFrom.cookies) && size(self.extractFrom.cookies)
+                          > 0)'
                     maxItems: 16
                     minItems: 1
                     type: array

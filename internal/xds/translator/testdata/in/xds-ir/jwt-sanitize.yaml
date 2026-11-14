@@ -1,0 +1,57 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "sanitize-route"
+    hostname: "*"
+    pathMatch:
+      exact: "foo"
+    security:
+      jwt:
+        name: default/sanitize
+        providers:
+        - name: example
+          issuer: https://www.example.com
+          remoteJWKS:
+            uri: https://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
+          claimToHeaders:
+          - claim: sub
+            header: x-jwt-sub
+          sanitize: true
+    destination:
+      name: "sanitize-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "sanitize-route-dest/backend/0"
+  - name: "forward-route"
+    hostname: "*"
+    pathMatch:
+      exact: "bar"
+    security:
+      jwt:
+        name: default/forward
+        providers:
+        - name: example
+          issuer: https://www.example.com
+          remoteJWKS:
+            uri: https://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
+          claimToHeaders:
+          - claim: sub
+            header: x-jwt-sub
+    destination:
+      name: "forward-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "forward-route-dest/backend/0"
