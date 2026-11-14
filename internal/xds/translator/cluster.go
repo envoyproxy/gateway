@@ -55,6 +55,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -1032,7 +1033,8 @@ func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreake
 	return trb
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
+func buildXdsClusterLoadAssignment(clusterName string, args *types.LoadAssignmentArgs) *endpointv3.ClusterLoadAssignment {
+	destSettings, hc, preferLocal, weightedZones := args.Settings, args.HealthCheck, args.PreferLocal, args.WeightedZones
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
 

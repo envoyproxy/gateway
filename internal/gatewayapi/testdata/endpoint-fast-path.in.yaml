@@ -1,0 +1,44 @@
+# The test injects captured endpoints with revision 42 for every Service, as the
+# provider does with the EndpointFastPath flag on. The output checks that the
+# route backend, the mirror backend and the proxy Service cluster each carry an
+# endpointSource with that revision, so fast endpoint updates can find them.
+# TODO(robin): Remove this fixture and its test hook once full translation always
+# uses the captured endpoints, since every fixture will then carry endpointSource.
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: endpoint-fast-path
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: /
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            name: service-2
+            port: 8080
