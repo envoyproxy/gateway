@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -2579,6 +2580,16 @@ func TestNodeAddressesChangedPredicate(t *testing.T) {
 			newNode: nodeWithAddress("10.0.0.1"),
 			expect:  false,
 		},
+		{
+			name:    "old node missing",
+			newNode: nodeWithAddress("10.0.0.1"),
+			expect:  false,
+		},
+		{
+			name:    "new node missing",
+			oldNode: nodeWithAddress("10.0.0.1"),
+			expect:  false,
+		},
 	}
 
 	p := nodeAddressesChangedPredicate()
@@ -2600,6 +2611,12 @@ func TestHandleNode(t *testing.T) {
 	lbService := test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: "lb-service"},
 		gatewayapi.OwnerLabels(lbGateway, false), nil)
 	lbService.Spec.Type = corev1.ServiceTypeLoadBalancer
+	mergedService := test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: "merged-service"},
+		gatewayapi.OwnerLabels(nodePortGateway, true), nil)
+	mergedService.Spec.Type = corev1.ServiceTypeNodePort
+	otherMergedService := test.GetService(types.NamespacedName{Namespace: "envoy-gateway-system", Name: "other-merged-service"},
+		gatewayapi.GatewayClassOwnerLabel("other-gc"), nil)
+	otherMergedService.Spec.Type = corev1.ServiceTypeNodePort
 
 	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node1"}}
 	nodeWithAddress := node.DeepCopy()
@@ -2611,6 +2628,12 @@ func TestHandleNode(t *testing.T) {
 		storeNode *corev1.Node
 		// node is the node in the cluster, nil if it was deleted.
 		node *corev1.Node
+		// services are more Services in the cluster.
+		services []*corev1.Service
+		// mergedClasses are the GatewayClasses with merged Gateways.
+		mergedClasses []string
+		// listErr is the error of a List of Services.
+		listErr error
 		// expect is the Gateways whose status is updated.
 		expect []string
 	}{
@@ -2630,6 +2653,28 @@ func TestHandleNode(t *testing.T) {
 			storeNode: nodeWithAddress,
 			expect:    []string{"nodeport-gateway"},
 		},
+		{
+			name:      "unable to list services",
+			storeNode: node,
+			node:      nodeWithAddress,
+			listErr:   fmt.Errorf("list failed"),
+		},
+		{
+			name:          "merged gateways under the gatewayclass",
+			storeNode:     node,
+			node:          nodeWithAddress,
+			services:      []*corev1.Service{mergedService},
+			mergedClasses: []string{"test-gc"},
+			expect:        []string{"lb-gateway", "nodeport-gateway"},
+		},
+		{
+			name:          "merged gatewayclass without gateways",
+			storeNode:     node,
+			node:          nodeWithAddress,
+			services:      []*corev1.Service{otherMergedService},
+			mergedClasses: []string{"other-gc"},
+			expect:        []string{"nodeport-gateway"},
+		},
 	}
 
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
@@ -2639,13 +2684,32 @@ func TestHandleNode(t *testing.T) {
 			if tc.node != nil {
 				objs = append(objs, tc.node.DeepCopy())
 			}
+			for _, svc := range tc.services {
+				objs = append(objs, svc.DeepCopy())
+			}
+			builder := fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc)
+
+			if tc.listErr != nil {
+				builder = builder.WithInterceptorFuncs(interceptor.Funcs{
+					List: func(ctx context.Context, cli client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						if _, ok := list.(*corev1.ServiceList); ok {
+							return tc.listErr
+						}
+						return cli.List(ctx, list, opts...)
+					},
+				})
+			}
 			r := gatewayAPIReconciler{
 				classController: egv1a1.GatewayControllerName,
 				namespace:       "envoy-gateway-system",
 				log:             logger,
 				store:           newProviderStore(),
 				resources:       &message.ProviderResources{},
-				client:          fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(objs...).Build(),
+				client:          builder.Build(),
+				mergeGateways:   sets.New(tc.mergedClasses...),
 			}
 			r.store.addNode(tc.storeNode)
 
@@ -2655,7 +2719,7 @@ func TestHandleNode(t *testing.T) {
 			for key := range r.resources.GatewayStatuses.LoadAll() {
 				updated = append(updated, key.Name)
 			}
-			require.Equal(t, tc.expect, updated)
+			require.ElementsMatch(t, tc.expect, updated)
 		})
 	}
 }
