@@ -2847,7 +2847,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
 	// Node creation/deletion and ExternalIP updates would require update in the Gateway
 	nPredicates := []predicate.TypedPredicate[*corev1.Node]{
-		predicate.TypedGenerationChangedPredicate[*corev1.Node]{},
+		nodeAddressesChangedPredicate(),
 		predicate.NewTypedPredicateFuncs(func(node *corev1.Node) bool {
 			return r.handleNode(node)
 		}),

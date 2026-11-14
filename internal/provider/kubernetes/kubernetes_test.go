@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -98,6 +99,7 @@ func TestProvider(t *testing.T) {
 		"httproute":                            testHTTPRoute,
 		"tlsroute":                             testTLSRoute,
 		"stale service cleanup route deletion": testServiceCleanupForMultipleRoutes,
+		"nodeport gateway node addresses":      testNodePortGatewayNodeAddresses,
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -208,6 +210,97 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 
 		return false
 	}, defaultWait, defaultTick)
+}
+
+func testNodePortGatewayNodeAddresses(ctx context.Context, t *testing.T, provider *Provider, _ *message.ProviderResources) {
+	cli := provider.manager.GetClient()
+
+	gc := test.GetGatewayClass("gc-nodeport-node-addresses", egv1a1.GatewayControllerName, nil)
+	require.NoError(t, cli.Create(ctx, gc))
+	requireGatewayClassAccepted(t, cli, gc)
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-nodeport-node-addresses"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := test.GetGateway(types.NamespacedName{Namespace: ns.Name, Name: "nodeport"}, gc.Name, 8080)
+	require.NoError(t, cli.Create(ctx, gw))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, utils.NamespacedName(gw), &gwapiv1.Gateway{}) == nil
+	}, defaultWait, defaultTick)
+
+	// The kubelet registers the node without addresses, the cloud controller sets them later.
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "nodeport-node-addresses"}}
+	require.NoError(t, cli.Create(ctx, node))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, node))
+	}()
+
+	labels := gatewayapi.OwnerLabels(gw, false)
+	deploy := test.GetGatewayDeployment(types.NamespacedName{Namespace: config.DefaultNamespace, Name: "nodeport-deployment"}, labels)
+	require.NoError(t, cli.Create(ctx, deploy))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, deploy))
+	}()
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: config.DefaultNamespace,
+			Name:      "nodeport-svc",
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:                  corev1.ServiceTypeNodePort,
+			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+			Ports:                 []corev1.ServicePort{{Port: 8080}},
+		},
+	}
+	eps := &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: config.DefaultNamespace,
+			Name:      "nodeport-svc",
+			Labels:    map[string]string{discoveryv1.LabelServiceName: svc.Name},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{{
+			Addresses:  []string{"10.244.0.10"},
+			NodeName:   new(node.Name),
+			Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
+		}},
+	}
+	require.NoError(t, cli.Create(ctx, eps))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, eps))
+	}()
+	require.NoError(t, cli.Create(ctx, svc))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, svc))
+	}()
+
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
+			return false
+		}
+		return slices.ContainsFunc(gw.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == string(gwapiv1.GatewayConditionAccepted) && c.Status == metav1.ConditionTrue
+		})
+	}, defaultWait, defaultTick)
+	require.Empty(t, gw.Status.Addresses)
+
+	node.Status.Addresses = []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "10.0.1.76"}}
+	require.NoError(t, cli.Status().Update(ctx, node))
+
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
+			return false
+		}
+		return len(gw.Status.Addresses) == 1 && gw.Status.Addresses[0].Value == "10.0.1.76"
+	}, defaultWait, defaultTick, "Gateway addresses: %+v", gw.Status.Addresses)
 }
 
 func requireGatewayClassAccepted(t *testing.T, cli client.Client, gc *gwapiv1.GatewayClass) {
