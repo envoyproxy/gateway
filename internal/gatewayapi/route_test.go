@@ -851,7 +851,7 @@ func TestIsMergeableBackendKind(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tr := &Translator{ExtensionGroupKinds: tc.extensionGroupKinds}
+			tr := &Translator{ExtensionBackendGroupKinds: tc.extensionGroupKinds}
 			backendMap := map[types.NamespacedName]*egv1a1.Backend{}
 			if tc.backend != nil {
 				backendMap[types.NamespacedName{Namespace: tc.backend.Namespace, Name: tc.backend.Name}] = tc.backend

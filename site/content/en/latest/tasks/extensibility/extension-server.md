@@ -39,6 +39,14 @@ When enabling Extension Server, additional security measures should be taken by 
 * Using K8s [RBAC][] to restrict access to the Envoy Gateway Configuration as well as the Extension Server deployment.
 * Disabling envoy extensions which are not needed with envoy [command line options][].
 * Implementing Kubernetes [network policies][] that restrict traffic from the proxy pod only to relevant targets.
+
+Resources registered under `secretResources` are created by users, who may be less trusted than the
+Extension Server. The `Secret` hook resolves such a resource to a secret that Envoy loads, so the
+Extension Server decides which secret a user's resource gives access to. Envoy Gateway only checks that
+the reference is to a registered kind, is permitted by a ReferenceGrant, and exists, and it ignores a
+resolution to a secret it provides to Envoy itself (for example, the xDS client certificate). It cannot
+check any other secret name or SDS server. The Extension Server must make sure a resource only resolves
+to secrets its owner is allowed to use, and must not pass a user-supplied secret name through unchecked.
   {{% /alert %}}
 
 ## Extension Hooks Overview
@@ -53,6 +61,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 | `Cluster` | `PostClusterModifyHook` | Modify clusters for custom backends | Single `envoy.config.cluster.v3.Cluster` | Per-cluster, only for custom backend clusters |
 | `VirtualHost` | `PostVirtualHostModifyHook` | Modify virtual hosts and add custom routes | Single `envoy.config.route.v3.VirtualHost` | Per-virtual-host; receives extension server policies targeting the listener that owns the virtual host |
 | `HTTPListener` | `PostHTTPListenerModifyHook` | Modify HTTP listeners | Single `envoy.config.listener.v3.Listener` | Per-listener |
+| `Secret` | `ResolveSecretHook` | Resolve listener certificates that reference a kind registered under `secretResources` | Single `envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig` | Per-certificate, only for certificates referencing a registered kind |
 | `Translation` | `PostTranslateModifyHook` | Global modification of all xDS resources | All clusters, secrets, listeners, and routes | Once per translation cycle |
 
 ### Hook Execution Order
@@ -60,6 +69,7 @@ Envoy Gateway provides several extension hooks that are called at different stag
 The hooks are executed in the following order during xDS translation:
 
 1. **Route Processing Phase**
+   - `Secret` hook (`ResolveSecretHook`): Called for each certificate of a listener that references a kind registered under `secretResources`, before the listener's routes are processed
    - `Route` hook (`PostRouteModifyHook`): Called for each route that has extension filters attached or extension server policies targettig the route
    - `Cluster` hook (`PostClusterModifyHook`): Called for each cluster generated from custom backend references
 
@@ -83,10 +93,14 @@ The hooks are executed in the following order during xDS translation:
 
 #### Cluster Hook (`PostClusterModifyHook`)
 
-- **When called**: During cluster generation for custom backend references only
-- **Input**: Single cluster and extension resources from the backend reference
+- **When called**: Once for each custom backendRef with a non-zero weight. Each custom backendRef gets its own
+  cluster. Clusters for Service, ServiceImport or Backend backendRefs in the same rule don't call the hook.
+- **Input**: Single cluster, and in `PostClusterContext.backend_extension_resources` the custom backend resource
+  for that cluster, plus any resources from the route's `extensionRef` filters
 - **Output**: Modified cluster
 - **Use cases**: Configure custom backend clusters, add health checks, modify load balancing
+
+See [How custom backends are translated](#how-custom-backends-are-translated) for how these clusters are routed.
 
 #### VirtualHost Hook (`PostVirtualHostModifyHook`)
 
@@ -101,6 +115,22 @@ The hooks are executed in the following order during xDS translation:
 - **Input**: Complete HTTP listener and associated extension policies
 - **Output**: Modified listener
 - **Use cases**: Add listener filters, modify listener configuration, add authentication
+
+#### Secret Hook (`ResolveSecretHook`)
+
+- **When called**: For each listener certificate that references a kind registered under `secretResources`
+- **Input**: The referenced resource (`secret_resource`), and the name and namespace of the data plane the listener
+  is translated for (`proxy`)
+- **Output**: How Envoy obtains the secret (`sds_secret_config`), or a failure reason when it cannot be resolved
+  yet (`failure_reason`, `failure_message`). `sds_secret_config` must have a name. Its `sds_config` may be left
+  unset when the data plane resolves the name itself. A response with neither is treated as unresolved.
+- **Use cases**: Serve listener certificates held by an external provider, without storing the key in a Kubernetes Secret
+- **Unresolved certificates**: A certificate that is not resolved is left out of the listener. If none of a
+  listener's certificates are resolved, Envoy closes the connections for the listener's hostnames, rather than
+  letting another listener on the same port, such as one with a wildcard hostname, handle them. HTTP/3 traffic
+  for the listener is not served.
+- **Errors**: A hook error fails translation even when `failOpen` is set, so Envoy keeps its last good
+  configuration. Report a certificate that cannot be served yet with a failure reason, not an error.
 
 #### Translation Hook (`PostTranslateModifyHook`)
 
@@ -266,6 +296,7 @@ extensionManager:
         - HTTPListener   # Enable HTTP listener modification hook
         - Cluster        # Enable cluster modification hook
         - Translation    # Enable global translation hook
+        - Secret         # Enable secret resolution hook (requires secretResources)
       # Configure which resources to include in PostTranslateModifyHook
       # Default: true for clusters and secrets (for backward compatibility)
       # Default: false for listeners and routes (for backward compatibility)
@@ -275,6 +306,107 @@ extensionManager:
         route:
           includeAll: true
 ```
+
+To use the `Secret` hook, register the kinds that Gateway or ListenerSet listeners may reference in
+`tls.certificateRefs` under `secretResources`:
+
+```yaml
+extensionManager:
+  secretResources:
+    - group: example.io
+      version: v1alpha1
+      kind: ExampleCertificate
+  hooks:
+    xdsTranslator:
+      post:
+        - Secret
+```
+
+#### Custom backend resources
+
+`extensionManager.backendResources` registers resource kinds that HTTPRoute `backendRefs` can
+reference as custom backends (for example an S3 bucket or a Lambda function). Envoy Gateway hands
+these backendRefs to the extension, which configures their clusters with the `Cluster` hook.
+
+Custom backends are supported only in HTTPRoute and GRPCRoute `backendRefs`. TCPRoute, UDPRoute and
+TLSRoute `backendRefs` and policy `backendRefs`, such as those in ExtAuth, ExtProc or telemetry
+sinks, accept only Service, ServiceImport and Backend.
+
+The backend kinds Envoy Gateway resolves itself can't be registered, and Envoy Gateway fails to
+start if `backendResources` lists any of them:
+
+| Group                   | Kind            |
+|-------------------------|-----------------|
+| `""` (core)             | `Service`       |
+| `multicluster.x-k8s.io` | `ServiceImport` |
+| `gateway.envoyproxy.io` | `Backend`       |
+
+Custom backends are matched by group and kind, so registering one of these wouldn't add a new
+backend type: it would hand every backendRef of that kind in the cluster to the extension. Those
+backendRefs would then skip Envoy Gateway's own validation and endpoint resolution, and the
+extension would have to build working clusters for all of them. To change how Envoy Gateway
+connects to these backends, use the xDS translator hooks (such as the `Cluster` or `Translation`
+hook) on the clusters it generates instead.
+
+A custom resource that happens to share a built-in kind name in its own group, such as
+`custom.example.io/Service`, is allowed and is always handed to the extension.
+
+##### How custom backends are translated
+
+Envoy Gateway treats a custom backendRef like any other backendRef in the rule:
+
+- Each backendRef in the rule gets its own cluster, whether it is a custom backend, a Service, a
+  ServiceImport or a Backend.
+- A rule with more than one backendRef routes with Envoy `weighted_clusters`, using the backendRef
+  weights. A rule with a single backendRef routes to that cluster directly.
+- The `Cluster` hook is called once for each custom backend cluster. `backend_extension_resources`
+  holds the custom backend resource for that cluster only, plus any resources from the route's
+  `extensionRef` filters.
+- A custom backendRef with weight 0 gets no cluster and is not passed to the extension.
+
+For example, this rule sends 75% of the traffic to `pool-a` and 25% to `pool-b`. Envoy Gateway
+generates two clusters and calls the `Cluster` hook twice, once with `pool-a` and once with `pool-b`:
+
+```yaml
+rules:
+- backendRefs:
+  - group: inference.networking.x-k8s.io
+    kind: InferencePool
+    name: pool-a
+    weight: 3
+  - group: inference.networking.x-k8s.io
+    kind: InferencePool
+    name: pool-b
+    weight: 1
+```
+
+##### Migrating extensions that expect one cluster per rule
+
+{{% alert title="Breaking change" color="warning" %}}
+Earlier releases generated a single cluster for each rule with custom backends and called the
+`Cluster` hook once, with every custom backend resource in the rule. The backendRef weights were
+ignored, and a rule that mixed a Service or Backend with a custom backend sent all its traffic to
+one side.
+{{% /alert %}}
+
+Check your extension against these cases:
+
+- **The extension reads one custom backend resource per hook call.** No change is needed. The hook
+  now receives that resource on its own cluster.
+- **The extension loops over `backend_extension_resources` and configures one cluster for all of
+  them.** Configure the cluster from the single custom backend resource it receives. Resources from
+  the route's `extensionRef` filters are still included, so check the kind of each resource rather
+  than assuming every entry is a backend.
+- **The extension split the merged cluster itself**, for example by building its own weighted
+  clusters or endpoints from several backend resources. Remove that logic. Envoy Gateway now
+  creates one cluster per backendRef and routes between them with the backendRef weights.
+- **The extension needs to see several backends together**, for example to load balance across
+  them with its own logic, or to fail over between them. Define a custom resource that lists those
+  backends, register its kind in `backendResources`, and reference it from the rule as a single
+  backendRef. Envoy Gateway then generates one cluster for it and calls the `Cluster` hook with
+  that resource, which holds every backend the extension needs. If the extension instead needs to
+  change how Envoy Gateway's clusters are combined, use the `Translation` hook
+  (`PostTranslateModifyHook`), which receives all clusters and routes at once.
 
 This task sets up an example extension server that adds the Envoy Proxy Basic Authentication
 HTTP filter to all the listeners generated by Envoy Gateway. The example extension server
@@ -438,9 +570,11 @@ A few nuances apply when multiple extension managers are configured:
   declared. Each server sees the output of the previous one, so mutations
   compose.
 * **Resource isolation.** Each server only receives the extension resources
-  whose GVK it declares under `resources`, `policyResources`, or
-  `backendResources`. In the example above a `FooFilter` is sent to `ext-a`
+  whose GVK it declares under `resources`, `policyResources`,
+  `backendResources`, or `secretResources`. In the example above a `FooFilter` is sent to `ext-a`
   but not to `ext-b`.
+* **The `Secret` hook does not chain.** Only the server that declares the
+  referenced kind under `secretResources` is called.
 * **`failOpen` is per server.** Setting `failOpen: true` on a server causes
   Envoy Gateway to skip that server in the chain when its hook returns an
   error (or when its gRPC connection cannot be established), while still

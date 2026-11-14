@@ -13,7 +13,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -194,12 +193,7 @@ func (t *Translator) translateRateLimitClusterSettings() (*ir.ClusterTrafficFeat
 	if t.RateLimitClusterSettings == nil {
 		return nil, nil
 	}
-	// EnvoyGateway isn't admitted as a CRD, so the schema defaults must be applied here.
-	cs, err := config.DefaultClusterSettings(t.RateLimitClusterSettings)
-	if err != nil {
-		return nil, fmt.Errorf("invalid rate limit cluster settings: %w", err)
-	}
-	traffic, err := translateExtServiceBackendSettings(&egv1a1.BackendSettings{ClusterSettings: *cs})
+	traffic, err := translateExtServiceBackendSettings(&egv1a1.BackendSettings{ClusterSettings: *t.RateLimitClusterSettings})
 	if err != nil {
 		return nil, fmt.Errorf("invalid rate limit cluster settings: %w", err)
 	}

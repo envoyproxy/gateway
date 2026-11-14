@@ -146,3 +146,7 @@ adopters:
     logo: "/logos/preparesh.svg"
     url: "https://prepare.sh/"
     description: "Prepare.sh uses Envoy Gateway as the shared gateway for its hands-on technical interview tutorials, routing each learner's traffic to their own isolated environment on Kubernetes and enforcing per-session access with SecurityPolicy external authorization."
+  - name: "Verfahrensdokumentation.pro"
+    logo: "/logos/verfahrensdokumentation-pro.svg"
+    url: "https://verfahrensdokumentation.pro/"
+    description: "VD.Pro is using Envoy Gateway to route all external traffic into its Kubernetes clusters, including API, WebSocket and per-tenant subdomains."

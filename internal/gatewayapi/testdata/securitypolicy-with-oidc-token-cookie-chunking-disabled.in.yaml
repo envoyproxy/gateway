@@ -56,8 +56,8 @@ securityPolicies:
     name: policy-for-gateway
     uid: 6f1e2c4a-3b9d-4e7f-8a21-5c0d9e8b7a63
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     oidc:

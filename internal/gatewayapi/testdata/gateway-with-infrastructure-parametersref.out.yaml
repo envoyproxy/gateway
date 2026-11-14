@@ -26,6 +26,12 @@ envoyProxiesForGateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.telemetry.tracing.provider.host is deprecated and will be removed
+          in v1.11, use spec.telemetry.tracing.provider.backendRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
@@ -141,6 +147,13 @@ infraIR:
               reason: Accepted
               status: "True"
               type: Accepted
+            - lastTransitionTime: null
+              message: spec.telemetry.tracing.provider.host is deprecated and will
+                be removed in v1.11, use spec.telemetry.tracing.provider.backendRefs
+                instead
+              reason: DeprecatedField
+              status: "True"
+              type: Warning
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:

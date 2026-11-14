@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 
@@ -32,6 +33,46 @@ type ResourceVersionTable struct {
 	XdsResources
 	EnvoyPatchPolicyStatuses
 	GlobalResourceStatus
+
+	clustersByName map[string]*clusterv3.Cluster
+}
+
+// EnableClusterIndex caches cluster names during resource construction. Add, replace,
+// and SetResources maintain the index. Disable it before mutating clusters in place.
+func (t *ResourceVersionTable) EnableClusterIndex() {
+	t.clustersByName = make(map[string]*clusterv3.Cluster, len(t.XdsResources[resourcev3.ClusterType]))
+	for _, resource := range t.XdsResources[resourcev3.ClusterType] {
+		t.indexCluster(resource)
+	}
+}
+
+// DisableClusterIndex releases the construction index before patches or extension hooks.
+func (t *ResourceVersionTable) DisableClusterIndex() {
+	t.clustersByName = nil
+}
+
+// FindCluster returns the first cluster with name, or nil if it does not exist.
+func (t *ResourceVersionTable) FindCluster(name string) *clusterv3.Cluster {
+	if t.clustersByName != nil {
+		return t.clustersByName[name]
+	}
+	for _, resource := range t.XdsResources[resourcev3.ClusterType] {
+		if cluster, ok := resource.(*clusterv3.Cluster); ok && cluster.Name == name {
+			return cluster
+		}
+	}
+	return nil
+}
+
+func (t *ResourceVersionTable) indexCluster(resource types.Resource) {
+	if t.clustersByName == nil {
+		return
+	}
+	if cluster, ok := resource.(*clusterv3.Cluster); ok {
+		if _, exists := t.clustersByName[cluster.Name]; !exists {
+			t.clustersByName[cluster.Name] = cluster
+		}
+	}
 }
 
 // GetXdsResources retrieves the translated xds resources saved in the translator context.
@@ -57,6 +98,9 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 	}
 
 	t.XdsResources[rType] = append(t.XdsResources[rType], xdsResource)
+	if rType == resourcev3.ClusterType {
+		t.indexCluster(xdsResource)
+	}
 	return nil
 }
 
@@ -90,6 +134,9 @@ func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resourcev3.Type, re
 	for i, r := range t.XdsResources[rType] {
 		if matchFunc(r, resource) {
 			t.XdsResources[rType][i] = resource
+			if rType == resourcev3.ClusterType && t.clustersByName != nil {
+				t.EnableClusterIndex()
+			}
 			found = true
 			break
 		}
@@ -111,4 +158,7 @@ func (t *ResourceVersionTable) SetResources(rType resourcev3.Type, xdsResources 
 	}
 
 	t.XdsResources[rType] = xdsResources
+	if rType == resourcev3.ClusterType && t.clustersByName != nil {
+		t.EnableClusterIndex()
+	}
 }

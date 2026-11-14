@@ -1,0 +1,165 @@
+---
+title: "gRPC-JSON Transcoding"
+---
+
+This task shows how to use [HTTPRouteFilter][HTTPRouteFilter] to convert JSON/HTTP requests to gRPC requests, so REST
+clients can call a gRPC backend.
+
+The JSON/HTTP API is defined by the `google.api.http` options in your proto files.
+
+The filter can only be used in the rule filters of an [HTTPRoute][HTTPRoute]. It is not supported in a [GRPCRoute][]
+or in the filters of a `backendRef`.
+
+## Prerequisites
+
+{{< boilerplate prerequisites >}}
+
+## Generate the Proto Descriptor
+
+The transcoder needs the protobuf descriptor set of your services. Generate it with `--include_imports`, so the
+imported proto files are included:
+
+```shell
+protoc --include_imports --descriptor_set_out=proto-descriptor.pb path/to/your.proto
+```
+
+Store it in a ConfigMap in the same namespace as the HTTPRoute:
+
+```shell
+kubectl create configmap greeter-proto-descriptor --from-file=proto-descriptor=proto-descriptor.pb
+```
+
+The descriptor set is read from the `proto-descriptor` key, either in `binaryData` or in `data`, where it can be
+base64-encoded. If the ConfigMap has no `data` and only one `binaryData` entry, that entry is used.
+
+## Backend
+
+The transcoded request is a gRPC request, so Envoy Gateway connects to the backend over HTTP/2, like the backend of a
+GRPCRoute. No `appProtocol` is needed. A backend with a WebSocket app protocol, like `appProtocol: kubernetes.io/ws`,
+can't be used, because it needs HTTP/1.1.
+
+Note: don't set `useClientProtocol` in a [BackendTrafficPolicy][] for the route. The client of the transcoder uses
+HTTP/1.1 most of the time, so Envoy would send the gRPC requests over HTTP/1.1 and they would fail.
+
+## Configuration
+
+Create an `HTTPRouteFilter` that references the ConfigMap, and use it in the HTTPRoute rule:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: grpc-transcoder
+spec:
+  grpcJSONTranscoder:
+    protoDescriptor:
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: greeter-proto-descriptor
+    services:
+    - example.Greeter
+    printOptions:
+      alwaysPrintPrimitiveFields: true
+    ignoreUnknownQueryParameters: true
+    convertGRPCStatus: true
+```
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grpc-route
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - grpc.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /v1/hello
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: HTTPRouteFilter
+        name: grpc-transcoder
+    backendRefs:
+    - name: grpc-service
+      port: 9000
+```
+
+Then call the JSON API:
+
+```shell
+curl -H "Host: grpc.example.com" http://${GATEWAY_HOST}/v1/hello/world
+```
+
+If `services` is not specified, all the services in the descriptor set are transcoded, except the ones that come from
+imported files.
+
+## Policies and Routing
+
+The transcoder changes the path of the request to the gRPC method, for example `/example.Greeter/SayHello`, but the
+request is not matched to another route. The backend and the policies of the HTTPRoute are used for the transcoded
+request, so attach the policies, like authentication and rate limiting, to the HTTPRoute. The policies of a GRPCRoute
+for the same service are not applied.
+
+Note: if `EnvoyProxy.spec.filterOrder` moves a filter that clears the route cache after the transcoder, like ExtAuth or
+JWT with `recomputeRoute`, the transcoded request may be matched to another route.
+
+The following filters can't be used in the same rule with the transcoder, because they use the path of the request:
+
+- `URLRewrite` with a path modifier
+- `URLRewrite` with a `PathRegex` hostname
+- `RequestRedirect`
+- `DirectResponse`
+
+Such a rule is not accepted and returns `500`.
+
+Note: a `RequestMirror` in the same rule sends the transcoded gRPC request to the mirror backend, over HTTP/2.
+
+## Troubleshooting
+
+The descriptor set is validated when the route is translated. If it is invalid, the rule returns `500` and the reason is
+in the `Accepted` condition of the HTTPRoute:
+
+```shell
+kubectl get httproute grpc-route -o yaml
+```
+
+These problems are reported:
+
+- The descriptor set can't be parsed, or an imported file is missing.
+- An imported file comes after the file that imports it.
+- A service in `services` is not in the descriptor set.
+- The `body` or `response_body` of a `google.api.http` option is not a field of the message, or a `response_body` is not
+  a `google.api.HttpBody` field.
+- The path template of a `google.api.http` option is invalid, for example `v1/hello` without the leading `/`.
+- With `convertGRPCStatus`, the descriptor set conflicts with the `google/protobuf/any.proto` and
+  `google/rpc/status.proto` that Envoy adds. This happens when `google.protobuf.Any` is in another file, for example a
+  vendored `third_party/google/protobuf/any.proto`.
+
+Note: the descriptor set should be generated by `protoc`. Envoy may still reject a descriptor set made by another tool
+that `protoc` wouldn't produce, for example with two fields that have the same JSON name. In that case, the whole
+listener is rejected.
+
+## Clean-Up
+
+Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
+
+```shell
+kubectl delete httproutefilter/grpc-transcoder
+kubectl delete configmap/greeter-proto-descriptor
+```
+
+## Next Steps
+
+Check out the [Developer Guide](/community/develop) to get involved in the project.
+
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
+[HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

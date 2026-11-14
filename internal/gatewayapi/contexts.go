@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/validation"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -31,6 +33,10 @@ type GatewayContext struct {
 	listeners             []*ListenerContext
 	envoyProxy            *egv1a1.EnvoyProxy
 	envoyProxyFromGateway bool
+	// gatewayEnvoyProxy is the EnvoyProxy referenced by the Gateway itself, as provided by the
+	// user. Unlike envoyProxy, it is neither merged nor stripped of its invalid fields, so it is
+	// the object whose status is updated and that is returned in the TranslateResult.
+	gatewayEnvoyProxy *egv1a1.EnvoyProxy
 
 	backendTLS *egv1a1.BackendTLSConfig
 }
@@ -107,16 +113,21 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
 				g.envoyProxyFromGateway = true
-				gatewayProxy = ep
+				g.gatewayEnvoyProxy = ep
+				gatewayProxy = validation.DropInvalidFields(ep)
 			}
 		}
 	}
 
 	// Merge all EnvoyProxy configs. On error, MergeEnvoyProxyConfigs returns a fallback
 	// configuration so the gateway can continue to function.
+	//
+	// Invalid fields are unset on each layer before merging, so an invalid override is ignored
+	// and the valid value it would have overridden in a less specific layer still applies. The
+	// EnvoyGateway default spec is validated strictly when the configuration is loaded.
 	merged, err := MergeEnvoyProxyConfigs(
 		resources.EnvoyProxyDefaultSpec,
-		resources.EnvoyProxyForGatewayClass,
+		validation.DropInvalidFields(resources.EnvoyProxyForGatewayClass),
 		gatewayProxy,
 	)
 	g.envoyProxy = merged
@@ -167,9 +178,17 @@ type ListenerContext struct {
 }
 
 type ListenerTLSConfig struct {
-	secrets               []*corev1.Secret
+	// secrets are the listener's secrets in the configured order.
+	secrets               []listenerSecret
 	certDNSNames          []string
 	frontendTLSValidation *ListenerFrontendTLSValidation
+}
+
+// listenerSecret is a listener secret from a Kubernetes Secret, or from a resource of a kind
+// registered in ExtensionManager.SecretResources. Exactly one field is set.
+type listenerSecret struct {
+	kubernetesSecret *corev1.Secret
+	extensionSecret  *unstructured.Unstructured
 }
 
 type ListenerFrontendTLSValidation struct {
@@ -330,8 +349,8 @@ func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionTy
 	}
 }
 
-func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
-	l.tls.secrets = tlsSecrets
+func (l *ListenerContext) SetTLSSecrets(secrets []listenerSecret) {
+	l.tls.secrets = secrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
