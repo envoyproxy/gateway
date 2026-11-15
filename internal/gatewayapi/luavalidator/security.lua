@@ -7,6 +7,8 @@
 
 local validate_path = __lua_validate_path
 local validate_env_var = __lua_validate_env_var
+-- Captured before user code runs so a redefined global type() cannot skip validation.
+local type = type
 
 -- Remove the injected globals so user code cannot access the validators directly.
 __lua_validate_path = nil
