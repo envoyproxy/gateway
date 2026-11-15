@@ -166,6 +166,12 @@ var BackendHealthCheckActiveGRPCTest = suite.ConformanceTest{
 		explicitHostnameRouteNN := types.NamespacedName{Name: "grpc-health-check-explicit-hostname", Namespace: ns}
 		routeHostnameRouteNN := types.NamespacedName{Name: "grpc-health-check-route-hostname", Namespace: ns}
 		clusterNameRouteNN := types.NamespacedName{Name: "grpc-health-check-cluster-name", Namespace: ns}
+
+		// Apply the health checked routes after the backend serves, because Envoy
+		// does not retry a failed first health check within the test's time budget.
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-health-backend"}, corev1.PodRunning, &PodReady)
+		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-health-check-active-grpc-hc.yaml", true)
+
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
 			kubernetes.NewGatewayRef(gwNN), &gwapiv1.GRPCRoute{}, true,
 			explicitHostnameRouteNN, routeHostnameRouteNN, clusterNameRouteNN)
@@ -179,8 +185,6 @@ var BackendHealthCheckActiveGRPCTest = suite.ConformanceTest{
 		for _, routeNN := range []types.NamespacedName{explicitHostnameRouteNN, routeHostnameRouteNN, clusterNameRouteNN} {
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: routeNN.Name + "-btp", Namespace: ns}, suite.ControllerName, ancestorRef)
 		}
-
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "grpc-health-backend"}, corev1.PodRunning, &PodReady)
 
 		promClient, err := prometheus.NewClient(suite.Client,
 			types.NamespacedName{Name: "prometheus", Namespace: "monitoring"},

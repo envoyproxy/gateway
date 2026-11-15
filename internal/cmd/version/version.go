@@ -30,16 +30,19 @@ func Get() Info {
 	return Info{
 		EnvoyGatewayVersion: envoyGatewayVersion,
 		GatewayAPIVersion:   gatewayAPIVersion,
-		EnvoyProxyVersion:   envoyProxyVersion,
+		EnvoyProxyVersion:   envoyProxyVersion(egv1a1.DefaultEnvoyProxyImage),
 		GitCommitID:         gitCommitID,
 		GolangVersion:       runtime.Version(),
 	}
 }
 
+func envoyProxyVersion(version string) string {
+	return strings.SplitN(version, ":", 2)[1]
+}
+
 var (
 	envoyGatewayVersion string
 	gatewayAPIVersion   string
-	envoyProxyVersion   = strings.Split(egv1a1.DefaultEnvoyProxyImage, ":")[1]
 	gitCommitID         string
 )
 

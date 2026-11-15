@@ -74,6 +74,8 @@ type ProxyMetrics struct {
 	// Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
 	// Example: `httproute/my-ns/my-route/rule/0`
 	//
+	// +kubebuilder:validation:MaxLength=1024
+	// +kubebuilder:validation:XValidation:rule="self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME|ROUTE_RULE_NUMBER|BACKEND_REFS)%)*$')",message="clusterStatName contains an unsupported or unterminated operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%, %ROUTE_KIND%, %ROUTE_RULE_NAME%, %ROUTE_RULE_NUMBER% and %BACKEND_REFS%"
 	// +optional
 	ClusterStatName *string `json:"clusterStatName,omitempty"`
 }
@@ -107,13 +109,13 @@ type ProxyOpenTelemetrySink struct {
 	BackendCluster `json:",inline"`
 	// Host define the service hostname.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the service is exposed on.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

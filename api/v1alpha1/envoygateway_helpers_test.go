@@ -488,3 +488,31 @@ func TestEnvoyProxyPatchRuntimeFlag(t *testing.T) {
 		})
 	}
 }
+
+func TestOIDCTokenCookieChunkingRuntimeFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		eg       EnvoyGateway
+		expected bool
+	}{
+		{
+			name:     "enabled by default",
+			eg:       EnvoyGateway{},
+			expected: true,
+		},
+		{
+			name: "explicitly disabled",
+			eg: EnvoyGateway{
+				EnvoyGatewaySpec: EnvoyGatewaySpec{
+					RuntimeFlags: &RuntimeFlags{Disabled: []RuntimeFlag{OIDCTokenCookieChunking}},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.eg.RuntimeFlags.IsEnabled(OIDCTokenCookieChunking))
+		})
+	}
+}

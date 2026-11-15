@@ -360,7 +360,7 @@ spec:
                 description: |-
                   The compression config for the http streams.
 
-                  Deprecated: Use Compressor instead.
+                  Deprecated: Use Compressor instead. This field will be removed in v1.11.
                 items:
                   description: |-
                     Compression defines the config of enabling compression.
@@ -1171,6 +1171,9 @@ spec:
                           checks.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                        x-kubernetes-validations:
+                        - message: interval must be greater than 0
+                          rule: duration(self) > duration('0s')
                       overrides:
                         description: |-
                           Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -1262,6 +1265,9 @@ spec:
                           check response.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                        x-kubernetes-validations:
+                        - message: timeout must be greater than 0
+                          rule: duration(self) > duration('0s')
                       type:
                         allOf:
                         - enum:
@@ -1322,6 +1328,9 @@ spec:
                           which a host will be ejected on consecutive failures.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                        x-kubernetes-validations:
+                        - message: baseEjectionTime must be greater than 0
+                          rule: duration(self) > duration('0s')
                       consecutive5XxErrors:
                         default: 5
                         description: Consecutive5xxErrors sets the number of consecutive
@@ -1355,6 +1364,9 @@ spec:
                           checks.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                        x-kubernetes-validations:
+                        - message: interval must be greater than 0
+                          rule: duration(self) > duration('0s')
                       maxEjectionPercent:
                         default: 10
                         description: MaxEjectionPercent sets the maximum percentage
@@ -1649,7 +1661,7 @@ spec:
                         description: |-
                           Header configures the header hash policy when the consistent hash type is set to Header.
 
-                          Deprecated: use Headers instead
+                          Deprecated: use Headers instead. This field will be removed in v1.11.
                         properties:
                           name:
                             description: Name of the header to hash.
@@ -3506,7 +3518,7 @@ spec:
                   This policy and the TargetRef MUST be in the same namespace for this
                   Policy to have effect
 
-                  Deprecated: use targetRefs/targetSelectors instead
+                  Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -3790,7 +3802,13 @@ spec:
                           %ROUTE_KIND%: kind of Gateway API xRoute resource
                           Example: %ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME% => httproute/my-ns/my-route
                           Disabled by default.
+                        maxLength: 1024
                         type: string
+                        x-kubernetes-validations:
+                        - message: routeStatName contains an unsupported or unterminated
+                            operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%,
+                            %ROUTE_KIND% and %ROUTE_RULE_NAME%
+                          rule: self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME)%)*$')
                     type: object
                   tracing:
                     description: |-

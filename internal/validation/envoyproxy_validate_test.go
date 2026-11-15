@@ -1,0 +1,1680 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package validation
+
+import (
+	"fmt"
+	"reflect"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+)
+
+func TestValidateEnvoyProxy(t *testing.T) {
+	testCases := []struct {
+		name     string
+		proxy    *egv1a1.EnvoyProxy
+		expected bool
+	}{
+		{
+			name:     "nil egv1a1.EnvoyProxy",
+			proxy:    nil,
+			expected: false,
+		},
+		{
+			name: "nil provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: nil,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "unsupported provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderType("unsupported"),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "nil custom provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeHost,
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "valid custom provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeHost,
+						Host: &egv1a1.EnvoyProxyHostProvider{},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "nil envoy service",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: nil,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "unsupported envoy service type \"\" ",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: egv1a1.GetKubernetesServiceType(""),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "valid envoy service type 'NodePort'",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceType(corev1.ServiceTypeNodePort)),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid envoy service type 'LoadBalancer'",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid envoy service type 'ClusterIP'",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with allocateLoadBalancerNodePorts",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								AllocateLoadBalancerNodePorts: new(false),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "non envoy service type 'LoadBalancer' with allocateLoadBalancerNodePorts",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+								AllocateLoadBalancerNodePorts: new(false),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+
+		{
+			name: "envoy service type 'LoadBalancer' with loadBalancerSourceRanges",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with ipv6 loadBalancerSourceRanges",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerSourceRanges: []string{"2001:db8::/32"},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "non envoy service type 'LoadBalancer' with loadBalancerSourceRanges",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+								LoadBalancerSourceRanges: []string{"1.1.1.1/32"},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with valid loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: new("10.11.12.13"),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with invalid loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: new("invalid-ip"),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with ipv6 loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: new("2001:db8::68"),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should invalid when accesslog enabled using Text format, but `text` field being empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should invalid when accesslog enabled using File sink, but `file` field being empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: &egv1a1.ProxyAccessLogFormat{
+										Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+										Text: new("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should invalid when metrics type is OpenTelemetry, but `OpenTelemetry` field being empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should valid when metrics type is OpenTelemetry and `OpenTelemetry` field being not empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										Host: new("0.0.0.0"),
+										Port: 3217,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be invalid when OpenTelemetry tracing backend has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendSettings: &egv1a1.BackendSettings{
+										HTTP1: &egv1a1.BackendHTTP1Settings{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be valid when OpenTelemetry tracing backend has no http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be invalid when OpenTelemetry metrics sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendSettings: &egv1a1.BackendSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when OpenTelemetry metrics sink has http1 settings and type is omitted",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									// Type omitted: CRD default not applied in embedded EnvoyProxy templates
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										BackendSettings: &egv1a1.BackendSettings{
+											HTTP1: &egv1a1.BackendHTTP1Settings{},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when OpenTelemetry access log sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+											OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendSettings: &egv1a1.BackendSettings{
+														HTTP1: &egv1a1.BackendHTTP1Settings{},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when ALS access log sink has no als settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be invalid when ALS access log sink has http1 settings",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeALS,
+											ALS: &egv1a1.ALSEnvoyProxyAccessLog{
+												BackendCluster: egv1a1.BackendCluster{
+													BackendSettings: &egv1a1.BackendSettings{
+														HTTP1: &egv1a1.BackendHTTP1Settings{},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be valid when service patch is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be valid when deployment patch is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be valid when pdb patch type and patch are empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be valid when pdb patch and type are set",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type: new(egv1a1.StrategicMerge),
+									Value: apiextensionsv1.JSON{
+										Raw: []byte("{}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be invalid when pdb patch object is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type: new(egv1a1.StrategicMerge),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be valid when pdb type not set",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte("{}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be valid when hpa patch and type are empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be valid when hpa patch and type are set",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type: new(egv1a1.StrategicMerge),
+									Value: apiextensionsv1.JSON{
+										Raw: []byte("{}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should be invalid when hpa patch object is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type: new(egv1a1.StrategicMerge),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should be valid when hpa type not set",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte("{}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should invalid when deployment patch object is empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type: new(egv1a1.StrategicMerge),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should valid when deployment patch type and object are both not empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Type: new(egv1a1.StrategicMerge),
+									Value: apiextensionsv1.JSON{
+										Raw: []byte("{}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "should valid when deployment patch type is empty and object is not empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Patch: &egv1a1.KubernetesPatchSpec{
+									Value: apiextensionsv1.JSON{
+										Raw: []byte("{}"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid filter order",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: new(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:  egv1a1.EnvoyFilterExtProc,
+							After: new(egv1a1.EnvoyFilterJWTAuthn),
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid filter order with circular dependency",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					FilterOrder: []egv1a1.FilterPosition{
+						{
+							Name:   egv1a1.EnvoyFilterOAuth2,
+							Before: new(egv1a1.EnvoyFilterJWTAuthn),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterJWTAuthn,
+							Before: new(egv1a1.EnvoyFilterExtProc),
+						},
+						{
+							Name:   egv1a1.EnvoyFilterExtProc,
+							Before: new(egv1a1.EnvoyFilterOAuth2),
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "valid operators in ClusterStatName",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: new(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", egv1a1.StatFormatterRouteName,
+								egv1a1.StatFormatterRouteName, egv1a1.StatFormatterRouteNamespace, egv1a1.StatFormatterRouteKind,
+								egv1a1.StatFormatterRouteRuleName, egv1a1.StatFormatterRouteRuleNumber, egv1a1.StatFormatterBackendRefs)),
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid operators in ClusterStatName",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: new("%ROUTE_NAME%.%FOO%.%BAR%/my/%BACKEND_REFS%/%FOOBAR%"),
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "mergeGateways and mergeBackends cannot both be enabled",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(true),
+					MergeBackends: &egv1a1.MergeBackendsConfig{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "mergeGateways alone is valid",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(true),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "mergeBackends alone is valid",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeBackends: &egv1a1.MergeBackendsConfig{},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "mergeGateways false with mergeBackends is valid",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(false),
+					MergeBackends: &egv1a1.MergeBackendsConfig{},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression without minContentLength",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type: egv1a1.GzipCompressorType,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength of 1 byte",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("1")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength at the uint32 limit",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("4294967295")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "prometheus compression with minContentLength overflowing uint32",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type:             egv1a1.GzipCompressorType,
+									MinContentLength: new(resource.MustParse("4Gi")),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateEnvoyProxy(tc.proxy)
+			if tc.expected {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestEnvoyProxyProvider(t *testing.T) {
+	envoyProxy := &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			Provider: egv1a1.DefaultEnvoyProxyProvider(),
+		},
+	}
+	assert.NotNil(t, envoyProxy.Spec.Provider)
+
+	envoyProxyProvider := envoyProxy.GetEnvoyProxyProvider()
+	assert.Nil(t, envoyProxyProvider.Kubernetes)
+	assert.True(t, reflect.DeepEqual(envoyProxy.Spec.Provider, envoyProxyProvider))
+
+	envoyProxyKubeProvider := envoyProxyProvider.GetEnvoyProxyKubeProvider()
+
+	assert.NotNil(t, envoyProxyProvider.Kubernetes)
+	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes, envoyProxyKubeProvider))
+
+	envoyProxyProvider.GetEnvoyProxyKubeProvider()
+
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage))
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, egv1a1.DefaultKubernetesPod())
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, egv1a1.DefaultKubernetesContainer(egv1a1.DefaultEnvoyProxyImage))
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, egv1a1.DefaultResourceRequirements())
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, egv1a1.DefaultKubernetesContainerImage(egv1a1.DefaultEnvoyProxyImage))
+
+	assert.NotNil(t, envoyProxyProvider.Kubernetes.EnvoyService)
+	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer)))
+}
+
+func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
+	cases := []struct {
+		logging   egv1a1.ProxyLogging
+		component egv1a1.ProxyLogComponent
+		expected  egv1a1.LogLevel
+	}{
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+				},
+			},
+			expected: egv1a1.LogLevelInfo,
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+				},
+			},
+			expected: egv1a1.LogLevelInfo,
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelOff,
+				},
+			},
+			expected: egv1a1.LogLevelOff,
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelCritical,
+				},
+			},
+			expected: egv1a1.LogLevelCritical,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			got := tc.logging.DefaultEnvoyProxyLoggingLevel()
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
+	cases := []struct {
+		logging  egv1a1.ProxyLogging
+		expected string
+	}{
+		{
+			logging:  egv1a1.ProxyLogging{},
+			expected: "misc:error",
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+				},
+			},
+			expected: "misc:error",
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
+				},
+			},
+			expected: "admin:warn",
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
+					egv1a1.LogComponentFilter:  egv1a1.LogLevelDebug,
+				},
+			},
+			expected: "admin:warn,filter:debug",
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
+					egv1a1.LogComponentFilter:  egv1a1.LogLevelDebug,
+					egv1a1.LogComponentClient:  "",
+				},
+			},
+			expected: "admin:warn,filter:debug",
+		},
+		{
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					egv1a1.LogComponentAdmin:   egv1a1.LogLevelOff,
+					egv1a1.LogComponentFilter:  egv1a1.LogLevelCritical,
+				},
+			},
+			expected: "admin:off,filter:critical",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			got := tc.logging.GetEnvoyProxyComponentLevel()
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestValidateClusterStatName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		statName string
+		expected bool
+	}{
+		{
+			name:     "valid cluster stat name with supported operators",
+			statName: "%ROUTE_NAME%/%ROUTE_NAMESPACE%/%BACKEND_REFS%",
+			expected: true,
+		},
+		{
+			name:     "invalid cluster stat name with unsupported operators",
+			statName: "%ROUTE_NAME%/%FOO%/%BAR%",
+			expected: false,
+		},
+		{
+			name:     "valid cluster stat name",
+			statName: "any_custom_name",
+			expected: true,
+		},
+		{
+			name:     "invalid cluster stat name",
+			statName: "%ROUTE_NAME",
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			errs := ValidateClusterStatName(tc.statName)
+			if tc.expected {
+				require.NoError(t, errs)
+			} else {
+				require.Error(t, errs)
+			}
+		})
+	}
+}
+
+func TestValidateProxyAccessLog(t *testing.T) {
+	tests := []struct {
+		name      string
+		accessLog *egv1a1.ProxyAccessLog
+		expected  []error
+	}{
+		{
+			name: "nil format type with text only",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Text: new("[%START_TIME%]"),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with json only",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							JSON: map[string]string{"start_time": "%START_TIME%"},
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with both text and json",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Text: new("[%START_TIME%]"),
+							JSON: map[string]string{"start_time": "%START_TIME%"},
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Text type without text field",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+			expected: []error{fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")},
+		},
+		{
+			name: "File sink without file field",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+							Text: new("[%START_TIME%]"),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+							},
+						},
+					},
+				},
+			},
+			expected: []error{fmt.Errorf("unable to configure access log when using File sink type but \"file\" field being empty")},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := validateProxyAccessLog(tc.accessLog)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestValidateEnvoyProxyFields(t *testing.T) {
+	textFormat := &egv1a1.ProxyAccessLogFormat{
+		Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+		Text: new("[%START_TIME%]"),
+	}
+	fileSink := egv1a1.ProxyAccessLogSink{
+		Type: egv1a1.ProxyAccessLogSinkTypeFile,
+		File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+	}
+
+	tests := []struct {
+		name          string
+		proxy         *egv1a1.EnvoyProxy
+		wantPaths     []string
+		wantFatal     bool
+		wantSanitized *egv1a1.EnvoyProxySpec
+	}{
+		{
+			name: "valid",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{ClusterStatName: new("%ROUTE_NAME%")},
+				},
+			}},
+		},
+		{
+			name: "invalid clusterStatName is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{
+						ClusterStatName:        new("%ROUTE_RULE_NAME/%ROUTE_RULE_NUMBER%"),
+						EnableVirtualHostStats: new(true),
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.metrics.clusterStatName"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{EnableVirtualHostStats: new(true)},
+				},
+			},
+		},
+		{
+			name: "only the invalid access log sink is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{{
+							Format: textFormat,
+							Sinks:  []egv1a1.ProxyAccessLogSink{{Type: egv1a1.ProxyAccessLogSinkTypeFile}, fileSink},
+						}},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].sinks[0]"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{{
+							Format: textFormat,
+							Sinks:  []egv1a1.ProxyAccessLogSink{fileSink},
+						}},
+					},
+				},
+			},
+		},
+		{
+			name: "access log setting with invalid format is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{
+								Format: &egv1a1.ProxyAccessLogFormat{Type: new(egv1a1.ProxyAccessLogFormatTypeText)},
+								Sinks:  []egv1a1.ProxyAccessLogSink{fileSink},
+							},
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].format"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "access log setting left without sinks is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{{Type: egv1a1.ProxyAccessLogSinkTypeFile}}},
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].sinks[0]"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{fileSink}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "access log settings are unset when no setting is left",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{
+					AccessLog: &egv1a1.ProxyAccessLog{
+						Settings: []egv1a1.ProxyAccessLogSetting{
+							{Format: textFormat, Sinks: []egv1a1.ProxyAccessLogSink{{Type: egv1a1.ProxyAccessLogSinkTypeFile}}},
+						},
+					},
+				},
+			}},
+			wantPaths: []string{"telemetry.accessLog.settings[0].sinks[0]"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{AccessLog: &egv1a1.ProxyAccessLog{}},
+			},
+		},
+		{
+			name: "filterOrder with a cycle is dropped",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				FilterOrder: []egv1a1.FilterPosition{
+					{Name: egv1a1.EnvoyFilterOAuth2, Before: new(egv1a1.EnvoyFilterJWTAuthn)},
+					{Name: egv1a1.EnvoyFilterJWTAuthn, Before: new(egv1a1.EnvoyFilterOAuth2)},
+				},
+			}},
+			wantPaths:     []string{"filterOrder"},
+			wantSanitized: &egv1a1.EnvoyProxySpec{},
+		},
+		{
+			name: "invalid provider is fatal",
+			proxy: &egv1a1.EnvoyProxy{Spec: egv1a1.EnvoyProxySpec{
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyService: &egv1a1.KubernetesServiceSpec{Type: new(egv1a1.ServiceType("foo"))},
+					},
+				},
+				Telemetry: &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{ClusterStatName: new("%FOO%")},
+				},
+			}},
+			wantPaths: []string{"telemetry.metrics.clusterStatName"},
+			wantFatal: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			invalid, err := ValidateEnvoyProxyFields(tc.proxy)
+			if tc.wantFatal {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			var paths []string
+			for _, f := range invalid {
+				paths = append(paths, f.Path)
+			}
+			require.Equal(t, tc.wantPaths, paths)
+
+			// ValidateEnvoyProxy stays strict and reports every error.
+			require.Equal(t, tc.wantFatal || len(tc.wantPaths) > 0, ValidateEnvoyProxy(tc.proxy) != nil)
+
+			original := tc.proxy.DeepCopy()
+			sanitized := DropInvalidFields(tc.proxy)
+			require.Equal(t, original, tc.proxy, "DropInvalidFields must not modify its input")
+			remaining, _ := ValidateEnvoyProxyFields(sanitized)
+			require.Empty(t, remaining, "DropInvalidFields must clear every field ValidateEnvoyProxyFields reports")
+			if tc.wantSanitized != nil {
+				require.Equal(t, *tc.wantSanitized, sanitized.Spec)
+			}
+			if len(tc.wantPaths) == 0 {
+				require.Same(t, tc.proxy, sanitized)
+			}
+		})
+	}
+}

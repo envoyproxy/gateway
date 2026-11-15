@@ -843,6 +843,14 @@ const (
 	// `patch` fields configured on this EnvoyProxy were ignored because patching is
 	// disabled in the EnvoyGateway configuration.
 	EnvoyProxyReasonPatchDisabled EnvoyProxyConditionReason = "PatchDisabled"
+
+	// EnvoyProxyReasonInvalidField indicates that one or more fields configured on this
+	// EnvoyProxy are invalid and were ignored, while the rest of the EnvoyProxy is applied.
+	EnvoyProxyReasonInvalidField EnvoyProxyConditionReason = "InvalidField"
+
+	// EnvoyProxyReasonMultipleWarnings is used with the "Warning" condition when the EnvoyProxy
+	// has warnings with different reasons; the condition message lists all of them.
+	EnvoyProxyReasonMultipleWarnings EnvoyProxyConditionReason = "Warnings"
 )
 
 // +kubebuilder:object:root=true

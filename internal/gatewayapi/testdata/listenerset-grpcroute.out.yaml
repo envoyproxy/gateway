@@ -87,7 +87,7 @@ grpcRoutes:
     parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
-      name: xlistenerset-grpc-one
+      name: listenerset-grpc-one
       namespace: gateway-xls
       sectionName: grpc-listener
     rules:
@@ -111,7 +111,7 @@ grpcRoutes:
       parentRef:
         group: gateway.networking.k8s.io
         kind: ListenerSet
-        name: xlistenerset-grpc-one
+        name: listenerset-grpc-one
         namespace: gateway-xls
         sectionName: grpc-listener
 - apiVersion: gateway.networking.k8s.io/v1
@@ -123,7 +123,7 @@ grpcRoutes:
     parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
-      name: xlistenerset-grpc-two
+      name: listenerset-grpc-two
       namespace: gateway-xls
     rules:
     - backendRefs:
@@ -146,7 +146,7 @@ grpcRoutes:
       parentRef:
         group: gateway.networking.k8s.io
         kind: ListenerSet
-        name: xlistenerset-grpc-two
+        name: listenerset-grpc-two
         namespace: gateway-xls
 infraIR:
   gateway-xls/composite-gateway:
@@ -158,13 +158,13 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-one/grpc-listener
+      - name: gateway-xls/composite-gateway/gateway-xls/listenerset-grpc-one/grpc-listener
         ports:
         - containerPort: 8081
           name: http-8081
           protocol: HTTP
           servicePort: 8081
-      - name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-two/grpc-listener
+      - name: gateway-xls/composite-gateway/gateway-xls/listenerset-grpc-two/grpc-listener
         ports:
         - containerPort: 8082
           name: http-8082
@@ -183,7 +183,7 @@ listenerSets:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: ListenerSet
   metadata:
-    name: xlistenerset-grpc-one
+    name: listenerset-grpc-one
     namespace: gateway-xls
   spec:
     listeners:
@@ -239,7 +239,7 @@ listenerSets:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: ListenerSet
   metadata:
-    name: xlistenerset-grpc-two
+    name: listenerset-grpc-two
     namespace: gateway-xls
   spec:
     listeners:
@@ -375,7 +375,7 @@ xdsIR:
         name: composite-gateway
         namespace: gateway-xls
         sectionName: grpc-listener
-      name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-one/grpc-listener
+      name: gateway-xls/composite-gateway/gateway-xls/listenerset-grpc-one/grpc-listener
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -419,7 +419,7 @@ xdsIR:
         name: composite-gateway
         namespace: gateway-xls
         sectionName: grpc-listener
-      name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-two/grpc-listener
+      name: gateway-xls/composite-gateway/gateway-xls/listenerset-grpc-two/grpc-listener
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true

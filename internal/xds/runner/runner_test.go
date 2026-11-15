@@ -601,6 +601,27 @@ func (c *xdsHookClientMock) PostHTTPListenerModifyHook(*listenerv3.Listener, []*
 	return nil, types.HookResult{}, fmt.Errorf("assuming a network error during the call")
 }
 
+func TestProxyInfraNameAndNamespace(t *testing.T) {
+	tests := []struct {
+		name                 string
+		irKey                string
+		gatewayNamespaceMode bool
+		wantName             string
+		wantNamespace        string
+	}{
+		{name: "gateway", irKey: "default/web", wantName: "default/web", wantNamespace: "envoy-gateway-system"},
+		{name: "merged gateways", irKey: "eg", wantName: "eg", wantNamespace: "envoy-gateway-system"},
+		{name: "gateway namespace mode", irKey: "default/web", gatewayNamespaceMode: true, wantName: "web", wantNamespace: "default"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name, namespace := proxyInfraNameAndNamespace(tt.irKey, "envoy-gateway-system", tt.gatewayNamespaceMode)
+			require.Equal(t, tt.wantName, name)
+			require.Equal(t, tt.wantNamespace, namespace)
+		})
+	}
+}
+
 func TestGetRandomMaxConnectionAge(t *testing.T) {
 	// Counter to track how many times each value is returned
 	counts := make(map[time.Duration]int)

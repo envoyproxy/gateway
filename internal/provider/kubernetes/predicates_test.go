@@ -1414,6 +1414,66 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 
 // TestValidateServiceForReconcile tests the validateServiceForReconcile
 // predicate function.
+func TestValidateServiceImportForReconcile(t *testing.T) {
+	backendRef := test.GetServiceImportBackendRef(types.NamespacedName{Name: "resolver"}, 8080)
+	policy := &egv1a1.EnvoyExtensionPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "extension", Namespace: "default"},
+		Spec: egv1a1.EnvoyExtensionPolicySpec{Backends: []egv1a1.ExtensionBackend{
+			{Name: "resolver", BackendRef: backendRef},
+		}},
+	}
+	remotePolicy := policy.DeepCopy()
+	remotePolicy.Spec.Backends[0].BackendRef.Namespace = new(gwapiv1.Namespace("other"))
+	route := test.GetHTTPRoute(types.NamespacedName{Name: "app", Namespace: "default"}, "gateway", backendRef, "")
+
+	testCases := []struct {
+		name         string
+		namespace    string
+		configs      []client.Object
+		eepCRDExists bool
+		expect       bool
+	}{
+		{
+			name: "extension backend in the policy namespace", namespace: "default",
+			configs: []client.Object{policy}, eepCRDExists: true, expect: true,
+		},
+		{
+			name: "extension backend in another namespace", namespace: "other",
+			configs: []client.Object{remotePolicy}, eepCRDExists: true, expect: true,
+		},
+		{
+			name: "same name in an unrelated namespace", namespace: "other",
+			configs: []client.Object{policy}, eepCRDExists: true,
+		},
+		{
+			name: "extension policy CRD absent", namespace: "default",
+			configs: []client.Object{policy},
+		},
+		{
+			name: "route backend without an extension policy", namespace: "default",
+			configs: []client.Object{route}, expect: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := gatewayAPIReconciler{
+				log:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				eepCRDExists: tc.eepCRDExists,
+				client: fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.configs...).
+					WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+					WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
+					Build(),
+			}
+			serviceImport := &mcsapiv1a1.ServiceImport{
+				ObjectMeta: metav1.ObjectMeta{Name: "resolver", Namespace: tc.namespace},
+			}
+			require.Equal(t, tc.expect, r.validateServiceImportForReconcile(serviceImport))
+		})
+	}
+}
+
 func TestValidateServiceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)

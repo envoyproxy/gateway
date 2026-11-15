@@ -1,1 +1,0 @@
-Lua scripts that use the `getfenv`, `setfenv`, `newproxy`, or `module` globals now fail `Strict` Lua validation, which is the default mode. Rewrite the script without them, or set `EnvoyProxy.spec.lua.validationType` to `InsecureSyntax` or `Disabled`.

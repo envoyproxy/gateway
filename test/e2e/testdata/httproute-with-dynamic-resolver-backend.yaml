@@ -203,3 +203,18 @@ spec:
       port: 80
       name: http11
       targetPort: 3000
+---
+# The echo server only speaks h2c on port 3001; port 3000 is HTTP/1.1 only.
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-service-h2c
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: infra-backend-v1
+  ports:
+    - protocol: TCP
+      port: 80
+      name: h2c
+      targetPort: 3001
