@@ -1,3 +1,5 @@
+# The patch targets the orders assignment but leaves it unchanged. orders is still
+# left off the fast path: a patch that matches nothing now may match new endpoints.
 http:
 - name: listener
   address: 0.0.0.0
