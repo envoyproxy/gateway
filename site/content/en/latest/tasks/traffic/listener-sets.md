@@ -159,10 +159,44 @@ The Gateway status reports the number of attached ListenerSets in `status.attach
 
 Test the new listener:
 
+{{< tabpane text=true >}}
+{{% tab header="With External LoadBalancer Support" %}}
+
+Get the External IP of the Gateway:
+
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
-curl -H "Host: www.example.com" http://${GATEWAY_HOST}:8080/
 ```
+
+Curl the example app through the ListenerSet listener:
+
+```shell
+curl --verbose --header "Host: www.example.com" http://${GATEWAY_HOST}:8080/
+```
+
+{{% /tab %}}
+{{% tab header="Without LoadBalancer Support" %}}
+
+Get the name of the Envoy service created by the example Gateway:
+
+```shell
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
+```
+
+Port forward to the Envoy service on the ListenerSet port:
+
+```shell
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8080:8080 &
+```
+
+Curl the example app through the ListenerSet listener:
+
+```shell
+curl --verbose --header "Host: www.example.com" http://localhost:8080/
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 HTTPS listeners work the same way: a ListenerSet listener can terminate TLS with `certificateRefs` pointing at
 Secrets in the ListenerSet's namespace, so application teams manage their own certificates.
