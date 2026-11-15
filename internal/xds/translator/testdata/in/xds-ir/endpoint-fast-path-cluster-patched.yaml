@@ -1,3 +1,5 @@
+# The patch only changes the orders cluster, not its assignment, so orders keeps
+# the fast path.
 http:
 - name: listener
   address: 0.0.0.0

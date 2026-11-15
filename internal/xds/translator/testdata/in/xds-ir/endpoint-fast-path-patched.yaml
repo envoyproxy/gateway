@@ -1,3 +1,4 @@
+# The patch changes the orders assignment, so orders is left off the fast path.
 http:
 - name: listener
   address: 0.0.0.0
