@@ -6,6 +6,7 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
+  Bumped Envoy to v1.39.6.
 
 # New features or capabilities added in this release.
 new features: |
@@ -30,7 +31,6 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
-  Bumped Envoy to v1.39.6.
   Bumped ratelimit to `3dfe2f9a`.
   Bumped Go from 1.26.10 to 1.26.11.
   Updated Go dependencies and the Envoy Gateway container base images.
