@@ -36,7 +36,7 @@ flowchart LR
     X -->|full snapshot + endpoint context| P["Snapshot publisher<br/>fast: rebuild EDS only, from new endpoints + saved context<br/>full: full snapshot + newer published endpoints"]
     F -->|endpoint update| P
     P --> V[xDS cache] --> E[Envoy]
-    R -.->|collect endpoints| T[(Revision tracker)]
+    R -.->|collect endpoints| T[("Revision tracker<br/>one revision per backend, shared by both paths,<br/>so the publisher can tell which endpoints are newer")]
     F -.->|collect endpoints| T
 ```
 
