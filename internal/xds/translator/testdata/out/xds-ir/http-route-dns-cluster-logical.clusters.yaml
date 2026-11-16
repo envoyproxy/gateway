@@ -1,0 +1,81 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      allAddressesInSingleEndpoint: true
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: logical-route-dest
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: bedrock-runtime.us-east-1.amazonaws.com
+              portValue: 443
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: logical-route-dest/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: logical-route-dest
+  perConnectionBufferLimitBytes: 32768
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  clusterType:
+    name: envoy.cluster.dns
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.clusters.dns.v3.DnsCluster
+      dnsLookupFamily: V4_PREFERRED
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: logical-route-multiple-endpoints-dest
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: foo.bar
+              portValue: 50000
+        loadBalancingWeight: 1
+      - endpoint:
+          address:
+            socketAddress:
+              address: bar.foo
+              portValue: 50001
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: logical-route-multiple-endpoints-dest/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: logical-route-multiple-endpoints-dest
+  perConnectionBufferLimitBytes: 32768

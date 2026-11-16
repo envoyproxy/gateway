@@ -36,6 +36,7 @@ backendTrafficPolicies:
     dns:
       dnsRefreshRate: 5s
       respectDnsTtl: false
+      type: Logical
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -476,6 +477,7 @@ xdsIR:
             dnsRefreshRate: 5s
             name: default/policy-for-route-2
             respectDnsTtl: false
+            type: Logical
       - destination:
           metadata:
             kind: HTTPRoute
