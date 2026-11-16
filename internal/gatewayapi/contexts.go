@@ -6,7 +6,7 @@
 package gatewayapi
 
 import (
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -987,7 +987,7 @@ type TranslatorContext struct {
 	BackendMap              map[types.NamespacedName]*egv1a1.Backend
 	SecretMap               map[types.NamespacedName]*corev1.Secret
 	ConfigMapMap            map[types.NamespacedName]*corev1.ConfigMap
-	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
+	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 	ExtensionBackendMap     map[ExtensionBackendKey]*ir.ExtensionBackend
@@ -1096,15 +1096,15 @@ func (t *TranslatorContext) SetConfigMaps(configMaps []*corev1.ConfigMap) {
 	t.ConfigMapMap = configMapMap
 }
 
-func (t *TranslatorContext) GetClusterTrustBundle(name string) *certificatesv1b1.ClusterTrustBundle {
+func (t *TranslatorContext) GetClusterTrustBundle(name string) *certificatesv1.ClusterTrustBundle {
 	if ctb, ok := t.ClusterTrustBundleMap[types.NamespacedName{Name: name}]; ok {
 		return ctb
 	}
 	return nil
 }
 
-func (t *TranslatorContext) SetClusterTrustBundles(ctbs []*certificatesv1b1.ClusterTrustBundle) {
-	ctbMap := make(map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle, len(ctbs))
+func (t *TranslatorContext) SetClusterTrustBundles(ctbs []*certificatesv1.ClusterTrustBundle) {
+	ctbMap := make(map[types.NamespacedName]*certificatesv1.ClusterTrustBundle, len(ctbs))
 	for _, ctb := range ctbs {
 		ctbMap[types.NamespacedName{Name: ctb.Name}] = ctb
 	}

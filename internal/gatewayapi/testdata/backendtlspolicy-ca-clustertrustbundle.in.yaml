@@ -81,7 +81,7 @@ endpointSlices:
         conditions:
           ready: true
 clusterTrustBundles:
-  - apiVersion: certificates.k8s.io/v1beta1
+  - apiVersion: certificates.k8s.io/v1
     kind: ClusterTrustBundle
     metadata:
       creationTimestamp: "2025-06-18T03:19:03Z"
