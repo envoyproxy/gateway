@@ -26,15 +26,18 @@ Non-goals:
 ## Overview
 
 ```mermaid
-flowchart TD
-    W[EndpointSlice event] --> F[Endpoint controller]
-    W --> R[Existing full reconciliation]
-    F --> T[Revision tracker]
-    R -->|collect endpoints| T
-    F -->|endpoint update| P[Snapshot publisher]
-    R --> X[Gateway API and xDS translation]
-    X -->|full result or deletion| P
-    P --> V[xDS cache and Envoy]
+flowchart LR
+    subgraph full [Full path]
+        R[Full reconciliation] --> X[Gateway API and xDS translation]
+    end
+    subgraph fast [Fast path]
+        F[Endpoint controller]
+    end
+    X -->|full snapshot + endpoint context| P["Snapshot publisher<br/>fast: rebuild EDS only, from new endpoints + saved context<br/>full: full snapshot + newer published endpoints"]
+    F -->|endpoint update| P
+    P --> V[xDS cache] --> E[Envoy]
+    R -.->|collect endpoints| T[(Revision tracker)]
+    F -.->|collect endpoints| T
 ```
 
 There are two paths to Envoy:
