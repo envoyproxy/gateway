@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -866,7 +866,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 		backend              *egv1a1.Backend
 		configMap            *corev1.ConfigMap
 		secret               *corev1.Secret
-		clusterTrustBundle   *certificatesv1b1.ClusterTrustBundle
+		clusterTrustBundle   *certificatesv1.ClusterTrustBundle
 		referenceGrant       *gwapiv1b1.ReferenceGrant
 		shouldBeAdded        bool
 	}{
@@ -1076,7 +1076,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 					},
 				},
 			},
-			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+			clusterTrustBundle: &certificatesv1.ClusterTrustBundle{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "ca-ctb",
 				},
@@ -1109,7 +1109,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 					},
 				},
 			},
-			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+			clusterTrustBundle: &certificatesv1.ClusterTrustBundle{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "ca-ctb-image",
 				},
@@ -1196,7 +1196,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 					Name:      "ca-cm-multi",
 				},
 			},
-			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+			clusterTrustBundle: &certificatesv1.ClusterTrustBundle{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "ca-ctb-multi",
 				},
@@ -2135,9 +2135,10 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 
 func newGatewayAPIReconciler(logger logging.Logger) *gatewayAPIReconciler {
 	return &gatewayAPIReconciler{
-		log:              logger,
-		classController:  "some-gateway-class",
-		backendCRDExists: true,
+		log:                  logger,
+		classController:      "some-gateway-class",
+		backendCRDExists:     true,
+		clusterTrustBundleGV: certificatesv1.SchemeGroupVersion,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 				ExtensionAPIs: &egv1a1.ExtensionAPISettings{
@@ -2562,8 +2563,9 @@ func setupReferenceGrantReconciler(objs []client.Object) *gatewayAPIReconciler {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := &gatewayAPIReconciler{
-		log:             logger,
-		classController: "some-gateway-class",
+		log:                  logger,
+		classController:      "some-gateway-class",
+		clusterTrustBundleGV: certificatesv1.SchemeGroupVersion,
 	}
 
 	r.client = fakeclient.NewClientBuilder().
@@ -3015,8 +3017,9 @@ func TestProcessCTPCrlRefs(t *testing.T) {
 			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			r := &gatewayAPIReconciler{
-				log:             logger,
-				classController: "some-gateway-class",
+				log:                  logger,
+				classController:      "some-gateway-class",
+				clusterTrustBundleGV: certificatesv1.SchemeGroupVersion,
 			}
 
 			r.client = fakeclient.NewClientBuilder().
@@ -3180,8 +3183,9 @@ func TestProcessCTPCACertificateRefs(t *testing.T) {
 			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			r := &gatewayAPIReconciler{
-				log:             logger,
-				classController: "some-gateway-class",
+				log:                  logger,
+				classController:      "some-gateway-class",
+				clusterTrustBundleGV: certificatesv1.SchemeGroupVersion,
 			}
 
 			r.client = fakeclient.NewClientBuilder().
@@ -3320,8 +3324,9 @@ func TestProcessClientTrafficPolicies(t *testing.T) {
 			logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 			r := &gatewayAPIReconciler{
-				log:             logger,
-				classController: "some-gateway-class",
+				log:                  logger,
+				classController:      "some-gateway-class",
+				clusterTrustBundleGV: certificatesv1.SchemeGroupVersion,
 			}
 
 			r.client = fakeclient.NewClientBuilder().
