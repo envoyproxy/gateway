@@ -28,7 +28,7 @@ spec:
     - "blocked.example.com"
   rules:
     - backendRefs:
-        - name: tls-backend
+        - name: tls-passthrough-authz-backend
           port: 443
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -44,7 +44,7 @@ spec:
     - "allowed.example.com"
   rules:
     - backendRefs:
-        - name: tls-backend
+        - name: tls-passthrough-authz-backend
           port: 443
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -87,11 +87,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: tls-backend
+  name: tls-passthrough-authz-backend
   namespace: gateway-conformance-infra
 spec:
   selector:
-    app: tls-backend
+    app: tls-passthrough-authz-backend
   ports:
     - protocol: TCP
       port: 443
@@ -100,22 +100,22 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tls-backend
+  name: tls-passthrough-authz-backend
   namespace: gateway-conformance-infra
   labels:
-    app: tls-backend
+    app: tls-passthrough-authz-backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: tls-backend
+      app: tls-passthrough-authz-backend
   template:
     metadata:
       labels:
-        app: tls-backend
+        app: tls-passthrough-authz-backend
     spec:
       containers:
-        - name: tls-backend
+        - name: tls-passthrough-authz-backend
           image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           volumeMounts:
             - name: secret-volume
@@ -130,7 +130,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: SERVICE_NAME
-              value: tls-backend
+              value: tls-passthrough-authz-backend
             - name: TLS_SERVER_CERT
               value: /etc/secret-volume/crt
             - name: TLS_SERVER_PRIVKEY

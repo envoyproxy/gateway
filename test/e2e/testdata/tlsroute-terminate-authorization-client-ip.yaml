@@ -44,7 +44,7 @@ spec:
     - "blocked-terminate.example.com"
   rules:
     - backendRefs:
-        - name: infra-backend-v1
+        - name: tls-terminate-authz-backend
           port: 8080
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -60,7 +60,7 @@ spec:
     - "allowed-terminate.example.com"
   rules:
     - backendRefs:
-        - name: infra-backend-v1
+        - name: tls-terminate-authz-backend
           port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -103,11 +103,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: infra-backend-v1
+  name: tls-terminate-authz-backend
   namespace: gateway-conformance-infra
 spec:
   selector:
-    app: infra-backend-v1
+    app: tls-terminate-authz-backend
   ports:
     - protocol: TCP
       port: 8080
@@ -121,22 +121,22 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: infra-backend-v1
+  name: tls-terminate-authz-backend
   namespace: gateway-conformance-infra
   labels:
-    app: infra-backend-v1
+    app: tls-terminate-authz-backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: infra-backend-v1
+      app: tls-terminate-authz-backend
   template:
     metadata:
       labels:
-        app: infra-backend-v1
+        app: tls-terminate-authz-backend
     spec:
       containers:
-        - name: infra-backend-v1
+        - name: tls-terminate-authz-backend
           image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
           env:
             - name: POD_NAME
@@ -148,7 +148,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: SERVICE_NAME
-              value: infra-backend-v1
+              value: tls-terminate-authz-backend
           resources:
             requests:
               cpu: 10m
