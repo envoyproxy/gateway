@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"k8s.io/utils/ptr"
 
@@ -46,6 +47,24 @@ func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
 		// then require, while anyOf lets jwt_authn pass requests without one.
 		if ptr.Deref(spec.OIDC.PassThroughAuthHeader, false) {
 			return errors.New("authentication.anyOf does not support oidc.passThroughAuthHeader")
+		}
+		// The oauth2 filter overwrites the forwarded ID token header, replacing
+		// the Basic credentials or client JWT that anyOf would accept.
+		if spec.OIDC.ForwardIDToken != nil {
+			header := spec.OIDC.ForwardIDToken.Header
+			if strings.EqualFold(header, "Authorization") {
+				return errors.New("authentication.anyOf does not support oidc.forwardIDToken on the Authorization header")
+			}
+			for _, provider := range spec.JWT.Providers {
+				if provider.ExtractFrom == nil {
+					continue
+				}
+				for _, extractor := range provider.ExtractFrom.Headers {
+					if strings.EqualFold(header, extractor.Name) {
+						return fmt.Errorf("authentication.anyOf does not support oidc.forwardIDToken on header %q, which JWT provider %q reads", header, provider.Name)
+					}
+				}
+			}
 		}
 	}
 	// Envoy enables per-route filters from the original route, while the gate

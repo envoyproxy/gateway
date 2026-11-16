@@ -82,6 +82,9 @@ does not support:
   header with the access token, so Basic credentials never reach Basic authentication.
 - `oidc.passThroughAuthHeader`, which skips OIDC for requests carrying a JWT header and
   relies on JWT authentication rejecting requests without a valid token.
+- `oidc.forwardIDToken` on the `Authorization` header or on a header a JWT provider
+  reads. The OIDC filter overwrites that header with the ID token, replacing the Basic
+  credentials or JWT the client sent.
 - `extAuth.recomputeRoute`.
 - `jwt.failOpen`, which would accept requests with invalid tokens.
 - `recomputeRoute` on JWT providers.

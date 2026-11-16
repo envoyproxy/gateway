@@ -70,7 +70,28 @@ func TestValidateAuthentication(t *testing.T) {
 			change:  func(policy *egv1a1.SecurityPolicy) { policy.Spec.OIDC = &egv1a1.OIDC{PassThroughAuthHeader: new(true)} },
 			wantErr: "oidc.passThroughAuthHeader",
 		},
-		{name: "required api key", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.APIKeyAuth = &egv1a1.APIKeyAuth{} }},
+		{
+			name: "oidc ID token on Authorization",
+			change: func(policy *egv1a1.SecurityPolicy) {
+				policy.Spec.OIDC = &egv1a1.OIDC{ForwardIDToken: &egv1a1.OIDCTokenForwarding{Header: "authorization"}}
+			},
+			wantErr: "oidc.forwardIDToken on the Authorization header",
+		},
+		{
+			name: "oidc ID token on JWT extractor header",
+			change: func(policy *egv1a1.SecurityPolicy) {
+				policy.Spec.OIDC = &egv1a1.OIDC{ForwardIDToken: &egv1a1.OIDCTokenForwarding{Header: "X-Token"}}
+				policy.Spec.JWT.Providers[0].ExtractFrom = &egv1a1.JWTExtractor{Headers: []egv1a1.JWTHeaderExtractor{{Name: "x-token"}}}
+			},
+			wantErr: `oidc.forwardIDToken on header "X-Token"`,
+		},
+		{
+			name: "oidc ID token on other header",
+			change: func(policy *egv1a1.SecurityPolicy) {
+				policy.Spec.OIDC = &egv1a1.OIDC{ForwardIDToken: &egv1a1.OIDCTokenForwarding{Header: "x-id-token"}}
+			},
+		},
+		{name: "required api key",change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.APIKeyAuth = &egv1a1.APIKeyAuth{} }},
 		{name: "required ext auth", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.ExtAuth = &egv1a1.ExtAuth{} }},
 		{
 			name:    "ext auth route recomputation",

@@ -115,6 +115,21 @@ func TestAuthenticationAnyOf(t *testing.T) {
 			wantErr: "authentication.anyOf does not support oidc.forwardAccessToken or oidc.passThroughAuthHeader",
 		},
 		{
+			name: "oidc forwardIDToken on Authorization",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.OIDC = oidc()
+				spec.OIDC.ForwardIDToken = &egv1a1.OIDCTokenForwarding{Header: "Authorization"}
+			},
+			wantErr: "authentication.anyOf does not support oidc.forwardIDToken on the Authorization header",
+		},
+		{
+			name: "oidc forwardIDToken on other header",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.OIDC = oidc()
+				spec.OIDC.ForwardIDToken = &egv1a1.OIDCTokenForwarding{Header: "x-id-token"}
+			},
+		},
+		{
 			name:    "jwt failOpen",
 			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.JWT.FailOpen = new(true) },
 			wantErr: "authentication.anyOf with JWT does not support jwt.failOpen or recomputeRoute on JWT providers",

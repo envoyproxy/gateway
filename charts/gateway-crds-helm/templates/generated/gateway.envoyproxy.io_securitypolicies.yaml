@@ -190,8 +190,10 @@ spec:
                       match a request authenticated by BasicAuth.
 
                       AnyOf currently requires both JWT and BasicAuth. It does not support
-                      oidc.forwardAccessToken, oidc.passThroughAuthHeader, extAuth.recomputeRoute,
-                      jwt.failOpen, JWT route recomputation or basicAuth.forwardUsernameHeader.
+                      oidc.forwardAccessToken, oidc.passThroughAuthHeader, oidc.forwardIDToken on
+                      the Authorization header or on a header a JWT provider reads,
+                      extAuth.recomputeRoute, jwt.failOpen, JWT route recomputation or
+                      basicAuth.forwardUsernameHeader.
                     items:
                       description: AuthenticationMethod names an authentication method
                         of a SecurityPolicy.
@@ -8754,6 +8756,11 @@ spec:
                 has(self.oidc)) ? ((!has(self.oidc.forwardAccessToken) || !self.oidc.forwardAccessToken)
                 && (!has(self.oidc.passThroughAuthHeader) || !self.oidc.passThroughAuthHeader))
                 : true'
+            - message: authentication.anyOf does not support oidc.forwardIDToken on
+                the Authorization header
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                has(self.oidc) && has(self.oidc.forwardIDToken)) ? self.oidc.forwardIDToken.header.lowerAscii()
+                != ''authorization'' : true'
             - message: authentication.anyOf does not support extAuth.recomputeRoute
               rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
                 has(self.extAuth)) ? (!has(self.extAuth.recomputeRoute) || !self.extAuth.recomputeRoute)
