@@ -46,7 +46,7 @@
                       maxInterval: 5s
                     retryOn: 5xx,gateway-error,reset
             requirementMap:
-              foobar_d74de7564544aa48:
+              default/policy:
                 providerName: foobar_14d5b09b29e54e96
         - name: envoy.filters.http.router
           typedConfig:

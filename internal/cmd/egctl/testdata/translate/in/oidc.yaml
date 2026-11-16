@@ -1,0 +1,79 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: default
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: default
+spec:
+  clusterIP: 7.7.7.7
+  ports:
+    - port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - www.example.com
+  rules:
+    - backendRefs:
+        - name: backend
+          port: 80
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: client-secret
+  namespace: default
+data:
+  client-secret: Y2xpZW50MTIzCg==
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: envoy-oidc-hmac
+  namespace: envoy-gateway-system
+data:
+  hmac-secret: cmVwbGFjZS13aXRoLXJhbmRvbS0zMi1ieXRlcy1obWFj
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  oidc:
+    provider:
+      issuer: https://accounts.google.com
+      authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
+      tokenEndpoint: https://oauth2.googleapis.com/token
+    clientID: client-id
+    clientSecret:
+      name: client-secret
+    redirectURL: https://www.example.com/oauth2/callback

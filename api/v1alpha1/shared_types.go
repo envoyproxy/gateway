@@ -27,7 +27,7 @@ const (
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
 	// pin to sha256 to avoid issues with image tags being mutable and changing over time.
-	DefaultEnvoyProxyImage = "docker.io/envoyproxy/envoy:distroless-v1.39.5@sha256:9d84a586119a27b50437dbb01eccd4722832741539b1ed53c8e9d6da6067a6e0"
+	DefaultEnvoyProxyImage = "docker.io/envoyproxy/envoy:distroless-v1.39.6@sha256:1cac8b3a2f72d5a0918f54d7b49e68aae0b0ba325c2d50c8a9a3fff7a4d1f994"
 	// DefaultShutdownManagerCPUResourceRequests for shutdown manager cpu resource
 	DefaultShutdownManagerCPUResourceRequests = "10m"
 	// DefaultShutdownManagerMemoryResourceRequests for shutdown manager memory resource
@@ -35,7 +35,7 @@ const (
 	// DefaultShutdownManagerImage is the default image used for the shutdown manager.
 	DefaultShutdownManagerImage = "docker.io/envoyproxy/gateway-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
-	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:5ae0682e@sha256:b95206e32b1a5f824fb06062fbb85bbdfb7f5de54135e92afe8462f22c979681"
+	DefaultRateLimitImage = "docker.io/envoyproxy/ratelimit:3dfe2f9a@sha256:c695e3a40d6047621ed05346147f23c919beb50a7943b1e32a241b549362a93f"
 	// HTTPProtocol is the common-used http protocol.
 	HTTPProtocol = "http"
 	// GRPCProtocol is the common-used grpc protocol.

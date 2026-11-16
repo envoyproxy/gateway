@@ -16,7 +16,6 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
@@ -96,7 +96,8 @@ type gatewayAPIReconciler struct {
 	udpRouteCRDExists      bool
 	extBackendCRDExists    map[schema.GroupVersionKind]bool
 
-	clusterTrustBundleExits bool
+	// clusterTrustBundleGV is the served ClusterTrustBundle API version, empty if none is served.
+	clusterTrustBundleGV schema.GroupVersion
 
 	// Experimental Gateway API features
 }
@@ -298,6 +299,9 @@ func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	}
 }
 
+// isTransientError reports whether err is likely to clear up on its own, either an
+// API server response such as a timeout or throttling, or a connection-level failure
+// (refused, reset, dropped) that client-go returns without a Kubernetes status.
 func isTransientError(err error) bool {
 	return kerrors.IsServerTimeout(err) ||
 		kerrors.IsTimeout(err) ||
@@ -307,7 +311,12 @@ func isTransientError(err error) bool {
 		kerrors.IsInternalError(err) ||
 		kerrors.IsUnexpectedServerError(err) ||
 		errors.Is(err, context.Canceled) ||
-		errors.Is(err, context.DeadlineExceeded)
+		errors.Is(err, context.DeadlineExceeded) ||
+		utilnet.IsConnectionRefused(err) ||
+		utilnet.IsConnectionReset(err) ||
+		utilnet.IsHTTP2ConnectionLost(err) ||
+		utilnet.IsProbableEOF(err) ||
+		utilnet.IsTimeout(err)
 }
 
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
@@ -1402,8 +1411,7 @@ func (r *gatewayAPIReconciler) processClusterTrustBundleRef(
 	resourceTree *resource.Resources,
 	ref gwapiv1.SecretObjectReference,
 ) error {
-	trustBundle := &certificatesv1b1.ClusterTrustBundle{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: string(ref.Name)}, trustBundle)
+	trustBundle, err := r.getClusterTrustBundle(ctx, string(ref.Name))
 	if err != nil {
 		return fmt.Errorf("unable to find the ClusterTrustBundle %s: %w", string(ref.Name), err)
 	}

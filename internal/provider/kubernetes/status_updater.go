@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -61,7 +62,19 @@ type UpdateHandler struct {
 	apiReader     client.Reader
 	updateChannel chan Update
 	ready         chan struct{}
+	// Only the Start goroutine touches lastWritten, so it needs no lock.
+	lastWritten map[types.UID]lastWrite
 }
+
+// lastWrite records a status write of the handler.
+type lastWrite struct {
+	resourceVersion string
+	at              time.Time
+}
+
+// lastWriteTTL is how long a record of a status write is kept. The record is only needed until the
+// cache has seen the write, which takes far less.
+const lastWriteTTL = time.Minute
 
 func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Reader) *UpdateHandler {
 	u := &UpdateHandler{
@@ -70,9 +83,36 @@ func NewUpdateHandler(log logr.Logger, client client.Client, apiReader client.Re
 		apiReader:     apiReader,
 		updateChannel: make(chan Update, 1000),
 		ready:         make(chan struct{}),
+		lastWritten:   make(map[types.UID]lastWrite),
 	}
 
 	return u
+}
+
+// statusRetryBackoff paces retries after conflicts and after errors that usually clear
+// up on their own, such as API server timeouts, throttling or a brief outage. It waits
+// about 1.5s in total, because every other status write queues up behind the one being retried.
+var statusRetryBackoff = wait.Backoff{
+	Steps:    5,
+	Duration: 100 * time.Millisecond,
+	Factor:   2.0,
+	Jitter:   0.1,
+}
+
+// cacheMayLag reports whether obj, read from the cache, may not show this handler's last write of it yet.
+func (u *UpdateHandler) cacheMayLag(obj client.Object) bool {
+	last, ok := u.lastWritten[obj.GetUID()]
+	return ok && last.resourceVersion != obj.GetResourceVersion()
+}
+
+// expireLastWrites drops the records of writes older than lastWriteTTL. Most records are never
+// looked up again: an object's last update is usually a write.
+func (u *UpdateHandler) expireLastWrites(now time.Time) {
+	for uid, w := range u.lastWritten {
+		if now.Sub(w.at) >= lastWriteTTL {
+			delete(u.lastWritten, uid)
+		}
+	}
 }
 
 func (u *UpdateHandler) apply(update Update) {
@@ -88,9 +128,15 @@ func (u *UpdateHandler) apply(update Update) {
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
 	}()
 
-	if err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
+	if err := retry.OnError(statusRetryBackoff, func(err error) bool {
 		if kerrors.IsConflict(err) {
 			statusUpdateTotal.WithFailure(metrics.ReasonConflict, kindLabel.Value(objKind)).Increment()
+			log.Info("retrying status update after a conflict error", "error", err.Error())
+			return true
+		}
+		if isTransientError(err) {
+			statusUpdateTotal.WithFailure(metrics.ReasonTransient, kindLabel.Value(objKind)).Increment()
+			log.Info("retrying status update after a transient error", "error", err.Error())
 			return true
 		}
 		return false
@@ -114,6 +160,17 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj := update.Mutator.Mutate(obj)
 
+		if isStatusEqual(obj, newObj) && u.cacheMayLag(obj) {
+			// The cache may still show a status the API server no longer has, so confirm against the server.
+			if err := u.apiReader.Get(context.Background(), update.NamespacedName, obj); err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+			newObj = update.Mutator.Mutate(obj)
+		}
+
 		if isStatusEqual(obj, newObj) {
 			log.Info("status unchanged, bypassing update")
 
@@ -123,7 +180,11 @@ func (u *UpdateHandler) apply(update Update) {
 
 		newObj.SetUID(obj.GetUID())
 
-		return u.client.Status().Update(context.Background(), newObj)
+		if err := u.client.Status().Update(context.Background(), newObj); err != nil {
+			return err
+		}
+		u.lastWritten[newObj.GetUID()] = lastWrite{resourceVersion: newObj.GetResourceVersion(), at: time.Now()}
+		return nil
 	}); err != nil {
 		log.Error(err, "unable to update status")
 
@@ -145,10 +206,15 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 	// Enable Updaters to start sending updates to this handler.
 	close(u.ready)
 
+	ticker := time.NewTicker(lastWriteTTL)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
+		case now := <-ticker.C:
+			u.expireLastWrites(now)
 		case update := <-u.updateChannel:
 			u.log.Info("received a status update", "namespace", update.NamespacedName.Namespace,
 				"name", update.NamespacedName.Name, "kind", KindOf(update.Resource))
