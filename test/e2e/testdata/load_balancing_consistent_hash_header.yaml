@@ -12,9 +12,9 @@ spec:
   loadBalancer:
     type: ConsistentHash
     consistentHash:
-      type: Header
-      header:
-        name: "Lb-Test-Header"
+      type: Headers
+      headers:
+        - name: "Lb-Test-Header"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

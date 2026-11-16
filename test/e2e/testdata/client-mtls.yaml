@@ -63,11 +63,11 @@ metadata:
   name: ctp-client-mtls
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: client-mtls-gateway
-    sectionName: mtls
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: client-mtls-gateway
+      sectionName: mtls
   headers:
     xForwardedClientCert:
       certDetailsToAdd:
@@ -132,11 +132,11 @@ metadata:
   name: ctp-client-tls-settings
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: client-mtls-gateway
-    sectionName: tls-settings
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: client-mtls-gateway
+      sectionName: tls-settings
   tls:
     minVersion: "1.1"
     maxVersion: "1.2"
