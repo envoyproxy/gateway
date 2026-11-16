@@ -208,7 +208,6 @@ xds:
                     path:
                       exact: /logout
                   statPrefix: securitypolicy/default/oidc
-                  tokenCookieChunking: {}
                   tokenEndpoint:
                     cluster: oauth2_googleapis_com_443
                     timeout: 10s
