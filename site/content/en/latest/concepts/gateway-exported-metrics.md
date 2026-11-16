@@ -1,5 +1,7 @@
 ---
 title: "Gateway Exported Metrics"
+aliases:
+  - /latest/tasks/observability/gateway-exported-metrics/
 ---
 
 The Envoy Gateway provides a collection of self-monitoring metrics in [Prometheus format][prom-format].
@@ -7,7 +9,7 @@ The Envoy Gateway provides a collection of self-monitoring metrics in [Prometheu
 These metrics allow monitoring of the behavior of Envoy Gateway itself (as distinct from that of the EnvoyProxy it managed).
 
 {{% alert title="EnvoyProxy Metrics" color="warning" %}}
-For EnvoyProxy Metrics, please refer to the [EnvoyProxy Metrics](./proxy-metric) to learn more.
+For EnvoyProxy Metrics, please refer to the [EnvoyProxy Metrics](../tasks/observability/proxy-metric.md) to learn more.
 {{% /alert %}}
 
 ## Watching Components
