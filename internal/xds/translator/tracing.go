@@ -89,7 +89,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 
 		providerConfig = func() (*anypb.Any, error) {
 			traceContextOption := tracecfg.ZipkinConfig_USE_B3
-			if ptr.Deref(tracing.Provider.Zipkin.TraceContextOption, "") == egv1a1.ZipkinTraceContextOptionUseB3WithW3CPropagation {
+			if ptr.Deref(tracing.Provider.Zipkin.TraceContextMode, "") == egv1a1.ZipkinTraceContextModeUseB3WithW3CPropagation {
 				traceContextOption = tracecfg.ZipkinConfig_USE_B3_WITH_W3C_PROPAGATION
 			}
 			config := &tracecfg.ZipkinConfig{

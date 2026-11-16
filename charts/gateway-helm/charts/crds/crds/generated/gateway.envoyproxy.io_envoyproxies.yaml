@@ -19634,9 +19634,9 @@ spec:
                                   when creating a new trace instance. If set to false, a 64bit trace
                                   id will be used.
                                 type: boolean
-                              traceContextOption:
+                              traceContextMode:
                                 description: |-
-                                  TraceContextOption determines which trace context headers are used to extract
+                                  TraceContextMode determines which trace context headers are used to extract
                                   the trace context from downstream requests and to inject it into upstream requests.
                                   Defaults to UseB3.
                                 enum:

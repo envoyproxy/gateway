@@ -9958,9 +9958,9 @@ func (in *ZipkinTracingProvider) DeepCopyInto(out *ZipkinTracingProvider) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.TraceContextOption != nil {
-		in, out := &in.TraceContextOption, &out.TraceContextOption
-		*out = new(ZipkinTraceContextOption)
+	if in.TraceContextMode != nil {
+		in, out := &in.TraceContextMode, &out.TraceContextMode
+		*out = new(ZipkinTraceContextMode)
 		**out = **in
 	}
 }
