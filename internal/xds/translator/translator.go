@@ -897,24 +897,14 @@ func (t *Translator) addRouteToRouteConfig(
 		vHost.Routes = append(vHost.Routes, xdsRoute)
 
 		if httpRoute.Destination != nil {
-			// Prepare extension resources for hook calls
-			var extensionResources []*unstructured.Unstructured
-			if len(httpRoute.ExtensionRefs) > 0 {
-				extensionResources = make([]*unstructured.Unstructured, len(httpRoute.ExtensionRefs))
-				for refIdx, ref := range httpRoute.ExtensionRefs {
-					extensionResources[refIdx] = resolveUnstructuredRef(ref, t.extensionIndex)
-				}
-			}
-
 			ea := &ExtraArgs{
-				metrics:          metrics,
-				http1Settings:    t.clusterHTTP1Settings(httpListener.HTTP1),
-				ipFamily:         determineIPFamily(httpRoute.Destination.Settings),
-				statName:         httpRoute.Destination.StatName,
-				unstructuredRefs: extensionResources,
-				extensionMgr:     t.ExtensionManager,
-				logger:           t.Logger,
-				healthCheckLog:   healthCheckLog,
+				metrics:        metrics,
+				http1Settings:  t.clusterHTTP1Settings(httpListener.HTTP1),
+				ipFamily:       determineIPFamily(httpRoute.Destination.Settings),
+				statName:       httpRoute.Destination.StatName,
+				extensionMgr:   t.ExtensionManager,
+				logger:         t.Logger,
+				healthCheckLog: healthCheckLog,
 			}
 
 			if httpRoute.Traffic != nil && httpRoute.Traffic.HTTP2 != nil {
@@ -932,6 +922,8 @@ func (t *Translator) addRouteToRouteConfig(
 				// * The rule also has a merged BackendClusterRef, whose weighted route action
 				//   entry always names each Settings entry individually (buildXdsWeightedRouteAction)
 				if !httpRoute.NeedsClusterPerSetting() && len(httpRoute.Destination.BackendClusterRefs) == 0 {
+					ea.unstructuredRefs = clusterExtensionResources(httpRoute.ExtensionRefs,
+						httpRoute.Destination.Settings, httpRoute.Destination.Settings, t.extensionIndex)
 					err = processXdsCluster(
 						tCtx,
 						httpRoute.Destination.Name,
@@ -947,6 +939,8 @@ func (t *Translator) addRouteToRouteConfig(
 				} else {
 					for _, setting := range httpRoute.Destination.Settings {
 						tSettings := []*ir.DestinationSetting{setting}
+						ea.unstructuredRefs = clusterExtensionResources(httpRoute.ExtensionRefs,
+							httpRoute.Destination.Settings, tSettings, t.extensionIndex)
 						err = processXdsCluster(
 							tCtx,
 							setting.Name,
@@ -1575,6 +1569,12 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	case EndpointTypeDynamicResolver:
 		// Dynamic resolver has no endpoints
 		// This assignment is not necessary, but it is added for clarity.
+		xdsCluster.LoadAssignment = nil
+	case EndpointTypeNone:
+		// Custom backend has no endpoints. Envoy treats an unset load assignment on a STATIC cluster
+		// as empty, so the cluster is valid with no hosts if the extension leaves it as is. Leaving it
+		// unset also means an extension that turns the cluster into e.g. ORIGINAL_DST, which must not
+		// have a load assignment, does not need to clear it.
 		xdsCluster.LoadAssignment = nil
 	}
 

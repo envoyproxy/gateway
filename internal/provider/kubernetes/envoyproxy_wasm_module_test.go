@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -131,8 +131,8 @@ func TestEnvoyProxyWasmModuleRefsTriggerReconcile(t *testing.T) {
 	configMap := func(ns, name string) *corev1.ConfigMap {
 		return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name}}
 	}
-	ctb := func(name string) *certificatesv1b1.ClusterTrustBundle {
-		return &certificatesv1b1.ClusterTrustBundle{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	ctb := func(name string) *certificatesv1.ClusterTrustBundle {
+		return &certificatesv1.ClusterTrustBundle{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	}
 
 	require.True(t, r.validateSecretForReconcile(secret("proxy-ns", "pull-secret")))
@@ -146,8 +146,9 @@ func TestEnvoyProxyWasmModuleRefsTriggerReconcile(t *testing.T) {
 
 func TestProcessWasmModuleRefs(t *testing.T) {
 	r := gatewayAPIReconciler{
-		classController: egv1a1.GatewayControllerName,
-		log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		classController:      egv1a1.GatewayControllerName,
+		clusterTrustBundleGV: certificatesv1.SchemeGroupVersion,
+		log:                  logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 		client: fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(
@@ -155,7 +156,7 @@ func TestProcessWasmModuleRefs(t *testing.T) {
 				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "proxy-ns", Name: "pull-secret"}},
 				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "other-ns", Name: "other-secret"}},
 				&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "proxy-ns", Name: "ca-configmap"}},
-				&certificatesv1b1.ClusterTrustBundle{ObjectMeta: metav1.ObjectMeta{Name: "ca-bundle"}},
+				&certificatesv1.ClusterTrustBundle{ObjectMeta: metav1.ObjectMeta{Name: "ca-bundle"}},
 			).
 			Build(),
 	}
@@ -198,7 +199,7 @@ func TestDefaultEnvoyProxySpecWasmModuleRefs(t *testing.T) {
 	require.True(t, r.validateSecretForReconcile(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: controllerNS, Name: "pull-secret"}}))
 	require.False(t, r.validateSecretForReconcile(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "proxy-ns", Name: "pull-secret"}}))
 	require.True(t, r.validateConfigMapForReconcile(&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: controllerNS, Name: "ca-configmap"}}))
-	require.True(t, r.validateClusterTrustBundleForReconcile(&certificatesv1b1.ClusterTrustBundle{ObjectMeta: metav1.ObjectMeta{Name: "ca-bundle"}}))
+	require.True(t, r.validateClusterTrustBundleForReconcile(&certificatesv1.ClusterTrustBundle{ObjectMeta: metav1.ObjectMeta{Name: "ca-bundle"}}))
 
 	resourceTree := resource.NewResources()
 	require.NoError(t, r.processWasmModuleRefs(context.Background(), defaultSpec, egv1a1.KindEnvoyGateway, controllerNS, "", newResourceMapping(), resourceTree))
