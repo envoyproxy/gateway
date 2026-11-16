@@ -30,7 +30,7 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: jwt1-or-missing_6f7e920fc2a0617c
+          requirementName: default/policy-1
   - domains:
     - domain2.example.com
     metadata:
@@ -60,4 +60,4 @@
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-          requirementName: jwt2-or-missing_554e269f8327a7aa
+          requirementName: default/policy-2

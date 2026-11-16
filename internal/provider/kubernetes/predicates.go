@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -288,7 +287,7 @@ func (r *gatewayAPIReconciler) isBackendReferencingSecret(nsName *types.Namespac
 	return false
 }
 
-func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb client.Object) bool {
 	if !r.backendAPIDisabled() {
 		if r.isBackendReferencingClusterTrustBundle(ctb) {
 			return true
@@ -316,10 +315,10 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 	return false
 }
 
-func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingClusterTrustBundle(ctb client.Object) bool {
 	eepList := &egv1a1.EnvoyExtensionPolicyList{}
 	if err := r.client.List(context.Background(), eepList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleEepIndex, ctb.Name),
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleEepIndex, ctb.GetName()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated EnvoyExtensionPolicy")
 		return false
@@ -328,10 +327,10 @@ func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingClusterTrustBund
 	return len(eepList.Items) > 0
 }
 
-func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb client.Object) bool {
 	ctpList := &egv1a1.ClientTrafficPolicyList{}
 	if err := r.client.List(context.Background(), ctpList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleCtpIndex, ctb.Name),
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleCtpIndex, ctb.GetName()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated ClientTrafficPolicies")
 		return false
@@ -340,10 +339,10 @@ func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb *certifica
 	return len(ctpList.Items) > 0
 }
 
-func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb client.Object) bool {
 	backendList := &egv1a1.BackendList{}
 	if err := r.client.List(context.Background(), backendList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBackendIndex, ctb.Name),
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBackendIndex, ctb.GetName()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated Backend")
 		return false
@@ -352,10 +351,10 @@ func (r *gatewayAPIReconciler) isBackendReferencingClusterTrustBundle(ctb *certi
 	return len(backendList.Items) > 0
 }
 
-func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+func (r *gatewayAPIReconciler) isBackendTLSPolicyReferencingClusterTrustBundle(ctb client.Object) bool {
 	btlsList := &gwapiv1.BackendTLSPolicyList{}
 	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBtlsIndex, ctb.Name),
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleBtlsIndex, ctb.GetName()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated BackendTLSPolicy")
 		return false

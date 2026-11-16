@@ -14,6 +14,7 @@ http:
       exact: "foo/bar"
     security:
       jwt:
+        name: default/policy-1
         # allowMissingOrFailed lets a valid token from one source pass even when
         # another source carries an invalid token (maps to Envoy's
         # allow_missing_or_failed). The two single-source providers are OR-ed.
@@ -53,6 +54,7 @@ http:
       exact: "foo/baz"
     security:
       jwt:
+        name: default/policy-2
         # allowMissingOrFailed supersedes allowMissing: with both set, only the
         # allow_missing_or_failed requirement is emitted.
         allowMissing: true

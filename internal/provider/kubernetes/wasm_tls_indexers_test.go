@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -380,7 +380,7 @@ func TestWasmTLSIndexers(t *testing.T) {
 				res = r.validateSecretForReconcile(_resource)
 			case *corev1.ConfigMap:
 				res = r.validateConfigMapForReconcile(_resource)
-			case *certificatesv1b1.ClusterTrustBundle:
+			case *certificatesv1.ClusterTrustBundle:
 				res = r.validateClusterTrustBundleForReconcile(_resource)
 			default:
 				t.Fatalf("unknown resource type: %T", tc.resource)
