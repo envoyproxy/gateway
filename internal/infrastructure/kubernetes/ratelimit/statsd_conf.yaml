@@ -86,6 +86,7 @@ mappings:
   - match: "ratelimit_server.*.response_time"
     name: "ratelimit_service_response_time_seconds"
     timer_type: histogram
+    scale: 0.001
     labels:
       grpc_method: "$1"
 
