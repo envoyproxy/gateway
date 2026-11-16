@@ -1,3 +1,7 @@
+envoyGateway:
+  managed: false
 gatewayAPI:
+  managed: false
   safeUpgradePolicy:
     enabled: true
+keep: true

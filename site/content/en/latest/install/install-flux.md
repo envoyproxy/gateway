@@ -74,6 +74,26 @@ EOF
 **Note**: For simplicity, we apply these manifests directly to the cluster.
 In a production environment, it's recommended to store this configuration in a Git or OCI source that Flux reconciles, following a GitOps workflow.
 
+Flux does not upgrade the CRDs in the chart's `crds/` directory by default. To have the `HelmRelease` upgrade them with
+the chart, set `spec.upgrade.crds` to `CreateReplace`. Alternatively, [manage the CRDs with Helm](../install-helm/#managing-crds-with-helm)
+through the chart's values, which also marks them with `helm.sh/resource-policy: keep`. With the manifest above, which
+installs both CRD sets, manage both, or the Gateway API CRDs stay at the version first installed:
+
+```yaml
+spec:
+  values:
+    crds:
+      envoyGateway:
+        managed: true
+      gatewayAPI:
+        managed: true
+```
+
+helm-controller v1.1.0 (Flux v2.4) or later takes ownership of existing resources, so the release adopts the CRDs that
+`crds/` created without further settings. In the provider-managed Gateway API case above, with `spec.install.crds` set
+to `Skip`, set only `crds.envoyGateway.managed`: the Envoy Gateway CRDs are then installed as templates of the release,
+so they no longer need to be installed separately, and the provider's Gateway API CRDs are left alone.
+
 Wait for Envoy Gateway to become available:
 
 ```shell

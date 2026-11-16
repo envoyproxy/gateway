@@ -1,0 +1,22 @@
+{{- /*
+Render the Envoy Gateway CRDs from this chart's crds/ directory as templates of the
+release when .Values.envoyGateway.managed is true, so Helm installs and upgrades them
+with the chart. Helm still applies the crds/ directory once on install, so a release
+that manages its CRDs is installed with --skip-crds, or with --take-ownership to adopt
+CRDs that are already in the cluster. With .Values.keep the CRDs carry
+helm.sh/resource-policy: keep, so helm uninstall leaves them in place.
+*/ -}}
+{{- if .Values.envoyGateway.managed }}
+{{- range $path, $_ := .Files.Glob "crds/generated/*.yaml" }}
+{{- $crd := $.Files.Get $path | trimPrefix "---\n" }}
+{{- if $.Values.keep }}
+{{- /* controller-gen emits one top-level metadata.annotations key per CRD, at two spaces. */ -}}
+{{- if ne (len (regexFindAll "(?m)^  annotations:$" $crd -1)) 1 }}
+{{- fail (printf "%s: expected one top-level metadata.annotations key to add helm.sh/resource-policy: keep" $path) }}
+{{- end }}
+{{- $crd = regexReplaceAll "(?m)^  annotations:$" $crd "  annotations:\n    helm.sh/resource-policy: keep" }}
+{{- end }}
+---
+{{ $crd }}
+{{- end }}
+{{- end }}
