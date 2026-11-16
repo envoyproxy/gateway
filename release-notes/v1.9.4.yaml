@@ -1,0 +1,34 @@
+date: November 16, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  The jwt_authn requirement generated from a JWT `SecurityPolicy` is now named after the SecurityPolicy that applies to the route, `<namespace>/<name>`, or for a merged policy after the route and parent policies it was built from, `<route namespace>/<route name>+<parent namespace>/<parent name>`, instead of the provider names and a hash of its content (`<provider>[-or-<provider>...][-missing|-missing-or-failed]_<hash>`). Routes that share a policy still share one requirement. An `EnvoyPatchPolicy` that targets a requirement by its hash-based name needs to use the new name. The names change once on upgrade, so requests on connections opened before it may be refused with 403 `Wrong requirement_name` until those connections drain.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed ExtensionServerPolicies that target a Gateway being attached to the listeners of every Gateway in the GatewayClass when `mergeGateways` is enabled, and `sectionName` matching same-named listeners on other Gateways.
+  Fixed the default Envoy proxy version reported by `envoy-gateway version` missing the image digest.
+  Fixed requests on existing connections being refused with 403 `Wrong requirement_name` after a JWT SecurityPolicy edit. Since v1.9.0 the jwt_authn requirement was named after a hash of its content, so an edit of the JWT config (an audience, the JWKS, `claimToHeaders`, `optional`) renamed it in both the listener's `requirement_map` and every route's `requirement_name`, and Envoy applies the two as separate updates. The requirement is now named after the SecurityPolicy that applies to the route, so such an edit changes only the listener's requirement content. Connections that are still draining verify against the previous config until they close, as they did before v1.9.0.
+  Fixed status updates being dropped when the API server returned a timeout, throttling or another transient error. The status writer now retries these errors with backoff, in addition to conflicts.
+  Fixed the status updater skipping a status write as unchanged when its cache had not yet seen its own previous write, which could leave a resource with an outdated status, for example a GatewayClass keeping the observedGeneration of its previous generation.
+  Fixed the shutdown manager failing to return an HTTP response when the shutdown readiness wait exceeds the server write timeout.
+  Fixed `egctl x translate` and the file provider (standalone mode) silently ignoring ListenerSets in YAML input, which also dropped every route attached to them. ListenerSets loaded from files are now translated and programmed as in Kubernetes.
+  Fixed `egctl x translate` failing every OIDC SecurityPolicy with `HMAC secret /envoy-oidc-hmac not found`, which also replaced the targeted routes with a 500 direct response. egctl now looks up the HMAC Secret in the namespace given by `--namespace` (default `envoy-gateway-system`).
+  Fixed ClusterTrustBundle references failing on Kubernetes 1.37+, where only `certificates.k8s.io/v1` is served. Envoy Gateway now prefers `certificates.k8s.io/v1` and falls back to `certificates.k8s.io/v1beta1` on older clusters. Updates to a referenced ClusterTrustBundle's `trustBundle`, such as CA rotation, now trigger a reconcile.
+  Fixed endpoint changes of Services referenced only by a SecurityPolicy's OIDC provider backendRefs not being reconciled, which left Envoy calling a stale token endpoint IP.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Bumped Go from 1.26.10 to 1.26.11.
+  Updated Go dependencies and the Envoy Gateway container base images.
