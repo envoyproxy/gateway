@@ -42,6 +42,20 @@ http:
               protocol: GRPC
               weight: 1
               name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
+      oidc:
+        name: securitypolicy/default/policy-for-http-route-1
+        clientID: client.oauth.foo.com
+        clientSecret: Y2xpZW50MTpzZWNyZXQK
+        hmacSecret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+        provider:
+          authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+          tokenEndpoint: https://oauth.foo.com/token
+        scopes:
+        - openid
+        redirectURL: "https://www.foo.com/any/oauth2/callback"
+        redirectPath: "/any/oauth2/callback"
+        logoutPath: "/any/logout"
+        cookieSuffix: 5F93C2E4
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1/authentication-any
         allowMissing: true

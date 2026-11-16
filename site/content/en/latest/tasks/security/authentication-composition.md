@@ -8,8 +8,8 @@ own. With JWT and Basic authentication on the same route, both are required unle
 credentials is rejected by the method that does not find its credentials.
 
 Listing JWT and Basic authentication in `authentication.anyOf` accepts a request
-authenticated by either of them. Any other configured method, such as `extAuth` or
-`apiKeyAuth`, stays required.
+authenticated by either of them. Any other configured method, such as `oidc`, `extAuth`
+or `apiKeyAuth`, stays required.
 
 ## Prerequisites
 
@@ -78,7 +78,10 @@ JWT and Basic authentication, so it also sees requests that they later reject.
 either in the policy itself or inherited from a parent policy through `mergeType`. It
 does not support:
 
-- `oidc`.
+- `oidc.forwardAccessToken`. The OIDC filter replaces the client's `Authorization`
+  header with the access token, so Basic credentials never reach Basic authentication.
+- `oidc.passThroughAuthHeader`, which skips OIDC for requests carrying a JWT header and
+  relies on JWT authentication rejecting requests without a valid token.
 - `extAuth.recomputeRoute`.
 - `jwt.failOpen`, which would accept requests with invalid tokens.
 - `recomputeRoute` on JWT providers.

@@ -2029,7 +2029,10 @@ func jwtName(policy *egv1a1.SecurityPolicy, owners *securityPolicyOwners) string
 		name += "+" + utils.NamespacedName(owners.mergedParent).String()
 	}
 	if authenticationAny(policy) {
-		// allow_missing is part of the requirement, so anyOf needs a distinct name.
+		// Connections still on the previous listener resolve this name against its
+		// requirement_map. Under one name they would pair anyOf's allow_missing with
+		// a route that no longer enables the gate, and pass requests without
+		// credentials; a distinct name makes them refuse requests until they drain.
 		name += authenticationAnySuffix
 	}
 	if len(name) <= maxJWTNameLength {

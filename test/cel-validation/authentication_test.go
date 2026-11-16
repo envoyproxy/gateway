@@ -34,6 +34,13 @@ func TestAuthenticationAnyOf(t *testing.T) {
 			}}},
 		}}
 	}
+	oidc := func() *egv1a1.OIDC {
+		return &egv1a1.OIDC{
+			Provider:     egv1a1.OIDCProvider{Issuer: "https://issuer.example"},
+			ClientID:     new("client"),
+			ClientSecret: gwapiv1.SecretObjectReference{Name: "client-secret"},
+		}
+	}
 	basicAuth := func() *egv1a1.BasicAuth {
 		return &egv1a1.BasicAuth{Users: gwapiv1.SecretObjectReference{Name: "users"}}
 	}
@@ -90,16 +97,22 @@ func TestAuthenticationAnyOf(t *testing.T) {
 			},
 			wantErr: "authentication.anyOf does not support extAuth.recomputeRoute",
 		},
+		{name: "required oidc", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.OIDC = oidc() }},
 		{
-			name: "oidc",
+			name: "oidc forwardAccessToken",
 			spec: func(spec *egv1a1.SecurityPolicySpec) {
-				spec.OIDC = &egv1a1.OIDC{
-					Provider:     egv1a1.OIDCProvider{Issuer: "https://issuer.example"},
-					ClientID:     new("client"),
-					ClientSecret: gwapiv1.SecretObjectReference{Name: "client-secret"},
-				}
+				spec.OIDC = oidc()
+				spec.OIDC.ForwardAccessToken = new(true)
 			},
-			wantErr: "authentication.anyOf does not support oidc",
+			wantErr: "authentication.anyOf does not support oidc.forwardAccessToken or oidc.passThroughAuthHeader",
+		},
+		{
+			name: "oidc passThroughAuthHeader",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.OIDC = oidc()
+				spec.OIDC.PassThroughAuthHeader = new(true)
+			},
+			wantErr: "authentication.anyOf does not support oidc.forwardAccessToken or oidc.passThroughAuthHeader",
 		},
 		{
 			name:    "jwt failOpen",

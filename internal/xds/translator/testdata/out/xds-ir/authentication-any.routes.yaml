@@ -23,6 +23,52 @@
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
           requirementName: default/policy-for-http-route-1/authentication-any
+        envoy.filters.http.oauth2:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
+          config:
+            authScopes:
+            - openid
+            authType: BASIC_AUTH
+            authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            cookieConfigs:
+              codeVerifierCookieConfig:
+                path: /any/oauth2/callback
+              oauthNonceCookieConfig:
+                path: /any/oauth2/callback
+            credentials:
+              clientId: client.oauth.foo.com
+              cookieNames:
+                bearerToken: AccessToken-5F93C2E4
+                codeVerifier: CodeVerifier-5F93C2E4
+                idToken: IdToken-5F93C2E4
+                oauthExpires: OauthExpires-5F93C2E4
+                oauthHmac: OauthHMAC-5F93C2E4
+                oauthNonce: OauthNonce-5F93C2E4
+                refreshToken: RefreshToken-5F93C2E4
+              hmacSecret:
+                name: oauth2/hmac_secret/securitypolicy/default/policy-for-http-route-1
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+              tokenSecret:
+                name: oauth2/client_secret/securitypolicy/default/policy-for-http-route-1
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+            preserveAuthorizationHeader: true
+            redirectPathMatcher:
+              path:
+                exact: /any/oauth2/callback
+            redirectUri: https://www.foo.com/any/oauth2/callback
+            signoutPath:
+              path:
+                exact: /any/logout
+            statPrefix: securitypolicy/default/policy-for-http-route-1
+            tokenEndpoint:
+              cluster: oauth_foo_com_443
+              timeout: 10s
+              uri: https://oauth.foo.com/token
+            useRefreshToken: false
         envoy.filters.http.rbac/authentication-any:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:

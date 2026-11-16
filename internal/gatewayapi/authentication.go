@@ -37,7 +37,16 @@ func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
 		return errors.New("authentication.anyOf requires jwt and basicAuth")
 	}
 	if spec.OIDC != nil {
-		return errors.New("authentication.anyOf does not support oidc")
+		// The oauth2 filter strips the client's Authorization header when it
+		// forwards the access token, so Basic credentials never reach basic_auth.
+		if ptr.Deref(spec.OIDC.ForwardAccessToken, false) {
+			return errors.New("authentication.anyOf does not support oidc.forwardAccessToken")
+		}
+		// Pass-through skips OIDC on the strength of a JWT that jwt_authn must
+		// then require, while anyOf lets jwt_authn pass requests without one.
+		if ptr.Deref(spec.OIDC.PassThroughAuthHeader, false) {
+			return errors.New("authentication.anyOf does not support oidc.passThroughAuthHeader")
+		}
 	}
 	// Envoy enables per-route filters from the original route, while the gate
 	// reads its rules from the recomputed one, so the two can disagree. ext_authz

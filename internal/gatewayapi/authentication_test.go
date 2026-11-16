@@ -59,7 +59,17 @@ func TestValidateAuthentication(t *testing.T) {
 		{name: "missing jwt", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT = nil }, wantErr: "requires jwt and basicAuth"},
 		{name: "missing providers", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers = nil }, wantErr: "requires jwt and basicAuth"},
 		{name: "missing basic", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.BasicAuth = nil }, wantErr: "requires jwt and basicAuth"},
-		{name: "oidc", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.OIDC = &egv1a1.OIDC{} }, wantErr: "does not support oidc"},
+		{name: "required oidc", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.OIDC = &egv1a1.OIDC{} }},
+		{
+			name:    "oidc forwarded access token",
+			change:  func(policy *egv1a1.SecurityPolicy) { policy.Spec.OIDC = &egv1a1.OIDC{ForwardAccessToken: new(true)} },
+			wantErr: "oidc.forwardAccessToken",
+		},
+		{
+			name:    "oidc pass-through",
+			change:  func(policy *egv1a1.SecurityPolicy) { policy.Spec.OIDC = &egv1a1.OIDC{PassThroughAuthHeader: new(true)} },
+			wantErr: "oidc.passThroughAuthHeader",
+		},
 		{name: "required api key", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.APIKeyAuth = &egv1a1.APIKeyAuth{} }},
 		{name: "required ext auth", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.ExtAuth = &egv1a1.ExtAuth{} }},
 		{
