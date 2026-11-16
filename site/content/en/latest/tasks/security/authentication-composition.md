@@ -7,8 +7,9 @@ own. With JWT and Basic authentication on the same route, both are required unle
 `jwt.optional` relaxes JWT, so a client that sends either a Bearer token or Basic
 credentials is rejected by the method that does not find its credentials.
 
-Setting `authentication.mode` to `Any` accepts a request authenticated by either JWT or
-Basic authentication.
+Listing JWT and Basic authentication in `authentication.anyOf` accepts a request
+authenticated by either of them. Any other configured method, such as `extAuth` or
+`apiKeyAuth`, stays required.
 
 ## Prerequisites
 
@@ -28,7 +29,7 @@ spec:
     kind: HTTPRoute
     name: backend
   authentication:
-    mode: Any
+    anyOf: [JWT, BasicAuth]
   jwt:
     providers:
     - name: example
@@ -47,8 +48,8 @@ spec:
 | Invalid Basic credentials | 401 Unauthorized, even if a valid JWT is also presented |
 | Invalid JWT | 401 Unauthorized (403 for an audience mismatch), even if valid Basic credentials are also presented |
 
-Each method lets requests without its own credentials through, and a check placed after
-both methods rejects a request that neither authenticated. That check responds with 403
+Each listed method lets requests without its own credentials through, and a check placed
+after both methods rejects a request that neither authenticated. That check responds with 403
 and does not send a `WWW-Authenticate` challenge, because Envoy's RBAC filter has no
 configurable deny status.
 
@@ -61,15 +62,24 @@ matches requests authenticated by JWT:
   Basic-authenticated request, so it does not restrict Basic users. Match them by other
   attributes, or use `defaultAction: Deny`.
 
-`jwt.optional` has no effect in `Any` mode, since JWT already lets requests without a
-token through.
+`jwt.optional` has no effect when JWT is listed in `anyOf`, since JWT already lets
+requests without a token through.
+
+## Combining with required methods
+
+Methods not listed in `anyOf` apply as usual. For example, adding `extAuth` to the policy
+above requires the external authorization service to allow the request in addition to
+JWT or Basic authentication. By default the external authorization service runs before
+JWT and Basic authentication, so it also sees requests that they later reject.
 
 ## Restrictions
 
-`mode: Any` requires both `jwt` and `basicAuth`, either in the policy itself or inherited
-from a parent policy through `mergeType`. It does not support:
+`anyOf` currently accepts exactly `JWT` and `BasicAuth`, and both must be configured,
+either in the policy itself or inherited from a parent policy through `mergeType`. It
+does not support:
 
-- `oidc`, `apiKeyAuth` or `extAuth`.
+- `oidc`.
+- `extAuth.recomputeRoute`.
 - `jwt.failOpen`, which would accept requests with invalid tokens.
 - `recomputeRoute` on JWT providers.
 - `basicAuth.forwardUsernameHeader`. Envoy's Basic authentication filter leaves that
@@ -80,7 +90,7 @@ from a parent policy through `mergeType`. It does not support:
 A policy that violates these restrictions through an inherited configuration is marked
 invalid, and the route returns 500.
 
-`mode: All`, the default, keeps the existing behavior.
+Without `anyOf`, every configured method is required, as before.
 
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [JWT Authentication]: ../jwt-authentication

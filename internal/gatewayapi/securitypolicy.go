@@ -2029,7 +2029,7 @@ func jwtName(policy *egv1a1.SecurityPolicy, owners *securityPolicyOwners) string
 		name += "+" + utils.NamespacedName(owners.mergedParent).String()
 	}
 	if authenticationAny(policy) {
-		// allow_missing is part of the requirement, so Any and All need distinct names.
+		// allow_missing is part of the requirement, so anyOf needs a distinct name.
 		name += authenticationAnySuffix
 	}
 	if len(name) <= maxJWTNameLength {

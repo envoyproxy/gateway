@@ -18,7 +18,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func TestAuthenticationMode(t *testing.T) {
+func TestAuthenticationAnyOf(t *testing.T) {
 	routeTarget := egv1a1.PolicyTargetReferences{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "HTTPRoute", Name: "backend"},
 	}}}
@@ -27,6 +27,13 @@ func TestAuthenticationMode(t *testing.T) {
 		Issuer:     "https://issuer.example",
 		RemoteJWKS: &egv1a1.RemoteJWKS{URI: "https://issuer.example/keys"},
 	}}}
+	extAuth := func() *egv1a1.ExtAuth {
+		return &egv1a1.ExtAuth{HTTP: &egv1a1.HTTPExtAuthService{
+			BackendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
+				BackendObjectReference: gwapiv1.BackendObjectReference{Name: "authz", Port: new(gwapiv1.PortNumber(80))},
+			}}},
+		}}
+	}
 	basicAuth := func() *egv1a1.BasicAuth {
 		return &egv1a1.BasicAuth{Users: gwapiv1.SecretObjectReference{Name: "users"}}
 	}
@@ -36,66 +43,90 @@ func TestAuthenticationMode(t *testing.T) {
 		spec    func(*egv1a1.SecurityPolicySpec)
 		wantErr string
 	}{
-		{name: "any", spec: func(*egv1a1.SecurityPolicySpec) {}},
-		{name: "all", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.Mode = egv1a1.AuthenticationModeAll }},
-		{name: "default", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.Mode = "" }},
-		{name: "unknown", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.Mode = "Unknown" }, wantErr: "supported values"},
-		{name: "any without jwt", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.JWT = nil }, wantErr: "authentication.mode Any requires jwt and basicAuth"},
-		{name: "any without basic", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.BasicAuth = nil }, wantErr: "authentication.mode Any requires jwt and basicAuth"},
+		{name: "any of", spec: func(*egv1a1.SecurityPolicySpec) {}},
+		{name: "without anyOf", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.AnyOf = nil }},
 		{
-			name: "any inherits methods with mergeType",
+			name:    "unknown method",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.AnyOf[1] = "APIKeyAuth" },
+			wantErr: "supported values",
+		},
+		{
+			name:    "single method",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.AnyOf = spec.Authentication.AnyOf[:1] },
+			wantErr: "should have at least 2 items",
+		},
+		{
+			name:    "duplicate method",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.Authentication.AnyOf[1] = egv1a1.AuthenticationMethodJWT },
+			wantErr: "Duplicate value",
+		},
+		{name: "without jwt", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.JWT = nil }, wantErr: "every method in authentication.anyOf must be configured"},
+		{name: "without basic", spec: func(spec *egv1a1.SecurityPolicySpec) { spec.BasicAuth = nil }, wantErr: "every method in authentication.anyOf must be configured"},
+		{
+			name: "inherits methods with mergeType",
 			spec: func(spec *egv1a1.SecurityPolicySpec) {
 				spec.JWT, spec.BasicAuth = nil, nil
 				spec.MergeType = new(egv1a1.JSONMerge)
 			},
 		},
 		{
-			name: "any with apiKeyAuth",
+			name: "required apiKeyAuth",
 			spec: func(spec *egv1a1.SecurityPolicySpec) {
 				spec.APIKeyAuth = &egv1a1.APIKeyAuth{
 					CredentialRefs: []gwapiv1.SecretObjectReference{{Name: "keys"}},
 					ExtractFrom:    []*egv1a1.ExtractFrom{{Headers: []string{"x-api-key"}}},
 				}
 			},
-			wantErr: "authentication.mode Any does not support oidc, apiKeyAuth or extAuth",
 		},
 		{
-			name: "any with extAuth",
+			name: "required extAuth",
+			spec: func(spec *egv1a1.SecurityPolicySpec) { spec.ExtAuth = extAuth() },
+		},
+		{
+			name: "extAuth recomputeRoute",
 			spec: func(spec *egv1a1.SecurityPolicySpec) {
-				spec.ExtAuth = &egv1a1.ExtAuth{HTTP: &egv1a1.HTTPExtAuthService{
-					BackendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
-						BackendObjectReference: gwapiv1.BackendObjectReference{Name: "authz", Port: new(gwapiv1.PortNumber(80))},
-					}}},
-				}}
+				spec.ExtAuth = extAuth()
+				spec.ExtAuth.RecomputeRoute = new(true)
 			},
-			wantErr: "authentication.mode Any does not support oidc, apiKeyAuth or extAuth",
+			wantErr: "authentication.anyOf does not support extAuth.recomputeRoute",
 		},
 		{
-			name:    "any with jwt failOpen",
-			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.JWT.FailOpen = new(true) },
-			wantErr: "authentication.mode Any does not support jwt.failOpen or recomputeRoute on JWT providers",
-		},
-		{
-			name:    "any with jwt recomputeRoute",
-			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.JWT.Providers[0].RecomputeRoute = new(true) },
-			wantErr: "authentication.mode Any does not support jwt.failOpen or recomputeRoute on JWT providers",
-		},
-		{
-			name: "all with jwt failOpen",
+			name: "oidc",
 			spec: func(spec *egv1a1.SecurityPolicySpec) {
-				spec.Authentication.Mode = egv1a1.AuthenticationModeAll
+				spec.OIDC = &egv1a1.OIDC{
+					Provider:     egv1a1.OIDCProvider{Issuer: "https://issuer.example"},
+					ClientID:     new("client"),
+					ClientSecret: gwapiv1.SecretObjectReference{Name: "client-secret"},
+				}
+			},
+			wantErr: "authentication.anyOf does not support oidc",
+		},
+		{
+			name:    "jwt failOpen",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.JWT.FailOpen = new(true) },
+			wantErr: "authentication.anyOf with JWT does not support jwt.failOpen or recomputeRoute on JWT providers",
+		},
+		{
+			name:    "jwt recomputeRoute",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.JWT.Providers[0].RecomputeRoute = new(true) },
+			wantErr: "authentication.anyOf with JWT does not support jwt.failOpen or recomputeRoute on JWT providers",
+		},
+		{
+			name: "jwt failOpen without anyOf",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.Authentication = nil
 				spec.JWT.FailOpen = new(true)
 			},
 		},
 		{
-			name:    "any with forwarded username",
+			name:    "forwarded username",
 			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.BasicAuth.ForwardUsernameHeader = new("x-user") },
-			wantErr: "authentication.mode Any does not support basicAuth.forwardUsernameHeader",
+			wantErr: "authentication.anyOf with BasicAuth does not support basicAuth.forwardUsernameHeader",
 		},
 		{
-			name: "all with forwarded username",
+			name: "forwarded username without anyOf",
 			spec: func(spec *egv1a1.SecurityPolicySpec) {
-				spec.Authentication.Mode = egv1a1.AuthenticationModeAll
+				spec.Authentication = nil
 				spec.BasicAuth.ForwardUsernameHeader = new("x-user")
 			},
 		},
@@ -105,7 +136,7 @@ func TestAuthenticationMode(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{GenerateName: "authentication-", Namespace: "default"},
 				Spec: egv1a1.SecurityPolicySpec{
 					PolicyTargetReferences: routeTarget,
-					Authentication:         &egv1a1.Authentication{Mode: egv1a1.AuthenticationModeAny},
+					Authentication:         &egv1a1.Authentication{AnyOf: []egv1a1.AuthenticationMethod{egv1a1.AuthenticationMethodJWT, egv1a1.AuthenticationMethodBasicAuth}},
 					JWT:                    jwt.DeepCopy(),
 					BasicAuth:              basicAuth(),
 				},
@@ -119,9 +150,6 @@ func TestAuthenticationMode(t *testing.T) {
 			}
 			require.NoError(t, err)
 			t.Cleanup(func() { require.NoError(t, c.Delete(context.WithoutCancel(t.Context()), policy)) })
-			if test.name == "default" {
-				require.Equal(t, egv1a1.AuthenticationModeAll, policy.Spec.Authentication.Mode)
-			}
 		})
 	}
 }

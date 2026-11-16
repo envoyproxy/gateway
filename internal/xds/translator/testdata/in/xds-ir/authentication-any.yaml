@@ -27,6 +27,21 @@ http:
         name: httproute/default/httproute-1/rule/0/backend/0
     security:
       authenticationAny: true
+      extAuth:
+        name: securitypolicy/default/policy-for-http-route-1
+        failOpen: false
+        grpc:
+          authority: grpc-backend.default:9000
+          destination:
+            name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+            settings:
+            - addressType: IP
+              endpoints:
+              - host: 8.8.4.4
+                port: 9001
+              protocol: GRPC
+              weight: 1
+              name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
       basicAuth:
         name: securitypolicy/default/policy-for-http-route-1/authentication-any
         allowMissing: true

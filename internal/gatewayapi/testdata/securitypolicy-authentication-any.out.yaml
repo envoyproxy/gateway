@@ -202,7 +202,9 @@ securityPolicies:
     namespace: default
   spec:
     authentication:
-      mode: Any
+      anyOf:
+      - JWT
+      - BasicAuth
     authorization:
       defaultAction: Deny
       rules:
@@ -216,6 +218,11 @@ securityPolicies:
     basicAuth:
       users:
         name: users-secret1
+    extAuth:
+      grpc:
+        backendRefs:
+        - name: grpc-backend
+          port: 9000
     jwt:
       providers:
       - audiences:
@@ -250,7 +257,9 @@ securityPolicies:
     namespace: default
   spec:
     authentication:
-      mode: Any
+      anyOf:
+      - JWT
+      - BasicAuth
     mergeType: JSONMerge
     targetRefs:
     - group: gateway.networking.k8s.io
@@ -283,7 +292,9 @@ securityPolicies:
     namespace: default
   spec:
     authentication:
-      mode: Any
+      anyOf:
+      - JWT
+      - BasicAuth
     basicAuth:
       users:
         name: users-secret1
@@ -301,7 +312,7 @@ securityPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Authentication mode Any requires jwt and basicAuth.
+        message: Authentication.anyOf requires jwt and basicAuth.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -437,6 +448,29 @@ xdsIR:
             allowMissing: true
             name: securitypolicy/default/policy-any/authentication-any
             users: '[redacted]'
+          extAuth:
+            grpc:
+              authority: grpc-backend.default:9000
+              destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-any
+                  namespace: default
+                name: securitypolicy/default/policy-any/extauth/0
+                settings:
+                - addressType: IP
+                  endpoints:
+                  - host: 8.8.8.8
+                    port: 9000
+                  metadata:
+                    kind: Service
+                    name: grpc-backend
+                    namespace: default
+                    sectionName: "9000"
+                  name: securitypolicy/default/policy-any/extauth/0/backend/0
+                  protocol: GRPC
+                  weight: 1
+            name: securitypolicy/default/policy-any
           jwt:
             allowMissing: true
             name: default/policy-any/authentication-any

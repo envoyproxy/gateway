@@ -259,22 +259,22 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `mode` | _[AuthenticationMode](#authenticationmode)_ |  false  | All | Mode defines how the configured authentication methods combine.<br />All applies each configured method on its own terms, so JWT and BasicAuth<br />are both required unless jwt.optional or jwt.failOpen relaxes JWT.<br />Any requires JWT and BasicAuth to be configured and accepts a request<br />authenticated by either of them; jwt.optional has no effect.<br />A request without credentials for either method is rejected with<br />403 Forbidden and no WWW-Authenticate challenge.<br />A request presenting invalid credentials for either method is rejected.<br />Authorization rules with a jwt principal never match a request<br />authenticated by BasicAuth.<br />Any does not support OIDC, APIKeyAuth, ExtAuth, jwt.failOpen, JWT route<br />recomputation or basicAuth.forwardUsernameHeader. |
+| `anyOf` | _[AuthenticationMethod](#authenticationmethod) array_ |  false  |  | AnyOf lists authentication methods of which any one is enough to<br />authenticate a request. Every configured method not listed stays required.<br />Without AnyOf, every configured method applies on its own terms, so JWT and<br />BasicAuth are both required unless jwt.optional or jwt.failOpen relaxes JWT.<br />Each listed method lets a request without its credentials through, and a<br />request without credentials for any listed method is rejected with<br />403 Forbidden and no WWW-Authenticate challenge. A request presenting<br />invalid credentials for a listed method is rejected. jwt.optional has no<br />effect when JWT is listed. Authorization rules with a jwt principal never<br />match a request authenticated by BasicAuth.<br />AnyOf currently requires both JWT and BasicAuth. It does not support OIDC,<br />extAuth.recomputeRoute, jwt.failOpen, JWT route recomputation or<br />basicAuth.forwardUsernameHeader. |
 
 
-#### AuthenticationMode
+#### AuthenticationMethod
 
 _Underlying type:_ _string_
 
-AuthenticationMode defines how the configured authentication methods combine.
+AuthenticationMethod names an authentication method of a SecurityPolicy.
 
 _Appears in:_
 - [Authentication](#authentication)
 
 | Value | Description |
 | ----- | ----------- |
-| `All` | AuthenticationModeAll requires every configured authentication method to succeed.<br /> | 
-| `Any` | AuthenticationModeAny requires JWT or BasicAuth authentication to succeed.<br /> | 
+| `JWT` | AuthenticationMethodJWT is the jwt authentication method.<br /> | 
+| `BasicAuth` | AuthenticationMethodBasicAuth is the basicAuth authentication method.<br /> | 
 
 
 #### Authorization

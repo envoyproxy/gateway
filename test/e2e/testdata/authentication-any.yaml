@@ -34,7 +34,7 @@ spec:
     kind: HTTPRoute
     name: authentication-any
   authentication:
-    mode: Any
+    anyOf: [JWT, BasicAuth]
   jwt:
     providers:
     - name: example

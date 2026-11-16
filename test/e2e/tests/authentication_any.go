@@ -26,7 +26,7 @@ func init() {
 
 var AuthenticationAnyTest = suite.ConformanceTest{
 	ShortName:   "AuthenticationAny",
-	Description: "SecurityPolicy with authentication mode Any accepts JWT or Basic credentials",
+	Description: "SecurityPolicy with authentication.anyOf accepts JWT or Basic credentials",
 	Manifests:   []string{"testdata/authentication-any.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"

@@ -15,6 +15,16 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
+          name: envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+            grpcService:
+              envoyGrpc:
+                authority: grpc-backend.default:9000
+                clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
+              timeout: 10s
+            transportApiVersion: V3
+        - disabled: true
           name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth

@@ -72,7 +72,7 @@ func (*authenticationGate) patchRoute(route *routev3.Route, irRoute *ir.HTTPRout
 	if !authenticationAny(security) {
 		return nil
 	}
-	// gatewayapi rejects Any without both methods and closes the route, but the
+	// gatewayapi rejects anyOf without both methods and closes the route, but the
 	// route is still patched; with no principal the gate denies every request.
 	policies := map[string]*rbacconfigv3.Policy{}
 	if principals := authenticationPrincipals(security); len(principals) > 0 {
