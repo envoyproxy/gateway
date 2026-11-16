@@ -9,8 +9,8 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend-4
         port: 8004
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-1
@@ -28,12 +28,6 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
@@ -45,8 +39,8 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend-3
         port: 8003
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -64,12 +58,6 @@ envoyExtensionPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
           for these route rules: [rule-1]'
         reason: Overridden
@@ -86,8 +74,8 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend-2
         port: 8002
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: listener-1
@@ -106,12 +94,6 @@ envoyExtensionPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
           for these routes: [default/httproute-1]'
         reason: Overridden
@@ -128,8 +110,8 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend-1
         port: 8001
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -145,12 +127,6 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other envoyExtensionPolicies
           for these gateway listeners: [envoy-gateway/gateway-1/listener-1] and these

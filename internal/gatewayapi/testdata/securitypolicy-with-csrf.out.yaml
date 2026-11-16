@@ -111,8 +111,8 @@ securityPolicies:
       - '*'
       shadowFraction:
         numerator: 20
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -129,12 +129,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:

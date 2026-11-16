@@ -327,8 +327,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-httproute-5-rule-2
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-5
       sectionName: rule-2
@@ -345,12 +345,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -372,8 +366,8 @@ securityPolicies:
       - x-header-7
       - x-header-8
       maxAge: 2000s
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -390,12 +384,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -407,8 +395,8 @@ securityPolicies:
       allowOrigins:
       - http://*.example.com
       maxAge: 1000s
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
   status:
@@ -425,12 +413,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -441,8 +423,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-httproute-5
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-5
   status:
@@ -459,12 +441,6 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
           route rules: [rule-2]'
         reason: Overridden
@@ -480,8 +456,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-listener-2
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: listener-2
@@ -505,12 +481,6 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -544,8 +514,8 @@ securityPolicies:
         name: example1
         remoteJWKS:
           uri: https://one.example.com/jwt/public-key/jwks.json
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -568,12 +538,6 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:

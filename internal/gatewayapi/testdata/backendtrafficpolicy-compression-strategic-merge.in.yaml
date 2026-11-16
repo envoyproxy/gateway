@@ -79,12 +79,13 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: gateway-compression-policy
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-      compression:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+      compressor:
         - type: Gzip
+          gzip: {}
   # Route-level policy with StrategicMerge
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
@@ -92,13 +93,15 @@ backendTrafficPolicies:
       namespace: default
       name: route-compression-policy
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
-      compression:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
+      compressor:
         - type: Brotli
+          brotli: {}
         - type: Zstd
+          zstd: {}
       mergeType: StrategicMerge
   # Route-level policy without mergeType (should not merge with gateway policy)
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -107,13 +110,15 @@ backendTrafficPolicies:
       namespace: default
       name: route-compression-policy-no-merge
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-2
-      compression:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
+      compressor:
         - type: Brotli
+          brotli: {}
         - type: Zstd
+          zstd: {}
   # Route-level policy with StrategicMerge but no compression (should inherit from gateway)
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
@@ -121,8 +126,8 @@ backendTrafficPolicies:
       namespace: default
       name: route-compression-policy-inherit
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-3
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-3
       mergeType: StrategicMerge

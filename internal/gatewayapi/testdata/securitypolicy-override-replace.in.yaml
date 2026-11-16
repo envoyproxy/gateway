@@ -151,8 +151,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     cors:
@@ -187,8 +187,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: policy-for-listener-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: listener-2
@@ -201,8 +201,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     cors:
@@ -225,8 +225,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
     cors:
@@ -239,8 +239,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route-5
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-5
     cors:
@@ -252,8 +252,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route-5-rule-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-5
       sectionName: rule-2

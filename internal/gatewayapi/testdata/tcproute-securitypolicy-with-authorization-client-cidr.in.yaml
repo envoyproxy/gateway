@@ -108,8 +108,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: sp-gw-tcp-whole
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-tcp
     authorization:
@@ -126,8 +126,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: sp-gw-tcp-section-foo   # This policy should attach sectionName foo
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-tcp
       sectionName: foo
@@ -145,8 +145,8 @@ securityPolicies:
     namespace: default
     name: sp-tcpr-app-bar   # This policy should attach tcproute bar
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TCPRoute
       name: tcpr-app-bar
     authorization:
@@ -163,8 +163,8 @@ securityPolicies:
     namespace: default
     name: sp-tcpr-app-conflict  # This policy should NOT attach tcproute bar due to conflict with above policy
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TCPRoute
       name: tcpr-app-bar
     authorization:
@@ -181,8 +181,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: sp-tcpr-app-invalid-section   # This policy should NOT attach tcproute bar due to invalid section
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-tcp
       sectionName: bogus
