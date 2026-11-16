@@ -295,7 +295,8 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -335,8 +336,9 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.extAuth.grpc.backendRef is deprecated, use spec.extAuth.grpc.backendRefs
-          instead; spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.extAuth.grpc.backendRef is deprecated and will be removed in
+          v1.11, use spec.extAuth.grpc.backendRefs instead; spec.targetRef is deprecated
+          and will be removed in v1.11, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -372,8 +374,9 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.extAuth.http.backendRef is deprecated, use spec.extAuth.http.backendRefs
-          instead; spec.targetRef is deprecated, use spec.targetRefs instead
+        message: spec.extAuth.http.backendRef is deprecated and will be removed in
+          v1.11, use spec.extAuth.http.backendRefs instead; spec.targetRef is deprecated
+          and will be removed in v1.11, use spec.targetRefs instead
         reason: DeprecatedField
         status: "True"
         type: Warning

@@ -49,8 +49,13 @@
       path: /healthz
       receive:
       - binary: RXZlcnl0aGluZyBPSw==
+      useAlpnProtocol: true
     interval: 3s
     timeout: 0.500s
+    tlsOptions:
+      alpnProtocols:
+      - h2
+      - http/1.1
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   loadAssignment:

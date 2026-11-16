@@ -796,11 +796,18 @@ spec:
                           Envoy will return HTTP 413 and will not initiate the authorization process when buffer
                           reaches the number set in this field.
                           Note that this setting will have precedence over failOpen mode.
+                          Defaults to 32768 bytes (32KiB), which matches the default per-connection buffer limit.
                         format: int32
                         minimum: 1
                         type: integer
-                    required:
-                    - maxRequestBytes
+                      packAsBytes:
+                        description: |-
+                          PackAsBytes, when true, sends the request body to the external authorization
+                          service as raw bytes, populating the raw_body field of the HTTP request
+                          attribute context. Otherwise, the body is sent as a UTF-8 string in the body field.
+                          This field is only supported for gRPC external authorization services.
+                          Defaults to false.
+                        type: boolean
                     type: object
                   contextExtensions:
                     description: |-
@@ -903,7 +910,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -1288,11 +1295,31 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
@@ -1450,6 +1477,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -1518,6 +1567,9 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   overrides:
                                     description: |-
                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -1614,6 +1666,9 @@ spec:
                                       for a health check response.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: timeout must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   type:
                                     allOf:
                                     - enum:
@@ -1677,6 +1732,10 @@ spec:
                                       consecutive failures.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: baseEjectionTime must be greater than
+                                        0
+                                      rule: duration(self) > duration('0s')
                                   consecutive5XxErrors:
                                     default: 5
                                     description: Consecutive5xxErrors sets the number
@@ -1711,6 +1770,9 @@ spec:
                                       passive health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   maxEjectionPercent:
                                     default: 10
                                     description: MaxEjectionPercent sets the maximum
@@ -1727,6 +1789,32 @@ spec:
                                       origin.
                                     type: boolean
                                 type: object
+                            type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
                             type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
@@ -1953,7 +2041,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -2145,6 +2233,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -2452,6 +2550,9 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: http1 is not supported for gRPC ExtAuth backends, which
+                        always use gRPC.
+                      rule: '!has(self.backendSettings) || !has(self.backendSettings.http1)'
                     - message: http3 is only supported for route backends
                       rule: '!has(self.backendSettings) || !has(self.backendSettings.http3)'
                   headersToExtAuth:
@@ -2480,7 +2581,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -2865,11 +2966,31 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
@@ -3027,6 +3148,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -3095,6 +3238,9 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   overrides:
                                     description: |-
                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -3191,6 +3337,9 @@ spec:
                                       for a health check response.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: timeout must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   type:
                                     allOf:
                                     - enum:
@@ -3254,6 +3403,10 @@ spec:
                                       consecutive failures.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: baseEjectionTime must be greater than
+                                        0
+                                      rule: duration(self) > duration('0s')
                                   consecutive5XxErrors:
                                     default: 5
                                     description: Consecutive5xxErrors sets the number
@@ -3288,6 +3441,9 @@ spec:
                                       passive health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   maxEjectionPercent:
                                     default: 10
                                     description: MaxEjectionPercent sets the maximum
@@ -3304,6 +3460,32 @@ spec:
                                       origin.
                                     type: boolean
                                 type: object
+                            type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
                             type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
@@ -3530,7 +3712,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -3722,6 +3904,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -4150,6 +4342,9 @@ spec:
                 - message: only one of grpc or http can be specified
                   rule: (has(self.grpc) && !has(self.http)) || (!has(self.grpc) &&
                     has(self.http))
+                - message: packAsBytes can only be enabled when grpc is specified
+                  rule: '!has(self.bodyToExtAuth) || !has(self.bodyToExtAuth.packAsBytes)
+                    || !self.bodyToExtAuth.packAsBytes || has(self.grpc)'
               jwt:
                 description: JWT defines the configuration for JSON Web Token (JWT)
                   authentication.
@@ -4372,7 +4567,7 @@ spec:
                                 BackendRef references a Kubernetes object that represents the
                                 backend server to which the authorization request will be sent.
 
-                                Deprecated: Use BackendRefs instead.
+                                Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                               properties:
                                 group:
                                   default: ""
@@ -4759,11 +4954,31 @@ spec:
                                     active:
                                       description: Active health check configuration
                                       properties:
+                                        disableConnectionReuse:
+                                          description: |-
+                                            DisableConnectionReuse determines whether the active health check connection to a
+                                            backend host is closed after each health check probe. When set to true, Envoy opens a
+                                            new connection for each health check, which is useful for backends (such as
+                                            haproxy-style agent checks) that do not expect a reused connection.
+                                            Defaults to false, which reuses the connection across probes.
+                                          type: boolean
                                         grpc:
                                           description: |-
                                             GRPC defines the configuration of the GRPC health checker.
                                             It's optional, and can only be used if the specified type is GRPC.
                                           properties:
+                                            hostname:
+                                              description: |-
+                                                Hostname defines the value of the :authority header sent with active gRPC
+                                                health checks. Authority selection uses this order: this field, the
+                                                associated Backend endpoint hostname if available, then the effective Route
+                                                hostname. If none of them is set, Envoy falls back to the name of the
+                                                cluster, which is not a valid authority and is rejected by some gRPC
+                                                servers.
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                              type: string
                                             service:
                                               description: |-
                                                 Service to send in the health check request.
@@ -4928,6 +5143,28 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            protocol:
+                                              default: Auto
+                                              description: |-
+                                                Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                                Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                                  - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                                    `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                                    GRPCRoute.
+                                                  - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                                    with HTTP1 as the fallback when nothing is negotiated.
+                                                  - HTTP1 otherwise.
+
+                                                Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                                the application, for example a backend that serves HTTP/1.1 traffic but only
+                                                accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                              enum:
+                                              - Auto
+                                              - HTTP1
+                                              - HTTP2
+                                              type: string
                                             requestBody:
                                               description: RequestBody defines the
                                                 HTTP request body payload sent during
@@ -4998,6 +5235,10 @@ spec:
                                             active health checks.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                          x-kubernetes-validations:
+                                          - message: interval must be greater than
+                                              0
+                                            rule: duration(self) > duration('0s')
                                         overrides:
                                           description: |-
                                             Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -5099,6 +5340,10 @@ spec:
                                             wait for a health check response.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                          x-kubernetes-validations:
+                                          - message: timeout must be greater than
+                                              0
+                                            rule: duration(self) > duration('0s')
                                         type:
                                           allOf:
                                           - enum:
@@ -5164,6 +5409,10 @@ spec:
                                             ejected on consecutive failures.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                          x-kubernetes-validations:
+                                          - message: baseEjectionTime must be greater
+                                              than 0
+                                            rule: duration(self) > duration('0s')
                                         consecutive5XxErrors:
                                           default: 5
                                           description: Consecutive5xxErrors sets the
@@ -5199,6 +5448,10 @@ spec:
                                             passive health checks.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                          x-kubernetes-validations:
+                                          - message: interval must be greater than
+                                              0
+                                            rule: duration(self) > duration('0s')
                                         maxEjectionPercent:
                                           default: 10
                                           description: MaxEjectionPercent sets the
@@ -5215,6 +5468,32 @@ spec:
                                             and local origin.
                                           type: boolean
                                       type: object
+                                  type: object
+                                http1:
+                                  description: |-
+                                    HTTP1 provides HTTP/1 configuration for backend connections.
+                                    When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                                    this field takes precedence for backend (upstream) traffic.
+
+                                    Behavior when targeting route kinds that do not use HTTP/1:
+                                      - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                        directly adds a Warning condition on the policy; the field is ignored.
+                                      - Gateway / ListenerSet / sectionName targets: this field is silently
+                                        ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                        beneath that target; no warning is emitted.
+                                      - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                        access log/metrics, tracing providers): rejected at admission on their
+                                        own BackendSettings via separate validation rules.
+                                  properties:
+                                    enableTrailers:
+                                      description: EnableTrailers defines if HTTP/1
+                                        trailers should be proxied by Envoy.
+                                      type: boolean
+                                    preserveHeaderCase:
+                                      description: |-
+                                        PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                        By default, Envoy will lowercase all the headers.
+                                      type: boolean
                                   type: object
                                 http2:
                                   description: HTTP2 provides HTTP/2 configuration
@@ -5444,7 +5723,7 @@ spec:
                                           description: |-
                                             Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                            Deprecated: use Headers instead
+                                            Deprecated: use Headers instead. This field will be removed in v1.11.
                                           properties:
                                             name:
                                               description: Name of the header to hash.
@@ -5639,6 +5918,16 @@ spec:
                                             zone-aware routing to prefer sending traffic
                                             to the local locality zone.
                                           properties:
+                                            failTrafficOnPanic:
+                                              description: |-
+                                                FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                                cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                                drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                                across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                                requests instead, applying backpressure to clients and giving the backend room to
+                                                recover.
+                                                Defaults to false.
+                                              type: boolean
                                             force:
                                               description: |-
                                                 ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -6438,7 +6727,7 @@ spec:
                           BackendRef references a Kubernetes object that represents the
                           backend server to which the authorization request will be sent.
 
-                          Deprecated: Use BackendRefs instead.
+                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
                         properties:
                           group:
                             default: ""
@@ -6823,11 +7112,31 @@ spec:
                               active:
                                 description: Active health check configuration
                                 properties:
+                                  disableConnectionReuse:
+                                    description: |-
+                                      DisableConnectionReuse determines whether the active health check connection to a
+                                      backend host is closed after each health check probe. When set to true, Envoy opens a
+                                      new connection for each health check, which is useful for backends (such as
+                                      haproxy-style agent checks) that do not expect a reused connection.
+                                      Defaults to false, which reuses the connection across probes.
+                                    type: boolean
                                   grpc:
                                     description: |-
                                       GRPC defines the configuration of the GRPC health checker.
                                       It's optional, and can only be used if the specified type is GRPC.
                                     properties:
+                                      hostname:
+                                        description: |-
+                                          Hostname defines the value of the :authority header sent with active gRPC
+                                          health checks. Authority selection uses this order: this field, the
+                                          associated Backend endpoint hostname if available, then the effective Route
+                                          hostname. If none of them is set, Envoy falls back to the name of the
+                                          cluster, which is not a valid authority and is rejected by some gRPC
+                                          servers.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                        type: string
                                       service:
                                         description: |-
                                           Service to send in the health check request.
@@ -6985,6 +7294,28 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      protocol:
+                                        default: Auto
+                                        description: |-
+                                          Protocol is the HTTP protocol that active health check requests are sent with.
+
+                                          Defaults to Auto, which uses the same protocol as regular requests to the backend:
+
+                                            - HTTP2 for a backend configured for HTTP/2, through a `kubernetes.io/h2c`,
+                                              `gateway.envoyproxy.io/h2c` or `grpc` appProtocol, or as the backend of a
+                                              GRPCRoute.
+                                            - The protocol negotiated through ALPN for a TLS backend that negotiates it,
+                                              with HTTP1 as the fallback when nothing is negotiated.
+                                            - HTTP1 otherwise.
+
+                                          Set HTTP1 or HTTP2 when the health check endpoint speaks a different protocol than
+                                          the application, for example a backend that serves HTTP/1.1 traffic but only
+                                          accepts HTTP/2 health checks. An explicit protocol is always used as is.
+                                        enum:
+                                        - Auto
+                                        - HTTP1
+                                        - HTTP2
+                                        type: string
                                       requestBody:
                                         description: RequestBody defines the HTTP
                                           request body payload sent during health
@@ -7053,6 +7384,9 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   overrides:
                                     description: |-
                                       Overrides defines the configuration of the overriding health check settings for all endpoints
@@ -7149,6 +7483,9 @@ spec:
                                       for a health check response.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: timeout must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   type:
                                     allOf:
                                     - enum:
@@ -7212,6 +7549,10 @@ spec:
                                       consecutive failures.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: baseEjectionTime must be greater than
+                                        0
+                                      rule: duration(self) > duration('0s')
                                   consecutive5XxErrors:
                                     default: 5
                                     description: Consecutive5xxErrors sets the number
@@ -7246,6 +7587,9 @@ spec:
                                       passive health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: interval must be greater than 0
+                                      rule: duration(self) > duration('0s')
                                   maxEjectionPercent:
                                     default: 10
                                     description: MaxEjectionPercent sets the maximum
@@ -7262,6 +7606,32 @@ spec:
                                       origin.
                                     type: boolean
                                 type: object
+                            type: object
+                          http1:
+                            description: |-
+                              HTTP1 provides HTTP/1 configuration for backend connections.
+                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
+                              this field takes precedence for backend (upstream) traffic.
+
+                              Behavior when targeting route kinds that do not use HTTP/1:
+                                - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
+                                  directly adds a Warning condition on the policy; the field is ignored.
+                                - Gateway / ListenerSet / sectionName targets: this field is silently
+                                  ignored for any GRPCRoute, TCPRoute, TLSRoute, or UDPRoute destinations
+                                  beneath that target; no warning is emitted.
+                                - gRPC-only external services (ExtProc, gRPC ExtAuth, ALS, OpenTelemetry
+                                  access log/metrics, tracing providers): rejected at admission on their
+                                  own BackendSettings via separate validation rules.
+                            properties:
+                              enableTrailers:
+                                description: EnableTrailers defines if HTTP/1 trailers
+                                  should be proxied by Envoy.
+                                type: boolean
+                              preserveHeaderCase:
+                                description: |-
+                                  PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
+                                  By default, Envoy will lowercase all the headers.
+                                type: boolean
                             type: object
                           http2:
                             description: HTTP2 provides HTTP/2 configuration for backend
@@ -7488,7 +7858,7 @@ spec:
                                     description: |-
                                       Header configures the header hash policy when the consistent hash type is set to Header.
 
-                                      Deprecated: use Headers instead
+                                      Deprecated: use Headers instead. This field will be removed in v1.11.
                                     properties:
                                       name:
                                         description: Name of the header to hash.
@@ -7680,6 +8050,16 @@ spec:
                                       routing to prefer sending traffic to the local
                                       locality zone.
                                     properties:
+                                      failTrafficOnPanic:
+                                        description: |-
+                                          FailTrafficOnPanic rejects traffic instead of routing to all endpoints when the
+                                          cluster is in panic mode. Panic mode is entered when the share of healthy endpoints
+                                          drops below HealthCheck.PanicThreshold, and by default Envoy then load balances
+                                          across every endpoint, healthy or not. Setting this to true makes Envoy fail the
+                                          requests instead, applying backpressure to clients and giving the backend room to
+                                          recover.
+                                          Defaults to false.
+                                        type: boolean
                                       force:
                                         description: |-
                                           ForceLocalZone defines override configuration for forcing all traffic to stay within the local zone instead of the default behavior
@@ -8058,7 +8438,7 @@ spec:
                   This policy and the TargetRef MUST be in the same namespace for this
                   Policy to have effect
 
-                  Deprecated: use targetRefs/targetSelectors instead
+                  Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
                 properties:
                   group:
                     description: Group is the group of the target resource.

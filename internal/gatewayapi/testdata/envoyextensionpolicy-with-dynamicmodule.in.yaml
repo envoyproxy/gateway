@@ -117,6 +117,17 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+    backends:
+    - name: resolver
+      backendRef:
+        name: service-1
+        port: 8080
+      backendSettings:
+        loadBalancer:
+          type: RoundRobin
+        timeout:
+          tcp:
+            connectTimeout: 3s
     dynamicModule:
     - name: ai-gateway-filter
       filterName: token-ratelimit

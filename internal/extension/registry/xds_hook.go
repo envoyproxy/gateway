@@ -7,6 +7,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -46,15 +47,15 @@ func translateUnstructuredToUnstructuredBytes(e []*unstructured.Unstructured) ([
 	return extensionResourceBytes, nil
 }
 
-func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources, extensionPolicies []*unstructured.Unstructured) (*route.Route, error) {
+func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources, extensionPolicies []*unstructured.Unstructured) (*route.Route, types.HookResult, error) {
 	// Take all of the unstructured resources and policies for the extension and package them into bytes
 	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
 	if err != nil {
-		return route, err
+		return route, types.HookResult{}, err
 	}
 	extensionPolicyBytes, err := translateUnstructuredToUnstructuredBytes(extensionPolicies)
 	if err != nil {
-		return route, err
+		return route, types.HookResult{}, err
 	}
 
 	// Make the request to the extension server
@@ -68,11 +69,12 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 				ExtensionPolicies:  extensionPolicyBytes,
 			},
 		})
+	// The RPC was attempted; count it regardless of whether the server returned an error.
 	if err != nil {
-		return nil, err
+		return nil, types.HookResult{CallCount: 1}, err
 	}
 
-	return resp.Route, nil
+	return resp.Route, types.HookResult{CallCount: 1}, nil
 }
 
 func (h *XDSHook) PostClusterModifyHook(cluster *cluster.Cluster, extensionResources []*unstructured.Unstructured) (*cluster.Cluster, error) {
@@ -112,26 +114,33 @@ func (h *XDSHook) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAs
 	return resp.LoadAssignment, nil
 }
 
-func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
+func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost, extensionResources []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
+	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return vh, types.HookResult{}, err
+	}
 	// Make the request to the extension server
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostVirtualHostModify(ctx,
 		&extension.PostVirtualHostModifyRequest{
-			VirtualHost:            vh,
-			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
+			VirtualHost: vh,
+			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{
+				ExtensionResources: extensionResourceBytes,
+			},
 		})
+	// The RPC was attempted; count it regardless of whether the server returned an error.
 	if err != nil {
-		return nil, err
+		return nil, types.HookResult{CallCount: 1}, err
 	}
 
-	return resp.VirtualHost, nil
+	return resp.VirtualHost, types.HookResult{CallCount: 1}, nil
 }
 
-func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, error) {
+func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, types.HookResult, error) {
 	// Take all of the unstructured resources for the extension and package them into bytes
 	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
 	if err != nil {
-		return l, err
+		return l, types.HookResult{}, err
 	}
 	// Make the request to the extension server
 	ctx := context.Background()
@@ -142,11 +151,12 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionReso
 				ExtensionResources: extensionResourceBytes,
 			},
 		})
+	// The RPC was attempted; count it regardless of whether the server returned an error.
 	if err != nil {
-		return nil, err
+		return nil, types.HookResult{CallCount: 1}, err
 	}
 
-	return resp.Listener, nil
+	return resp.Listener, types.HookResult{CallCount: 1}, nil
 }
 
 func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, extensionPolicies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
@@ -178,4 +188,40 @@ func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets [
 	}
 
 	return resp.Clusters, resp.Secrets, resp.Listeners, resp.Routes, nil
+}
+
+func (h *XDSHook) ResolveSecretHook(secretCtx *types.SecretContext) (*types.SecretResolution, error) {
+	if secretCtx == nil || secretCtx.Secret == nil {
+		return nil, fmt.Errorf("a secret resource is required to resolve a secret")
+	}
+
+	secretBytes, err := translateUnstructuredToUnstructuredBytes([]*unstructured.Unstructured{secretCtx.Secret})
+	if err != nil {
+		return nil, err
+	}
+	if len(secretBytes) != 1 {
+		return nil, fmt.Errorf("failed to marshal secret resource %s/%s",
+			secretCtx.Secret.GetNamespace(), secretCtx.Secret.GetName())
+	}
+
+	ctx := context.Background()
+	resp, err := h.grpcClient.ResolveSecret(ctx,
+		&extension.ResolveSecretRequest{
+			SecretContext: &extension.SecretExtensionContext{
+				SecretResource: secretBytes[0],
+				Proxy: &extension.ProxyInfra{
+					Name:      secretCtx.ProxyInfraName,
+					Namespace: secretCtx.ProxyInfraNamespace,
+				},
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.SecretResolution{
+		SdsSecretConfig: resp.SdsSecretConfig,
+		FailureReason:   resp.FailureReason,
+		FailureMessage:  resp.FailureMessage,
+	}, nil
 }

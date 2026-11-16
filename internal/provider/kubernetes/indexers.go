@@ -47,6 +47,7 @@ const (
 	serviceImportEndpointSliceIndex  = "serviceImportEndpointSliceIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
+	serviceBackendIndex              = "serviceBackendIndex"
 	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
 	configMapCtpIndex                = "configMapCtpIndex"
 	secretCtpIndex                   = "secretCtpIndex"
@@ -247,7 +248,7 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httpRouteFilterRefs := make(map[string]struct{})
 	for _, rule := range httproute.Spec.Rules {
 		for _, filter := range rule.Filters {
-			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+			if gatewayapi.IsHTTPRouteFilterRef(filter.ExtensionRef) {
 				httpRouteFilterRefs[types.NamespacedName{
 					Namespace: httproute.Namespace,
 					Name:      string(filter.ExtensionRef.Name),
@@ -256,7 +257,7 @@ func httpRouteFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 		}
 		for _, backendRef := range rule.BackendRefs {
 			for _, filter := range backendRef.Filters {
-				if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+				if gatewayapi.IsHTTPRouteFilterRef(filter.ExtensionRef) {
 					httpRouteFilterRefs[types.NamespacedName{
 						Namespace: httproute.Namespace,
 						Name:      string(filter.ExtensionRef.Name),
@@ -279,7 +280,7 @@ func httpRouteFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
 	// backendRef-level filters are intentionally not indexed.
 	for _, rule := range grpcroute.Spec.Rules {
 		for _, filter := range rule.Filters {
-			if filter.ExtensionRef != nil && string(filter.ExtensionRef.Kind) == resource.KindHTTPRouteFilter {
+			if gatewayapi.IsHTTPRouteFilterRef(filter.ExtensionRef) {
 				httpRouteFilterRefs[types.NamespacedName{
 					Namespace: grpcroute.Namespace,
 					Name:      string(filter.ExtensionRef.Name),
@@ -904,6 +905,11 @@ func backendSecurityPolicyIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
+	if securityPolicy.Spec.OIDC != nil {
+		for _, backendRef := range securityPolicy.Spec.OIDC.Provider.BackendRefs {
+			backendRefs = append(backendRefs, backendRef.BackendObjectReference)
+		}
+	}
 
 	for _, reference := range backendRefs {
 		values = append(values,
@@ -1072,7 +1078,25 @@ func addBackendIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.Backend{}, serviceBackendIndex, serviceBackendIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// serviceBackendIndexFunc indexes KubernetesService Backends by the Service they point at.
+func serviceBackendIndexFunc(rawObj client.Object) []string {
+	backend := rawObj.(*egv1a1.Backend)
+	if backend.Spec.Type == nil || *backend.Spec.Type != egv1a1.BackendTypeKubernetesService || backend.Spec.KubernetesService == nil {
+		return nil
+	}
+	return []string{
+		types.NamespacedName{
+			Namespace: backend.Namespace,
+			Name:      string(backend.Spec.KubernetesService.Name),
+		}.String(),
+	}
 }
 
 func configMapBackendIndexFunc(rawObj client.Object) []string {
@@ -1243,6 +1267,17 @@ func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
 			)
 		}
 	}
+	if t := filter.Spec.GRPCJSONTranscoder; t != nil {
+		ref := t.ProtoDescriptor.ValueRef
+		if string(ref.Group) == "" && string(ref.Kind) == resource.KindConfigMap {
+			configMapReferences = append(configMapReferences,
+				types.NamespacedName{
+					Namespace: filter.Namespace,
+					Name:      string(ref.Name),
+				}.String(),
+			)
+		}
+	}
 	return configMapReferences
 }
 
@@ -1375,6 +1410,13 @@ func backendEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 					Name:      string(backendRef.Name),
 				}.String())
 		}
+	}
+
+	for _, backend := range envoyExtensionPolicy.Spec.Backends {
+		ret = append(ret, types.NamespacedName{
+			Namespace: gatewayapi.NamespaceDerefOr(backend.BackendRef.Namespace, envoyExtensionPolicy.Namespace),
+			Name:      string(backend.BackendRef.Name),
+		}.String())
 	}
 
 	return ret

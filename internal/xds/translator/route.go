@@ -52,6 +52,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches, httpRoute.CookieMatches),
 		Metadata: buildXdsMetadata(httpRoute.Metadata),
 	}
+	patchExtensionBackendMetadata(router, httpRoute)
 
 	if len(httpRoute.AddRequestHeaders) > 0 {
 		router.RequestHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddRequestHeaders)
@@ -375,7 +376,9 @@ func buildXdsWeightedRouteAction(destination *ir.RouteDestination, backendIndex 
 
 	// Each Setting gets its own weighted entry, using its own Weight.
 	for _, destinationSetting := range destination.Settings {
-		if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
+		if len(destinationSetting.Endpoints) > 0 ||
+			destinationSetting.IsDynamicResolver || // Dynamic resolver has no endpoints
+			destinationSetting.IsCustomBackend {
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
 				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
@@ -675,12 +678,17 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 
 	for _, policy := range mirrorPolicies {
 		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
-			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+			rmp := &routev3.RouteAction_RequestMirrorPolicy{
 				Cluster:         policy.Destination.Name,
 				RuntimeFraction: mp,
+			}
+			if policy.HostRewrite != nil && *policy.HostRewrite != "" {
+				rmp.HostRewriteLiteral = *policy.HostRewrite
+			} else {
 				// We don't need to append the shadow host suffix as the mirror policy already uses a different cluster which is enough to distinguish the mirrored traffic
-				DisableShadowHostSuffixAppend: true,
-			})
+				rmp.DisableShadowHostSuffixAppend = true
+			}
+			xdsMirrorPolicies = append(xdsMirrorPolicies, rmp)
 		}
 	}
 

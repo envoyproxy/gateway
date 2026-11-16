@@ -1,0 +1,236 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-valid
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/literal"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  kind: Service
+                  name: service-1
+                  port: 8080
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-host-literal
+        - matches:
+            - path:
+                value: "/backend"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  group: gateway.envoyproxy.io
+                  kind: Backend
+                  name: backend-single-fqdn
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-host-backend
+        - matches:
+            - path:
+                value: "/filter-order"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-host-literal
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  kind: Service
+                  name: service-1
+                  port: 8080
+        - matches:
+            - path:
+                value: "/percentage"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  kind: Service
+                  name: service-1
+                  port: 8080
+                percent: 50
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-host-literal
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-invalid-service-backend
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/invalid-service"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  kind: Service
+                  name: service-1
+                  port: 8080
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-host-backend
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-invalid-multi-fqdn
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/invalid-multi-fqdn"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  group: gateway.envoyproxy.io
+                  kind: Backend
+                  name: backend-multi-fqdn
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-host-backend
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-invalid-multiple-filters
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/invalid-multiple-filters"
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  kind: Service
+                  name: service-1
+                  port: 8080
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-host-literal
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-host-backend
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-single-fqdn
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: fqdn-mirror.example.internal
+            port: 8080
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-multi-fqdn
+      namespace: default
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: fqdn-1.example.internal
+            port: 8080
+        - fqdn:
+            hostname: fqdn-2.example.internal
+            port: 8080
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: mirror-host-literal
+      namespace: default
+    spec:
+      requestMirror:
+        hostname:
+          type: Literal
+          literal: literal.example.internal
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: mirror-host-backend
+      namespace: default
+    spec:
+      requestMirror:
+        hostname:
+          type: Backend

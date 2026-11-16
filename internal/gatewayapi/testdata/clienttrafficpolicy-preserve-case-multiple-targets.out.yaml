@@ -30,6 +30,16 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'spec.http1.enableTrailers behavior will change in a future release:
+          this field will only apply to client connections, for compatibility: use
+          BackendTrafficPolicy.http1.enableTrailers for backend settings; spec.http1.preserveHeaderCase
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.preserveHeaderCase
+          for backend settings'
+        reason: BehaviorChange
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -42,6 +52,16 @@ clientTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'spec.http1.enableTrailers behavior will change in a future release:
+          this field will only apply to client connections, for compatibility: use
+          BackendTrafficPolicy.http1.enableTrailers for backend settings; spec.http1.preserveHeaderCase
+          behavior will change in a future release: this field will only apply to
+          client connections, for compatibility: use BackendTrafficPolicy.http1.preserveHeaderCase
+          for backend settings'
+        reason: BehaviorChange
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

@@ -55,6 +55,7 @@ type LocalDynamicModuleSource struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=4096
+	// +kubebuilder:validation:Pattern=`^/.*`
 	Path string `json:"path"`
 }
 

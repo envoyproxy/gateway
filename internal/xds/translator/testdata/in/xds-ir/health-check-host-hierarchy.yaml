@@ -24,6 +24,7 @@ http:
           interval: 5s
           healthyThreshold: 1
           unhealthyThreshold: 3
+          disableConnectionReuse: true
           http:
             host: btp-health.example.com
             path: /healthz

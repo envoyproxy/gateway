@@ -112,6 +112,7 @@ type PreconnectPolicy struct {
 }
 
 // +kubebuilder:validation:XValidation:rule="!has(self.closeDelay) || has(self.value)",message="closeDelay can only be configured when value is set"
+// +kubebuilder:validation:XValidation:rule="!has(self.maxConnectionDurationJitter) || has(self.maxConnectionDuration)",message="maxConnectionDurationJitter can only be configured when maxConnectionDuration is set"
 type ConnectionLimit struct {
 	// Value of the maximum concurrent connections limit.
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
@@ -132,6 +133,15 @@ type ConnectionLimit struct {
 	//
 	// +optional
 	MaxConnectionDuration *gwapiv1.Duration `json:"maxConnectionDuration,omitempty"`
+	// MaxConnectionDurationJitter adds a random extra amount of time to each connection's
+	// MaxConnectionDuration, up to this percentage of that duration. This keeps connections
+	// opened together from expiring at the same moment. Requires MaxConnectionDuration.
+	// If not specified, no jitter is added.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	MaxConnectionDurationJitter *uint32 `json:"maxConnectionDurationJitter,omitempty"`
 	// MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
 	// If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive.
 	//

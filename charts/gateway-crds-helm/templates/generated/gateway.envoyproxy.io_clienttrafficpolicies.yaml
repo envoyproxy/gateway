@@ -182,6 +182,16 @@ spec:
                           If not specified, there is no limit.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      maxConnectionDurationJitter:
+                        description: |-
+                          MaxConnectionDurationJitter adds a random extra amount of time to each connection's
+                          MaxConnectionDuration, up to this percentage of that duration. This keeps connections
+                          opened together from expiring at the same moment. Requires MaxConnectionDuration.
+                          If not specified, no jitter is added.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
                       maxRequestsPerConnection:
                         description: |-
                           MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.
@@ -205,6 +215,9 @@ spec:
                     x-kubernetes-validations:
                     - message: closeDelay can only be configured when value is set
                       rule: '!has(self.closeDelay) || has(self.value)'
+                    - message: maxConnectionDurationJitter can only be configured
+                        when maxConnectionDuration is set
+                      rule: '!has(self.maxConnectionDurationJitter) || has(self.maxConnectionDuration)'
                   maxAcceptPerSocketEvent:
                     default: 1
                     description: |-
@@ -235,7 +248,7 @@ spec:
                   Note Proxy Protocol must be present when this field is set, else the connection
                   is closed.
 
-                  Deprecated: Use ProxyProtocol instead.
+                  Deprecated: Use ProxyProtocol instead. This field will be removed in v1.11.
                 type: boolean
               grpc:
                 description: GRPC provides gRPC configuration on the listener.
@@ -1010,7 +1023,7 @@ spec:
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
 
-                      Deprecated: use RequestID=PreserveOrGenerate instead
+                      Deprecated: use RequestID=PreserveOrGenerate instead. This field will be removed in v1.11.
                     type: boolean
                   requestID:
                     description: |-
@@ -1114,12 +1127,23 @@ spec:
                       Has no effect unless maxConnectionDuration is set.
                     type: boolean
                   enableTrailers:
-                    description: EnableTrailers defines if HTTP/1 trailers should
-                      be proxied by Envoy.
+                    description: |-
+                      EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                   http10:
-                    description: HTTP10 turns on support for HTTP/1.0 and HTTP/0.9
-                      requests.
+                    description: |-
+                      HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+
+                      Note: this field currently forces explicit HTTP/1 for backend connections when other
+                      backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.
+                      In a future release it will no longer force explicit HTTP/1 on backend connections.
+                      Use BackendTrafficPolicy.http1: {} to force HTTP/1 on a backend cluster explicitly.
                     properties:
                       useDefaultHost:
                         description: |-
@@ -1176,6 +1200,12 @@ spec:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
                       By default, Envoy will lowercase all the headers.
+
+                      Note: this field currently configures both the client connection and the backend HTTP/1
+                      protocol settings. In a future release it will be restricted to the client connection only.
+                      Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+                      Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+                      to opt in to the new behavior now.
                     type: boolean
                 type: object
               http2:
@@ -1295,6 +1325,56 @@ spec:
                   If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
                 minProperties: 0
                 properties:
+                  forwardProtoConfig:
+                    description: |-
+                      ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+                      destination port. Only takes effect when PROXY protocol is enabled.
+
+                      This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and
+                      forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct
+                      scheme for the forwarded request.
+                    properties:
+                      httpDestinationPorts:
+                        description: |-
+                          HTTPDestinationPorts are the destination ports treated as HTTP.
+                          When the PROXY protocol destination port matches one of these, the
+                          x-forwarded-proto header is set to "http".
+                          Common values: 80, 8080.
+                        items:
+                          format: int32
+                          type: integer
+                          x-kubernetes-validations:
+                          - message: port must be in the range [1, 65535]
+                            rule: self >= 1 && self <= 65535
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                      httpsDestinationPorts:
+                        description: |-
+                          HTTPSDestinationPorts are the destination ports treated as HTTPS.
+                          When the PROXY protocol destination port matches one of these, the
+                          x-forwarded-proto header is set to "https".
+                          Common values: 443, 8443.
+                        items:
+                          format: int32
+                          type: integer
+                          x-kubernetes-validations:
+                          - message: port must be in the range [1, 65535]
+                            rule: self >= 1 && self <= 65535
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                    type: object
+                    x-kubernetes-validations:
+                    - message: at least one of httpsDestinationPorts or httpDestinationPorts
+                        must be set
+                      rule: '(has(self.httpsDestinationPorts) ? self.httpsDestinationPorts.size()
+                        : 0) + (has(self.httpDestinationPorts) ? self.httpDestinationPorts.size()
+                        : 0) >= 1'
+                    - message: httpsDestinationPorts and httpDestinationPorts must
+                        be disjoint
+                      rule: '!(has(self.httpsDestinationPorts) && has(self.httpDestinationPorts)
+                        && self.httpsDestinationPorts.exists(p, p in self.httpDestinationPorts))'
                   optional:
                     description: |-
                       Optional allows requests without a Proxy Protocol header to be proxied.
@@ -1326,7 +1406,7 @@ spec:
                   This policy and the TargetRef MUST be in the same namespace for this
                   Policy to have effect
 
-                  Deprecated: use targetRefs/targetSelectors instead
+                  Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -1810,6 +1890,8 @@ spec:
                           An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will
                           verify that the SHA-256 of the DER-encoded presented certificate matches
                           one of the specified values.
+                          Setting this requires a client certificate, so it cannot be combined with
+                          mode VerifyIfGiven or the deprecated optional: true.
                         items:
                           type: string
                         type: array
@@ -1910,6 +1992,8 @@ spec:
                           An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will
                           verify that the SHA-256 of the DER-encoded Subject Public Key Information
                           (SPKI) of the presented certificate matches one of the specified values.
+                          Setting this requires a client certificate, so it cannot be combined with
+                          mode VerifyIfGiven or the deprecated optional: true.
                         items:
                           type: string
                         type: array
@@ -1917,7 +2001,9 @@ spec:
                         description: |-
                           An optional list of Subject Alternative name matchers. If specified, Envoy
                           will verify that the Subject Alternative Name of the presented certificate
-                          matches one of the specified matchers
+                          matches one of the specified matchers.
+                          Setting this requires a client certificate, so it cannot be combined with
+                          mode VerifyIfGiven or the deprecated optional: true.
                         properties:
                           dnsNames:
                             description: DNS names matchers
@@ -2066,6 +2152,12 @@ spec:
                         VerifyIfGiven or RequireAndVerify
                       rule: '!has(self.allowExpiredCertificate) || !self.allowExpiredCertificate
                         || !has(self.mode) || self.mode in [''VerifyIfGiven'', ''RequireAndVerify'']'
+                    - message: subjectAltNames, certificateHashes and spkiHashes cannot
+                        be used with mode VerifyIfGiven, because Envoy requires a
+                        client certificate whenever they are set
+                      rule: '!((has(self.mode) ? self.mode == ''VerifyIfGiven'' :
+                        (has(self.optional) && self.optional)) && (has(self.subjectAltNames)
+                        || has(self.certificateHashes) || has(self.spkiHashes)))'
                   ecdhCurves:
                     description: |-
                       ECDHCurves specifies the set of supported ECDH curves.

@@ -1,0 +1,130 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    mergeBackends: {}
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: transcode
+          backendRefs:
+            - name: service-ws
+              port: 8080
+            - name: service-grpc
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: service-ws
+    spec:
+      clusterIP: 10.0.0.1
+      ports:
+        - name: ws
+          port: 8080
+          targetPort: 8080
+          protocol: TCP
+          appProtocol: kubernetes.io/ws
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: service-grpc
+    spec:
+      clusterIP: 10.0.0.2
+      ports:
+        - name: grpc
+          port: 8080
+          targetPort: 8080
+          protocol: TCP
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: default
+      name: endpointslice-service-ws
+      labels:
+        kubernetes.io/service-name: service-ws
+    addressType: IPv4
+    ports:
+      - name: ws
+        port: 8080
+        protocol: TCP
+    endpoints:
+      - addresses:
+          - "10.244.0.21"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      namespace: default
+      name: endpointslice-service-grpc
+      labels:
+        kubernetes.io/service-name: service-grpc
+    addressType: IPv4
+    ports:
+      - name: grpc
+        port: 8080
+        protocol: TCP
+    endpoints:
+      - addresses:
+          - "10.244.0.22"
+        conditions:
+          ready: true
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      namespace: default
+      name: proto-descriptor
+    binaryData:
+      proto-descriptor: CnkKCmVjaG8ucHJvdG8SB3Rlc3QudjEiDQoLUGluZ1JlcXVlc3QiDgoMUGluZ1Jlc3BvbnNlMjsKBEVjaG8SMwoEUGluZxIULnRlc3QudjEuUGluZ1JlcXVlc3QaFS50ZXN0LnYxLlBpbmdSZXNwb25zZWIGcHJvdG8z
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: transcode
+    spec:
+      grpcJSONTranscoder:
+        protoDescriptor:
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: proto-descriptor

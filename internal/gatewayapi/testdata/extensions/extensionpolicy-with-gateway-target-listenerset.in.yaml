@@ -1,0 +1,58 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: All
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: envoy-gateway
+    name: ext-listeners
+  spec:
+    parentRef:
+      name: gateway-1
+    listeners:
+    - name: ext-http
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: gateway-1
+    data: "attached to every listener of the Gateway, including ListenerSet listeners"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: gateway-1
+      sectionName: http
+    data: "attached only to the Gateway's own http listener"

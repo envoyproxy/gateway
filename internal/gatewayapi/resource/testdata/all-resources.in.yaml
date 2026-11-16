@@ -15,6 +15,8 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
+  labels:
+    tier: edge
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
@@ -87,6 +89,21 @@ spec:
     - backendRefs:
         - name: providedBackend
           port: 8000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: extra
+  namespace: default
+spec:
+  parentRef:
+    name: eg
+    namespace: envoy-gateway-system
+  listeners:
+    - name: extra
+      protocol: HTTP
+      port: 8080
+      hostname: extra.example.com
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute

@@ -1,0 +1,67 @@
+- ignorePortInHostMatching: true
+  name: default/gateway/http
+  virtualHosts:
+  - domains:
+    - example.com
+    name: default/gateway/http/example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /one
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: route-one
+              namespace: default
+          envoy.filters.http.lua/0:
+            resolver: envoyextensionpolicy/default/one/backend/resolver/0
+          envoy.filters.http.lua/1:
+            resolver: envoyextensionpolicy/default/one/backend/resolver/0
+          gateway.envoyproxy.io/extension-backends:
+            resolver: envoyextensionpolicy/default/one/backend/resolver/0
+      name: route-one
+      route:
+        cluster: route-backend
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/one/dynamic-module/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+        envoy.filters.http.lua/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          filterContext:
+            preserved: value
+          sharedVmId: envoyextensionpolicy/default/one/lua/0
+          sourceCode:
+            inlineString: |
+              function envoy_on_request(handle)
+                local cluster = handle:route():metadata():get("resolver")
+                handle:httpCall(cluster, {[":method"]="GET", [":path"]="/", [":authority"]="resolver"}, nil, 1000)
+              end
+        envoy.filters.http.lua/1:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          sharedVmId: envoyextensionpolicy/default/one/lua/1
+          sourceCode:
+            inlineString: function envoy_on_request(handle) end
+        envoy.filters.http.wasm/envoyextensionpolicy/default/one/wasm/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - directResponse:
+        status: 200
+      match:
+        pathSeparatedPrefix: /two
+      metadata:
+        filterMetadata:
+          envoy.filters.http.lua/0:
+            resolver: envoyextensionpolicy/default/two/backend/resolver/0
+          gateway.envoyproxy.io/extension-backends:
+            resolver: envoyextensionpolicy/default/two/backend/resolver/0
+      name: route-two
+      typedPerFilterConfig:
+        envoy.filters.http.lua/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          sharedVmId: envoyextensionpolicy/default/two/lua/0
+          sourceCode:
+            inlineString: function envoy_on_request(handle) end

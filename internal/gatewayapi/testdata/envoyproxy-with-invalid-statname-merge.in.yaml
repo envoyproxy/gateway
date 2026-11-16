@@ -1,0 +1,88 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: gc-proxy
+      namespace: envoy-gateway-system
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: gc-proxy
+  spec:
+    telemetry:
+      metrics:
+        clusterStatName: "%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%"
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: gw-proxy
+  spec:
+    mergeType: StrategicMerge
+    telemetry:
+      metrics:
+        # Invalid override: the closing % of ROUTE_RULE_NAME is missing. It must be ignored and
+        # the GatewayClass value kept.
+        clusterStatName: "%ROUTE_NAME%/%ROUTE_RULE_NAME/%ROUTE_RULE_NUMBER%"
+        enableVirtualHostStats: true
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: gw-proxy
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: gw-proxy
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: envoy-gateway
+    name: httproute-1
+  spec:
+    parentRefs:
+    - name: gateway-1
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080

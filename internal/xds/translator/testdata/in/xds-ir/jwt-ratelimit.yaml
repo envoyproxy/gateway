@@ -36,6 +36,7 @@ http:
         name: "first-route-dest/backend/0"
     security:
       jwt:
+        name: default/policy
         providers:
         - name: example
           issuer: https://www.example.com

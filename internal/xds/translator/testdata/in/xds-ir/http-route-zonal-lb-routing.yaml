@@ -43,6 +43,7 @@ http:
         leastRequest: {}
         preferLocal:
           minEndpointsThreshold: 3
+          failTrafficOnPanic: true
   - name: "route-with-lb-and-settings-preferlocal"
     hostname: "*"
     destination:

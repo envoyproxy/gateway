@@ -21,6 +21,7 @@ clientTrafficPolicies:
         value: 3
         closeDelay: 10s
         maxConnectionDuration: 300s
+        maxConnectionDurationJitter: 20
         maxRequestsPerConnection: 100
         maxStreamDuration: 200s
     targetRef:
