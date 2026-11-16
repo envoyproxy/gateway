@@ -1245,6 +1245,8 @@ type DNS struct {
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 	// LookupFamily allows to configure the dns lookup policy
 	LookupFamily *egv1a1.DNSLookupFamily `json:"lookupFamily,omitempty"`
+	// Type selects strict or logical DNS resolution for FQDN backends.
+	Type *egv1a1.DNSType `json:"type,omitempty" yaml:"type,omitempty"`
 	// Name is a unique name for a DNS configuration.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }

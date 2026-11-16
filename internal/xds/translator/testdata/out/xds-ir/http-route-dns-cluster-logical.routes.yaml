@@ -1,0 +1,21 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /logical
+      name: logical-route
+      route:
+        cluster: logical-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /multiple
+      name: logical-route-multiple-endpoints
+      route:
+        cluster: logical-route-multiple-endpoints-dest
+        upgradeConfigs:
+        - upgradeType: websocket

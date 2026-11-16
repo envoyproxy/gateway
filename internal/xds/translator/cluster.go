@@ -611,6 +611,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			if args.dns.RespectDNSTTL != nil {
 				dnsCluster.RespectDnsTtl = ptr.Deref(args.dns.RespectDNSTTL, true)
 			}
+			// Logical DNS (all addresses in a single endpoint) needs exactly one endpoint in
+			// the cluster, or Envoy rejects the cluster. Keep strict DNS otherwise.
+			if ptr.Deref(args.dns.Type, egv1a1.StrictDNSType) == egv1a1.LogicalDNSType && countEndpoints(args.settings) == 1 {
+				dnsCluster.AllAddressesInSingleEndpoint = true
+			}
 		}
 		dnsClusterAny, err := proto.ToAnyWithValidation(dnsCluster)
 		if err != nil {
@@ -1030,6 +1035,15 @@ func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreake
 		trb.MinRetryConcurrency = wrapperspb.UInt32(rb.MinRetryConcurrency)
 	}
 	return trb
+}
+
+// countEndpoints returns the number of endpoints across all destination settings of a cluster.
+func countEndpoints(settings []*ir.DestinationSetting) int {
+	n := 0
+	for _, ds := range settings {
+		n += len(ds.Endpoints)
+	}
+	return n
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {

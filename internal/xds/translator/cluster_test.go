@@ -26,6 +26,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"sigs.k8s.io/yaml"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -832,6 +833,39 @@ func TestGetHealthCheckOverridesHostnameWithGRPCAuthority(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.expected, getHealthCheckOverridesHostname(tc.healthCheck, tc.endpoint))
+		})
+	}
+}
+
+func TestBuildXdsClusterLogicalDNS(t *testing.T) {
+	endpoint := func(host string) *ir.DestinationEndpoint {
+		return &ir.DestinationEndpoint{Host: host, Port: 443}
+	}
+	tests := []struct {
+		name      string
+		dnsType   *egv1a1.DNSType
+		endpoints []*ir.DestinationEndpoint
+		logical   bool
+	}{
+		{name: "default is strict", endpoints: []*ir.DestinationEndpoint{endpoint("a.example.com")}},
+		{name: "explicit strict", dnsType: new(egv1a1.StrictDNSType), endpoints: []*ir.DestinationEndpoint{endpoint("a.example.com")}},
+		{name: "logical with one endpoint", dnsType: new(egv1a1.LogicalDNSType), endpoints: []*ir.DestinationEndpoint{endpoint("a.example.com")}, logical: true},
+		// Envoy rejects a logical DNS cluster with more than one endpoint, so it stays strict.
+		{name: "logical with two endpoints falls back to strict", dnsType: new(egv1a1.LogicalDNSType), endpoints: []*ir.DestinationEndpoint{endpoint("a.example.com"), endpoint("b.example.com")}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			args := &xdsClusterArgs{
+				name:         "dns-cluster",
+				endpointType: EndpointTypeDNS,
+				settings:     []*ir.DestinationSetting{{Name: "dns-cluster/backend/0", Endpoints: tc.endpoints, AddressType: new(ir.FQDN)}},
+				dns:          &ir.DNS{Type: tc.dnsType},
+			}
+			result, err := buildXdsCluster(args)
+			require.NoError(t, err)
+			dnsCluster := &dnsclusterv3.DnsCluster{}
+			require.NoError(t, result.cluster.GetClusterType().TypedConfig.UnmarshalTo(dnsCluster))
+			require.Equal(t, tc.logical, dnsCluster.AllAddressesInSingleEndpoint)
 		})
 	}
 }
