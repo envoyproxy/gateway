@@ -1,1 +1,1 @@
-Fixed the default rate-limit response-time histogram to convert milliseconds to seconds before observing values. Previously collected observations retain the old units; latency queries should use a time range after the rate-limit service pods restart.
+Fixed the default rate-limit response-time histogram to convert milliseconds to seconds and automatically roll rate-limit pods when the metric mapping changes. Historical observations retain the previous units.

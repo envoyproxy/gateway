@@ -869,6 +869,37 @@ func TestDeployment(t *testing.T) {
 	}
 }
 
+func TestDeploymentConfigHash(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
+		Backend: egv1a1.RateLimitDatabaseBackend{
+			Type: egv1a1.RedisBackendType,
+			Redis: &egv1a1.RateLimitRedisSettings{
+				URL: new("redis.redis.svc:6379"),
+			},
+		},
+	}
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+
+	deployment, err := r.Deployment()
+	require.NoError(t, err)
+	const annotation = "gateway.envoyproxy.io/ratelimit-config-hash"
+	hash := deployment.Spec.Template.Annotations[annotation]
+	require.NotEmpty(t, hash)
+
+	unchanged, err := r.Deployment()
+	require.NoError(t, err)
+	require.Equal(t, hash, unchanged.Spec.Template.Annotations[annotation])
+
+	original := statsConf
+	t.Cleanup(func() { statsConf = original })
+	statsConf += "\n# changed mapping\n"
+	changed, err := r.Deployment()
+	require.NoError(t, err)
+	require.NotEqual(t, hash, changed.Spec.Template.Annotations[annotation])
+}
+
 func TestHorizontalPodAutoscaler(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
