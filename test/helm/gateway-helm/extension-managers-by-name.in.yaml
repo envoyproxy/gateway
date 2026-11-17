@@ -57,3 +57,14 @@ extensionManagersByName:
       fqdn:
         hostname: bool-off
         port: 5005
+  # Renders first: lowest order. Names may contain "/".
+  team/ext:
+    order: 5
+    hooks:
+      xdsTranslator:
+        post:
+          - Route
+    service:
+      fqdn:
+        hostname: team-ext
+        port: 5005

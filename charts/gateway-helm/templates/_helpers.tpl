@@ -257,8 +257,8 @@ sorted by order and then name, without disabled entries, and with name set from 
 {{- fail (printf "extensionManagersByName.%s must be a map" $name) }}
 {{- end }}
 {{- $enabled := true }}
-{{- if hasKey $em "enabled" }}
-{{- $raw := get $em "enabled" }}
+{{- $raw := index $em "enabled" }}
+{{- if and (hasKey $em "enabled") (not (kindIs "invalid" $raw)) }}
 {{- if kindIs "string" $raw }}
 {{- $rendered := tpl $raw $ | trim }}
 {{- if not (has $rendered (list "true" "false")) }}
@@ -271,13 +271,26 @@ sorted by order and then name, without disabled entries, and with name set from 
 {{- fail (printf "extensionManagersByName.%s.enabled must be a bool or a template string" $name) }}
 {{- end }}
 {{- end }}
+{{- $order := 0 }}
+{{- $rawOrder := index $em "order" }}
+{{- if and (hasKey $em "order") (not (kindIs "invalid" $rawOrder)) }}
+{{- if not (or (kindIs "int" $rawOrder) (kindIs "int64" $rawOrder) (kindIs "float64" $rawOrder)) }}
+{{- fail (printf "extensionManagersByName.%s.order must be a non-negative integer" $name) }}
+{{- end }}
+{{- $order = int $rawOrder }}
+{{- if or (lt $order 0) (ne (float64 $rawOrder) (float64 $order)) }}
+{{- fail (printf "extensionManagersByName.%s.order must be a non-negative integer" $name) }}
+{{- end }}
+{{- end }}
 {{- if $enabled }}
-{{- $keys = append $keys (printf "%010d/%s" (int (default 0 $em.order)) $name) }}
+{{- /* Zero-padded so the text sort below matches numeric order; order can't be negative. */}}
+{{- $keys = append $keys (printf "%020d/%s" $order $name) }}
 {{- end }}
 {{- end }}
 {{- $items := list }}
 {{- range sortAlpha $keys }}
-{{- $name := index (splitList "/" .) 1 }}
+{{- /* Drop the 20-digit order and the "/" after it; the name itself may contain "/". */}}
+{{- $name := substr 21 (len .) . }}
 {{- $em := deepCopy (get $.Values.extensionManagersByName $name) }}
 {{- $_ := unset $em "enabled" }}
 {{- $_ = unset $em "order" }}

@@ -37,6 +37,15 @@ data:
     - hooks:
         xdsTranslator:
           post:
+          - Route
+      name: team/ext
+      service:
+        fqdn:
+          hostname: team-ext
+          port: 5005
+    - hooks:
+        xdsTranslator:
+          post:
           - Translation
       name: waf-extension
       policyResources:
