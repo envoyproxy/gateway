@@ -2,6 +2,9 @@ name: OSV-Scanner
 
 on:
   pull_request:
+    # "edited" covers a PR retargeted to a new base without a new push; the
+    # jobs below ignore edits that do not change the base (title, body, ...).
+    types: [opened, synchronize, reopened, edited]
     branches:
     - "main"
     - "release/v*"
@@ -35,7 +38,7 @@ jobs:
       security-events: write
 
   scan-pr:
-    if: ${{ (github.event_name == 'pull_request' && !startsWith(github.base_ref, 'release/')) || github.event_name == 'merge_group' }}
+    if: ${{ (github.event_name == 'pull_request' && !startsWith(github.base_ref, 'release/') && (github.event.action != 'edited' || github.event.changes.base)) || github.event_name == 'merge_group' }}
     uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@9a96bc4d2b09685b6142bcfe25a3dc17cb2d7347"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
     with:
       scan-args: |-
@@ -52,7 +55,7 @@ jobs:
   # Release branches are not continuously updated like main, so a cherry-pick PR
   # must fail on any known vulnerability, including ones already on the branch.
   scan-release-pr:
-    if: ${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'release/') }}
+    if: ${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'release/') && (github.event.action != 'edited' || github.event.changes.base) }}
     uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@9a96bc4d2b09685b6142bcfe25a3dc17cb2d7347"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
     with:
       # PRs from forks cannot write security events, so report through the
